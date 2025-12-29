@@ -97,6 +97,90 @@ class StorageService {
     await Promise.all(deletePromises)
   }
 
+  // ==================== LEGACY COMPATIBILITY METHODS (for InvoiceService) ====================
+  
+  /**
+   * Upload raw buffer (for PDFs, etc.)
+   * @deprecated Use uploadImage() for images, this is for PDF/documents only
+   */
+  async upload(buffer: Buffer, options: { filename: string; folder: string; contentType: string; isPublic?: boolean }): Promise<{ url: string; key: string }> {
+    if (this.storageType === 'cloudinary') {
+      // For Cloudinary: save buffer to temp file, upload, then delete
+      const tempPath = path.join(this.localUploadDir, `temp_${Date.now()}_${options.filename}`)
+      fs.writeFileSync(tempPath, buffer)
+      
+      try {
+        const result = await cloudinary.uploader.upload(tempPath, {
+          folder: `echatbot/${options.folder}`,
+          resource_type: 'raw', // For non-image files like PDF
+          public_id: path.parse(options.filename).name,
+          use_filename: true,
+        })
+        
+        fs.unlinkSync(tempPath) // Cleanup temp file
+        
+        logger.info(`☁️ Uploaded buffer to Cloudinary: ${result.secure_url}`)
+        return { url: result.secure_url, key: result.public_id }
+      } catch (error) {
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath)
+        throw error
+      }
+    } else {
+      // Local: save buffer directly
+      const folderPath = path.join(this.localUploadDir, options.folder)
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true })
+      }
+      
+      const filePath = path.join(folderPath, options.filename)
+      fs.writeFileSync(filePath, buffer)
+      
+      const url = `/uploads/${options.folder}/${options.filename}`
+      logger.info(`💾 Uploaded buffer to local: ${url}`)
+      return { url, key: url }
+    }
+  }
+
+  /**
+   * Get file as buffer
+   * @deprecated Legacy method for InvoiceService
+   */
+  async get(key: string): Promise<Buffer> {
+    if (this.storageType === 'cloudinary') {
+      // Download from Cloudinary URL
+      const response = await fetch(key)
+      const arrayBuffer = await response.arrayBuffer()
+      return Buffer.from(arrayBuffer)
+    } else {
+      // Read from local filesystem
+      const filePath = key.startsWith('/') ? path.join(this.localUploadDir, key.replace('/uploads/', '')) : key
+      return fs.readFileSync(filePath)
+    }
+  }
+
+  /**
+   * Get signed/public URL for file
+   * @deprecated Legacy method for InvoiceService
+   */
+  async getUrl(key: string, expiresIn: number = 3600): Promise<string> {
+    if (this.storageType === 'cloudinary') {
+      // Cloudinary URLs are already accessible, just return them
+      // For private files, would use cloudinary.utils.private_download_url() but PDF are already secure URLs
+      return key
+    } else {
+      // For local, return the URL directly (handled by Express static middleware)
+      return key.startsWith('/') ? key : `/uploads/${key}`
+    }
+  }
+
+  /**
+   * Delete file by key
+   * @deprecated Use deleteImage() instead, this is for backwards compat
+   */
+  async delete(key: string): Promise<void> {
+    await this.deleteImage(key)
+  }
+
   // ==================== CLOUDINARY METHODS ====================
 
   private async uploadToCloudinary(file: Express.Multer.File, folder: Folder): Promise<string> {

@@ -2,7 +2,7 @@ import { Response } from "express"
 import ServiceService from "../../../application/services/service.service"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
-import { getStorageService } from "../../../services/storage"
+import { storageService } from "../../../services/storage.service"
 
 import { WorkspaceRequest } from "../types/workspace-request"
 
@@ -152,9 +152,8 @@ export class ServicesController {
       }
 
       // Handle multiple image uploads with Storage Service
-      const storage = getStorageService()
       let allImageUrls: string[] = []
-      let allImageKeys: string[] = []
+      let imageKey: string | null = null
 
       // Add existing images first (if reordered)
       if (req.body.existingImageUrls) {
@@ -171,22 +170,18 @@ export class ServicesController {
 
       // Add new uploaded images via Storage Service
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        for (const file of req.files as Express.Multer.File[]) {
-          const uploadedFile = await storage.upload(file.buffer, {
-            filename: file.filename,
-            folder: `services/${workspaceId}`,
-            contentType: file.mimetype,
-            isPublic: true
-          })
-          allImageUrls.push(uploadedFile.url)
-          allImageKeys.push(uploadedFile.key)
-        }
-        logger.info(`New images uploaded via Storage Service:`, allImageUrls)
+        const uploadedUrls = await storageService.uploadImages(
+          req.files as Express.Multer.File[],
+          'services'
+        )
+        allImageUrls.push(...uploadedUrls)
+        imageKey = uploadedUrls[0] // Store first image URL as key
+        logger.info(`New images uploaded via Storage Service:`, uploadedUrls)
       }
 
       // Always set imageUrl and imageKey
       serviceData.imageUrl = allImageUrls
-      serviceData.imageKey = allImageKeys.length > 0 ? allImageKeys[0] : null
+      serviceData.imageKey = imageKey
       logger.info(`Total images for service:`, allImageUrls)
 
       logger.info(`Creating service for workspace: ${workspaceId}`)
@@ -277,10 +272,8 @@ export class ServicesController {
         }
       }
 
-      // Get old image key for cleanup
-      const storage = getStorageService()
-      const oldImageKey = (existingService as any).imageKey
-
+      // Get old image URLs for cleanup
+      const oldImageUrls = (existingService as any).imageUrl || []
       let newImageKey: string | null = null
 
       // Handle multiple image uploads and existing images for update
@@ -301,23 +294,20 @@ export class ServicesController {
 
       // Add new uploaded images via Storage Service
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        // Delete old image if uploading new ones
-        if (oldImageKey) {
-          await storage.delete(oldImageKey)
-          logger.info(`Deleted old image: ${oldImageKey}`)
+        // Delete old images that are being replaced
+        const imagesToDelete = oldImageUrls.filter(url => !allImageUrls.includes(url))
+        if (imagesToDelete.length > 0) {
+          await storageService.deleteImages(imagesToDelete)
+          logger.info(`Deleted old images:`, imagesToDelete)
         }
 
-        for (const file of req.files as Express.Multer.File[]) {
-          const uploadedFile = await storage.upload(file.buffer, {
-            filename: file.filename,
-            folder: `services/${workspaceId}`,
-            contentType: file.mimetype,
-            isPublic: true
-          })
-          allImageUrls.push(uploadedFile.url)
-          if (!newImageKey) newImageKey = uploadedFile.key
-        }
-        logger.info(`New images uploaded via Storage Service:`, allImageUrls)
+        const uploadedUrls = await storageService.uploadImages(
+          req.files as Express.Multer.File[],
+          'services'
+        )
+        allImageUrls.push(...uploadedUrls)
+        newImageKey = uploadedUrls[0] // Store first image URL as key
+        logger.info(`New images uploaded via Storage Service:`, uploadedUrls)
       }
 
       // Always set imageUrl and update imageKey if changed
@@ -372,11 +362,10 @@ export class ServicesController {
           .json({ error: "Service not found in specified workspace" })
       }
 
-      // Clean up service image from storage before deleting
-      if ((existingService as any).imageKey) {
-        const storage = getStorageService()
-        await storage.delete((existingService as any).imageKey)
-        logger.info(`Deleted image from storage: ${(existingService as any).imageKey}`)
+      // Clean up service images from storage before deleting
+      if ((existingService as any).imageUrl && (existingService as any).imageUrl.length > 0) {
+        await storageService.deleteImages((existingService as any).imageUrl)
+        logger.info(`Deleted images from storage:`, (existingService as any).imageUrl)
       }
 
       await this.serviceService.delete(id, workspaceId)

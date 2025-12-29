@@ -514,7 +514,16 @@ export class ProductController {
 
       // Add new uploaded images via Storage Service
       if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-        logger.info(`Received ${req.files.length} files from multer`)
+        logger.info(`🔍 DEBUG - Received ${req.files.length} files from multer`)
+        logger.info(`🔍 DEBUG - Files details:`, req.files.map(f => ({
+          fieldname: f.fieldname,
+          originalname: f.originalname,
+          mimetype: f.mimetype,
+          size: f.size,
+          filename: f.filename,
+          path: f.path,
+          pathExists: require('fs').existsSync(f.path)
+        })))
         
         // Delete old images that are being replaced
         const imagesToDelete = oldImageUrls.filter(url => !allImageUrls.includes(url))

@@ -23,28 +23,25 @@ echo ""
 echo "🗄️ Step 3: Add PostgreSQL database"
 heroku addons:create heroku-postgresql:mini -a $APP_NAME
 
-echo ""
-echo "📦 Step 4: Add Bucketeer storage"
-heroku addons:create bucketeer:micro -a $APP_NAME
-
 # Wait for addons to provision
-echo "⏳ Waiting for addons to provision..."
+echo "⏳ Waiting for database to provision..."
 sleep 10
 
-# 4. Copy Bucketeer vars to AWS_* format
+# 4. Cloudinary setup (manual)
 echo ""
-echo "🔑 Step 5: Configure storage credentials"
-BUCKETEER_KEY=$(heroku config:get BUCKETEER_AWS_ACCESS_KEY_ID -a $APP_NAME)
-BUCKETEER_SECRET=$(heroku config:get BUCKETEER_AWS_SECRET_ACCESS_KEY -a $APP_NAME)
-BUCKETEER_REGION=$(heroku config:get BUCKETEER_AWS_REGION -a $APP_NAME)
-BUCKETEER_BUCKET=$(heroku config:get BUCKETEER_BUCKET_NAME -a $APP_NAME)
-
-heroku config:set \
-  AWS_ACCESS_KEY_ID="$BUCKETEER_KEY" \
-  AWS_SECRET_ACCESS_KEY="$BUCKETEER_SECRET" \
-  AWS_REGION="$BUCKETEER_REGION" \
-  AWS_S3_BUCKET="$BUCKETEER_BUCKET" \
-  -a $APP_NAME
+echo "☁️ Step 4: Cloudinary Storage Setup"
+echo "──────────────────────────────────────────────────────"
+echo "⚠️  MANUAL STEP REQUIRED:"
+echo "1. Sign up at https://cloudinary.com/users/register/free"
+echo "2. Get credentials from https://cloudinary.com/console"
+echo "3. Run: heroku config:set -a $APP_NAME \\"
+echo "     CLOUDINARY_CLOUD_NAME='your_cloud_name' \\"
+echo "     CLOUDINARY_API_KEY='your_api_key' \\"
+echo "     CLOUDINARY_API_SECRET='your_api_secret' \\"
+echo "     CLOUDINARY_URL='cloudinary://api_key:api_secret@cloud_name'"
+echo "──────────────────────────────────────────────────────"
+echo ""
+read -p "Press ENTER after setting Cloudinary credentials..."
 
 # 5. Security config
 echo ""

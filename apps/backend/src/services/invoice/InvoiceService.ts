@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { getStorageService } from '../storage';
+import { storageService } from '../storage.service';
 import { prisma } from '@echatbot/database';
 
 export interface InvoiceData {
@@ -80,7 +80,7 @@ export class InvoiceService {
     const pdfBuffer = await this.createPDF(invoiceData);
 
     // 5. Salva con Storage Service
-    const storage = getStorageService();
+    const storage = storageService;
     const file = await storage.upload(pdfBuffer, {
       filename: `${order.orderCode}.pdf`,
       folder: `invoices/${order.workspaceId}`,
@@ -134,7 +134,7 @@ export class InvoiceService {
         
         if (logoUrl) {
           try {
-            const storage = getStorageService();
+            const storage = storageService;
             const logoKey = this.extractKeyFromUrl(logoUrl);
             const logoBuffer = await storage.get(logoKey);
             
@@ -301,12 +301,14 @@ export class InvoiceService {
    */
   private extractKeyFromUrl(url: string): string {
     // http://localhost:3001/uploads/workspaces/123/logo.png → workspaces/123/logo.png
-    // https://bucket.s3.amazonaws.com/workspaces/123/logo.png → workspaces/123/logo.png
+    // https://res.cloudinary.com/root/image/upload/echatbot/products/logo.png → echatbot/products/logo.png
     if (url.includes('/uploads/')) {
       return url.split('/uploads/')[1];
     }
-    if (url.includes('.amazonaws.com/')) {
-      return url.split('.amazonaws.com/')[1].split('?')[0];
+    if (url.includes('cloudinary.com/')) {
+      // Extract public_id from Cloudinary URL
+      const matches = url.match(/\/([^/]+\/[^/]+\/[^/.]+)\.[^.]+$/);
+      return matches ? matches[1] : url;
     }
     return url;
   }
@@ -324,7 +326,7 @@ export class InvoiceService {
       throw new Error('Invoice not found');
     }
 
-    const storage = getStorageService();
+    const storage = storageService;
     return storage.getUrl(order.invoiceKey, expiresIn);
   }
 
@@ -341,7 +343,7 @@ export class InvoiceService {
       return;
     }
 
-    const storage = getStorageService();
+    const storage = storageService;
     await storage.delete(order.invoiceKey);
 
     await prisma.orders.update({

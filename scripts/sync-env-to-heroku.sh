@@ -49,10 +49,6 @@ echo ""
 SKIP_VARS=(
   "PORT"                    # Heroku sets this automatically
   "DATABASE_URL"            # From Postgres addon
-  "BUCKETEER_AWS_ACCESS_KEY_ID"    # From Bucketeer addon
-  "BUCKETEER_AWS_SECRET_ACCESS_KEY" # From Bucketeer addon
-  "BUCKETEER_AWS_REGION"    # From Bucketeer addon
-  "BUCKETEER_BUCKET_NAME"   # From Bucketeer addon
   "UPLOADS_DIR"             # Only for local dev
   "UPLOADS_URL"             # Only for local dev
 )
@@ -196,7 +192,7 @@ echo ""
 echo -e "${YELLOW}⚠️  IMPORTANT:${NC}"
 echo "1. Verify NODE_ENV=production (not from .env)"
 echo "2. Verify DATABASE_URL is set (from Postgres addon)"
-echo "3. Verify Bucketeer vars are set (from addon)"
+echo "3. Verify Cloudinary credentials are set (CLOUDINARY_URL, etc.)"
 echo "4. Verify FRONTEND_URL matches your Heroku domain"
 echo ""
 echo -e "${GREEN}✅ All done!${NC}"

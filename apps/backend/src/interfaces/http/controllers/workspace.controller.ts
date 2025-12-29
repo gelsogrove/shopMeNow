@@ -4,7 +4,7 @@ import { SubscriptionBillingService } from "../../../application/services/subscr
 import { WorkspaceService } from "../../../application/services/workspace.service"
 import { workspaceMemberService } from "../../../application/services/workspace-member.service"
 import logger from "../../../utils/logger"
-import { getStorageService } from "../../../services/storage"
+import { storageService } from "../../../services/storage.service"
 import fs from "fs/promises"
 
 // prisma imported
@@ -422,38 +422,25 @@ export class WorkspaceController {
       // Get current workspace to check for old logo
       const currentWorkspace = await prisma.workspace.findUnique({
         where: { id },
-        select: { logoKey: true }
+        select: { logoKey: true, logoUrl: true }
       })
 
       // Delete old logo if exists
-      if (currentWorkspace?.logoKey) {
-        const storage = getStorageService()
-        await storage.delete(currentWorkspace.logoKey)
-        logger.info(`Deleted old logo: ${currentWorkspace.logoKey}`)
+      if (currentWorkspace?.logoUrl) {
+        await storageService.deleteImage(currentWorkspace.logoUrl)
+        logger.info(`Deleted old logo: ${currentWorkspace.logoUrl}`)
       }
 
       // Upload new logo via Storage Service
-      const storage = getStorageService()
-      const fileBuffer = file.buffer ?? (file.path ? await fs.readFile(file.path) : null)
-
-      if (!fileBuffer) {
-        return res.status(400).json({ error: "Invalid file payload" })
-      }
-
-      const uploadedFile = await storage.upload(fileBuffer, {
-        filename: `${id}-logo-${Date.now()}.${file.originalname.split('.').pop()}`,
-        folder: `workspaces/${id}`,
-        contentType: file.mimetype,
-        isPublic: true
-      })
+      const uploadedUrl = await storageService.uploadImage(file, 'users')
 
       // Update workspace with new logo URL and key
       const workspace = await this.workspaceService.update(id, { 
-        logoUrl: uploadedFile.url,
-        logoKey: uploadedFile.key
+        logoUrl: uploadedUrl,
+        logoKey: uploadedUrl // Store URL as key for compatibility
       })
 
-      logger.info(`✅ Logo uploaded for workspace ${id}: ${uploadedFile.url}`)
+      logger.info(`✅ Logo uploaded for workspace ${id}: ${uploadedUrl}`)
       return res.json({ logoUrl: workspace.logoUrl })
     } catch (error) {
       logger.error("Error uploading workspace logo:", error)
