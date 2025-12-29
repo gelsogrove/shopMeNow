@@ -45,7 +45,6 @@ export function ProductsPage() {
   const [categories, setCategories] = useState<
     Array<{ id: string; name: string }>
   >([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [certifications, setCertifications] = useState<Certification[]>([])
   const [transportTypes, setTransportTypes] = useState<TransportType[]>([])
   const [selectedCertificationIds, setSelectedCertificationIds] = useState<
@@ -67,7 +66,6 @@ export function ProductsPage() {
   const [showTransportTypesPanel, setShowTransportTypesPanel] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none")
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("none")
   const [productIsActive, setProductIsActive] = useState(true)
   const [sku, setSku] = useState("")
   const [imageFiles, setImageFiles] = useState<File[]>([])
@@ -109,13 +107,12 @@ export function ProductsPage() {
       setIsLoading(true)
       
       try {
-        // Parallel fetch for better performance (supplier may be optional)
+        // Parallel fetch for better performance
         const results = await Promise.allSettled([
           productsApi.getAllForWorkspace(workspace.id),
           categoriesApi.getAllForWorkspace(workspace.id),
           certificationsApi.getAllForWorkspace(workspace.id),
           transportTypesApi.getAllForWorkspace(workspace.id),
-          supplierApi.getAll(workspace.id),
         ])
 
         const [
@@ -123,7 +120,6 @@ export function ProductsPage() {
           categoriesResult,
           certificationsResult,
           transportTypesResult,
-          suppliersResult,
         ] = results
 
         // Set products
@@ -151,15 +147,6 @@ export function ProductsPage() {
         setCertifications(certificationsResult.status === "fulfilled" ? certificationsResult.value : [])
         setTransportTypes(transportTypesResult.status === "fulfilled" ? transportTypesResult.value : [])
 
-        if (suppliersResult.status === "fulfilled") {
-          setSuppliers(suppliersResult.value)
-        } else {
-          logger.warn("Suppliers endpoint unavailable, continuing without suppliers", {
-            error: suppliersResult.reason,
-          })
-          setSuppliers([])
-        }
-
         if (!coreLoadFailed) {
           logger.info("✅ All data loaded successfully")
         }
@@ -175,18 +162,16 @@ export function ProductsPage() {
     loadAllData()
   }, [workspace?.id])
 
-  // Reset category and supplier selection when product changes
+  // Reset category when product changes
   useEffect(() => {
     if (selectedProduct) {
       setSelectedCategoryId(selectedProduct.categoryId || "none")
-      setSelectedSupplierId(selectedProduct.supplierId || "none")
       logger.info("Setting selected values from product:", {
         categoryId: selectedProduct.categoryId,
-        supplierId: selectedProduct.supplierId,
       })
     }
     // Rimuovo il reset del sku da qui per evitare conflitti
-  }, [selectedProduct, suppliers]) // Also depend on suppliers being loaded
+  }, [selectedProduct])
 
   // Filter and sort products
   const filteredProducts = React.useMemo(() => {
@@ -375,7 +360,6 @@ export function ProductsPage() {
       // Reset form state
       setSku("")
       setSelectedCategoryId("none")
-      setSelectedSupplierId("none")
       setFormCategoryIds([])
       setFormCertificationIds([])
       setFormTransportTypeIds([])
@@ -398,7 +382,6 @@ export function ProductsPage() {
     
     setSelectedProduct(product)
     setSelectedCategoryId(product.categoryId || "none") // DEPRECATED - keep for backward compatibility
-    setSelectedSupplierId(product.supplierId || "none")
     setProductIsActive(product.isActive ?? true)
     setSku(product.code || "")
 
@@ -479,17 +462,9 @@ export function ProductsPage() {
     // Send categoryIds array to backend (many-to-many)
     formData.set("categoryIds", JSON.stringify(formCategoryIds))
 
-    // Make sure supplierId is set correctly if "none" is selected
-    const suppId = formData.get("supplierId")
-    if (suppId === "none") {
-      formData.delete("supplierId")
-      formData.append("supplierId", "")
-    }
-
     // Debug logging
     logger.info("Form data being sent for product update")
     logger.info("CategoryIds:", formCategoryIds)
-    logger.info("SupplierId:", formData.get("supplierId"))
     logger.info("CertificationIds:", formCertificationIds)
 
     try {
@@ -849,31 +824,6 @@ export function ProductsPage() {
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="supplierId">Supplier</Label>
-          <Select
-            value={selectedSupplierId}
-            onValueChange={setSelectedSupplierId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a supplier" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No Supplier</SelectItem>
-              {suppliers.map((supplier) => (
-                <SelectItem key={supplier.id} value={supplier.id}>
-                  {supplier.companyName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <input
-            type="hidden"
-            name="supplierId"
-            value={selectedSupplierId === "none" ? "" : selectedSupplierId}
-          />
-        </div>
-
         {/* Dynamic Certifications Section */}
         {certifications.length > 0 && (
           <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
@@ -1090,31 +1040,6 @@ export function ProductsPage() {
             </Button>
           </div>
         )}
-
-        <div className="space-y-2">
-          <Label htmlFor="supplierId">Supplier</Label>
-          <Select
-            value={selectedSupplierId}
-            onValueChange={setSelectedSupplierId}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a supplier" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No Supplier</SelectItem>
-              {suppliers.map((supplier) => (
-                <SelectItem key={supplier.id} value={supplier.id}>
-                  {supplier.companyName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <input
-            type="hidden"
-            name="supplierId"
-            value={selectedSupplierId === "none" ? "" : selectedSupplierId}
-          />
-        </div>
 
         <div className="space-y-2">
           <Label htmlFor="region">Region</Label>
