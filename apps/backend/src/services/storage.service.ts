@@ -103,6 +103,19 @@ class StorageService {
     await Promise.all(deletePromises)
   }
 
+  /**
+   * List all images in a folder
+   * @param folder Folder name (products, services, users, channels)
+   * @returns Array of image objects with url and publicId
+   */
+  async listImages(folder: Folder): Promise<Array<{ url: string; publicId: string }>> {
+    if (this.storageType === 'cloudinary') {
+      return this.listFromCloudinary(folder)
+    } else {
+      return this.listFromLocal(folder)
+    }
+  }
+
   // ==================== LEGACY COMPATIBILITY METHODS (for InvoiceService) ====================
   
   /**
@@ -269,6 +282,46 @@ class StorageService {
     } catch (error) {
       logger.error('❌ Local delete failed:', error)
       // Don't throw - file might already be deleted
+    }
+  }
+
+  private async listFromCloudinary(folder: Folder): Promise<Array<{ url: string; publicId: string }>> {
+    try {
+      const result = await cloudinary.api.resources({
+        type: 'upload',
+        prefix: `echatbot/${folder}`,
+        max_results: 500,
+      })
+
+      return result.resources.map((resource: any) => ({
+        url: resource.secure_url,
+        publicId: resource.public_id,
+      }))
+    } catch (error) {
+      logger.error(`❌ Cloudinary list failed for folder ${folder}:`, error)
+      return []
+    }
+  }
+
+  private async listFromLocal(folder: Folder): Promise<Array<{ url: string; publicId: string }>> {
+    try {
+      const folderPath = path.join(this.localUploadDir, folder)
+      
+      if (!fs.existsSync(folderPath)) {
+        return []
+      }
+
+      const files = fs.readdirSync(folderPath)
+      
+      return files
+        .filter(file => !file.startsWith('.')) // Skip hidden files
+        .map(file => ({
+          url: `/uploads/${folder}/${file}`,
+          publicId: file,
+        }))
+    } catch (error) {
+      logger.error(`❌ Local list failed for folder ${folder}:`, error)
+      return []
     }
   }
 

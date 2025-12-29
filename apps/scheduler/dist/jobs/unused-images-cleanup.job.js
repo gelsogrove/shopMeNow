@@ -41,14 +41,33 @@ const database_1 = require("../config/database");
 const logger_1 = __importDefault(require("../utils/logger"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const cloudinary_1 = require("cloudinary");
 /**
  * Unused Images Cleanup Job
  * Runs daily at 23:02
  * Deletes orphaned images not referenced in the database
  * Covers: products, services, suppliers, users, channels (logos)
+ *
+ * ⚙️ BEHAVIOR:
+ * - Production (CLOUDINARY_URL set): Deletes from Cloudinary
+ * - Development (local): Deletes from uploads/ folder
  */
 async function unusedImagesCleanupJob() {
     const uploadsDir = path.join(__dirname, '..', '..', '..', 'backend', 'uploads');
+    const isProduction = !!process.env.CLOUDINARY_URL;
+    logger_1.default.info(`🧹 [Unused Images Cleanup] Starting cleanup (${isProduction ? 'CLOUDINARY' : 'LOCAL'})`);
+    // Configure Cloudinary if in production
+    if (isProduction) {
+        const cloudinaryUrl = process.env.CLOUDINARY_URL;
+        const match = cloudinaryUrl.match(/cloudinary:\/\/(\d+):([^@]+)@(.+)/);
+        if (!match) {
+            logger_1.default.error('❌ Invalid CLOUDINARY_URL format - skipping cleanup');
+            return;
+        }
+        const [, api_key, api_secret, cloud_name] = match;
+        cloudinary_1.v2.config({ cloud_name, api_key, api_secret });
+        logger_1.default.info(`✅ Cloudinary configured: ${cloud_name}`);
+    }
     let totalDeleted = 0;
     // ═══════════════════════════════════════════════════════════════
     // 1. PRODUCT IMAGES CLEANUP
@@ -67,7 +86,7 @@ async function unusedImagesCleanupJob() {
         }
     }
     logger_1.default.info(`[Products] Found ${usedProductImages.size} images referenced in database`);
-    totalDeleted += cleanupDirectory(productImagesDir, usedProductImages, 'products');
+    totalDeleted += await cleanupDirectory(productImagesDir, usedProductImages, 'products', 'products');
     // ═══════════════════════════════════════════════════════════════
     // 2. SERVICE IMAGES CLEANUP
     // ═══════════════════════════════════════════════════════════════
@@ -85,7 +104,7 @@ async function unusedImagesCleanupJob() {
         }
     }
     logger_1.default.info(`[Services] Found ${usedServiceImages.size} images referenced in database`);
-    totalDeleted += cleanupDirectory(serviceImagesDir, usedServiceImages, 'services');
+    totalDeleted += await cleanupDirectory(serviceImagesDir, usedServiceImages, 'services', 'services');
     // ═══════════════════════════════════════════════════════════════
     // 3. USER LOGOS CLEANUP
     // ═══════════════════════════════════════════════════════════════
@@ -101,7 +120,7 @@ async function unusedImagesCleanupJob() {
         }
     }
     logger_1.default.info(`[Users] Found ${usedUserLogos.size} logos referenced in database`);
-    totalDeleted += cleanupDirectory(userImagesDir, usedUserLogos, 'users');
+    totalDeleted += await cleanupDirectory(userImagesDir, usedUserLogos, 'users', 'users');
     // ═══════════════════════════════════════════════════════════════
     // 4. CHANNEL LOGOS CLEANUP
     // ═══════════════════════════════════════════════════════════════
@@ -117,7 +136,7 @@ async function unusedImagesCleanupJob() {
         }
     }
     logger_1.default.info(`[Channels] Found ${usedChannelLogos.size} logos referenced in database`);
-    totalDeleted += cleanupDirectory(channelImagesDir, usedChannelLogos, 'channels');
+    totalDeleted += await cleanupDirectory(channelImagesDir, usedChannelLogos, 'channels', 'channels');
     // ═══════════════════════════════════════════════════════════════
     // SUMMARY
     // ═══════════════════════════════════════════════════════════════
@@ -125,35 +144,68 @@ async function unusedImagesCleanupJob() {
 }
 /**
  * Helper function to cleanup a directory
- * @param dir - Directory path to clean
+ * @param dir - Directory path to clean (local)
  * @param usedImages - Set of filenames that are in use
  * @param label - Label for logging
+ * @param cloudinaryFolder - Cloudinary folder name (products, services, users, channels)
  * @returns Number of deleted files
  */
-function cleanupDirectory(dir, usedImages, label) {
+async function cleanupDirectory(dir, usedImages, label, cloudinaryFolder) {
+    const isProduction = !!process.env.CLOUDINARY_URL;
     let deleted = 0;
-    if (!fs.existsSync(dir)) {
-        logger_1.default.info(`[${label}] Directory not found: ${dir}`);
-        return 0;
+    if (!isProduction) {
+        // LOCAL MODE: Delete from filesystem
+        if (!fs.existsSync(dir)) {
+            logger_1.default.info(`[${label}] Directory not found: ${dir}`);
+            return 0;
+        }
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+            // Skip hidden files and directories
+            if (file.startsWith('.'))
+                continue;
+            const filePath = path.join(dir, file);
+            // Skip directories
+            if (fs.statSync(filePath).isDirectory())
+                continue;
+            if (!usedImages.has(file)) {
+                try {
+                    fs.unlinkSync(filePath);
+                    deleted++;
+                    logger_1.default.info(`[${label}] 🗑️ Deleted local orphan: ${file}`);
+                }
+                catch (error) {
+                    logger_1.default.error(`[${label}] Failed to delete ${file}:`, error);
+                }
+            }
+        }
     }
-    const files = fs.readdirSync(dir);
-    for (const file of files) {
-        // Skip hidden files and directories
-        if (file.startsWith('.'))
-            continue;
-        const filePath = path.join(dir, file);
-        // Skip directories
-        if (fs.statSync(filePath).isDirectory())
-            continue;
-        if (!usedImages.has(file)) {
-            try {
-                fs.unlinkSync(filePath);
-                deleted++;
-                logger_1.default.info(`[${label}] Deleted orphan image: ${file}`);
+    else {
+        // PRODUCTION MODE: Delete from Cloudinary
+        try {
+            // List all images in Cloudinary folder
+            const result = await cloudinary_1.v2.api.resources({
+                type: 'upload',
+                prefix: `echatbot/${cloudinaryFolder}`,
+                max_results: 500,
+            });
+            for (const resource of result.resources) {
+                const filename = path.basename(resource.secure_url);
+                if (!usedImages.has(filename)) {
+                    try {
+                        await cloudinary_1.v2.uploader.destroy(resource.public_id);
+                        deleted++;
+                        logger_1.default.info(`[${label}] ☁️ Deleted Cloudinary orphan: ${filename} (${resource.public_id})`);
+                    }
+                    catch (error) {
+                        logger_1.default.error(`[${label}] Failed to delete ${filename} from Cloudinary:`, error);
+                    }
+                }
             }
-            catch (error) {
-                logger_1.default.error(`[${label}] Failed to delete ${file}:`, error);
-            }
+        }
+        catch (error) {
+            logger_1.default.error(`[${label}] Failed to list Cloudinary images:`, error);
+            return 0;
         }
     }
     logger_1.default.info(`[${label}] Deleted ${deleted} orphan files`);
