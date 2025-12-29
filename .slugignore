@@ -22,7 +22,7 @@ scripts/
 apps/backend/src/
 apps/frontend/src/
 apps/scheduler/src/
-apps/backoffice/src/
+# apps/backoffice/src/  # ✅ KEEP: needed for standalone SPA build on Heroku
 
 # TypeScript config (not needed after build)
 **/tsconfig.json
