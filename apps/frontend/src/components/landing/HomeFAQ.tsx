@@ -38,7 +38,7 @@ const faqs = [
     accent: "from-violet-50 to-white",
     question: "Posso schedulare push o campagne WhatsApp?",
     answer:
-      "Sì, pianifichi broadcast e follow-up automatici con regole su fuso orario, opt-in e prodotti disponibili. Il motore evita l’invio se l’utente sta già parlando con l’operatore.",
+      "Sì, pianifichi broadcast e follow-up automatici con regole su fuso orario, opt-in e prodotti disponibili. Il motore evita l'invio se l'utente sta già parlando con l'operatore.",
   },
   {
     icon: Headphones,
@@ -85,88 +85,5 @@ const faqs = [
 ]
 
 export function HomeFAQ() {
-  return (
-    <section className="py-20 bg-gradient-to-b from-white via-slate-50 to-white" id="faq">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
-        <div className="grid items-start gap-10 lg:gap-16 lg:grid-cols-[1.15fr,0.85fr]">
-          <div>
-            <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.4em] text-emerald-600">
-              <span className="h-px w-10 bg-emerald-500" />
-              FAQ
-            </p>
-            <h2 className="mt-4 text-3xl lg:text-4xl font-bold text-slate-900">
-              Tutto quello che un founder chiede prima di automatizzare WhatsApp
-            </h2>
-            <p className="mt-3 text-lg text-slate-600">
-              Risposte rapide e senza giri di parole. Sono le domande che riceviamo ogni giorno da ecommerce,
-              marketplace e aziende di servizi.
-            </p>
-
-            <div className="mt-10 space-y-4">
-              {faqs.map(({ icon: Icon, accent, question, answer }) => (
-                <div
-                  key={question}
-                  className="group rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-[0_25px_45px_-40px_rgba(15,23,42,0.35)] transition hover:-translate-y-0.5 hover:border-emerald-200"
-                >
-                  <div className="flex gap-4">
-                    <div
-                      className={`mt-1 h-12 w-12 shrink-0 rounded-2xl bg-gradient-to-br ${accent} flex items-center justify-center text-emerald-700`}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-slate-900">{question}</h3>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-600">{answer}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="rounded-[40px] bg-gradient-to-br from-slate-900 via-emerald-900 to-emerald-600 p-10 text-white shadow-2xl">
-              <p className="text-sm uppercase tracking-[0.4em] text-emerald-200">Hand-off perfetto</p>
-              <h3 className="mt-4 text-3xl font-semibold leading-snug">
-                Quando il bot passa la chat,
-                <br />
-                l’operatore trova già tutto pronto.
-              </h3>
-              <ul className="mt-6 space-y-3 text-sm text-emerald-50">
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/30 text-xs font-semibold">
-                    1
-                  </span>
-                  Carrello e offerte in corso.
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/30 text-xs font-semibold">
-                    2
-                  </span>
-                  Sentiment e lingua del cliente.
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/30 text-xs font-semibold">
-                    3
-                  </span>
-                  Ultime azioni effettuate dal bot.
-                </li>
-              </ul>
-              <button className="mt-8 inline-flex items-center justify-center rounded-2xl bg-white/10 px-5 py-3 text-sm font-semibold backdrop-blur hover:bg-white/20">
-                Contatta un esperto
-              </button>
-            </div>
-
-            <div className="rounded-[36px] border-2 border-dashed border-slate-200 bg-white/80 p-8 text-center shadow-inner">
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-[0.3em]">Area visual</p>
-              <p className="mt-2 text-base text-slate-600">
-                Qui inseriremo un illustrazione del flusso chat → ordine. Manteniamo lo spazio pronto per quando
-                avrai gli asset definitivi.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
+  return null
 }
