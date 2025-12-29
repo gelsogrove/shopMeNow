@@ -18,10 +18,5 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    rollupOptions: {
-      // ✅ EXPLICIT input specification for Heroku
-      // MUST use import.meta.url because __dirname points to monorepo root in Heroku build
-      input: new URL('./index.html', import.meta.url).pathname,
-    },
   },
 })
