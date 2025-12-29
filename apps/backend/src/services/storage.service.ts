@@ -35,12 +35,18 @@ class StorageService {
         logger.warn('⚠️ CLOUDINARY_URL not set - falling back to local storage')
         this.storageType = 'local'
       } else {
-        cloudinary.config({
-          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-          api_key: process.env.CLOUDINARY_API_KEY,
-          api_secret: process.env.CLOUDINARY_API_SECRET,
-        })
-        logger.info('✅ Cloudinary configured')
+        // Parse CLOUDINARY_URL: cloudinary://api_key:api_secret@cloud_name
+        const cloudinaryUrl = process.env.CLOUDINARY_URL
+        const match = cloudinaryUrl.match(/cloudinary:\/\/(\d+):([^@]+)@(.+)/)
+        
+        if (!match) {
+          logger.error('❌ Invalid CLOUDINARY_URL format - falling back to local storage')
+          this.storageType = 'local'
+        } else {
+          const [, api_key, api_secret, cloud_name] = match
+          cloudinary.config({ cloud_name, api_key, api_secret })
+          logger.info(`✅ Cloudinary configured: ${cloud_name}`)
+        }
       }
     }
 
