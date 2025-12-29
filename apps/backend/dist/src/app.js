@@ -80,6 +80,8 @@ app.options("*", (0, cors_1.default)());
 // 🔒 SECURITY: Helmet with strict security headers
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    // 🔐 FIX GOOGLE GSI: Allow popups for OAuth flow
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
     // HSTS: Force HTTPS for 1 year (only in production)
     hsts: process.env.NODE_ENV === "production"
         ? {
@@ -106,7 +108,7 @@ app.use((0, helmet_1.default)({
                     "'unsafe-inline'",
                     "https://accounts.google.com",
                 ],
-                imgSrc: ["'self'", "data:", "https:"],
+                imgSrc: ["'self'", "data:", "https:", "blob:"],
                 connectSrc: [
                     "'self'",
                     "https://api.openrouter.ai",
