@@ -1,6 +1,6 @@
 # ⏱️ ECHATBOT-SCHEDULER - Background cron jobs
 # Deploy: git push heroku-scheduler main
 # NO web dyno - only worker for cron tasks
+# NO release command - migrations are handled by echatbot-app only
 
 worker: node apps/scheduler/dist/index.js
-release: npm run prisma:migrate:prod
