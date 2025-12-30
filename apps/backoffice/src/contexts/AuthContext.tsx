@@ -106,9 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.clear()
     api.logout()
     
-    // Redirect IMMEDIATELY before React re-renders (avoids flash of AccessDeniedPage)
-    const frontendUrl = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000'
-    window.location.href = `${frontendUrl}/auth/login?logout=true`
+    // Redirect to backoffice login (stay in same app)
+    window.location.href = '/login?logout=true'
   }
 
   return (
