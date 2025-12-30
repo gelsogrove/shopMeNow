@@ -30,7 +30,6 @@ import {
   Mail,
   MapPin,
   Phone,
-  Chrome,
   Loader2,
   Eye,
   EyeOff,
@@ -1014,14 +1013,14 @@ export function LoginPage() {
         <div className="text-center mb-12 space-y-4">
           <p className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-green-600">
             <span className="h-[1px] w-8 bg-green-600" aria-hidden="true" />
-            From chat to order
+            {t("header.tagline")}
             <span className="h-[1px] w-8 bg-green-600" aria-hidden="true" />
           </p>
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
-            Automate every conversation on WhatsApp
+            {t("hero.title")}
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Capture leads, confirm orders, and provide support to your customers.
+          <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+            {t("hero.subtitle")}
           </p>
         </div>
         <div className="flex flex-col lg:flex-row gap-10 items-stretch">
@@ -1429,6 +1428,52 @@ export function LoginPage() {
             </div>
           )}
         </div>
+
+        <div className="mt-14">
+          <div className="text-center space-y-2 mb-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
+              {t("hero.whyTitle")}
+            </p>
+            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900">
+              {t("hero.useCasesTitle")}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
+              <div className="h-12 w-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center mb-4">
+                <BarChart3 className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                {t("hero.useCases.sales.title")}
+              </h3>
+              <p className="text-sm text-slate-600">
+                {t("hero.useCases.sales.desc")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
+              <div className="h-12 w-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+                <MessageSquare className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                {t("hero.useCases.support.title")}
+              </h3>
+              <p className="text-sm text-slate-600">
+                {t("hero.useCases.support.desc")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
+              <div className="h-12 w-12 rounded-xl bg-lime-100 text-lime-600 flex items-center justify-center mb-4">
+                <Phone className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                {t("hero.useCases.ops.title")}
+              </h3>
+              <p className="text-sm text-slate-600">
+                {t("hero.useCases.ops.desc")}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* News & Updates Section */}
@@ -1457,29 +1502,28 @@ export function LoginPage() {
       <HomeFAQ />
 
       {/* Contact Section */}
-      <div className="bg-slate-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="py-14 bg-white border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="max-w-2xl mx-auto text-center space-y-4">
-            <h3 className="text-2xl font-bold">Get in Touch</h3>
-            <p className="text-slate-300">
-              Have questions? We're here to help you get started with eChatbot.
+            <h3 className="text-2xl font-bold text-slate-900">
+              {t("contact.title")}
+            </h3>
+            <p className="text-slate-600">
+              {t("contact.subtitle")}
             </p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-6 pt-4">
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-green-400" />
+              <div className="flex items-center gap-3 text-slate-700">
+                <Mail className="w-5 h-5 text-green-600" />
                 <a
                   href="mailto:info@echatbot.ai"
-                  className="text-slate-300 hover:text-white"
+                  className="hover:text-green-700"
                 >
                   info@echatbot.ai
                 </a>
               </div>
-              <div className="flex items-center gap-3">
-                 
-              </div>
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-green-400" />
-                <span className="text-slate-300">Barcelona</span>
+              <div className="flex items-center gap-3 text-slate-700">
+                <MapPin className="w-5 h-5 text-green-600" />
+                <span>Barcelona</span>
               </div>
             </div>
           </div>

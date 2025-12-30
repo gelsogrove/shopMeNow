@@ -6,7 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- 🔐 FIX GOOGLE GSI: Required for token transformation in production -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <title>eChatbot - Create your sell AI agent !</title>
+    <title>eChatbot - WhatsApp AI agent for sales and support</title>
+    <meta
+      name="description"
+      content="Create your WhatsApp AI agent to qualify leads, confirm orders, and support customers with eChatbot."
+    />
+    <meta property="og:title" content="eChatbot - WhatsApp AI agent for sales and support" />
+    <meta
+      property="og:description"
+      content="Create your WhatsApp AI agent to qualify leads, confirm orders, and support customers with eChatbot."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="eChatbot - WhatsApp AI agent for sales and support" />
+    <meta
+      name="twitter:description"
+      content="Create your WhatsApp AI agent to qualify leads, confirm orders, and support customers with eChatbot."
+    />
+    <meta name="twitter:image" content="/logo.png" />
     <script>
       ;(function handleRootRedirect() {
         const path = window.location.pathname
@@ -14,9 +32,12 @@
           return
         }
 
+        const apiBase = "%VITE_API_URL%"
+        const resolvedApiBase =
+          apiBase && !apiBase.startsWith("%") ? apiBase.replace(/\/$/, "") : window.location.origin
         const loginUrl = `${window.location.origin}/auth/login`
 
-        fetch("/api/platform-config/flags/check")
+        fetch(`${resolvedApiBase}/api/platform-config/flags/check`)
           .then((response) => (response.ok ? response.json() : null))
           .then((payload) => {
             const landingEnabled = payload?.data?.landingPageEnabled

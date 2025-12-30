@@ -97,6 +97,7 @@ export function App() {
                 <Route path="/impersonate" element={<ImpersonatePage />} />
 
                 {/* Public Legal Pages */}
+                <Route path="/landing" element={<LoginPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 {/* Direct route for /forgot-password to avoid 404 */}
