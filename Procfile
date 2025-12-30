@@ -3,4 +3,4 @@
 # For other apps, use: Procfile.scheduler, Procfile.backoffice
 
 web: node apps/backend/dist/src/index.js
-release: npm run prisma:migrate:prod
+release: bash .heroku-release

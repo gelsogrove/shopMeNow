@@ -1,0 +1,12 @@
+#!/bin/bash
+# Heroku release script
+# Skip release for backoffice (static SPA - no DB needed)
+
+if [ "$HEROKU_APP_NAME" = "echatbot-backoffice" ]; then
+  echo "✅ echatbot-backoffice: Skipping release (static SPA)"
+  exit 0
+fi
+
+# Run migrations for apps that need DB
+echo "🚀 Running Prisma migrations..."
+npm run prisma:migrate:prod
