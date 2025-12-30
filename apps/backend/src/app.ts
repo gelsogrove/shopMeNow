@@ -64,6 +64,7 @@ app.use(
       process.env.NODE_ENV === "production"
         ? [
             process.env.FRONTEND_URL || "https://echatbot.ai",
+            "https://www.echatbot.ai", // Frontend with www
             process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
             "https://echatbot-backoffice-3497e777ec08.herokuapp.com", // Temporary: Heroku URL until DNS propagates
           ]
