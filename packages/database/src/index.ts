@@ -43,10 +43,20 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
+// Build DATABASE_URL with SSL if needed
+const databaseUrl = process.env.DATABASE_URL
+  ? `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}sslmode=require`
+  : undefined
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
+    datasources: {
+      db: {
+        url: databaseUrl,
+      },
+    },
     log: process.env.NODE_ENV === 'development' 
       ? ['error', 'warn'] 
       : ['error'],
