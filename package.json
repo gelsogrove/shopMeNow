@@ -16,7 +16,7 @@
     "kill-ports": "./scripts/kill-ports.sh",
     "dev:all": "npm run kill-ports && npm run dev:backend & npm run dev:frontend & npm run dev:scheduler & npm run dev:backoffice",
     "build": "npm run build --workspaces --if-present",
-    "build:backend": "npm run build -w @echatbot/backend",
+    "build:backend": "cd apps/backend && npm run build",
     "build:frontend": "cd apps/frontend && npm run build",
     "build:backoffice": "npm run build -w @echatbot/backoffice",
     "build:scheduler": "npm run build -w @echatbot/scheduler",
