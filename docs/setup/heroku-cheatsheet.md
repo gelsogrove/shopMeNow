@@ -16,24 +16,16 @@ heroku create echatbot-production
 # 3. Aggiungi Postgres
 heroku addons:create heroku-postgresql:mini -a echatbot-production
 
-# 4. Aggiungi Bucketeer (storage)
-heroku addons:create bucketeer:micro -a echatbot-production
+# 4. Configura storage (Cloudinary)
+heroku config:set CLOUDINARY_URL='cloudinary://api_key:api_secret@cloud_name' -a echatbot-production
 
-# 5. Configura storage (copia variabili Bucketeer)
-heroku config:set \
-  AWS_ACCESS_KEY_ID=$(heroku config:get BUCKETEER_AWS_ACCESS_KEY_ID -a echatbot-production) \
-  AWS_SECRET_ACCESS_KEY=$(heroku config:get BUCKETEER_AWS_SECRET_ACCESS_KEY -a echatbot-production) \
-  AWS_REGION=$(heroku config:get BUCKETEER_AWS_REGION -a echatbot-production) \
-  AWS_S3_BUCKET=$(heroku config:get BUCKETEER_BUCKET_NAME -a echatbot-production) \
-  -a echatbot-production
-
-# 6. Configura security
+# 5. Configura security
 heroku config:set \
   NODE_ENV=production \
   JWT_SECRET=$(openssl rand -hex 64) \
   -a echatbot-production
 
-# 7. Copia TUTTE le altre variabili da .env
+# 6. Copia TUTTE le altre variabili da .env
 ./scripts/sync-env-to-heroku.sh echatbot-production
 ```
 
@@ -125,24 +117,6 @@ heroku run "npx prisma migrate deploy" -a echatbot-production
 
 # Run seed (ATTENZIONE: cancella dati!)
 heroku run "ALLOW_DESTRUCTIVE_OPERATIONS=true npm run prisma:seed" -a echatbot-production
-```
-
----
-
-## 📦 Storage (Bucketeer)
-
-```bash
-# Info addon
-heroku addons:info bucketeer -a echatbot-production
-
-# Dashboard addon
-heroku addons:open bucketeer -a echatbot-production
-
-# Variabili Bucketeer
-heroku config -a echatbot-production | grep BUCKETEER
-
-# Upgrade storage plan
-heroku addons:upgrade bucketeer:kilo -a echatbot-production  # 10GB
 ```
 
 ---
@@ -248,6 +222,5 @@ heroku addons:destroy heroku-postgresql -a echatbot-production
 
 - **Heroku CLI Docs**: https://devcenter.heroku.com/articles/heroku-cli
 - **Postgres Addon**: https://devcenter.heroku.com/articles/heroku-postgresql
-- **Bucketeer Addon**: https://elements.heroku.com/addons/bucketeer
 - **Node.js on Heroku**: https://devcenter.heroku.com/articles/nodejs-support
 - **Dashboard**: https://dashboard.heroku.com/

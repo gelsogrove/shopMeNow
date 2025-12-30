@@ -4,7 +4,7 @@
 
 Quando un ordine viene completato:
 1. ✅ Genera PDF fattura professionale
-2. ✅ Salva con Storage Service (Local dev / S3 prod)
+2. ✅ Salva con Storage Service (Local dev / Cloudinary prod)
 3. ✅ Associa fattura all'ordine nel DB
 4. ✅ Genera signed URL per download sicuro
 5. ✅ Invia email al cliente con link
@@ -22,7 +22,7 @@ InvoiceService.generateInvoice()
 2. Genera PDF (pdfkit)
 3. Upload PDF (StorageService)
     ├─ Dev: ./uploads/invoices/
-    └─ Prod: S3 bucket
+    └─ Prod: Cloudinary
 4. Salva URL in Order.invoiceUrl
 5. Return signed URL
     ↓
@@ -136,7 +136,7 @@ model Order {
   
   // Invoice fields
   invoiceUrl   String?  // Public or signed URL
-  invoiceKey   String?  // S3 key for deletion
+  invoiceKey   String?  // Storage key for deletion
   invoiceDate  DateTime? // When invoice was generated
   
   @@index([invoiceKey])
@@ -169,7 +169,7 @@ POST /api/orders/:id/complete
 1. Valida pagamento
 2. Update order status → COMPLETED
 3. Genera fattura PDF
-4. Upload su S3 (o local)
+4. Upload su storage esterno (o local)
 5. Salva URL in order.invoiceUrl
 6. Invia email con link
 ```
@@ -215,12 +215,12 @@ const file = await storage.upload(pdfBuffer, {
 });
 
 // URL diretta NON funziona:
-// https://bucket.s3.amazonaws.com/invoices/123/ORD-001.pdf
+// https://res.cloudinary.com/<cloud_name>/.../invoices/123/ORD-001.pdf
 // → 403 Forbidden
 
 // Serve signed URL:
 const signedUrl = await storage.getUrl(file.key, 3600);
-// https://bucket.s3.amazonaws.com/invoices/123/ORD-001.pdf?X-Amz-Signature=...
+// https://res.cloudinary.com/<cloud_name>/.../invoices/123/ORD-001.pdf?signature=...
 // → 200 OK (valido 1 ora)
 ```
 
@@ -332,22 +332,9 @@ export function setupInvoiceCleanup() {
 
 ## 💰 Costi
 
-### Storage S3
+### Storage
 
-```
-Scenario: 1000 ordini/mese
-
-Files:
-- 1000 fatture PDF (100KB) = 100MB/mese
-- Retention: Permanente (legale)
-
-S3 Storage: 100MB × €0.023/GB = €0.002/mese
-S3 Requests:
-  - Upload: 1000 × €0.005/1000 = €0.005
-  - Download: 2000 × €0.0004/1000 = €0.0008
-
-Totale: ~€0.01/mese (praticamente gratis)
-```
+Valuta i costi in base al provider (Cloudinary o equivalente).
 
 ---
 

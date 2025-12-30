@@ -19,40 +19,38 @@ Guida completa per deployment di eChatbot su Heroku.
 
 ## 🏗️ Setup Iniziale Heroku
 
-### 1. Login e Creazione delle 4 App
+### 1. Login e Creazione delle 3 App
 
 ```bash
 # Login a Heroku
 heroku login
 
-# Crea 4 app separate (scegli nomi unici)
-heroku create echatbot-api         # Backend API
-heroku create echatbot-app          # Frontend
+# Crea 3 app separate (scegli nomi unici)
+heroku create echatbot-app          # Backend + Frontend (monolith)
 heroku create echatbot-backoffice   # Backoffice Admin
 heroku create echatbot-scheduler    # Scheduler/Worker
 
 # Verifica remote git (aggiungeremo app specifiche dopo)
 git remote -v
-# Per deploy su app specifica: git push heroku-api main (dove heroku-api è remote custom)
 ```
 
-### 2. Aggiungi Postgres Database (CONDIVISO tra tutte le 4 app)
+### 2. Aggiungi Postgres Database (CONDIVISO tra tutte le 3 app)
 
 ```bash
-# Crea database su app Backend (echatbot-api)
-heroku addons:create heroku-postgresql:mini --app echatbot-api
+# Crea database su app principale (echatbot-app)
+heroku addons:create heroku-postgresql:mini --app echatbot-app
 
 # Ottieni DATABASE_URL
-DATABASE_URL=$(heroku config:get DATABASE_URL --app echatbot-api)
+DATABASE_URL=$(heroku config:get DATABASE_URL --app echatbot-app)
 
 # Condividi DATABASE_URL con tutte le altre app
-heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-app
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-backoffice
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-scheduler
 
 # Verifica che tutte le app abbiano lo stesso DATABASE_URL
-heroku config:get DATABASE_URL --app echatbot-api
 heroku config:get DATABASE_URL --app echatbot-app
+heroku config:get DATABASE_URL --app echatbot-backoffice
+heroku config:get DATABASE_URL --app echatbot-scheduler
 ```
 
 **IMPORTANTE**: 
@@ -61,15 +59,18 @@ heroku config:get DATABASE_URL --app echatbot-app
 
 ### 3. Configura Variabili d'Ambiente (tutte le 4 app)
 
-#### **Backend (echatbot-api)**
+#### **Backend + Frontend (echatbot-app)**
 
 ```bash
 # Security
-heroku config:set NODE_ENV=production --app echatbot-api
-heroku config:set JWT_SECRET=$(openssl rand -hex 64) --app echatbot-api
+heroku config:set NODE_ENV=production --app echatbot-app
+heroku config:set JWT_SECRET=$(openssl rand -hex 64) --app echatbot-app
 
-# Frontend URL (per redirect con token)
-heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-api
+# Frontend URL (per redirect con token - stessa app)
+heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-app
+
+# Backend API URL (per chiamate frontend - stessa app)
+heroku config:set VITE_API_URL=https://echatbot-app.herokuapp.com --app echatbot-app
 
 # LLM / AI
 heroku config:set OPENROUTER_API_KEY=your_key --app echatbot-api
@@ -85,13 +86,8 @@ heroku config:set WHATSAPP_API_URL=https://api.whatsapp.com --app echatbot-api
 heroku config:set WHATSAPP_PHONE_NUMBER_ID=your_id --app echatbot-api
 heroku config:set WHATSAPP_ACCESS_TOKEN=your_token --app echatbot-api
 
-# Storage (Bucketeer addon)
-heroku addons:create bucketeer:micro --app echatbot-api
-# Alias variabili per il codice
-heroku config:set AWS_ACCESS_KEY_ID=$(heroku config:get BUCKETEER_AWS_ACCESS_KEY_ID --app echatbot-api) --app echatbot-api
-heroku config:set AWS_SECRET_ACCESS_KEY=$(heroku config:get BUCKETEER_AWS_SECRET_ACCESS_KEY --app echatbot-api) --app echatbot-api
-heroku config:set AWS_REGION=$(heroku config:get BUCKETEER_AWS_REGION --app echatbot-api) --app echatbot-api
-heroku config:set AWS_S3_BUCKET=$(heroku config:get BUCKETEER_BUCKET_NAME --app echatbot-api) --app echatbot-api
+# Storage (Cloudinary)
+heroku config:set CLOUDINARY_URL='cloudinary://api_key:api_secret@cloud_name' --app echatbot-api
 ```
 
 #### **Frontend (echatbot-app)**
@@ -105,14 +101,14 @@ heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot
 
 ```bash
 # Backend API URL
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-backoffice
+heroku config:set VITE_API_URL=https://echatbot-app.herokuapp.com --app echatbot-backoffice
 ```
 
 #### **Scheduler (echatbot-scheduler)**
 
 ```bash
 # Backend API URL (se necessario)
-heroku config:set API_URL=https://echatbot-api.herokuapp.com --app echatbot-scheduler
+heroku config:set API_URL=https://echatbot-app.herokuapp.com --app echatbot-scheduler
 ```
 ```
 
@@ -460,8 +456,7 @@ heroku run "npx prisma migrate deploy"
 | ----------------- | -------------- | ---------- | ---- |
 | Dyno (web)        | Eco            | $5         | 1000 ore/mese |
 | Postgres          | Mini           | $5         | 10GB + backup automatico |
-| Bucketeer (storage) | Micro        | $5         | 1GB immagini/file |
-| **TOTALE**        |                | **$15**    | ✅ Setup completo + backup |
+| **TOTALE**        |                | **$10**    | ✅ Setup completo + backup |
 
 **Setup Performance (se traffico alto):**
 
@@ -469,8 +464,7 @@ heroku run "npx prisma migrate deploy"
 | ----------------- | -------------- | ---------- | ---- |
 | Dyno (web)        | Standard 1X    | $25        | 512MB RAM, sempre attivo |
 | Postgres          | Standard 0     | $50        | 64GB + backup avanzato |
-| Bucketeer         | Kilo           | $15        | 10GB storage + 10GB transfer |
-| **TOTALE**        |                | **$90**    | Performance + scalabilità |
+| **TOTALE**        |                | **$75**    | Performance + scalabilità |
 
 **Setup Zero-Budget (SOLO TEST - non affidabile):**
 
@@ -497,8 +491,7 @@ heroku run "npx prisma migrate deploy"
 - [ ] Heroku CLI installato e login fatto
 - [ ] App Heroku creata (`heroku create`)
 - [ ] Postgres addon aggiunto (`heroku-postgresql:mini`)
-- [ ] Bucketeer addon aggiunto (`heroku addons:create bucketeer:micro`)
-- [ ] Variabili Bucketeer copiate in AWS_* (`heroku config:set AWS_ACCESS_KEY_ID=...`)
+- [ ] Cloudinary configurato (`heroku config:set CLOUDINARY_URL=...`)
 - [ ] Tutte le env variables configurate (JWT_SECRET, DATABASE_URL, etc.)
 - [ ] Deploy fatto (`git push heroku main`)
 - [ ] Migrations eseguite (automatico via `release` command)
@@ -506,7 +499,7 @@ heroku run "npx prisma migrate deploy"
 - [ ] Login admin testato
 - [ ] API endpoints testano (`/health`, `/api/...`)
 - [ ] Frontend carica correttamente
-- [ ] Upload immagini funziona (Bucketeer)
+- [ ] Upload immagini funziona (Cloudinary)
 - [ ] Backup database verificato (`heroku pg:backups`)
 
 ---
@@ -517,6 +510,5 @@ heroku run "npx prisma migrate deploy"
 
 ## 📚 Riferimenti Addon
 
-- **Bucketeer**: https://elements.heroku.com/addons/bucketeer
 - **Postgres**: https://elements.heroku.com/addons/heroku-postgresql
 - **Dashboard Heroku**: https://dashboard.heroku.com/

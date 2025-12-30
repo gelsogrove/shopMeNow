@@ -39,7 +39,7 @@ interface UpdateWorkspaceData {
   welcomeMessage?: string // English only
   allowedExternalLinks?: string[] // 🛡️ Security: allowed domains for external links
   logoUrl?: string // Logo URL
-  logoKey?: string // 💾 S3 key for cleanup
+  logoKey?: string // 💾 Storage key for cleanup
   // 🆕 Channel Configuration (Feature 199)
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean

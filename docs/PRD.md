@@ -114,7 +114,7 @@ Una piattaforma SaaS che trasforma WhatsApp in un canale di vendita automatizzat
 | **Team** | Multi-user workspace, Inviti, Ruoli |
 | **Security** | 2FA, JWT, Workspace isolation |
 | **Analytics** | Dashboard base, Usage tracking |
-| **Storage** | Unified storage (Local dev / S3 prod), Image upload, Cleanup scheduler |
+| **Storage** | Unified storage (Local dev / Cloudinary prod), Image upload, Cleanup scheduler |
 | **Invoices** | PDF generation, Storage integration, Signed URLs |
 
 ### ❌ Out of Scope (Future / V2)
@@ -376,7 +376,7 @@ Postcondizioni: Chatbot riprende a funzionare
 
 | RF-ID | Requisito | Dettaglio |
 |-------|-----------|----------|
-| RF-070 | Unified Interface | `IStorageService` interface comune per Local e S3 |
+| RF-070 | Unified Interface | `IStorageService` interface comune per Local e Cloudinary |
 | RF-071 | Auto-Switch | `getStorageService()` ritorna LocalAdapter in dev, S3Adapter in prod (basato su NODE_ENV) |
 | RF-072 | Product Images | Upload immagini prodotti in `products/{workspaceId}/` con tracking `imageKey` |
 | RF-073 | Service Images | Upload immagini servizi in `services/{workspaceId}/` con tracking `imageKey` |
@@ -390,7 +390,7 @@ Postcondizioni: Chatbot riprende a funzionare
 | RF-ID | Requisito | Dettaglio |
 |-------|-----------|----------|
 | RF-080 | PDF Generation | Generazione fattura PDF con pdfkit (logo, dettagli ordine, totali) |
-| RF-081 | Storage Integration | Salvataggio fattura via Storage Service (Local o S3) |
+| RF-081 | Storage Integration | Salvataggio fattura via Storage Service (Local o Cloudinary) |
 | RF-082 | Signed URLs | URL firmati con scadenza per download sicuro (default 1h) |
 | RF-083 | Order Integration | `invoiceUrl`, `invoiceKey`, `invoiceDate` salvati in Orders table |
 | RF-084 | Cancelled Cleanup | Job scheduler elimina fatture ordini cancellati (04:00 daily) |
@@ -621,9 +621,9 @@ AND non vede MAI i prodotti del workspace B
 - [x] Soft Delete (Feature 196)
 - [x] Owner-based Billing (Feature 198)
 - [x] Channel Wizard (Feature 199)
-- [x] Storage Service (Local/S3) 
+- [x] Storage Service (Local/Cloudinary) 
 - [x] Invoice Generation (PDF)
-- [x] Terraform AWS Infrastructure
+- [x] Terraform Infrastructure
 
 ---
 
@@ -640,9 +640,9 @@ AND non vede MAI i prodotti del workspace B
 | **Auth** | JWT + TOTP (2FA) |
 | **Payments** | PayPal API |
 | **Messaging** | WhatsApp Business API |
-| **Storage** | Local (dev) / AWS S3 (prod) |
+| **Storage** | Local (dev) / Cloudinary (prod) |
 | **PDF** | pdfkit |
-| **Hosting** | AWS EC2 + RDS (Terraform) |
+| **Hosting** | Heroku |
 
 ### Struttura Monorepo
 
@@ -661,7 +661,6 @@ shopME/
 │   ├── setup/           # Deployment guides
 │   ├── prompts/         # LLM prompt templates
 │   └── archived/        # Old specs & completed tasks
-└── terraform/           # AWS infrastructure (EC2, RDS, S3)
 ```
 
 ### Database Schema (Entità Principali)

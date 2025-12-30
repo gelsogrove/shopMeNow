@@ -4,7 +4,7 @@
 
 **Problema**: File salvati localmente non funzionano in produzione (EC2 effimero, scaling, backup)
 
-**Soluzione**: Storage Service unificato con switch automatico Local/S3
+**Soluzione**: Storage Service unificato con switch automatico Local/Cloudinary
 
 ---
 
@@ -13,8 +13,8 @@
 ### 1. **Fatture (PDF)** 🧾
 ```typescript
 Tipo: Private
-Storage: S3 (production) / Local (dev)
-Access: Signed URLs (scadono dopo 1h)
+Storage: Cloudinary (production) / Local (dev)
+Access: Public URLs (o firmate dal provider se necessario)
 Path: invoices/{workspaceId}/{orderId}.pdf
 Retention: Permanente (legale)
 Size: ~100KB per fattura
@@ -23,7 +23,7 @@ Size: ~100KB per fattura
 ### 2. **Immagini Prodotti** 🛍️
 ```typescript
 Tipo: Public
-Storage: S3 + CloudFront CDN
+Storage: Cloudinary CDN
 Access: Public URLs
 Path: products/{workspaceId}/{productId}.jpg
 Retention: Finché prodotto esiste
@@ -34,7 +34,7 @@ Cleanup: Quando prodotto eliminato
 ### 3. **Immagini Servizi** 🔧
 ```typescript
 Tipo: Public
-Storage: S3 + CloudFront CDN
+Storage: Cloudinary CDN
 Access: Public URLs
 Path: services/{workspaceId}/{serviceId}.jpg
 Retention: Finché servizio esiste
@@ -45,7 +45,7 @@ Cleanup: Quando servizio eliminato
 ### 4. **Loghi Workspace** 🏢
 ```typescript
 Tipo: Public
-Storage: S3 + CloudFront CDN
+Storage: Cloudinary CDN
 Access: Public URLs
 Path: workspaces/{workspaceId}/logo.png
 Retention: Finché workspace esiste
@@ -56,7 +56,7 @@ Cleanup: Quando workspace eliminato
 ### 5. **Loghi Canali WhatsApp** 📱
 ```typescript
 Tipo: Public
-Storage: S3 + CloudFront CDN
+Storage: Cloudinary CDN
 Access: Public URLs
 Path: channels/{workspaceId}/{channelId}/logo.png
 Retention: Finché canale esiste
@@ -67,7 +67,7 @@ Cleanup: Quando canale eliminato
 ### 6. **File Temporanei** ⏱️
 ```typescript
 Tipo: Temporary
-Storage: S3 (temp folder)
+Storage: Cloudinary (temp folder)
 Access: Private
 Path: temp/{timestamp}-{random}.ext
 Retention: 24 ore
@@ -93,15 +93,14 @@ Cleanup: Scheduler giornaliero
         ┌────────┴────────┐
         ▼                 ▼
 ┌──────────────┐  ┌──────────────┐
-│   Local      │  │     S3       │
+│   Local      │  │  Cloudinary  │
 │ (Dev only)   │  │ (Production) │
-│ ./uploads/   │  │ AWS Bucket   │
+│ ./uploads/   │  │ Cloudinary   │
 └──────────────┘  └──────────────┘
                          │
                          ▼
                   ┌──────────────┐
-                  │  CloudFront  │
-                  │     CDN      │
+                  │  CDN         │
                   │  (Public)    │
                   └──────────────┘
 ```
@@ -119,7 +118,7 @@ Cleanup: Scheduler giornaliero
 async function cleanupOrphanedFiles() {
   const storage = getStorageService();
   
-  // 1. Lista tutti i file S3
+  // 1. Lista tutti i file storage
   const allFiles = await storage.list('products');
   
   // 2. Query database per file attivi
@@ -181,7 +180,7 @@ async function reportUnusedFiles() {
   const storage = getStorageService();
   
   // Query file non acceduti da 30 giorni
-  // (richiede S3 access logs o CloudWatch)
+  // (richiede access logs del provider)
   
   const report = {
     totalFiles: 0,
@@ -243,7 +242,7 @@ export function setupStorageCleanup() {
 
 model FileMetadata {
   id          String   @id @default(cuid())
-  key         String   @unique // S3 key or local path
+  key         String   @unique // Storage key or local path
   url         String   // Public or signed URL
   type        FileType
   entityType  String   // "product", "service", "workspace", "channel", "invoice"
@@ -273,7 +272,7 @@ enum FileType {
 model Product {
   // ... existing fields
   imageUrl     String?
-  imageKey     String? // S3 key for cleanup
+  imageKey     String? // Storage key for cleanup
   imageMetadataId String?
   imageMetadata FileMetadata? @relation(fields: [imageMetadataId], references: [id])
 }
@@ -365,7 +364,7 @@ async function migrateExistingFiles() {
   
   for (const product of products) {
     if (product.imageUrl?.startsWith('/uploads/')) {
-      // File locale, upload su S3
+      // File locale, upload su storage esterno
       const localPath = path.join('./uploads', product.imageUrl.replace('/uploads/', ''));
       const buffer = await fs.readFile(localPath);
       
@@ -395,39 +394,6 @@ async function migrateExistingFiles() {
 ```bash
 # Attiva scheduler
 npm run scheduler
-```
-
----
-
-## 💰 Cost Estimation
-
-### Storage Costs (S3)
-
-```
-Scenario: 1000 workspaces, 10 prodotti ciascuno
-
-Files:
-- 1000 workspace logos (100KB) = 100MB
-- 10000 product images (500KB) = 5GB
-- 1000 invoices/mese (100KB) = 100MB/mese
-Total: ~5.2GB
-
-S3 Storage: 5.2GB × €0.023/GB = €0.12/mese
-S3 Requests: 
-  - Upload: 1000/mese × €0.005/1000 = €0.005
-  - Download: 100K/mese × €0.0004/1000 = €0.04
-CloudFront: 10GB transfer × €0.085/GB = €0.85/mese
-
-Total: ~€1/mese
-```
-
-### Cleanup Savings
-
-```
-Senza cleanup: +500MB/mese file orfani = +€0.01/mese
-Con cleanup: File orfani eliminati = €0 extra
-
-Risparmio annuale: €0.12 (minimo ma importante per scalabilità)
 ```
 
 ---
@@ -475,11 +441,11 @@ workspace.logoUrl = file.url;
 
 ## 📊 Monitoring
 
-### CloudWatch Metrics
+### Monitoring Metrics
 
 ```typescript
 // Track storage usage
-await cloudwatch.putMetricData({
+await monitoringClient.putMetricData({
   Namespace: 'eChatbot/Storage',
   MetricData: [{
     MetricName: 'FilesUploaded',
@@ -513,11 +479,11 @@ await cloudwatch.putMetricData({
 - [ ] Update Channel upload logic
 - [ ] Update Invoice generation
 - [ ] Crea cleanup jobs scheduler
-- [ ] Migra file esistenti da local a S3
+- [ ] Migra file esistenti da local a storage esterno
 - [ ] Test cleanup jobs
-- [ ] Setup CloudWatch monitoring
+- [ ] Setup monitoring provider
 - [ ] Deploy in production
-- [ ] Verifica backup S3
+- [ ] Verifica backup storage
 
 ---
 

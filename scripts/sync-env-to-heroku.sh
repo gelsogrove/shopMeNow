@@ -61,7 +61,6 @@ WARN_VARS=(
   "OPENROUTER_API_KEY"
   "WHATSAPP_ACCESS_TOKEN"
   "GOOGLE_CLIENT_SECRET"
-  "AWS_SECRET_ACCESS_KEY"
 )
 
 # Read .env file and prepare config vars

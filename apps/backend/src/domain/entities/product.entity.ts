@@ -16,7 +16,7 @@ export class Product {
   supplierId: string | null
   workspaceId: string
   imageUrl: string[]
-  imageKey: string | null // 💾 S3 key for cleanup
+  imageKey: string | null // 💾 Storage key for cleanup
   certifications: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
   transportType: string
   region: string | null // ✅ Feature 123 - Geographic region (Campania, Puglia, etc.)

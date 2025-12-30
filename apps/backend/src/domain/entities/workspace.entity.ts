@@ -45,7 +45,7 @@ export interface WorkspaceProps {
   customAiRules?: string | null
   // 🆕 Logo
   logoUrl?: string | null
-  logoKey?: string | null // 💾 S3 key for cleanup
+  logoKey?: string | null // 💾 Storage key for cleanup
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

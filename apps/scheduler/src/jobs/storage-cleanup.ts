@@ -10,17 +10,6 @@ interface IStorageService {
 // Simple storage service implementation for scheduler
 // This avoids importing from backend which causes rootDir issues
 function getStorageService(): IStorageService {
-  const storageType = process.env.STORAGE_TYPE || 'local';
-  
-  if (storageType === 's3') {
-    // For S3, we'd need AWS SDK - for now just log and skip
-    console.warn('⚠️ S3 storage cleanup not yet implemented in scheduler');
-    return {
-      list: async () => [],
-      delete: async () => {},
-    };
-  }
-  
   // Local storage implementation
   const fs = require('fs');
   const path = require('path');

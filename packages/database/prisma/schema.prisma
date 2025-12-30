@@ -34,7 +34,7 @@ model Workspace {
   metadata                  Json?
   allowedExternalLinks      String[]          @default([]) // Security Agent: allowed external domains (e.g., ["shopme.com", "stripe.com"])
   logoUrl                   String?                            // Channel logo URL (circular display)
-  logoKey                   String?                            // 💾 S3 key for cleanup
+  logoKey                   String?                            // 💾 Storage key for cleanup
   
   // ============================================================================
   // 🆕 Channel Configuration (from Wizard - Feature 199)
@@ -191,7 +191,7 @@ model Products {
   slug                  String                  @unique
   status                ProductStatus           @default(ACTIVE)
   imageUrl              String[]                @default([])
-  imageKey              String?                 // 💾 S3 key for cleanup (e.g., "products/workspace-id/product-id.jpg")
+  imageKey              String?                 // 💾 Storage key for cleanup (e.g., "products/workspace-id/product-id.jpg")
   transportType         String                  @default("Temperatura ambiente")
   region                String?
   allergens             String[]                @default([])
@@ -394,7 +394,7 @@ model Orders {
   
   // 🧯 INVOICE FIELDS
   invoiceUrl      String?         // Public or signed URL to invoice PDF
-  invoiceKey      String?         // S3 key for deletion (e.g., "invoices/workspace-id/ORD-2024-001.pdf")
+  invoiceKey      String?         // Storage key for deletion (e.g., "invoices/workspace-id/ORD-2024-001.pdf")
   invoiceDate     DateTime?       // When invoice was generated
   
   items           OrderItems[]
@@ -831,7 +831,7 @@ model Services {
   updatedAt   DateTime     @updatedAt
   duration    Int          @default(60)
   imageUrl    String[]     @default([])
-  imageKey    String?      // 💾 S3 key for cleanup
+  imageKey    String?      // 💾 Storage key for cleanup
   cartItems   CartItems[]
   orderItems  OrderItems[]
   workspace   Workspace    @relation(fields: [workspaceId], references: [id])

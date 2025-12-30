@@ -727,7 +727,7 @@ export class ProductRepository implements IProductRepository {
       supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
-      imageKey: data.imageKey || null, // 💾 S3 key for cleanup
+      imageKey: data.imageKey || null, // 💾 Storage key for cleanup
       certifications: certificationNames, // Use relation data or fallback to array
       transportType: data.transportType || "Temperatura ambiente",
       region: data.region,

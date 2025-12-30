@@ -130,8 +130,8 @@ export async function downloadInvoice(req: Request, res: Response) {
 - [x] `workspace.service.ts` - Aggiunto `logoKey` all'interface ✅
 
 ### Environment:
-- [ ] `.env` locale - Aggiungi `AWS_S3_BUCKET`, `UPLOADS_DIR`
-- [ ] GitHub Secrets - Aggiungi `AWS_S3_BUCKET`
+- [ ] `.env` locale - Aggiungi `CLOUDINARY_URL` (prod) o `UPLOADS_DIR` (local)
+- [ ] GitHub Secrets - Aggiungi `CLOUDINARY_URL` se necessario
 
 ---
 
@@ -143,11 +143,11 @@ export async function downloadInvoice(req: Request, res: Response) {
 - [ ] Genera fattura → Salva in `./uploads/invoices/`
 - [ ] Scheduler cleanup → Elimina file orfani da `./uploads/`
 
-### Production (S3):
-- [ ] Upload immagine prodotto → Salva in S3 `products/`
-- [ ] Delete prodotto → Elimina da S3
-- [ ] Genera fattura → Salva in S3 `invoices/`
-- [ ] Scheduler cleanup → Elimina file orfani da S3
+### Production:
+- [ ] Upload immagine prodotto → Salva su storage esterno
+- [ ] Delete prodotto → Elimina da storage esterno
+- [ ] Genera fattura → Salva su storage esterno
+- [ ] Scheduler cleanup → Elimina file orfani
 
 ---
 
@@ -228,7 +228,7 @@ try {
 - [ ] Tutti i controller aggiornati
 - [ ] Database migration eseguita
 - [ ] Test local funzionanti
-- [ ] Terraform apply (crea S3 buckets)
+- [ ] Terraform apply (solo se usi Terraform)
 - [ ] Test production funzionanti
 - [ ] Scheduler attivo
 - [ ] Documentazione aggiornata
@@ -243,17 +243,8 @@ try {
 import { getStorageService } from '../../../services/storage';
 ```
 
-### Errore: "AWS credentials not found"
+### Errore: "Storage credentials not found"
 ```bash
 # Verifica .env
-AWS_S3_BUCKET=echatbot-uploads-prod
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-```
-
-### Errore: "Bucket does not exist"
-```bash
-# Crea bucket con Terraform
-cd terraform
-terraform apply
+CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
 ```

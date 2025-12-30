@@ -6,30 +6,24 @@ Sei un **Deployment Agent** responsabile del deploy completo del progetto **echa
 
 ## 📦 Architettura del progetto
 
-Il progetto è composto da **4 componenti separati**:
+Il progetto è deployato su **3 app Heroku separate**:
 
-### 1. **Frontend (App Principale)**
+### 1. **echatbot-app (Backend + Frontend - Monolith)**
 - **Heroku App**: `echatbot-app`
-- **Sorgenti**: `apps/frontend/src/`
-- **Build Output**: `apps/frontend/dist/` (generato su Heroku)
-- **Serve**: File statici HTML/JS/CSS
+- **Componenti**:
+  - Backend API: `apps/backend/src/` → `apps/backend/dist/src/index.js`
+  - Frontend: `apps/frontend/src/` → `apps/frontend/dist/`
 - **URL Produzione**: `https://echatbot-app.herokuapp.com`
+- **Serve**: API + File statici Frontend
 
-### 2. **Backend (API)**
-- **Heroku App**: `echatbot-api`
-- **Sorgenti**: `apps/backend/src/`
-- **Build Output**: `apps/backend/dist/` (generato su Heroku)
-- **Entry Point**: `apps/backend/dist/src/index.js`
-- **URL Produzione**: `https://echatbot-api.herokuapp.com`
-
-### 3. **Backoffice (Admin Panel)**
+### 2. **echatbot-backoffice (Admin Panel)**
 - **Heroku App**: `echatbot-backoffice`
 - **Sorgenti**: `apps/backoffice/src/`
 - **Build Output**: `apps/backoffice/dist/` (generato su Heroku)
-- **Serve**: File statici HTML/JS/CSS
 - **URL Produzione**: `https://echatbot-backoffice.herokuapp.com`
+- **Serve**: File statici Admin UI
 
-### 4. **Scheduler (Worker/Cron)**
+### 3. **echatbot-scheduler (Worker/Cron)**
 - **Heroku App**: `echatbot-scheduler`
 - **Sorgenti**: `apps/scheduler/src/`
 - **Build Output**: `apps/scheduler/dist/` (generato su Heroku)
@@ -88,7 +82,7 @@ git add apps/backend/src/
 git commit -m "feat: nuova funzionalità"
 
 # 3. PUSH A HEROKU: Deploy automatico
-git push heroku main
+git push heroku-app main
 
 # 4. HEROKU ESEGUE (automaticamente):
 # - npm install
@@ -101,7 +95,7 @@ git push heroku main
 # - Avvia app
 
 # 5. VERIFICA DEPLOY
-heroku logs --tail --app echatbot-api
+heroku logs --tail --app echatbot-app
 ```
 
 ---
@@ -117,14 +111,14 @@ Il **Frontend** deve chiamare il **Backend API** con URL corretto:
 const API_URL = "http://localhost:3001"
 
 // ✅ CORRETTO (environment-based)
-const API_URL = import.meta.env.VITE_API_URL || "https://echatbot-api.herokuapp.com"
+const API_URL = import.meta.env.VITE_API_URL || "https://echatbot-app.herokuapp.com"
 ```
 
 **File di configurazione Frontend:**
 
 ```bash
 # apps/frontend/.env.production
-VITE_API_URL=https://echatbot-api.herokuapp.com
+VITE_API_URL=https://echatbot-app.herokuapp.com
 ```
 
 **Heroku Config Vars (Frontend):**
@@ -160,10 +154,10 @@ Stesso pattern del Frontend:
 
 ```bash
 # apps/backoffice/.env.production
-VITE_API_URL=https://echatbot-api.herokuapp.com
+VITE_API_URL=https://echatbot-app.herokuapp.com
 
 # Heroku Config Vars
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-backoffice
+heroku config:set VITE_API_URL=https://echatbot-app.herokuapp.com --app echatbot-backoffice
 ```
 
 ---
@@ -183,14 +177,14 @@ Tutte le applicazioni:
 
 ```bash
 # 1. Crea database Postgres (una sola volta)
-heroku addons:create heroku-postgresql:mini --app echatbot-api
+heroku addons:create heroku-postgresql:mini --app echatbot-app
 
 # 2. Ottieni DATABASE_URL
-heroku config:get DATABASE_URL --app echatbot-api
+heroku config:get DATABASE_URL --app echatbot-app
 # Output: postgres://user:pass@host:5432/dbname
 
 # 3. Condividi DATABASE_URL con tutte le altre app
-DATABASE_URL=$(heroku config:get DATABASE_URL --app echatbot-api)
+DATABASE_URL=$(heroku config:get DATABASE_URL --app echatbot-app)
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-app
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-backoffice
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-scheduler
@@ -206,7 +200,7 @@ heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-scheduler
 "heroku-postbuild": "npm run prisma:migrate:prod && npm run build:backend"
 
 # Oppure manualmente:
-heroku run "npx prisma migrate deploy" --app echatbot-api
+heroku run "npx prisma migrate deploy" --app echatbot-app
 ```
 
 ### **Documentazione**
@@ -217,7 +211,7 @@ heroku run "npx prisma migrate deploy" --app echatbot-api
 
 ## 🔐 Variabili di Ambiente (Complete)
 
-### **Backend (echatbot-api)**
+### **echatbot-app (Backend + Frontend)**
 
 ```bash
 # Database

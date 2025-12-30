@@ -865,7 +865,7 @@ const invoiceUrl = `${process.env.FRONTEND_URL}/invoice-public?orderId=${order.i
 **Storage Location**: Local filesystem (for now)
 
 - `backend/uploads/{workspaceId}/invoices/{orderCode}.pdf`
-- Future enhancement: S3/Cloud Storage (out of scope)
+- Future enhancement: Cloud Storage (out of scope)
 
 ### Architecture
 
@@ -1006,7 +1006,7 @@ const invoiceUrl = `${process.env.FRONTEND_URL}/invoice-public?orderId=${order.i
 ### Out of Scope (Future Enhancements)
 
 - PDF customization (customer-specific templates)
-- Cloud storage (S3, Google Cloud Storage)
+- Cloud storage (Cloudinary, Google Cloud Storage)
 - Retry mechanism for failed emails
 - Email tracking (open rate, click rate)
 - Multiple invoice formats (PDF, XML for e-invoicing)

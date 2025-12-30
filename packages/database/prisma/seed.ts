@@ -33,7 +33,7 @@ import { workspaceSettings } from "./data/workspaceSettings"
 // Initialize the PostgreSQL adapter for Prisma 7 with SSL config for Heroku
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('amazonaws.com') || process.env.DATABASE_URL?.includes('heroku')
+  ssl: process.env.DATABASE_URL?.includes('heroku')
     ? { rejectUnauthorized: false }
     : false
 })

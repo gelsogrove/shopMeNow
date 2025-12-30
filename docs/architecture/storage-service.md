@@ -2,13 +2,13 @@
 
 ## 🎯 Problema Risolto
 
-**Prima**: Codice diverso per local e S3
+**Prima**: Codice diverso per local e Cloudinary
 ```typescript
 // Development
 fs.writeFile('./uploads/file.jpg', buffer);
 
 // Production
-s3.upload({ Bucket: 'bucket', Key: 'file.jpg', Body: buffer });
+cloudinary.uploader.upload('/tmp/file.jpg', { folder: 'uploads' });
 ```
 
 **Dopo**: Stesso codice ovunque
@@ -27,13 +27,13 @@ StorageService (Interface)
     ├── LocalStorageAdapter (Development)
     │   └── Salva in ./uploads/
     │
-    └── S3StorageAdapter (Production)
-        └── Salva in S3 bucket
+    └── CloudinaryAdapter (Production)
+        └── Salva su Cloudinary
 ```
 
 **Switch automatico** basato su `NODE_ENV`:
 - `development` → Local filesystem
-- `production` → AWS S3
+- `production` → Cloudinary
 
 ---
 
@@ -59,7 +59,7 @@ const file = await storage.upload(buffer, {
 });
 
 console.log(file.url); // http://localhost:3001/uploads/logos/logo.png (dev)
-                       // https://echatbot-uploads.s3.eu-west-1.amazonaws.com/logos/logo.png (prod)
+                       // https://res.cloudinary.com/<cloud_name>/... (prod)
 ```
 
 ### Upload da path
@@ -83,8 +83,8 @@ const buffer = await storage.get('logos/logo.png');
 // Public URL (se isPublic: true)
 const url = await storage.getUrl('logos/logo.png');
 
-// Signed URL (scade dopo 1 ora)
-const signedUrl = await storage.getUrl('private/doc.pdf', 3600);
+// URL pubblico (o firmato dal provider se necessario)
+const publicUrl = await storage.getUrl('private/doc.pdf', 3600);
 ```
 
 ### Delete file
@@ -122,10 +122,7 @@ UPLOADS_URL=http://localhost:3001/uploads
 
 ```env
 NODE_ENV=production
-AWS_S3_BUCKET=echatbot-uploads-prod
-AWS_REGION=eu-west-1
-AWS_ACCESS_KEY_ID=AKIAQC4U3MGFIUTN4JHJ
-AWS_SECRET_ACCESS_KEY=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
+CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
 ```
 
 ---
@@ -193,70 +190,13 @@ export async function deleteOldLogo(oldUrl: string) {
   
   // Estrai key da URL
   // http://localhost:3001/uploads/workspaces/123-logo.png → workspaces/123-logo.png
-  // https://bucket.s3.amazonaws.com/workspaces/123-logo.png → workspaces/123-logo.png
+  // https://res.cloudinary.com/<cloud_name>/.../workspaces/123-logo.png → workspaces/123-logo.png
   const key = oldUrl.split('/uploads/')[1] || oldUrl.split('.com/')[1];
   
   if (await storage.exists(key)) {
     await storage.delete(key);
   }
 }
-```
-
----
-
-## 🔄 Migrazione da Local a S3
-
-### Step 1: Sync files esistenti
-
-```bash
-# Copia tutti i file locali su S3
-aws s3 sync ./uploads s3://echatbot-uploads-prod/
-```
-
-### Step 2: Update database URLs
-
-```typescript
-// Script migrazione
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-async function migrateUrls() {
-  const workspaces = await prisma.workspace.findMany({
-    where: { logoUrl: { startsWith: 'http://localhost' } }
-  });
-  
-  for (const workspace of workspaces) {
-    const key = workspace.logoUrl.split('/uploads/')[1];
-    const newUrl = `https://echatbot-uploads-prod.s3.eu-west-1.amazonaws.com/${key}`;
-    
-    await prisma.workspace.update({
-      where: { id: workspace.id },
-      data: { logoUrl: newUrl }
-    });
-  }
-  
-  console.log(`✅ Migrated ${workspaces.length} workspace logos`);
-}
-
-migrateUrls();
-```
-
----
-
-## 💰 Costi S3
-
-```
-Storage:     €0.023/GB/mese
-Requests:    €0.0004 per 1000 GET
-             €0.005 per 1000 PUT
-Transfer:    €0.09/GB (primi 10TB)
-
-Esempio (1000 immagini, 500KB ciascuna):
-- Storage: 500MB = €0.01/mese
-- Upload: 1000 PUT = €0.005
-- Download: 10GB = €0.90/mese
-Totale: ~€1/mese
 ```
 
 ---
@@ -318,32 +258,13 @@ const storage = new MockStorageAdapter();
 
 ---
 
-## 📦 Dipendenze
-
-```bash
-# Installa AWS SDK
-npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
-```
-
-```json
-// package.json
-{
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.450.0",
-    "@aws-sdk/s3-request-presigner": "^3.450.0"
-  }
-}
-```
-
----
-
 ## ✅ Vantaggi
 
 - ✅ **Stesso codice** per dev e prod
 - ✅ **Switch automatico** basato su NODE_ENV
 - ✅ **Facile testing** con mock
 - ✅ **Type-safe** con TypeScript
-- ✅ **Scalabile** (da local a S3 senza cambiare codice)
+- ✅ **Scalabile** (da local a Cloudinary senza cambiare codice)
 - ✅ **Signed URLs** per file privati
 - ✅ **Public URLs** per file pubblici
 
@@ -361,34 +282,19 @@ const file = await storage.upload(buffer, { filename: 'logo.png' });
 // Salva in: ./uploads/logos/logo.png
 // URL: http://localhost:3001/uploads/logos/logo.png
 
-// 3. Production (S3)
+// 3. Production (Cloudinary)
 NODE_ENV=production npm start
-// Storage: S3 (bucket: echatbot-uploads-prod)
+// Storage: Cloudinary
 
 // 4. Stesso codice!
 const file = await storage.upload(buffer, { filename: 'logo.png' });
-// Salva in: S3 bucket
-// URL: https://echatbot-uploads-prod.s3.eu-west-1.amazonaws.com/logos/logo.png
+// Salva in: Cloudinary
+// URL: https://res.cloudinary.com/<cloud_name>/.../logos/logo.png
 ```
 
 ---
 
 ## 🆘 Troubleshooting
-
-### Errore: AWS credentials not found
-
-```bash
-# Verifica .env
-AWS_ACCESS_KEY_ID=AKIAQC4U3MGFIUTN4JHJ
-AWS_SECRET_ACCESS_KEY=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
-```
-
-### Errore: Bucket does not exist
-
-```bash
-# Crea bucket S3
-aws s3 mb s3://echatbot-uploads-prod --region eu-west-1
-```
 
 ### File non accessibile (403)
 

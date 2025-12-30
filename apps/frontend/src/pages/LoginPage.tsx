@@ -1021,7 +1021,7 @@ export function LoginPage() {
             Automate every conversation on WhatsApp
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Capture leads, showcase products and confirm orders without leaving the chat.
+            Capture leads, confirm orders, and provide support to your customers.
           </p>
         </div>
         <div className="flex flex-col lg:flex-row gap-10 items-stretch">
