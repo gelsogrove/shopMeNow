@@ -94,14 +94,14 @@ heroku config:set CLOUDINARY_URL='cloudinary://api_key:api_secret@cloud_name' --
 
 ```bash
 # Backend API URL
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-app
+heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-app
 ```
 
 #### **Backoffice (echatbot-backoffice)**
 
 ```bash
 # Backend API URL
-heroku config:set VITE_API_URL=https://echatbot-app.herokuapp.com --app echatbot-backoffice
+heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-backoffice
 ```
 
 #### **Scheduler (echatbot-scheduler)**
@@ -240,10 +240,10 @@ curl https://echatbot-api.herokuapp.com/health
 # Output atteso: {"status":"ok","timestamp":"...","version":"1.0.0"}
 
 # Test Frontend (deve caricare pagina HTML)
-curl https://echatbot-app.herokuapp.com
+curl https://echatbot.ai
 
 # Test Backoffice (deve caricare pagina HTML)
-curl https://echatbot-backoffice.herokuapp.com
+curl https://backoffice.echatbot.ai
 
 # Test Scheduler (NON espone web server, solo worker)
 heroku ps --app echatbot-scheduler  # Verifica worker running

@@ -34,7 +34,7 @@ const pg_1 = require("pg");
 // Initialize the PostgreSQL adapter with SSL support for Heroku
 const pool = new pg_1.Pool({
     connectionString: DATABASE_URL,
-    ssl: DATABASE_URL?.includes('amazonaws.com') || DATABASE_URL?.includes('heroku')
+    ssl: DATABASE_URL?.includes('heroku')
         ? { rejectUnauthorized: false }
         : false
 });

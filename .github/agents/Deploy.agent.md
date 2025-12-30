@@ -20,7 +20,8 @@ Il progetto è deployato su **3 app Heroku separate**:
 - **Heroku App**: `echatbot-backoffice`
 - **Sorgenti**: `apps/backoffice/src/`
 - **Build Output**: `apps/backoffice/dist/` (generato su Heroku)
-- **URL Produzione**: `https://echatbot-backoffice.herokuapp.com`
+- **URL Produzione**: `https://backoffice.echatbot.ai`
+- **Dominio Custom**: `backoffice.echatbot.ai` (CNAME → Heroku DNS)
 - **Serve**: File statici Admin UI
 
 ### 3. **echatbot-scheduler (Worker/Cron)**
@@ -29,6 +30,48 @@ Il progetto è deployato su **3 app Heroku separate**:
 - **Build Output**: `apps/scheduler/dist/` (generato su Heroku)
 - **Entry Point**: `apps/scheduler/dist/src/index.js`
 - **Tipo**: Worker (NO web server)
+
+---
+
+## 🔐 CORS Configuration (CRITICO!)
+
+**⚠️ REQUISITO OBBLIGATORIO**: Configurare CORS su Backend per consentire comunicazione tra app.
+
+### **Variabili Ambiente Heroku (echatbot-app)**
+
+```bash
+# Domini autorizzati per CORS
+FRONTEND_URL=https://echatbot.ai
+BACKOFFICE_URL=https://backoffice.echatbot.ai
+CORS_ORIGIN=https://echatbot.ai,https://backoffice.echatbot.ai
+```
+
+### **Codice Backend (apps/backend/src/app.ts)**
+
+```typescript
+app.use(cors({
+  origin: process.env.NODE_ENV === "production"
+    ? [
+        process.env.FRONTEND_URL || "https://echatbot.ai",
+        process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
+      ]
+    : ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:5173"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-workspace-id", "X-Session-Id"],
+}))
+```
+
+### **Checklist CORS Deploy**
+
+- [ ] ✅ `FRONTEND_URL` configurato su echatbot-app
+- [ ] ✅ `BACKOFFICE_URL` configurato su echatbot-app
+- [ ] ✅ `CORS_ORIGIN` configurato su echatbot-app (opzionale, ma recommended)
+- [ ] ✅ Backend riavviato dopo modifica variabili: `heroku restart --app echatbot-app`
+- [ ] ✅ Test chiamate API da backoffice: nessun errore CORS nel browser console
+- [ ] ✅ Domini custom configurati correttamente (DNS CNAME records)
+
+**⚠️ ATTENZIONE**: Modifiche a variabili CORS richiedono SEMPRE riavvio del backend!
 
 ---
 
@@ -111,14 +154,14 @@ Il **Frontend** deve chiamare il **Backend API** con URL corretto:
 const API_URL = "http://localhost:3001"
 
 // ✅ CORRETTO (environment-based)
-const API_URL = import.meta.env.VITE_API_URL || "https://echatbot-app.herokuapp.com"
+const API_URL = import.meta.env.VITE_API_URL || "https://echatbot.ai"
 ```
 
 **File di configurazione Frontend:**
 
 ```bash
 # apps/frontend/.env.production
-VITE_API_URL=https://echatbot-app.herokuapp.com
+VITE_API_URL=https://echatbot.ai/api
 ```
 
 **Heroku Config Vars (Frontend):**
@@ -136,7 +179,7 @@ Quando il backend genera link pubblici (es. ordini WhatsApp), deve usare URL fro
 const frontendUrl = "http://localhost:3000"
 
 // ✅ CORRETTO (environment variable)
-const frontendUrl = process.env.FRONTEND_URL || "https://echatbot-app.herokuapp.com"
+const frontendUrl = process.env.FRONTEND_URL || "https://echatbot.ai"
 
 // Esempio: Link pubblico ordine con token
 const publicOrderLink = `${frontendUrl}/orders-public/${orderCode}?token=${secureToken}`
@@ -145,7 +188,7 @@ const publicOrderLink = `${frontendUrl}/orders-public/${orderCode}?token=${secur
 **Heroku Config Vars (Backend):**
 
 ```bash
-heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-api
+heroku config:set FRONTEND_URL=https://echatbot.ai --app echatbot-app
 ```
 
 ### **Backoffice → Backend Communication**
@@ -154,10 +197,10 @@ Stesso pattern del Frontend:
 
 ```bash
 # apps/backoffice/.env.production
-VITE_API_URL=https://echatbot-app.herokuapp.com
+VITE_API_URL=https://echatbot.ai/api
 
 # Heroku Config Vars
-heroku config:set VITE_API_URL=https://echatbot-app.herokuapp.com --app echatbot-backoffice
+heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-backoffice
 ```
 
 ---
@@ -218,45 +261,48 @@ heroku run "npx prisma migrate deploy" --app echatbot-app
 heroku config:set DATABASE_URL="postgres://..." --app echatbot-api
 
 # Security
-heroku config:set NODE_ENV=production --app echatbot-api
-heroku config:set JWT_SECRET=$(openssl rand -hex 64) --app echatbot-api
+heroku config:set NODE_ENV=production --app echatbot-app
+heroku config:set JWT_SECRET=$(openssl rand -hex 64) --app echatbot-app
 
 # Frontend URL (per redirect con token)
-heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-api
+heroku config:set FRONTEND_URL=https://echatbot.ai --app echatbot-app
+
+# Backoffice URL (per CORS)
+heroku config:set BACKOFFICE_URL=https://backoffice.echatbot.ai --app echatbot-app
 
 # LLM / AI
-heroku config:set OPENROUTER_API_KEY=your_key --app echatbot-api
+heroku config:set OPENROUTER_API_KEY=your_key --app echatbot-app
 
 # Email
-heroku config:set EMAIL_HOST=smtp.gmail.com --app echatbot-api
-heroku config:set EMAIL_PORT=587 --app echatbot-api
-heroku config:set EMAIL_USER=your-email@gmail.com --app echatbot-api
-heroku config:set EMAIL_PASSWORD="your-app-password" --app echatbot-api
+heroku config:set EMAIL_HOST=smtp.gmail.com --app echatbot-app
+heroku config:set EMAIL_PORT=587 --app echatbot-app
+heroku config:set EMAIL_USER=your-email@gmail.com --app echatbot-app
+heroku config:set EMAIL_PASSWORD="your-app-password" --app echatbot-app
 
 # WhatsApp
-heroku config:set WHATSAPP_API_URL=https://api.whatsapp.com --app echatbot-api
-heroku config:set WHATSAPP_PHONE_NUMBER_ID=your_id --app echatbot-api
-heroku config:set WHATSAPP_ACCESS_TOKEN=your_token --app echatbot-api
+heroku config:set WHATSAPP_API_URL=https://api.whatsapp.com --app echatbot-app
+heroku config:set WHATSAPP_PHONE_NUMBER_ID=your_id --app echatbot-app
+heroku config:set WHATSAPP_ACCESS_TOKEN=your_token --app echatbot-app
 
 # Storage (Bucketeer o AWS S3)
-heroku config:set AWS_ACCESS_KEY_ID=your_key --app echatbot-api
-heroku config:set AWS_SECRET_ACCESS_KEY=your_secret --app echatbot-api
-heroku config:set AWS_REGION=us-east-1 --app echatbot-api
-heroku config:set AWS_S3_BUCKET=your_bucket --app echatbot-api
+heroku config:set AWS_ACCESS_KEY_ID=your_key --app echatbot-app
+heroku config:set AWS_SECRET_ACCESS_KEY=your_secret --app echatbot-app
+heroku config:set AWS_REGION=us-east-1 --app echatbot-app
+heroku config:set AWS_S3_BUCKET=your_bucket --app echatbot-app
 ```
 
 ### **Frontend (echatbot-app)**
 
 ```bash
 # Backend API URL
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-app
+heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-app
 ```
 
 ### **Backoffice (echatbot-backoffice)**
 
 ```bash
 # Backend API URL
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-backoffice
+heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-backoffice
 ```
 
 ### **Scheduler (echatbot-scheduler)**
@@ -266,7 +312,7 @@ heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot
 heroku config:set DATABASE_URL="postgres://..." --app echatbot-scheduler
 
 # Backend API URL (se necessario)
-heroku config:set API_URL=https://echatbot-api.herokuapp.com --app echatbot-scheduler
+heroku config:set API_URL=https://echatbot.ai/api --app echatbot-scheduler
 ```
 
 ### **Script Sync Automatico**
@@ -354,10 +400,10 @@ heroku ps --app echatbot-api
 curl https://echatbot-api.herokuapp.com/health
 
 # Test Frontend
-curl https://echatbot-app.herokuapp.com
+curl https://echatbot.ai
 
 # Test Backoffice
-curl https://echatbot-backoffice.herokuapp.com
+curl https://backoffice.echatbot.ai
 ```
 
 ---
@@ -414,13 +460,43 @@ heroku run "echo \$FRONTEND_URL" --app echatbot-api
 **Soluzione**:
 ```bash
 # Ottieni DATABASE_URL da Backend
-DATABASE_URL=$(heroku config:get DATABASE_URL --app echatbot-api)
+DATABASE_URL=$(heroku config:get DATABASE_URL --app echatbot-app)
 
 # Condividi con tutte le app
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-app
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-backoffice
 heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-scheduler
 ```
+
+### **Errore: "Access to fetch... has been blocked by CORS policy"**
+
+**Causa**: Backend CORS non configurato o non riavviato
+
+**Soluzione**:
+```bash
+# 1. Verifica configurazione CORS
+heroku config:get FRONTEND_URL --app echatbot-app
+heroku config:get BACKOFFICE_URL --app echatbot-app
+
+# 2. Configura se mancanti
+heroku config:set FRONTEND_URL=https://echatbot.ai --app echatbot-app
+heroku config:set BACKOFFICE_URL=https://backoffice.echatbot.ai --app echatbot-app
+heroku config:set CORS_ORIGIN="https://echatbot.ai,https://backoffice.echatbot.ai" --app echatbot-app
+
+# 3. RIAVVIA BACKEND (CRITICO!)
+heroku restart --app echatbot-app
+
+# 4. Verifica logs
+heroku logs --tail --app echatbot-app | grep -i cors
+
+# 5. Test dal browser
+# Apri backoffice.echatbot.ai
+# Controlla DevTools → Console (NO errori CORS)
+# Controlla DevTools → Network → Response Headers:
+#   Access-Control-Allow-Origin: https://backoffice.echatbot.ai
+```
+
+**⚠️ IMPORTANTE**: Variabili CORS richiedono SEMPRE riavvio del backend!
 
 ---
 
@@ -483,7 +559,7 @@ const token = secureTokenService.generateToken({
 
 // 2. BACKEND: Costruisce URL con token
 // ✅ CORRETTO: Usa FRONTEND_URL da env
-const frontendUrl = process.env.FRONTEND_URL  // https://echatbot-app.herokuapp.com
+const frontendUrl = process.env.FRONTEND_URL  // https://echatbot.ai
 const publicLink = `${frontendUrl}/orders-public/${orderCode}?token=${token}`
 
 // 3. BACKEND: Invia link via WhatsApp
@@ -498,7 +574,7 @@ const token = urlParams.get('token')
 
 // 5. FRONTEND: Chiama API Backend con token
 // ✅ CORRETTO: Usa VITE_API_URL da env
-const apiUrl = import.meta.env.VITE_API_URL  // https://echatbot-api.herokuapp.com
+const apiUrl = import.meta.env.VITE_API_URL  // https://echatbot.ai/api
 const response = await fetch(`${apiUrl}/api/orders-public/${orderCode}?token=${token}`)
 
 // 6. BACKEND: Valida token e ritorna dati
@@ -513,17 +589,22 @@ return res.json(order)
 
 ✅ **Backend** ha `FRONTEND_URL` configurato:
 ```bash
-heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-api
+heroku config:set FRONTEND_URL=https://echatbot.ai --app echatbot-app
+```
+
+✅ **Backend** ha `BACKOFFICE_URL` configurato:
+```bash
+heroku config:set BACKOFFICE_URL=https://backoffice.echatbot.ai --app echatbot-app
 ```
 
 ✅ **Frontend** ha `VITE_API_URL` configurato:
 ```bash
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-app
+heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-app
 ```
 
 ✅ **Backoffice** ha `VITE_API_URL` configurato:
 ```bash
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-backoffice
+heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-backoffice
 ```
 
 ✅ **Nessun URL hardcoded** nel codice:
@@ -576,12 +657,18 @@ const url = import.meta.env.VITE_API_URL || process.env.FRONTEND_URL
 
 ### **Post-Deploy**
 
+- [ ] **CORS Configuration**:
+  - `heroku config:get FRONTEND_URL --app echatbot-app` → `https://echatbot.ai`
+  - `heroku config:get BACKOFFICE_URL --app echatbot-app` → `https://backoffice.echatbot.ai`
+  - `heroku config:get CORS_ORIGIN --app echatbot-app` → Domini custom configurati
+  - Backend riavviato: `heroku restart --app echatbot-app`
+  - Test CORS: Apri backoffice, controlla console browser (NO errori CORS)
 - [ ] Endpoint API funzionanti:
-  - `curl https://echatbot-api.herokuapp.com/health` → `{"status":"ok"}`
+  - `curl https://echatbot.ai/health` → `{"status":"ok"}`
 - [ ] Frontend accessibile:
-  - `https://echatbot-app.herokuapp.com` → App carica
+  - `https://echatbot.ai` → App carica
 - [ ] Backoffice accessibile:
-  - `https://echatbot-backoffice.herokuapp.com` → Admin panel
+  - `https://backoffice.echatbot.ai` → Admin panel
 - [ ] Scheduler worker running:
   - `heroku ps --app echatbot-scheduler` → `worker.1: up`
 - [ ] Link pubblici con token funzionanti:
@@ -605,12 +692,11 @@ const url = import.meta.env.VITE_API_URL || process.env.FRONTEND_URL
 - ✅ HTTPS obbligatorio (Heroku lo fornisce automaticamente)
 - ✅ CORS configurato correttamente:
   ```typescript
-  // Backend: apps/backend/src/index.ts
+  // Backend: apps/backend/src/app.ts
   app.use(cors({
     origin: [
-      process.env.FRONTEND_URL,
-      'https://echatbot-app.herokuapp.com',
-      'https://echatbot-backoffice.herokuapp.com'
+      process.env.FRONTEND_URL || 'https://echatbot.ai',
+      process.env.BACKOFFICE_URL || 'https://backoffice.echatbot.ai'
     ],
     credentials: true
   }))
