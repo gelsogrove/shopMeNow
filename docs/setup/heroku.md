@@ -1,6 +1,10 @@
 # 🚀 Heroku Deployment Guide - eChatbot
 
-Guida completa per deployment di eChatbot su Heroku (monolith app: Backend + Frontend + Scheduler).
+Guida completa per deployment di eChatbot su Heroku.
+
+**Architettura**: 4 app separate (Backend API, Frontend, Backoffice, Scheduler) con database condiviso.
+
+**Build Strategy**: Heroku compila automaticamente tutti i sorgenti durante il deploy (NO file `dist/` committati su Git).
 
 ---
 
@@ -15,129 +19,101 @@ Guida completa per deployment di eChatbot su Heroku (monolith app: Backend + Fro
 
 ## 🏗️ Setup Iniziale Heroku
 
-### 1. Login e Creazione App
+### 1. Login e Creazione delle 4 App
 
 ```bash
 # Login a Heroku
 heroku login
 
-# Crea nuova app (scegli nome unico)
-heroku create echatbot-production
+# Crea 4 app separate (scegli nomi unici)
+heroku create echatbot-api         # Backend API
+heroku create echatbot-app          # Frontend
+heroku create echatbot-backoffice   # Backoffice Admin
+heroku create echatbot-scheduler    # Scheduler/Worker
 
-# Oppure se hai già un nome specifico:
-# heroku create nome-tua-app
-
-# Verifica remote git
+# Verifica remote git (aggiungeremo app specifiche dopo)
 git remote -v
-# Dovresti vedere: heroku  https://git.heroku.com/echatbot-production.git
+# Per deploy su app specifica: git push heroku-api main (dove heroku-api è remote custom)
 ```
 
-### 2. Aggiungi Postgres Database
+### 2. Aggiungi Postgres Database (CONDIVISO tra tutte le 4 app)
 
 ```bash
-# Heroku Postgres Mini ($5/mese - 10GB storage, 20 connections)
-# ✅ Include backup automatico giornaliero + rollback 4 giorni
-heroku addons:create heroku-postgresql:mini
+# Crea database su app Backend (echatbot-api)
+heroku addons:create heroku-postgresql:mini --app echatbot-api
 
-# Oppure free tier per test (1GB, 20 connections, NO BACKUP!)
-# ⚠️ NON USARE IN PRODUZIONE - dati possono essere persi
-# heroku addons:create heroku-postgresql:essential-0
+# Ottieni DATABASE_URL
+DATABASE_URL=$(heroku config:get DATABASE_URL --app echatbot-api)
 
-# Verifica DATABASE_URL è stata creata automaticamente
-heroku config:get DATABASE_URL
+# Condividi DATABASE_URL con tutte le altre app
+heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-app
+heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-backoffice
+heroku config:set DATABASE_URL="$DATABASE_URL" --app echatbot-scheduler
+
+# Verifica che tutte le app abbiano lo stesso DATABASE_URL
+heroku config:get DATABASE_URL --app echatbot-api
+heroku config:get DATABASE_URL --app echatbot-app
 ```
 
 **IMPORTANTE**: 
 - ✅ **Mini ($5/mese)** include backup automatico + rollback → OBBLIGATORIO per produzione
 - ❌ **Essential-0 (free)** NO backup, può perdere dati → solo per test
 
-### 3. Configura Variabili d'Ambiente
+### 3. Configura Variabili d'Ambiente (tutte le 4 app)
+
+#### **Backend (echatbot-api)**
 
 ```bash
-# 🔐 SECURITY (OBBLIGATORIO)
-heroku config:set NODE_ENV=production
-heroku config:set JWT_SECRET=$(openssl rand -hex 64)
+# Security
+heroku config:set NODE_ENV=production --app echatbot-api
+heroku config:set JWT_SECRET=$(openssl rand -hex 64) --app echatbot-api
 
-# 🌐 Frontend URL (cambia con il tuo dominio Heroku)
-heroku config:set FRONTEND_URL=https://echatbot-production.herokuapp.com
+# Frontend URL (per redirect con token)
+heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-api
 
-# 👤 Admin iniziale (cambia password!)
-heroku config:set ADMIN_EMAIL=admin@tuodominio.com
-heroku config:set ADMIN_PASSWORD="TuaPasswordSicura123!"
+# LLM / AI
+heroku config:set OPENROUTER_API_KEY=your_key --app echatbot-api
 
-# 🤖 LLM / AI (OpenRouter)
-heroku config:set OPENROUTER_API_KEY=your_openrouter_key_here
+# Email
+heroku config:set EMAIL_HOST=smtp.gmail.com --app echatbot-api
+heroku config:set EMAIL_PORT=587 --app echatbot-api
+heroku config:set EMAIL_USER=your-email@gmail.com --app echatbot-api
+heroku config:set EMAIL_PASSWORD="your-app-password" --app echatbot-api
 
-# 📧 Email (Nodemailer - Gmail esempio)
-heroku config:set EMAIL_HOST=smtp.gmail.com
-heroku config:set EMAIL_PORT=587
-heroku config:set EMAIL_USER=tua-email@gmail.com
-heroku config:set EMAIL_PASSWORD="tua-app-password"
-heroku config:set EMAIL_FROM="eChatbot <noreply@tuodominio.com>"
+# WhatsApp
+heroku config:set WHATSAPP_API_URL=https://api.whatsapp.com --app echatbot-api
+heroku config:set WHATSAPP_PHONE_NUMBER_ID=your_id --app echatbot-api
+heroku config:set WHATSAPP_ACCESS_TOKEN=your_token --app echatbot-api
 
-# 📱 WhatsApp (se attivo)
-heroku config:set WHATSAPP_API_URL=https://api.whatsapp.com
-heroku config:set WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
-heroku config:set WHATSAPP_ACCESS_TOKEN=your_whatsapp_token
-heroku config:set WHATSAPP_VERIFY_TOKEN=your_verify_token
-
-# 🗂️ Storage File Statici (Bucketeer - S3 Compatible)
-
-### IMPORTANTE: NON serve AWS S3!
-Heroku ha storage **effimero** (si cancella ad ogni deploy).
-Usiamo **Bucketeer addon** = storage persistente S3-compatible SENZA account AWS!
-
-```bash
-# Aggiungi Bucketeer addon ($5/mese - 1GB storage)
-heroku addons:create bucketeer:micro
-
-# Verifica credenziali create automaticamente
-heroku config | grep BUCKETEER
-
-# Output:
-# BUCKETEER_AWS_ACCESS_KEY_ID=xxx
-# BUCKETEER_AWS_REGION=us-east-1
-# BUCKETEER_AWS_SECRET_ACCESS_KEY=xxx
-# BUCKETEER_BUCKET_NAME=bucketeer-xxx-xxx
-
-# Alias variabili per il nostro codice (StorageService)
-heroku config:set AWS_ACCESS_KEY_ID=$(heroku config:get BUCKETEER_AWS_ACCESS_KEY_ID)
-heroku config:set AWS_SECRET_ACCESS_KEY=$(heroku config:get BUCKETEER_AWS_SECRET_ACCESS_KEY)
-heroku config:set AWS_REGION=$(heroku config:get BUCKETEER_AWS_REGION)
-heroku config:set AWS_S3_BUCKET=$(heroku config:get BUCKETEER_BUCKET_NAME)
+# Storage (Bucketeer addon)
+heroku addons:create bucketeer:micro --app echatbot-api
+# Alias variabili per il codice
+heroku config:set AWS_ACCESS_KEY_ID=$(heroku config:get BUCKETEER_AWS_ACCESS_KEY_ID --app echatbot-api) --app echatbot-api
+heroku config:set AWS_SECRET_ACCESS_KEY=$(heroku config:get BUCKETEER_AWS_SECRET_ACCESS_KEY --app echatbot-api) --app echatbot-api
+heroku config:set AWS_REGION=$(heroku config:get BUCKETEER_AWS_REGION --app echatbot-api) --app echatbot-api
+heroku config:set AWS_S3_BUCKET=$(heroku config:get BUCKETEER_BUCKET_NAME --app echatbot-api) --app echatbot-api
 ```
 
-**Alternative plans:**
-- `bucketeer:micro` - $5/mese - 1GB storage + 1GB transfer
-- `bucketeer:kilo` - $15/mese - 10GB storage + 10GB transfer
-- `bucketeer:mega` - $50/mese - 100GB storage + 100GB transfer
-
-### Come funziona?
-- ✅ Bucketeer usa protocollo S3 (compatibile con `@aws-sdk/client-s3`)
-- ✅ Il nostro `StorageService` funziona SENZA modifiche
-- ✅ Backup automatico incluso
-- ✅ NON serve account AWS
-
----
-
-## 🔄 ALTERNATIVA: Storage Database (se budget zero)
-
-Se vuoi **zero costi storage** (solo per test, NON produzione):
-- Salva immagini come BLOB in Postgres
-- ⚠️ **SCONSIGLIATO**: rallenta DB, dimensione limitata
-- Solo per piccoli loghi/avatar, MAI per catalogo prodotti
+#### **Frontend (echatbot-app)**
 
 ```bash
-# NO addon necessario, usa solo Postgres
-# Modifica codice per salvare in DB come bytea
+# Backend API URL
+heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-app
 ```
 
-# 🔑 Google OAuth (opzionale)
-heroku config:set GOOGLE_CLIENT_ID=your_google_client_id
-heroku config:set GOOGLE_CLIENT_SECRET=your_google_client_secret
+#### **Backoffice (echatbot-backoffice)**
 
-# ⏱️ Token expiration (default: 1h per link WhatsApp)
-heroku config:set TOKEN_EXPIRATION=1h
+```bash
+# Backend API URL
+heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-backoffice
+```
+
+#### **Scheduler (echatbot-scheduler)**
+
+```bash
+# Backend API URL (se necessario)
+heroku config:set API_URL=https://echatbot-api.herokuapp.com --app echatbot-scheduler
+```
 ```
 
 ### 4. Verifica Configurazione
@@ -152,44 +128,130 @@ heroku config:get DATABASE_URL
 
 ---
 
-## 🚀 Deploy
+## 🚀 Deploy Process
 
-### 1. Build Locale (opzionale - test prima di deploy)
+### ❗ IMPORTANTE: Build su Heroku
+
+**NON committare cartelle `dist/` su Git!**
+
+Heroku compila automaticamente i sorgenti durante il deploy.
+
+### 1. Build Locale (Test Opzionale)
 
 ```bash
-# Test build in locale
+# Test build in locale PRIMA di pushare (opzionale)
 npm run build
 
-# Test start in locale (simula produzione)
-NODE_ENV=production npm run start:all
+# Verifica output (solo per debug locale)
+ls -la apps/backend/dist/
+ls -la apps/frontend/dist/
+ls -la apps/scheduler/dist/
+ls -la apps/backoffice/dist/
 
-# Verifica su http://localhost:3001
+# ⚠️ NON committare dist/! Serve solo per test locale
 ```
 
-### 2. Deploy su Heroku
+### 2. Commit SOLO Sorgenti
 
 ```bash
-# Commit eventuali modifiche
-git add .
-git commit -m "feat: Heroku deployment configuration"
+# Commit SOLO file src/, NO dist/
+git add apps/backend/src/
+git add apps/frontend/src/
+git add apps/scheduler/src/
+git add apps/backoffice/src/
+git add package.json
 
-# Push su Heroku (avvia deploy automatico)
-git push heroku main
+git commit -m "feat: nuova funzionalità"
 
-# Oppure se il tuo branch principale è "master":
-# git push heroku master:main
+# Verifica che dist/ NON sia committato
+git status  # Non deve mostrare apps/*/dist/
 ```
 
-**Cosa succede durante il deploy:**
+### 3. Deploy su Heroku (4 app)
 
-1. ✅ Heroku installa dipendenze (`npm install`)
-2. ✅ Esegue `heroku-postbuild`: `prisma generate` + `npm run build`
-3. ✅ Esegue release command: `npm run prisma:migrate:prod` (migrations)
-4. ✅ Avvia app con `web` process dal Procfile: `npm run start:all`
-
-### 3. Monitora Deploy
+**Imposta remote Git per ogni app:**
 
 ```bash
+# Aggiungi remote per ogni app
+git remote add heroku-api https://git.heroku.com/echatbot-api.git
+git remote add heroku-app https://git.heroku.com/echatbot-app.git
+git remote add heroku-backoffice https://git.heroku.com/echatbot-backoffice.git
+git remote add heroku-scheduler https://git.heroku.com/echatbot-scheduler.git
+```
+
+**Deploy su ogni app:**
+
+```bash
+# 1. Backend API
+git push heroku-api main
+# Heroku esegue: npm install → prisma:generate → build:backend → avvia
+
+# 2. Frontend
+git push heroku-app main
+# Heroku esegue: npm install → build:frontend → serve
+
+# 3. Backoffice
+git push heroku-backoffice main
+# Heroku esegue: npm install → build:backoffice → serve
+
+# 4. Scheduler
+git push heroku-scheduler main
+# Heroku esegue: npm install → prisma:generate → build:scheduler → worker
+```
+
+**Cosa succede su Heroku (automaticamente):**
+
+1. ✅ Heroku riceve sorgenti (NO dist/)
+2. ✅ `npm install` (dipendenze)
+3. ✅ `npm run heroku-postbuild` (vedi package.json):
+   - Backend: `prisma:generate` + `build:backend`
+   - Frontend: `build:frontend`
+   - Scheduler: `prisma:generate` + `build:scheduler`
+   - Backoffice: `build:backoffice`
+4. ✅ Crea tutte le cartelle `dist/` su Heroku
+5. ✅ Avvia app da `dist/`
+
+### 4. Monitora Deploy
+
+```bash
+# Logs Backend in tempo reale
+heroku logs --tail --app echatbot-api
+
+# Logs Frontend
+heroku logs --tail --app echatbot-app
+
+# Logs Scheduler
+heroku logs --tail --app echatbot-scheduler
+
+# Logs Backoffice
+heroku logs --tail --app echatbot-backoffice
+
+# Verifica build completato (cerca "Build succeeded")
+heroku logs --tail --app echatbot-api | grep "Build succeeded"
+
+# Verifica app running
+heroku ps --app echatbot-api
+heroku ps --app echatbot-app
+heroku ps --app echatbot-scheduler  # Deve mostrare worker.1
+heroku ps --app echatbot-backoffice
+```
+
+### 5. Verifica Endpoint
+
+```bash
+# Test API Backend
+curl https://echatbot-api.herokuapp.com/health
+# Output atteso: {"status":"ok","timestamp":"...","version":"1.0.0"}
+
+# Test Frontend (deve caricare pagina HTML)
+curl https://echatbot-app.herokuapp.com
+
+# Test Backoffice (deve caricare pagina HTML)
+curl https://echatbot-backoffice.herokuapp.com
+
+# Test Scheduler (NON espone web server, solo worker)
+heroku ps --app echatbot-scheduler  # Verifica worker running
+```
 # Segui i logs in tempo reale
 heroku logs --tail
 
@@ -274,17 +336,22 @@ heroku pg:psql --command "\\copy (SELECT * FROM \"User\") TO 'users.csv' CSV HEA
 
 ## 🔧 Operazioni Post-Deploy
 
-### 1. Verifica App Funzionante
+### 1. Verifica App Funzionanti (tutte e 4)
 
 ```bash
-# Apri app nel browser
-heroku open
+# Apri le app nel browser
+heroku open --app echatbot-app         # Frontend
+heroku open --app echatbot-api         # API (mostra JSON health)
+heroku open --app echatbot-backoffice  # Backoffice
 
-# Test endpoint API
-curl https://echatbot-production.herokuapp.com/health
+# Test endpoint API completo
+curl https://echatbot-api.herokuapp.com/health
+# Output atteso:
+# {"status":"ok","timestamp":"2025-12-30T...","version":"1.0.0","apiVersion":"v1"}
 
-# Dovresti vedere:
-# {"status":"ok","timestamp":"2025-12-26T...","version":"1.0.0","apiVersion":"v1"}
+# Verifica Scheduler worker
+heroku ps --app echatbot-scheduler
+# Output atteso: worker.1: up 2025/12/30 10:00:00 +0000 (~ 1m ago)
 ```
 
 ### 2. Controlla Logs

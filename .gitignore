@@ -18,12 +18,13 @@ node_modules/
 # Testing
 coverage/
 
-# Production
+# Production - Build output (generated on Heroku during deploy)
 build/
-# dist/ - Committed for Heroku pre-compiled deployment
-# apps/backend/dist/  # Allowed for Heroku
-# apps/frontend/dist/  # Allowed for Heroku
-# apps/backoffice/dist/  # Allowed for Heroku
+dist/
+apps/backend/dist/
+apps/frontend/dist/
+apps/scheduler/dist/
+apps/backoffice/dist/
 packages/*/dist/
 dist-ssr/
 .next/
