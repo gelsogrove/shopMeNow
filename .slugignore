@@ -18,15 +18,16 @@ scripts/
 .github/
 .vscode/
 
-# Source files (only need compiled dist/)
-apps/backend/src/
-apps/frontend/src/
-apps/scheduler/src/
-# apps/backoffice/src/  # ✅ KEEP: needed for standalone SPA build on Heroku
+# Source files (BUILD on Heroku, so we NEED them!)
+# ✅ KEEP all src/ folders - Heroku compiles on server
+# apps/backend/src/
+# apps/frontend/src/
+# apps/scheduler/src/
+# apps/backoffice/src/
 
-# TypeScript config (not needed after build)
-**/tsconfig.json
-**/tsconfig.*.json
+# TypeScript config (KEEP - needed for Heroku build)
+# **/tsconfig.json  # ✅ KEEP: required for tsc compilation on Heroku
+# **/tsconfig.*.json
 
 # Local development
 docker-compose.yml
