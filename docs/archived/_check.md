@@ -1,4 +1,10 @@
- 
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This document contains obsolete checklists and Q&A from early development.  
+> **Status**: Obsolete  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See [PRD.md](../PRD.md) for active specifications  
+>
+> ---
 
 rispondi alla domande
 

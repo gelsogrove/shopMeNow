@@ -36,6 +36,14 @@
 Agent prompt templates and configurations.
 
 ### `/archived` - Historical Documentation
+
+> ⚠️ **WARNING**: This directory contains **completed features, obsolete specs, and historical documentation**.
+> 
+> - Documents here are **NOT current specifications**
+> - Use only for historical reference or understanding past decisions
+> - All files have `ARCHIVED` warning headers with status and date
+> - For current documentation, see [PRD.md](PRD.md) and `/architecture`
+
 Old specs, completed tasks, and deprecated docs. Kept for reference only.
 
 ---

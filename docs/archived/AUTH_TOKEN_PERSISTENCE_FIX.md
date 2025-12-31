@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This document describes a resolved authentication bug from Feature 182.  
+> **Status**: Resolved - Fix in production  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See active auth implementation in codebase  
+>
+> ---
+
 # Authentication Token Persistence Fix
 
 **Branch**: `182-2fa-authentication`  

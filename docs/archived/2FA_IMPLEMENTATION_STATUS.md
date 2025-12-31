@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This document describes the 2FA authentication implementation (Feature 182/189).  
+> **Status**: Completed - Feature in production  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See [PRD.md](../PRD.md) and production codebase  
+>
+> ---
+
 # 🎉 2FA Authentication System - Progress Update
 
 ## ✅ COMPLETED WORK

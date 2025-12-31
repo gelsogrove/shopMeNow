@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This document describes a critical security fix for user isolation (completed).  
+> **Status**: Completed - Security fix in production  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See workspace isolation in backend middleware  
+>
+> ---
+
 # 🛡️ SECURITY FIX COMPLETO - ISOLAMENTO UTENTI
 
 **Data**: 23 Novembre 2025

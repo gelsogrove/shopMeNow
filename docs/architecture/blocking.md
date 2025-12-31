@@ -421,7 +421,6 @@ if (isBlocked) {
   res.status(200).json({
     success: true,
     data: {
-      sessionId: null,
       message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED"
     }
   })

@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This plan describes UI/layout standardization work (completed).  
+> **Status**: Completed - UI standards applied  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See [ui-standards.md](../architecture/ui-standards.md)  
+>
+> ---
+
 # Layout Standardization Plan
 
 ## ✅ Completed

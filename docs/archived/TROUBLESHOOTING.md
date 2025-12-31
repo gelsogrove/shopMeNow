@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This troubleshooting guide may contain outdated information from Nov 2025.  
+> **Status**: Superseded - Refer to current documentation  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See [PRD.md](../PRD.md) and active troubleshooting in README  
+>
+> ---
+
 # eChatbot Troubleshooting Guide
 
 **Version**: 1.0.0  

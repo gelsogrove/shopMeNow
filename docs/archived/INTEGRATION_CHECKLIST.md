@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This checklist describes the storage service integration (completed).  
+> **Status**: Completed - Storage service operational  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See [storage.md](../architecture/storage.md) for active docs  
+>
+> ---
+
 # ✅ Integration Checklist - Storage Service
 
 ## 📋 Modifiche da fare al codice esistente

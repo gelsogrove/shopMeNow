@@ -1,3 +1,11 @@
+> ⚠️ **ARCHIVED DOCUMENTATION**  
+> This document describes pricing centralization work (completed).  
+> **Status**: Completed - BillingPrices enum in production  
+> **Date Archived**: December 31, 2025  
+> **Current Documentation**: See BillingPrices in backend codebase  
+>
+> ---
+
 # 💰 CENTRALIZZAZIONE PREZZI - COMPLETATA
 
 **Data**: 18 Novembre 2025
