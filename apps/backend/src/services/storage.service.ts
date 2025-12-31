@@ -17,7 +17,8 @@ import logger from '../utils/logger'
 
 // Storage types
 type StorageType = 'local' | 'cloudinary'
-type Folder = 'products' | 'services' | 'suppliers' | 'users' | 'channels'
+type Folder = 'products' | 'services' | 'users' | 'channels' | 'workspaces'
+type StorageCategory = 'public' | 'private'
 
 class StorageService {
   private storageType: StorageType
@@ -63,13 +64,14 @@ class StorageService {
    * Upload image to storage
    * @param file Express.Multer.File object
    * @param folder Folder name (products, services, etc.)
+   * @param isPublic Whether file should be publicly accessible (default: true)
    * @returns Public URL of uploaded image
    */
-  async uploadImage(file: Express.Multer.File, folder: Folder): Promise<string> {
+  async uploadImage(file: Express.Multer.File, folder: Folder, isPublic: boolean = true): Promise<string> {
     if (this.storageType === 'cloudinary') {
       return this.uploadToCloudinary(file, folder)
     } else {
-      return this.uploadToLocal(file, folder)
+      return this.uploadToLocal(file, folder, isPublic)
     }
   }
 
@@ -244,9 +246,11 @@ class StorageService {
 
   // ==================== LOCAL FILESYSTEM METHODS ====================
 
-  private uploadToLocal(file: Express.Multer.File, folder: Folder): string {
+  private uploadToLocal(file: Express.Multer.File, folder: Folder, isPublic: boolean = true): string {
     try {
-      const folderPath = path.join(this.localUploadDir, folder)
+      // Determine storage category (public/private)
+      const category: StorageCategory = isPublic ? 'public' : 'private'
+      const folderPath = path.join(this.localUploadDir, category, folder)
       
       // Generate unique filename
       const timestamp = Date.now()
@@ -258,8 +262,8 @@ class StorageService {
       const destPath = path.join(folderPath, filename)
       fs.renameSync(file.path, destPath)
 
-      // Return relative URL (served by Express static middleware)
-      const relativeUrl = `/uploads/${folder}/${filename}`
+      // Return relative URL (public served by Express static, private served by authenticated endpoint)
+      const relativeUrl = `/uploads/${category}/${folder}/${filename}`
       logger.info(`💾 Uploaded to local: ${relativeUrl}`)
       return relativeUrl
     } catch (error) {
@@ -326,13 +330,24 @@ class StorageService {
   }
 
   private ensureLocalDirectories(): void {
-    const folders: Folder[] = ['products', 'services', 'suppliers', 'users', 'channels']
-    folders.forEach(folder => {
-      const folderPath = path.join(this.localUploadDir, folder)
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true })
-      }
+    const folders: Folder[] = ['products', 'services', 'users', 'channels', 'workspaces']
+    const categories: StorageCategory[] = ['public', 'private']
+    
+    // Create public and private subdirectories for each folder
+    categories.forEach(category => {
+      folders.forEach(folder => {
+        const folderPath = path.join(this.localUploadDir, category, folder)
+        if (!fs.existsSync(folderPath)) {
+          fs.mkdirSync(folderPath, { recursive: true })
+        }
+      })
     })
+    
+    // Special folder for private documents (invoices, etc.)
+    const privateDocsPath = path.join(this.localUploadDir, 'private', 'documents')
+    if (!fs.existsSync(privateDocsPath)) {
+      fs.mkdirSync(privateDocsPath, { recursive: true })
+    }
   }
 
   // ==================== UTILITY METHODS ====================

@@ -48,6 +48,7 @@ import { ChatController } from "../interfaces/http/controllers/chat.controller"
 import { CustomersController } from "../interfaces/http/controllers/customers.controller"
 import { FaqController } from "../interfaces/http/controllers/faq.controller"
 import { FeedbackController } from "../interfaces/http/controllers/feedback.controller"
+import { filesController } from "../interfaces/http/controllers/files.controller"
 import { ProductController } from "../interfaces/http/controllers/product.controller"
 import { PushController } from "../interfaces/http/controllers/push.controller"
 import { ServicesController } from "../interfaces/http/controllers/services.controller"
@@ -105,6 +106,7 @@ import {
 } from "../interfaces/http/routes/customers.routes"
 import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
+import filesRoutes from "../interfaces/http/routes/files.routes"
 import { pushRoutes } from "../interfaces/http/routes/push.routes"
 import { whatsappQueueRoutes } from "../interfaces/http/routes/whatsapp-queue.routes"
 
@@ -655,6 +657,10 @@ router.use("/workspaces", workspaceCustomersRouter(customersController))
 // NOTE: workspaceRoutes FIRST (has /badge-stats) before workspaceRoutesLegacy (has /:id which would catch "badge-stats" as ID)
 router.use("/workspaces", authMiddleware, workspaceRoutes)
 router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
+
+// 🔒 SECURITY (TASK06): Private file serving with authentication
+router.use("/files", filesRoutes)
+logger.info("✅ Registered PROTECTED file routes: /api/v1/files/private/:category/:folder/:filename")
 
 // Mount invitation and member routes for workspace team management (Feature 184)
 // Workspace-scoped routes (require workspaceId in path)

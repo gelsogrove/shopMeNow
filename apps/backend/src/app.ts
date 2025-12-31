@@ -158,10 +158,12 @@ app.use(
   })
 )
 
-// Serve static files from uploads directory
-const uploadsPath = path.join(backendRoot, "apps/backend/uploads")
-app.use("/uploads", express.static(uploadsPath))
-logger.info(`Serving static files from: ${uploadsPath}`)
+// 🔒 SECURITY (TASK06): Serve ONLY public uploads directory
+// Private files are served via authenticated endpoint /api/v1/files/:key
+const publicUploadsPath = path.join(backendRoot, "apps/backend/uploads/public")
+app.use("/uploads/public", express.static(publicUploadsPath))
+logger.info(`[SECURITY] Serving public files from: ${publicUploadsPath}`)
+logger.info(`[SECURITY] Private files require authentication via /api/v1/files/:key`)
 
 if (fs.existsSync(landingAssetsPath)) {
   app.use("/landing-assets", express.static(landingAssetsPath))
