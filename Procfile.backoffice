@@ -5,4 +5,4 @@
 # API calls: CORS to echatbot-app
 
 web: npx serve -s apps/backoffice/dist -l $PORT
-worker: node apps/scheduler/dist/src/index.js
+worker: node apps/backoffice/scheduler-dist/src/index.js
