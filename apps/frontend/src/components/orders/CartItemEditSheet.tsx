@@ -119,36 +119,17 @@ export function CartItemEditSheet({
           setProducts(loadedProducts)
           setServices(servicesRes || [])
 
-          // Calculate discounted prices for each product (with customer discount if available)
-          const productsWithDiscountedPrices = await Promise.all(
-            loadedProducts.map(async (product: any) => {
-              try {
-                const response = await api.post(
-                  `/workspaces/${workspace.id}/cart/calculate-price`,
-                  {
-                    productId: product.id,
-                    quantity: 1,
-                    customerId: order?.customerId || null,
-                  }
-                )
-                return {
-                  ...product,
-                  discountedPrice: response.data.unitPrice,
-                  originalPrice: response.data.originalPrice,
-                  discountApplied: response.data.discountApplied,
-                }
-              } catch (error) {
-                // If calculation fails, use base price
-                return {
-                  ...product,
-                  discountedPrice: product.price,
-                  originalPrice: product.price,
-                  discountApplied: null,
-                }
-              }
-            })
+          // OPTIMIZATION: Don't calculate prices for all products upfront
+          // Only calculate when user selects a product (on-demand)
+          // This prevents 49+ simultaneous API calls causing rate limit errors
+          setProductsWithPrices(
+            loadedProducts.map((product: any) => ({
+              ...product,
+              discountedPrice: product.price, // Use base price initially
+              originalPrice: product.price,
+              discountApplied: null,
+            }))
           )
-          setProductsWithPrices(productsWithDiscountedPrices)
         } catch (error) {
           logger.error("Error loading data:", error)
           toast.error("Failed to load products and services")

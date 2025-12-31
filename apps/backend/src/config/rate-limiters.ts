@@ -120,7 +120,7 @@ export const registrationLimiter = rateLimit({
  */
 export const cartLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
-  max: 30, // 30 operazioni al minuto
+  max: process.env.NODE_ENV === "development" ? 500 : 30, // 500 in dev, 30 in prod
   message: "Too many cart operations, please slow down",
   standardHeaders: true,
   legacyHeaders: false,
