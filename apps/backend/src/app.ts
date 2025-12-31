@@ -6,7 +6,9 @@ import helmet from "helmet"
 import path from "path"
 
 import { errorMiddleware } from "./interfaces/http/middlewares/error.middleware"
+import { authMiddleware } from "./interfaces/http/middlewares/auth.middleware"
 import { jsonFixMiddleware } from "./interfaces/http/middlewares/json-fix.middleware"
+import { sessionValidationMiddleware } from "./interfaces/http/middlewares/session-validation.middleware"
 import { loggingMiddleware } from "./middlewares/logging.middleware"
 import apiRouter from "./routes"
 import logger from "./utils/logger"
@@ -232,7 +234,11 @@ app.post("/api/test/json-parser", (req, res) => {
 })
 
 // Endpoint di catch-all specifico per bloccare clienti
-app.post("/api/workspaces/:workspaceId/customers/:id/block", (req, res) => {
+app.post(
+  "/api/workspaces/:workspaceId/customers/:id/block",
+  authMiddleware,
+  sessionValidationMiddleware,
+  (req, res) => {
   const { id, workspaceId } = req.params
   logger.info(
     `🔥 HOTFIX: Block customer catch-all endpoint chiamato per workspace ${workspaceId}, customer ${id}`
@@ -262,7 +268,8 @@ app.post("/api/workspaces/:workspaceId/customers/:id/block", (req, res) => {
         error: true,
       })
   })
-})
+  }
+)
 
 if (hasLandingPage) {
   logger.info(`[LandingPage] Serving static landing page from ${landingPagePath}`)
@@ -355,10 +362,6 @@ app.use("/api", (req, res, next) => {
   const newUrl = `${newPath}${req.url.includes("?") ? "?" + req.url.split("?")[1] : ""}`
   return res.redirect(307, newUrl)
 })
-
-// Mount workspace routes directly at root for legacy compatibility
-import { workspaceRoutes as workspaceRoutesRoot } from "./interfaces/http/routes/workspace.routes"
-app.use("/workspaces", workspaceRoutesRoot)
 
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts
