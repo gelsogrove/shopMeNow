@@ -23,7 +23,7 @@
     "heroku-postbuild": "if [ \"$HEROKU_APP_NAME\" = \"echatbot-scheduler\" ]; then npm run heroku:scheduler; elif [ \"$HEROKU_APP_NAME\" = \"echatbot-backoffice\" ]; then npm run heroku:backoffice; else npm run heroku:app; fi",
     "heroku:app": "npm run prisma:generate && npm run build -w @echatbot/database && npm run build:backend && npm run build:frontend && echo '✅ echatbot-app: Database + Backend + Frontend built'",
     "heroku:scheduler": "cp Procfile.scheduler Procfile && npm run prisma:generate && npm run build -w @echatbot/database && npm run build:scheduler && echo '✅ echatbot-scheduler: Database + Scheduler built'",
-    "heroku:backoffice": "cp Procfile.backoffice Procfile && npm run prisma:generate && npm run build:backoffice && npm install -g serve && echo '✅ echatbot-backoffice: Backoffice built'",
+    "heroku:backoffice": "cp Procfile.backoffice Procfile && npm run prisma:generate && npm run build:backoffice && echo '✅ echatbot-backoffice: Backoffice built'",
     "start": "npm run start:all",
     "start:all": "node apps/backend/dist/src/index.js",
     "start:backend": "npm run start -w @echatbot/backend",

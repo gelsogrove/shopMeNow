@@ -4354,6 +4354,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // STEP 6: Replace tokens/links
       // ========================================================================
       const replacementStart = Date.now()
+      const messageBeforeReplacement = finalMessage // Store original for comparison
       const replacementParams: ReplaceLinkWithTokenParams = {
         response: finalMessage,
         linkType: "auto",
@@ -4369,7 +4370,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         finalMessage = replacementResult.response
         
         // 🆕 Add link replacement debug step (only if links were replaced)
-        if (replacementResult.response !== finalMessage) {
+        // TASK17 FIX: Compare BEFORE vs AFTER replacement (not result vs result)
+        if (messageBeforeReplacement !== finalMessage) {
           debugSteps.push({
             type: "link-replacement",
             agent: "🔗 Link Replacement",

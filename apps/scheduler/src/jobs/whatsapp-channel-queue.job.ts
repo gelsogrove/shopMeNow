@@ -100,7 +100,7 @@ let isProcessing = false
 /**
  * WhatsApp Channel Queue Job
  * 
- * Runs every 3 seconds via cron (configured in index.ts)
+ * Runs every 5 seconds via cron (configured in index.ts)
  * Processes pending messages for workspaces with active channel
  * 
  * CRITICAL FEATURES:
@@ -118,7 +118,7 @@ let isProcessing = false
  * The 6-second limit only applies to the SAME customer.
  * 
  * WHY LOCK?
- * - Cron runs every 3 seconds
+ * - Cron runs every 5 seconds
  * - If processing takes longer, next tick is skipped
  * - Prevents duplicate processing of same messages
  * 

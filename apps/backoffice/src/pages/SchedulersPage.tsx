@@ -76,51 +76,65 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 const jobNames: Record<string, { name: string; description: string; schedule: string; details: string; sortOrder: number }> = {
   'whatsapp-channel-queue': {
     name: 'WhatsApp Channel Queue',
-    schedule: 'Every 3 minutes',
-    description: 'Processes pending channel messages for customer verification',
-    details: 'Sends verification codes to customers who need to confirm their phone number. Processes up to 50 messages per cycle.',
+    schedule: 'Every 5 seconds',
+    description: 'Elabora la coda e invia i messaggi WhatsApp in attesa',
+    details: 'Valida e invia i messaggi pendenti per i canali attivi. Applica controlli di sicurezza e aggiorna lo stato della coda.',
     sortOrder: 1
   },
   'short-urls-cleanup': {
     name: 'Short URLs Cleanup',
     schedule: 'Daily at 23:00',
-    description: 'Removes expired short URLs from the database',
-    details: 'Deletes all short URLs that have passed their expiration date. Default expiry is 7 days after creation.',
+    description: 'Rimuove i short link scaduti dal database',
+    details: 'Cancella tutte le short URL con scadenza passata.',
     sortOrder: 3
   },
   'blocked-customers-cleanup': {
     name: 'Blocked Customers Cleanup',
     schedule: 'Every 3 days at 23:01',
-    description: 'Unblocks customers after the blocking period expires',
-    details: 'Reviews blocked customers every 3 days and unblocks those whose blocking period (configured per workspace) has expired.',
-    sortOrder: 5
+    description: 'Sblocca clienti dopo la scadenza del blocco',
+    details: 'Controlla periodicamente i clienti bloccati e rimuove il blocco quando scade.',
+    sortOrder: 9
   },
   'unused-images-cleanup': {
-    name: 'Unused Images Cleanup',
-    schedule: 'Daily at 23:02',
-    description: 'Removes orphaned images not linked to any product',
-    details: 'Scans uploads folder and deletes images that are not referenced by any product. Saves disk space.',
+    name: 'Storage Cleanup',
+    schedule: 'Daily at 23:05',
+    description: 'Pulisce immagini orfane, file temporanei e fatture annullate',
+    details: 'Scansiona uploads per immagini non referenziate (prodotti/servizi/utenti/canali), elimina i temp >24h e rimuove fatture di ordini cancellati (local).',
     sortOrder: 4
   },
   'monthly-billing': {
     name: 'Monthly Billing',
-    schedule: '1st of month at 12:00',
-    description: 'Processes monthly subscription charges for all workspaces',
-    details: 'Calculates usage, applies plan charges, and deducts from workspace credit balance. Sends invoice emails.',
-    sortOrder: 7
+    schedule: '1st of month at 23:30',
+    description: 'Elabora il billing mensile per gli owner attivi',
+    details: 'Calcola canone e debiti, prova il pagamento e aggiorna lo stato di subscription.',
+    sortOrder: 8
   },
   'messages-archive': {
     name: 'Messages Archive',
-    schedule: 'Weekly on Sunday at 03:00',
-    description: 'Archives old messages to improve database performance',
-    details: '🗄️ Moves messages older than 6 months to archive table. Keeps database fast and responsive. Archived messages are still accessible via API.',
+    schedule: 'Daily at 23:10',
+    description: 'Archivia i messaggi più vecchi di 6 mesi',
+    details: '🗄️ Sposta i messaggi vecchi nella tabella di archivio per mantenere il DB snello.',
     sortOrder: 6
+  },
+  'whatsapp-queue-cleanup': {
+    name: 'WhatsApp Queue Cleanup',
+    schedule: 'Daily at 23:15',
+    description: 'Pulisce la coda WhatsApp da errori e inviati vecchi',
+    details: 'Elimina messaggi in coda con stato error/sent più vecchi di 7 giorni.',
+    sortOrder: 5
+  },
+  'soft-delete-cleanup': {
+    name: 'Soft Delete Cleanup',
+    schedule: 'Daily at 23:20',
+    description: 'Hard-delete dei record soft-deleted dopo retention',
+    details: 'Cancella definitivamente i record soft-deleted dopo la retention (default 90 giorni).',
+    sortOrder: 7
   },
   'campaign-send': {
     name: 'Campaign Send',
     schedule: 'Daily at 10:00',
-    description: 'Sends scheduled marketing campaigns to customers',
-    details: 'Checks active campaigns with scheduled send time and queues WhatsApp messages for eligible customers.',
+    description: 'Invia campagne programmate ai clienti',
+    details: 'Controlla le campagne attive e mette in coda i messaggi WhatsApp.',
     sortOrder: 2
   },
 }

@@ -2,7 +2,7 @@
 
 Guida completa per deployment di eChatbot su Heroku.
 
-**Architettura**: 4 app separate (Backend API, Frontend, Backoffice, Scheduler) con database condiviso.
+**Architettura**: 3 app separate (Backend+Frontend monolith, Backoffice, Scheduler) con database condiviso.
 
 **Build Strategy**: Heroku compila automaticamente tutti i sorgenti durante il deploy (NO file `dist/` committati su Git).
 
@@ -57,7 +57,7 @@ heroku config:get DATABASE_URL --app echatbot-scheduler
 - ✅ **Mini ($5/mese)** include backup automatico + rollback → OBBLIGATORIO per produzione
 - ❌ **Essential-0 (free)** NO backup, può perdere dati → solo per test
 
-### 3. Configura Variabili d'Ambiente (tutte le 4 app)
+### 3. Configura Variabili d'Ambiente (tutte le 3 app)
 
 #### **Backend + Frontend (echatbot-app)**
 
@@ -73,27 +73,27 @@ heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot
 heroku config:set VITE_API_URL=https://echatbot-app.herokuapp.com --app echatbot-app
 
 # LLM / AI
-heroku config:set OPENROUTER_API_KEY=your_key --app echatbot-api
+heroku config:set OPENROUTER_API_KEY=your_key --app echatbot-app
 
 # Email
-heroku config:set EMAIL_HOST=smtp.gmail.com --app echatbot-api
-heroku config:set EMAIL_PORT=587 --app echatbot-api
-heroku config:set EMAIL_USER=your-email@gmail.com --app echatbot-api
-heroku config:set EMAIL_PASSWORD="your-app-password" --app echatbot-api
+heroku config:set EMAIL_HOST=smtp.gmail.com --app echatbot-app
+heroku config:set EMAIL_PORT=587 --app echatbot-app
+heroku config:set EMAIL_USER=your-email@gmail.com --app echatbot-app
+heroku config:set EMAIL_PASSWORD="your-app-password" --app echatbot-app
 
 # WhatsApp
-heroku config:set WHATSAPP_API_URL=https://api.whatsapp.com --app echatbot-api
-heroku config:set WHATSAPP_PHONE_NUMBER_ID=your_id --app echatbot-api
-heroku config:set WHATSAPP_ACCESS_TOKEN=your_token --app echatbot-api
+heroku config:set WHATSAPP_API_URL=https://api.whatsapp.com --app echatbot-app
+heroku config:set WHATSAPP_PHONE_NUMBER_ID=your_id --app echatbot-app
+heroku config:set WHATSAPP_ACCESS_TOKEN=your_token --app echatbot-app
 
 # Storage (Cloudinary)
-heroku config:set CLOUDINARY_URL='cloudinary://api_key:api_secret@cloud_name' --app echatbot-api
+heroku config:set CLOUDINARY_URL='cloudinary://api_key:api_secret@cloud_name' --app echatbot-app
 ```
 
 #### **Frontend (echatbot-app)**
 
 ```bash
-# Backend API URL
+# Backend API URL (se usi dominio custom)
 heroku config:set VITE_API_URL=https://echatbot.ai/api --app echatbot-app
 ```
 
@@ -163,13 +163,12 @@ git commit -m "feat: nuova funzionalità"
 git status  # Non deve mostrare apps/*/dist/
 ```
 
-### 3. Deploy su Heroku (4 app)
+### 3. Deploy su Heroku (3 app)
 
 **Imposta remote Git per ogni app:**
 
 ```bash
 # Aggiungi remote per ogni app
-git remote add heroku-api https://git.heroku.com/echatbot-api.git
 git remote add heroku-app https://git.heroku.com/echatbot-app.git
 git remote add heroku-backoffice https://git.heroku.com/echatbot-backoffice.git
 git remote add heroku-scheduler https://git.heroku.com/echatbot-scheduler.git
@@ -178,19 +177,15 @@ git remote add heroku-scheduler https://git.heroku.com/echatbot-scheduler.git
 **Deploy su ogni app:**
 
 ```bash
-# 1. Backend API
-git push heroku-api main
-# Heroku esegue: npm install → prisma:generate → build:backend → avvia
-
-# 2. Frontend
+# 1. Backend + Frontend (monolith)
 git push heroku-app main
-# Heroku esegue: npm install → build:frontend → serve
+# Heroku esegue: npm install → prisma:generate → build:backend → build:frontend → avvia
 
-# 3. Backoffice
+# 2. Backoffice
 git push heroku-backoffice main
 # Heroku esegue: npm install → build:backoffice → serve
 
-# 4. Scheduler
+# 3. Scheduler
 git push heroku-scheduler main
 # Heroku esegue: npm install → prisma:generate → build:scheduler → worker
 ```
@@ -210,10 +205,7 @@ git push heroku-scheduler main
 ### 4. Monitora Deploy
 
 ```bash
-# Logs Backend in tempo reale
-heroku logs --tail --app echatbot-api
-
-# Logs Frontend
+# Logs Backend+Frontend in tempo reale
 heroku logs --tail --app echatbot-app
 
 # Logs Scheduler
@@ -223,10 +215,9 @@ heroku logs --tail --app echatbot-scheduler
 heroku logs --tail --app echatbot-backoffice
 
 # Verifica build completato (cerca "Build succeeded")
-heroku logs --tail --app echatbot-api | grep "Build succeeded"
+heroku logs --tail --app echatbot-app | grep "Build succeeded"
 
 # Verifica app running
-heroku ps --app echatbot-api
 heroku ps --app echatbot-app
 heroku ps --app echatbot-scheduler  # Deve mostrare worker.1
 heroku ps --app echatbot-backoffice
@@ -236,7 +227,7 @@ heroku ps --app echatbot-backoffice
 
 ```bash
 # Test API Backend
-curl https://echatbot-api.herokuapp.com/health
+curl https://echatbot-app.herokuapp.com/health
 # Output atteso: {"status":"ok","timestamp":"...","version":"1.0.0"}
 
 # Test Frontend (deve caricare pagina HTML)
@@ -248,6 +239,7 @@ curl https://backoffice.echatbot.ai
 # Test Scheduler (NON espone web server, solo worker)
 heroku ps --app echatbot-scheduler  # Verifica worker running
 ```
+# Segui i logs in tempo reale
 # Segui i logs in tempo reale
 heroku logs --tail
 
@@ -337,11 +329,11 @@ heroku pg:psql --command "\\copy (SELECT * FROM \"User\") TO 'users.csv' CSV HEA
 ```bash
 # Apri le app nel browser
 heroku open --app echatbot-app         # Frontend
-heroku open --app echatbot-api         # API (mostra JSON health)
+heroku open --app echatbot-app         # API (mostra JSON health)
 heroku open --app echatbot-backoffice  # Backoffice
 
 # Test endpoint API completo
-curl https://echatbot-api.herokuapp.com/health
+curl https://echatbot-app.herokuapp.com/health
 # Output atteso:
 # {"status":"ok","timestamp":"2025-12-30T...","version":"1.0.0","apiVersion":"v1"}
 

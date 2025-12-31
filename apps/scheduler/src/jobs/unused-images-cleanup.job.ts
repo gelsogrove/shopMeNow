@@ -6,9 +6,10 @@ import { v2 as cloudinary } from 'cloudinary'
 
 /**
  * Unused Images Cleanup Job
- * Runs daily at 23:02
+ * Runs daily at 23:05
  * Deletes orphaned images not referenced in the database
- * Covers: products, services, suppliers, users, channels (logos)
+ * Covers: products, services, users, channels (logos)
+ * Also cleans temp files and cancelled order invoices (local filesystem)
  * 
  * ⚙️ BEHAVIOR:
  * - Production (CLOUDINARY_URL set): Deletes from Cloudinary
@@ -18,7 +19,18 @@ export async function unusedImagesCleanupJob(): Promise<void> {
   const uploadsDir = path.join(__dirname, '..', '..', '..', 'backend', 'uploads')
   const isProduction = !!process.env.CLOUDINARY_URL
   
-  logger.info(`🧹 [Unused Images Cleanup] Starting cleanup (${isProduction ? 'CLOUDINARY' : 'LOCAL'})`)
+  logger.info(`🧹 [Storage Cleanup] Starting cleanup (${isProduction ? 'CLOUDINARY' : 'LOCAL'})`)
+
+  const usedFilenames = new Set<string>()
+  const addFilename = (value?: string | null) => {
+    if (!value) return
+    const filename = path.basename(value)
+    if (filename) usedFilenames.add(filename)
+  }
+  const addFilenames = (values?: string[] | null) => {
+    if (!values || values.length === 0) return
+    values.forEach((value) => addFilename(value))
+  }
   
   // Configure Cloudinary if in production
   if (isProduction) {
@@ -42,42 +54,32 @@ export async function unusedImagesCleanupJob(): Promise<void> {
   // ═══════════════════════════════════════════════════════════════
   const productImagesDir = path.join(uploadsDir, 'products')
   const products = await prisma.products.findMany({
-    select: { imageUrl: true },
+    select: { imageUrl: true, imageKey: true },
   })
 
-  const usedProductImages = new Set<string>()
   for (const product of products) {
-    if (product.imageUrl && product.imageUrl.length > 0) {
-      for (const url of product.imageUrl) {
-        const filename = path.basename(url)
-        usedProductImages.add(filename)
-      }
-    }
+    addFilenames(product.imageUrl)
+    addFilename(product.imageKey)
   }
 
-  logger.info(`[Products] Found ${usedProductImages.size} images referenced in database`)
-  totalDeleted += await cleanupDirectory(productImagesDir, usedProductImages, 'products', 'products')
+  logger.info(`[Products] Found ${usedFilenames.size} images referenced in database`)
+  totalDeleted += await cleanupDirectory(productImagesDir, usedFilenames, 'products', 'products')
 
   // ═══════════════════════════════════════════════════════════════
   // 2. SERVICE IMAGES CLEANUP
   // ═══════════════════════════════════════════════════════════════
   const serviceImagesDir = path.join(uploadsDir, 'services')
   const services = await prisma.services.findMany({
-    select: { imageUrl: true },
+    select: { imageUrl: true, imageKey: true },
   })
 
-  const usedServiceImages = new Set<string>()
   for (const service of services) {
-    if (service.imageUrl && service.imageUrl.length > 0) {
-      for (const url of service.imageUrl) {
-        const filename = path.basename(url)
-        usedServiceImages.add(filename)
-      }
-    }
+    addFilenames(service.imageUrl)
+    addFilename(service.imageKey)
   }
 
-  logger.info(`[Services] Found ${usedServiceImages.size} images referenced in database`)
-  totalDeleted += await cleanupDirectory(serviceImagesDir, usedServiceImages, 'services', 'services')
+  logger.info(`[Services] Found ${usedFilenames.size} images referenced in database`)
+  totalDeleted += await cleanupDirectory(serviceImagesDir, usedFilenames, 'services', 'services')
 
   // ═══════════════════════════════════════════════════════════════
   // 3. USER LOGOS CLEANUP
@@ -87,40 +89,96 @@ export async function unusedImagesCleanupJob(): Promise<void> {
     select: { logo: true },
   })
 
-  const usedUserLogos = new Set<string>()
   for (const user of users) {
-    if (user.logo) {
-      const filename = path.basename(user.logo)
-      usedUserLogos.add(filename)
-    }
+    addFilename(user.logo)
   }
 
-  logger.info(`[Users] Found ${usedUserLogos.size} logos referenced in database`)
-  totalDeleted += await cleanupDirectory(userImagesDir, usedUserLogos, 'users', 'users')
+  logger.info(`[Users] Found ${usedFilenames.size} logos referenced in database`)
+  totalDeleted += await cleanupDirectory(userImagesDir, usedFilenames, 'users', 'users')
 
   // ═══════════════════════════════════════════════════════════════
   // 4. CHANNEL LOGOS CLEANUP
   // ═══════════════════════════════════════════════════════════════
   const channelImagesDir = path.join(uploadsDir, 'channels')
   const workspaces = await prisma.workspace.findMany({
-    select: { logoUrl: true },
+    select: { logoUrl: true, logoKey: true },
   })
 
-  const usedChannelLogos = new Set<string>()
   for (const workspace of workspaces) {
-    if (workspace.logoUrl) {
-      const filename = path.basename(workspace.logoUrl)
-      usedChannelLogos.add(filename)
-    }
+    addFilename(workspace.logoUrl)
+    addFilename(workspace.logoKey)
   }
 
-  logger.info(`[Channels] Found ${usedChannelLogos.size} logos referenced in database`)
-  totalDeleted += await cleanupDirectory(channelImagesDir, usedChannelLogos, 'channels', 'channels')
+  logger.info(`[Channels] Found ${usedFilenames.size} logos referenced in database`)
+  totalDeleted += await cleanupDirectory(channelImagesDir, usedFilenames, 'channels', 'channels')
+
+  // ═══════════════════════════════════════════════════════════════
+  // 5. TEMP FILES CLEANUP (LOCAL ONLY)
+  // ═══════════════════════════════════════════════════════════════
+  if (!isProduction) {
+    const tempDir = path.join(uploadsDir, 'temp')
+    const now = Date.now()
+    const maxAge = 24 * 60 * 60 * 1000 // 24 hours
+    let deletedTemp = 0
+
+    if (fs.existsSync(tempDir)) {
+      const items = fs.readdirSync(tempDir, { withFileTypes: true })
+      for (const item of items) {
+        if (!item.isFile()) continue
+        const filename = item.name
+        const timestamp = parseInt(filename.split('-')[0], 10)
+        if (Number.isNaN(timestamp)) continue
+        if (now - timestamp > maxAge) {
+          fs.unlinkSync(path.join(tempDir, filename))
+          deletedTemp++
+        }
+      }
+    }
+
+    if (deletedTemp > 0) {
+      logger.info(`🧹 [Temp Files] Deleted ${deletedTemp} old temp files`)
+    }
+  } else {
+    logger.info('🧹 [Temp Files] Skipped in Cloudinary mode')
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 6. CANCELLED INVOICE CLEANUP (LOCAL ONLY)
+  // ═══════════════════════════════════════════════════════════════
+  if (!isProduction) {
+    const cancelledOrders = await prisma.orders.findMany({
+      where: {
+        status: 'CANCELLED',
+        invoiceKey: { not: null },
+      },
+      select: { id: true, orderCode: true, invoiceKey: true },
+    })
+
+    let deletedInvoices = 0
+    for (const order of cancelledOrders) {
+      if (!order.invoiceKey) continue
+      const invoicePath = path.join(uploadsDir, order.invoiceKey)
+      if (fs.existsSync(invoicePath)) {
+        fs.unlinkSync(invoicePath)
+      }
+      await prisma.orders.update({
+        where: { id: order.id },
+        data: { invoiceUrl: null, invoiceKey: null },
+      })
+      deletedInvoices++
+    }
+
+    if (deletedInvoices > 0) {
+      logger.info(`🧹 [Invoices] Deleted ${deletedInvoices} cancelled order invoices`)
+    }
+  } else {
+    logger.info('🧹 [Invoices] Skipped in Cloudinary mode')
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // SUMMARY
   // ═══════════════════════════════════════════════════════════════
-  logger.info(`✅ [Unused Images Cleanup] Total orphan files deleted: ${totalDeleted}`)
+  logger.info(`✅ [Storage Cleanup] Total orphan files deleted: ${totalDeleted}`)
 }
 
 /**

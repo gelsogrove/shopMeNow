@@ -10,15 +10,14 @@ import {
   whatsappQueueCleanupJob,
   softDeleteCleanupJob,
 } from './jobs'
-import { setupStorageCleanup } from './jobs/storage-cleanup'
 import logger from './utils/logger'
 
 // eChatbot Scheduler Microservice
 //
 // Cron Jobs (ordered by execution time):
-// 1. WhatsApp Channel Queue   - every 3 SECONDS (parallel send, with lock)
+// 1. WhatsApp Channel Queue   - every 5 SECONDS (parallel send, with lock)
 // 2. Short URLs Cleanup         - daily at 23:00
-// 3. Unused Images Cleanup      - daily at 23:05
+// 3. Storage Cleanup            - daily at 23:05 (unused images + temp + invoices)
 // 4. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
 // 5. WhatsApp Queue Cleanup     - daily at 23:15 (delete errors/sent older than 7 days)
 // 6. Soft Delete Cleanup        - daily at 23:20 (hard-delete records after retention period)
@@ -34,15 +33,12 @@ async function main() {
   // Connect to database
   await connectDatabase()
 
-  // Setup storage cleanup jobs
-  setupStorageCleanup()
-
   // ═══════════════════════════════════════════════════════════════════════════
-  // Job 1: WhatsApp Channel Queue - every 3 seconds
+  // Job 1: WhatsApp Channel Queue - every 5 seconds
   // Uses in-memory lock: if previous job is still running, skip
   // Sends messages in PARALLEL (safe for different customers)
   // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('*/3 * * * * *', async () => {
+  cron.schedule('*/5 * * * * *', async () => {
     await runJob('whatsapp-channel-queue', whatsappChannelQueueJob)
   })
 
@@ -55,8 +51,8 @@ async function main() {
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Job 3: Unused Images Cleanup - daily at 23:05
-  // Removes orphaned images from uploads folder
+  // Job 3: Storage Cleanup - daily at 23:05
+  // Removes orphaned images + temp files + cancelled invoices
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('5 23 * * *', async () => {
     await runJob('unused-images-cleanup', unusedImagesCleanupJob)
@@ -97,16 +93,13 @@ async function main() {
 
   logger.info('✅ Scheduler started successfully!')
   logger.info('📋 Scheduled jobs:')
-  logger.info('   1. WhatsApp Channel Queue   - every 3 SECONDS')
+  logger.info('   1. WhatsApp Channel Queue   - every 5 SECONDS')
   logger.info('   2. Short URLs Cleanup         - daily at 23:00')
   logger.info('   3. Unused Images Cleanup      - daily at 23:05')
   logger.info('   4. Messages Archive           - daily at 23:10')
   logger.info('   5. WhatsApp Queue Cleanup     - daily at 23:15')
   logger.info('   6. Soft Delete Cleanup        - daily at 23:20')
   logger.info('   7. Monthly Billing            - 1st of month at 23:30')
-  logger.info('   8. Orphaned Files Cleanup     - daily at 03:00')
-  logger.info('   9. Temp Files Cleanup         - every hour')
-  logger.info('  10. Invoice Cleanup            - daily at 04:00')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {
