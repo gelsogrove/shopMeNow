@@ -27,7 +27,7 @@ export default function ShortUrlRedirect() {
     }
 
     // Call backend to resolve the short URL
-    const backendUrl = API_URL.replace("/api", "")
+    const backendUrl = API_URL.replace("/api/v1", "")
     const resolveUrl = `${backendUrl}/s/${code}/resolve`
 
     fetch(resolveUrl)

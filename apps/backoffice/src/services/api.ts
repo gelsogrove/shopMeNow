@@ -7,7 +7,7 @@
 
 // 🌐 Use relative URL in production, absolute in dev
 const API_BASE = import.meta.env.VITE_API_URL || (
-  import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:3001/api'
+  import.meta.env.MODE === 'production' ? '/api/v1' : 'http://localhost:3001/api/v1'
 )
 
 interface PlatformConfig {

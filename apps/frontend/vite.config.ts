@@ -21,7 +21,7 @@ export default defineConfig({
       allow: [path.resolve(__dirname, ".."), path.resolve(__dirname, "../../shared")],
     },
     proxy: {
-      "/api": {
+      "/api/v1": {
         target: "http://localhost:3001",
         changeOrigin: true,
         secure: false,

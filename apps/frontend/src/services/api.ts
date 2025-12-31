@@ -4,7 +4,7 @@ import { toast } from "../lib/toast"
 
 // Create an axios instance with custom config
 export const api = axios.create({
-  baseURL: "/api", // Set standard /api prefix for all API calls
+  baseURL: "/api/v1", // Versioned API base URL
   withCredentials: true, // Importante: invia i cookie con le richieste
 })
 

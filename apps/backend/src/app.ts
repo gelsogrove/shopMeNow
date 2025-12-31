@@ -344,8 +344,17 @@ logger.info("✅ Registered PUBLIC services endpoint at /api/services/public")
 // Versioned routes
 app.use("/api/v1", apiRouter)
 
-// Default version route (current version)
-app.use("/api", apiRouter)
+// Temporary redirect: /api → /api/v1 (for gradual migration)
+app.use("/api", (req, res, next) => {
+  // Skip if already on /api/v1 path
+  if (req.path.startsWith("/v1")) {
+    return next()
+  }
+  // Redirect to versioned endpoint
+  const newPath = `/api/v1${req.path === "/" ? "" : req.path}`
+  const newUrl = `${newPath}${req.url.includes("?") ? "?" + req.url.split("?")[1] : ""}`
+  return res.redirect(307, newUrl)
+})
 
 // Mount workspace routes directly at root for legacy compatibility
 import { workspaceRoutes as workspaceRoutesRoot } from "./interfaces/http/routes/workspace.routes"
