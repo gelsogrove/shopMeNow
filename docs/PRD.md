@@ -377,7 +377,7 @@ Postcondizioni: Chatbot riprende a funzionare
 | RF-ID | Requisito | Dettaglio |
 |-------|-----------|----------|
 | RF-070 | Unified Interface | `IStorageService` interface comune per Local e Cloudinary |
-| RF-071 | Auto-Switch | `getStorageService()` ritorna LocalAdapter in dev, S3Adapter in prod (basato su NODE_ENV) |
+| RF-071 | Auto-Switch | `getStorageService()` ritorna LocalAdapter in dev, CloudinaryAdapter in prod (basato su NODE_ENV) |
 | RF-072 | Product Images | Upload immagini prodotti in `products/{workspaceId}/` con tracking `imageKey` |
 | RF-073 | Service Images | Upload immagini servizi in `services/{workspaceId}/` con tracking `imageKey` |
 | RF-074 | Workspace Logo | Upload logo workspace in `workspaces/{workspaceId}/` con tracking `logoKey` |
