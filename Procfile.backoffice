@@ -1,6 +1,8 @@
-# 🔐 ECHATBOT-BACKOFFICE - Admin Panel SPA
+# 🔐 ECHATBOT-BACKOFFICE - Admin Panel SPA + Scheduler Worker
 # Deploy: git push heroku-backoffice main
-# Serve: Backoffice static SPA (/)
+# Web: Backoffice static SPA (/)
+# Worker: Scheduler cron jobs (background)
 # API calls: CORS to echatbot-app
 
 web: npx serve -s apps/backoffice/dist -l $PORT
+worker: node apps/scheduler/dist/src/index.js
