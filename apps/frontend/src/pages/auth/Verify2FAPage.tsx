@@ -26,6 +26,7 @@ import { toast } from '@/lib/toast'
 import { Loader2, Shield, AlertCircle } from 'lucide-react'
 import { api } from '@/services/api'
 import { logger } from '@/lib/logger'
+import { storage } from '@/lib/storage'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function Verify2FAPage() {
@@ -77,23 +78,22 @@ export default function Verify2FAPage() {
       
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
       logger.info('🧹 [Verify2FA] Clearing ALL storage (localStorage + sessionStorage)')
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       logger.info('✅ [Verify2FA] Storage cleared completely')
       
       // Store token and user
       if (token) {
-        localStorage.setItem('token', token)
+        storage.setToken(token)
         logger.info('✅ JWT token saved to localStorage')
       }
 
       // 🆕 Store sessionId for x-session-id header
       if (sessionId) {
-        sessionStorage.setItem('sessionId', sessionId)
+        storage.setSessionId(sessionId)
         logger.info('✅ SessionId saved to sessionStorage')
       }
       
-      localStorage.setItem('user', JSON.stringify(user))
+      storage.setUser(user)
       
       toast.success(`Welcome back, ${user.firstName}!`)
       

@@ -61,7 +61,7 @@ CREATE TABLE "public"."Workspace" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "isDelete" BOOLEAN NOT NULL DEFAULT false,
     "currency" TEXT NOT NULL DEFAULT 'EUR',
-    "challengeStatus" BOOLEAN NOT NULL DEFAULT false,
+    "channelStatus" BOOLEAN NOT NULL DEFAULT false,
     "description" TEXT,
     "messageLimit" INTEGER NOT NULL DEFAULT 50,
     "blocklist" TEXT DEFAULT '',

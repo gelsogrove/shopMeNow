@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { api } from "@/services/api"
+import { storage } from "@/lib/storage"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
 
@@ -36,7 +37,7 @@ export function ProductSearchDebug() {
     setError(null)
 
     try {
-      const sessionId = localStorage.getItem("sessionId") || ""
+      const sessionId = storage.getSessionId() || ""
       const response = await api.post(
         `/workspaces/${workspace.id}/debug/search-products`,
         { query: searchQuery },

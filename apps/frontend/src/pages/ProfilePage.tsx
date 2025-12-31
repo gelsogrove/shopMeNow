@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
 import {
   UserProfile,
@@ -272,8 +273,7 @@ export default function ProfilePage() {
       
       // Clear ALL storage (security)
       logger.info("🧹 [DELETE ACCOUNT] Clearing ALL storage")
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       
       setTimeout(() => {
         navigate("/login")

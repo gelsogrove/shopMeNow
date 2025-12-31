@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
-import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
@@ -45,10 +45,8 @@ export function MinimalLayout() {
 
   // Load user profile from localStorage
   useEffect(() => {
-    const cachedUser = localStorage.getItem("user")
-    if (cachedUser) {
-      try {
-        const userData = JSON.parse(cachedUser)
+    const userData = storage.getUser<any>()
+    if (userData) {
         const firstName = userData?.firstName || ""
         const lastName = userData?.lastName || ""
         const fullName = `${firstName} ${lastName}`.trim()
@@ -66,9 +64,6 @@ export function MinimalLayout() {
             ? firstName[0].toUpperCase()
             : "U"
         setUserInitials(initials)
-      } catch (error) {
-        logger.error("Error parsing user from localStorage:", error)
-      }
     }
   }, [])
 
@@ -103,9 +98,7 @@ export function MinimalLayout() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    localStorage.removeItem("currentWorkspace")
+    storage.clearAuth()
     navigate("/auth/login")
   }
 

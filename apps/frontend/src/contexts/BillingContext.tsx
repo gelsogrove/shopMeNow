@@ -12,6 +12,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
 import { useWorkspace } from "./WorkspaceContext"
+import { storage } from "@/lib/storage"
 import {
   getBalance,
   getBillingOverview,
@@ -22,7 +23,7 @@ import {
 
 // Helper to check if user is authenticated
 const isAuthenticated = (): boolean => {
-  const token = localStorage.getItem("token")
+  const token = storage.getToken()
   return !!token
 }
 

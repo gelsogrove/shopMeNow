@@ -21,7 +21,7 @@ eChatbot implements multiple blocking mechanisms to ensure:
 | Code | HTTP Status | Trigger | User Impact |
 |------|-------------|---------|-------------|
 | `PAUSED` | - | Owner paused subscription | Chatbot silently ignores messages |
-| `PAYMENT_FAILED` | - | Monthly payment failed | Chatbot blocked until payment |
+| `PAYMENT_FAILED` | - | Monthly payment failed (>= 3 attempts) | Chatbot blocked until payment |
 | `CREDIT_EXHAUSTED` | - | Credit < -€10 | Chatbot blocked |
 | `CHANNEL_DISABLED` | - | channelStatus = false | WIP mode response |
 | `WORKSPACE_INACTIVE` | - | Workspace deleted | Full block |
@@ -47,7 +47,7 @@ eChatbot implements multiple blocking mechanisms to ensure:
 
 **Effect:**
 - **IMMEDIATE** - Chatbot stops responding instantly
-- NO billing on 1st of month for paused users
+- No subscription fee for months fully paused; pause month still bills the subscription fee and usage only until `pausedAt`
 - Affects ALL workspaces owned by this user
 
 **Checked by:**
@@ -58,6 +58,22 @@ eChatbot implements multiple blocking mechanisms to ensure:
 - Owner clicks "Resume Subscription"
 - `subscriptionStatus = 'ACTIVE'`
 - Chatbot resumes immediately
+
+---
+
+## 💳 PAYMENT_FAILED - Payment Failed (AFTER 3 ATTEMPTS)
+
+**When it triggers:**
+- `owner.subscriptionStatus = 'PAYMENT_FAILED'`
+- `owner.paymentFailureCount >= 3`
+
+**Effect:**
+- Chatbot is blocked only after 3 consecutive failed payment attempts
+- Affects ALL workspaces owned by this user
+
+**Notes:**
+- `paymentFailureCount` is stored on the `User` record
+- Counter must be reset to 0 on successful payment
 
 ---
 

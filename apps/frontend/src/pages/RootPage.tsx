@@ -13,6 +13,7 @@ import { LoginPage } from "./LoginPage"
 import { useFeatureFlags } from "@/hooks/usePlatformConfig"
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { storage } from "@/lib/storage"
 
 export function RootPage() {
   const { landingPageEnabled, isLoading } = useFeatureFlags()
@@ -20,7 +21,7 @@ export function RootPage() {
 
   useEffect(() => {
     // Check if user is already logged in
-    const token = localStorage.getItem("token")
+    const token = storage.getToken()
     if (token) {
       // User logged in, redirect to workspace selection
       navigate("/workspace-selection", { replace: true })

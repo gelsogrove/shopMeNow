@@ -25,7 +25,8 @@ CHATBOT STOPS IMMEDIATELY
   • Customer messages silently ignored
          ↓
 Monthly Billing (1st of month):
-  • SKIPS paused users → NO €29/€49 charge
+  • If paused before the month starts → NO subscription fee for that month
+  • If paused during the month → subscription fee applies, usage billed only up to pausedAt
   • User keeps current credit balance
 ```
 
@@ -45,12 +46,13 @@ CHATBOT RESUMES IMMEDIATELY
   • Customer messages processed normally
          ↓
 Next 1st of Month:
-  • User charged normally (€29/€49)
+  • User charged normally for active months
 ```
 
 ### Key Points:
 - **IMMEDIATE**: Pause/Resume take effect instantly (not end-of-month)
-- **NO BILLING**: Paused users are NOT charged on 1st of month
+- **NO MONTHLY FEE WHEN FULLY PAUSED**: If the user is paused before a month starts, that month has no subscription fee.
+- **PAUSE MONTH**: If pause happens mid-month, the subscription fee applies and usage is billed only until `pausedAt`.
 - **ALL WORKSPACES**: Pause affects ALL workspaces owned by the user
 - **CREDIT PRESERVED**: Credit balance stays unchanged while paused
 
@@ -355,6 +357,13 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Payment Failure Tracking (Future Payment Flow)
+
+- `user.paymentFailureCount` increments on each failed payment attempt.
+- `user.lastPaymentFailedAt` stores the last failure timestamp.
+- Service blocking occurs only when `paymentFailureCount >= 3`.
+- On successful payment, reset `paymentFailureCount` to 0 and set `subscriptionStatus = ACTIVE`.
+
 ---
 
 ## 📅 Billing Cycle
@@ -410,4 +419,3 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 - [BLOCKING_SYSTEM.md](./BLOCKING_SYSTEM.md) - Complete blocking conditions
 - [PRICING_CENTRALIZATION_SUMMARY.md](./PRICING_CENTRALIZATION_SUMMARY.md) - Pricing enum details
 - [specs/185-subscription-billing-system/spec.md](../specs/185-subscription-billing-system/spec.md) - Feature spec
-

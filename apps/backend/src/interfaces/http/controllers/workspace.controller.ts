@@ -58,7 +58,6 @@ export class WorkspaceController {
         welcomeMessage: workspace.welcomeMessage,
         wipMessage: workspace.wipMessage,
         channelStatus: workspace.channelStatus,
-        challengeStatus: workspace.channelStatus, // 🔄 Alias for frontend compatibility
         isActive: workspace.isActive,
         isDelete: workspace.isDelete,
         url: workspace.url,
@@ -130,7 +129,6 @@ export class WorkspaceController {
           welcomeMessage: workspace.welcomeMessage,
           wipMessage: workspace.wipMessage,
           channelStatus: workspace.channelStatus,
-          challengeStatus: workspace.channelStatus, // 🔄 Alias for frontend compatibility
           isActive: workspace.isActive,
           isDelete: workspace.isDelete,
           url: workspace.url,
@@ -309,7 +307,6 @@ export class WorkspaceController {
         welcomeMessage: workspace.welcomeMessage,
         wipMessage: workspace.wipMessage,
         channelStatus: workspace.channelStatus,
-        challengeStatus: workspace.channelStatus, // 🔄 Alias for frontend compatibility
         isActive: workspace.isActive,
         isDelete: workspace.isDelete,
         url: workspace.url,

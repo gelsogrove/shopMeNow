@@ -41,6 +41,7 @@ vi.mock("@/lib/toast", () => ({
 
 vi.mock("@/lib/logger", () => ({
   logger: {
+    debug: vi.fn(),
     info: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),

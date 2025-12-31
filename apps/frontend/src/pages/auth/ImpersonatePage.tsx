@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, AlertCircle, Shield } from 'lucide-react'
+import { storage } from '@/lib/storage'
 
 export default function ImpersonatePage() {
   const navigate = useNavigate()
@@ -33,23 +34,18 @@ export default function ImpersonatePage() {
 
     try {
       // Clear ALL existing auth data FIRST
-      localStorage.removeItem('token')
-      localStorage.removeItem('currentWorkspace')
-      localStorage.removeItem('sessionId')
-      localStorage.removeItem('user')
+      storage.clearAuth()
       localStorage.removeItem('isImpersonating')
       localStorage.removeItem('impersonatorEmail')
-      sessionStorage.clear()
       
       // Decode token to get impersonation info
       const tokenPayload = JSON.parse(atob(token.split('.')[1]))
       
       // Store the impersonation token in localStorage
-      localStorage.setItem('token', token)
+      storage.setToken(token)
       
       // Store sessionId in BOTH localStorage and sessionStorage (api.ts reads from sessionStorage)
-      localStorage.setItem('sessionId', sessionId)
-      sessionStorage.setItem('sessionId', sessionId)
+      storage.setSessionId(sessionId)
       
       // Store impersonation flags (Feature 190)
       if (tokenPayload.isImpersonating) {
@@ -58,7 +54,7 @@ export default function ImpersonatePage() {
       }
       
       // Verify token is actually saved
-      const savedToken = localStorage.getItem('token')
+      const savedToken = storage.getToken()
       
       if (!savedToken) {
         console.error('❌ CRITICAL: Token not saved to localStorage!')

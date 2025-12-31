@@ -91,6 +91,38 @@ describe("Billing Middleware", () => {
       )
     })
 
+    it("should include customer limit message when at customer limit", async () => {
+      mockCheckPlanLimits.mockResolvedValue({
+        withinLimits: false,
+        current: 50,
+        max: 50,
+        limitType: "customers",
+      })
+
+      const middleware = checkPlanLimits("customers")
+      await middleware(mockReq as Request, mockRes as Response, nextFunction)
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0]
+      expect(payload.code).toBe("PLAN_LIMIT_REACHED")
+      expect(payload.message).toContain("clienti")
+    })
+
+    it("should include channel limit message when at channel limit", async () => {
+      mockCheckPlanLimits.mockResolvedValue({
+        withinLimits: false,
+        current: 3,
+        max: 3,
+        limitType: "channels",
+      })
+
+      const middleware = checkPlanLimits("channels")
+      await middleware(mockReq as Request, mockRes as Response, nextFunction)
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0]
+      expect(payload.code).toBe("PLAN_LIMIT_REACHED")
+      expect(payload.message).toContain("canali")
+    })
+
     it("should return 400 when workspaceId is missing", async () => {
       mockReq = { params: {} }
 

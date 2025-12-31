@@ -1,4 +1,4 @@
-export { whatsappChallengeQueueJob } from './whatsapp-challenge-queue.job'
+export { whatsappChannelQueueJob } from './whatsapp-channel-queue.job'
 export { shortUrlsCleanupJob } from './short-urls-cleanup.job'
 export { unusedImagesCleanupJob } from './unused-images-cleanup.job'
 export { monthlyBillingJob } from './monthly-billing.job'

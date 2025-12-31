@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { api } from "./api"
 
 export interface Language {
@@ -35,7 +36,7 @@ export interface Workspace {
   operatorWhatsappNumber?: string
   toneOfVoice?: string
   botIdentityResponse?: string
-  challengeStatus?: boolean
+  channelStatus?: boolean
   allowedExternalLinks?: string[]
   // 🆕 Prompt Builder fields
   address?: string
@@ -84,7 +85,7 @@ export interface UpdateWorkspaceData {
   operatorWhatsappNumber?: string
   toneOfVoice?: string
   botIdentityResponse?: string
-  challengeStatus?: boolean
+  channelStatus?: boolean
   // 🆕 Prompt Builder fields
   address?: string
   customAiRules?: string
@@ -159,12 +160,11 @@ const workspaceApi = {
 
 // Language functions
 export const getLanguages = async (): Promise<Language[]> => {
-  const workspaceStr = localStorage.getItem("currentWorkspace")
-  if (!workspaceStr) {
+  const workspace = storage.getWorkspace<{ id?: string }>()
+  if (!workspace?.id) {
     throw new Error("No workspace selected")
   }
   try {
-    const workspace = JSON.parse(workspaceStr)
     const response = await api.get("/languages", {
       headers: {
         "x-workspace-id": workspace.id,

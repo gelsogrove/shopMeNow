@@ -10,7 +10,8 @@ module.exports = {
     "^.+\\.(ts|tsx)$": [
       "ts-jest",
       {
-        isolatedModules: true,
+        tsconfig: "tsconfig.test.json",
+        useESM: true,
         diagnostics: {
           ignoreCodes: [2615, 6133],
         },
@@ -22,13 +23,9 @@ module.exports = {
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
   testMatch: ["**/__tests__/security/**/*.test.ts"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
-  // NO setupFilesAfterEnv - security tests use real DB, no mocks
+  setupFilesAfterEnv: ["<rootDir>/jest.security.setup.js"],
+  globalTeardown: "<rootDir>/jest.security.teardown.js",
   verbose: true,
   transformIgnorePatterns: ["node_modules/"],
   extensionsToTreatAsEsm: [".ts"],
-  globals: {
-    "ts-jest": {
-      useESM: true,
-    },
-  },
 }

@@ -1,4 +1,4 @@
-import { useWorkspace } from "@/hooks/use-workspace";
+import { storage } from "@/lib/storage";
 
 /**
  * Get the currency symbol based on the currency code
@@ -28,30 +28,9 @@ const getWorkspaceCurrency = (): string => {
     return 'EUR'; // SSR fallback
   }
 
-  // Try to get from sessionStorage
-  const sessionWorkspace = sessionStorage.getItem('currentWorkspace');
-  if (sessionWorkspace) {
-    try {
-      const workspace = JSON.parse(sessionWorkspace);
-      if (workspace?.currency) {
-        return workspace.currency;
-      }
-    } catch {
-      // Silent fail - continue to other methods
-    }
-  }
-
-  // Try to get from localStorage as fallback
-  const localWorkspace = localStorage.getItem('currentWorkspace');
-  if (localWorkspace) {
-    try {
-      const workspace = JSON.parse(localWorkspace);
-      if (workspace?.currency) {
-        return workspace.currency;
-      }
-    } catch {
-      // Silent fail - use default
-    }
+  const workspace = storage.getWorkspace<{ currency?: string }>()
+  if (workspace?.currency) {
+    return workspace.currency
   }
 
   return 'EUR'; // Default fallback

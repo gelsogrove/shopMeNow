@@ -6,7 +6,7 @@ Microservizio per job schedulati. Progetto separato dal backend, stesso database
 
 | # | Job | Schedule | Cron | Description |
 |---|-----|----------|------|-------------|
-| 1 | WhatsApp Challenge Queue | Ogni 3 sec | `*/3 * * * * *` | Invia messaggi dalla coda WhatsApp |
+| 1 | WhatsApp Channel Queue | Ogni 3 sec | `*/3 * * * * *` | Invia messaggi dalla coda WhatsApp |
 | 2 | Short URLs Cleanup | 23:00 daily | `0 23 * * *` | Elimina short URL scaduti |
 | 3 | Unused Images Cleanup | 23:05 daily | `5 23 * * *` | Elimina immagini orfane |
 | 4 | Messages Archive | 23:10 daily | `10 23 * * *` | Archivia messaggi > 6 mesi |
@@ -69,7 +69,7 @@ scheduler/
 │   ├── config/
 │   │   └── database.ts     # Prisma client
 │   ├── jobs/
-│   │   ├── whatsapp-challenge-queue.job.ts
+│   │   ├── whatsapp-channel-queue.job.ts
 │   │   ├── short-urls-cleanup.job.ts
 │   │   ├── unused-images-cleanup.job.ts
 │   │   ├── messages-archive.job.ts

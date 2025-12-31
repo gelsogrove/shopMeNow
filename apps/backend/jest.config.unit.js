@@ -14,7 +14,7 @@ module.exports = {
       "ts-jest",
       {
         tsconfig: "tsconfig.test.json",
-        isolatedModules: true,
+        useESM: true,
         diagnostics: {
           ignoreCodes: [2615, 6133],
         },
@@ -36,9 +36,4 @@ module.exports = {
   verbose: true,
   transformIgnorePatterns: ["node_modules/"],
   extensionsToTreatAsEsm: [".ts"],
-  globals: {
-    "ts-jest": {
-      useESM: true,
-    },
-  },
 }

@@ -522,10 +522,10 @@ const CheckoutPage: React.FC = () => {
   const loadAvailableServices = async () => {
     const workspaceId = tokenData?.workspaceId
     logger.info("🔍 LoadAvailableServices called, workspaceId:", workspaceId)
-    logger.info("🔍 Full tokenData:", tokenData)
+    logger.debug("🔍 Token data loaded for checkout")
 
     if (!workspaceId) {
-      logger.error("❌ No workspaceId found in tokenData:", tokenData)
+      logger.error("❌ No workspaceId found in tokenData")
       // toast.error("Workspace ID non trovato")
       return
     }

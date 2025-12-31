@@ -145,3 +145,10 @@ export type {
 
 // Export prisma as default
 export default prisma
+
+export const databasePool = pool
+
+export async function disconnectDatabase(): Promise<void> {
+  await prisma.$disconnect()
+  await pool.end()
+}

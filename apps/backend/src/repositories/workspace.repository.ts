@@ -48,6 +48,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       hasSalesAgents: data.hasSalesAgents ?? false,
       hasHumanSupport: data.hasHumanSupport ?? true,
       humanSupportInstructions: data.humanSupportInstructions || null,
+      frustrationEscalationInstructions: data.frustrationEscalationInstructions || null,
       operatorContactMethod: data.operatorContactMethod || 'email',
       operatorWhatsappNumber: data.operatorWhatsappNumber || null,
       toneOfVoice: data.toneOfVoice || 'friendly',
@@ -95,6 +96,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       hasSalesAgents: workspace.hasSalesAgents,
       hasHumanSupport: workspace.hasHumanSupport,
       humanSupportInstructions: workspace.humanSupportInstructions,
+      frustrationEscalationInstructions: workspace.frustrationEscalationInstructions,
       operatorContactMethod: workspace.operatorContactMethod,
       operatorWhatsappNumber: workspace.operatorWhatsappNumber,
       toneOfVoice: workspace.toneOfVoice,
@@ -421,10 +423,10 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // Ensure whatsappApiToken/whatsappApiKey is mapped correctly for Prisma
       const dbData: any = { ...data }
 
-      // 🔄 Map challengeStatus → channelStatus (frontend uses different name than DB)
-      if (dbData.challengeStatus !== undefined) {
-        dbData.channelStatus = dbData.challengeStatus
-        delete dbData.challengeStatus
+      // 🔄 Map channelStatus → channelStatus (frontend uses different name than DB)
+      if (dbData.channelStatus !== undefined) {
+        dbData.channelStatus = dbData.channelStatus
+        delete dbData.channelStatus
       }
 
       // Remove 'id' if present - shouldn't update primary key

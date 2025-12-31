@@ -26,7 +26,7 @@ const mockWorkspace = {
   whatsappPhoneNumber: '+39 333 1234567',
   adminEmail: 'admin@test.com',
   url: 'https://test.com',
-  challengeStatus: true,
+  channelStatus: true,
   welcomeMessage: 'Welcome to our channel!',
   wipMessage: 'We are under maintenance',
   allowedExternalLinks: ['stripe.com', 'paypal.com'],

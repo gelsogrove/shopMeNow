@@ -24,6 +24,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { toast } from '@/lib/toast'
 import { logger } from '@/lib/logger'
+import { storage } from '@/lib/storage'
 import { Loader2, CheckCircle, AlertCircle, Smartphone } from 'lucide-react'
 import { api } from '@/services/api'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -76,7 +77,7 @@ export default function Setup2FAPage() {
       const { recoveryCodes: codes, token, sessionId, user } = response.data
       
       // Save token for authentication (JWT-only)
-      logger.info('🔐 [Setup2FA] verify-2fa-setup response:', { token, sessionId, user })
+      logger.info('🔐 [Setup2FA] verify-2fa-setup response received')
       
       if (!token) {
         logger.error('❌ [Setup2FA] CRITICAL: Backend did not return token!')
@@ -87,22 +88,21 @@ export default function Setup2FAPage() {
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
       logger.info('🧹 [Setup2FA] Clearing ALL storage (localStorage + sessionStorage)')
       
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       logger.info('✅ [Setup2FA] Storage cleared completely')
       
       // Save new authentication data
-      localStorage.setItem('token', token)
+      storage.setToken(token)
       logger.info(`✅ [Setup2FA] NEW token saved`)
 
       // 🆕 Save sessionId for x-session-id header
       if (sessionId) {
-        sessionStorage.setItem('sessionId', sessionId)
+        storage.setSessionId(sessionId)
         logger.info(`✅ [Setup2FA] SessionId saved`)
       }
       
       // Verify immediately that the token was saved correctly
-      const savedToken = localStorage.getItem('token')
+      const savedToken = storage.getToken()
       if (savedToken !== token) {
         logger.error('❌ [Setup2FA] Token mismatch after save!')
         toast.error('Token save failed')
@@ -110,13 +110,12 @@ export default function Setup2FAPage() {
       }
       
       if (user) {
-        localStorage.setItem('user', JSON.stringify(user))
+        storage.setUser(user)
       }
       
       // Verify token saved correctly
-      const verifyToken = localStorage.getItem('token')
-      
-      logger.info(`✅ [Setup2FA] Token saved: ${verifyToken ? verifyToken.substring(0, 20) + '...' : 'NULL'}`)
+      const verifyToken = storage.getToken()
+      logger.info(`✅ [Setup2FA] Token saved`)
       
       if (!verifyToken) {
         logger.error('❌ [Setup2FA] CRITICAL: Token save failed!')

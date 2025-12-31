@@ -1,6 +1,0 @@
-    2830 words - docs/prompts/cart-management-agent.md
-    1260 words - docs/prompts/customer-support-agent.md
-    2575 words - docs/prompts/order-tracking-agent.md
-    1283 words - docs/prompts/product-search-agent.md
-    2830 words - docs/prompts/router-agent.md
-    1438 words - docs/prompts/safety-translation-agent.md

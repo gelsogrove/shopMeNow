@@ -32,6 +32,7 @@ const createWorkspaceMock = (overrides: {
   channelStatus?: boolean
   ownerSubscriptionStatus?: string
   ownerCreditBalance?: number
+  ownerPaymentFailureCount?: number
   ownerId?: string
 }) => ({
   id: overrides.workspaceId ?? "test-workspace-id",
@@ -44,6 +45,7 @@ const createWorkspaceMock = (overrides: {
     id: overrides.ownerId ?? "test-owner-id",
     subscriptionStatus: overrides.ownerSubscriptionStatus ?? "ACTIVE",
     creditBalance: overrides.ownerCreditBalance ?? 50,
+    paymentFailureCount: overrides.ownerPaymentFailureCount ?? 0,
   },
 })
 
@@ -133,9 +135,12 @@ describe("WorkspaceAccessService", () => {
     })
 
     describe("owner subscription status - PAYMENT_FAILED (Feature 198)", () => {
-      it("should block when owner subscriptionStatus is PAYMENT_FAILED", async () => {
+      it("should block when owner subscriptionStatus is PAYMENT_FAILED and failures >= 3", async () => {
         mockPrisma.workspace.findUnique.mockResolvedValue(
-          createWorkspaceMock({ ownerSubscriptionStatus: "PAYMENT_FAILED" })
+          createWorkspaceMock({
+            ownerSubscriptionStatus: "PAYMENT_FAILED",
+            ownerPaymentFailureCount: 3,
+          })
         )
 
         const result = await service.canProcessMessages(workspaceId)
@@ -143,6 +148,20 @@ describe("WorkspaceAccessService", () => {
         expect(result.canProcess).toBe(false)
         expect(result.blockReason).toBe("PAYMENT_FAILED")
         expect(result.message).toContain("Payment failed")
+      })
+
+      it("should allow processing when owner subscriptionStatus is PAYMENT_FAILED but failures < 3", async () => {
+        mockPrisma.workspace.findUnique.mockResolvedValue(
+          createWorkspaceMock({
+            ownerSubscriptionStatus: "PAYMENT_FAILED",
+            ownerPaymentFailureCount: 2,
+          })
+        )
+
+        const result = await service.canProcessMessages(workspaceId)
+
+        expect(result.canProcess).toBe(true)
+        expect(result.blockReason).toBeUndefined()
       })
     })
 
@@ -177,6 +196,17 @@ describe("WorkspaceAccessService", () => {
         const result = await service.canProcessMessages(workspaceId)
 
         expect(result.canProcess).toBe(true)
+      })
+
+      it("should block when owner credit is -€11", async () => {
+        mockPrisma.workspace.findUnique.mockResolvedValue(
+          createWorkspaceMock({ ownerCreditBalance: -11 })
+        )
+
+        const result = await service.canProcessMessages(workspaceId)
+
+        expect(result.canProcess).toBe(false)
+        expect(result.blockReason).toBe("CREDIT_EXHAUSTED")
       })
 
       it("should allow processing when owner credit is zero", async () => {
@@ -271,14 +301,30 @@ describe("WorkspaceAccessService", () => {
       expect(result).toBe(true)
     })
 
-    it("should return true when owner PAYMENT_FAILED", async () => {
+    it("should return true when owner PAYMENT_FAILED and failures >= 3", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
-        createWorkspaceMock({ ownerSubscriptionStatus: "PAYMENT_FAILED" })
+        createWorkspaceMock({
+          ownerSubscriptionStatus: "PAYMENT_FAILED",
+          ownerPaymentFailureCount: 3,
+        })
       )
 
       const result = await service.isBlockedDueToBilling(workspaceId)
 
       expect(result).toBe(true)
+    })
+
+    it("should return false when owner PAYMENT_FAILED but failures < 3", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue(
+        createWorkspaceMock({
+          ownerSubscriptionStatus: "PAYMENT_FAILED",
+          ownerPaymentFailureCount: 2,
+        })
+      )
+
+      const result = await service.isBlockedDueToBilling(workspaceId)
+
+      expect(result).toBe(false)
     })
 
     it("should return true when owner CREDIT_EXHAUSTED", async () => {
@@ -347,9 +393,12 @@ describe("WorkspaceAccessService", () => {
       expect(result.blockReason).toBe("PAUSED")
     })
 
-    it("should return payment_failed status when owner payment failed", async () => {
+    it("should return payment_failed status when owner payment failed and failures >= 3", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
-        createWorkspaceMock({ ownerSubscriptionStatus: "PAYMENT_FAILED" })
+        createWorkspaceMock({
+          ownerSubscriptionStatus: "PAYMENT_FAILED",
+          ownerPaymentFailureCount: 3,
+        })
       )
 
       const result = await service.getAccessStatus(workspaceId)

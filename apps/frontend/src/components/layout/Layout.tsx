@@ -2,6 +2,7 @@ import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { useChat } from "@/contexts/ChatContext"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { Chat } from "@/types/chat"
 import ImpersonationBanner from "@/components/ImpersonationBanner"
 // Importiamo l'icona WhatsAppIcon che creiamo internamente
@@ -31,13 +32,9 @@ export function Layout() {
 
   // Load workspace from localStorage
   useEffect(() => {
-    const cachedWorkspace = localStorage.getItem("currentWorkspace")
+    const cachedWorkspace = storage.getWorkspace()
     if (cachedWorkspace) {
-      try {
-        setWorkspace(JSON.parse(cachedWorkspace))
-      } catch (error) {
-        logger.error("Error parsing workspace from localStorage:", error)
-      }
+      setWorkspace(cachedWorkspace)
     }
   }, [])
 

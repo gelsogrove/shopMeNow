@@ -100,7 +100,7 @@ Always final layer - translate to customer's language
 ### PRESERVE EXISTING CONTROLS (CRITICAL!)
 The orchestration MUST preserve ALL existing security/state checks:
 - ✅ **Blocked User** - If user is blocked, return blocked message (no processing)
-- ✅ **Channel Stopped** - If workspace.challengeStatus is stopped, return WIP message
+- ✅ **Channel Stopped** - If workspace.channelStatus is stopped, return WIP message
 - ✅ **No Credits** - If user has no credits/balance, handle appropriately
 - ✅ **Soft Deleted** - Check deletedAt on all entities
 - ✅ **Workspace Isolation** - ALL queries must filter by workspaceId

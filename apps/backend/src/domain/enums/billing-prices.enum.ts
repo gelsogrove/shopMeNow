@@ -19,7 +19,7 @@ export enum BillingPrices {
   FREE_MONTHLY = 0.0, // €0.00 - Free plan
   BASIC_MONTHLY = 19.0, // €19.00 - Basic plan
   PREMIUM_MONTHLY = 49.0, // €49.00 - Premium plan
-  ENTERPRISE_MONTHLY = 149.0, // €149.00 - Enterprise plan
+  ENTERPRISE_MONTHLY = 129.0, // €129.00 - Enterprise plan
 }
 
 /**

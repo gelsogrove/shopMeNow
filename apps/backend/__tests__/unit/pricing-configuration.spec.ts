@@ -40,8 +40,8 @@ describe("Pricing Configuration", () => {
   })
 
   describe("Enterprise Plan Pricing", () => {
-    it("should have Enterprise monthly fee of €149", () => {
-      expect(BillingPrices.ENTERPRISE_MONTHLY).toBe(149.0)
+    it("should have Enterprise monthly fee of €129", () => {
+      expect(BillingPrices.ENTERPRISE_MONTHLY).toBe(129.0)
     })
   })
 

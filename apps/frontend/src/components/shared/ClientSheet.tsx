@@ -19,6 +19,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { Client } from "@/pages/ClientsPage"
 import { api } from "@/services/api"
 import { salesApi } from "@/services/salesApi"
@@ -71,14 +72,8 @@ interface ClientSheetProps {
 
 // Helper to get workspaceId from localStorage
 function getWorkspaceId() {
-  const workspaceData = localStorage.getItem("currentWorkspace")
-  if (workspaceData) {
-    try {
-      const workspace = JSON.parse(workspaceData)
-      return workspace.id
-    } catch {}
-  }
-  return null
+  const workspace = storage.getWorkspace<{ id?: string }>()
+  return workspace?.id || null
 }
 
 // Helper function to convert language code to name

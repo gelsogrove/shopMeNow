@@ -313,9 +313,21 @@ export default function ClientsPage(): JSX.Element {
         toast.success("Client created successfully", { duration: 1000 })
         setClientSheetOpen(false)
       }
-    } catch (error) {
+    } catch (error: any) {
+      const errorData = error?.response?.data
+      if (
+        errorData?.code === "PLAN_LIMIT_REACHED" ||
+        errorData?.code === "CUSTOMER_LIMIT_REACHED"
+      ) {
+        toast.error(
+          errorData.message ||
+            "Customer limit reached for your plan. Upgrade to add more customers.",
+          { duration: 3000 }
+        )
+      } else {
+        toast.error("Failed to create client", { duration: 1000 })
+      }
       logger.error("Error creating client:", error)
-      toast.error("Failed to create client", { duration: 1000 })
     }
   }
 

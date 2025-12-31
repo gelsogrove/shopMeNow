@@ -47,7 +47,7 @@ export class WhatsAppWebhookController {
     try {
       const mode = req.query["hub.mode"]
       const token = req.query["hub.verify_token"]
-      const challenge = req.query["hub.challenge"]
+      const channel = req.query["hub.channel"]
 
       logger.info("[WEBHOOK-VERIFY] Meta verification request received", {
         mode,
@@ -59,7 +59,7 @@ export class WhatsAppWebhookController {
       // For now, accept all verification requests in development
       if (mode === "subscribe") {
         logger.info("[WEBHOOK-VERIFY] ✅ Verification successful (dev mode)")
-        res.status(200).send(challenge)
+        res.status(200).send(channel)
       } else {
         logger.warn("[WEBHOOK-VERIFY] ❌ Verification failed - invalid token")
         res.status(403).send("Forbidden")

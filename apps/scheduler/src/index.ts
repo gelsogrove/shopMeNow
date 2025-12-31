@@ -2,7 +2,7 @@ import cron from 'node-cron'
 import { connectDatabase, disconnectDatabase } from './config/database'
 import { runJob } from './services/job-runner.service'
 import {
-  whatsappChallengeQueueJob,
+  whatsappChannelQueueJob,
   shortUrlsCleanupJob,
   unusedImagesCleanupJob,
   monthlyBillingJob,
@@ -16,7 +16,7 @@ import logger from './utils/logger'
 // eChatbot Scheduler Microservice
 //
 // Cron Jobs (ordered by execution time):
-// 1. WhatsApp Challenge Queue   - every 3 SECONDS (parallel send, with lock)
+// 1. WhatsApp Channel Queue   - every 3 SECONDS (parallel send, with lock)
 // 2. Short URLs Cleanup         - daily at 23:00
 // 3. Unused Images Cleanup      - daily at 23:05
 // 4. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
@@ -38,12 +38,12 @@ async function main() {
   setupStorageCleanup()
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Job 1: WhatsApp Challenge Queue - every 3 seconds
+  // Job 1: WhatsApp Channel Queue - every 3 seconds
   // Uses in-memory lock: if previous job is still running, skip
   // Sends messages in PARALLEL (safe for different customers)
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('*/3 * * * * *', async () => {
-    await runJob('whatsapp-challenge-queue', whatsappChallengeQueueJob)
+    await runJob('whatsapp-channel-queue', whatsappChannelQueueJob)
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -97,7 +97,7 @@ async function main() {
 
   logger.info('✅ Scheduler started successfully!')
   logger.info('📋 Scheduled jobs:')
-  logger.info('   1. WhatsApp Challenge Queue   - every 3 SECONDS')
+  logger.info('   1. WhatsApp Channel Queue   - every 3 SECONDS')
   logger.info('   2. Short URLs Cleanup         - daily at 23:00')
   logger.info('   3. Unused Images Cleanup      - daily at 23:05')
   logger.info('   4. Messages Archive           - daily at 23:10')

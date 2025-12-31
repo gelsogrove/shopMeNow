@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card"
 import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { storage } from "@/lib/storage"
 
 export function VerifyOtpPage() {
   const [searchParams] = useSearchParams()
@@ -53,11 +54,10 @@ export function VerifyOtpPage() {
       }
 
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       
       // Store the token and redirect to workspace selection
-      localStorage.setItem("token", data.token)
+      storage.setToken(data.token)
       navigate("/workspace-selection")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")

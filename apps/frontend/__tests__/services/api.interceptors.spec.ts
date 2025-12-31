@@ -16,6 +16,7 @@ import MockAdapter from "axios-mock-adapter"
 // Mock logger
 vi.mock("@/lib/logger", () => ({
   logger: {
+    debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),

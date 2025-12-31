@@ -8,7 +8,7 @@
  *
  * Blocking conditions (checked on OWNER, not workspace):
  * 1. owner.subscriptionStatus === 'PAUSED' → User paused subscription
- * 2. owner.subscriptionStatus === 'PAYMENT_FAILED' → Payment failed, service blocked
+ * 2. owner.subscriptionStatus === 'PAYMENT_FAILED' (>= 3 failures) → Payment failed, service blocked
  * 3. owner.creditBalance < -10 → Credit exhausted below threshold
  * 4. workspace.channelStatus === false → WIP mode (handled separately with WIP message)
  *
@@ -22,6 +22,7 @@ import logger from "../../utils/logger"
 
 /** Credit minimum threshold - allow negative up to -€10 */
 export const CREDIT_MIN_THRESHOLD = -10
+const PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
 
 export type BlockReason =
   | "PAUSED"
@@ -86,6 +87,7 @@ export class WorkspaceAccessService {
               deletedAt: true,
               subscriptionStatus: true,
               creditBalance: true,
+              paymentFailureCount: true,
             },
           },
         },
@@ -170,7 +172,12 @@ export class WorkspaceAccessService {
       // }
 
       // 4. Check owner subscription status - PAYMENT_FAILED
-      if (owner.subscriptionStatus === "PAYMENT_FAILED") {
+      const paymentFailureCount = owner.paymentFailureCount ?? 0
+
+      if (
+        owner.subscriptionStatus === "PAYMENT_FAILED" &&
+        paymentFailureCount >= PAYMENT_FAILURE_BLOCK_THRESHOLD
+      ) {
         logger.info(
           `[ACCESS] 💳 Owner payment failed for workspace: ${workspace.name} (owner: ${workspace.ownerId})`
         )
@@ -302,6 +309,7 @@ export class WorkspaceAccessService {
           select: {
             subscriptionStatus: true,
             creditBalance: true,
+            paymentFailureCount: true,
           },
         },
       },
@@ -351,12 +359,13 @@ export class WorkspaceAccessService {
     try {
       const owner = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: {
-          id: true,
-          subscriptionStatus: true,
-          creditBalance: true,
-        },
-      })
+      select: {
+        id: true,
+        subscriptionStatus: true,
+        creditBalance: true,
+        paymentFailureCount: true,
+      },
+    })
 
       if (!owner) {
         return {
@@ -381,7 +390,12 @@ export class WorkspaceAccessService {
         }
       }
 
-      if (owner.subscriptionStatus === "PAYMENT_FAILED") {
+      const paymentFailureCount = owner.paymentFailureCount ?? 0
+
+      if (
+        owner.subscriptionStatus === "PAYMENT_FAILED" &&
+        paymentFailureCount >= PAYMENT_FAILURE_BLOCK_THRESHOLD
+      ) {
         return {
           canProcess: false,
           blockReason: "PAYMENT_FAILED",

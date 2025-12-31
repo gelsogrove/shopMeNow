@@ -16,6 +16,7 @@ import { useCurrentChatMessages } from "@/hooks/useCurrentChatMessages"
 import { useLoadMoreMessages } from "@/hooks/useLoadMoreMessages"
 import { useWebSocket } from "@/hooks/useWebSocket"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { pushNotificationService } from "@/services/pushNotificationService"
@@ -111,8 +112,8 @@ export function ChatPage() {
 
   // 🔑 Get workspaceId from URL first, fallback to localStorage
   const urlWorkspaceId = new URLSearchParams(window.location.search).get("workspaceId")
-  const storedWorkspace = localStorage.getItem("currentWorkspace")
-  const storedWorkspaceId = storedWorkspace ? JSON.parse(storedWorkspace)?.id : null
+  const storedWorkspace = storage.getWorkspace<{ id?: string }>()
+  const storedWorkspaceId = storedWorkspace?.id || null
   const effectiveWorkspaceId = urlWorkspaceId || storedWorkspaceId
 
   // 🚨 CRITICAL: If no workspaceId anywhere, redirect to workspace selection
@@ -127,12 +128,12 @@ export function ChatPage() {
     if (urlWorkspaceId && storedWorkspaceId !== urlWorkspaceId) {
       logger.info(`[ChatPage] Syncing localStorage with URL workspaceId: ${urlWorkspaceId}`)
       // We need to fetch workspace data - for now just clear the cache
-      localStorage.removeItem("currentWorkspace")
+      storage.clearWorkspace()
     }
   }, [])
 
   // Get sessionId from sessionStorage (unique per browser session)
-  const userSessionId = localStorage.getItem("sessionId")
+  const userSessionId = storage.getSessionId()
 
   // Clean any stale locks on mount
   useEffect(() => {
@@ -236,7 +237,7 @@ export function ChatPage() {
     logger.info("[ChatPage] 🔄 RESET: Cleaning all data on mount")
 
     // 1. ✅ PRIMA verifica sessionStorage - se c'è un valore salvato, NON resettare MAI
-    const savedChatId = sessionStorage.getItem("selectedChatId")
+    const savedChatId = storage.getSelectedChatId()
 
     if (!savedChatId) {
       logger.info("[ChatPage] Nessuna chat salvata, reset selectedChat")
@@ -268,8 +269,7 @@ export function ChatPage() {
   useEffect(() => {
     if (!isWorkspaceLoading && !workspace) {
       // 🔍 Check if workspace exists in localStorage (might not be loaded yet)
-      const storedWorkspace = localStorage.getItem("currentWorkspace")
-      
+      const storedWorkspace = storage.getWorkspace()
       if (!storedWorkspace) {
         // No workspace in localStorage → redirect to selection
         logger.warn("[ChatPage] ❌ No workspace found, redirecting to workspace selection")
@@ -350,7 +350,7 @@ export function ChatPage() {
   useEffect(() => {
     // � PRIORITÀ 1: Ripristina da sessionStorage se disponibile
     if (chats.length > 0 && !selectedChat) {
-      const savedChatId = sessionStorage.getItem("selectedChatId")
+      const savedChatId = storage.getSelectedChatId()
 
       if (savedChatId) {
         logger.info(
@@ -370,7 +370,7 @@ export function ChatPage() {
           logger.warn(
             "[ChatPage] ⚠️ Chat salvata non trovata nella lista, rimuovo da storage"
           )
-          sessionStorage.removeItem("selectedChatId")
+          storage.clearSelectedChatId()
         }
       }
     }
@@ -723,9 +723,9 @@ export function ChatPage() {
     setSelectedChat(chat)
     // 💾 Salva l'ID della chat selezionata in sessionStorage
     if (chat?.sessionId) {
-      sessionStorage.setItem("selectedChatId", chat.sessionId)
+      storage.setSelectedChatId(chat.sessionId)
       // 🔔 Store current chat sessionId for WebSocket toast notifications
-      sessionStorage.setItem("currentChatSessionId", chat.sessionId)
+      storage.setCurrentChatSessionId(chat.sessionId)
       logger.info(
         "[ChatPage] Saved selectedChatId to sessionStorage:",
         chat.sessionId

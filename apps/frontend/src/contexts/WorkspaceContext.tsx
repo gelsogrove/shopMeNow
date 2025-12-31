@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import {
   createContext,
   ReactNode,
@@ -28,7 +29,7 @@ export interface Workspace {
   afterRegistrationMessages?: any
   messageLimit?: number
   blocklist?: string
-  challengeStatus?: boolean
+  channelStatus?: boolean
   notificationEmail?: string
   webhookUrl?: string
   planType?: string | null
@@ -92,9 +93,7 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
       }
       // Initialize from localStorage (shared across tabs)
       try {
-        const stored = localStorage.getItem("currentWorkspace")
-        const parsed = stored ? JSON.parse(stored) : null
-        return parsed
+        return storage.getWorkspace<Workspace>()
       } catch (error) {
         return null
       }
@@ -106,14 +105,13 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
   useEffect(() => {
     const checkAuth = () => {
       try {
-        const user = localStorage.getItem("user")
+        const user = storage.getUser()
         const authenticated = user !== null
 
         // If authenticated but no workspace, try to get from localStorage
         if (authenticated && !currentWorkspace) {
-          const stored = localStorage.getItem("currentWorkspace")
-          if (stored) {
-            const workspace = JSON.parse(stored)
+          const workspace = storage.getWorkspace<Workspace>()
+          if (workspace) {
             setCurrentWorkspace(workspace)
           }
         }
@@ -154,7 +152,7 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
   // Salva il workspace nel localStorage quando cambia
   useEffect(() => {
     if (currentWorkspace) {
-      localStorage.setItem("currentWorkspace", JSON.stringify(currentWorkspace))
+      storage.setWorkspace(currentWorkspace)
       logger.info("🏢 Workspace saved to localStorage:", currentWorkspace.name)
     }
   }, [currentWorkspace])
@@ -172,9 +170,8 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
 
   const handleSetCurrentWorkspace = (workspace: Workspace) => {
     // 🔍 Check what's currently in localStorage BEFORE we update
-    const beforeUpdate = localStorage.getItem("currentWorkspace")
-    if (beforeUpdate) {
-      const parsed = JSON.parse(beforeUpdate)
+    const parsed = storage.getWorkspace<Workspace>()
+    if (parsed) {
       
       // 🧹 CRITICAL: Clear chat-related storage when workspace changes
       // This prevents cross-workspace data contamination
@@ -183,14 +180,14 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
         localStorage.removeItem("selectedChat")
         localStorage.removeItem("chatMessages")
         localStorage.removeItem("chat-list-updated")
-        sessionStorage.removeItem("selectedChatId")  // 🔥 CRITICAL: ChatContext reads this!
+        storage.clearSelectedChatId()  // 🔥 CRITICAL: ChatContext reads this!
         // Invalidate react-query cache by triggering storage event
         localStorage.setItem("workspace-changed", Date.now().toString())
       }
     }
     
     // Salva nel localStorage PRIMA di settare lo state
-    localStorage.setItem("currentWorkspace", JSON.stringify(workspace))
+    storage.setWorkspace(workspace)
     
     setCurrentWorkspace(workspace)
   }

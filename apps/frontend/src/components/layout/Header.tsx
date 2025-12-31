@@ -17,6 +17,7 @@ import {
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview } from "@/services/subscriptionBillingApi"
@@ -52,13 +53,9 @@ export function Header() {
   // Load user data from storage
   useEffect(() => {
     const loadUserData = () => {
-      const cachedUser = localStorage.getItem("user")
+      const cachedUser = storage.getUser()
       if (cachedUser) {
-        try {
-          setUserData(JSON.parse(cachedUser))
-        } catch (error) {
-          logger.error("Error parsing user from localStorage:", error)
-        }
+        setUserData(cachedUser)
       }
     }
     
@@ -169,8 +166,7 @@ export function Header() {
 
       // 🛡️ CRITICAL SECURITY: Clear ALL storage on logout
       logger.info("🧹 [LOGOUT] Clearing ALL storage (localStorage + sessionStorage)")
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       logger.info("✅ [LOGOUT] Storage cleared completely")
 
       navigate("/auth/login")
@@ -179,8 +175,7 @@ export function Header() {
       
       // Force logout even if API call fails
       logger.info("🧹 [LOGOUT FORCE] Clearing ALL storage after API error")
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       logger.info("✅ [LOGOUT FORCE] Storage cleared completely")
       
       toast.error("Failed to logout")

@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import axios from "axios"
 import { toast } from "../lib/toast"
 
@@ -10,74 +11,51 @@ export const api = axios.create({
 
 // Helper function to get current workspace ID from local storage
 const getCurrentWorkspaceId = (): string | null => {
-  const workspaceData = localStorage.getItem("currentWorkspace")
-  if (workspaceData) {
-    try {
-      const workspace = JSON.parse(workspaceData)
-      return workspace.id
-    } catch (e) {
-      logger.error("Error parsing workspace data:", e)
-    }
-  }
-  return null
+  const workspace = storage.getWorkspace<{ id?: string }>()
+  return workspace?.id || null
 }
 
 // Add a request interceptor to handle authentication
 api.interceptors.request.use(
   (config) => {
-    logger.info(
+    logger.debug(
       `📤 API Request: ${config.method?.toUpperCase()} ${config.url}`,
       {
         data: config.data || {},
-        headers: config.headers,
         baseURL: config.baseURL,
       }
     )
 
     // 🆕 ADD AUTHORIZATION HEADER (JWT token from localStorage - proxy-safe)
-    const token = localStorage.getItem("token")
+    const token = storage.getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-      logger.info(`🔐 Added Authorization header with JWT token`)
-      logger.info(`🔍 [DEBUG] Token preview: ${token.substring(0, 50)}...`)
-      
-      // 🔍 DEBUG: Decode token to see content
-      try {
-        const base64Url = token.split('.')[1]
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map((c: string) => {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-        }).join(''))
-        const decoded = JSON.parse(jsonPayload)
-        logger.info(`🔍 [DEBUG] Token decoded:`, decoded)
-      } catch (e) {
-        logger.error('Failed to decode token for debug:', e)
-      }
+      logger.debug(`🔐 Added Authorization header with JWT token`)
     } else {
-      logger.warn(`⚠️ No JWT token in localStorage - request may fail authentication`)
+      logger.debug(`⚠️ No JWT token available - request may fail authentication`)
     }
 
-    // Add x-session-id header if present in localStorage
-    const sessionId = localStorage.getItem("sessionId")
+    // Add x-session-id header if present
+    const sessionId = storage.getSessionId()
     if (sessionId) {
       config.headers["x-session-id"] = sessionId
-      logger.info(`🔐 Added x-session-id header`)
+      logger.debug(`🔐 Added x-session-id header`)
     }
 
     // Add x-workspace-id header if not already present and we have a workspace ID
     if (!config.headers["x-workspace-id"]) {
       const workspaceId = getCurrentWorkspaceId()
       if (workspaceId) {
-        logger.info(`🔧 Adding x-workspace-id header: ${workspaceId}`)
+        logger.debug(`🔧 Adding x-workspace-id header: ${workspaceId}`)
         config.headers["x-workspace-id"] = workspaceId
       } else {
-        logger.warn(
-          `⚠️ No workspace ID found in localStorage for request to ${config.url}`
+        logger.debug(
+          `⚠️ No workspace ID found for request to ${config.url}`
         )
       }
     }
 
-    logger.info(`📋 Final request headers:`, config.headers)
+    logger.debug(`📋 Final request headers ready`)
     return config
   },
   (error) => {
@@ -89,14 +67,13 @@ api.interceptors.request.use(
 // Add a response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    logger.info(
+    logger.debug(
       `📥 API Response: ${
         response.status
       } ${response.config.method?.toUpperCase()} ${response.config.url}`,
       {
         data: response.data,
         status: response.status,
-        headers: response.headers,
       }
     )
     return response
@@ -132,11 +109,7 @@ api.interceptors.response.use(
       const isSessionError = errorMessage.toLowerCase().includes("session")
 
       // 🛡️ CRITICAL: Clear ALL auth data to prevent stale token issues
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-      localStorage.removeItem("currentWorkspace")
-      sessionStorage.removeItem("currentWorkspace")
-      sessionStorage.clear()
+      storage.clearAuth()
 
       // Show appropriate toast message
       toast.error("Sessione scaduta. Effettua nuovamente il login.")
@@ -157,8 +130,7 @@ api.interceptors.response.use(
 export const auth = {
   login: async (credentials: { email: string; password: string }) => {
     // Pulisci la localStorage prima del login
-    localStorage.removeItem("currentWorkspace")
-    sessionStorage.removeItem("currentWorkspace")
+    storage.clearWorkspace()
 
     // Ora tenta il login con stato pulito
     return api.post("/auth/login", credentials)

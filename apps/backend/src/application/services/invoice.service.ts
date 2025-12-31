@@ -12,7 +12,7 @@
  * - Generate invoice data for display
  */
 
-import { prisma, InvoiceStatus, PlanType, TransactionType } from '@echatbot/database'
+import { prisma, InvoiceStatus, PlanType, TransactionType, SubscriptionStatus } from '@echatbot/database'
 import logger from '../../utils/logger'
 
 interface ConsumptionBreakdown {
@@ -43,6 +43,50 @@ interface InvoiceData {
 }
 
 export class InvoiceService {
+  /**
+   * Determine subscription fee for a billing period based on pause status.
+   * - If paused before the period starts: no monthly fee.
+   * - If paused within the period: charge full monthly fee.
+   */
+  private resolveSubscriptionAmount(
+    subscriptionStatus: SubscriptionStatus | string,
+    pausedAt: Date | null,
+    periodStart: Date,
+    monthlyFee: number
+  ): number {
+    if (subscriptionStatus !== "PAUSED") {
+      return monthlyFee
+    }
+
+    if (!pausedAt) {
+      return 0
+    }
+
+    return pausedAt <= periodStart ? 0 : monthlyFee
+  }
+
+  /**
+   * Determine effective consumption window for paused users.
+   * - If paused before period start: skip consumption.
+   * - If paused within the period: cap consumption at pausedAt.
+   */
+  private resolveConsumptionEnd(
+    subscriptionStatus: SubscriptionStatus | string,
+    pausedAt: Date | null,
+    periodStart: Date,
+    periodEnd: Date
+  ): Date | null {
+    if (subscriptionStatus !== "PAUSED" || !pausedAt) {
+      return periodEnd
+    }
+
+    if (pausedAt <= periodStart) {
+      return null
+    }
+
+    return pausedAt < periodEnd ? pausedAt : periodEnd
+  }
+
   /**
    * Get plan monthly fee from database (PlanConfiguration table)
    * NO HARDCODED VALUES - everything from database
@@ -78,7 +122,7 @@ export class InvoiceService {
       // Get user's plan type
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { planType: true, creditBalance: true },
+        select: { planType: true, creditBalance: true, subscriptionStatus: true, pausedAt: true },
       })
       
       if (!user) {
@@ -87,9 +131,15 @@ export class InvoiceService {
       
       // Get plan monthly fee from database (NO HARDCODED VALUES)
       const monthlyFee = await this.getPlanMonthlyFee(user.planType)
+      const periodStart = new Date(periodYear, periodMonth - 1, 1, 0, 0, 0)
+      const subscriptionAmount = this.resolveSubscriptionAmount(
+        user.subscriptionStatus,
+        user.pausedAt,
+        periodStart,
+        monthlyFee
+      )
       
       // Calculate period dates
-      const periodStart = new Date(periodYear, periodMonth - 1, 1, 0, 0, 0)
       const periodEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59) // Last day of month
       
       // Create draft invoice
@@ -100,10 +150,10 @@ export class InvoiceService {
           periodEnd,
           periodMonth,
           periodYear,
-          subscriptionAmount: monthlyFee,
+          subscriptionAmount,
           creditUsage: 0,
           creditDebt: 0,
-          totalAmount: monthlyFee,
+          totalAmount: subscriptionAmount,
           status: 'DRAFT',
           planType: user.planType,
           itemsBreakdown: {
@@ -120,15 +170,46 @@ export class InvoiceService {
     }
     
     // Calculate current consumption from transactions
-    const consumption = await this.calculateConsumption(userId, invoice.periodStart, invoice.periodEnd)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { planType: true, subscriptionStatus: true, pausedAt: true },
+    })
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const monthlyFee = await this.getPlanMonthlyFee(user.planType)
+    const subscriptionAmount = this.resolveSubscriptionAmount(
+      user.subscriptionStatus,
+      user.pausedAt,
+      invoice.periodStart,
+      monthlyFee
+    )
+    const consumptionEnd = this.resolveConsumptionEnd(
+      user.subscriptionStatus,
+      user.pausedAt,
+      invoice.periodStart,
+      invoice.periodEnd
+    )
+    const consumption = consumptionEnd
+      ? await this.calculateConsumption(userId, invoice.periodStart, consumptionEnd)
+      : {
+          messages: { count: 0, amount: 0 },
+          orders: { count: 0, amount: 0 },
+          pushNotifications: { count: 0, amount: 0 },
+          adjustments: { count: 0, amount: 0 },
+          totalConsumption: 0,
+        }
     
     // Update invoice with current consumption
     const updatedInvoice = await prisma.monthlyInvoice.update({
       where: { id: invoice.id },
       data: {
         creditUsage: consumption.totalConsumption,
+        subscriptionAmount,
         itemsBreakdown: consumption as any, // Cast to any for Prisma JSON compatibility
-        totalAmount: Number(invoice.subscriptionAmount) + consumption.totalConsumption,
+        totalAmount: Number(subscriptionAmount) + consumption.totalConsumption,
       },
     })
     
@@ -259,25 +340,51 @@ export class InvoiceService {
     }
     
     // Recalculate final consumption
-    const consumption = await this.calculateConsumption(
-      invoice.userId,
+    const user = await prisma.user.findUnique({
+      where: { id: invoice.userId },
+      select: { planType: true, creditBalance: true, subscriptionStatus: true, pausedAt: true },
+    })
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const monthlyFee = await this.getPlanMonthlyFee(user.planType)
+    const subscriptionAmount = this.resolveSubscriptionAmount(
+      user.subscriptionStatus,
+      user.pausedAt,
+      invoice.periodStart,
+      monthlyFee
+    )
+    const consumptionEnd = this.resolveConsumptionEnd(
+      user.subscriptionStatus,
+      user.pausedAt,
       invoice.periodStart,
       invoice.periodEnd
     )
+    const consumption = consumptionEnd
+      ? await this.calculateConsumption(
+          invoice.userId,
+          invoice.periodStart,
+          consumptionEnd
+        )
+      : {
+          messages: { count: 0, amount: 0 },
+          orders: { count: 0, amount: 0 },
+          pushNotifications: { count: 0, amount: 0 },
+          adjustments: { count: 0, amount: 0 },
+          totalConsumption: 0,
+        }
     
     // Get user's credit debt (if negative balance)
-    const user = await prisma.user.findUnique({
-      where: { id: invoice.userId },
-      select: { creditBalance: true },
-    })
-    
-    const creditDebt = user ? Math.max(0, -Number(user.creditBalance)) : 0
-    const totalAmount = Number(invoice.subscriptionAmount) + consumption.totalConsumption + creditDebt
+    const creditDebt = user.creditBalance < 0 ? Math.abs(Number(user.creditBalance)) : 0
+    const totalAmount = Number(subscriptionAmount) + consumption.totalConsumption + creditDebt
     
     await prisma.monthlyInvoice.update({
       where: { id: invoiceId },
       data: {
         creditUsage: consumption.totalConsumption,
+        subscriptionAmount,
         creditDebt,
         totalAmount,
         itemsBreakdown: consumption as any, // Cast to any for Prisma JSON compatibility

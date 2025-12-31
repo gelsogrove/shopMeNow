@@ -1,8 +1,10 @@
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
+import { storage } from "@/lib/storage"
+import { getSocket, disconnectSocket } from "@/services/socket"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
-import { io, Socket } from "socket.io-client"
+import { Socket } from "socket.io-client"
 
 interface UseWebSocketOptions {
   workspaceId: string | null
@@ -62,43 +64,23 @@ export function useWebSocket(options: UseWebSocketOptions) {
   onErrorRef.current = onError
 
   useEffect(() => {
-    // Don't connect if no workspace
     if (!workspaceId) {
-      if (socketRef.current) {
-        logger.info("[WebSocket] Disconnecting - no workspace")
-        socketRef.current.disconnect()
-        socketRef.current = null
-        setIsConnected(false)
-      }
+      logger.info("[WebSocket] Disconnecting - no workspace")
+      disconnectSocket()
+      socketRef.current = null
+      setIsConnected(false)
       return
     }
 
-    // 🚨 FIX: Don't create new socket if already connected to same workspace
-    if (socketRef.current?.connected) {
-      logger.info("[WebSocket] Already connected, reusing existing socket")
+    const socket = getSocket(workspaceId)
+    if (!socket) {
       return
     }
-
-    logger.info("[WebSocket] Creating new socket connection")
-    // Create socket connection
-    // In production, use current origin (Heroku URL), in dev use localhost
-    const socketUrl =
-      import.meta.env.VITE_API_URL ||
-      (window.location.hostname === "localhost"
-        ? "http://localhost:3001"
-        : window.location.origin)
-    logger.info("[WebSocket] Connecting to:", socketUrl)
-    const socket = io(socketUrl, {
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    })
 
     socketRef.current = socket
 
     // Connection handlers
-    socket.on("connect", () => {
+    const handleConnect = () => {
       logger.info("[WebSocket] Connected:", socket.id)
       setIsConnected(true)
 
@@ -106,29 +88,28 @@ export function useWebSocket(options: UseWebSocketOptions) {
       socket.emit("join-workspace", { workspaceId, userId })
 
       onConnectRef.current?.()
-    })
+    }
 
-    socket.on("disconnect", (reason) => {
+    const handleDisconnect = (reason: string) => {
       logger.info("[WebSocket] Disconnected:", reason)
       setIsConnected(false)
       onDisconnectRef.current?.()
-    })
+    }
 
-    socket.on("connect_error", (error) => {
+    const handleConnectError = (error: Error) => {
       logger.error("[WebSocket] Connection error:", error)
       onErrorRef.current?.(error)
-    })
+    }
 
     // Workspace joined confirmation
-    socket.on("workspace-joined", (data: { workspaceId: string }) => {
+    const handleWorkspaceJoined = (data: { workspaceId: string }) => {
       logger.info("[WebSocket] Joined workspace:", data.workspaceId)
-    })
+    }
 
     // New message received - invalidate message queries
-    socket.on("new-message", (message: WebSocketMessage) => {
+    const handleNewMessage = (message: WebSocketMessage) => {
       logger.info("[WebSocket] New message:", message)
-      // Get sessionId from sessionStorage
-      const sessionId = localStorage.getItem("sessionId")
+      const sessionId = storage.getSessionId()
 
       // Invalidate messages for this chat
       queryClient.invalidateQueries({
@@ -147,9 +128,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
       // 🔔 Show toast for messages in non-active chats
       // Check if message is for currently selected chat
-      const currentChatSessionId = sessionStorage.getItem(
-        "currentChatSessionId"
-      )
+      const currentChatSessionId = storage.getCurrentChatSessionId()
       if (
         message.sessionId !== currentChatSessionId &&
         message.sender === "customer"
@@ -157,13 +136,12 @@ export function useWebSocket(options: UseWebSocketOptions) {
         // New message from customer in different chat
         toast.info("New message received", { duration: 2000 })
       }
-    })
+    }
 
     // Chat list updated (new chat, status change, etc.)
-    socket.on("chat-updated", (chat: WebSocketChat) => {
+    const handleChatUpdated = (chat: WebSocketChat) => {
       logger.info("[WebSocket] Chat updated:", chat)
-      // Get sessionId from sessionStorage
-      const sessionId = localStorage.getItem("sessionId")
+      const sessionId = storage.getSessionId()
 
       // 🔥 Force immediate refetch by invalidating AND refetching
       queryClient.invalidateQueries({
@@ -182,90 +160,81 @@ export function useWebSocket(options: UseWebSocketOptions) {
       })
 
       logger.info("[WebSocket] Chat list refetched after update event")
-    })
+    }
 
     // User blocked event
-    socket.on(
-      "user-blocked",
-      (data: {
-        customerId: string
-        customerName: string
-        customerPhone: string
-        timestamp: string
-      }) => {
-        logger.info("[WebSocket] User blocked:", data)
-        const sessionId = localStorage.getItem("sessionId")
+    const handleUserBlocked = (data: {
+      customerId: string
+      customerName: string
+      customerPhone: string
+      timestamp: string
+    }) => {
+      logger.info("[WebSocket] User blocked:", data)
+      const sessionId = storage.getSessionId()
 
-        // Invalidate customer-related queries
-        queryClient.invalidateQueries({
-          queryKey: ["customers"],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ["chats", sessionId],
-        })
+      // Invalidate customer-related queries
+      queryClient.invalidateQueries({
+        queryKey: ["customers"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["chats", sessionId],
+      })
 
-        // Show warning toast
-        toast.warning(`Customer ${data.customerName} has been blocked`)
-      }
-    )
+      // Show warning toast
+      toast.warning(`Customer ${data.customerName} has been blocked`)
+    }
 
     // User unblocked event
-    socket.on(
-      "user-unblocked",
-      (data: {
-        customerId: string
-        customerName: string
-        customerPhone: string
-        timestamp: string
-      }) => {
-        logger.info("[WebSocket] User unblocked:", data)
-        const sessionId = localStorage.getItem("sessionId")
+    const handleUserUnblocked = (data: {
+      customerId: string
+      customerName: string
+      customerPhone: string
+      timestamp: string
+    }) => {
+      logger.info("[WebSocket] User unblocked:", data)
+      const sessionId = storage.getSessionId()
 
-        // Invalidate customer-related queries
-        queryClient.invalidateQueries({
-          queryKey: ["customers"],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ["chats", sessionId],
-        })
+      // Invalidate customer-related queries
+      queryClient.invalidateQueries({
+        queryKey: ["customers"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["chats", sessionId],
+      })
 
-        // Show success toast
-        toast.success(`Customer ${data.customerName} has been unblocked`)
-      }
-    )
+      // Show success toast
+      toast.success(`Customer ${data.customerName} has been unblocked`)
+    }
 
     // New customer event
-    socket.on(
-      "new-customer",
-      (data: {
-        customerId: string
-        sessionId: string
-        customerName: string
-        customerPhone: string
-        language?: string
-        timestamp: string
-      }) => {
-        logger.info("[WebSocket] New customer:", data)
-        const sessionId = localStorage.getItem("sessionId")
+    const handleNewCustomer = (data: {
+      customerId: string
+      sessionId: string
+      customerName: string
+      customerPhone: string
+      language?: string
+      timestamp: string
+    }) => {
+      logger.info("[WebSocket] New customer:", data)
+      const sessionId = storage.getSessionId()
 
-        // Invalidate chat list and customer queries
-        queryClient.invalidateQueries({
-          queryKey: ["chats", sessionId],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ["recent-chats", sessionId],
-        })
-        queryClient.invalidateQueries({
-          queryKey: ["customers"],
-        })
+      // Invalidate chat list and customer queries
+      queryClient.invalidateQueries({
+        queryKey: ["chats", sessionId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["recent-chats", sessionId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["customers"],
+      })
 
-        // Show info toast
-        toast.info(`New customer: ${data.customerName || data.customerPhone}`)
-      }
-    )
+      // Show info toast
+      toast.info(`New customer: ${data.customerName || data.customerPhone}`)
+    }
 
     // Workspace changed - invalidate ALL cached data
-    socket.on("workspace-changed", (data: { workspaceId: string }) => {
+    const handleWorkspaceChanged = (data: { workspaceId: string }) => {
       logger.info("[WebSocket] Workspace changed:", data.workspaceId)
       // Invalidate all chat-related queries
       queryClient.invalidateQueries({
@@ -277,24 +246,43 @@ export function useWebSocket(options: UseWebSocketOptions) {
       queryClient.invalidateQueries({
         queryKey: ["recent-chats"],
       })
-    })
+    }
+
+    socket.off("connect", handleConnect)
+    socket.off("disconnect", handleDisconnect)
+    socket.off("connect_error", handleConnectError)
+    socket.off("workspace-joined", handleWorkspaceJoined)
+    socket.off("new-message", handleNewMessage)
+    socket.off("chat-updated", handleChatUpdated)
+    socket.off("user-blocked", handleUserBlocked)
+    socket.off("user-unblocked", handleUserUnblocked)
+    socket.off("new-customer", handleNewCustomer)
+    socket.off("workspace-changed", handleWorkspaceChanged)
+
+    socket.on("connect", handleConnect)
+    socket.on("disconnect", handleDisconnect)
+    socket.on("connect_error", handleConnectError)
+    socket.on("workspace-joined", handleWorkspaceJoined)
+    socket.on("new-message", handleNewMessage)
+    socket.on("chat-updated", handleChatUpdated)
+    socket.on("user-blocked", handleUserBlocked)
+    socket.on("user-unblocked", handleUserUnblocked)
+    socket.on("new-customer", handleNewCustomer)
+    socket.on("workspace-changed", handleWorkspaceChanged)
 
     // Cleanup on unmount or workspace change
     return () => {
       logger.info("[WebSocket] Cleaning up connection")
-      socket.off("connect")
-      socket.off("disconnect")
-      socket.off("connect_error")
-      socket.off("workspace-joined")
-      socket.off("new-message")
-      socket.off("chat-updated")
-      socket.off("user-blocked")
-      socket.off("user-unblocked")
-      socket.off("new-customer")
-      socket.off("workspace-changed")
-      socket.disconnect()
-      socketRef.current = null
-      setIsConnected(false)
+      socket.off("connect", handleConnect)
+      socket.off("disconnect", handleDisconnect)
+      socket.off("connect_error", handleConnectError)
+      socket.off("workspace-joined", handleWorkspaceJoined)
+      socket.off("new-message", handleNewMessage)
+      socket.off("chat-updated", handleChatUpdated)
+      socket.off("user-blocked", handleUserBlocked)
+      socket.off("user-unblocked", handleUserUnblocked)
+      socket.off("new-customer", handleNewCustomer)
+      socket.off("workspace-changed", handleWorkspaceChanged)
     }
   }, [workspaceId, userId, queryClient]) // 🚨 FIX: Removed callback dependencies to prevent reconnections
 

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { clientsApi } from "@/services/clientsApi"
 import { ordersApi, type Order, type OrderStatus } from "@/services/ordersApi"
 import { commonStyles } from "@/styles/common"
@@ -190,7 +191,7 @@ export default function OrdersPage() {
       const response = await fetch(`/api/orders/${order.orderCode}/invoice`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${storage.getToken()}`,
         },
       })
 
@@ -220,7 +221,7 @@ export default function OrdersPage() {
       const response = await fetch(`/api/orders/${order.orderCode}/ddt`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${storage.getToken()}`,
         },
       })
 

@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
@@ -38,7 +39,7 @@ interface WorkspaceData {
   whatsappPhoneNumber: string
   adminEmail: string
   url: string
-  challengeStatus: boolean // 🆕 Feature 126: Chatbot enabled/disabled (true=enabled, false=WIP mode)
+  channelStatus: boolean // 🆕 Feature 126: Chatbot enabled/disabled (true=enabled, false=WIP mode)
   welcomeMessage: string
   wipMessage: string
   allowedExternalLinks: string // 🆕 Security: comma-separated list of allowed domains
@@ -200,7 +201,7 @@ export default function SettingsPage() {
     whatsappPhoneNumber: "",
     adminEmail: "",
     url: "http://localhost:3000",
-    challengeStatus: true, // 🆕 Default: chatbot enabled
+    channelStatus: true, // 🆕 Default: chatbot enabled
     welcomeMessage: defaultWelcomeMessage,
     wipMessage: defaultWipMessage,
     allowedExternalLinks: "", // 🆕 Security: allowed external domains
@@ -238,7 +239,7 @@ export default function SettingsPage() {
       whatsappPhoneNumber: workspace.whatsappPhoneNumber || "",
       adminEmail: workspace.adminEmail || workspace.notificationEmail || "",
       url: workspace.url || "http://localhost:3000",
-      challengeStatus: workspace.challengeStatus ?? true, // 🆕 Default to enabled if not set
+      channelStatus: workspace.channelStatus ?? true, // 🆕 Default to enabled if not set
       welcomeMessage: extractEnglishMessage(workspace.welcomeMessage, defaultWelcomeMessage),
       wipMessage: extractEnglishMessage(workspace.wipMessage, defaultWipMessage),
       allowedExternalLinks: (workspace.allowedExternalLinks || []).join(", "), // 🆕 Security: convert array to comma-separated
@@ -303,8 +304,7 @@ export default function SettingsPage() {
       
       // Clear ALL storage (security)
       logger.info("🧹 [DELETE WORKSPACE] Clearing ALL storage")
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       
       toast.success("Workspace deleted successfully. You have been logged out.")
       navigate("/auth/login")
@@ -358,7 +358,7 @@ export default function SettingsPage() {
       whatsappPhoneNumber: formData.whatsappPhoneNumber,
       adminEmail: formData.adminEmail,
       url: formData.url || "http://localhost:3000",
-      challengeStatus: formData.challengeStatus, // 🆕 Feature 126: Chatbot enabled/disabled
+      channelStatus: formData.channelStatus, // 🆕 Feature 126: Chatbot enabled/disabled
       welcomeMessage: formData.welcomeMessage,
       wipMessage: formData.wipMessage,
       allowedExternalLinks: formData.allowedExternalLinks
@@ -545,13 +545,13 @@ export default function SettingsPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium ${formData.challengeStatus ? 'text-green-600' : 'text-gray-500'}`}>
-                          {formData.challengeStatus ? '🟢 Active' : '🔴 Disabled'}
+                        <span className={`text-sm font-medium ${formData.channelStatus ? 'text-green-600' : 'text-gray-500'}`}>
+                          {formData.channelStatus ? '🟢 Active' : '🔴 Disabled'}
                         </span>
                         <Switch
-                          checked={formData.challengeStatus}
+                          checked={formData.channelStatus}
                           onCheckedChange={(checked) =>
-                            handleFieldChange("challengeStatus", checked)
+                            handleFieldChange("channelStatus", checked)
                           }
                         />
                       </div>
@@ -958,11 +958,6 @@ export default function SettingsPage() {
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                       <span className="text-lg">🚨</span> Escalation Triggers
-                      {formData.frustrationEscalationInstructions?.trim() && (
-                        <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                          Custom Active ✅
-                        </span>
-                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-0">
@@ -971,6 +966,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-purple-600">
                         Define the situations where the chatbot should automatically escalate to a human operator.
                         Leave empty to use default triggers (damaged products, missing delivery, explicit operator requests).
+                        Be explicit that the AI must call <code className="font-mono">contactOperator</code> when these rules match.
                       </p>
                     </div>
                     <div className="space-y-2">

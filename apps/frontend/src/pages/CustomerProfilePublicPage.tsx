@@ -214,7 +214,7 @@ const CustomerProfilePublicPage: React.FC = () => {
   // 🛒 Navigate to cart
   // 📋 Handle view cart - Use same token (TOKEN-ONLY system)
   const handleViewCart = () => {
-    logger.info("[PROFILE] View Cart clicked, using current token:", token)
+    logger.info("[PROFILE] View Cart clicked, using current token")
 
     // Use current token and redirect to cart page (TOKEN-ONLY)
     const cartUrl = `/checkout?token=${token}`

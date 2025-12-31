@@ -13,7 +13,7 @@ const mockLogout = vi.fn()
 const mockSchedulers = [
   {
     id: 'sched-1',
-    jobName: 'whatsapp-challenge-queue',
+    jobName: 'whatsapp-channel-queue',
     isActive: true,
     lastRunAt: '2024-06-01T10:00:00Z',
     lastStatus: 'SUCCESS',
@@ -99,7 +99,7 @@ describe('SchedulersPage', () => {
       
       await waitFor(() => {
         // Job names are mapped to friendly names in the component
-        expect(screen.getByText('WhatsApp Challenge Queue')).toBeInTheDocument()
+        expect(screen.getByText('WhatsApp Channel Queue')).toBeInTheDocument()
         expect(screen.getByText('Short URLs Cleanup')).toBeInTheDocument()
       })
     })

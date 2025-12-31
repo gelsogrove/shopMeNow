@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { Chat } from "@/types/chat"
 import {
   createContext,
@@ -22,7 +23,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   // 🔥 Leggi da sessionStorage DOPO il mount per garantire la sincronizzazione
   useEffect(() => {
-    const savedChatId = sessionStorage.getItem("selectedChatId")
+    const savedChatId = storage.getSelectedChatId()
 
     if (savedChatId) {
       logger.info(
@@ -64,7 +65,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   // 🔥 Method to manually clear selected chat (used when switching workspaces)
   const clearSelectedChat = () => {
     logger.info("🧹 ChatContext - clearSelectedChat called")
-    sessionStorage.removeItem("selectedChatId")
+    storage.clearSelectedChatId()
     setSelectedChat(null)
   }
 

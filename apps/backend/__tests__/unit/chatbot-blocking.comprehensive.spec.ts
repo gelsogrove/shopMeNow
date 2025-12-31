@@ -41,6 +41,7 @@ const createWorkspaceMock = (overrides: {
   channelStatus?: boolean
   ownerSubscriptionStatus?: string
   ownerCreditBalance?: number
+  ownerPaymentFailureCount?: number
   ownerId?: string | null
 }) => ({
   id: overrides.workspaceId ?? "test-workspace-id",
@@ -53,6 +54,7 @@ const createWorkspaceMock = (overrides: {
     id: overrides.ownerId ?? "test-owner-id",
     subscriptionStatus: overrides.ownerSubscriptionStatus ?? "ACTIVE",
     creditBalance: overrides.ownerCreditBalance ?? 50,
+    paymentFailureCount: overrides.ownerPaymentFailureCount ?? 0,
   },
 })
 
@@ -100,9 +102,12 @@ describe("Chatbot Blocking - Comprehensive Test Suite", () => {
   })
 
   describe("✅ SCENARIO 2: PAYMENT_FAILED - Owner payment failed", () => {
-    it("should BLOCK messages when subscriptionStatus is PAYMENT_FAILED", async () => {
+    it("should BLOCK messages when subscriptionStatus is PAYMENT_FAILED and failures >= 3", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
-        createWorkspaceMock({ ownerSubscriptionStatus: "PAYMENT_FAILED" })
+        createWorkspaceMock({
+          ownerSubscriptionStatus: "PAYMENT_FAILED",
+          ownerPaymentFailureCount: 3,
+        })
       )
 
       const result = await service.canProcessMessages(workspaceId)
@@ -112,14 +117,31 @@ describe("Chatbot Blocking - Comprehensive Test Suite", () => {
       expect(result.message).toContain("Payment failed")
     })
 
-    it("isBlockedDueToBilling should return TRUE for PAYMENT_FAILED", async () => {
+    it("isBlockedDueToBilling should return TRUE for PAYMENT_FAILED with failures >= 3", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
-        createWorkspaceMock({ ownerSubscriptionStatus: "PAYMENT_FAILED" })
+        createWorkspaceMock({
+          ownerSubscriptionStatus: "PAYMENT_FAILED",
+          ownerPaymentFailureCount: 3,
+        })
       )
 
       const result = await service.isBlockedDueToBilling(workspaceId)
 
       expect(result).toBe(true)
+    })
+
+    it("should ALLOW messages when subscriptionStatus is PAYMENT_FAILED but failures < 3", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue(
+        createWorkspaceMock({
+          ownerSubscriptionStatus: "PAYMENT_FAILED",
+          ownerPaymentFailureCount: 2,
+        })
+      )
+
+      const result = await service.canProcessMessages(workspaceId)
+
+      expect(result.canProcess).toBe(true)
+      expect(result.blockReason).toBeUndefined()
     })
   })
 
@@ -347,6 +369,7 @@ describe("Chatbot Blocking - Comprehensive Test Suite", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
         createWorkspaceMock({
           ownerSubscriptionStatus: "PAYMENT_FAILED",
+          ownerPaymentFailureCount: 3,
           ownerCreditBalance: -15,
         })
       )

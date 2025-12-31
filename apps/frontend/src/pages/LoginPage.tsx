@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useFeatureFlags } from "@/hooks/usePlatformConfig"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import hero1 from "@/assets/hero/home_1.png"
 import hero2 from "@/assets/hero/home_2.png"
 import hero3 from "@/assets/hero/home_3.png"
@@ -204,8 +205,7 @@ export function LoginPage() {
     // 🆕 If logout=true param, force logout regardless of existing token
     if (logoutParam === 'true') {
       logger.info('🚪 [LOGOUT] Force logout requested from backoffice - clearing all storage')
-      localStorage.clear()
-      sessionStorage.clear()
+      storage.clearAll()
       // Remove the logout param from URL to prevent re-logout on refresh
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('logout')
@@ -216,34 +216,26 @@ export function LoginPage() {
       return
     }
     
-    const existingToken = localStorage.getItem('token')
+    const existingToken = storage.getToken()
     
     // If user already has a token, show avatar instead of login buttons (DON'T redirect)
     if (existingToken) {
       logger.info('👤 [LOGIN PAGE] Token exists - showing user avatar in header')
       // Load user data from localStorage
-      const cachedUser = localStorage.getItem('user')
+      const cachedUser = storage.getUser<{ email?: string }>()
       if (cachedUser) {
         try {
-          const userData = JSON.parse(cachedUser)
-          setLoggedInUser(userData)
+          setLoggedInUser(cachedUser)
           setIsLoggedIn(true)
           setAvatarImageError(false) // Reset image error when loading user
-          logger.info('✅ [LOGIN PAGE] User loaded:', userData.email)
+          logger.info('✅ [LOGIN PAGE] User loaded:', cachedUser.email)
           
           // Fetch workspaces to get plan info - use first workspace (same as WorkspaceSelectionPage)
           workspaceApi.getAll().then(workspaces => {
             if (workspaces && workspaces.length > 0) {
               let storedWorkspaceId: string | null = null
-              const storedWorkspaceStr = localStorage.getItem('currentWorkspace')
-              if (storedWorkspaceStr) {
-                try {
-                  const storedWorkspace = JSON.parse(storedWorkspaceStr)
-                  storedWorkspaceId = storedWorkspace?.id ?? null
-                } catch (parseErr) {
-                  logger.warn('Failed to parse stored workspace selection:', parseErr)
-                }
-              }
+              const storedWorkspace = storage.getWorkspace<{ id?: string }>()
+              storedWorkspaceId = storedWorkspace?.id ?? null
 
               const selectedWorkspace = workspaces.reduce((best, current) => {
                 if (!best) {
@@ -313,9 +305,9 @@ export function LoginPage() {
     
     // No token - safe to clear any stale data
     logger.info('🧹 [LOGIN PAGE LOAD] No token found - clearing stale storage')
-    localStorage.removeItem('currentWorkspace')
-    localStorage.removeItem('user')
-    sessionStorage.clear()
+    storage.clearWorkspace()
+    storage.clearUser()
+    storage.clearSessionId()
     logger.info('✅ [LOGIN PAGE LOAD] Storage cleared - ready for fresh login')
     setIsValidatingSession(false)
   }, [navigate, logoutParam]) // Run only once on mount, or when logout param changes
@@ -381,8 +373,7 @@ export function LoginPage() {
 
     // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
     logger.info("🧹 [LOGIN] Clearing ALL storage (localStorage + sessionStorage)")
-    localStorage.clear()
-    sessionStorage.clear()
+    storage.clearAll()
     logger.info("✅ [LOGIN] Storage cleared completely")
 
     try {
@@ -415,7 +406,7 @@ export function LoginPage() {
       if (response.data && response.data.user) {
         // 🆕 SAVE JWT TOKEN for Authorization header (proxy-safe)
         if (response.data.token) {
-          localStorage.setItem("token", response.data.token)
+          storage.setToken(response.data.token)
           logger.info(`✅ JWT token saved to localStorage`)
         } else {
           logger.warn("⚠️ No JWT token in login response (cookie-only mode)")
@@ -424,14 +415,14 @@ export function LoginPage() {
         // 🆕 SAVE SESSION ID for x-session-id header
         // Using localStorage to persist across page refreshes
         if (response.data.sessionId) {
-          localStorage.setItem("sessionId", response.data.sessionId)
+          storage.setSessionId(response.data.sessionId)
           logger.info(`✅ SessionId saved to localStorage`)
         } else {
           logger.warn("⚠️ No sessionId in login response")
         }
 
         // Save user data
-        localStorage.setItem("user", JSON.stringify(response.data.user))
+        storage.setUser(response.data.user)
 
         // JWT token is automatically saved as HTTP-only cookie by backend
         logger.info("Login successful - JWT token saved as HTTP-only cookie")
@@ -484,8 +475,7 @@ export function LoginPage() {
 
     // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
     logger.info("🧹 [REGISTER] Clearing storage")
-    localStorage.clear()
-    sessionStorage.clear()
+    storage.clearAll()
 
     try {
       const response = await api.post('/auth/register', {
@@ -539,11 +529,10 @@ export function LoginPage() {
     
     // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
     logger.info("🧹 [GOOGLE OAUTH] Clearing storage")
-    localStorage.clear()
+    storage.clearAll()
     // 🛡️ CRITICAL SECURITY: Clear ALL storage before OAuth flow
     logger.info('🧹 [GOOGLE OAUTH] Clearing ALL storage (localStorage + sessionStorage)')
-    localStorage.clear()
-    sessionStorage.clear()
+    storage.clearAll()
     logger.info('✅ [GOOGLE OAUTH] Storage cleared completely')
     
     try {
@@ -558,9 +547,9 @@ export function LoginPage() {
         logger.info('🔐 [GOOGLE OAUTH] Direct login (2FA skipped for admin/developer)')
         
         // Save token and session
-        localStorage.setItem('token', token)
-        sessionStorage.setItem('sessionId', sessionId)
-        localStorage.setItem('user', JSON.stringify(user))
+        storage.setToken(token)
+        storage.setSessionId(sessionId)
+        storage.setUser(user)
         
         toast.success('Login successful!')
         
@@ -581,7 +570,7 @@ export function LoginPage() {
       }
       
       // Only save user info for the 2FA pages to use
-      localStorage.setItem('user', JSON.stringify(user))
+      storage.setUser(user)
       
       if (requiresSetup) {
         toast.success('Welcome! Please setup 2FA.')
@@ -687,8 +676,7 @@ export function LoginPage() {
               {/* 🔐 Hidden Admin Access - small link for platform admins */}
               <button
                 onClick={() => {
-                  localStorage.clear()
-                  sessionStorage.clear()
+                  storage.clearAll()
                   setActiveTab('signin')
                   setIsAdminAccess(true) // 🔐 Enable admin bypass
                   setShowLoginModal(true)
@@ -988,8 +976,7 @@ export function LoginPage() {
                       <DropdownMenuItem
                         className="p-2 cursor-pointer text-red-600 focus:text-red-600"
                         onClick={() => {
-                          localStorage.clear()
-                          sessionStorage.clear()
+                          storage.clearAll()
                           setIsLoggedIn(false)
                           setLoggedInUser(null)
                           setUserPlan(null)
@@ -1212,8 +1199,7 @@ export function LoginPage() {
                                 return
                               }
 
-                              localStorage.clear()
-                              sessionStorage.clear()
+                              storage.clearAll()
                               setError("")
                               setActiveTab("register")
                             }}
@@ -1412,8 +1398,7 @@ export function LoginPage() {
                             setShowWIPModal(true)
                             return
                           }
-                          localStorage.clear()
-                          sessionStorage.clear()
+                          storage.clearAll()
                           setError("")
                           setActiveTab("signin")
                         }}

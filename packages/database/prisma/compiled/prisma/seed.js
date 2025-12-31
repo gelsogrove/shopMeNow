@@ -2457,7 +2457,7 @@ Sono qui per aiutarti 😊`,
     console.log("⏰ Creating scheduler job status...");
     const schedulerJobs = [
         {
-            jobName: "whatsapp-challenge-queue",
+            jobName: "whatsapp-channel-queue",
             isActive: true,
             lastStatus: "NEVER_RUN",
         },

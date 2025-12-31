@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
 import { Chat } from "@/types/chat"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -34,20 +35,11 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
 
   // Get current workspace ID from local storage (shared across tabs)
-  const workspaceData = localStorage.getItem("currentWorkspace")
-  let workspaceId = null
-
-  if (workspaceData) {
-    try {
-      const workspace = JSON.parse(workspaceData)
-      workspaceId = workspace.id
-    } catch (e) {
-      logger.error("Error parsing workspace data:", e)
-    }
-  }
+  const workspaceData = storage.getWorkspace<{ id?: string }>()
+  const workspaceId = workspaceData?.id ?? null
 
   // Get sessionId from sessionStorage (unique per browser session)
-  const sessionId = localStorage.getItem("sessionId")
+  const sessionId = storage.getSessionId()
 
   // Use React Query to handle chat list fetching
   // 🚀 WEBSOCKET: No polling - updates via WebSocket events

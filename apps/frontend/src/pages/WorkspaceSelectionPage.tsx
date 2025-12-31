@@ -26,6 +26,7 @@ import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
@@ -296,10 +297,8 @@ export function WorkspaceSelectionPage() {
 
   // Load user profile from localStorage
   useEffect(() => {
-    const cachedUser = localStorage.getItem("user")
-    if (cachedUser) {
-      try {
-        const userData = JSON.parse(cachedUser)
+    const userData = storage.getUser<any>()
+    if (userData) {
         const firstName = userData?.firstName || ""
         const lastName = userData?.lastName || ""
         const fullName = `${firstName} ${lastName}`.trim()
@@ -321,38 +320,7 @@ export function WorkspaceSelectionPage() {
         if (!userEmail && userData?.email) {
           setUserEmail(userData.email)
         }
-      } catch (error) {
-        logger.error("Error parsing user from localStorage:", error)
       }
-    }
-  }, [])
-
-  // 🔍 DEBUG: Log ALL localStorage keys on mount
-  useEffect(() => {
-    logger.info('🔍 [WorkspaceSelectionPage] MOUNT - Checking localStorage:')
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key) {
-        const value = localStorage.getItem(key)
-        logger.info(`  - ${key}: ${value?.substring(0, 50)}...`)
-      }
-    }
-    
-    // Decode token if present
-    const token = localStorage.getItem('token')
-    if (token) {
-      try {
-        const base64Url = token.split('.')[1]
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map((c: string) => {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-        }).join(''))
-        const decoded = JSON.parse(jsonPayload)
-        logger.info('🔍 [WorkspaceSelectionPage] Token decoded:', decoded)
-      } catch (e) {
-        logger.error('Failed to decode token:', e)
-      }
-    }
   }, [])
 
   // Get first workspace ID for role check (all workspaces share the same owner)
@@ -428,7 +396,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
   // 🧹 Clear workspace on mount
   useEffect(() => {
-    localStorage.removeItem("currentWorkspace")
+    storage.clearWorkspace()
   }, [])
 
   // Carica i workspace all'avvio
@@ -446,11 +414,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   const loadWorkspaces = async () => {
     try {
       // Verify token exists before making API call
-      const token = localStorage.getItem("token")
-      logger.info(
-        "🔍 [WorkspaceSelectionPage] Token in localStorage:",
-        token ? token.substring(0, 20) + "..." : "NULL"
-      )
+      const token = storage.getToken()
 
       // Decode token to get user email
       if (token) {
@@ -461,7 +425,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
           }).join(''))
           const decoded = JSON.parse(jsonPayload)
-          logger.info('🔍 [WorkspaceSelectionPage] Token belongs to:', decoded.email || decoded.id)
           // Set user email from token for workspace creation
           if (decoded.email) {
             setUserEmail(decoded.email)
@@ -525,7 +488,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   // Gestisce la selezione di un workspace
   const handleSelectWorkspace = (workspace: Workspace) => {
     // 1. Set localStorage
-    localStorage.setItem("currentWorkspace", JSON.stringify(workspace))
+    storage.setWorkspace(workspace)
     
     // 2. Redirect with workspaceId in URL (SOURCE OF TRUTH)
     window.location.href = `/chat?workspaceId=${workspace.id}`
@@ -655,8 +618,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     
     // 🛡️ CRITICAL SECURITY: Clear ALL storage on logout to prevent user isolation bugs
     logger.info('🧹 [LOGOUT] Clearing ALL storage (localStorage + sessionStorage)')
-    localStorage.clear()
-    sessionStorage.clear()
+    storage.clearAll()
     logger.info('✅ [LOGOUT] Storage cleared completely')
     
     navigate("/auth/login")
@@ -1021,7 +983,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </span>
                     </div>
                     {/* Disabled Badge - Top Left */}
-                    {!workspace.challengeStatus && (
+                    {!workspace.channelStatus && (
                       <div className="absolute top-2 left-2">
                         <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
                           Disabled

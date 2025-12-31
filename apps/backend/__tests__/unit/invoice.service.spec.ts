@@ -82,6 +82,8 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     id: mockUserId,
     planType: 'BASIC',
     creditBalance: 50.0,
+    subscriptionStatus: 'ACTIVE',
+    pausedAt: null,
   }
 
   const mockInvoice = {
@@ -114,6 +116,7 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     service = new InvoiceService()
     // Default mock for planConfiguration
     mockPrisma.planConfiguration.findUnique.mockResolvedValue({ monthlyFee: 19.0 })
+    mockPrisma.user.findUnique.mockResolvedValue(mockUser)
   })
 
   describe('getOrCreateCurrentInvoice', () => {
@@ -140,7 +143,6 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
 
     it('should create new draft invoice if none exists', async () => {
       mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(null)
-      mockPrisma.user.findUnique.mockResolvedValue(mockUser)
       mockPrisma.monthlyInvoice.create.mockResolvedValue(mockInvoice)
       mockPrisma.billingTransaction.findMany.mockResolvedValue([])
       mockPrisma.monthlyInvoice.update.mockResolvedValue(mockInvoice)
@@ -187,6 +189,57 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
 
       expect(mockPrisma.monthlyInvoice.update).toHaveBeenCalled()
       expect(result.creditUsage).toBe(5.5)
+    })
+
+    it('should set subscriptionAmount to 0 when paused before period starts', async () => {
+      const pausedUser = {
+        ...mockUser,
+        subscriptionStatus: 'PAUSED',
+        pausedAt: new Date(periodYear, periodMonth - 2, 15),
+      }
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(mockInvoice)
+      mockPrisma.user.findUnique.mockResolvedValue(pausedUser)
+      mockPrisma.billingTransaction.findMany.mockResolvedValue([])
+      mockPrisma.monthlyInvoice.update.mockResolvedValue({
+        ...mockInvoice,
+        subscriptionAmount: 0,
+        totalAmount: 0,
+      })
+
+      await service.getOrCreateCurrentInvoice(mockUserId)
+
+      expect(mockPrisma.monthlyInvoice.update).toHaveBeenCalledWith({
+        where: { id: mockInvoice.id },
+        data: expect.objectContaining({
+          subscriptionAmount: 0,
+          totalAmount: 0,
+        }),
+      })
+    })
+
+    it('should cap consumption at pausedAt when paused within period', async () => {
+      const pausedAt = new Date(periodYear, periodMonth - 1, 10, 12, 0, 0)
+      const pausedUser = {
+        ...mockUser,
+        subscriptionStatus: 'PAUSED',
+        pausedAt,
+      }
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(mockInvoice)
+      mockPrisma.user.findUnique.mockResolvedValue(pausedUser)
+      mockPrisma.billingTransaction.findMany.mockResolvedValue([])
+      mockPrisma.monthlyInvoice.update.mockResolvedValue(mockInvoice)
+
+      await service.getOrCreateCurrentInvoice(mockUserId)
+
+      expect(mockPrisma.billingTransaction.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            createdAt: expect.objectContaining({
+              lte: pausedAt,
+            }),
+          }),
+        })
+      )
     })
   })
 
@@ -333,7 +386,7 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     it('should change status from DRAFT to PENDING', async () => {
       mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(mockInvoice)
       mockPrisma.billingTransaction.findMany.mockResolvedValue([])
-      mockPrisma.user.findUnique.mockResolvedValue({ creditBalance: 50 })
+      mockPrisma.user.findUnique.mockResolvedValue(mockUser)
       mockPrisma.monthlyInvoice.update.mockResolvedValue({ ...mockInvoice, status: 'PENDING' })
 
       await service.finalizeInvoice('invoice-123')
@@ -368,7 +421,10 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     it('should include credit debt if user has negative balance', async () => {
       mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(mockInvoice)
       mockPrisma.billingTransaction.findMany.mockResolvedValue([])
-      mockPrisma.user.findUnique.mockResolvedValue({ creditBalance: -15 })
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        creditBalance: -15,
+      })
       mockPrisma.monthlyInvoice.update.mockResolvedValue(mockInvoice)
 
       await service.finalizeInvoice('invoice-123')

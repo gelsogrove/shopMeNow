@@ -248,12 +248,6 @@ export function App() {
                   }
                 />
 
-                {/* Root redirect to login */}
-                <Route
-                  path="/"
-                  element={<Navigate to="/auth/login" replace />}
-                />
-
                 {/* Legacy login redirect */}
                 <Route
                   path="/login"

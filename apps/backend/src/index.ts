@@ -45,7 +45,7 @@ async function startServer() {
       startScheduler()
 
       // WhatsApp Queue Processor REMOVED - handled by Scheduler microservice
-      // See apps/scheduler/src/jobs/whatsapp-challenge-queue.job.ts
+      // See apps/scheduler/src/jobs/whatsapp-channel-queue.job.ts
 
       // Start WhatsApp queue cleanup (daily at 2 AM)
       startWhatsAppQueueCleanup()

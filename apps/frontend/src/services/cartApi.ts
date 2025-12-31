@@ -67,7 +67,7 @@ class CartApi {
    */
   async getCartByToken(token: string): Promise<Cart> {
     try {
-      logger.debug('🛒 Getting cart by token', { token: token.substring(0, 10) + '...' })
+      logger.debug('🛒 Getting cart by token')
       
       const response = await api.get(`/cart/token?token=${encodeURIComponent(token)}`)
       

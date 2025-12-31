@@ -74,10 +74,10 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 
 // Job name to friendly name mapping with schedule and detailed description
 const jobNames: Record<string, { name: string; description: string; schedule: string; details: string; sortOrder: number }> = {
-  'whatsapp-challenge-queue': {
-    name: 'WhatsApp Challenge Queue',
+  'whatsapp-channel-queue': {
+    name: 'WhatsApp Channel Queue',
     schedule: 'Every 3 minutes',
-    description: 'Processes pending challenge messages for customer verification',
+    description: 'Processes pending channel messages for customer verification',
     details: 'Sends verification codes to customers who need to confirm their phone number. Processes up to 50 messages per cycle.',
     sortOrder: 1
   },

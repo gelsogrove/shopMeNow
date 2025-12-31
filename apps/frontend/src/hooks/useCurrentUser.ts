@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { api } from '@/services/api'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
@@ -9,18 +10,7 @@ export function useCurrentUser() {
     queryFn: async () => {
       try {
         // First check localStorage for cached user data
-        const userStr = localStorage.getItem('user')
-        let cachedUser = null
-        
-        if (userStr) {
-          try {
-            cachedUser = JSON.parse(userStr)
-          } catch (e) {
-            logger.error('Error parsing user data from localStorage')
-            // Clear invalid cached data
-            localStorage.removeItem('user')
-          }
-        }
+        const cachedUser = storage.getUser()
         
         // Se non c'è un utente nel localStorage, non fare chiamate API
         if (!cachedUser) {
@@ -30,7 +20,7 @@ export function useCurrentUser() {
         const response = await api.get('/auth/me')
         if (response.data?.user) {
           // Cache user data in localStorage
-          localStorage.setItem('user', JSON.stringify(response.data.user))
+          storage.setUser(response.data.user)
           return response.data.user
         }
         throw new Error('User not found')
@@ -38,8 +28,8 @@ export function useCurrentUser() {
         // Clear invalid cached data on authentication errors
         if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 404)) {
           logger.warn('Authentication failed, clearing cached data')
-          localStorage.removeItem('user')
-          sessionStorage.removeItem('currentWorkspace')
+          storage.clearUser()
+          storage.clearWorkspace()
         }
         
         // Se siamo nella pagina settings, non propagare errori di autenticazione
@@ -48,14 +38,9 @@ export function useCurrentUser() {
           logger.warn('Auth error in settings page, using cached data if available')
           
           // Cerca di recuperare i dati utente dal localStorage
-          const userStr = localStorage.getItem('user')
-          if (userStr) {
-            try {
-              return JSON.parse(userStr)
-            } catch (e) {
-              logger.error('Error parsing user data from localStorage')
-              localStorage.removeItem('user')
-            }
+          const cachedUserFallback = storage.getUser()
+          if (cachedUserFallback) {
+            return cachedUserFallback
           }
         }
         
@@ -71,7 +56,7 @@ export function useCurrentUser() {
     // Cache successful responses for 10 minutes (using gcTime instead of deprecated cacheTime)
     gcTime: 10 * 60 * 1000,
     // Disable the query completely if no user data is available
-    enabled: !!localStorage.getItem('user'),
+    enabled: !!storage.getUser(),
     retry: (failureCount, error: any) => {
       // Non riprovare in caso di errori 401 o 404 (non autorizzato o utente non trovato)
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 404)) {

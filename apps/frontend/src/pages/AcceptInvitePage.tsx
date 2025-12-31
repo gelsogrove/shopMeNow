@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { invitationApi, type InvitationValidation } from "@/services/teamApi"
 import { AlertCircle, CheckCircle, Clock, Loader2, Mail, UserPlus } from "lucide-react"
@@ -31,18 +32,10 @@ export function AcceptInvitePage() {
   const [hasAutoAccepted, setHasAutoAccepted] = useState(false)
 
   // Check if user is logged in
-  const isLoggedIn = !!localStorage.getItem("token")
+  const isLoggedIn = !!storage.getToken()
   const currentUserEmail = (() => {
-    try {
-      const user = localStorage.getItem("user")
-      if (user) {
-        const parsed = JSON.parse(user)
-        return parsed.email?.toLowerCase()
-      }
-    } catch {
-      return null
-    }
-    return null
+    const user = storage.getUser<{ email?: string }>()
+    return user?.email?.toLowerCase() || null
   })()
 
   // Auto-accept function

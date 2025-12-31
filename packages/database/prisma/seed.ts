@@ -2509,7 +2509,7 @@ Sono qui per aiutarti 😊`,
     {
       planType: "ENTERPRISE" as const,
       displayName: "Enterprise",
-      monthlyFee: 149.00, // Base price, actual is custom
+      monthlyFee: 129.00, // Base price, actual is custom
       maxChannels: 999, // Unlimited
       maxProducts: 9999, // Unlimited
       maxCustomers: 9999, // Unlimited
@@ -2808,7 +2808,7 @@ Sono qui per aiutarti 😊`,
 
   const schedulerJobs = [
     {
-      jobName: "whatsapp-challenge-queue",
+      jobName: "whatsapp-channel-queue",
       isActive: true,
       lastStatus: "NEVER_RUN",
     },

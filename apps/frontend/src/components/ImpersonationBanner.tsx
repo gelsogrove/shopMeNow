@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { Shield, X } from 'lucide-react'
+import { storage } from '@/lib/storage'
 
 export default function ImpersonationBanner() {
   const [isImpersonating, setIsImpersonating] = useState(false)
@@ -23,13 +24,9 @@ export default function ImpersonationBanner() {
 
   const handleExit = () => {
     // Clear all auth data
-    localStorage.removeItem('token')
-    localStorage.removeItem('sessionId')
-    localStorage.removeItem('currentWorkspace')
-    localStorage.removeItem('user')
+    storage.clearAuth()
     localStorage.removeItem('isImpersonating')
     localStorage.removeItem('impersonatorEmail')
-    sessionStorage.clear()
     
     // Close this window
     window.close()

@@ -2,7 +2,7 @@
  * Scheduler Jobs - Unit Tests
  * 
  * Tests for all scheduler cronjobs:
- * - WhatsApp Challenge Queue
+ * - WhatsApp Channel Queue
  * - Short URLs Cleanup
  * - Unused Images Cleanup
  * - Messages Archive
@@ -125,7 +125,7 @@ jest.mock('../src/services/email-alert.service', () => ({
 }))
 
 // === NOW IMPORT MODULES ===
-import { whatsappChallengeQueueJob } from '../src/jobs/whatsapp-challenge-queue.job'
+import { whatsappChannelQueueJob } from '../src/jobs/whatsapp-channel-queue.job'
 import { shortUrlsCleanupJob } from '../src/jobs/short-urls-cleanup.job'
 import { monthlyBillingJob } from '../src/jobs/monthly-billing.job'
 
@@ -134,11 +134,11 @@ describe('Scheduler Jobs', () => {
     jest.clearAllMocks()
   })
 
-  describe('WhatsApp Challenge Queue Job', () => {
+  describe('WhatsApp Channel Queue Job', () => {
     it('should skip if no workspaces with active channel', async () => {
       mockPrisma.workspace.findMany.mockResolvedValue([])
 
-      await whatsappChallengeQueueJob()
+      await whatsappChannelQueueJob()
 
       expect(mockPrisma.workspace.findMany).toHaveBeenCalledWith({
         where: {
@@ -172,7 +172,7 @@ describe('Scheduler Jobs', () => {
       mockPrisma.whatsAppQueue.findMany.mockResolvedValue([mockMessage])
       mockPrisma.whatsAppQueue.update.mockResolvedValue({ ...mockMessage, status: 'sent' })
 
-      await whatsappChallengeQueueJob()
+      await whatsappChannelQueueJob()
 
       expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledWith({
         where: { id: 'msg-1' },
@@ -189,7 +189,7 @@ describe('Scheduler Jobs', () => {
       mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
       mockPrisma.whatsAppQueue.findMany.mockResolvedValue([])
 
-      await whatsappChallengeQueueJob()
+      await whatsappChannelQueueJob()
 
       expect(mockPrisma.whatsAppQueue.update).not.toHaveBeenCalled()
     })
@@ -213,7 +213,7 @@ describe('Scheduler Jobs', () => {
       mockPrisma.whatsAppQueue.findMany.mockResolvedValue(mockMessages)
       mockPrisma.whatsAppQueue.update.mockResolvedValue({ status: 'sent' })
 
-      await whatsappChallengeQueueJob()
+      await whatsappChannelQueueJob()
 
       // All 3 messages should be processed
       expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledTimes(3)
@@ -244,7 +244,7 @@ describe('Scheduler Jobs', () => {
       mockPrisma.whatsAppQueue.findMany.mockResolvedValue(mockMessages.slice(0, 10))
       mockPrisma.whatsAppQueue.update.mockResolvedValue({ status: 'sent' })
 
-      await whatsappChallengeQueueJob()
+      await whatsappChannelQueueJob()
 
       // Only 10 messages should be processed per cycle
       expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledTimes(10)
@@ -255,9 +255,9 @@ describe('Scheduler Jobs', () => {
       mockPrisma.workspace.findMany.mockResolvedValue([])
 
       // First call
-      const firstCall = whatsappChallengeQueueJob()
+      const firstCall = whatsappChannelQueueJob()
       // Second call immediately (simulating concurrent execution)
-      const secondCall = whatsappChallengeQueueJob()
+      const secondCall = whatsappChannelQueueJob()
 
       await Promise.all([firstCall, secondCall])
 
@@ -361,7 +361,9 @@ describe('Scheduler Jobs', () => {
 
     it('should apply pending plan changes (downgrade)', async () => {
       const lastMonth = new Date()
+      lastMonth.setDate(1)
       lastMonth.setMonth(lastMonth.getMonth() - 1)
+      lastMonth.setHours(0, 0, 0, 0)
 
       const mockOwner = {
         id: 'user-downgrade',

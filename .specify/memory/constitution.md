@@ -226,7 +226,7 @@
   Modified Principles:
   - ADDED Principle XIII: LLM Message Flow Priority System (MUST - CRITICAL)
     - Rule 1: Blocked User Gate (P1) - isBlocked=true → zero response
-    - Rule 2: Channel Disabled Gate (P2) - challengeStatus=false → WIP message
+    - Rule 2: Channel Disabled Gate (P2) - ChannelStatus=false → WIP message
     - Rule 3: New Customer Welcome (P3) - first message → welcome message
     - Rule 4: Router Orchestration (P4) - delegation to specialist agents
     - Rule 5: Router Conversation History - full session context
@@ -3156,7 +3156,7 @@ async addToCart(args: { items: Array<{code: string, quantity?: number, type: "PR
                       ↓
 ┌─────────────────────────────────────────────────────┐
 │  P2: Channel Disabled Check (Rule 2)                │
-│  challengeStatus = false?                           │
+│  ChannelStatus = false?                           │
 │    YES → Return WIP message (DB source, 0 LLM)      │
 │    NO  → Continue to P3                             │
 └─────────────────────┬───────────────────────────────┘

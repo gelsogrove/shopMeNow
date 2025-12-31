@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { useEffect, useState } from "react"
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { api } from "../services/api"
@@ -33,7 +34,7 @@ export function ProtectedRoute() {
 
   const validateSession = async () => {
     try {
-      const token = localStorage.getItem("token")
+      const token = storage.getToken()
 
       // If no token in localStorage, clear everything and redirect
       if (!token) {
@@ -42,10 +43,7 @@ export function ProtectedRoute() {
         )
 
         // Clear all auth data
-        localStorage.removeItem("currentWorkspace")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        sessionStorage.clear()
+        storage.clearAuth()
 
         setIsValid(false)
         setIsValidating(false)
@@ -62,12 +60,7 @@ export function ProtectedRoute() {
       logger.warn("🗑️ Clearing storage due to validation failure")
 
       // Clear localStorage
-      localStorage.removeItem("currentWorkspace")
-      localStorage.removeItem("token")
-      localStorage.removeItem("user")
-
-      // Clear sessionStorage
-      sessionStorage.clear()
+      storage.clearAuth()
 
       setIsValid(false)
     } finally {
