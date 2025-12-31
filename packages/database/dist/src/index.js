@@ -34,9 +34,9 @@ const pg_1 = require("pg");
 // Initialize the PostgreSQL adapter with SSL support for Heroku
 const pool = new pg_1.Pool({
     connectionString: DATABASE_URL,
-    ssl: DATABASE_URL?.includes('heroku')
+    ssl: process.env.NODE_ENV === 'production'
         ? { rejectUnauthorized: false }
-        : false
+        : false,
 });
 const adapter = new adapter_pg_1.PrismaPg(pool);
 // Singleton Prisma client instance

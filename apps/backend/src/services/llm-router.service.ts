@@ -249,19 +249,6 @@ export class LLMRouterService {
   }
 
   /**
-   * 🆕 Validation-Only Router Pattern - Validate sub-agent response without LLM call
-   *
-   * This method checks if a specialist agent's response is valid and complete
-   * without making an expensive LLM call to the Router. This saves ~5000 tokens
-   * per request (25% token reduction) when validation passes.
-   *
-   * @param options - Validation parameters
-   * @returns Validation result with reason if invalid
-   *
-   * @see Constitution v1.8.0 Principle X: Validation-Only Router Pattern
-   * @see docs/architecture/MULTI_AGENT_FLOW.md for complete flow documentation
-   */
-  /**
    * 🆕 Feature 126: Check if customer is blocked (P1 - Security Layer)
    *
    * This is the HIGHEST priority check - runs BEFORE any LLM processing.
