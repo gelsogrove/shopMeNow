@@ -223,15 +223,17 @@ app.use(jsonFixMiddleware)
 
 app.use(cookieParser())
 
-// Add test endpoint for JSON parsing
-app.post("/api/test/json-parser", (req, res) => {
-  logger.info("JSON parser test received body:", req.body)
-  res.json({
-    success: true,
-    receivedBody: req.body,
-    rawBodyExists: !!req.rawBody,
+// 🔒 SECURITY: Test endpoint only in development (TASK07)
+if (process.env.NODE_ENV !== "production") {
+  app.post("/api/test/json-parser", (req, res) => {
+    logger.info("JSON parser test received body:", req.body)
+    res.json({
+      success: true,
+      receivedBody: req.body,
+      rawBodyExists: !!req.rawBody,
+    })
   })
-})
+}
 
 // Endpoint di catch-all specifico per bloccare clienti
 app.post(

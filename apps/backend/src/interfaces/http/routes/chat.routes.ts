@@ -445,43 +445,46 @@ export const chatRouter = (chatController: ChatController): express.Router => {
     asyncHandler(chatController.deleteChat.bind(chatController))
   )
 
-  /**
-   * @swagger
-   * /api/chat/test/{sessionId}:
-   *   delete:
-   *     summary: Test endpoint for deleting a chat session (no auth required)
-   *     tags: [Chat]
-   *     parameters:
-   *       - in: path
-   *         name: sessionId
-   *         schema:
-   *           type: string
-   *         required: true
-   *         description: ID of the chat session
-   *     responses:
-   *       200:
-   *         description: Chat session deleted successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 data:
-   *                   type: object
-   *                   properties:
-   *                     deleted:
-   *                       type: boolean
-   *       400:
-   *         description: Session ID is required
-   *       500:
-   *         description: Server error
-   */
-  router.delete(
-    "/test/:sessionId",
-    asyncHandler(chatController.deleteChat.bind(chatController))
-  )
+  // 🔒 SECURITY: Test endpoint only in development (TASK07)
+  if (process.env.NODE_ENV !== "production") {
+    /**
+     * @swagger
+     * /api/chat/test/{sessionId}:
+     *   delete:
+     *     summary: Test endpoint for deleting a chat session (DEVELOPMENT ONLY)
+     *     tags: [Chat]
+     *     parameters:
+     *       - in: path
+     *         name: sessionId
+     *         schema:
+     *           type: string
+     *         required: true
+     *         description: ID of the chat session
+     *     responses:
+     *       200:
+     *         description: Chat session deleted successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                 data:
+     *                   type: object
+     *                   properties:
+     *                     deleted:
+     *                       type: boolean
+     *       400:
+     *         description: Session ID is required
+     *       500:
+     *         description: Server error
+     */
+    router.delete(
+      "/test/:sessionId",
+      asyncHandler(chatController.deleteChat.bind(chatController))
+    )
+  }
 
   return router
 }
