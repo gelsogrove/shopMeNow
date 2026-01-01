@@ -174,9 +174,6 @@ export function PlatformsPage() {
           <li>
             <strong>User Registration:</strong> When disabled, new user registration is blocked
           </li>
-          <li>
-            <strong>Landing Page:</strong> Controls whether /index.html redirects to the marketing landing or directly to /auth/login
-          </li>
         </ul>
       </div>
     </div>

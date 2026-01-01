@@ -356,7 +356,7 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     // 🚀 Check if login is enabled (bypass if admin access mode)
-    if (!canLogin) {
+    if (isLoginDisabled) {
       setWipFeature('login')
       setShowWIPModal(true)
       return
@@ -456,7 +456,7 @@ export function LoginPage() {
 
   const onRegisterSubmit = async (data: RegisterForm) => {
     // 🚀 Check if registration is enabled
-    if (!canRegister) {
+    if (isRegisterDisabled) {
       setWipFeature('register')
       setShowWIPModal(true)
       return
@@ -1136,23 +1136,30 @@ export function LoginPage() {
                       </div>
 
                       <div className="flex items-start gap-2">
-                        <Checkbox
-                          id="gdpr"
-                          checked={registerForm.watch("gdprAccepted")}
-                          onCheckedChange={async (checked) => {
-                            registerForm.setValue("gdprAccepted", checked as boolean)
-                            await registerForm.trigger("gdprAccepted")
-                          }}
-                          className={registerForm.formState.errors.gdprAccepted ? "border-red-500 text-red-500" : ""}
-                        />
+                      <Checkbox
+                        id="gdpr"
+                        checked={registerForm.watch("gdprAccepted")}
+                        onCheckedChange={async (checked) => {
+                          if (isRegisterDisabled) {
+                            return
+                          }
+                          registerForm.setValue("gdprAccepted", checked as boolean)
+                          await registerForm.trigger("gdprAccepted")
+                        }}
+                        disabled={isRegisterDisabled || isLoading}
+                        className={registerForm.formState.errors.gdprAccepted ? "border-red-500 text-red-500" : ""}
+                      />
                         <label
-                          htmlFor="gdpr"
-                          className="text-sm text-gray-600 leading-tight cursor-pointer"
-                          onClick={async () => {
-                            const current = registerForm.getValues("gdprAccepted")
-                            registerForm.setValue("gdprAccepted", !current)
-                            await registerForm.trigger("gdprAccepted")
-                          }}
+                        htmlFor="gdpr"
+                        className="text-sm text-gray-600 leading-tight cursor-pointer"
+                        onClick={async () => {
+                          if (isRegisterDisabled) {
+                            return
+                          }
+                          const current = registerForm.getValues("gdprAccepted")
+                          registerForm.setValue("gdprAccepted", !current)
+                          await registerForm.trigger("gdprAccepted")
+                        }}
                         >
                           I agree to the{" "}
                           <Link to="/privacy" className="text-green-600 hover:underline" onClick={(e) => e.stopPropagation()}>
@@ -1316,6 +1323,7 @@ export function LoginPage() {
               document.getElementById("firstName")?.focus()
             }, 0)
           }}
+          disableTrial={isRegisterDisabled}
         />
       </div>
 

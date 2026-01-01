@@ -22,9 +22,10 @@ interface PricingPlansProps {
   onStartFreeTrial?: () => void
   currentPlan?: PlanType | null
   onChangePlan?: () => void
+  disableTrial?: boolean
 }
 
-export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: PricingPlansProps) {
+export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disableTrial = false }: PricingPlansProps) {
   const { t } = useLanguage()
   const { prices, isLoading, error, getPriceWithOriginal } = usePlatformConfig()
 
@@ -202,7 +203,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: Pr
                     plan.name === "Basic" || plan.name === "Premium"
                       ? "bg-green-600 hover:bg-green-700 text-white"
                       : ""
-                  }`}
+                  } ${plan.name === "Free" && disableTrial ? "opacity-60 cursor-not-allowed" : ""}`}
                   variant={plan.buttonVariant}
                   size="lg"
                   disabled={
@@ -210,6 +211,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: Pr
                     plan.name === "Enterprise" ||
                     plan.name === "Basic"
                   }
+                  aria-disabled={plan.name === "Free" && disableTrial}
                   onClick={plan.name === "Free" ? handleStartFreeTrial : undefined}
                 >
                   {plan.name === "Free" && "Start Free Trial"}
