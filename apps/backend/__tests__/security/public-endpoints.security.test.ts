@@ -106,7 +106,7 @@ describe('🔒 Public Endpoints Security - Critical Routes', () => {
     })
 
     it('should allow public access to /api/v1/platform-config', async () => {
-      // Platform config MUST be public (for landing page flags)
+      // Platform config MUST be public (for login/register flags)
       // See: apps/backend/src/routes/index.ts line 587
       
       expect(true).toBe(true)

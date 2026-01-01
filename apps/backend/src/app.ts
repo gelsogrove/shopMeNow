@@ -12,7 +12,6 @@ import { sessionValidationMiddleware } from "./interfaces/http/middlewares/sessi
 import { loggingMiddleware } from "./middlewares/logging.middleware"
 import apiRouter from "./routes"
 import logger from "./utils/logger"
-import { platformConfigService } from "./services/platform-config.service"
 
 // Extend Request interface to include rawBody
 declare global {
@@ -30,12 +29,6 @@ import { SchedulerService } from "./services/scheduler.service"
 const app = express()
 // Use process.cwd() for monorepo root (on Heroku cwd = /app = monorepo root)
 const backendRoot = process.cwd()
-const landingAssetsPath = path.join(backendRoot, "apps/backend/public")
-const landingPagePath = path.join(landingAssetsPath, "index.html")
-const hasLandingPage = fs.existsSync(landingPagePath)
-const landingRoutes = ["/", "/index.html", "/landing", "/landing/index.html"]
-const frontendBaseUrl = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")
-const loginRedirectUrl = `${frontendBaseUrl}/auth/login`
 
 // Initialize and start scheduler service
 const schedulerService = new SchedulerService()
@@ -164,11 +157,6 @@ app.use("/uploads/public", express.static(publicUploadsPath))
 logger.info(`[SECURITY] Serving public files from: ${publicUploadsPath}`)
 logger.info(`[SECURITY] Private files require authentication via /api/v1/files/:key`)
 
-if (fs.existsSync(landingAssetsPath)) {
-  app.use("/landing-assets", express.static(landingAssetsPath))
-  logger.info(`[LandingPage] Serving assets from ${landingAssetsPath}`)
-}
-
 // 🌐 PRODUCTION: Serve frontend static files (from Vite build)
 // Note: backendRoot = process.cwd() = monorepo root, so use apps/ path
 if (process.env.NODE_ENV === "production") {
@@ -273,37 +261,6 @@ app.post(
   })
   }
 )
-
-if (hasLandingPage) {
-  logger.info(`[LandingPage] Serving static landing page from ${landingPagePath}`)
-} else {
-  logger.warn(`[LandingPage] Public landing page not found at ${landingPagePath} - requests will redirect to ${loginRedirectUrl}`)
-}
-
-app.get(landingRoutes, async (req, res, next) => {
-  try {
-    if (!hasLandingPage) {
-      logger.warn("[LandingPage] Requested but file missing, redirecting to login", { path: req.path })
-      return res.redirect(302, loginRedirectUrl)
-    }
-
-    const landingEnabled = await platformConfigService.isLandingPageEnabled()
-    if (!landingEnabled) {
-      logger.info("[LandingPage] Flag disabled - redirecting to login", { path: req.path })
-      return res.redirect(302, loginRedirectUrl)
-    }
-
-    res.sendFile(landingPagePath, (err) => {
-      if (err) {
-        logger.error("Failed to send landing page", { error: err })
-        next(err)
-      }
-    })
-  } catch (error) {
-    logger.error("[LandingPage] Error handling request, redirecting to login", { error })
-    return res.redirect(302, loginRedirectUrl)
-  }
-})
 
 // Short URL routes (must be before API routes to handle /s/:shortCode)
 import { shortUrlRoutes } from "./interfaces/http/routes/short-url.routes"

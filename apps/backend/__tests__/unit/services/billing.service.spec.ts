@@ -36,6 +36,7 @@ const mockPrisma = {
   },
   user: {
     update: jest.fn(),
+    findUnique: jest.fn(), // ✅ Add findUnique mock for transaction
   },
   // 🔒 Mock $transaction for atomic operations
   $transaction: jest.fn(async (callback: (tx: typeof mockPrisma) => Promise<any>) => {
@@ -71,6 +72,12 @@ describe("Billing Service - Feature 198 Owner-Based Billing", () => {
         name: "Test Workspace",
         creditBalance: 50,
         ownerId: mockOwnerId,
+      })
+
+      // ✅ Mock user.findUnique for FRESH balance inside transaction
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: mockOwnerId,
+        creditBalance: 50,
       })
 
       // Mock aggregate for previous total

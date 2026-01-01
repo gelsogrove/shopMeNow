@@ -31,24 +31,10 @@
         if (path !== "/" && path !== "/index.html") {
           return
         }
-
-        const apiBase = "%VITE_API_URL%"
-        const resolvedApiBase =
-          apiBase && !apiBase.startsWith("%") ? apiBase.replace(/\/$/, "") : window.location.origin
         const loginUrl = `${window.location.origin}/auth/login`
-
-        fetch(`${resolvedApiBase}/api/platform-config/flags/check`)
-          .then((response) => (response.ok ? response.json() : null))
-          .then((payload) => {
-            const landingEnabled = payload?.data?.landingPageEnabled
-            const target = landingEnabled ? "/landing" : loginUrl
-            if (target && target !== window.location.pathname) {
-              window.location.replace(target)
-            }
-          })
-          .catch(() => {
-            window.location.replace(loginUrl)
-          })
+        if (loginUrl !== window.location.pathname) {
+          window.location.replace(loginUrl)
+        }
       })()
     </script>
   </head>

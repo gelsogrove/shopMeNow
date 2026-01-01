@@ -26,7 +26,6 @@ import ExpiredPage from "./pages/expired"
 import { FAQPage } from "./pages/FAQPage"
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage"
 import { LoginPage } from "./pages/LoginPage"
-import { LandingPage } from "./pages/LandingPage"
 import NotFoundPage from "./pages/not-found"
 import { OffersPage } from "./pages/OffersPage"
 import OrdersPage from "./pages/OrdersPage"
@@ -74,8 +73,8 @@ export function App() {
               <BrowserRouter>
               <Toaster position="top-right" duration={800} />
               <Routes>
-                {/* ROOT: Dynamic Landing vs Login based on flag */}
-                <Route path="/" element={<Navigate to="/landing" replace />} />
+                {/* ROOT: Login is the homepage */}
+                <Route path="/" element={<Navigate to="/auth/login" replace />} />
 
                 {/* Auth Routes - accessibili senza autenticazione */}
                 <Route path="/auth">
@@ -99,8 +98,8 @@ export function App() {
                 {/* Impersonate Route - OUTSIDE /auth to avoid LoginPage storage clearing */}
                 <Route path="/impersonate" element={<ImpersonatePage />} />
 
-                {/* Public Landing Page - "Coming Soon" mode */}
-                <Route path="/landing" element={<LandingPage />} />
+                {/* Legacy landing route: redirect to login */}
+                <Route path="/landing" element={<Navigate to="/auth/login" replace />} />
                 
                 {/* Public Legal Pages */}
                 <Route path="/privacy" element={<PrivacyPage />} />

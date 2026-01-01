@@ -10,8 +10,7 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Loader2,
-  Home
+  Loader2
 } from 'lucide-react'
 
 interface FlagConfig {
@@ -31,7 +30,6 @@ export function PlatformsPage() {
   const flagIcons: Record<string, { icon: React.ReactNode; title: string }> = {
     canLogin: { icon: <LogIn className="h-6 w-6" />, title: 'User Login' },
     canRegister: { icon: <UserPlus className="h-6 w-6" />, title: 'User Registration' },
-    landingPageEnabled: { icon: <Home className="h-6 w-6" />, title: 'Landing Page Redirect' },
   }
 
   const fetchConfig = async () => {

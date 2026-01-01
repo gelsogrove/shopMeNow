@@ -62,54 +62,6 @@ export default defineConfig({
           })
         },
       },
-      "^/$": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, _options) => {
-          proxy.on("error", (err, _req, _res) => {
-            if (process.env.NODE_ENV === "development") {
-              console.error("Proxy error for root landing:", err)
-            }
-          })
-        },
-      },
-      "^/index.html$": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, _options) => {
-          proxy.on("error", (err, _req, _res) => {
-            if (process.env.NODE_ENV === "development") {
-              console.error("Proxy error for root index:", err)
-            }
-          })
-        },
-      },
-      "/landing": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, _options) => {
-          proxy.on("error", (err, _req, _res) => {
-            if (process.env.NODE_ENV === "development") {
-              console.error("Proxy error for landing page:", err)
-            }
-          })
-        },
-      },
-      "/landing-assets": {
-        target: "http://localhost:3001",
-        changeOrigin: true,
-        secure: false,
-        configure: (proxy, _options) => {
-          proxy.on("error", (err, _req, _res) => {
-            if (process.env.NODE_ENV === "development") {
-              console.error("Proxy error for landing assets:", err)
-            }
-          })
-        },
-      },
       // ✅ Short URLs - proxy to backend for direct HTTP 302 redirect
       // Pattern: ^/s/ matches /s/XXXXX but NOT /src, /static, etc.
       // This ensures short URLs work on FIRST click (no SPA hydration needed)

@@ -63,7 +63,7 @@ const REQUIRED_PRICE_KEYS = [
   "PUSH_CAMPAIGN",
 ]
 
-const REQUIRED_FLAG_KEYS = ["canLogin", "canRegister", "landingPageEnabled"]
+const REQUIRED_FLAG_KEYS = ["canLogin", "canRegister"]
 
 const findMissingKeys = (source: Record<string, unknown>, keys: string[]) =>
   keys.filter((key) => source[key] === undefined)
@@ -189,8 +189,6 @@ export function usePlatformConfig() {
   // Convenience accessors for common flags
   const canLogin = state.data?.flags.canLogin ?? false
   const canRegister = state.data?.flags.canRegister ?? false
-  const landingPageEnabled = state.data?.flags.landingPageEnabled ?? false
-
   return {
     // Raw data
     prices: state.data?.prices ?? {},
@@ -214,7 +212,7 @@ export function usePlatformConfig() {
     // Convenience flags
     canLogin,
     canRegister,
-    landingPageEnabled,
+    
   }
 }
 
@@ -226,7 +224,6 @@ export function useFeatureFlags() {
   const [flags, setFlags] = useState({
     canLogin: false,
     canRegister: false,
-    landingPageEnabled: false,
     isLoading: true,
     error: null as string | null,
   })

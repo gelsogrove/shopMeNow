@@ -90,17 +90,6 @@ describe("PlatformConfigService", () => {
       updatedAt: new Date(),
     },
     {
-      id: "8",
-      key: "landingPageEnabled",
-      type: "FLAG" as const,
-      value: "true",
-      originalValue: null,
-      description: "Show marketing landing page on index",
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
       id: "6",
       key: "FREE_PRODUCTS",
       type: "LIMIT" as const,

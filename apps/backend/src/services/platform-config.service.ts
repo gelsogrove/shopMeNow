@@ -224,13 +224,6 @@ class PlatformConfigService {
     return this.getFlag("canRegister")
   }
 
-  /**
-   * Check if landing page redirect is enabled
-   */
-  async isLandingPageEnabled(): Promise<boolean> {
-    return this.getFlag("landingPageEnabled")
-  }
-
   // ============================================================================
   // 📊 LIMIT GETTERS
   // ============================================================================
@@ -335,7 +328,7 @@ class PlatformConfigService {
     }
 
     // Only include supported flags exposed in admin UI
-    const supportedFlags = ["canLogin", "canRegister", "landingPageEnabled"]
+    const supportedFlags = ["canLogin", "canRegister"]
     for (const [key, item] of this.cache.flags) {
       if (supportedFlags.includes(key)) {
         flags.push({

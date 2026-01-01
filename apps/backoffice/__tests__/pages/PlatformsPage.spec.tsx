@@ -19,11 +19,6 @@ const mockConfig = {
       key: 'canRegister',
       value: false,
       description: 'Allow new user registrations'
-    },
-    {
-      key: 'landingPageEnabled',
-      value: true,
-      description: 'Show the marketing landing page when visiting /index.html'
     }
   ]
 }
@@ -67,7 +62,6 @@ describe('PlatformsPage', () => {
         // Flags are displayed with friendly titles
         expect(screen.getByText('User Login')).toBeInTheDocument()
         expect(screen.getByText('User Registration')).toBeInTheDocument()
-        expect(screen.getByText('Landing Page Redirect')).toBeInTheDocument()
       })
     })
 

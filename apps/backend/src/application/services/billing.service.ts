@@ -85,11 +85,22 @@ export class BillingService {
         return
       }
 
-      const newBalance = Number(workspace.creditBalance) - messageCost
-
       // 🔒 TRANSACTION: Ensure billing, credit deduction, and transaction history are atomic
-      // Prevents: credit not deducted but message sent, or inconsistent transaction history
+      // CRITICAL: Calculate newBalance INSIDE transaction to avoid race conditions
       await this.prisma.$transaction(async (tx) => {
+        // 🔒 Get FRESH user balance inside transaction (prevents race conditions)
+        const user = await tx.user.findUnique({
+          where: { id: workspace.ownerId! },
+          select: { creditBalance: true },
+        })
+
+        if (!user) {
+          throw new Error(`User ${workspace.ownerId} not found`)
+        }
+
+        const currentBalance = Number(user.creditBalance)
+        const newBalance = currentBalance - messageCost
+
         // 1️⃣ Write to legacy billing table (for Analytics)
         await tx.billing.create({
           data: {
@@ -117,16 +128,16 @@ export class BillingService {
             userId: workspace.ownerId!,
             workspaceId,
             type: "MESSAGE",
-            amount: messageCost,
+            amount: -messageCost, // ❗ NEGATIVE for deductions (credits removed)
             description: `WhatsApp message (${workspace.name})`,
             balanceAfter: newBalance,
           },
         })
-      })
 
-      logger.info(
-        `[BILLING] 💰 Message: €${messageCost.toFixed(2)} deducted from all owner workspaces. New balance: €${newBalance.toFixed(2)}`
-      )
+        logger.info(
+          `[BILLING] 💰 Message: €${messageCost.toFixed(2)} deducted. Balance: €${currentBalance.toFixed(2)} → €${newBalance.toFixed(2)}`
+        )
+      })
     } catch (error) {
       logger.error(
         `Failed to charge message cost for workspace ${workspaceId}, customer ${customerId}`,
