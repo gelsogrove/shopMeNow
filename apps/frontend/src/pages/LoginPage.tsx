@@ -31,6 +31,9 @@ import {
   Mail,
   MapPin,
   Phone,
+  Bot,
+  Megaphone,
+  Headphones,
   Loader2,
   Eye,
   EyeOff,
@@ -1316,44 +1319,43 @@ export function LoginPage() {
         <div className="mt-14">
           <div className="text-center space-y-2 mb-8">
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
-              {t("hero.whyTitle")}
+              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
+              Why eChatbot?
+              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
             </p>
-            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900">
-              {t("hero.useCasesTitle")}
-            </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
               <div className="h-12 w-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center mb-4">
-                <BarChart3 className="h-6 w-6" />
+                <Bot className="h-6 w-6" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                {t("hero.useCases.sales.title")}
+                AI sales agent
               </h3>
               <p className="text-sm text-slate-600">
-                {t("hero.useCases.sales.desc")}
+                Create your agent in minutes. No AI skills or prompts required.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
               <div className="h-12 w-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
-                <MessageSquare className="h-6 w-6" />
+                <Megaphone className="h-6 w-6" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                {t("hero.useCases.support.title")}
+                Push messages
               </h3>
               <p className="text-sm text-slate-600">
-                {t("hero.useCases.support.desc")}
+                Send targeted WhatsApp pushes, recover abandoned carts, and bring customers back at the right time.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
               <div className="h-12 w-12 rounded-xl bg-lime-100 text-lime-600 flex items-center justify-center mb-4">
-                <Phone className="h-6 w-6" />
+                <Headphones className="h-6 w-6" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                {t("hero.useCases.ops.title")}
+                Customer care
               </h3>
               <p className="text-sm text-slate-600">
-                {t("hero.useCases.ops.desc")}
+                Triage FAQs, escalate to humans with context, and keep every chat logged.
               </p>
             </div>
           </div>
@@ -1389,14 +1391,32 @@ export function LoginPage() {
       {/* Contact Section */}
       <div className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto text-center space-y-4">
-            <h3 className="text-2xl font-bold text-slate-900">
-              {t("contact.title")}
-            </h3>
-            <p className="text-slate-600">
-              {t("contact.subtitle")}
-            </p>
-            <div className="pt-4" />
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,260px] gap-8 items-center rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-emerald-50/60 to-white p-8 lg:p-10 shadow-xl">
+            <div className="flex items-center justify-center">
+              <div className="w-48 h-48 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-md">
+                <img
+                  src="/bellaitalia.webp"
+                  alt="Bellitalia demo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="text-center lg:text-left space-y-2">
+              <h3 className="text-3xl lg:text-4xl font-bold text-slate-900">Demo</h3>
+              <p className="text-lg text-slate-600">
+                Bellitalia is a distributor of Italian products and has created its own AI Sales Agent.
+                Ask the agent anything about their business and try adding products to your cart.
+              </p>
+            </div>
+            <div className="flex justify-center lg:justify-end">
+              <Button
+                type="button"
+                disabled
+                className="px-12 py-7 text-lg font-semibold rounded-full bg-green-600 text-white cursor-not-allowed shadow-xl shadow-green-200/70 hover:bg-green-600"
+              >
+                Try our demo
+              </Button>
+            </div>
           </div>
         </div>
       </div>

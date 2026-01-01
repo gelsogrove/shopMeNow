@@ -361,9 +361,9 @@ const translations = {
     "header.tagline": "Talk to your customers through their favorite chat",
 
     // Hero Section
-    "hero.title": "Is the way to sell changing?",
+    "hero.title": "Build your AI sales agent",
     "hero.subtitle":
-      "Yes, things have changed: customers don’t read emails, calling feels intrusive, and visiting is a disturbance. So we meet them where they already are — WhatsApp. That’s our proposal.",
+      "Customers don’t read emails? Calling feels intrusive? Visiting feels like a disturbance? We meet them where they already are — WhatsApp. That’s our proposal.",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Tailored workflows for your team",
     "hero.useCases.sales.title": "Sales teams",

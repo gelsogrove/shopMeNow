@@ -107,7 +107,7 @@ export function NewsUpdates() {
   const actualIndex = currentIndex + newsItems.length
 
   return (
-    <div className="py-12 bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="py-12 bg-gradient-to-br from-slate-50 to-blue-50 -mt-[35px]">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-8">
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
