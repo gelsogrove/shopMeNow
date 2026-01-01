@@ -19,7 +19,7 @@ import axios from "axios"
  * - withCredentials: false
  */
 export const tokenApi = axios.create({
-  baseURL: "/api/token",
+  baseURL: "/api/v1/token",
   withCredentials: false, // No cookies for token endpoints
 })
 

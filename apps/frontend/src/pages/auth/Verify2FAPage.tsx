@@ -78,7 +78,7 @@ export default function Verify2FAPage() {
       
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
       logger.info('🧹 [Verify2FA] Clearing ALL storage (localStorage + sessionStorage)')
-      storage.clearAll()
+      storage.clearAppState()
       logger.info('✅ [Verify2FA] Storage cleared completely')
       
       // Store token and user

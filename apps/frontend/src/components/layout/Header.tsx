@@ -166,7 +166,7 @@ export function Header() {
 
       // 🛡️ CRITICAL SECURITY: Clear ALL storage on logout
       logger.info("🧹 [LOGOUT] Clearing ALL storage (localStorage + sessionStorage)")
-      storage.clearAll()
+      storage.clearAppState()
       logger.info("✅ [LOGOUT] Storage cleared completely")
 
       navigate("/auth/login")
@@ -175,7 +175,7 @@ export function Header() {
       
       // Force logout even if API call fails
       logger.info("🧹 [LOGOUT FORCE] Clearing ALL storage after API error")
-      storage.clearAll()
+      storage.clearAppState()
       logger.info("✅ [LOGOUT FORCE] Storage cleared completely")
       
       toast.error("Failed to logout")

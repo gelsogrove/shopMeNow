@@ -71,7 +71,8 @@ eChatbot/
 
    ```bash
    cp .env.example .env
-   # Configure your environment variables in .env
+   # Configure your environment variables in .env (do not commit this file)
+   # Frontend: create apps/frontend/.env.local with VITE_ variables
    ```
 
 5. **Setup database**
@@ -399,14 +400,14 @@ npm run seed
 
 **Solution**:
 ```bash
-cd backend
 cp .env.example .env
-# Edit .env file with your settings
+# Edit .env file with your settings (do not commit)
+# Frontend: create apps/frontend/.env.local with VITE_ variables
 ```
 
 ### SMTP Configuration (Optional)
 
-For email functionality, configure these variables in `backend/.env`:
+For email functionality, configure these variables in `.env`:
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -421,6 +422,7 @@ SMTP_PASS=your-app-password
 - **PRD**: `docs/PRD.md` - Product Requirements Document
 - **API**: Swagger documentation at `/api/docs`
 - **Architecture**: `docs/architecture.md`
+- **Scripts**: `scripts/README.md` - Deployment and maintenance scripts
 
 ## 🤝 Contributing
 

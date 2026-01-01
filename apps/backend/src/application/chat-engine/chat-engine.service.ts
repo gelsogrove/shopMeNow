@@ -505,6 +505,8 @@ export class ChatEngineService {
       let finalMessage = formatterResult.text
       const formatterTokens = formatterResult.tokensUsed || 0
 
+      // 🔗 TASK17: Replace token placeholders with secure links
+      const messageBeforeReplacement = finalMessage
       const replacementResult = await this.linkReplacementService.replaceTokens(
         { response: finalMessage, linkType: "auto" },
         input.customerId,
@@ -512,6 +514,21 @@ export class ChatEngineService {
       )
       if (replacementResult.success && replacementResult.response) {
         finalMessage = replacementResult.response
+        
+        // 🔗 TASK17 FIX: Add debug step when tokens are replaced
+        if (messageBeforeReplacement !== finalMessage) {
+          debugSteps.push({
+            type: "link-replacement",
+            agent: "🔗 Link Replacement",
+            timestamp: new Date().toISOString(),
+            input: {
+              textContent: "Scanning for [LINK_*_WITH_TOKEN] placeholders",
+            },
+            output: {
+              textContent: "Tokens replaced with secure URLs",
+            },
+          })
+        }
       }
 
       finalMessage = finalMessage
@@ -2236,6 +2253,9 @@ export class ChatEngineService {
                   input.customerName
                 )
 
+                // 🔗 TASK17: Replace token placeholders with secure links
+                const messageBeforeReplacement = confirmMessage
+                const replacementStart = Date.now()
                 const replacementResult = await this.linkReplacementService.replaceTokens(
                   { response: confirmMessage, linkType: "auto" },
                   input.customerId,
@@ -2243,6 +2263,43 @@ export class ChatEngineService {
                 )
                 if (replacementResult.success && replacementResult.response) {
                   confirmMessage = replacementResult.response
+                }
+                const replacementTime = Date.now() - replacementStart
+
+                // Build debug steps array for confirmOrder
+                const confirmDebugSteps: DebugStep[] = [
+                  {
+                    type: "function_call",
+                    agent: "🧾 confirmOrder",
+                    timestamp: new Date().toISOString(),
+                    input: { textContent: "Finalize cart checkout" },
+                    output: {
+                      result: {
+                        success: orderResult.success,
+                        orderCode: orderResult.orderCode,
+                        total: orderResult.orderTotal,
+                      },
+                      executionTimeMs: Date.now() - confirmStart,
+                    },
+                    duration: Date.now() - confirmStart,
+                  },
+                ]
+
+                // 🔗 TASK17 FIX: Add link replacement debug step when tokens are replaced
+                if (messageBeforeReplacement !== confirmMessage) {
+                  confirmDebugSteps.push({
+                    type: "link-replacement",
+                    agent: "🔗 Link Replacement",
+                    timestamp: new Date().toISOString(),
+                    input: {
+                      textContent: "Scanning for [LINK_*_WITH_TOKEN] placeholders",
+                    },
+                    output: {
+                      textContent: "Tokens replaced with secure URLs",
+                      executionTimeMs: replacementTime,
+                    },
+                    duration: replacementTime,
+                  })
                 }
 
                 // Persist response
@@ -2258,23 +2315,7 @@ export class ChatEngineService {
                     loadedDataType: "CART_ACTION",
                     responseType: "CONFIRM_ORDER",
                     llmUsed: false,
-                    steps: [
-                      {
-                        type: "function_call",
-                        agent: "🧾 confirmOrder",
-                        timestamp: new Date().toISOString(),
-                        input: { textContent: "Finalize cart checkout" },
-                        output: {
-                          result: {
-                            success: orderResult.success,
-                            orderCode: orderResult.orderCode,
-                            total: orderResult.orderTotal,
-                          },
-                          executionTimeMs: Date.now() - confirmStart,
-                        },
-                        duration: Date.now() - confirmStart,
-                      },
-                    ],
+                    steps: confirmDebugSteps,
                     totalTokens: 0,
                     totalCost: 0,
                     executionTimeMs: Date.now() - confirmStart,

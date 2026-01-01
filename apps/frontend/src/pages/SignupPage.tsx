@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
+import { api } from "@/services/api"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -33,22 +34,22 @@ export function SignupPage() {
       return;
     }
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, firstName, lastName, gdprAccepted }),
+      const response = await api.post("/auth/register", {
+        email,
+        password,
+        firstName,
+        lastName,
+        gdprAccepted,
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Registration failed")
-      }
-
+      const data = response.data
       // Se la registrazione ha successo, reindirizza alla pagina di verifica OTP
       navigate(`/auth/verify-otp?userId=${data.userId}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const message =
+        (err as any).response?.data?.message ||
+        (err as Error).message ||
+        "An error occurred"
+      setError(message)
     }
   }
 

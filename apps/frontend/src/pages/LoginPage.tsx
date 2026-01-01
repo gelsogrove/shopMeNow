@@ -205,7 +205,7 @@ export function LoginPage() {
     // 🆕 If logout=true param, force logout regardless of existing token
     if (logoutParam === 'true') {
       logger.info('🚪 [LOGOUT] Force logout requested from backoffice - clearing all storage')
-      storage.clearAll()
+      storage.clearAppState()
       // Remove the logout param from URL to prevent re-logout on refresh
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('logout')
@@ -373,7 +373,7 @@ export function LoginPage() {
 
     // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
     logger.info("🧹 [LOGIN] Clearing ALL storage (localStorage + sessionStorage)")
-    storage.clearAll()
+    storage.clearAppState()
     logger.info("✅ [LOGIN] Storage cleared completely")
 
     try {
@@ -416,7 +416,7 @@ export function LoginPage() {
         // Using localStorage to persist across page refreshes
         if (response.data.sessionId) {
           storage.setSessionId(response.data.sessionId)
-          logger.info(`✅ SessionId saved to localStorage`)
+          logger.info(`✅ SessionId saved to sessionStorage`)
         } else {
           logger.warn("⚠️ No sessionId in login response")
         }
@@ -475,7 +475,7 @@ export function LoginPage() {
 
     // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
     logger.info("🧹 [REGISTER] Clearing storage")
-    storage.clearAll()
+    storage.clearAppState()
 
     try {
       const response = await api.post('/auth/register', {
@@ -529,10 +529,10 @@ export function LoginPage() {
     
     // 🛡️ CRITICAL SECURITY: Clear ALL storage to prevent session/workspace leakage
     logger.info("🧹 [GOOGLE OAUTH] Clearing storage")
-    storage.clearAll()
+    storage.clearAppState()
     // 🛡️ CRITICAL SECURITY: Clear ALL storage before OAuth flow
     logger.info('🧹 [GOOGLE OAUTH] Clearing ALL storage (localStorage + sessionStorage)')
-    storage.clearAll()
+    storage.clearAppState()
     logger.info('✅ [GOOGLE OAUTH] Storage cleared completely')
     
     try {
@@ -676,7 +676,7 @@ export function LoginPage() {
               {/* 🔐 Hidden Admin Access - small link for platform admins */}
               <button
                 onClick={() => {
-                  storage.clearAll()
+                  storage.clearAppState()
                   setActiveTab('signin')
                   setIsAdminAccess(true) // 🔐 Enable admin bypass
                   setShowLoginModal(true)
@@ -976,7 +976,7 @@ export function LoginPage() {
                       <DropdownMenuItem
                         className="p-2 cursor-pointer text-red-600 focus:text-red-600"
                         onClick={() => {
-                          storage.clearAll()
+                          storage.clearAppState()
                           setIsLoggedIn(false)
                           setLoggedInUser(null)
                           setUserPlan(null)
@@ -1199,7 +1199,7 @@ export function LoginPage() {
                                 return
                               }
 
-                              storage.clearAll()
+                              storage.clearAppState()
                               setError("")
                               setActiveTab("register")
                             }}
@@ -1398,7 +1398,7 @@ export function LoginPage() {
                             setShowWIPModal(true)
                             return
                           }
-                          storage.clearAll()
+                          storage.clearAppState()
                           setError("")
                           setActiveTab("signin")
                         }}

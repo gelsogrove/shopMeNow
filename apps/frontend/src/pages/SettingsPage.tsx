@@ -304,7 +304,7 @@ export default function SettingsPage() {
       
       // Clear ALL storage (security)
       logger.info("🧹 [DELETE WORKSPACE] Clearing ALL storage")
-      storage.clearAll()
+      storage.clearAppState()
       
       toast.success("Workspace deleted successfully. You have been logged out.")
       navigate("/auth/login")

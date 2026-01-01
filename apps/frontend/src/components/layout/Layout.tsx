@@ -41,12 +41,11 @@ export function Layout() {
   const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
   const [savedChat, setSavedChat] = useState<Chat | null>(null)
 
-  // Recupera la chat salvata dal localStorage quando il componente viene montato
+  // Recupera la chat salvata dallo storage quando il componente viene montato
   useEffect(() => {
     try {
-      const savedChatJson = localStorage.getItem("selectedChat")
-      if (savedChatJson) {
-        const chat = JSON.parse(savedChatJson)
+      const chat = storage.getSelectedChat<Chat>()
+      if (chat) {
         logger.info("Loaded chat from localStorage:", chat)
         setSavedChat(chat)
       }
@@ -55,16 +54,16 @@ export function Layout() {
     }
   }, [])
 
-  // Aggiorna il savedChat quando cambia il localStorage
+  // Aggiorna il savedChat quando cambia lo storage
   // (utile per quando la chat viene selezionata in un'altra pagina)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "selectedChat") {
-        try {
-          if (e.newValue) {
-            const chat = JSON.parse(e.newValue)
-            logger.info("Chat in localStorage updated:", chat)
-            setSavedChat(chat)
+        if (e.key === "selectedChat") {
+          try {
+            if (e.newValue) {
+              const chat = JSON.parse(e.newValue)
+              logger.info("Chat in localStorage updated:", chat)
+              setSavedChat(chat)
           } else {
             setSavedChat(null)
           }
@@ -80,9 +79,8 @@ export function Layout() {
 
   const handlePlaygroundClick = () => {
     try {
-      const latestChatJson = localStorage.getItem("selectedChat")
-      if (latestChatJson) {
-        const latestChat = JSON.parse(latestChatJson)
+      const latestChat = storage.getSelectedChat<Chat>()
+      if (latestChat) {
         // Only update if different from current savedChat
         if (!savedChat || savedChat.sessionId !== latestChat.sessionId) {
           logger.info("Updating to latest chat from localStorage:", latestChat)

@@ -13,6 +13,7 @@ import {
 import { useChatList } from "@/contexts/ChatListContext"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { pushNotificationService } from "@/services/pushNotificationService"
@@ -558,8 +559,8 @@ export default function ClientsPage(): JSX.Element {
 
   // Handle opening the new chat modal
   const handleOpenNewChat = () => {
-    // Clear any existing selectedChat from localStorage first
-    localStorage.removeItem("selectedChat")
+    // Clear any existing selectedChat first
+    storage.clearSelectedChat()
     // Then open the chat modal
     setShowPlayground(true)
   }

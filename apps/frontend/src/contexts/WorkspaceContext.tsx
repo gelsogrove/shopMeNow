@@ -177,12 +177,10 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
       // This prevents cross-workspace data contamination
       if (parsed?.id !== workspace?.id) {
         logger.info("🧹 Workspace changed! Clearing chat localStorage AND sessionStorage...")
-        localStorage.removeItem("selectedChat")
-        localStorage.removeItem("chatMessages")
-        localStorage.removeItem("chat-list-updated")
+        storage.clearChatCache()
         storage.clearSelectedChatId()  // 🔥 CRITICAL: ChatContext reads this!
         // Invalidate react-query cache by triggering storage event
-        localStorage.setItem("workspace-changed", Date.now().toString())
+        storage.setWorkspaceChanged()
       }
     }
     

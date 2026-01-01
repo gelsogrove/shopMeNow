@@ -2,6 +2,8 @@ import { Minus, Package, Plus, ShoppingCart, Trash2, Truck } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
+import { api } from "@/services/api"
+import { tokenApi } from "@/services/tokenApi"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
@@ -45,18 +47,8 @@ const OrderSummaryPage: React.FC = () => {
       try {
         setLoading(true)
 
-        const response = await fetch(`/api/token/checkout/${token}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error("Token non valido o scaduto")
-        }
-
-        const data = await response.json()
+        const response = await tokenApi.get(`/checkout/${token}`)
+        const data = response.data
         setOrderData(data)
         setItems(data.items || [])
         setTotalAmount(data.totalAmount || 0)
@@ -182,31 +174,20 @@ const OrderSummaryPage: React.FC = () => {
     try {
       setIsConfirmed(true)
 
-      const response = await fetch("/api/internal/create-order", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          workspaceId: orderData?.workspaceId,
-          customerId: orderData?.customerId,
-          status: "CONFIRMED", // 💰 Create order as CONFIRMED to trigger billing
-          items: items.map((item) => ({
-            itemType: item.itemType.toLowerCase(),
-            id: item.itemType === "PRODUCT" ? item.productId : item.serviceId,
-            name: item.name,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-          })),
-          notes: "Order confirmed via WhatsApp - OrderSummaryPage",
-        }),
+      const response = await api.post("/internal/create-order", {
+        workspaceId: orderData?.workspaceId,
+        customerId: orderData?.customerId,
+        status: "CONFIRMED",
+        items: items.map((item) => ({
+          itemType: item.itemType.toLowerCase(),
+          id: item.itemType === "PRODUCT" ? item.productId : item.serviceId,
+          name: item.name,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+        })),
+        notes: "Order confirmed via WhatsApp - OrderSummaryPage",
       })
-
-      if (!response.ok) {
-        throw new Error("Errore nella creazione dell'ordine")
-      }
-
-      const result = await response.json()
+      const result = response.data
       toast.success("Order confirmed successfully!")
 
       // Redirect to order confirmation

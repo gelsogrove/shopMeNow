@@ -1,6 +1,7 @@
 import { useChatList } from "@/contexts/ChatListContext"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
@@ -108,7 +109,7 @@ export function useRecentChats(
 
           // Notify other tabs if this tab has the lock
           if (hasPollingLock) {
-            localStorage.setItem("chat-list-updated", Date.now().toString())
+            storage.setChatListUpdated()
             logger.info("📤 Notified other tabs about chat list update")
           }
 

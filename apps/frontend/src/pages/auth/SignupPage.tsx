@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/form"
 import { GDPRDialog } from "@/components/ui/gdpr-dialog"
 import { Input } from "@/components/ui/input"
+import { api } from "@/services/api"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
@@ -75,18 +76,8 @@ export default function SignupPage() {
       setError("")
       setSuccess("")
 
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to register")
-      }
-
-      const result = await response.json()
+      const response = await api.post("/auth/register", data)
+      const result = response.data
       setSuccess(
         "Registration successful! Please check your email for verification."
       )
@@ -96,7 +87,11 @@ export default function SignupPage() {
         navigate(`/auth/verify-otp?userId=${result.userId}`)
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const message =
+        (err as any).response?.data?.message ||
+        (err as Error).message ||
+        "An error occurred"
+      setError(message)
     } finally {
       setIsLoading(false)
     }

@@ -61,7 +61,8 @@ npm install
 
 # Copia e configura environment
 cp .env.example .env
-nano .env  # Configura DATABASE_URL, OPENROUTER_API_KEY, etc.
+nano .env  # Configura DATABASE_URL, OPENROUTER_API_KEY, etc. (do not commit)
+# Frontend: create apps/frontend/.env.local with VITE_ variables
 
 # Setup database (migrazioni sono SICURE in prod)
 npm run prisma:migrate:prod
@@ -214,6 +215,10 @@ npm run build
 # Restart servizi
 pm2 restart all
 ```
+
+## 🔧 Scripts
+
+Per gli script di deploy e manutenzione, vedi `scripts/README.md`.
 
 ---
 

@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { api } from "@/services/api"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useState, useMemo, useEffect } from "react"
@@ -66,27 +67,22 @@ export default function ForgotPasswordPage() {
         pt: "pt-PT",
       }
 
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
+      await api.post("/auth/forgot-password", data, {
         headers: {
-          "Content-Type": "application/json",
-          "Accept-Language": languageMap[language] || "it-IT", // 🌍 Send user's language
+          "Accept-Language": languageMap[language] || "it-IT",
         },
-        body: JSON.stringify(data),
       })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || t("forgotPassword.error"))
-      }
-
       setSuccess(true)
       toast({
         title: t("forgotPassword.title"),
         description: t("forgotPassword.success"),
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("forgotPassword.error"))
+      const message =
+        (err as any).response?.data?.message ||
+        (err as Error).message ||
+        t("forgotPassword.error")
+      setError(message)
     } finally {
       setIsLoading(false)
     }

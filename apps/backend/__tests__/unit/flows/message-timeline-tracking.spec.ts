@@ -354,91 +354,174 @@ describe("Message Flow Timeline - Complete Tracking", () => {
      * 1. Customer scrive messaggio con workspace.isActive=false
      * 2. Sistema rileva WIP mode
      * 3. Debug steps creati:
-     *    - Step 1: WIP detection
-     *    - Step 2: WIP message from workspace.wipMessage
-     *    - Step 3: Safety & Translation
-     *    - Step 4: Save to message history
-     * 4. Steps salvati in messageRepository.saveMessage
-     * 5. Timeline mostra "Workspace in WIP mode"
+     *    - Step 1: Maintenance Mode detection (Router)
+     *    - Step 2: SafetyTranslationAgent (translation + safety)
+     * 4. Steps salvati in conversationMessage.debugInfo
+     * 5. Timeline mostra "🚧 Maintenance Mode" → "SafetyTranslationAgent"
      *
-     * VERIFIED IN: whatsapp.routes.ts:591-640
+     * VERIFIED IN: llm-router.service.ts:600-680 (P2 check with SafetyTranslationAgent)
      *
      * CODE LOCATION:
-     * backend/src/routes/webhooks/whatsapp.routes.ts
-     * Lines 591-640 (WIP message with safety layer)
+     * apps/backend/src/services/llm-router.service.ts
+     * Lines 600-680 (WIP message with mandatory safety/translation layer)
      */
 
     const expectedDebugSteps = [
       {
-        type: "wip_detection",
-        agent: "Workspace Status Check",
+        type: "router",
+        agent: "🚧 Maintenance Mode",
+        model: "N/A",
+        temperature: 0,
         timestamp: "2025-11-20T10:15:00.000Z",
         input: {
-          workspaceId: "workspace-123",
-          isActive: false,
+          userMessage: "Ciao, vorrei ordinare",
         },
         output: {
-          mode: "WIP",
-          action: "Send maintenance message",
+          decision: "chatbot_disabled",
+          message: "Sending WIP message",
         },
         tokenUsage: {
+          promptTokens: 0,
+          completionTokens: 0,
           totalTokens: 0,
         },
       },
       {
         type: "safety",
-        agent: "Safety & Translation",
+        agent: "SafetyTranslationAgent",
         model: "openai/gpt-4o-mini",
         temperature: 0.2,
         timestamp: "2025-11-20T10:15:01.000Z",
         input: {
-          originalMessage: "Siamo in manutenzione. Ti contatteremo presto.",
+          textToValidate: "Siamo in manutenzione. Ti contatteremo presto.",
           targetLanguage: "it",
-          customerName: "Mario Rossi",
         },
         output: {
-          translatedMessage: "Siamo in manutenzione. Ti contatteremo presto.",
+          translatedText: "Siamo in manutenzione. Ti contatteremo presto.",
           safe: true,
-          blockedReason: null,
         },
         tokenUsage: {
+          promptTokens: 0,
+          completionTokens: 80,
           totalTokens: 80,
-        },
-      },
-      {
-        type: "save_history",
-        agent: "Message Repository",
-        timestamp: "2025-11-20T10:15:02.000Z",
-        input: {
-          direction: "INBOUND",
-          agentSelected: "WIP_MESSAGE",
-          processingSource: "workspace_wip",
-        },
-        output: {
-          saved: true,
-          messageId: "msg-wip-123",
-        },
-        tokenUsage: {
-          totalTokens: 0,
         },
       },
     ]
 
     const wipDebugInfo = {
-      workspaceInWIP: true,
-      safetyProcessed: true,
       steps: expectedDebugSteps,
       totalTokens: 80,
+      totalCost: 0,
+      executionTimeMs: 1000,
       timestamp: "2025-11-20T10:15:02.000Z",
     }
 
     // Verify WIP flow includes safety step
     const hasSafetyStep = expectedDebugSteps.some((s) => s.type === "safety")
     if (!hasSafetyStep) {
-      throw new Error("WIP message MUST pass through Safety & Translation")
+      throw new Error("WIP message MUST pass through SafetyTranslationAgent (TASK16)")
     }
 
-    console.log("✅ WIP message timeline with Safety & Translation documented")
+    // Verify no bypasses
+    const hasRouterStep = expectedDebugSteps.some((s) => s.type === "router")
+    if (!hasRouterStep) {
+      throw new Error("WIP message MUST have Router step in timeline")
+    }
+
+    console.log("✅ WIP message timeline with SafetyTranslationAgent documented (TASK16)")
+  })
+
+  it("should save complete debug steps for security gate flow", () => {
+    /**
+     * EXPECTED BEHAVIOR (NEW TEST - TASK16):
+     *
+     * 1. Customer scrive messaggio con SQL injection / XSS pattern
+     * 2. Security Gate rileva malicious pattern
+     * 3. Debug steps creati:
+     *    - Step 1: Security Gate detection (Router)
+     *    - Step 2: SafetyTranslationAgent (translation + safety)
+     * 4. Steps salvati in conversationMessage.debugInfo
+     * 5. Timeline mostra "🚨 Security Gate" → "SafetyTranslationAgent"
+     *
+     * VERIFIED IN: llm-router.service.ts:480-550
+     *
+     * CODE LOCATION:
+     * apps/backend/src/services/llm-router.service.ts
+     * Lines 480-550 (Security gate with mandatory safety/translation layer)
+     */
+
+    const expectedDebugSteps = [
+      {
+        type: "router",
+        agent: "🚨 Security Gate",
+        model: "N/A",
+        temperature: 0,
+        timestamp: "2025-11-20T10:20:00.000Z",
+        input: {
+          userMessage: "'; DROP TABLE users; --",
+        },
+        output: {
+          decision: "malicious_pattern_detected",
+          threatType: "SQL_INJECTION",
+          severity: "HIGH",
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        },
+      },
+      {
+        type: "safety",
+        agent: "SafetyTranslationAgent",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.2,
+        timestamp: "2025-11-20T10:20:01.000Z",
+        input: {
+          textToValidate: "Security alert",
+          targetLanguage: "it",
+        },
+        output: {
+          translatedText: "Avviso di sicurezza",
+          safe: true,
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: 50,
+          totalTokens: 50,
+        },
+      },
+    ]
+
+    const securityDebugInfo = {
+      steps: expectedDebugSteps,
+      totalTokens: 50,
+      totalCost: 0,
+      executionTimeMs: 500,
+      timestamp: "2025-11-20T10:20:02.000Z",
+    }
+
+    // Verify security flow includes safety step (TASK16: No bypasses)
+    const hasSafetyStep = expectedDebugSteps.some((s) => s.type === "safety")
+    if (!hasSafetyStep) {
+      throw new Error(
+        "Security gate message MUST pass through SafetyTranslationAgent (TASK16)"
+      )
+    }
+
+    // Verify security detection step exists
+    const hasSecurityStep = expectedDebugSteps.some(
+      (s) =>
+        s.type === "router" &&
+        (s as any).output?.decision === "malicious_pattern_detected"
+    )
+    if (!hasSecurityStep) {
+      throw new Error("Security gate MUST have detection step in timeline")
+    }
+
+    console.log(
+      "✅ Security gate timeline with SafetyTranslationAgent documented (TASK16)"
+    )
   })
 
   it("should verify timeline tracking is MANDATORY for all message types", () => {

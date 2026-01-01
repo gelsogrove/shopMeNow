@@ -21,6 +21,8 @@ import { Input } from "@/components/ui/input"
 import { QRCodeDisplay } from "@/components/ui/qr-code"
 import { useToast } from "@/hooks/use-toast"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
+import { api } from "@/services/api"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -60,24 +62,14 @@ export default function VerifyOtpPage() {
       setIsLoading(true)
       setError("")
 
-      const response = await fetch("/api/auth/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          otp: data.otp,
-        }),
+      const response = await api.post("/auth/verify-otp", {
+        userId,
+        otp: data.otp,
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to verify OTP")
-      }
+      const { token } = response.data
 
-      const { token } = await response.json()
-
-      // Store the token
-      localStorage.setItem("token", token)
+      storage.setToken(token)
 
       toast({
         title: "Success!",
@@ -86,16 +78,9 @@ export default function VerifyOtpPage() {
 
       // Check if user has workspaces before redirecting
       try {
-        const workspacesResponse = await fetch("/api/workspaces", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        })
-
-        if (workspacesResponse.ok) {
-          const workspaces = await workspacesResponse.json()
+        const workspacesResponse = await api.get("/workspaces")
+        if (workspacesResponse.status === 200) {
+          const workspaces = workspacesResponse.data
 
           if (workspaces && workspaces.length > 0) {
             // User has workspaces, redirect to chat
@@ -117,7 +102,11 @@ export default function VerifyOtpPage() {
         navigate("/clients")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const message =
+        (err as any).response?.data?.message ||
+        (err as Error).message ||
+        "An error occurred"
+      setError(message)
     } finally {
       setIsLoading(false)
     }

@@ -115,7 +115,6 @@ app.use(
               scriptSrc: [
                 "'self'",
                 "'unsafe-inline'",
-                "'unsafe-eval'",
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
                 "https://*.gstatic.com",
@@ -227,7 +226,7 @@ app.use(cookieParser())
 
 // 🔒 SECURITY: Test endpoint only in development (TASK07)
 if (process.env.NODE_ENV !== "production") {
-  app.post("/api/test/json-parser", (req, res) => {
+  app.post("/api/v1/test/json-parser", (req, res) => {
     logger.info("JSON parser test received body:", req.body)
     res.json({
       success: true,
@@ -315,7 +314,7 @@ import { prisma } from "@echatbot/database"
 import { workspaceValidationMiddleware } from "./interfaces/http/middlewares/workspace-validation.middleware"
 
 app.get(
-  "/api/services/public",
+  "/api/v1/services/public",
   workspaceValidationMiddleware,
   async (req, res) => {
     try {
@@ -352,20 +351,8 @@ app.get(
 )
 logger.info("✅ Registered PUBLIC services endpoint at /api/services/public")
 
-// Versioned routes
+// Versioned routes - API v1 is the only endpoint
 app.use("/api/v1", apiRouter)
-
-// Temporary redirect: /api → /api/v1 (for gradual migration)
-app.use("/api", (req, res, next) => {
-  // Skip if already on /api/v1 path
-  if (req.path.startsWith("/v1")) {
-    return next()
-  }
-  // Redirect to versioned endpoint
-  const newPath = `/api/v1${req.path === "/" ? "" : req.path}`
-  const newUrl = `${newPath}${req.url.includes("?") ? "?" + req.url.split("?")[1] : ""}`
-  return res.redirect(307, newUrl)
-})
 
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts

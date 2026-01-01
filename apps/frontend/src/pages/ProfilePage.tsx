@@ -273,7 +273,7 @@ export default function ProfilePage() {
       
       // Clear ALL storage (security)
       logger.info("🧹 [DELETE ACCOUNT] Clearing ALL storage")
-      storage.clearAll()
+      storage.clearAppState()
       
       setTimeout(() => {
         navigate("/login")

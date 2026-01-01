@@ -119,7 +119,7 @@ class CartApi {
     try {
       logger.debug('➕ Adding item to cart', request)
       
-      const response = await api.post('/api/cart/add', request)
+      const response = await api.post('/api/v1/cart/add', request)
       
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to add item to cart')
@@ -144,7 +144,7 @@ class CartApi {
     try {
       logger.debug('📝 Updating cart item', request)
       
-      const response = await api.put('/api/cart/item', request)
+      const response = await api.put('/api/v1/cart/item', request)
       
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to update cart item')
@@ -166,7 +166,7 @@ class CartApi {
     try {
       logger.debug('🗑️ Removing item from cart', { cartItemId })
       
-      const response = await api.delete(`/api/cart/item/${cartItemId}`)
+      const response = await api.delete(`/api/v1/cart/item/${cartItemId}`)
       
       if (!response.data.success) {
         throw new Error(response.data.message || 'Failed to remove item from cart')
@@ -188,7 +188,7 @@ class CartApi {
     try {
       logger.debug('🧹 Clearing cart', { customerId, workspaceId })
       
-      const response = await api.delete('/api/cart/clear', {
+      const response = await api.delete('/api/v1/cart/clear', {
         data: { customerId, workspaceId }
       })
       
@@ -212,7 +212,7 @@ class CartApi {
     try {
       logger.debug('📊 Getting cart summary', { customerId, workspaceId })
       
-      const response = await api.get('/api/cart/summary', {
+      const response = await api.get('/api/v1/cart/summary', {
         params: { customerId, workspaceId }
       })
       
@@ -245,7 +245,7 @@ class CartApi {
     try {
       logger.debug('🛍️ Creating order from cart', { customerId, workspaceId })
       
-      const response = await api.post('/api/cart/checkout', {
+      const response = await api.post('/api/v1/cart/checkout', {
         customerId,
         workspaceId,
         ...orderData

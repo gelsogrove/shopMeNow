@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { api } from "@/services/api"
 import { Eye, EyeOff } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useSearchParams, useNavigate } from "react-router-dom"
@@ -58,25 +59,21 @@ export function ResetPasswordPage() {
     }
 
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: password }),
+      await api.post("/auth/reset-password", {
+        token,
+        newPassword: password,
       })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to reset password")
-      }
-
       setSuccess(true)
       // Redirect to login after 3 seconds
       setTimeout(() => {
         navigate("/auth/login")
       }, 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("forgotPassword.error"))
+      const message =
+        (err as any).response?.data?.message ||
+        (err as Error).message ||
+        t("forgotPassword.error")
+      setError(message)
     } finally {
       setLoading(false)
     }

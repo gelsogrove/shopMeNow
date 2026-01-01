@@ -500,6 +500,30 @@ export class LLMRouterService {
           executionTimeMs,
         })
 
+        // 🔍 Build debug steps for security gate flow
+        const securityDebugSteps: DebugStep[] = [
+          {
+            type: "router",
+            agent: "🚨 Security Gate",
+            model: "N/A",
+            temperature: 0,
+            timestamp: new Date().toISOString(),
+            input: {
+              userMessage: params.message,
+            },
+            output: {
+              decision: "malicious_pattern_detected",
+              threatType: securityCheck.threatType,
+              severity: securityCheck.severity,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+          },
+        ]
+
         // Save user message (INBOUND) - for audit trail
         await this.conversationManager.saveUserMessage({
           workspaceId: params.workspaceId,
@@ -508,21 +532,60 @@ export class LLMRouterService {
           content: params.message,
         })
 
-        // Save generic security warning (OUTBOUND)
+        // 🆕 Apply SafetyTranslationAgent to security message (TASK16: No bypasses)
+        const securitySafetyResult = await this.safetyAgent.process({
+          workspaceId: params.workspaceId,
+          response: securityCheck.message || "Security alert",
+          targetLanguage: params.customerLanguage || "it",
+          customerName: params.customerName,
+        })
+
+        const translatedSecurityMessage = securitySafetyResult.translatedText
+
+        // 🔍 Add safety/translation step to timeline
+        securityDebugSteps.push({
+          type: "safety",
+          agent: "SafetyTranslationAgent",
+          model: "openai/gpt-4o-mini",
+          temperature: 0.2,
+          timestamp: new Date().toISOString(),
+          input: {
+            textToValidate: securityCheck.message || "Security alert",
+            targetLanguage: params.customerLanguage || "it",
+          },
+          output: {
+            translatedText: translatedSecurityMessage,
+            safe: true,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: securitySafetyResult.tokensUsed || 0,
+            totalTokens: securitySafetyResult.tokensUsed || 0,
+          },
+        })
+
+        // Save generic security warning (OUTBOUND) with translated message and debugInfo
         await this.conversationManager.saveAssistantMessage({
           workspaceId: params.workspaceId,
           customerId: params.customerId,
           conversationId: params.conversationId,
-          content: securityCheck.message || "Security alert",
+          content: translatedSecurityMessage,
           agentType: "ROUTER" as AgentType,
+          debugInfo: {
+            steps: securityDebugSteps,
+            totalTokens: securitySafetyResult.tokensUsed || 0,
+            totalCost: 0,
+            executionTimeMs,
+            timestamp: new Date().toISOString(),
+          },
         })
 
-        // Return generic security message (don't reveal detection details)
+        // Return translated security message (don't reveal detection details)
         return {
-          response: securityCheck.message || "Security alert",
+          response: translatedSecurityMessage,
           agentUsed: "ROUTER" as AgentType,
           confidence: 1.0,
-          tokensUsed: 0,
+          tokensUsed: securitySafetyResult.tokensUsed || 0,
           executionTimeMs,
           wasFAQ: false,
           isBlocked: false,
@@ -580,6 +643,62 @@ export class LLMRouterService {
           executionTimeMs,
         })
 
+        // 🔍 Build debug steps for WIP message flow
+        const wipDebugSteps: DebugStep[] = [
+          {
+            type: "router",
+            agent: "🚧 Maintenance Mode",
+            model: "N/A",
+            temperature: 0,
+            timestamp: new Date().toISOString(),
+            input: {
+              userMessage: params.message,
+            },
+            output: {
+              decision: "chatbot_disabled",
+              message: "Sending WIP message",
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+          },
+        ]
+
+        // 🆕 Apply SafetyTranslationAgent to WIP message (TASK16: No bypasses)
+        // Even WIP messages should be translated to customer's language
+        const wipSafetyResult = await this.safetyAgent.process({
+          workspaceId: params.workspaceId,
+          response: wipMessage,
+          targetLanguage: params.customerLanguage || "it",
+          customerName: params.customerName,
+        })
+
+        const translatedWipMessage = wipSafetyResult.translatedText
+
+        // 🔍 Add safety/translation step to timeline
+        wipDebugSteps.push({
+          type: "safety",
+          agent: "SafetyTranslationAgent",
+          model: "openai/gpt-4o-mini",
+          temperature: 0.2,
+          timestamp: new Date().toISOString(),
+          input: {
+            textToValidate: wipMessage,
+            targetLanguage: params.customerLanguage || "it",
+          },
+          output: {
+            translatedText: translatedWipMessage,
+            safe: true,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: wipSafetyResult.tokensUsed || 0,
+            totalTokens: wipSafetyResult.tokensUsed || 0,
+          },
+        })
+
         // Save user message (INBOUND)
         await this.conversationManager.saveUserMessage({
           workspaceId: params.workspaceId,
@@ -588,19 +707,26 @@ export class LLMRouterService {
           content: params.message,
         })
 
-        // Save WIP response (OUTBOUND)
+        // Save WIP response (OUTBOUND) with translated message and debugInfo
         await this.conversationManager.saveAssistantMessage({
           workspaceId: params.workspaceId,
           customerId: params.customerId,
           conversationId: params.conversationId,
-          content: wipMessage,
+          content: translatedWipMessage,
+          debugInfo: {
+            steps: wipDebugSteps,
+            totalTokens: wipSafetyResult.tokensUsed || 0,
+            totalCost: 0,
+            executionTimeMs,
+            timestamp: new Date().toISOString(),
+          },
         })
 
         return {
-          response: wipMessage,
+          response: translatedWipMessage,
           agentUsed: "ROUTER" as AgentType,
           confidence: 1.0,
-          tokensUsed: 0,
+          tokensUsed: wipSafetyResult.tokensUsed || 0,
           executionTimeMs,
           wasFAQ: false,
         }

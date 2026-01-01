@@ -618,7 +618,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     
     // 🛡️ CRITICAL SECURITY: Clear ALL storage on logout to prevent user isolation bugs
     logger.info('🧹 [LOGOUT] Clearing ALL storage (localStorage + sessionStorage)')
-    storage.clearAll()
+    storage.clearAppState()
     logger.info('✅ [LOGOUT] Storage cleared completely')
     
     navigate("/auth/login")

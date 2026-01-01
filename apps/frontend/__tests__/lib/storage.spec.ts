@@ -82,9 +82,9 @@ describe("storage helper", () => {
       expect(sessionStorage.getItem("sessionId")).toBe("session-123")
     })
 
-    it("falls back to localStorage if not in sessionStorage", () => {
+    it("does not fall back to localStorage when sessionStorage is empty", () => {
       localStorage.setItem("sessionId", "fallback-session")
-      expect(storage.getSessionId()).toBe("fallback-session")
+      expect(storage.getSessionId()).toBeNull()
     })
 
     it("prefers sessionStorage over localStorage", () => {

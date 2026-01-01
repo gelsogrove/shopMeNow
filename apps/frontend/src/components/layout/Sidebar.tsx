@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { IMG_BASE_URL } from "@/config"
+import { storage } from "@/lib/storage"
 import {
   Bot,
   Building2,
@@ -42,7 +43,7 @@ export function Sidebar() {
   const [isImpersonating, setIsImpersonating] = useState(false)
   
   useEffect(() => {
-    const impersonating = localStorage.getItem('isImpersonating') === 'true'
+    const { isImpersonating: impersonating } = storage.getImpersonationFlags()
     setIsImpersonating(impersonating)
   }, [])
 

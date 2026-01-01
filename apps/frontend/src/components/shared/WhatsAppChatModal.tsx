@@ -18,6 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { getWorkspaceId } from "@/config/workspace.config"
 import { logger } from "@/lib/logger"
+import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
 import { getAllForWorkspace, Client } from "@/services/clientsApi"
 import axios from "axios"
@@ -203,7 +204,7 @@ export function WhatsAppChatModal({
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const lastSendRef = useRef<number>(0) // Track last sendMessage call
 
-  // Load chat from props or localStorage when the modal opens
+  // Load chat from props or storage when the modal opens
   useEffect(() => {
     if (isOpen) {
       // Priority 1: Use the chat passed from props if available
@@ -217,17 +218,16 @@ export function WhatsAppChatModal({
           globalSessionId = selectedChat.sessionId
         }
 
-        // Store in localStorage as backup
-        localStorage.setItem("selectedChat", JSON.stringify(selectedChat))
+        // Store in storage as backup
+        storage.setSelectedChat(selectedChat)
         return
       }
 
-      // Priority 2: Try to retrieve the chat from localStorage
+      // Priority 2: Try to retrieve the chat from storage
       try {
-        const savedChatJson = localStorage.getItem("selectedChat")
-        if (savedChatJson) {
-          const savedChat = JSON.parse(savedChatJson) as Chat
-          logger.info("Using selectedChat from localStorage:", savedChat)
+        const savedChat = storage.getSelectedChat<Chat>()
+        if (savedChat) {
+          logger.info("Using selectedChat from storage:", savedChat)
           setLocalSelectedChat(savedChat)
 
           // If the savedChat has a sessionId, use it
@@ -239,7 +239,7 @@ export function WhatsAppChatModal({
           return
         }
       } catch (error) {
-        logger.error("Error reading selectedChat from localStorage:", error)
+        logger.error("Error reading selectedChat from storage:", error)
       }
 
       // If the sessionId was set but not the chat, try to use that
@@ -486,7 +486,7 @@ export function WhatsAppChatModal({
           }
 
           setLocalSelectedChat(newChat)
-          localStorage.setItem("selectedChat", JSON.stringify(newChat))
+          storage.setSelectedChat(newChat)
         }
 
         // Create the bot message from the API response

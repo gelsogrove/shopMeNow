@@ -1,6 +1,7 @@
 import QRCode from "qrcode"
 import { useEffect, useState } from "react"
 import { Alert, AlertDescription } from "./alert"
+import { api } from "@/services/api"
 
 interface QRCodeDisplayProps {
   userId: string | null
@@ -20,12 +21,10 @@ export function QRCodeDisplay({ userId }: QRCodeDisplayProps) {
       }
 
       try {
-        const response = await fetch(`/api/auth/2fa/setup?userId=${userId}`)
-        if (!response.ok) {
-          throw new Error("Failed to fetch QR code")
-        }
-
-        const { otpAuthUrl } = await response.json()
+        const response = await api.get("/auth/2fa/setup", {
+          params: { userId },
+        })
+        const { otpAuthUrl } = response.data
         const qrCode = await QRCode.toDataURL(otpAuthUrl)
         setQrCodeUrl(qrCode)
       } catch (err) {

@@ -14,9 +14,9 @@ export default function ImpersonationBanner() {
   const [impersonatorEmail, setImpersonatorEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    // Check localStorage for impersonation flags
-    const impersonating = localStorage.getItem('isImpersonating') === 'true'
-    const email = localStorage.getItem('impersonatorEmail')
+    // Check storage for impersonation flags
+    const { isImpersonating: impersonating, impersonatorEmail: email } =
+      storage.getImpersonationFlags()
     
     setIsImpersonating(impersonating)
     setImpersonatorEmail(email)
@@ -25,8 +25,7 @@ export default function ImpersonationBanner() {
   const handleExit = () => {
     // Clear all auth data
     storage.clearAuth()
-    localStorage.removeItem('isImpersonating')
-    localStorage.removeItem('impersonatorEmail')
+    storage.clearImpersonationFlags()
     
     // Close this window
     window.close()

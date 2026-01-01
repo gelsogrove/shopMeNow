@@ -740,8 +740,8 @@ export function ChatPage() {
     }
     setSearchParams(newParams)
 
-    // Salva la chat selezionata nel localStorage
-    localStorage.setItem("selectedChat", JSON.stringify(chat))
+    // Salva la chat selezionata nello storage centralizzato
+    storage.setSelectedChat(chat)
 
     // Reset unread count when selecting a chat
     if (chat.unreadCount > 0) {

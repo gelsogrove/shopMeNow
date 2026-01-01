@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
-import { storage } from "@/lib/storage"
+import { api } from "@/services/api"
 import { clientsApi } from "@/services/clientsApi"
 import { ordersApi, type Order, type OrderStatus } from "@/services/ordersApi"
 import { commonStyles } from "@/styles/common"
@@ -188,18 +188,11 @@ export default function OrdersPage() {
 
   const handleDownloadInvoice = async (order: Order) => {
     try {
-      const response = await fetch(`/api/orders/${order.orderCode}/invoice`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${storage.getToken()}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to download invoice")
-      }
-
-      const blob = await response.blob()
+      const response = await api.get(
+        `/orders/${order.orderCode}/invoice`,
+        { responseType: "blob" }
+      )
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
@@ -218,18 +211,11 @@ export default function OrdersPage() {
 
   const handleDownloadDdt = async (order: Order) => {
     try {
-      const response = await fetch(`/api/orders/${order.orderCode}/ddt`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${storage.getToken()}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to download delivery note")
-      }
-
-      const blob = await response.blob()
+      const response = await api.get(
+        `/orders/${order.orderCode}/ddt`,
+        { responseType: "blob" }
+      )
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url

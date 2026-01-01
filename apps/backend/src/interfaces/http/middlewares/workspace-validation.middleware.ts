@@ -12,6 +12,7 @@ export const workspaceValidationMiddleware = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const isProd = process.env.NODE_ENV === "production"
     // Extract workspace ID from various sources
     let workspaceIdFromParams = req.params.workspaceId
     const workspaceIdFromQuery = req.query.workspaceId as string
@@ -97,7 +98,11 @@ export const workspaceValidationMiddleware = async (
         sqlQuery: "No SQL query executed - workspace ID missing",
       }
 
-      res.status(400).json(debugResponse)
+      const responsePayload = isProd
+        ? { message: "Workspace ID is required" }
+        : debugResponse
+
+      res.status(400).json(responsePayload)
       return
     }
 
@@ -117,7 +122,11 @@ export const workspaceValidationMiddleware = async (
         },
       }
 
-      res.status(404).json(debugResponse)
+      const responsePayload = isProd
+        ? { message: "Workspace not found" }
+        : debugResponse
+
+      res.status(404).json(responsePayload)
       return
     }
 
@@ -137,7 +146,11 @@ export const workspaceValidationMiddleware = async (
         },
       }
 
-      res.status(403).json(debugResponse)
+      const responsePayload = isProd
+        ? { message: "Workspace is not available" }
+        : debugResponse
+
+      res.status(403).json(responsePayload)
       return
     }
 
@@ -169,7 +182,12 @@ export const workspaceValidationMiddleware = async (
       sqlQuery: "Error occurred before SQL execution",
     }
 
-    res.status(500).json(debugResponse)
+    const responsePayload =
+      process.env.NODE_ENV === "production"
+        ? { message: "Workspace validation failed" }
+        : debugResponse
+
+    res.status(500).json(responsePayload)
     return
   }
 }

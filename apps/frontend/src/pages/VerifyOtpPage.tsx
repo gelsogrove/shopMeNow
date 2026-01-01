@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { storage } from "@/lib/storage"
+import { api } from "@/services/api"
 
 export function VerifyOtpPage() {
   const [searchParams] = useSearchParams()
@@ -24,14 +25,14 @@ export function VerifyOtpPage() {
     }
 
     // Fetch QR code for 2FA setup
-    fetch(`/api/auth/2fa/setup?userId=${userId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.qrCode) {
-          setQrCode(data.qrCode)
+    api
+      .get("/auth/2fa/setup", { params: { userId } })
+      .then((response) => {
+        if (response.data?.qrCode) {
+          setQrCode(response.data.qrCode)
         }
       })
-      .catch((err) => {
+      .catch(() => {
         setError("Failed to load QR code")
       })
   }, [userId, navigate])
@@ -41,26 +42,21 @@ export function VerifyOtpPage() {
     setError("")
 
     try {
-      const response = await fetch("/api/auth/2fa/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, otp }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Invalid OTP code")
-      }
+      const response = await api.post("/auth/2fa/verify", { userId, otp })
+      const data = response.data
 
       // 🛡️ CRITICAL SECURITY: Clear ALL storage before saving new credentials
-      storage.clearAll()
+      storage.clearAppState()
       
       // Store the token and redirect to workspace selection
       storage.setToken(data.token)
       navigate("/workspace-selection")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const message =
+        (err as any).response?.data?.message ||
+        (err as Error).message ||
+        "An error occurred"
+      setError(message)
     }
   }
 

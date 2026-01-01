@@ -35,8 +35,7 @@ export default function ImpersonatePage() {
     try {
       // Clear ALL existing auth data FIRST
       storage.clearAuth()
-      localStorage.removeItem('isImpersonating')
-      localStorage.removeItem('impersonatorEmail')
+      storage.clearImpersonationFlags()
       
       // Decode token to get impersonation info
       const tokenPayload = JSON.parse(atob(token.split('.')[1]))
@@ -44,13 +43,12 @@ export default function ImpersonatePage() {
       // Store the impersonation token in localStorage
       storage.setToken(token)
       
-      // Store sessionId in BOTH localStorage and sessionStorage (api.ts reads from sessionStorage)
+      // Store sessionId in sessionStorage (single source of truth)
       storage.setSessionId(sessionId)
       
       // Store impersonation flags (Feature 190)
       if (tokenPayload.isImpersonating) {
-        localStorage.setItem('isImpersonating', 'true')
-        localStorage.setItem('impersonatorEmail', tokenPayload.impersonatorEmail || '')
+        storage.setImpersonationFlags(true, tokenPayload.impersonatorEmail || '')
       }
       
       // Verify token is actually saved

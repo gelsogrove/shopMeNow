@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { api } from "@/services/api"
 import React, { useEffect, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
 import {
@@ -491,15 +492,10 @@ const CheckoutPage: React.FC = () => {
     setLoadingProducts(true)
     try {
       // 🔒 SECURITY: Pass token instead of workspaceId and customerId
-      const response = await fetch("/api/internal/get-all-products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: token, // ✅ Only token is passed
-        }),
+      const response = await api.post("/internal/get-all-products", {
+        token,
       })
-
-      const result = await response.json()
+      const result = response.data
       if (result.success) {
         // 🔍 DEBUG: Log products data to understand the structure
 
@@ -532,20 +528,18 @@ const CheckoutPage: React.FC = () => {
 
     setLoadingServices(true)
     try {
-      const url = "/api/services/public"
+      const url = "/api/v1/services/public"
       logger.info(`🌐 Fetching services from: ${url}`)
       logger.info(`🌐 With workspace ID: ${workspaceId}`)
 
-      const response = await fetch(url, {
-        method: "GET",
+      const response = await api.get(url, {
         headers: {
-          "Content-Type": "application/json",
           "x-workspace-id": workspaceId,
         },
       })
 
       logger.info(`📡 Response status: ${response.status}`)
-      const result = await response.json()
+      const result = response.data
       logger.info(`📦 Response data:`, result)
 
       if (result.success) {

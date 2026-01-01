@@ -7,6 +7,12 @@ const STORAGE_KEYS = {
   sessionId: "sessionId",
   selectedChatId: "selectedChatId",
   currentChatSessionId: "currentChatSessionId",
+  selectedChat: "selectedChat",
+  chatMessages: "chatMessages",
+  chatListUpdated: "chat-list-updated",
+  workspaceChanged: "workspace-changed",
+  isImpersonating: "isImpersonating",
+  impersonatorEmail: "impersonatorEmail",
 }
 
 const safeParse = <T>(value: string | null, label: string): T | null => {
@@ -55,10 +61,7 @@ export const storage = {
     sessionStorage.removeItem(STORAGE_KEYS.currentWorkspace)
   },
   getSessionId(): string | null {
-    return (
-      sessionStorage.getItem(STORAGE_KEYS.sessionId) ||
-      localStorage.getItem(STORAGE_KEYS.sessionId)
-    )
+    return sessionStorage.getItem(STORAGE_KEYS.sessionId)
   },
   setSessionId(sessionId: string) {
     sessionStorage.setItem(STORAGE_KEYS.sessionId, sessionId)
@@ -76,6 +79,15 @@ export const storage = {
   clearSelectedChatId() {
     sessionStorage.removeItem(STORAGE_KEYS.selectedChatId)
   },
+  getSelectedChat<T = any>(): T | null {
+    return safeParse<T>(localStorage.getItem(STORAGE_KEYS.selectedChat), "selectedChat")
+  },
+  setSelectedChat(chat: unknown) {
+    localStorage.setItem(STORAGE_KEYS.selectedChat, JSON.stringify(chat))
+  },
+  clearSelectedChat() {
+    localStorage.removeItem(STORAGE_KEYS.selectedChat)
+  },
   setCurrentChatSessionId(sessionId: string) {
     sessionStorage.setItem(STORAGE_KEYS.currentChatSessionId, sessionId)
   },
@@ -84,6 +96,45 @@ export const storage = {
   },
   clearCurrentChatSessionId() {
     sessionStorage.removeItem(STORAGE_KEYS.currentChatSessionId)
+  },
+  setChatListUpdated(timestamp = Date.now()) {
+    localStorage.setItem(STORAGE_KEYS.chatListUpdated, String(timestamp))
+  },
+  clearChatListUpdated() {
+    localStorage.removeItem(STORAGE_KEYS.chatListUpdated)
+  },
+  setWorkspaceChanged(timestamp = Date.now()) {
+    localStorage.setItem(STORAGE_KEYS.workspaceChanged, String(timestamp))
+  },
+  clearWorkspaceChanged() {
+    localStorage.removeItem(STORAGE_KEYS.workspaceChanged)
+  },
+  clearChatCache() {
+    localStorage.removeItem(STORAGE_KEYS.selectedChat)
+    localStorage.removeItem(STORAGE_KEYS.chatMessages)
+    localStorage.removeItem(STORAGE_KEYS.chatListUpdated)
+    localStorage.removeItem(STORAGE_KEYS.workspaceChanged)
+    sessionStorage.removeItem(STORAGE_KEYS.selectedChatId)
+    sessionStorage.removeItem(STORAGE_KEYS.currentChatSessionId)
+  },
+  getImpersonationFlags(): { isImpersonating: boolean; impersonatorEmail: string | null } {
+    return {
+      isImpersonating: localStorage.getItem(STORAGE_KEYS.isImpersonating) === "true",
+      impersonatorEmail: localStorage.getItem(STORAGE_KEYS.impersonatorEmail),
+    }
+  },
+  setImpersonationFlags(isImpersonating: boolean, impersonatorEmail?: string | null) {
+    if (isImpersonating) {
+      localStorage.setItem(STORAGE_KEYS.isImpersonating, "true")
+      localStorage.setItem(STORAGE_KEYS.impersonatorEmail, impersonatorEmail || "")
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.isImpersonating)
+      localStorage.removeItem(STORAGE_KEYS.impersonatorEmail)
+    }
+  },
+  clearImpersonationFlags() {
+    localStorage.removeItem(STORAGE_KEYS.isImpersonating)
+    localStorage.removeItem(STORAGE_KEYS.impersonatorEmail)
   },
   clearAuth() {
     localStorage.removeItem(STORAGE_KEYS.token)
@@ -94,6 +145,11 @@ export const storage = {
     sessionStorage.removeItem(STORAGE_KEYS.sessionId)
     sessionStorage.removeItem(STORAGE_KEYS.selectedChatId)
     sessionStorage.removeItem(STORAGE_KEYS.currentChatSessionId)
+  },
+  clearAppState() {
+    this.clearAuth()
+    this.clearChatCache()
+    this.clearImpersonationFlags()
   },
   clearAll() {
     localStorage.clear()

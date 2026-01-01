@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { api } from "@/services/api"
 import { useState } from "react"
 
 export function ForgotPasswordPage() {
@@ -18,21 +19,14 @@ export function ForgotPasswordPage() {
     setSuccess(false)
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to send reset email")
-      }
-
+      await api.post("/auth/forgot-password", { email })
       setSuccess(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const message =
+        (err as any).response?.data?.message ||
+        (err as Error).message ||
+        "An error occurred"
+      setError(message)
     }
   }
 
