@@ -34,6 +34,16 @@ export interface OperatorNotificationEmailData {
   fromEmail?: string
 }
 
+export interface ContactEmailData {
+  to: string
+  subject: string
+  message: string
+  metadata?: {
+    ip?: string
+    userAgent?: string
+  }
+}
+
 export class EmailService {
   private transporter: nodemailer.Transporter | null = null
   private initialized = false
@@ -785,6 +795,28 @@ startxref
 %%EOF
 `
     return Buffer.from(content, 'utf-8')
+  }
+
+  async sendContactEmail(data: ContactEmailData): Promise<boolean> {
+    const text = [
+      "New contact request",
+      "",
+      "Message:",
+      data.message,
+      "",
+      `IP: ${data.metadata?.ip || "N/A"}`,
+      `User-Agent: ${data.metadata?.userAgent || "N/A"}`,
+    ].join("\n")
+
+    const mailOptions = {
+      from: `"eChatbot Contact" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+      to: data.to,
+      subject: data.subject,
+      text,
+    }
+
+    await this.getTransporter().sendMail(mailOptions)
+    return true
   }
 
   async verifyConnection(): Promise<boolean> {

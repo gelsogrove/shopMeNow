@@ -43,7 +43,7 @@ import {
   Crown,
   CreditCard,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
@@ -175,6 +175,14 @@ export function LoginPage() {
     { src: hero5, alt: "WhatsApp AI agent dashboard view 5" },
   ]
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [contactTitle, setContactTitle] = useState("")
+  const [contactMessage, setContactMessage] = useState("")
+  const [contactCaptchaToken, setContactCaptchaToken] = useState("")
+  const [contactSubmitting, setContactSubmitting] = useState(false)
+  const [contactError, setContactError] = useState("")
+  const [contactSuccess, setContactSuccess] = useState(false)
+  const [contactHoneypot, setContactHoneypot] = useState("")
+  const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ""
 
 
   useEffect(() => {
@@ -183,6 +191,33 @@ export function LoginPage() {
     }, 7000)
     return () => clearInterval(interval)
   }, [heroSlides.length])
+
+  useEffect(() => {
+    if (!recaptchaSiteKey) {
+      return
+    }
+
+    const existingScript = document.querySelector(
+      'script[src="https://www.google.com/recaptcha/api.js"]'
+    )
+
+    if (!existingScript) {
+      const script = document.createElement("script")
+      script.src = "https://www.google.com/recaptcha/api.js"
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
+    }
+
+    ;(window as any).onRecaptchaSuccess = (token: string) => {
+      setContactCaptchaToken(token)
+      setContactError("")
+    }
+
+    return () => {
+      delete (window as any).onRecaptchaSuccess
+    }
+  }, [recaptchaSiteKey])
   
   const navigate = useNavigate()
 
@@ -622,6 +657,53 @@ export function LoginPage() {
     }
   }
 
+  const handleContactSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+    setContactError("")
+
+    if (!contactCaptchaToken) {
+      setContactError("Please complete the security check.")
+      return
+    }
+
+    if (!contactTitle.trim() || contactTitle.trim().length < 3) {
+      setContactError("Please enter a title.")
+      return
+    }
+
+    if (!contactMessage.trim() || contactMessage.trim().length < 10) {
+      setContactError("Please enter a longer message.")
+      return
+    }
+
+    setContactSubmitting(true)
+    setContactSuccess(false)
+
+    try {
+      await api.post("/contact", {
+        title: contactTitle.trim(),
+        message: contactMessage.trim(),
+        captchaToken: contactCaptchaToken,
+        website: contactHoneypot,
+      })
+
+      setContactSuccess(true)
+      setContactTitle("")
+      setContactMessage("")
+      setContactCaptchaToken("")
+      setContactHoneypot("")
+      ;(window as any).grecaptcha?.reset?.()
+    } catch (err: any) {
+      const msg =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Failed to send message. Please try again."
+      setContactError(msg)
+    } finally {
+      setContactSubmitting(false)
+    }
+  }
+
   const handleGoogleError = () => {
     toast.error('Google login failed. Please try again.')
   }
@@ -693,8 +775,18 @@ export function LoginPage() {
       {/* Header - Professional Design */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-8 lg:px-12">
+          <div className="flex justify-end pt-3">
+            <a
+              href="#contact"
+              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Contact us
+            </a>
+          </div>
+
           {/* Main Header Row */}
-          <div className="flex items-center justify-between h-24">
+          <div className="flex items-center justify-between h-20">
             {/* Left: Logo + Brand */}
             <div className="flex items-center gap-0 mt-[5px]">
               <img 
@@ -806,7 +898,7 @@ export function LoginPage() {
               ) : null}
             </div>
           </div>
-          
+
         </div>
       </header>
 
@@ -1418,6 +1510,93 @@ export function LoginPage() {
               </Button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Contact Form */}
+      <div id="contact" className="py-16 bg-white border-t border-slate-200">
+        <div className="max-w-4xl mx-auto px-6 lg:px-8">
+          <div className="text-center space-y-3 mb-10">
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-green-600">
+              Contact us
+            </p>
+            <h3 className="text-3xl font-bold text-slate-900">Send us a message</h3>
+            <p className="text-slate-600">
+              Tell us what you want to build and we’ll get back to you shortly.
+            </p>
+          </div>
+
+          <form
+            onSubmit={handleContactSubmit}
+            className="rounded-3xl border border-slate-200 bg-slate-50 p-6 lg:p-8 space-y-6 shadow-lg"
+          >
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700" htmlFor="contact-title">
+                Title
+              </label>
+              <Input
+                id="contact-title"
+                value={contactTitle}
+                onChange={(event) => setContactTitle(event.target.value)}
+                placeholder="Tell us what you need"
+                className="h-11"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700" htmlFor="contact-message">
+                Message
+              </label>
+              <textarea
+                id="contact-message"
+                value={contactMessage}
+                onChange={(event) => setContactMessage(event.target.value)}
+                placeholder="Write your message here..."
+                className="min-h-[140px] w-full rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+              />
+            </div>
+
+            <input
+              type="text"
+              name="website"
+              value={contactHoneypot}
+              onChange={(event) => setContactHoneypot(event.target.value)}
+              className="hidden"
+              tabIndex={-1}
+              autoComplete="off"
+            />
+
+            <div className="flex justify-center">
+              {recaptchaSiteKey ? (
+                <div
+                  className="g-recaptcha"
+                  data-sitekey={recaptchaSiteKey}
+                  data-callback="onRecaptchaSuccess"
+                />
+              ) : (
+                <p className="text-sm text-red-600">Captcha configuration missing.</p>
+              )}
+            </div>
+
+            {contactError && (
+              <div className="text-sm text-red-600 text-center">{contactError}</div>
+            )}
+            {contactSuccess && (
+              <div className="text-sm text-green-600 text-center">
+                Message sent successfully. We’ll be in touch soon.
+              </div>
+            )}
+
+            <div className="flex justify-center">
+              <Button
+                type="submit"
+                disabled={contactSubmitting}
+                className="px-10 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+              >
+                {contactSubmitting ? "Sending..." : "Send message"}
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
 

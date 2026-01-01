@@ -106,6 +106,7 @@ import {
 } from "../interfaces/http/routes/customers.routes"
 import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
+import { contactRoutes } from "../interfaces/http/routes/contact.routes"
 import filesRoutes from "../interfaces/http/routes/files.routes"
 import { pushRoutes } from "../interfaces/http/routes/push.routes"
 import { whatsappQueueRoutes } from "../interfaces/http/routes/whatsapp-queue.routes"
@@ -681,6 +682,10 @@ router.use(feedbackRoutes(feedbackController))
 logger.info(
   "✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin)"
 )
+
+// Public contact form route
+router.use(contactRoutes())
+logger.info("✅ Registered contact route: /api/contact (public)")
 
 // Mount agent routes with workspace parameter properly configured
 router.use(

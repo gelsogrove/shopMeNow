@@ -164,6 +164,31 @@ export const feedbackLimiter = rateLimit({
 })
 
 /**
+ * Contact Form - Protezione spam contatto
+ *
+ * Prevents abuse of public contact form.
+ * Allows 5 submissions per hour per IP.
+ */
+export const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 ora
+  max: 5, // 5 richieste per IP all'ora
+  message: "Too many contact requests, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for contact form", {
+      ip: req.ip,
+      path: req.path,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Too many contact requests. Please try again in 1 hour.",
+      retryAfter: 3600,
+    })
+  },
+})
+
+/**
  * Cart Token - Protezione generazione token
  *
  * Prevents cart token abuse.
