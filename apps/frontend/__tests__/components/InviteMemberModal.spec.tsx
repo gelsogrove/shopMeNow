@@ -112,6 +112,31 @@ describe("InviteMemberModal", () => {
     expect(defaultProps.onOpenChange).toHaveBeenCalledWith(false)
   })
 
+  it("should include first and last name when provided", async () => {
+    const user = userEvent.setup()
+    vi.mocked(invitationApi.create).mockResolvedValueOnce({
+      invitationId: "inv-456",
+      message: "Invitation sent",
+    })
+
+    render(<InviteMemberModal {...defaultProps} />)
+
+    await user.type(screen.getByLabelText("First Name"), "Jane")
+    await user.type(screen.getByLabelText("Last Name"), "Doe")
+    await user.type(screen.getByLabelText(/Email Address/), "jane@company.com")
+
+    const form = screen.getByLabelText(/Email Address/).closest("form")!
+    fireEvent.submit(form)
+
+    await waitFor(() => {
+      expect(invitationApi.create).toHaveBeenCalledWith(mockWorkspaceId, {
+        email: "jane@company.com",
+        firstName: "Jane",
+        lastName: "Doe",
+      })
+    })
+  })
+
   it("should trim email before validation", async () => {
     const user = userEvent.setup()
     vi.mocked(invitationApi.create).mockResolvedValueOnce({

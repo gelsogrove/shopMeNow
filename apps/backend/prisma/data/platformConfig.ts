@@ -56,8 +56,12 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "PRICE" as const,
     key: "ENTERPRISE_MONTHLY",
-    value: "139", // NEW PRICE: €139
-    originalValue: "149", // OLD PRICE: €149 (strikethrough)
+    value: "129", // PROMO PRICE: €129 (sempre scontato)
+    originalValue: null, // No strikethrough - this IS the regular price
+    description:
+      "Enterprise plan - €129/month for large scale operations",
+    isActive: true,
+  },
     description:
       "Enterprise plan - €129/month for large scale operations (was €149)",
     isActive: true,

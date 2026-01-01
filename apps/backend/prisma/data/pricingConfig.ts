@@ -40,7 +40,7 @@ export const pricingConfigData = [
     type: "PLAN" as const,
     key: "ENTERPRISE_MONTHLY",
     value: BillingPrices.ENTERPRISE_MONTHLY,
-    description: "Enterprise plan - €299/month for large scale operations",
+    description: "Enterprise plan - €129/month for large scale operations",
     isActive: true,
   },
   {

@@ -167,7 +167,7 @@ VITE_API_URL=https://echatbot.ai/api
 **Heroku Config Vars (Frontend):**
 
 ```bash
-heroku config:set VITE_API_URL=https://echatbot-api.herokuapp.com --app echatbot-app
+heroku config:set VITE_API_URL=https://echatbot-app.herokuapp.com --app echatbot-app
 ```
 
 ### **Backend → Frontend Redirects (con Token)**
@@ -258,7 +258,7 @@ heroku run "npx prisma migrate deploy" --app echatbot-app
 
 ```bash
 # Database
-heroku config:set DATABASE_URL="postgres://..." --app echatbot-api
+heroku config:set DATABASE_URL="postgres://..." --app echatbot-app
 
 # Security
 heroku config:set NODE_ENV=production --app echatbot-app
@@ -325,7 +325,7 @@ Usa lo script `scripts/sync-env-to-heroku.sh` per sincronizzare `.env` → Herok
 
 # Oppure manualmente per ogni app
 source .env
-heroku config:set JWT_SECRET=$JWT_SECRET --app echatbot-api
+heroku config:set JWT_SECRET=$JWT_SECRET --app echatbot-app
 ```
 
 ---
@@ -384,20 +384,20 @@ git push heroku main
 
 ```bash
 # Logs in tempo reale
-heroku logs --tail --app echatbot-api
+heroku logs --tail --app echatbot-app
 
 # Verifica build completato
-heroku logs --tail --app echatbot-api | grep "Build succeeded"
+heroku logs --tail --app echatbot-app | grep "Build succeeded"
 
 # Verifica app running
-heroku ps --app echatbot-api
+heroku ps --app echatbot-app
 ```
 
 ### **5. Verifica Endpoint**
 
 ```bash
 # Test API Backend
-curl https://echatbot-api.herokuapp.com/health
+curl https://echatbot-app.herokuapp.com/health
 
 # Test Frontend
 curl https://echatbot.ai
@@ -417,10 +417,10 @@ curl https://backoffice.echatbot.ai
 **Soluzione**:
 ```bash
 # Verifica build output su Heroku
-heroku run "ls -la apps/backend/dist/" --app echatbot-api
+heroku run "ls -la apps/backend/dist/" --app echatbot-app
 
 # Re-buildi manualmente
-heroku run "npm run build:backend" --app echatbot-api
+heroku run "npm run build:backend" --app echatbot-app
 ```
 
 ### **Errore: "VITE_API_URL is undefined"**
@@ -447,10 +447,10 @@ git push heroku main
 **Soluzione**:
 ```bash
 # Configura FRONTEND_URL su Backend
-heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-api
+heroku config:set FRONTEND_URL=https://echatbot-app.herokuapp.com --app echatbot-app
 
 # Verifica nel codice Backend
-heroku run "echo \$FRONTEND_URL" --app echatbot-api
+heroku run "echo \$FRONTEND_URL" --app echatbot-app
 ```
 
 ### **Errore: "Database connection failed"**
@@ -632,11 +632,10 @@ const url = import.meta.env.VITE_API_URL || process.env.FRONTEND_URL
 ### **Heroku Setup**
 
 - [ ] 4 app Heroku create:
-  - `echatbot-api` (Backend)
-  - `echatbot-app` (Frontend)
+  - `echatbot-app` (Backend + Frontend monolith)
   - `echatbot-backoffice` (Backoffice)
   - `echatbot-scheduler` (Scheduler)
-- [ ] Database Postgres creato su `echatbot-api`
+- [ ] Database Postgres creato su `echatbot-app`
 - [ ] `DATABASE_URL` condiviso con tutte le 4 app
 - [ ] Variabili ambiente configurate:
   - Backend: `FRONTEND_URL`, `JWT_SECRET`, `OPENROUTER_API_KEY`, etc.
@@ -719,7 +718,7 @@ const url = import.meta.env.VITE_API_URL || process.env.FRONTEND_URL
 
 ```bash
 # Logs Backend
-heroku logs --tail --app echatbot-api
+heroku logs --tail --app echatbot-app
 
 # Logs Frontend (build/serve)
 heroku logs --tail --app echatbot-app
@@ -728,8 +727,8 @@ heroku logs --tail --app echatbot-app
 heroku logs --tail --app echatbot-scheduler
 
 # Metrics
-heroku ps --app echatbot-api
-heroku pg:info --app echatbot-api
+heroku ps --app echatbot-app
+heroku pg:info --app echatbot-app
 ```
 
 ---

@@ -29,7 +29,7 @@
 
 import { PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../../../utils/logger"
-import { TemplateLoaderService } from "./template-loader.service"
+import { TemplateLoaderService } from "../template-loader.service"
 import { VariableResolverService } from "./variable-resolver.service"
 import { TemplateEngineService } from "./template-engine.service"
 
@@ -54,7 +54,7 @@ export class PromptBuilderService {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
-    this.templateLoader = new TemplateLoaderService()
+    this.templateLoader = TemplateLoaderService.getInstance(prisma)
     this.variableResolver = new VariableResolverService(prisma)
     this.templateEngine = new TemplateEngineService()
 
@@ -80,15 +80,9 @@ export class PromptBuilderService {
     })
 
     try {
-      // 0. Get workspace config to determine template folder
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: context.workspaceId },
-        select: { sellsProductsAndServices: true },
-      })
-      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
-
-      // 1. Load base template for this agent (from correct folder based on workspace type)
-      const template = await this.templateLoader.load(agentType, hasEcommerce)
+      // 1. Load and render template with conditionals compiled
+      // (workspace settings fetched internally by TemplateLoaderService)
+      const template = await this.templateLoader.loadAndRenderTemplate(agentType, context.workspaceId)
 
       // 2. Resolve all variables needed for this agent
       const variables = await this.variableResolver.resolve(

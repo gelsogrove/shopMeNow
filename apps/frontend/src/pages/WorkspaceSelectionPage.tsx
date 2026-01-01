@@ -38,7 +38,7 @@ import {
   getWorkspaces,
   updateWorkspace,
   workspaceApi,
-} from "../services/workspaceApi"
+} from "@/services/workspaceApi"
 
 // ============================================================================
 // WIZARD TYPES & CONFIGURATION

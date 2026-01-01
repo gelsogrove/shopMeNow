@@ -53,10 +53,6 @@ export class ConversationHistoryLayer {
   ): Promise<ConversationHistoryLayerOutput> {
     const startTime = Date.now()
 
-    // 🚨 DEBUG - VERIFICO CHE QUESTO LAYER SIA CHIAMATO
-    console.log("🚨🚨🚨 CONVERSATION_HISTORY LAYER CALLED 🚨🚨🚨")
-    console.log("Input technical response:", input.technicalResponse.rawMessage?.substring(0, 100))
-    
     logger.info("🎭 ConversationHistoryLayer.process() called", {
       workspaceId: input.workspaceId,
       customerId: input.customerId,

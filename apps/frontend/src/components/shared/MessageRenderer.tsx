@@ -78,8 +78,6 @@ export function MessageRenderer({
 
   // SOLUZIONE BRUTALE: Spacca il testo e trova tutti gli URL
   const renderWithLinks = (text: string) => {
-    console.log("MessageRenderer INPUT:", text)
-    
     // FIX: Handle malformed img tags ONLY if NOT already correct
     // Check if text already has correct <img src="URL" - if so, DON'T apply fix!
     const hasCorrectImg = /<img\s+src="https?:\/\//.test(text)
@@ -89,12 +87,7 @@ export function MessageRenderer({
       // Only fix truly malformed tags (URL" alt=... without <img src=")
       const malformedImgPattern = /(https?:\/\/[^\s"]+)"(\s*alt="[^"]*"\s*\/>)/g
       fixedText = text.replace(malformedImgPattern, '<img src="$1"$2')
-      console.log("Applied malformed img fix")
-    } else {
-      console.log("Img tag already correct, skipping fix")
     }
-    
-    console.log("After fix check:", fixedText)
     
     // Check if this is a product detail message (has img tag)
     const imgMatch = fixedText.match(/<img\s+src="([^"]+)"\s*alt="([^"]*)"\s*\/>/)
@@ -153,15 +146,11 @@ export function MessageRenderer({
     // First extract and protect img tags
     const imgPlaceholders: string[] = []
     fixedText = fixedText.replace(/<img([^>]+)>/g, (match, attrs) => {
-      console.log("Found img tag:", match)
       // Add max-width style to make image smaller (1/3 size)
       const styledImg = `<img${attrs} style="max-width: 120px; height: auto; border-radius: 8px;">`
       imgPlaceholders.push(styledImg)
       return `__IMG_PLACEHOLDER_${imgPlaceholders.length - 1}__`
     })
-    
-    console.log("After placeholder:", fixedText)
-    console.log("Placeholders:", imgPlaceholders)
     
     // Regex SEMPLICE per trovare URL
     const urlRegex = /(https?:\/\/[^\s]+)/g

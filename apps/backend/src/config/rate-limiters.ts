@@ -189,6 +189,85 @@ export const cartTokenLimiter = rateLimit({
 })
 
 /**
+ * Login - Protezione brute force
+ *
+ * Prevents brute force login attempts.
+ * Allows 5 login attempts per 15 minutes per IP.
+ */
+export const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: 5, // 5 tentativi per IP
+  message: "Too many login attempts, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: false, // Count all attempts
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for login", {
+      ip: req.ip,
+      path: req.path,
+      email: req.body?.email,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Too many login attempts. Please try again in 15 minutes.",
+      retryAfter: 900,
+    })
+  },
+})
+
+/**
+ * Forgot Password - Protezione spam richieste
+ *
+ * Prevents spam password reset requests.
+ * Allows 3 requests per hour per email/IP.
+ */
+export const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 ora
+  max: 3, // 3 richieste per IP all'ora
+  message: "Too many password reset requests, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for forgot password", {
+      ip: req.ip,
+      path: req.path,
+      email: req.body?.email,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Too many password reset requests. Please try again in 1 hour.",
+      retryAfter: 3600,
+    })
+  },
+})
+
+/**
+ * 2FA Verification - Protezione brute force
+ *
+ * Prevents brute force 2FA code attempts.
+ * Allows 5 attempts per 15 minutes per user.
+ */
+export const twoFactorLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: 5, // 5 tentativi per IP
+  message: "Too many 2FA verification attempts, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for 2FA verification", {
+      ip: req.ip,
+      path: req.path,
+      tempToken: req.body?.tempToken ? "present" : "missing",
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Too many 2FA verification attempts. Please try again in 15 minutes.",
+      retryAfter: 900,
+    })
+  },
+})
+
+/**
  * General API Rate Limiter
  *
  * Fallback rate limiter for all API endpoints.

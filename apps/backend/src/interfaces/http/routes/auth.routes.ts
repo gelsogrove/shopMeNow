@@ -1,5 +1,4 @@
 import { Router, Request, Response } from "express"
-import rateLimit from "express-rate-limit"
 import { prisma } from "@echatbot/database"
 import logger from "../../../utils/logger"
 import { AuthController } from "../controllers/auth.controller"
@@ -12,63 +11,15 @@ import {
   validateForgotPassword,
   validateResetPassword,
 } from "../middlewares/validation.middleware"
+import {
+  loginLimiter,
+  forgotPasswordLimiter,
+  twoFactorLimiter,
+  registrationLimiter,
+} from "../../../config/rate-limiters"
 
 // Prisma client and services
-// prisma imported
 const authService = new AuthService(prisma)
-
-// Rate limiters
-// 🔒 LOGIN RATE LIMITER (OWASP A07:2021 - Protection against brute force attacks)
-// DEVELOPMENT SETTINGS: 15 minutes window, max 50 attempts (increased for testing)
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Max 50 login attempts per IP per 15 minutes (increased for development)
-  message: {
-    error: "Too many login attempts",
-    message:
-      "Too many login attempts from this IP, please try again after 15 minutes",
-    retryAfter: "15 minutes",
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  handler: (req, res) => {
-    logger.info(`🚨 RATE LIMIT EXCEEDED for IP ${req.ip} on ${req.path}`)
-    res.status(429).json({
-      error: "Too many login attempts",
-      message:
-        "Too many login attempts from this IP, please try again after 15 minutes",
-      retryAfter: "15 minutes",
-    })
-  },
-})
-
-const twoFactorLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 🧪 INCREASED for testing (was 3) - CHANGE BACK TO 3 IN PRODUCTION
-  message: {
-    error: "Too many 2FA verification attempts, please try again later",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-})
-
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // limit each IP to 3 requests per windowMs
-  message: { error: "Too many registration attempts, please try again later" },
-  standardHeaders: true,
-  legacyHeaders: false,
-})
-
-const passwordResetLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // limit each IP to 3 password reset requests per windowMs
-  message: {
-    error: "Too many password reset attempts, please try again later",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-})
 
 export const createAuthRouter = (authController: AuthController): Router => {
   const router = Router()
@@ -105,7 +56,7 @@ export const createAuthRouter = (authController: AuthController): Router => {
   // OLD register route (kept for backwards compatibility)
   router.post(
     "/register-old",
-    registerLimiter,
+    registrationLimiter,
     asyncHandler(authController.register.bind(authController))
   )
 
@@ -125,14 +76,14 @@ export const createAuthRouter = (authController: AuthController): Router => {
   // Password reset routes
   router.post(
     "/forgot-password",
-    passwordResetLimiter,
+    forgotPasswordLimiter,
     validateForgotPassword,
     asyncHandler(authController.forgotPassword.bind(authController))
   )
 
   router.post(
     "/reset-password",
-    passwordResetLimiter,
+    forgotPasswordLimiter,
     validateResetPassword,
     asyncHandler(authController.resetPassword.bind(authController))
   )
@@ -144,7 +95,7 @@ export const createAuthRouter = (authController: AuthController): Router => {
   // Email/Password Registration (NEW - with mandatory 2FA)
   router.post(
     "/register",
-    registerLimiter,
+    registrationLimiter,
     asyncHandler(enhancedAuthController.register.bind(enhancedAuthController))
   )
 

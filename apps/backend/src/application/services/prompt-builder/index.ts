@@ -16,6 +16,5 @@
  */
 
 export { PromptBuilderService, PromptBuildContext, BuiltPrompt } from "./prompt-builder.service"
-export { TemplateLoaderService } from "./template-loader.service"
 export { TemplateEngineService } from "./template-engine.service"
 export { VariableResolverService, PromptVariables } from "./variable-resolver.service"

@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { BrowserRouter } from "react-router-dom"
 import { WorkspaceSelectionPage } from "@/pages/WorkspaceSelectionPage"
@@ -101,6 +102,31 @@ describe("WorkspaceSelectionPage", () => {
       // When there are no workspaces, show welcome card
       await waitFor(() => {
         expect(screen.getByText(/Welcome to eChatbot/)).toBeInTheDocument()
+      })
+    })
+
+    it("should open the setup wizard dialog when there are no workspaces", async () => {
+      vi.mocked(workspaceApi.getWorkspaces).mockResolvedValue([])
+
+      renderWithRouter(<WorkspaceSelectionPage />)
+
+      await waitFor(() => {
+        expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText(/Welcome to eChatbot/)).toBeInTheDocument()
+      })
+
+      const launchButton = screen.getByRole("button", {
+        name: /launch setup wizard/i,
+      })
+      await userEvent.click(launchButton)
+
+      const dialog = document.getElementById("wizard-dialog") as HTMLDialogElement
+      await waitFor(() => {
+        expect(dialog).toBeTruthy()
+        expect(dialog.open).toBe(true)
       })
     })
 

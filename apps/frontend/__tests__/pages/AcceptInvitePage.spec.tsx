@@ -92,6 +92,16 @@ describe("AcceptInvitePage", () => {
     expect(screen.getByText("Validating your invitation...")).toBeInTheDocument()
   })
 
+  it("should validate the invitation token from query params", async () => {
+    vi.mocked(invitationApi.validate).mockResolvedValueOnce(mockValidation)
+
+    renderPage("token-456")
+
+    await waitFor(() => {
+      expect(invitationApi.validate).toHaveBeenCalledWith("token-456")
+    })
+  })
+
   // ============================================================================
   // Valid Invitation - Not Logged In
   // ============================================================================
