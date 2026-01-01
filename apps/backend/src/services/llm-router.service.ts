@@ -513,7 +513,6 @@ export class LLMRouterService {
             },
             output: {
               decision: "malicious_pattern_detected",
-              threatType: securityCheck.threatType,
               severity: securityCheck.severity,
             },
             tokenUsage: {

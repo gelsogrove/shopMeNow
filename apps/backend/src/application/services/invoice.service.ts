@@ -377,7 +377,7 @@ export class InvoiceService {
         }
     
     // Get user's credit debt (if negative balance)
-    const creditDebt = user.creditBalance < 0 ? Math.abs(Number(user.creditBalance)) : 0
+    const creditDebt = Number(user.creditBalance) < 0 ? Math.abs(Number(user.creditBalance)) : 0
     const totalAmount = Number(subscriptionAmount) + consumption.totalConsumption + creditDebt
     
     await prisma.monthlyInvoice.update({
