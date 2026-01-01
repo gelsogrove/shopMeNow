@@ -30,47 +30,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Construction, AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 
 // Multilingual translations
 const translations = {
   it: {
-    title: "Funzionalità in Sviluppo",
-    description: "Stiamo lavorando per migliorare questa funzionalità. Sarà disponibile presto!",
-    featureDisabled: "La funzionalità {{feature}} è temporaneamente disabilitata.",
-    login: "accesso",
-    register: "registrazione",
-    chatbot: "chatbot",
+    title: "Work in Progress",
+    description:
+      "Stiamo implementando nuove funzionalità. Torna a trovarci presto!",
     close: "Chiudi",
     backHome: "Torna alla Home",
   },
   en: {
-    title: "Feature Under Development",
-    description: "We're working to improve this feature. It will be available soon!",
-    featureDisabled: "The {{feature}} feature is temporarily disabled.",
-    login: "login",
-    register: "registration",
-    chatbot: "chatbot",
+    title: "Work in Progress",
+    description:
+      "We are working on implementing new features. Please come back soon.",
     close: "Close",
     backHome: "Back to Home",
   },
   es: {
-    title: "Funcionalidad en Desarrollo",
-    description: "Estamos trabajando para mejorar esta funcionalidad. ¡Pronto estará disponible!",
-    featureDisabled: "La funcionalidad de {{feature}} está temporalmente deshabilitada.",
-    login: "inicio de sesión",
-    register: "registro",
-    chatbot: "chatbot",
+    title: "Work in Progress",
+    description:
+      "Estamos implementando nuevas funcionalidades. ¡Vuelve pronto!",
     close: "Cerrar",
     backHome: "Volver al Inicio",
   },
   pt: {
-    title: "Funcionalidade em Desenvolvimento",
-    description: "Estamos trabalhando para melhorar esta funcionalidade. Estará disponível em breve!",
-    featureDisabled: "A funcionalidade de {{feature}} está temporariamente desativada.",
-    login: "login",
-    register: "registro",
-    chatbot: "chatbot",
+    title: "Work in Progress",
+    description:
+      "Estamos implementando novas funcionalidades. Volte em breve!",
     close: "Fechar",
     backHome: "Voltar para Home",
   },
@@ -100,37 +88,24 @@ function detectLanguage(): SupportedLanguage {
 
 export function WIPModal({
   isOpen,
-  feature,
+  feature: _feature,
   onClose,
-  showBackHome = true,
+  showBackHome = false,
   onBackHome,
 }: WIPModalProps) {
   const lang = detectLanguage()
   const t = translations[lang]
 
-  const getFeatureName = (feat?: FeatureType): string => {
-    if (!feat) return ""
-    return t[feat] || feat
-  }
-
-  const description = feature
-    ? t.featureDisabled.replace("{{feature}}", getFeatureName(feature))
-    : t.description
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose ? () => onClose() : undefined}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-            <Construction className="h-8 w-8 text-amber-600" />
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-100">
+            <AlertCircle className="h-10 w-10 text-red-600" />
           </div>
           <DialogTitle className="text-center text-xl">{t.title}</DialogTitle>
           <DialogDescription className="text-center">
-            <div className="mt-2 flex items-center justify-center gap-2 text-amber-600">
-              <AlertCircle className="h-4 w-4" />
-              <span className="font-medium">{description}</span>
-            </div>
-            <p className="mt-4 text-muted-foreground">{t.description}</p>
+            <p className="mt-2 text-muted-foreground">{t.description}</p>
           </DialogDescription>
         </DialogHeader>
 

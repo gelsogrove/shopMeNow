@@ -191,6 +191,14 @@ export function MinimalLayout() {
                   <>
                     <DropdownMenuItem
                       className="p-2 cursor-pointer"
+                      onClick={() => navigate("/workspace-selection")}
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4 text-green-500" fill="currentColor" />
+                      <span>Your Channels</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
                       onClick={() => navigate("/profile")}
                     >
                       <User className="mr-2 h-4 w-4 text-blue-500" />

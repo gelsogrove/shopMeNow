@@ -913,10 +913,16 @@ export function LoginPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => navigate("/workspace-selection")}
+                          onClick={() => {
+                            if (loggedInUser?.isPlatformAdmin) {
+                              window.location.assign("https://backoffice.echatbot.ai")
+                              return
+                            }
+                            navigate("/workspace-selection")
+                          }}
                           className="w-full rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
                         >
-                          Go to workspace
+                          {loggedInUser?.isPlatformAdmin ? "Go to backoffice" : "Go to workspace"}
                         </button>
                       </div>
                     ) : (
@@ -1450,10 +1456,6 @@ export function LoginPage() {
         isOpen={showWIPModal}
         feature={wipFeature}
         onClose={() => setShowWIPModal(false)}
-        showBackHome={true}
-        onBackHome={() => {
-          setShowWIPModal(false)
-        }}
       />
     </div>
   )
