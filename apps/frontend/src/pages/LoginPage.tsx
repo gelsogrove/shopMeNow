@@ -106,9 +106,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isValidatingSession, setIsValidatingSession] = useState(true)
-  const [showLoginModal, setShowLoginModal] = useState(false)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
-  const [isAdminAccess, setIsAdminAccess] = useState(false) // 🔐 Admin bypass for WIP mode
   
   // 👤 Logged-in user state (for showing avatar instead of login/register buttons)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -130,7 +128,6 @@ export function LoginPage() {
   
   // 🚀 Platform feature flags (canLogin, canRegister)
   const { canLogin, canRegister, isLoading: flagsLoading } = useFeatureFlags()
-  const isWipMode = !flagsLoading && !canLogin && !canRegister
   const [showWIPModal, setShowWIPModal] = useState(false)
   const [wipFeature, setWipFeature] = useState<'login' | 'register'>('login')
   
@@ -324,9 +321,6 @@ export function LoginPage() {
       }
       
       logger.info('🎯 [AUTO-OPEN] Detected register mode - switching to register form')
-      if (isWipMode) {
-        setShowLoginModal(true)
-      }
       setActiveTab('register')
       
       // Pre-fill form from invite data if available
@@ -348,7 +342,7 @@ export function LoginPage() {
         }
       }
     }
-  }, [actionParam, modeParam, inviteParam, canRegister, flagsLoading, isWipMode])
+  }, [actionParam, modeParam, inviteParam, canRegister, flagsLoading])
 
   // If login is disabled but registration is allowed, show register form by default
   useEffect(() => {
@@ -362,7 +356,7 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     // 🚀 Check if login is enabled (bypass if admin access mode)
-    if (!canLogin && !isAdminAccess) {
+    if (!canLogin) {
       setWipFeature('login')
       setShowWIPModal(true)
       return
@@ -630,206 +624,6 @@ export function LoginPage() {
     )
   }
 
-  // 🚧 WIP MODE: Show simple page with hidden admin access
-  if (isWipMode && !showLoginModal) {
-    return (
-      <>
-        <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col items-center justify-center p-4">
-          <div className="text-center mb-12 w-full">
-            
-            <h1 style={{ fontSize: '120px' }} className="font-bold text-slate-900">eChatbot</h1>
-          </div>
-          <div className="max-w-lg w-full">
-
-            {/* WIP Card */}
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
-              <div className="w-20 h-20 mx-auto mb-6 bg-amber-100 rounded-full flex items-center justify-center">
-                <svg 
-                  className="w-10 h-10 text-amber-600" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-                  />
-                </svg>
-              </div>
-              
-              <h2 className="text-2xl font-bold text-slate-900 mb-3">
-                Work in Progress
-              </h2>
-              
-              <p className="text-slate-600 mb-6">
-                We're working hard to bring you something amazing. 
-                Please check back soon!
-              </p>
-
-              <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
-                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                <span>Coming Soon</span>
-              </div>
-              
-              {/* 🔐 Hidden Admin Access - small link for platform admins */}
-              <button
-                onClick={() => {
-                  storage.clearAppState()
-                  setActiveTab('signin')
-                  setIsAdminAccess(true) // 🔐 Enable admin bypass
-                  setShowLoginModal(true)
-                }}
-                className="mt-6 text-xs text-slate-400 hover:text-slate-600 underline opacity-50 hover:opacity-100 transition-opacity"
-              >
-                Admin Access
-              </button>
-            </div>
-
-            {/* Footer */}
-            <p className="text-center text-sm text-slate-400 mt-8">
-              © 2025 eChatbot. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  // 🚧 WIP MODE with Modal Open: Show modal overlay on top of WIP page
-  if (isWipMode && showLoginModal) {
-    return (
-      <>
-        {/* Background - WIP Page */}
-        <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
-          <div className="max-w-lg w-full opacity-30">
-            
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
-              <h2 className="text-2xl font-bold text-slate-900 mb-3">Work in Progress</h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Login Modal */}
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto relative">
-            <div className="p-8">
-              {/* Close Button */}
-              <button
-                onClick={() => {
-                  setShowLoginModal(false)
-                  setIsAdminAccess(false) // 🔐 Reset admin bypass
-                }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl font-light leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-              >
-                ×
-              </button>
-
-              {/* Header */}
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900">Admin Access</h3>
-              </div>
-
-              {/* Error Alert */}
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Sign In Form */}
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <div className="space-y-2">
-                  <Input
-                    id="email-admin"
-                    type="email"
-                    placeholder="your@email.com"
-                    {...register("email")}
-                    disabled={isLoading}
-                    autoComplete="username"
-                    className="h-11"
-                  />
-                  {errors.email && (
-                    <p className="text-sm text-red-500">{errors.email.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Input
-                      id="password-admin"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      {...register("password")}
-                      disabled={isLoading}
-                      autoComplete="current-password"
-                      className="h-11 pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="text-sm text-red-500">{errors.password.message}</p>
-                  )}
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-11 bg-green-600 hover:bg-green-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {t("login.signingIn")}
-                    </>
-                  ) : (
-                    t("login.signin")
-                  )}
-                </Button>
-              </form>
-
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t"></span>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-2 text-gray-500">Or continue with</span>
-                </div>
-              </div>
-
-              {/* Google OAuth */}
-              <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                <div className="flex justify-center">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={handleGoogleError}
-                    useOneTap={false}
-                    theme="outline"
-                    size="large"
-                    text="signin_with"
-                    shape="rectangular"
-                    logo_alignment="left"
-                  />
-                </div>
-              </GoogleOAuthProvider>
-            </div>
-          </div>
-        </div>
-      </>
-    )
-  }
-
   const planLabel =
     !userPlan?.planType || userPlan.planType === "FREE_TRIAL"
       ? "Free Trial"
@@ -1041,9 +835,8 @@ export function LoginPage() {
             </div>
           </div>
 
-          {(canLogin || canRegister) && (
-            <div className="w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex">
-              <div className="space-y-6 flex-1 flex flex-col">
+          <div className="w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex">
+            <div className="space-y-6 flex-1 flex flex-col">
                 <div className="text-center space-y-2">
                   <h3 className="text-2xl font-bold text-slate-900">
                     {activeTab === "signin" ? "Login" : "Create your account"}
@@ -1101,7 +894,7 @@ export function LoginPage() {
                               type="email"
                               placeholder="your@email.com"
                               {...register("email")}
-                              disabled={isLoading}
+                              disabled={isLoading || isLoginDisabled}
                               autoComplete="username"
                               className="h-11"
                             />
@@ -1117,7 +910,7 @@ export function LoginPage() {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="********"
                                 {...register("password")}
-                                disabled={isLoading}
+                                disabled={isLoading || isLoginDisabled}
                                 autoComplete="current-password"
                                 className="h-11 pr-10"
                               />
@@ -1149,8 +942,16 @@ export function LoginPage() {
 
                           <Button
                             type="submit"
-                            className="w-full bg-green-600 hover:bg-green-700"
+                            className={`w-full bg-green-600 hover:bg-green-700 ${isLoginDisabled ? "opacity-60 cursor-not-allowed hover:bg-green-600" : ""}`}
                             disabled={isLoading}
+                            aria-disabled={isLoginDisabled}
+                            onClick={(event) => {
+                              if (isLoginDisabled) {
+                                event.preventDefault()
+                                setWipFeature("login")
+                                setShowWIPModal(true)
+                              }
+                            }}
                           >
                             {isLoading ? (
                               <>
@@ -1174,17 +975,30 @@ export function LoginPage() {
                           </div>
 
                           <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                            <div className="flex justify-center">
-                              <GoogleLogin
-                                onSuccess={handleGoogleSuccess}
-                                onError={handleGoogleError}
-                                useOneTap={false}
-                                theme="outline"
-                                size="large"
-                                text="signin_with"
-                                shape="rectangular"
-                                logo_alignment="left"
-                              />
+                            <div className="flex justify-center relative">
+                              {isLoginDisabled && (
+                                <button
+                                  type="button"
+                                  aria-label="Login disabled"
+                                  className="absolute inset-0 z-10 cursor-not-allowed"
+                                  onClick={() => {
+                                    setWipFeature("login")
+                                    setShowWIPModal(true)
+                                  }}
+                                />
+                              )}
+                              <div className={isLoginDisabled ? "opacity-60 pointer-events-none" : ""}>
+                                <GoogleLogin
+                                  onSuccess={handleGoogleSuccess}
+                                  onError={handleGoogleError}
+                                  useOneTap={false}
+                                  theme="outline"
+                                  size="large"
+                                  text="signin_with"
+                                  shape="rectangular"
+                                  logo_alignment="left"
+                                />
+                              </div>
                             </div>
                           </GoogleOAuthProvider>
                         </div>
@@ -1193,7 +1007,7 @@ export function LoginPage() {
                           Don't have an account?{" "}
                           <button
                             onClick={() => {
-                              if (!canRegister) {
+                              if (isRegisterDisabled) {
                                 setWipFeature('register')
                                 setShowWIPModal(true)
                                 return
@@ -1203,7 +1017,8 @@ export function LoginPage() {
                               setError("")
                               setActiveTab("register")
                             }}
-                            className="text-green-600 hover:underline font-semibold"
+                            className={`text-green-600 hover:underline font-semibold ${isRegisterDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                            aria-disabled={isRegisterDisabled}
                           >
                             Create one
                           </button>
@@ -1232,7 +1047,7 @@ export function LoginPage() {
                           placeholder="First name"
                           autoComplete="off"
                           {...registerForm.register("firstName")}
-                          disabled={isLoading}
+                          disabled={isLoading || isRegisterDisabled}
                           className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
                         </div>
@@ -1243,23 +1058,23 @@ export function LoginPage() {
                           placeholder="Last name"
                           autoComplete="off"
                           {...registerForm.register("lastName")}
-                          disabled={isLoading}
+                          disabled={isLoading || isRegisterDisabled}
                           className={`h-11 ${registerForm.formState.errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Input
-                          id="email-register"
-                          type="email"
-                          placeholder="your@email.com"
-                          {...registerForm.register("email")}
-                          disabled={isLoading || !!inviteData?.email}
-                          readOnly={!!inviteData?.email}
-                          autoComplete="email"
-                          className={`h-11 ${inviteData?.email ? "bg-gray-100 cursor-not-allowed" : ""} ${registerForm.formState.errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                        />
+                      <Input
+                        id="email-register"
+                        type="email"
+                        placeholder="your@email.com"
+                        {...registerForm.register("email")}
+                        disabled={isLoading || isRegisterDisabled || !!inviteData?.email}
+                        readOnly={!!inviteData?.email}
+                        autoComplete="email"
+                        className={`h-11 ${inviteData?.email ? "bg-gray-100 cursor-not-allowed" : ""} ${registerForm.formState.errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                      />
                         {inviteData?.email && (
                           <p className="text-xs text-gray-500">Email is pre-filled from your invitation</p>
                         )}
@@ -1273,7 +1088,7 @@ export function LoginPage() {
                             type={showPasswordRegister ? "text" : "password"}
                             placeholder="********"
                             {...registerForm.register("password")}
-                            disabled={isLoading}
+                            disabled={isLoading || isRegisterDisabled}
                             autoComplete="new-password"
                             className={`h-11 pr-10 ${registerForm.formState.errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                           />
@@ -1300,7 +1115,7 @@ export function LoginPage() {
                             type={showConfirmPassword ? "text" : "password"}
                             placeholder="********"
                             {...registerForm.register("confirmPassword")}
-                            disabled={isLoading}
+                            disabled={isLoading || isRegisterDisabled}
                             autoComplete="new-password"
                             className={`h-11 pr-10 ${registerForm.formState.errors.confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                           />
@@ -1351,8 +1166,16 @@ export function LoginPage() {
                       </div>
                     <Button
                       type="submit"
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      className={`w-full bg-green-600 hover:bg-green-700 ${isRegisterDisabled ? "opacity-60 cursor-not-allowed hover:bg-green-600" : ""}`}
                       disabled={isLoading || !registerForm.formState.isValid}
+                      aria-disabled={isRegisterDisabled}
+                      onClick={(event) => {
+                        if (isRegisterDisabled) {
+                          event.preventDefault()
+                          setWipFeature("register")
+                          setShowWIPModal(true)
+                        }
+                      }}
                     >
                         {isLoading ? (
                           <>
@@ -1375,17 +1198,30 @@ export function LoginPage() {
                     </div>
 
                     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                      <div className="flex justify-center">
-                        <GoogleLogin
-                          onSuccess={handleGoogleSuccess}
-                          onError={handleGoogleError}
-                          useOneTap={false}
-                          theme="outline"
-                          size="large"
-                          text="signup_with"
-                          shape="rectangular"
-                          logo_alignment="left"
-                        />
+                      <div className="flex justify-center relative">
+                        {isRegisterDisabled && (
+                          <button
+                            type="button"
+                            aria-label="Registration disabled"
+                            className="absolute inset-0 z-10 cursor-not-allowed"
+                            onClick={() => {
+                              setWipFeature("register")
+                              setShowWIPModal(true)
+                            }}
+                          />
+                        )}
+                        <div className={isRegisterDisabled ? "opacity-60 pointer-events-none" : ""}>
+                          <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={handleGoogleError}
+                            useOneTap={false}
+                            theme="outline"
+                            size="large"
+                            text="signup_with"
+                            shape="rectangular"
+                            logo_alignment="left"
+                          />
+                        </div>
                       </div>
                     </GoogleOAuthProvider>
 
@@ -1393,7 +1229,7 @@ export function LoginPage() {
                       Already have an account?{" "}
                       <button
                         onClick={() => {
-                          if (!canLogin) {
+                          if (isLoginDisabled) {
                             setWipFeature('login')
                             setShowWIPModal(true)
                             return
@@ -1402,7 +1238,8 @@ export function LoginPage() {
                           setError("")
                           setActiveTab("signin")
                         }}
-                        className="text-green-600 hover:underline font-semibold"
+                        className={`text-green-600 hover:underline font-semibold ${isLoginDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                        aria-disabled={isLoginDisabled}
                       >
                         Sign in
                       </button>
@@ -1411,7 +1248,6 @@ export function LoginPage() {
                 )}
               </div>
             </div>
-          )}
         </div>
 
         <div className="mt-14">
@@ -1470,7 +1306,7 @@ export function LoginPage() {
           currentPlan={currentPlanForPricing || null}
           onChangePlan={() => navigate("/billing")}
           onStartFreeTrial={() => {
-            if (!canRegister) {
+            if (isRegisterDisabled) {
               setWipFeature('register')
               setShowWIPModal(true)
               return
@@ -1565,331 +1401,6 @@ export function LoginPage() {
         </span>
       </a>
 
-      {/* Login Modal - Rendered at page level for proper z-index */}
-      {showLoginModal && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
-        >
-          <div 
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto relative"
-          >
-            <div className="p-8">
-              {/* Close Button */}
-              <button
-                onClick={() => setShowLoginModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-3xl font-light leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-              >
-                ×
-              </button>
-
-              {/* Header */}
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-slate-900">
-                  {activeTab === 'signin' ? t("login.welcomeBack") : t("register.createAccount")}
-                </h3>
-              </div>
-
-              {/* Error Alert */}
-              {error && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Sign In Form */}
-              {activeTab === 'signin' && (
-                <>
-                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="space-y-2">
-                      <Input
-                        id="email-modal"
-                        type="email"
-                        placeholder="your@email.com"
-                        {...register("email")}
-                        disabled={isLoading}
-                        autoComplete="username"
-                        className="h-11"
-                      />
-                      {errors.email && (
-                        <p className="text-sm text-red-500">{errors.email.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <Input
-                          id="password-modal"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          {...register("password")}
-                          disabled={isLoading}
-                          autoComplete="current-password"
-                          className="h-11 pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          tabIndex={-1}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      {errors.password && (
-                        <p className="text-sm text-red-500">{errors.password.message}</p>
-                      )}
-                    </div>
-
-                    <div className="flex justify-end">
-                      <Link
-                        to="/auth/forgot-password"
-                        className="text-sm text-green-600 hover:text-green-700 underline-offset-4 hover:underline"
-                        onClick={() => setShowLoginModal(false)}
-                      >
-                        {t("login.forgotPassword")}
-                      </Link>
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-11 bg-green-600 hover:bg-green-700"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t("login.signingIn")}
-                        </>
-                      ) : (
-                        t("login.signin")
-                      )}
-                    </Button>
-                  </form>
-                </>
-              )}
-
-              {/* Register Form */}
-              {activeTab === 'register' && (
-                <>
-                  {/* Invitation welcome message */}
-                  {inviteData && (
-                    <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
-                        <span className="font-medium">{inviteData.invitedByName}</span> has invited you to join{' '}
-                        <span className="font-medium">{inviteData.workspaceName}</span>. 
-                        Create your account to accept the invitation.
-                      </p>
-                    </div>
-                  )}
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Input
-                          id="firstName"
-                          type="text"
-                          placeholder="First name"
-                          autoComplete="off"
-                          {...registerForm.register("firstName")}
-                          disabled={isLoading}
-                          className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                        />
-                        </div>
-                        <div className="space-y-2">
-                        <Input
-                          id="lastName"
-                          type="text"
-                          placeholder="Last name"
-                          autoComplete="off"
-                          {...registerForm.register("lastName")}
-                          disabled={isLoading}
-                          className={`h-11 ${registerForm.formState.errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Input
-                        id="email-register"
-                        type="email"
-                        placeholder="your@email.com"
-                        {...registerForm.register("email")}
-                        disabled={isLoading || !!inviteData?.email}
-                        readOnly={!!inviteData?.email}
-                        autoComplete="email"
-                        className={`h-11 ${inviteData?.email ? 'bg-gray-100 cursor-not-allowed' : ''} ${registerForm.formState.errors.email ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                      />
-                      {inviteData?.email && (
-                        <p className="text-xs text-gray-500">Email is pre-filled from your invitation</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <Input
-                          id="password-register"
-                          type={showPasswordRegister ? "text" : "password"}
-                          placeholder="••••••••"
-                          {...registerForm.register("password")}
-                          disabled={isLoading}
-                          autoComplete="new-password"
-                          className={`h-11 pr-10 ${registerForm.formState.errors.password ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswordRegister(!showPasswordRegister)}
-                          tabIndex={-1}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showPasswordRegister ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      {registerForm.formState.errors.password && (
-                        <p className="text-xs text-red-500">{registerForm.formState.errors.password.message}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="relative">
-                        <Input
-                          id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          {...registerForm.register("confirmPassword")}
-                          disabled={isLoading}
-                          autoComplete="new-password"
-                          className={`h-11 pr-10 ${registerForm.formState.errors.confirmPassword ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          tabIndex={-1}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      {registerForm.formState.errors.confirmPassword && (
-                        <p className="text-xs text-red-500">
-                          {registerForm.formState.errors.confirmPassword.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-start gap-2">
-                      <Checkbox 
-                        id="gdpr" 
-                        checked={registerForm.watch("gdprAccepted")}
-                        onCheckedChange={async (checked) => {
-                          registerForm.setValue("gdprAccepted", checked as boolean)
-                          // Force immediate validation
-                          await registerForm.trigger("gdprAccepted")
-                        }}
-                        className={registerForm.formState.errors.gdprAccepted ? "border-red-500 text-red-500" : ""}
-                      />
-                      <label 
-                        htmlFor="gdpr" 
-                        className="text-sm text-gray-600 leading-tight cursor-pointer"
-                        onClick={async () => {
-                          const current = registerForm.getValues("gdprAccepted")
-                          registerForm.setValue("gdprAccepted", !current)
-                          // Force immediate validation
-                          await registerForm.trigger("gdprAccepted")
-                        }}
-                      >
-                        {t("register.gdprAccept")}{" "}
-                        <Link to="/privacy" className="text-green-600 hover:underline" onClick={(e) => e.stopPropagation()}>
-                          {t("register.privacyPolicy")}
-                        </Link>{" "}
-                        {t("register.and")}{" "}
-                        <Link to="/terms" className="text-green-600 hover:underline" onClick={(e) => e.stopPropagation()}>
-                          {t("register.termsOfService")}
-                        </Link>
-                      </label>
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full h-11 bg-green-600 hover:bg-green-700"
-                      disabled={isLoading || !registerForm.formState.isValid}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t("register.creatingAccount")}
-                        </>
-                      ) : (
-                        t("register.createAccount")
-                      )}
-                    </Button>
-                  </form>
-
-                  {/* Divider */}
-                  <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300" />
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="bg-white px-2 text-gray-500">{t("login.orContinueWith")}</span>
-                    </div>
-                  </div>
-
-                  {/* OAuth Buttons */}
-                  <div className="space-y-3">
-                    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                      <div className="flex justify-center">
-                        <GoogleLogin
-                          onSuccess={handleGoogleSuccess}
-                          onError={handleGoogleError}
-                          useOneTap={false}
-                          theme="outline"
-                          size="large"
-                          text="signup_with"
-                          shape="rectangular"
-                          logo_alignment="left"
-                        />
-                      </div>
-                    </GoogleOAuthProvider>
-                  </div>
-                </>
-              )}
-
-              {/* Divider - Only for Sign In */}
-              {activeTab === 'signin' && (
-                <>
-                  <div className="relative my-6">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300" />
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="bg-white px-2 text-gray-500">{t("login.orContinueWith")}</span>
-                    </div>
-                  </div>
-
-                  {/* OAuth Buttons - Sign In */}
-                  <div className="space-y-3">
-                    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-                      <div className="flex justify-center">
-                        <GoogleLogin
-                          onSuccess={handleGoogleSuccess}
-                          onError={handleGoogleError}
-                          useOneTap={false}
-                          theme="outline"
-                          size="large"
-                          text="signin_with"
-                          shape="rectangular"
-                          logo_alignment="left"
-                        />
-                      </div>
-                    </GoogleOAuthProvider>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* WIP Modal - shown when canLogin or canRegister is false */}
       <WIPModal
         isOpen={showWIPModal}
@@ -1898,7 +1409,6 @@ export function LoginPage() {
         showBackHome={true}
         onBackHome={() => {
           setShowWIPModal(false)
-          setShowLoginModal(false)
         }}
       />
     </div>
