@@ -363,7 +363,7 @@ const translations = {
     // Hero Section
     "hero.title": "Is the way to sell changing?",
     "hero.subtitle":
-      "Bring a personal shopper into WhatsApp. eChatbot listens, qualifies, recommends bundles, pushes payments, and keeps customers updated without leaving the chat.",
+      "Yes, things have changed: customers don’t read emails, calling feels intrusive, and visiting is a disturbance. So we meet them where they already are — WhatsApp. That’s our proposal.",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Tailored workflows for your team",
     "hero.useCases.sales.title": "Sales teams",

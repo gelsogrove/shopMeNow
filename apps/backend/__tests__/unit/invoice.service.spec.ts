@@ -303,6 +303,23 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
       expect(result.adjustments).toEqual({ count: 0, amount: 0 })
       expect(result.totalConsumption).toBe(0)
     })
+
+    it('should not count bonus or recharge credits as consumption', async () => {
+      mockPrisma.billingTransaction.findMany.mockResolvedValue([
+        { type: 'MESSAGE', amount: -0.1 },
+        { type: 'BONUS', amount: 10.0 },
+        { type: 'RECHARGE', amount: 5.0 },
+      ])
+
+      const periodStart = new Date(periodYear, periodMonth - 1, 1)
+      const periodEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59)
+
+      const result = await service.calculateConsumption(mockUserId, periodStart, periodEnd)
+
+      expect(result.messages.count).toBe(1)
+      expect(result.messages.amount).toBeCloseTo(0.1)
+      expect(result.totalConsumption).toBeCloseTo(0.1)
+    })
   })
 
   describe('getInvoicesForOwner', () => {
