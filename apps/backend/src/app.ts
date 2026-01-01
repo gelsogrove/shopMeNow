@@ -111,6 +111,8 @@ app.use(
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
                 "https://*.gstatic.com",
+                "https://www.google.com",
+                "https://www.gstatic.com",
               ],
               styleSrc: [
                 "'self'",
