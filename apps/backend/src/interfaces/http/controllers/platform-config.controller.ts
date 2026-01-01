@@ -175,9 +175,12 @@ export class PlatformConfigController {
    */
   async checkFlags(_req: Request, res: Response): Promise<Response> {
     try {
-      const [canLogin, canRegister] = await Promise.all([
+      const [canLogin, canRegister, workingInProgress, registerFirst] =
+        await Promise.all([
         platformConfigService.canLogin(),
         platformConfigService.canRegister(),
+        platformConfigService.isWorkingInProgress(),
+        platformConfigService.getFlag("registerFirst"),
       ])
 
       return res.status(200).json({
@@ -185,6 +188,8 @@ export class PlatformConfigController {
         data: {
           canLogin,
           canRegister,
+          workingInProgress,
+          registerFirst,
         },
       })
     } catch (error) {

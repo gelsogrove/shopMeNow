@@ -77,64 +77,64 @@ const jobNames: Record<string, { name: string; description: string; schedule: st
   'whatsapp-channel-queue': {
     name: 'WhatsApp Channel Queue',
     schedule: 'Every 5 seconds',
-    description: 'Elabora la coda e invia i messaggi WhatsApp in attesa',
-    details: 'Valida e invia i messaggi pendenti per i canali attivi. Applica controlli di sicurezza e aggiorna lo stato della coda.',
+    description: 'Processes queue and sends pending WhatsApp messages',
+    details: 'Validates and sends pending messages for active channels. Applies security checks and updates queue status.',
     sortOrder: 1
   },
   'short-urls-cleanup': {
     name: 'Short URLs Cleanup',
     schedule: 'Daily at 23:00',
-    description: 'Rimuove i short link scaduti dal database',
-    details: 'Cancella tutte le short URL con scadenza passata.',
+    description: 'Removes expired short links from database',
+    details: 'Deletes all short URLs with past expiration date.',
     sortOrder: 3
   },
   'blocked-customers-cleanup': {
     name: 'Blocked Customers Cleanup',
     schedule: 'Every 3 days at 23:01',
-    description: 'Sblocca clienti dopo la scadenza del blocco',
-    details: 'Controlla periodicamente i clienti bloccati e rimuove il blocco quando scade.',
+    description: 'Unblocks customers after block expiration',
+    details: 'Periodically checks blocked customers and removes block when expired.',
     sortOrder: 9
   },
   'unused-images-cleanup': {
     name: 'Storage Cleanup',
     schedule: 'Daily at 23:05',
-    description: 'Pulisce immagini orfane, file temporanei e fatture annullate',
-    details: 'Scansiona uploads per immagini non referenziate (prodotti/servizi/utenti/canali), elimina i temp >24h e rimuove fatture di ordini cancellati (local).',
+    description: 'Cleans orphaned images, temp files and cancelled invoices',
+    details: 'Scans uploads for unreferenced images (products/services/users/channels), removes temp files >24h and deletes invoices from cancelled orders (local).',
     sortOrder: 4
   },
   'monthly-billing': {
     name: 'Monthly Billing',
     schedule: '1st of month at 23:30',
-    description: 'Elabora il billing mensile per gli owner attivi',
-    details: 'Calcola canone e debiti, prova il pagamento e aggiorna lo stato di subscription.',
+    description: 'Processes monthly billing for active owners',
+    details: 'Calculates subscription fee and debts, attempts payment and updates subscription status.',
     sortOrder: 8
   },
   'messages-archive': {
     name: 'Messages Archive',
     schedule: 'Daily at 23:10',
-    description: 'Archivia i messaggi più vecchi di 6 mesi',
-    details: '🗄️ Sposta i messaggi vecchi nella tabella di archivio per mantenere il DB snello.',
+    description: 'Archives messages older than 6 months',
+    details: '🗄️ Moves old messages to archive table to keep DB lean.',
     sortOrder: 6
   },
   'whatsapp-queue-cleanup': {
     name: 'WhatsApp Queue Cleanup',
     schedule: 'Daily at 23:15',
-    description: 'Pulisce la coda WhatsApp da errori e inviati vecchi',
-    details: 'Elimina messaggi in coda con stato error/sent più vecchi di 7 giorni.',
+    description: 'Cleans WhatsApp queue from old errors and sent messages',
+    details: 'Deletes queued messages with error/sent status older than 7 days.',
     sortOrder: 5
   },
   'soft-delete-cleanup': {
     name: 'Soft Delete Cleanup',
     schedule: 'Daily at 23:20',
-    description: 'Hard-delete dei record soft-deleted dopo retention',
-    details: 'Cancella definitivamente i record soft-deleted dopo la retention (default 90 giorni).',
+    description: 'Hard-deletes soft-deleted records after retention',
+    details: 'Permanently deletes soft-deleted records after retention period (default 90 days).',
     sortOrder: 7
   },
   'campaign-send': {
     name: 'Campaign Send',
     schedule: 'Daily at 10:00',
-    description: 'Invia campagne programmate ai clienti',
-    details: 'Controlla le campagne attive e mette in coda i messaggi WhatsApp.',
+    description: 'Sends scheduled campaigns to customers',
+    details: 'Checks active campaigns and queues WhatsApp messages for delivery.',
     sortOrder: 2
   },
 }

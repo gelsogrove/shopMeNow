@@ -224,6 +224,13 @@ class PlatformConfigService {
     return this.getFlag("canRegister")
   }
 
+  /**
+   * Check if "Work in Progress" mode is enabled
+   */
+  async isWorkingInProgress(): Promise<boolean> {
+    return this.getFlag("workingInProgress")
+  }
+
   // ============================================================================
   // 📊 LIMIT GETTERS
   // ============================================================================
@@ -327,14 +334,35 @@ class PlatformConfigService {
       })
     }
 
-    // Only include supported flags exposed in admin UI
-    const supportedFlags = ["canLogin", "canRegister"]
+    const supportedFlags = [
+      "canLogin",
+      "canRegister",
+      "workingInProgress",
+      "registerFirst",
+    ]
+    const defaultFlagDescriptions: Record<string, string> = {
+      canLogin: "Allow users to login",
+      canRegister: "Allow new user registration",
+      workingInProgress: "Show Work in Progress badge",
+      registerFirst: "Default auth view is registration",
+    }
+    const flagKeys = new Set<string>()
     for (const [key, item] of this.cache.flags) {
       if (supportedFlags.includes(key)) {
+        flagKeys.add(key)
         flags.push({
           key,
           value: item.value === "true",
           description: item.description,
+        })
+      }
+    }
+    for (const key of supportedFlags) {
+      if (!flagKeys.has(key)) {
+        flags.push({
+          key,
+          value: false,
+          description: defaultFlagDescriptions[key] ?? null,
         })
       }
     }
@@ -393,9 +421,40 @@ class PlatformConfigService {
    * Toggle a flag (admin only)
    */
   async toggleFlag(key: string): Promise<boolean> {
-    const currentValue = await this.getFlag(key)
+    await this.ensureCache()
+    const existing = this.cache.flags.get(key)
+    const currentValue = existing ? existing.value === "true" : false
     const newValue = !currentValue
-    await this.updateConfig(key, newValue.toString())
+
+    if (existing) {
+      await this.updateConfig(key, newValue.toString())
+      return newValue
+    }
+
+    const defaultDescriptions: Record<string, string> = {
+      canLogin: "Allow users to login",
+      canRegister: "Allow new user registration",
+      workingInProgress: "Show Work in Progress badge",
+      registerFirst: "Default auth view is registration",
+    }
+
+    await this.prisma.platformConfig.upsert({
+      where: { key },
+      update: {
+        value: newValue.toString(),
+        updatedAt: new Date(),
+      },
+      create: {
+        key,
+        type: "FLAG",
+        value: newValue.toString(),
+        originalValue: null,
+        description: defaultDescriptions[key] ?? null,
+        isActive: true,
+      },
+    })
+
+    await this.invalidateCache()
     return newValue
   }
 }

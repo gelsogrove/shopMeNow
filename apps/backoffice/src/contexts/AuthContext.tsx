@@ -106,8 +106,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.clear()
     api.logout()
     
-    // Redirect to backoffice login (stay in same app)
-    window.location.href = '/login?logout=true'
+    // Redirect to frontend home (production or local)
+    const isProd = window.location.hostname !== 'localhost'
+    const frontendUrl = isProd ? 'https://echatbot.ai' : 'http://localhost:3000'
+    window.location.href = frontendUrl
   }
 
   return (

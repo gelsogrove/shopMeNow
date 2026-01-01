@@ -112,6 +112,22 @@ export const platformConfigData: PlatformConfigData[] = [
       "Allow new user registration. When false: show WIP popup, disable register button",
     isActive: true,
   },
+  {
+    type: "FLAG" as const,
+    key: "workingInProgress",
+    value: "false",
+    description:
+      "Show Work in Progress badge to communicate service is under maintenance",
+    isActive: true,
+  },
+  {
+    type: "FLAG" as const,
+    key: "registerFirst",
+    value: "false",
+    description:
+      "When true, default auth view is registration instead of login",
+    isActive: true,
+  },
 
   // ============================================================================
   // 📊 LIMITS (Plan-based thresholds)

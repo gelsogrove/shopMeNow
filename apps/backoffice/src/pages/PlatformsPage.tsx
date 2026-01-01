@@ -10,7 +10,8 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from 'lucide-react'
 
 interface FlagConfig {
@@ -30,6 +31,8 @@ export function PlatformsPage() {
   const flagIcons: Record<string, { icon: React.ReactNode; title: string }> = {
     canLogin: { icon: <LogIn className="h-6 w-6" />, title: 'User Login' },
     canRegister: { icon: <UserPlus className="h-6 w-6" />, title: 'User Registration' },
+    workingInProgress: { icon: <AlertTriangle className="h-6 w-6" />, title: 'Work in Progress' },
+    registerFirst: { icon: <UserPlus className="h-6 w-6" />, title: 'Register First' },
   }
 
   const fetchConfig = async () => {
@@ -173,6 +176,12 @@ export function PlatformsPage() {
           </li>
           <li>
             <strong>User Registration:</strong> When disabled, new user registration is blocked
+          </li>
+          <li>
+            <strong>Work in Progress:</strong> Shows a WIP badge on the login page to communicate service status
+          </li>
+          <li>
+            <strong>Register First:</strong> Default view on /auth/login is registration instead of login
           </li>
         </ul>
       </div>

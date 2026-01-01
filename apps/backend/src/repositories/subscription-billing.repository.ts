@@ -461,25 +461,12 @@ export class SubscriptionBillingRepository {
 
   /**
    * Calculate next billing date:
-   * - If today is 1st of month AND before 23:30 → today at 23:30 (charge happens today)
-   * - Otherwise → 1st of next month at 23:30
+   * - Always 1st of next month at 23:30
    * 
    * Scheduler runs at 23:30 on the 1st of each month
    */
   private getFirstOfNextMonth(): Date {
     const now = new Date()
-    const today = now.getDate()
-    const currentHour = now.getHours()
-    const currentMinute = now.getMinutes()
-    
-    // If it's the 1st of the month AND before 23:30, next charge is TODAY at 23:30
-    if (today === 1 && (currentHour < 23 || (currentHour === 23 && currentMinute < 30))) {
-      const todayCharge = new Date(now.getFullYear(), now.getMonth(), 1)
-      todayCharge.setHours(23, 30, 0, 0)
-      return todayCharge
-    }
-    
-    // Otherwise, next charge is 1st of next month at 23:30
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
     nextMonth.setHours(23, 30, 0, 0)
     return nextMonth

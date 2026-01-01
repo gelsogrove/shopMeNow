@@ -110,6 +110,22 @@ export const platformConfigData: PlatformConfigData[] = [
   },
   {
     type: "FLAG" as const,
+    key: "workingInProgress",
+    value: "false",
+    description:
+      "Show Work in Progress badge to communicate service status",
+    isActive: true,
+  },
+  {
+    type: "FLAG" as const,
+    key: "registerFirst",
+    value: "false",
+    description:
+      "When true, default auth view is registration instead of login",
+    isActive: true,
+  },
+  {
+    type: "FLAG" as const,
     key: "landingPageEnabled",
     value: "true",
     description:

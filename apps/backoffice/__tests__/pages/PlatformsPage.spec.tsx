@@ -19,6 +19,16 @@ const mockConfig = {
       key: 'canRegister',
       value: false,
       description: 'Allow new user registrations'
+    },
+    {
+      key: 'workingInProgress',
+      value: true,
+      description: 'Show Work in Progress badge'
+    },
+    {
+      key: 'registerFirst',
+      value: false,
+      description: 'Default to registration view'
     }
   ]
 }
@@ -62,6 +72,8 @@ describe('PlatformsPage', () => {
         // Flags are displayed with friendly titles
         expect(screen.getByText('User Login')).toBeInTheDocument()
         expect(screen.getByText('User Registration')).toBeInTheDocument()
+        expect(screen.getByText('Work in Progress')).toBeInTheDocument()
+        expect(screen.getByText('Register First')).toBeInTheDocument()
       })
     })
 

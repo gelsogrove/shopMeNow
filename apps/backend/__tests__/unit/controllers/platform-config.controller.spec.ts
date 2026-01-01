@@ -35,6 +35,8 @@ jest.mock("../../../src/services/platform-config.service", () => ({
     invalidateCache: jest.fn(),
     canLogin: jest.fn(),
     canRegister: jest.fn(),
+    isWorkingInProgress: jest.fn(),
+    getFlag: jest.fn(),
   },
 }))
 
@@ -119,6 +121,10 @@ describe("PlatformConfigController", () => {
     it("should return all feature flags", async () => {
       ;(platformConfigService.canLogin as jest.Mock).mockResolvedValue(true)
       ;(platformConfigService.canRegister as jest.Mock).mockResolvedValue(false)
+      ;(platformConfigService.isWorkingInProgress as jest.Mock).mockResolvedValue(
+        true
+      )
+      ;(platformConfigService.getFlag as jest.Mock).mockResolvedValue(false)
 
       await platformConfigController.checkFlags(
         mockRequest as Request,
@@ -131,6 +137,8 @@ describe("PlatformConfigController", () => {
         data: {
           canLogin: true,
           canRegister: false,
+          workingInProgress: true,
+          registerFirst: false,
         },
       })
     })

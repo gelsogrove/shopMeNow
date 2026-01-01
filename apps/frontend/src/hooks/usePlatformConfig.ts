@@ -63,7 +63,12 @@ const REQUIRED_PRICE_KEYS = [
   "PUSH_CAMPAIGN",
 ]
 
-const REQUIRED_FLAG_KEYS = ["canLogin", "canRegister"]
+const REQUIRED_FLAG_KEYS = [
+  "canLogin",
+  "canRegister",
+  "workingInProgress",
+  "registerFirst",
+]
 
 const findMissingKeys = (source: Record<string, unknown>, keys: string[]) =>
   keys.filter((key) => source[key] === undefined)
@@ -224,6 +229,8 @@ export function useFeatureFlags() {
   const [flags, setFlags] = useState({
     canLogin: false,
     canRegister: false,
+    workingInProgress: false,
+    registerFirst: false,
     isLoading: true,
     error: null as string | null,
   })
