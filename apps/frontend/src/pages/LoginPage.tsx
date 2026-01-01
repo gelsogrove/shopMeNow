@@ -953,8 +953,10 @@ export function LoginPage() {
                       key={slide.src}
                       src={slide.src}
                       alt={slide.alt}
-                      className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-in-out ${
-                        index === currentSlide ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                      className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-in-out ${
+                        index === currentSlide
+                          ? "opacity-100 scale-[1.12] sm:scale-100"
+                          : "opacity-0 scale-[1.04] sm:scale-95 pointer-events-none"
                       }`}
                     />
                   ))}
@@ -1534,7 +1536,9 @@ export function LoginPage() {
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
           <div className="text-center space-y-3 mb-10">
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-green-600">
+              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
               Contact us
+              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
             </p>
             <h3 className="text-3xl font-bold text-slate-900">Send us a message</h3>
             <p className="text-slate-600">

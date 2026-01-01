@@ -213,11 +213,17 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
                   }
                   aria-disabled={plan.name === "Free" && disableTrial}
                   onClick={plan.name === "Free" ? handleStartFreeTrial : undefined}
+                  asChild={plan.name === "Enterprise"}
                 >
-                  {plan.name === "Free" && "Start Free Trial"}
-                  {plan.name === "Basic" && "Start Basic"}
-                  {plan.name === "Premium" && "Start Premium"}
-                  {plan.name === "Enterprise" && "Contact Sales"}
+                  {plan.name === "Enterprise" ? (
+                    <a href="#contact">Contact Sales</a>
+                  ) : (
+                    <>
+                      {plan.name === "Free" && "Start Free Trial"}
+                      {plan.name === "Basic" && "Start Basic"}
+                      {plan.name === "Premium" && "Start Premium"}
+                    </>
+                  )}
                 </Button>
               ) : (
                 <>
@@ -240,13 +246,16 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
                       size="lg"
                       onClick={
                         plan.planType === "ENTERPRISE"
-                          ? onChangePlan
+                          ? undefined
                           : onChangePlan
                       }
+                      asChild={plan.planType === "ENTERPRISE"}
                     >
-                      {plan.planType === "ENTERPRISE"
-                        ? "Contact Sales"
-                        : `Upgrade to ${plan.name}`}
+                      {plan.planType === "ENTERPRISE" ? (
+                        <a href="#contact">Contact Sales</a>
+                      ) : (
+                        `Upgrade to ${plan.name}`
+                      )}
                     </Button>
                   )}
                 </>
