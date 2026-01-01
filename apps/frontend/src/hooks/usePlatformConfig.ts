@@ -54,6 +54,20 @@ interface PlatformConfigState {
 // Cache TTL (5 minutes to match backend)
 const CACHE_TTL_MS = 5 * 60 * 1000
 
+const REQUIRED_PRICE_KEYS = [
+  "FREE_MONTHLY",
+  "BASIC_MONTHLY",
+  "PREMIUM_MONTHLY",
+  "ENTERPRISE_MONTHLY",
+  "MESSAGE",
+  "PUSH_CAMPAIGN",
+]
+
+const REQUIRED_FLAG_KEYS = ["canLogin", "canRegister", "landingPageEnabled"]
+
+const findMissingKeys = (source: Record<string, unknown>, keys: string[]) =>
+  keys.filter((key) => source[key] === undefined)
+
 // In-memory cache
 let cachedData: PlatformConfigData | null = null
 let lastFetchTime: Date | null = null
@@ -74,6 +88,9 @@ export function usePlatformConfig() {
       lastFetchTime &&
       Date.now() - lastFetchTime.getTime() < CACHE_TTL_MS
     ) {
+      const missingPrices = findMissingKeys(cachedData.prices || {}, REQUIRED_PRICE_KEYS)
+      const missingFlags = findMissingKeys(cachedData.flags || {}, REQUIRED_FLAG_KEYS)
+      if (!missingPrices.length && !missingFlags.length) {
       setState({
         data: cachedData,
         isLoading: false,
@@ -81,6 +98,9 @@ export function usePlatformConfig() {
         lastFetch: lastFetchTime,
       })
       return
+      }
+      cachedData = null
+      lastFetchTime = null
     }
 
     setState((prev) => ({ ...prev, isLoading: true, error: null }))
@@ -89,7 +109,21 @@ export function usePlatformConfig() {
       const response = await api.get("/platform-config")
 
       if (response.data.success) {
-        cachedData = response.data.data
+        const nextData = response.data.data as PlatformConfigData
+        const missingPrices = findMissingKeys(nextData.prices || {}, REQUIRED_PRICE_KEYS)
+        const missingFlags = findMissingKeys(nextData.flags || {}, REQUIRED_FLAG_KEYS)
+
+        if (missingPrices.length || missingFlags.length) {
+          throw new Error(
+            `Missing platform config keys: ${
+              missingPrices.length ? `prices=[${missingPrices.join(", ")}]` : ""
+            }${missingPrices.length && missingFlags.length ? " " : ""}${
+              missingFlags.length ? `flags=[${missingFlags.join(", ")}]` : ""
+            }`
+          )
+        }
+
+        cachedData = nextData
         lastFetchTime = new Date()
 
         setState({
@@ -103,14 +137,15 @@ export function usePlatformConfig() {
       }
     } catch (error) {
       console.error("[usePlatformConfig] Error fetching config:", error)
-      setState((prev) => ({
-        ...prev,
+      setState({
+        data: null,
         isLoading: false,
         error:
           error instanceof Error
             ? error.message
             : "Failed to fetch platform configuration",
-      }))
+        lastFetch: null,
+      })
     }
   }, [])
 
@@ -121,40 +156,40 @@ export function usePlatformConfig() {
 
   // Helper to get price with fallback
   const getPrice = useCallback(
-    (key: string, fallback = 0): number => {
-      return state.data?.prices[key]?.current ?? fallback
+    (key: string): number | null => {
+      return state.data?.prices[key]?.current ?? null
     },
     [state.data]
   )
 
   // Helper to get price with original (for strikethrough)
   const getPriceWithOriginal = useCallback(
-    (key: string): PriceInfo => {
-      return state.data?.prices[key] ?? { current: 0, original: null }
+    (key: string): PriceInfo | null => {
+      return state.data?.prices[key] ?? null
     },
     [state.data]
   )
 
   // Helper to get flag with fallback
   const getFlag = useCallback(
-    (key: string, fallback = true): boolean => {
-      return state.data?.flags[key] ?? fallback
+    (key: string): boolean | null => {
+      return state.data?.flags[key] ?? null
     },
     [state.data]
   )
 
   // Helper to get limit with fallback
   const getLimit = useCallback(
-    (key: string, fallback = 0): number => {
-      return state.data?.limits[key] ?? fallback
+    (key: string): number | null => {
+      return state.data?.limits[key] ?? null
     },
     [state.data]
   )
 
   // Convenience accessors for common flags
-  const canLogin = state.data?.flags.canLogin ?? true
-  const canRegister = state.data?.flags.canRegister ?? true
-  const landingPageEnabled = state.data?.flags.landingPageEnabled ?? true
+  const canLogin = state.data?.flags.canLogin ?? false
+  const canRegister = state.data?.flags.canRegister ?? false
+  const landingPageEnabled = state.data?.flags.landingPageEnabled ?? false
 
   return {
     // Raw data
@@ -189,9 +224,9 @@ export function usePlatformConfig() {
  */
 export function useFeatureFlags() {
   const [flags, setFlags] = useState({
-    canLogin: true,
-    canRegister: true,
-    landingPageEnabled: true,
+    canLogin: false,
+    canRegister: false,
+    landingPageEnabled: false,
     isLoading: true,
     error: null as string | null,
   })
@@ -202,8 +237,15 @@ export function useFeatureFlags() {
         const response = await api.get("/platform-config/flags/check")
 
         if (response.data.success) {
+          const data = response.data.data || {}
+          const missingFlags = findMissingKeys(data, REQUIRED_FLAG_KEYS)
+          if (missingFlags.length) {
+            throw new Error(
+              `Missing platform flag keys: ${missingFlags.join(", ")}`
+            )
+          }
           setFlags({
-            ...response.data.data,
+            ...data,
             isLoading: false,
             error: null,
           })

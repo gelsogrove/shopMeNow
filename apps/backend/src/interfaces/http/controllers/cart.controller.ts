@@ -1,7 +1,6 @@
 import { Request, Response } from "express"
 import { PriceCalculationService } from "../../../application/services/price-calculation.service"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
-import { BillingPrices } from "../../../domain/enums/billing-prices.enum"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
 

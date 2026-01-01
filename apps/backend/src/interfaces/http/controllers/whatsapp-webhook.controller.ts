@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import { UrlShortenerService } from "../../../application/services/url-shortener.service"
-import { BillingPrices } from "../../../domain/enums/billing-prices.enum"
+import { platformConfigService } from "../../../services/platform-config.service"
 import { prisma } from "../../../lib/prisma"
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../../middlewares/rateLimiter"
 // 🆕 Chat Engine - Main conversation processor
@@ -619,6 +619,8 @@ export class WhatsAppWebhookController {
           workspaceName: workspace?.name || "unknown",
         })
         
+        const welcomeMessagePrice = await platformConfigService.getPrice("MESSAGE")
+
         const { tempCustomer, chatSession } = await prisma.$transaction(async (tx) => {
           // ✅ STEP 5: CREATE TEMPORARY CUSTOMER RECORD (will be updated after registration)
           // This allows us to save the welcome message in chat history
@@ -675,7 +677,7 @@ export class WhatsAppWebhookController {
                 timestamp: new Date().toISOString(),
                 flow: ["welcome", "safety", "save", "whatsapp"],
                 attemptCount: registrationAttempt.attemptCount,
-                messagePrice: BillingPrices.MESSAGE,
+                messagePrice: welcomeMessagePrice,
                 debugSteps: debugSteps,
               }),
             },
@@ -705,7 +707,7 @@ export class WhatsAppWebhookController {
           },
         })
 
-        // 💰 STEP 9: Track welcome message cost (from BillingPrices enum)
+        // 💰 STEP 9: Track welcome message cost
         // NOTE: This is OUTSIDE transaction intentionally - billing failure shouldn't rollback user creation
         try {
           const { BillingService } = await import(
@@ -721,7 +723,7 @@ export class WhatsAppWebhookController {
           )
 
           logger.info(
-            `[WEBHOOK] 💰 Welcome message cost tracked: €${BillingPrices.MESSAGE.toFixed(2)} for customer ${tempCustomer.id}`
+            `[WEBHOOK] 💰 Welcome message cost tracked: €${welcomeMessagePrice.toFixed(2)} for customer ${tempCustomer.id}`
           )
         } catch (billingError) {
           logger.error(

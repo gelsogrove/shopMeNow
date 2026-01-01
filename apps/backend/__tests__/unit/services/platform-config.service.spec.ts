@@ -138,9 +138,10 @@ describe("PlatformConfigService", () => {
       expect(price).toBe(19)
     })
 
-    it("should return 0 for non-existent price", async () => {
-      const price = await platformConfigService.getPrice("NON_EXISTENT")
-      expect(price).toBe(0)
+    it("should throw for non-existent price", async () => {
+      await expect(
+        platformConfigService.getPrice("NON_EXISTENT")
+      ).rejects.toThrow("Missing platform price config")
     })
 
     it("should handle decimal prices correctly", async () => {
@@ -176,9 +177,10 @@ describe("PlatformConfigService", () => {
       expect(result).toBe(false)
     })
 
-    it("should return true for non-existent flag (safe default)", async () => {
-      const result = await platformConfigService.getFlag("NON_EXISTENT")
-      expect(result).toBe(true)
+    it("should throw for non-existent flag", async () => {
+      await expect(
+        platformConfigService.getFlag("NON_EXISTENT")
+      ).rejects.toThrow("Missing platform flag config")
     })
   })
 
@@ -200,9 +202,10 @@ describe("PlatformConfigService", () => {
       expect(limit).toBe(50)
     })
 
-    it("should return 0 for non-existent limit", async () => {
-      const limit = await platformConfigService.getLimit("NON_EXISTENT")
-      expect(limit).toBe(0)
+    it("should throw for non-existent limit", async () => {
+      await expect(
+        platformConfigService.getLimit("NON_EXISTENT")
+      ).rejects.toThrow("Missing platform limit config")
     })
   })
 

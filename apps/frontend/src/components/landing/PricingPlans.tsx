@@ -26,7 +26,7 @@ interface PricingPlansProps {
 
 export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: PricingPlansProps) {
   const { t } = useLanguage()
-  const { prices, isLoading, getPriceWithOriginal } = usePlatformConfig()
+  const { prices, isLoading, error, getPriceWithOriginal } = usePlatformConfig()
 
   const handleStartFreeTrial = () => {
     if (onStartFreeTrial) {
@@ -45,11 +45,37 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: Pr
     )
   }
 
+  if (error) {
+    return (
+      <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-red-600 font-medium">
+            Pricing configuration missing. Please contact support.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   // Get prices from database with original values for strikethrough
   const freePrice = getPriceWithOriginal("FREE_MONTHLY")
   const basicPrice = getPriceWithOriginal("BASIC_MONTHLY")
   const premiumPrice = getPriceWithOriginal("PREMIUM_MONTHLY")
   const enterprisePrice = getPriceWithOriginal("ENTERPRISE_MONTHLY")
+  const messagePrice = prices.MESSAGE
+  const pushPrice = prices.PUSH_CAMPAIGN
+
+  if (!freePrice || !basicPrice || !premiumPrice || !enterprisePrice || !messagePrice || !pushPrice) {
+    return (
+      <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <p className="text-red-600 font-medium">
+            Pricing configuration missing. Please contact support.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   // Build plans with DYNAMIC prices from database
   const plans: PricingPlan[] = [
@@ -261,7 +287,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: Pr
               <MessageSquare className="w-6 h-6 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-green-600 mb-1">
-              €{(prices.MESSAGE?.current ?? 0.10).toFixed(2)}
+              €{messagePrice.current.toFixed(2)}
             </div>
             <div className="text-sm font-medium text-gray-900 mb-2">
               {t("pricing.usage.message")}
@@ -289,7 +315,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan }: Pr
               </svg>
             </div>
             <div className="text-3xl font-bold text-orange-600 mb-1">
-              €{(prices.PUSH_CAMPAIGN?.current ?? 1.00).toFixed(2)}
+              €{pushPrice.current.toFixed(2)}
             </div>
             <div className="text-sm font-medium text-gray-900 mb-2">
               {t("pricing.usage.push")}

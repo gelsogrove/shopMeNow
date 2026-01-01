@@ -183,6 +183,16 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   
   // Get prices from database for dynamic pricing
   const { getPriceWithOriginal } = usePlatformConfig()
+  const requiredPlanPrices = {
+    BASIC_MONTHLY: getPriceWithOriginal("BASIC_MONTHLY"),
+    PREMIUM_MONTHLY: getPriceWithOriginal("PREMIUM_MONTHLY"),
+    ENTERPRISE_MONTHLY: getPriceWithOriginal("ENTERPRISE_MONTHLY"),
+    MESSAGE: getPriceWithOriginal("MESSAGE"),
+    PUSH_CAMPAIGN: getPriceWithOriginal("PUSH_CAMPAIGN"),
+  }
+  const missingPriceKeys = Object.entries(requiredPlanPrices)
+    .filter(([, value]) => !value)
+    .map(([key]) => key)
   
   // Local billing state (used when workspaceId prop is provided)
   const [localBillingOverview, setLocalBillingOverview] = useState<BillingOverview | null>(null)
@@ -976,7 +986,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     Choose the plan that best suits your needs. The subscription will start in 30 days.
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    💡 Usage costs are extra: €0.10 per message + €1.00 per WhatsApp campaign message
+                    {requiredPlanPrices.MESSAGE && requiredPlanPrices.PUSH_CAMPAIGN
+                      ? `💡 Usage costs are extra: €${requiredPlanPrices.MESSAGE.current.toFixed(2)} per message + €${requiredPlanPrices.PUSH_CAMPAIGN.current.toFixed(2)} per WhatsApp campaign message`
+                      : "⚠️ Pricing configuration missing. Plan changes are disabled."}
                   </span>
                 </DialogDescription>
               </DialogHeader>
@@ -990,12 +1002,14 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   const isDowngrade = PLAN_ORDER[billing.planType] > PLAN_ORDER[planKey]
                   const downgradeCheck = isDowngrade ? checkCanDowngrade(usage, planKey) : { canDowngrade: true, reasons: [] }
                   // Free plan is never selectable for plan changes
-                  const canSelect = !isFreePlan && !isCurrentPlan && (isDowngrade ? downgradeCheck.canDowngrade : true)
+                  const hasMissingPrices = missingPriceKeys.length > 0
+                  const canSelect = !isFreePlan && !isCurrentPlan && !hasMissingPrices && (isDowngrade ? downgradeCheck.canDowngrade : true)
                   const features = getPlanFeaturesWithText(planKey)
                   
                   // Get dynamic price from database (Free plan has no price key)
                   const priceKey = isFreePlan ? null : `${planKey}_MONTHLY`
-              const priceInfo = priceKey ? getPriceWithOriginal(priceKey) : { current: 0, original: null }
+              const priceInfo = priceKey ? requiredPlanPrices[priceKey as keyof typeof requiredPlanPrices] : null
+              const isPriceMissing = !!priceKey && !priceInfo
               
               return (
                 <div
@@ -1024,15 +1038,23 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       ) : (
                         <>
                           {/* Show strikethrough original price if different from current */}
-                          {priceInfo.original && priceInfo.original !== priceInfo.current && (
+                          {priceInfo?.original && priceInfo.original !== priceInfo.current && (
                             <span className="text-lg text-gray-400 line-through mr-2">
                               €{priceInfo.original}
                             </span>
                           )}
-                          <span className={`text-3xl font-bold ${priceInfo.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
-                            €{priceInfo.current}
-                          </span>
-                          <span className="text-gray-600">/month</span>
+                          {isPriceMissing ? (
+                            <span className="text-sm text-red-600">
+                              Pricing not configured
+                            </span>
+                          ) : (
+                            <>
+                              <span className={`text-3xl font-bold ${priceInfo?.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
+                                €{priceInfo?.current}
+                              </span>
+                              <span className="text-gray-600">/month</span>
+                            </>
+                          )}
                         </>
                       )}
                     </div>

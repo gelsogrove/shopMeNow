@@ -27,7 +27,6 @@ import { FAQPage } from "./pages/FAQPage"
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage"
 import { LoginPage } from "./pages/LoginPage"
 import { LandingPage } from "./pages/LandingPage"
-import { RootPage } from "./pages/RootPage"
 import NotFoundPage from "./pages/not-found"
 import { OffersPage } from "./pages/OffersPage"
 import OrdersPage from "./pages/OrdersPage"
@@ -76,7 +75,7 @@ export function App() {
               <Toaster position="top-right" duration={800} />
               <Routes>
                 {/* ROOT: Dynamic Landing vs Login based on flag */}
-                <Route path="/" element={<RootPage />} />
+                <Route path="/" element={<Navigate to="/landing" replace />} />
 
                 {/* Auth Routes - accessibili senza autenticazione */}
                 <Route path="/auth">

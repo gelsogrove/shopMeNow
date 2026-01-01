@@ -1,5 +1,5 @@
 import { prisma } from "@echatbot/database"
-import { BillingPrices } from "../domain/enums/billing-prices.enum"
+import { platformConfigService } from "./platform-config.service"
 import logger from "../utils/logger"
 import { usageService } from "./usage.service"
 
@@ -10,7 +10,7 @@ import { usageService } from "./usage.service"
  *
  * Gestisce tutti i push messaging WhatsApp con:
  * - 🌍 Supporto multilingua automatico
- * - 💰 Tracking costi da BillingPrices enum (SINGLE SOURCE OF TRUTH)
+ * - 💰 Tracking costi da PlatformConfig (single source of truth)
  * - 📊 Integrazione analytics
  * - 🔄 Template messaging unificati
  *
@@ -172,7 +172,7 @@ export const pushMessagingService = {
       )
 
       // 7. 💰 Track usage cost based on message type (using centralized pricing)
-      const messagePrice = this.getMessagePrice(data.type)
+      const messagePrice = await this.getMessagePrice(data.type)
 
       if (messagePrice > 0) {
         await this.trackPushCost(
@@ -324,9 +324,9 @@ export const pushMessagingService = {
    * 💰 Get message price - ALL push notifications use PUSH_CAMPAIGN price
    * Simplified: only 2 prices exist (MESSAGE and PUSH_CAMPAIGN)
    */
-  getMessagePrice(_type: PushMessageType): number {
+  async getMessagePrice(_type: PushMessageType): Promise<number> {
     // All push notifications have the same price
-    return BillingPrices.PUSH_CAMPAIGN
+    return platformConfigService.getPrice("PUSH_CAMPAIGN")
   },
 
   /**

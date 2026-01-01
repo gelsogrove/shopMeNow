@@ -7,9 +7,7 @@
  * Features:
  * - In-memory cache with 5-minute TTL
  * - Type-safe getters for prices, flags, and limits
- * - Automatic fallback for backwards compatibility (during migration)
- *
- * ⚠️ CRITICAL: After full migration, remove all fallbacks
+ * - No fallbacks: missing config is a hard error
  *
  * @author Andrea Gelso - eChatbot Platform
  */
@@ -132,8 +130,8 @@ class PlatformConfigService {
     await this.ensureCache()
     const item = this.cache.prices.get(key)
     if (!item) {
-      console.warn(`[PlatformConfig] Price not found: ${key}`)
-      return 0
+      logger.error(`[PlatformConfig] Price not found: ${key}`)
+      throw new Error(`Missing platform price config: ${key}`)
     }
     return parseFloat(item.value)
   }
@@ -147,8 +145,8 @@ class PlatformConfigService {
     await this.ensureCache()
     const item = this.cache.prices.get(key)
     if (!item) {
-      console.warn(`[PlatformConfig] Price not found: ${key}`)
-      return { current: 0, original: null }
+      logger.error(`[PlatformConfig] Price not found: ${key}`)
+      throw new Error(`Missing platform price config: ${key}`)
     }
     return {
       current: parseFloat(item.value),
@@ -192,8 +190,8 @@ class PlatformConfigService {
     await this.ensureCache()
     const item = this.cache.flags.get(key)
     if (!item) {
-      console.warn(`[PlatformConfig] Flag not found: ${key}, defaulting to true`)
-      return true // Safe default: allow operation
+      logger.error(`[PlatformConfig] Flag not found: ${key}`)
+      throw new Error(`Missing platform flag config: ${key}`)
     }
     return item.value === "true"
   }
@@ -246,8 +244,8 @@ class PlatformConfigService {
     await this.ensureCache()
     const item = this.cache.limits.get(key)
     if (!item) {
-      console.warn(`[PlatformConfig] Limit not found: ${key}`)
-      return 0
+      logger.error(`[PlatformConfig] Limit not found: ${key}`)
+      throw new Error(`Missing platform limit config: ${key}`)
     }
     return parseInt(item.value, 10)
   }
