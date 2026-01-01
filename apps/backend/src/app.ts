@@ -134,10 +134,12 @@ app.use(
               frameSrc: [
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
+                "https://www.google.com",
               ],
               childSrc: [
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
+                "https://www.google.com",
               ],
               upgradeInsecureRequests: [],
             },
