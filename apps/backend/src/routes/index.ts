@@ -646,6 +646,11 @@ logger.info(
   "✅ Registered agent config routes (/api/workspaces/:workspaceId/agent-config)"
 )
 
+// 🔓 PUBLIC CONTACT FORM ROUTE (NO AUTH REQUIRED)
+// IMPORTANT: Must be mounted BEFORE customersRouter to prevent auth middleware interception
+router.use(contactRoutes())
+logger.info("✅ Registered contact route: /api/contact (public)")
+
 // Removed messages, push-messaging, and push-testing routes (not used by frontend)
 router.use("/users", createUserRouter())
 // Mount customer routes on both legacy and workspace paths to ensure backward compatibility
@@ -682,10 +687,6 @@ router.use(feedbackRoutes(feedbackController))
 logger.info(
   "✅ Registered feedback routes: /api/feedback (public), /api/workspaces/:workspaceId/feedbacks (admin)"
 )
-
-// Public contact form route
-router.use(contactRoutes())
-logger.info("✅ Registered contact route: /api/contact (public)")
 
 // Mount agent routes with workspace parameter properly configured
 router.use(
