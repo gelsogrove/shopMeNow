@@ -175,6 +175,8 @@ export function LoginPage() {
     { src: hero5, alt: "WhatsApp AI agent dashboard view 5" },
   ]
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [contactName, setContactName] = useState("")
+  const [contactSurname, setContactSurname] = useState("")
   const [contactTitle, setContactTitle] = useState("")
   const [contactMessage, setContactMessage] = useState("")
   const [contactCaptchaToken, setContactCaptchaToken] = useState("")
@@ -661,6 +663,16 @@ export function LoginPage() {
     event.preventDefault()
     setContactError("")
 
+    if (!contactName.trim() || contactName.trim().length < 2) {
+      setContactError("Please enter your name.")
+      return
+    }
+
+    if (!contactSurname.trim() || contactSurname.trim().length < 2) {
+      setContactError("Please enter your surname.")
+      return
+    }
+
     if (!contactCaptchaToken) {
       setContactError("Please complete the security check.")
       return
@@ -681,6 +693,8 @@ export function LoginPage() {
 
     try {
       await api.post("/contact", {
+        name: contactName.trim(),
+        surname: contactSurname.trim(),
         title: contactTitle.trim(),
         message: contactMessage.trim(),
         captchaToken: contactCaptchaToken,
@@ -688,6 +702,8 @@ export function LoginPage() {
       })
 
       setContactSuccess(true)
+      setContactName("")
+      setContactSurname("")
       setContactTitle("")
       setContactMessage("")
       setContactCaptchaToken("")
@@ -931,7 +947,7 @@ export function LoginPage() {
                     />
                   ))}
                 </div>
-                <div className="relative w-full pt-[70%]">
+                <div className="relative w-full pt-[85%] sm:pt-[70%] min-h-[20rem] bg-white">
                   {heroSlides.map((slide, index) => (
                     <img
                       key={slide.src}
@@ -1530,6 +1546,34 @@ export function LoginPage() {
             onSubmit={handleContactSubmit}
             className="rounded-3xl border border-slate-200 bg-slate-50 p-6 lg:p-8 space-y-6 shadow-lg"
           >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-name">
+                  Name
+                </label>
+                <Input
+                  id="contact-name"
+                  value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                  placeholder="Your first name"
+                  className="h-11"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-surname">
+                  Surname
+                </label>
+                <Input
+                  id="contact-surname"
+                  value={contactSurname}
+                  onChange={(event) => setContactSurname(event.target.value)}
+                  placeholder="Your last name"
+                  className="h-11"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700" htmlFor="contact-title">
                 Title
