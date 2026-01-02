@@ -107,13 +107,13 @@ export function NewsUpdates() {
   const actualIndex = currentIndex + newsItems.length
 
   return (
-    <div className="py-12 bg-gradient-to-br from-slate-50 to-blue-50 -mt-[35px]">
+    <div className="py-8 bg-gradient-to-br from-slate-50 to-blue-50 -mt-[35px]">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-8">
+        <div className="text-center mb-4">
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
             {t("news.title")}
           </h2>
-          <p className="text-lg text-gray-600">{t("news.subtitle")}</p>
+          <p className="text-xl text-gray-600">{t("news.subtitle")}</p>
         </div>
 
         {/* Carousel Container */}
@@ -203,7 +203,7 @@ export function NewsUpdates() {
                         </div>
 
                         <h3
-                          className={`text-xl md:text-2xl font-bold mb-4 transition-colors ${
+                          className={`text-2xl md:text-3xl font-bold mb-4 transition-colors ${
                             isCenter ? "text-gray-900" : "text-gray-600"
                           }`}
                         >
@@ -211,7 +211,7 @@ export function NewsUpdates() {
                         </h3>
 
                         <p
-                          className={`text-sm md:text-base leading-relaxed transition-colors ${
+                          className={`text-base md:text-lg leading-relaxed transition-colors ${
                             isCenter ? "text-gray-700" : "text-gray-500"
                           }`}
                         >

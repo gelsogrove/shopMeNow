@@ -1437,10 +1437,10 @@ export function LoginPage() {
               <div className="h-12 w-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center mb-4">
                 <Bot className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              <h3 className="text-2xl font-semibold text-slate-900 mb-3">
                 AI sales agent
               </h3>
-              <p className="text-base text-slate-600">
+              <p className="text-lg text-slate-600">
                 Build your intelligent sales assistant in minutes. Showcase products, handle inquiries 24/7, and process orders seamlessly through WhatsApp with natural conversation flows.
               </p>
             </div>
@@ -1448,10 +1448,10 @@ export function LoginPage() {
               <div className="h-12 w-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
                 <Megaphone className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              <h3 className="text-2xl font-semibold text-slate-900 mb-3">
                 Push messages
               </h3>
-              <p className="text-base text-slate-600">
+              <p className="text-lg text-slate-600">
                 Launch targeted WhatsApp campaigns, recover abandoned carts automatically, and re-engage customers with personalized promotions. Track real-time metrics to optimize conversions.
               </p>
             </div>
@@ -1459,10 +1459,10 @@ export function LoginPage() {
               <div className="h-12 w-12 rounded-xl bg-lime-100 text-lime-600 flex items-center justify-center mb-4">
                 <Headphones className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              <h3 className="text-2xl font-semibold text-slate-900 mb-3">
                 Customer care
               </h3>
-              <p className="text-base text-slate-600">
+              <p className="text-lg text-slate-600">
                 Resolve customer questions instantly with AI support. Track orders, provide product details, and escalate complex issues to your team with full conversation history.
               </p>
             </div>
@@ -1520,7 +1520,7 @@ export function LoginPage() {
               <Button
                 type="button"
                 disabled
-                className="px-12 py-7 text-lg font-semibold rounded-full bg-green-600 text-white cursor-not-allowed shadow-xl shadow-green-200/70 hover:bg-green-600"
+                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white cursor-not-allowed shadow-lg shadow-green-200/70 hover:bg-green-600"
               >
                 Try our demo
               </Button>
@@ -1552,7 +1552,7 @@ export function LoginPage() {
             <div className="flex justify-center lg:justify-end">
               <Button
                 type="button"
-                className="px-10 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
                 onClick={() => {
                   document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
                 }}
@@ -1567,7 +1567,7 @@ export function LoginPage() {
       {/* Privacy Section */}
       <div className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,260px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
             <div className="flex items-center justify-center">
               <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
                 <img
@@ -1584,6 +1584,14 @@ export function LoginPage() {
                 models. Your customer information stays under your control, encrypted in transit, and handled with strict
                 access rules.
               </p>
+            </div>
+            <div className="flex justify-center lg:justify-end">
+              <Button
+                type="button"
+                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+              >
+                Go to GDPR
+              </Button>
             </div>
           </div>
         </div>
@@ -1731,7 +1739,7 @@ export function LoginPage() {
                 <Button
                   type="submit"
                   disabled={contactSubmitting}
-                  className="px-10 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
                 >
                   {contactSubmitting ? "Sending..." : "Send message"}
                 </Button>
