@@ -5,7 +5,7 @@ import { EmailService } from "../../../application/services/email.service"
 export class ContactController {
   async submitContact(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, surname, title, message, captchaToken, website } = req.body
+      const { name, surname, title, message, phone, captchaToken, website } = req.body
 
       // Honeypot field for bots
       if (website && typeof website === "string" && website.trim().length > 0) {
@@ -61,10 +61,15 @@ export class ContactController {
       }
 
       const emailService = new EmailService()
+      const phoneLine =
+        typeof phone === "string" && phone.trim().length > 0
+          ? `Phone: ${phone.trim()}\n`
+          : ""
+
       await emailService.sendContactEmail({
         to: process.env.CONTACT_EMAIL || "echatbotai@gmail.com",
         subject: `[Contact] ${title.trim()}`,
-        message: `From: ${name.trim()} ${surname.trim()}\n\n${message.trim()}`,
+        message: `From: ${name.trim()} ${surname.trim()}\n${phoneLine}\n${message.trim()}`,
         metadata: {
           ip: req.ip,
           userAgent: req.headers["user-agent"],

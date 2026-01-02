@@ -179,6 +179,7 @@ export function LoginPage() {
   const [contactSurname, setContactSurname] = useState("")
   const [contactTitle, setContactTitle] = useState("")
   const [contactMessage, setContactMessage] = useState("")
+  const [contactPhone, setContactPhone] = useState("")
   const [contactCaptchaToken, setContactCaptchaToken] = useState("")
   const [contactSubmitting, setContactSubmitting] = useState(false)
   const [contactError, setContactError] = useState("")
@@ -697,6 +698,7 @@ export function LoginPage() {
         surname: contactSurname.trim(),
         title: contactTitle.trim(),
         message: contactMessage.trim(),
+        phone: contactPhone.trim() || undefined,
         captchaToken: contactCaptchaToken,
         website: contactHoneypot,
       })
@@ -706,6 +708,7 @@ export function LoginPage() {
       setContactSurname("")
       setContactTitle("")
       setContactMessage("")
+      setContactPhone("")
       setContactCaptchaToken("")
       setContactHoneypot("")
       ;(window as any).grecaptcha?.reset?.()
@@ -920,11 +923,6 @@ export function LoginPage() {
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16 relative z-20">
         <div className="text-center mb-12 space-y-4">
-          <p className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-green-600">
-            <span className="h-[1px] w-8 bg-green-600" aria-hidden="true" />
-            {t("header.tagline")}
-            <span className="h-[1px] w-8 bg-green-600" aria-hidden="true" />
-          </p>
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
             {t("hero.title")}
           </h1>
@@ -1443,7 +1441,7 @@ export function LoginPage() {
                 AI sales agent
               </h3>
               <p className="text-sm text-slate-600">
-                Create your agent in minutes. No AI skills or prompts required.
+                Create your agent in minutes with guided setup and ready-made flows.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
@@ -1465,7 +1463,7 @@ export function LoginPage() {
                 Customer care
               </h3>
               <p className="text-sm text-slate-600">
-                Triage FAQs, escalate to humans with context, and keep every chat logged.
+                Handle FAQs, escalate to humans with context, and keep every chat logged.
               </p>
             </div>
           </div>
@@ -1531,6 +1529,41 @@ export function LoginPage() {
         </div>
       </div>
 
+      {/* Integration Section */}
+      <div className="py-14 bg-white border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,260px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
+            <div className="flex items-center justify-center">
+              <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
+                <img
+                  src="/CRM.jpg"
+                  alt="CRM integration preview"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="text-center lg:text-left space-y-3">
+              <h3 className="text-3xl font-bold text-slate-900">Custom CRM integration</h3>
+              <p className="text-lg text-slate-600">
+                With a custom integration on the enterprise plan, you can connect your chatbot to external data sources,
+                trigger workflows, and securely read or write data via protected REST APIs.
+              </p>
+            </div>
+            <div className="flex justify-center lg:justify-end">
+              <Button
+                type="button"
+                className="px-10 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                onClick={() => {
+                  document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
+                }}
+              >
+                Request a quote
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Contact Form */}
       <div id="contact" className="py-16 bg-white border-t border-slate-200">
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
@@ -1546,105 +1579,140 @@ export function LoginPage() {
             </p>
           </div>
 
-          <form
-            onSubmit={handleContactSubmit}
-            className="rounded-3xl border border-slate-200 bg-slate-50 p-6 lg:p-8 space-y-6 shadow-lg"
-          >
-            <div className="grid grid-cols-2 gap-4">
+          {contactSuccess ? (
+            <div className="rounded-3xl border border-emerald-200 bg-emerald-50/60 p-10 text-center shadow-lg">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-8 w-8"
+                  aria-hidden="true"
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </div>
+              <h4 className="text-2xl font-semibold text-slate-900">Message sent</h4>
+              <p className="mt-2 text-slate-600">
+                Thanks for reaching out. We’ll be in touch soon.
+              </p>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleContactSubmit}
+              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 lg:p-8 space-y-6 shadow-lg"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700" htmlFor="contact-name">
+                    Name
+                  </label>
+                  <Input
+                    id="contact-name"
+                    value={contactName}
+                    onChange={(event) => setContactName(event.target.value)}
+                    placeholder="Your first name"
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700" htmlFor="contact-surname">
+                    Surname
+                  </label>
+                  <Input
+                    id="contact-surname"
+                    value={contactSurname}
+                    onChange={(event) => setContactSurname(event.target.value)}
+                    placeholder="Your last name"
+                    className="h-11"
+                    required
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-name">
-                  Name
+                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-phone">
+                  Phone (optional)
                 </label>
                 <Input
-                  id="contact-name"
-                  value={contactName}
-                  onChange={(event) => setContactName(event.target.value)}
-                  placeholder="Your first name"
+                  id="contact-phone"
+                  value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
+                  placeholder="+34 654 728 753"
                   className="h-11"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-surname">
-                  Surname
+                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-title">
+                  Title
                 </label>
                 <Input
-                  id="contact-surname"
-                  value={contactSurname}
-                  onChange={(event) => setContactSurname(event.target.value)}
-                  placeholder="Your last name"
+                  id="contact-title"
+                  value={contactTitle}
+                  onChange={(event) => setContactTitle(event.target.value)}
+                  placeholder="Tell us what you need"
                   className="h-11"
+                  required
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700" htmlFor="contact-title">
-                Title
-              </label>
-              <Input
-                id="contact-title"
-                value={contactTitle}
-                onChange={(event) => setContactTitle(event.target.value)}
-                placeholder="Tell us what you need"
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700" htmlFor="contact-message">
-                Message
-              </label>
-              <textarea
-                id="contact-message"
-                value={contactMessage}
-                onChange={(event) => setContactMessage(event.target.value)}
-                placeholder="Write your message here..."
-                className="min-h-[140px] w-full rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
-              />
-            </div>
-
-            <input
-              type="text"
-              name="website"
-              value={contactHoneypot}
-              onChange={(event) => setContactHoneypot(event.target.value)}
-              className="hidden"
-              tabIndex={-1}
-              autoComplete="off"
-            />
-
-            <div className="flex justify-center">
-              {recaptchaSiteKey ? (
-                <div
-                  className="g-recaptcha"
-                  data-sitekey={recaptchaSiteKey}
-                  data-callback="onRecaptchaSuccess"
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-message">
+                  Message
+                </label>
+                <textarea
+                  id="contact-message"
+                  value={contactMessage}
+                  onChange={(event) => setContactMessage(event.target.value)}
+                  placeholder="Write your message here..."
+                  required
+                  className="min-h-[140px] w-full rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                 />
-              ) : (
-                <p className="text-sm text-red-600">Captcha configuration missing.</p>
+              </div>
+
+              <input
+                type="text"
+                name="website"
+                value={contactHoneypot}
+                onChange={(event) => setContactHoneypot(event.target.value)}
+                className="hidden"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+
+              <div className="flex justify-center">
+                {recaptchaSiteKey ? (
+                  <div
+                    className="g-recaptcha"
+                    data-sitekey={recaptchaSiteKey}
+                    data-callback="onRecaptchaSuccess"
+                  />
+                ) : (
+                  <p className="text-sm text-red-600">Captcha configuration missing.</p>
+                )}
+              </div>
+
+              {contactError && (
+                <div className="text-sm text-red-600 text-center">{contactError}</div>
               )}
-            </div>
 
-            {contactError && (
-              <div className="text-sm text-red-600 text-center">{contactError}</div>
-            )}
-            {contactSuccess && (
-              <div className="text-sm text-green-600 text-center">
-                Message sent successfully. We’ll be in touch soon.
+              <div className="flex justify-center">
+                <Button
+                  type="submit"
+                  disabled={contactSubmitting}
+                  className="px-10 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                >
+                  {contactSubmitting ? "Sending..." : "Send message"}
+                </Button>
               </div>
-            )}
-
-            <div className="flex justify-center">
-              <Button
-                type="submit"
-                disabled={contactSubmitting}
-                className="px-10 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
-              >
-                {contactSubmitting ? "Sending..." : "Send message"}
-              </Button>
-            </div>
-          </form>
+            </form>
+          )}
         </div>
       </div>
 
