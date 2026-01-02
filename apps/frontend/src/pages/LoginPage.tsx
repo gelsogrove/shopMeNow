@@ -907,13 +907,9 @@ export function LoginPage() {
           {/* Main Header Row */}
           <div className="flex items-center justify-between py-1 md:py-1.5">
             {/* Left: Logo + Brand */}
-            <div className="flex items-center justify-start gap-0">
-              <img 
-                src="/logo.png" 
-                alt="eChatbot" 
-                className="h-[56px] w-[56px] md:h-[72px] md:w-[72px] lg:h-[80px] lg:w-[80px] object-contain mr-[-10px] md:mr-[-14px]"
-              />
-              <span className="text-2xl md:text-3xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot</span>
+            <div className="flex items-center justify-start gap-1">
+               
+              <span className="text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot.AI</span>
             </div>
 
             {/* Right: Language Selector + Auth */}
