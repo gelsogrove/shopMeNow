@@ -905,13 +905,13 @@ export function LoginPage() {
           </div>
 
           {/* Main Header Row */}
-          <div className="flex items-center justify-between h-16 md:h-20">
+          <div className="flex items-center justify-between py-1 md:py-1.5">
             {/* Left: Logo + Brand */}
             <div className="flex items-center justify-start gap-0">
               <img 
                 src="/logo.png" 
                 alt="eChatbot" 
-                className="h-[64px] w-[64px] md:h-[88px] md:w-[88px] lg:h-[100px] lg:w-[100px] object-contain mr-[-8px] md:mr-[-15px]"
+                className="h-[56px] w-[56px] md:h-[72px] md:w-[72px] lg:h-[80px] lg:w-[80px] object-contain mr-[-10px] md:mr-[-14px]"
               />
               <span className="text-2xl md:text-3xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot</span>
             </div>
@@ -1772,7 +1772,7 @@ export function LoginPage() {
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                       Interactive Demo
                     </div>
-                    <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
                       {t("demo.title")}
                     </h3>
                     <p className="text-xl text-slate-600 leading-relaxed">
@@ -1804,6 +1804,40 @@ export function LoginPage() {
         </div>
       </div>
 
+      {/* Human-in-the-loop Section */}
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="group relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
+                <div className="flex flex-col items-center lg:items-start gap-4">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/40 shadow-inner" aria-hidden="true" />
+                  </div>
+                </div>
+
+                <div className="space-y-6 text-center lg:text-left">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <span>🤝</span>
+                      Human-in-the-loop
+                    </div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                      {t("humanLoop.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed">
+                      {t("humanLoop.subtitle")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Integration Section */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -1820,7 +1854,7 @@ export function LoginPage() {
                       <span>🔗</span>
                       Enterprise Feature
                     </div>
-                    <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
                       {t("integration.crm.title")}
                     </h3>
                     <p className="text-xl text-slate-600 leading-relaxed">
@@ -1898,7 +1932,7 @@ export function LoginPage() {
                       <span>🛡️</span>
                       GDPR Compliant
                     </div>
-                    <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
                       {t("privacy.title")}
                     </h3>
                     <p className="text-xl text-slate-600 leading-relaxed">
@@ -2092,14 +2126,14 @@ export function LoginPage() {
       </div>
 
       {/* CTA Section - Barra Verde con Call to Action */}
-      <div className="py-20 bg-gradient-to-br from-green-600 to-emerald-700 relative overflow-hidden">
+      <div className="py-12 bg-gradient-to-br from-green-600 to-emerald-700 relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute inset-0 bg-gradient-to-r from-green-600/50 to-transparent"></div>
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl"></div>
         
         <div className="max-w-5xl mx-auto px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
             {t("cta.title")}
           </h2>
           <p className="text-xl md:text-2xl text-green-50 mb-10 leading-relaxed max-w-3xl mx-auto">

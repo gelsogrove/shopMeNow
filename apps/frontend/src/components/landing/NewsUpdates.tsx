@@ -73,6 +73,16 @@ const newsItems: NewsItem[] = [
     image: "/logo.png",
     bgGradient: "from-emerald-50 to-teal-50",
   },
+  {
+    id: 6,
+    dateKey: "news.6.date",
+    titleKey: "news.6.title",
+    categoryKey: "news.6.category",
+    descriptionKey: "news.6.desc",
+    icon: <Headphones className="w-6 h-6" />,
+    image: "/logo.png",
+    bgGradient: "from-amber-50 to-orange-50",
+  },
 ]
 
 export function NewsUpdates() {

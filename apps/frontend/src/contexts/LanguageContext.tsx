@@ -85,7 +85,17 @@ const translations = {
     "news.5.title": "Supporto per team informativi",
     "news.5.category": "Supporto",
     "news.5.desc":
-      "Non vendi online? Nessun problema. eChatbot aiuta anche i team di assistenza a rispondere alle domande, fornire informazioni e guidare i clienti su WhatsApp con risposte sempre aggiornate.",
+      "Non vendi online? Nessun problema. Il nostro chatbot di supporto aiuta i team di assistenza a rispondere alle domande, fornire informazioni e guidare i clienti su WhatsApp con risposte sempre aggiornate.",
+    "news.6.date": "5 Settembre 2025",
+    "news.6.title": "Human-in-the-loop disponibile",
+    "news.6.category": "Supporto",
+    "news.6.desc":
+      "La funzionalita human-in-the-loop e ora attiva: passa all'operatore quando serve e mantieni il contesto completo della conversazione.",
+
+    // Human-in-the-loop Section
+    "humanLoop.title": "Supporto human-in-the-loop",
+    "humanLoop.subtitle":
+      "Passa a un operatore quando serve mantenendo tutto il contesto. Il team resta in controllo, con l'AI che fa il lavoro pesante.",
 
     // Pricing
     "pricing.title": "Scegli il Tuo Piano",
@@ -507,6 +517,21 @@ const translations = {
     "news.4.category": "Marketing",
     "news.4.desc":
       "Launch targeted marketing campaigns with our new Push Notifications feature! Send promotional messages, special offers, and updates directly to your customers via WhatsApp. Create campaigns with custom messages, schedule sends for optimal timing, and track delivery rates and customer engagement. Perfect for announcing new products, flash sales, or important updates to keep your customers informed and engaged.",
+    "news.5.date": "September 10, 2025",
+    "news.5.title": "Support-first teams welcome",
+    "news.5.category": "Support",
+    "news.5.desc":
+      "Not selling online? No problem. Our support chatbot helps teams answer questions, share accurate information, and guide customers on WhatsApp with up-to-date replies.",
+    "news.6.date": "September 5, 2025",
+    "news.6.title": "Human-in-the-loop now available",
+    "news.6.category": "Support",
+    "news.6.desc":
+      "Human-in-the-loop support is now live. Escalate to a human when needed and keep the full conversation context.",
+
+    // Human-in-the-loop Section
+    "humanLoop.title": "Human-in-the-loop support",
+    "humanLoop.subtitle":
+      "Escalate to a human when needed while keeping full context. Your team stays in control, with the AI doing the heavy lifting.",
 
     // Pricing
     "pricing.title": "Choose Your Plan",
@@ -982,6 +1007,21 @@ const translations = {
     "news.4.category": "Marketing",
     "news.4.desc":
       "¡Lanza campañas de marketing dirigidas con nuestra nueva función de Notificaciones Push! Envía mensajes promocionales, ofertas especiales y actualizaciones directamente a tus clientes a través de WhatsApp. Crea campañas con mensajes personalizados, programa envíos para el momento óptimo y rastrea las tasas de entrega y el compromiso del cliente. Perfecto para anunciar nuevos productos, ventas flash o actualizaciones importantes para mantener a tus clientes informados y comprometidos.",
+    "news.5.date": "10 de Septiembre de 2025",
+    "news.5.title": "Soporte para equipos informativos",
+    "news.5.category": "Soporte",
+    "news.5.desc":
+      "¿No vendes en linea? No hay problema. Nuestro chatbot de soporte ayuda a los equipos a responder preguntas, compartir informacion precisa y guiar a los clientes en WhatsApp con respuestas siempre actualizadas.",
+    "news.6.date": "5 de Septiembre de 2025",
+    "news.6.title": "Human-in-the-loop disponible",
+    "news.6.category": "Soporte",
+    "news.6.desc":
+      "La funcion human-in-the-loop ya esta activa. Escala a un humano cuando sea necesario y conserva todo el contexto de la conversacion.",
+
+    // Human-in-the-loop Section
+    "humanLoop.title": "Soporte human-in-the-loop",
+    "humanLoop.subtitle":
+      "Escala a un humano cuando sea necesario manteniendo todo el contexto. Tu equipo mantiene el control y la IA hace el trabajo pesado.",
 
     // Pricing
     "pricing.title": "Elige Tu Plan",
@@ -1334,6 +1374,21 @@ const translations = {
     "news.4.category": "Marketing",
     "news.4.desc":
       "Lance campanhas de marketing direcionadas com nossa nova funcionalidade de Notificações Push! Envie mensagens promocionais, ofertas especiais e atualizações diretamente para seus clientes via WhatsApp. Crie campanhas com mensagens personalizadas, agende envios para o momento ideal e rastreie taxas de entrega e engajamento do cliente. Perfeito para anunciar novos produtos, vendas relâmpago ou atualizações importantes para manter seus clientes informados e engajados.",
+    "news.5.date": "10 de Setembro de 2025",
+    "news.5.title": "Suporte para equipes informativas",
+    "news.5.category": "Suporte",
+    "news.5.desc":
+      "Nao vende online? Sem problema. Nosso chatbot de suporte ajuda as equipes a responder perguntas, compartilhar informacoes precisas e orientar clientes no WhatsApp com respostas sempre atualizadas.",
+    "news.6.date": "5 de Setembro de 2025",
+    "news.6.title": "Human-in-the-loop disponivel",
+    "news.6.category": "Suporte",
+    "news.6.desc":
+      "A funcionalidade human-in-the-loop ja esta ativa. Escale para um humano quando necessario e mantenha todo o contexto da conversa.",
+
+    // Human-in-the-loop Section
+    "humanLoop.title": "Suporte human-in-the-loop",
+    "humanLoop.subtitle":
+      "Escale para um humano quando necessario mantendo todo o contexto. Sua equipe fica no controle e a IA faz o trabalho pesado.",
 
     // Pricing
     "pricing.title": "Escolha Seu Plano",
@@ -1487,6 +1542,19 @@ const translations = {
     "cta.subtitle": "Junte-se a centenas de empresas que usam o eChatbot para automatizar vendas, aumentar conversões e encantar clientes 24/7.",
     "cta.button.start": "Comece Grátis",
     "cta.button.contact": "Contatar Vendas",
+
+    // How It Works
+    "howItWorks.title": "Comece em 3 Passos Simples",
+    "howItWorks.subtitle": "Sem código, sem habilidades técnicas necessárias. Comece a vender em minutos.",
+    "howItWorks.step1.title": "Conecte WhatsApp",
+    "howItWorks.step1.desc": "Vincule sua conta WhatsApp Business com poucos cliques. Nós guiamos você na configuração.",
+    "howItWorks.step2.title": "Configure Agente AI",
+    "howItWorks.step2.desc": "Carregue seu catálogo de produtos, configure as perguntas frequentes e personalize a personalidade do seu chatbot. Nós guiamos você na configuração.",
+    "howItWorks.step3.title": "Vá ao Vivo!",
+    "howItWorks.step3.desc": "Comece a atender clientes 24/7. Monitore o desempenho e otimize com análises em tempo real.",
+    
+    // Work in Progress
+    "wip.banner": "Trabalho em Andamento",
 
     // Login
     "login.title": "Entre na sua conta",

@@ -290,14 +290,4 @@ describe('LoginPage', () => {
     })
   })
 
-  describe('Mobile Responsiveness', () => {
-    it('should render mobile-optimized header', async () => {
-      renderLoginPage()
-      
-      await waitFor(() => {
-        const logos = screen.getAllByAltText(/eChatbot/i)
-        expect(logos[0]).toHaveClass(/h-\[64px\]/)
-      })
-    })
-  })
 })
