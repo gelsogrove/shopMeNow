@@ -133,13 +133,20 @@ export function NewsUpdates() {
   const actualIndex = currentIndex + newsItems.length
 
   return (
-    <div className="py-16 bg-gradient-to-br from-slate-50 to-blue-50 -mt-[35px]">
+    <div className="pt-20 pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-14">
-          <p className="text-base font-semibold uppercase tracking-[0.25em] text-green-600">
-            <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
-            {t("news.title")}
-            <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full mb-4">
+            <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
+            <p className="text-sm font-semibold uppercase tracking-wider text-green-700">
+              {t("news.title")}
+            </p>
+          </div>
+          <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-3">
+            Latest Updates and Features
+          </h2>
+          <p className="text-lg text-slate-600">
+            Stay updated with our newest features and improvements
           </p>
         </div>
 
@@ -150,27 +157,27 @@ export function NewsUpdates() {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          {/* Left Arrow - Hidden on mobile */}
+          {/* Left Arrow - SEMPRE VISIBILE con design moderno */}
           <button
             onClick={goToPrevious}
-            className="hidden md:block absolute left-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
+            className="absolute left-0 md:left-4 z-20 bg-green-600 hover:bg-green-700 text-white rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-white"
             aria-label="Previous update"
           >
-            <ChevronLeft className="w-10 h-10" />
+            <ChevronLeft className="w-7 h-7" />
           </button>
 
-          {/* Right Arrow - Hidden on mobile */}
+          {/* Right Arrow - SEMPRE VISIBILE con design moderno */}
           <button
             onClick={goToNext}
-            className="hidden md:block absolute right-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
+            className="absolute right-0 md:right-4 z-20 bg-green-600 hover:bg-green-700 text-white rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-white"
             aria-label="Next update"
           >
-            <ChevronRight className="w-10 h-10" />
+            <ChevronRight className="w-7 h-7" />
           </button>
 
           {/* Cards Container */}
-          <div className="flex items-center justify-center w-full px-4 md:px-24 overflow-hidden">
-            <div className="relative w-full max-w-4xl h-[450px] flex items-center justify-center">
+          <div className="flex items-center justify-center w-full px-4 md:px-20 overflow-hidden">
+            <div className="relative w-full max-w-5xl h-[420px] flex items-center justify-center">
               {extendedItems.map((item, idx) => {
                 const offset = idx - actualIndex
                 const isCenter = offset === 0
@@ -194,27 +201,27 @@ export function NewsUpdates() {
                     }}
                   >
                     <div
-                      className={`bg-white rounded-2xl shadow-xl border-2 overflow-hidden ${
+                      className={`bg-white rounded-3xl shadow-xl border-2 overflow-hidden transition-all duration-700 ${
                         isCenter
-                          ? "border-green-500 w-[90vw] md:w-[600px]"
-                          : "border-gray-300 bg-gray-50 w-[75vw] md:w-[500px]"
+                          ? "border-green-500 w-[90vw] md:w-[620px] ring-4 ring-green-100"
+                          : "border-gray-200 bg-gray-50/50 w-[75vw] md:w-[500px]"
                       }`}
                     >
                       <div className="p-6 md:p-8">
                         <div className="flex items-center gap-3 mb-6">
                           <div
-                            className={`p-3 rounded-lg transition-colors ${
+                            className={`p-3 rounded-xl transition-all ${
                               isCenter
-                                ? "bg-green-100 text-green-600"
+                                ? "bg-green-100 text-green-600 ring-2 ring-green-200"
                                 : "bg-gray-200 text-gray-500"
                             }`}
                           >
                             {item.icon}
                           </div>
                           <span
-                            className={`px-3 py-1 text-sm rounded-full font-medium transition-colors ${
+                            className={`px-4 py-1.5 text-sm rounded-full font-semibold transition-all ${
                               isCenter
-                                ? "bg-blue-100 text-blue-700"
+                                ? "bg-green-600 text-white shadow-md"
                                 : "bg-gray-200 text-gray-600"
                             }`}
                           >
@@ -258,8 +265,8 @@ export function NewsUpdates() {
           </div>
         </div>
 
-        {/* Indicators - Separate Row */}
-        <div className="flex justify-center gap-2 mt-4">
+        {/* Indicators - Più grandi e visibili */}
+        <div className="flex justify-center gap-3 mt-8">
           {newsItems.map((_, index) => {
             const normalizedIndex =
               ((currentIndex % newsItems.length) + newsItems.length) %
@@ -268,10 +275,10 @@ export function NewsUpdates() {
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`h-2 w-2 rounded-full transition-all ${
+                className={`h-3 rounded-full transition-all duration-300 ${
                   index === normalizedIndex
-                    ? "bg-green-500 scale-150"
-                    : "bg-gray-300 hover:bg-gray-400"
+                    ? "bg-green-600 w-12 shadow-md"
+                    : "bg-gray-300 hover:bg-gray-400 w-3"
                 }`}
                 aria-label={`Go to update ${index + 1}`}
               />

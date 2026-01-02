@@ -1567,47 +1567,107 @@ export function LoginPage() {
             </div>
         </div>
 
-        <div className="py-16">
-          <div className="text-center space-y-2 mb-14">
-            <p className="text-base font-semibold uppercase tracking-[0.25em] text-green-600">
-              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
-              {t("hero.whyTitle")}
-              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
-              <div className="h-12 w-12 rounded-xl bg-green-100 text-green-600 flex items-center justify-center mb-4">
-                <Bot className="h-6 w-6" />
-              </div>
-              <h3 className="text-2xl font-semibold text-slate-900 mb-3">
-                {t("hero.useCases.sales.title")}
-              </h3>
-              <p className="text-lg text-slate-600">
-                {t("hero.useCases.sales.desc")}
+        {/* Why eChatbot Section - Background Grigio Chiaro */}
+        <div className="pt-24 pb-16 bg-gray-100">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            {/* Header */}
+            <div className="text-center space-y-4 mb-20">
+              <p className="text-sm font-semibold uppercase tracking-widest text-green-600">
+                {t("hero.whyTitle")}
               </p>
+              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900">
+                {t("hero.useCasesTitle")}
+              </h2>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
-              <div className="h-12 w-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
-                <Megaphone className="h-6 w-6" />
+            
+            {/* Cards Grid - Mobile: Horizontal Scroll, Desktop: Grid */}
+            <div className="lg:grid lg:grid-cols-3 lg:gap-10 lg:max-w-6xl lg:mx-auto flex lg:flex-none overflow-x-auto gap-8 px-6 lg:px-0 snap-x snap-mandatory scrollbar-hide pb-4">
+              {/* Card 1 - Sales */}
+              <div className="bg-white rounded-3xl pt-12 px-10 pb-10 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 min-w-[320px] lg:min-w-0 snap-center">
+                {/* Number badge */}
+                <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-10 shadow-md">
+                  1
+                </div>
+                
+                {/* Icon box */}
+                <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mb-8 mx-auto">
+                  <Bot className="h-10 w-10 text-green-600" />
+                </div>
+                
+                {/* Content */}
+                <div className="text-center space-y-5">
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {t("hero.useCases.sales.title")}
+                  </h3>
+                  <p className="text-base text-slate-600 leading-relaxed">
+                    {t("hero.useCases.sales.desc")}
+                  </p>
+                </div>
+                
+                {/* Badge */}
+                <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                  <span className="text-sm text-slate-600 font-medium">AI-Powered</span>
+                </div>
               </div>
-              <h3 className="text-2xl font-semibold text-slate-900 mb-3">
-                {t("hero.useCases.ops.title")}
-              </h3>
-              <p className="text-lg text-slate-600">
-                {t("hero.useCases.ops.desc")}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
-              <div className="h-12 w-12 rounded-xl bg-lime-100 text-lime-600 flex items-center justify-center mb-4">
-                <Headphones className="h-6 w-6" />
+
+              {/* Card 2 - Push Messages */}
+              <div className="bg-white rounded-3xl pt-12 px-10 pb-10 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 min-w-[320px] lg:min-w-0 snap-center">
+                {/* Number badge */}
+                <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-10 shadow-md">
+                  2
+                </div>
+                
+                {/* Icon box */}
+                <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mb-8 mx-auto">
+                  <Megaphone className="h-10 w-10 text-green-600" />
+                </div>
+                
+                {/* Content */}
+                <div className="text-center space-y-5">
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {t("hero.useCases.ops.title")}
+                  </h3>
+                  <p className="text-base text-slate-600 leading-relaxed">
+                    {t("hero.useCases.ops.desc")}
+                  </p>
+                </div>
+                
+                {/* Badge */}
+                <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                  <span className="text-sm text-slate-600 font-medium">Automated</span>
+                </div>
               </div>
-              <h3 className="text-2xl font-semibold text-slate-900 mb-3">
-                {t("hero.useCases.support.title")}
-              </h3>
-              <p className="text-lg text-slate-600">
-                {t("hero.useCases.support.desc")}
-              </p>
+
+              {/* Card 3 - Support */}
+              <div className="bg-white rounded-3xl pt-12 px-10 pb-10 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 min-w-[320px] lg:min-w-0 snap-center">
+                {/* Number badge */}
+                <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-10 shadow-md">
+                  3
+                </div>
+                
+                {/* Icon box */}
+                <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mb-8 mx-auto">
+                  <Headphones className="h-10 w-10 text-green-600" />
+                </div>
+                
+                {/* Content */}
+                <div className="text-center space-y-5">
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {t("hero.useCases.support.title")}
+                  </h3>
+                  <p className="text-base text-slate-600 leading-relaxed">
+                    {t("hero.useCases.support.desc")}
+                  </p>
+                </div>
+                
+                {/* Badge */}
+                <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
+                  <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+                  <span className="text-sm text-slate-600 font-medium">24/7 Available</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1640,97 +1700,181 @@ export function LoginPage() {
       <HomeFAQ />
 
       {/* Contact Section */}
-      <div id="demo" className="py-14 bg-white border-t border-slate-200">
+      <div id="demo" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,240px] gap-8 items-center rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-emerald-50/60 to-white p-8 lg:p-10 shadow-xl">
-            <div className="flex items-center justify-center">
-              <div className="w-48 h-48 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-md">
-                <img
-                  src="/bellaitalia.webp"
-                  alt="Bellitalia demo"
-                  className="w-full h-full object-cover"
-                />
+          <div className="group relative">
+            {/* Decorative background blob */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-3xl blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
+            
+            <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
+                {/* Left: Image with badge */}
+                <div className="flex flex-col items-center lg:items-start gap-4">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-green-100 transition-all duration-300">
+                      <img
+                        src="/bellaitalia.webp"
+                        alt="Bellitalia demo"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    </div>
+                    {/* Badge */}
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
+                      🎯 Live
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Right: Content */}
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Interactive Demo
+                    </div>
+                    <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+                      {t("demo.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed">
+                      {t("demo.subtitle")}
+                    </p>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <Button
+                      type="button"
+                      disabled
+                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white cursor-not-allowed shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                    >
+                      <span className="flex items-center gap-3">
+                        <span>🚀</span>
+                        <span>{t("demo.button")}</span>
+                      </span>
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="text-center lg:text-left space-y-2">
-              <h3 className="text-3xl lg:text-4xl font-bold text-slate-900">{t("demo.title")}</h3>
-              <p className="text-lg text-slate-600">
-                {t("demo.subtitle")}
-              </p>
-            </div>
-            <div className="flex justify-center lg:justify-end">
-              <Button
-                type="button"
-                disabled
-                className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white cursor-not-allowed shadow-lg shadow-green-200/70 hover:bg-green-600"
-              >
-                {t("demo.button")}
-              </Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Integration Section */}
-      <div className="py-14 bg-white border-t border-slate-200">
+      <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,240px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
-            <div className="flex items-center justify-center">
-              <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
-                <img
-                  src="/CRM.jpg"
-                  alt="CRM integration preview"
-                  className="h-full w-full object-cover"
-                />
+          <div className="group relative">
+            {/* Decorative background */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-3xl blur-2xl opacity-15 group-hover:opacity-25 transition-opacity duration-500"></div>
+            
+            <div className="relative bg-gradient-to-br from-white to-slate-50 rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
+                {/* Left: Content */}
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                      <span>🔗</span>
+                      Enterprise Feature
+                    </div>
+                    <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+                      {t("integration.crm.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed">
+                      {t("integration.crm.subtitle")}
+                    </p>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <Button
+                      type="button"
+                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                      onClick={() => {
+                        document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
+                      }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span>💼</span>
+                        <span>{t("integration.crm.button")}</span>
+                      </span>
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Right: Image with effects */}
+                <div className="flex flex-col items-center lg:items-end">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-blue-100 transition-all duration-300">
+                      <img
+                        src="/CRM.jpg"
+                        alt="CRM integration preview"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    </div>
+                    {/* Floating badge */}
+                    <div className="absolute -bottom-3 -left-3 bg-gradient-to-br from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
+                      🎨 Custom
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="text-center lg:text-left space-y-3">
-              <h3 className="text-3xl font-bold text-slate-900">{t("integration.crm.title")}</h3>
-              <p className="text-lg text-slate-600">
-                {t("integration.crm.subtitle")}
-              </p>
-            </div>
-            <div className="flex justify-center lg:justify-end">
-              <Button
-                type="button"
-                className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
-                onClick={() => {
-                  document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
-                }}
-              >
-                {t("integration.crm.button")}
-              </Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Privacy Section */}
-      <div className="py-14 bg-white border-t border-slate-200">
+      <div className="py-20 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,240px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
-            <div className="flex items-center justify-center">
-              <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
-                <img
-                  src="/privacy.jpg"
-                  alt="Privacy by design"
-                  className="h-full w-full object-cover"
-                />
+          <div className="group relative">
+            {/* Decorative background */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-3xl blur-2xl opacity-15 group-hover:opacity-25 transition-opacity duration-500"></div>
+            
+            <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
+                {/* Left: Image with security badge */}
+                <div className="flex flex-col items-center lg:items-start gap-4">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-teal-100 transition-all duration-300">
+                      <img
+                        src="/privacy.jpg"
+                        alt="Privacy by design"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    </div>
+                    {/* Security badge */}
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-teal-500 to-cyan-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
+                      🔒 Secure
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Right: Content */}
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-sm font-medium">
+                      <span>🛡️</span>
+                      GDPR Compliant
+                    </div>
+                    <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+                      {t("privacy.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed">
+                      {t("privacy.subtitle")}
+                    </p>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <Button
+                      type="button"
+                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                    >
+                      <span className="flex items-center gap-3">
+                        <span>📋</span>
+                        <span>{t("privacy.button")}</span>
+                      </span>
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="text-center lg:text-left space-y-3">
-              <h3 className="text-3xl font-bold text-slate-900">{t("privacy.title")}</h3>
-              <p className="text-lg text-slate-600">
-                {t("privacy.subtitle")}
-              </p>
-            </div>
-            <div className="flex justify-center lg:justify-end">
-              <Button
-                type="button"
-                className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
-              >
-                {t("privacy.button")}
-              </Button>
             </div>
           </div>
         </div>
@@ -1887,34 +2031,66 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 text-slate-400 py-6 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-3">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo.png"
-                alt="eChatbot"
-                className="w-8 h-8 object-contain"
-              />
-              <span className="text-xs">
-                © 2025 eChatbot. All rights reserved.
-              </span>
+      {/* Footer Semplificato */}
+      <footer className="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          {/* Main Footer Content - 2 colonne */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
+            {/* Brand Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/logo.png"
+                  alt="eChatbot"
+                  className="w-10 h-10 object-contain"
+                />
+                <span className="text-xl font-bold text-white">eChatbot</span>
+              </div>
+              <p className="text-sm text-slate-400 leading-relaxed max-w-md">
+                Professional WhatsApp AI Chatbot Platform for E-commerce Success.
+              </p>
             </div>
-            <div className="flex gap-6 text-xs">
-              <Link to="/privacy" className="hover:text-white">
-                Privacy Policy
-              </Link>
-              <Link to="/terms" className="hover:text-white">
-                Terms of Service
-              </Link>
-              <a 
-                href="#contact" 
-                onClick={scrollToContactForm}
-                className="hover:text-white cursor-pointer"
-              >
-                Support
-              </a>
+
+            {/* Links */}
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Quick Links</h3>
+                <ul className="space-y-3">
+                  <li><a href="#features" className="text-sm hover:text-green-400 transition-colors">Features</a></li>
+                  <li><a href="#pricing" className="text-sm hover:text-green-400 transition-colors">Pricing</a></li>
+                  <li>
+                    <a 
+                      href="#contact" 
+                      onClick={scrollToContactForm}
+                      className="text-sm hover:text-green-400 transition-colors cursor-pointer"
+                    >
+                      Contact
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Legal</h3>
+                <ul className="space-y-3">
+                  <li><Link to="/privacy" className="text-sm hover:text-green-400 transition-colors">Privacy Policy</Link></li>
+                  <li><Link to="/terms" className="text-sm hover:text-green-400 transition-colors">Terms of Service</Link></li>
+                  <li><Link to="/refund" className="text-sm hover:text-green-400 transition-colors">Refund Policy</Link></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="pt-6 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-xs text-slate-500">
+              © 2025 eChatbot. All rights reserved.
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Powered by</span>
+              <div className="bg-green-600/10 border border-green-600/30 rounded px-3 py-1">
+                <span className="text-xs font-semibold text-green-400">WhatsApp Business API</span>
+              </div>
             </div>
           </div>
         </div>

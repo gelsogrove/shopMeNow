@@ -23,7 +23,8 @@ vi.mock("@/hooks/useWorkspaceRole", () => ({
 }))
 
 vi.mock("@/services/subscriptionBillingApi", () => ({
-  formatCurrency: (value: number) => value !== undefined && value !== null ? `€${value.toFixed(2)}` : "€0.00",
+  formatCurrency: (value: number) =>
+    value !== undefined && value !== null ? `$${value.toFixed(2)}` : "$0.00",
   getTransactionTypeInfo: vi.fn(() => ({ icon: "💰", label: "Message" })),
   rechargeCredit: vi.fn(),
   getTransactions: vi.fn(),
@@ -93,12 +94,12 @@ describe("BillingSection", () => {
   // ===========================================================================
 
   describe("Credit Warnings", () => {
-    it("should NOT show warning when credit is sufficient (€25)", async () => {
+    it("should NOT show warning when credit is sufficient ($25)", async () => {
       render(<BillingSection />)
 
       await waitFor(() => {
         expect(
-          screen.queryByText("Your chatbot is DISABLED")
+          screen.queryByText("Your chatbots are DISABLED")
         ).not.toBeInTheDocument()
         expect(
           screen.queryByText("Low credit warning")
@@ -106,7 +107,7 @@ describe("BillingSection", () => {
       })
     })
 
-    it("should show LOW CREDIT warning when below threshold (€3 < €5)", async () => {
+    it("should show LOW CREDIT warning when below threshold ($3 < $5)", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
           ...mockBillingOverview,
@@ -132,19 +133,19 @@ describe("BillingSection", () => {
       })
     })
 
-    it("should show CRITICAL warning when credit is 0", async () => {
+    it("should show CRITICAL warning when credit is below -$12", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
           ...mockBillingOverview,
           billing: {
             ...mockBillingOverview.billing,
-            creditBalance: 0,
+            creditBalance: -13,
           },
         },
         isLoadingOverview: false,
         refreshOverview: mockRefreshOverview,
         updateBalanceLocally: mockUpdateBalanceLocally,
-        creditBalance: 0,
+        creditBalance: -13,
         isLoadingBalance: false,
       } as any)
 
@@ -152,29 +153,29 @@ describe("BillingSection", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText("⚠️ Your chatbot is DISABLED")
+          screen.getByText("⚠️ Your chatbots are DISABLED")
         ).toBeInTheDocument()
         expect(
           screen.getByText(
-            /Credit balance is €0.00. Your chatbot will not respond/
+            /Credit balance is \$-13.00 \(below -\$12.00 threshold\). Your chatbots will not respond/
           )
         ).toBeInTheDocument()
       })
     })
 
-    it("should show Recharge Now button when credit is 0", async () => {
+    it("should show Recharge Now button when credit is below -$12", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
           ...mockBillingOverview,
           billing: {
             ...mockBillingOverview.billing,
-            creditBalance: 0,
+            creditBalance: -13,
           },
         },
         isLoadingOverview: false,
         refreshOverview: mockRefreshOverview,
         updateBalanceLocally: mockUpdateBalanceLocally,
-        creditBalance: 0,
+        creditBalance: -13,
         isLoadingBalance: false,
       } as any)
 
@@ -257,10 +258,10 @@ describe("BillingSection", () => {
 
       await waitFor(() => {
         // Check for preset amounts in the dialog
-        expect(screen.getByText("€10")).toBeInTheDocument()
-        expect(screen.getByText("€25")).toBeInTheDocument()
-        expect(screen.getByText("€50")).toBeInTheDocument()
-        expect(screen.getByText("€100")).toBeInTheDocument()
+        expect(screen.getByText("$12")).toBeInTheDocument()
+        expect(screen.getByText("$29")).toBeInTheDocument()
+        expect(screen.getByText("$59")).toBeInTheDocument()
+        expect(screen.getByText("$118")).toBeInTheDocument()
       })
     })
   })

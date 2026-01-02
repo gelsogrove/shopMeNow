@@ -3,17 +3,48 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { LoginPage } from '../src/pages/LoginPage'
 import { LanguageProvider } from '../src/contexts/LanguageContext'
-import * as authService from '../src/services/auth'
+import { auth as authService } from '../src/services/api'
+import { useFeatureFlags } from '@/hooks/usePlatformConfig'
 
-// Mock modules
-vi.mock('../src/services/auth')
-vi.mock('../src/hooks/usePlatformConfig', () => ({
-  useFeatureFlags: () => ({
+const { mockUseFeatureFlags } = vi.hoisted(() => ({
+  mockUseFeatureFlags: vi.fn(() => ({
     canLogin: true,
     canRegister: true,
     workingInProgress: false,
     registerFirst: false,
     isLoading: false,
+  })),
+}))
+
+// Mock modules
+vi.mock('../src/services/api', () => ({
+  auth: {
+    login: vi.fn(),
+    logout: vi.fn(),
+  },
+  api: {
+    post: vi.fn(),
+  },
+}))
+vi.mock('@/hooks/usePlatformConfig', () => ({
+  useFeatureFlags: mockUseFeatureFlags,
+  usePlatformConfig: () => ({
+    prices: {
+      FREE_MONTHLY: { current: 0, original: null },
+      BASIC_MONTHLY: { current: 23, original: 34 },
+      PREMIUM_MONTHLY: { current: 44, original: 58 },
+      ENTERPRISE_MONTHLY: { current: 139, original: 175 },
+    },
+    isLoading: false,
+    error: null,
+    getPriceWithOriginal: (key: string) =>
+      ({
+        FREE_MONTHLY: { current: 0, original: null },
+        BASIC_MONTHLY: { current: 23, original: 34 },
+        PREMIUM_MONTHLY: { current: 44, original: 58 },
+        ENTERPRISE_MONTHLY: { current: 139, original: 175 },
+      } as Record<string, { current: number; original: number | null }>)[key] ??
+      null,
   }),
 }))
 vi.mock('../src/lib/storage', () => ({
@@ -60,7 +91,8 @@ describe('LoginPage', () => {
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/your@email.com/i)).toBeInTheDocument()
         expect(screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i)).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+        const signInButtons = screen.getAllByRole('button', { name: /^Sign In$/ })
+        expect(signInButtons.length).toBeGreaterThan(0)
       })
     })
 
@@ -68,7 +100,7 @@ describe('LoginPage', () => {
       renderLoginPage()
       
       await waitFor(() => {
-        expect(screen.getByText(/🇮🇹/)).toBeInTheDocument()
+        expect(screen.getByText(/EN/)).toBeInTheDocument()
       })
     })
 
@@ -76,7 +108,7 @@ describe('LoginPage', () => {
       renderLoginPage()
       
       await waitFor(() => {
-        const heroImages = screen.getAllByAltText(/WhatsApp AI agent dashboard view/i)
+        const heroImages = screen.getAllByAltText(/Bellitalia demo|CRM integration preview|Privacy by design/i)
         expect(heroImages.length).toBeGreaterThan(0)
       })
     })
@@ -85,7 +117,7 @@ describe('LoginPage', () => {
       renderLoginPage()
       
       await waitFor(() => {
-        expect(screen.getByText(/Accedi con Google/i)).toBeInTheDocument()
+        expect(screen.getByText(/Or continue with/i)).toBeInTheDocument()
       })
     })
   })
@@ -94,14 +126,13 @@ describe('LoginPage', () => {
     it('should display validation error for invalid email', async () => {
       renderLoginPage()
       
-      await waitFor(() => {
-        const emailInput = screen.getByPlaceholderText(/your@email.com/i)
-        const passwordInput = screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i)
-        
-        fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
-        fireEvent.change(passwordInput, { target: { value: 'password123' } })
-        fireEvent.blur(emailInput)
-      })
+      const emailInput = await screen.findByPlaceholderText(/your@email.com/i)
+      const passwordInput = screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i)
+      const submitButton = screen.getByRole('button', { name: /^Sign In$/ })
+      
+      fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
+      fireEvent.change(passwordInput, { target: { value: 'password123' } })
+      fireEvent.click(submitButton)
       
       await waitFor(() => {
         expect(screen.getByText(/Invalid email address/i)).toBeInTheDocument()
@@ -113,7 +144,7 @@ describe('LoginPage', () => {
       
       await waitFor(() => {
         const emailInput = screen.getByPlaceholderText(/your@email.com/i)
-        const submitButton = screen.getByRole('button', { name: /sign in/i })
+        const submitButton = screen.getByRole('button', { name: /^Sign In$/ })
         
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
         fireEvent.click(submitButton)
@@ -132,14 +163,14 @@ describe('LoginPage', () => {
           sessionId: 'fake-session',
         },
       })
-      vi.mocked(authService.auth.login).mockImplementation(mockLogin)
+      vi.mocked(authService.login).mockImplementation(mockLogin)
 
       renderLoginPage()
       
       await waitFor(() => {
         const emailInput = screen.getByPlaceholderText(/your@email.com/i)
         const passwordInput = screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i)
-        const submitButton = screen.getByRole('button', { name: /sign in/i })
+        const submitButton = screen.getByRole('button', { name: /^Sign In$/ })
         
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
         fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
@@ -159,10 +190,8 @@ describe('LoginPage', () => {
     it('should switch to register form when clicking "Create one"', async () => {
       renderLoginPage()
       
-      await waitFor(() => {
-        const createButton = screen.getByText(/Create one/i)
-        fireEvent.click(createButton)
-      })
+      const createButton = await screen.findByRole('button', { name: /Create one/i })
+      fireEvent.click(createButton)
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/First name/i)).toBeInTheDocument()
@@ -216,16 +245,13 @@ describe('LoginPage', () => {
 
   describe('Admin Bypass', () => {
     it('should allow login with ?admin=true when workingInProgress is true', async () => {
-      // Mock feature flags with workingInProgress
-      vi.mock('../src/hooks/usePlatformConfig', () => ({
-        useFeatureFlags: () => ({
-          canLogin: false,
-          canRegister: false,
-          workingInProgress: true,
-          registerFirst: false,
-          isLoading: false,
-        }),
-      }))
+      vi.mocked(useFeatureFlags).mockReturnValue({
+        canLogin: false,
+        canRegister: false,
+        workingInProgress: true,
+        registerFirst: false,
+        isLoading: false,
+      })
 
       // Render with admin param
       window.history.pushState({}, '', '?admin=true')
@@ -246,12 +272,8 @@ describe('LoginPage', () => {
         const passwordInput = screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i) as HTMLInputElement
         expect(passwordInput.type).toBe('password')
         
-        // Find and click eye icon
-        const eyeButtons = screen.getAllByRole('button')
-        const eyeButton = eyeButtons.find(btn => btn.querySelector('svg'))
-        if (eyeButton) {
-          fireEvent.click(eyeButton)
-        }
+        const eyeButton = passwordInput.parentElement?.querySelector('button') as HTMLButtonElement
+        fireEvent.click(eyeButton)
       })
 
       await waitFor(() => {
@@ -267,8 +289,8 @@ describe('LoginPage', () => {
       
       await waitFor(() => {
         // Click language selector
-        const itFlag = screen.getByText(/🇮🇹/)
-        fireEvent.click(itFlag)
+        const langButton = screen.getByRole('button', { name: /^EN$/ })
+        fireEvent.click(langButton)
       })
 
       await waitFor(() => {
@@ -283,8 +305,8 @@ describe('LoginPage', () => {
       renderLoginPage()
       
       await waitFor(() => {
-        const logo = screen.getByAltText(/eChatbot/i)
-        expect(logo).toHaveClass(/h-\[70px\]/)
+        const logos = screen.getAllByAltText(/eChatbot/i)
+        expect(logos[0]).toHaveClass(/h-\[70px\]/)
       })
     })
   })
