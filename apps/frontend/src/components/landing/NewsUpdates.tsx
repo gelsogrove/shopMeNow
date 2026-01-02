@@ -132,21 +132,21 @@ export function NewsUpdates() {
       setTimeout(() => {
         setIsTransitioning(false)
         setCurrentIndex(0)
-      }, 700) // Wait for transition to complete
+      }, 500) // Wait for transition to complete
 
       setTimeout(() => {
         setIsTransitioning(true)
-      }, 750) // Re-enable transition
+      }, 550) // Re-enable transition
     } else if (currentIndex === -1) {
       // Just moved to before first item
       setTimeout(() => {
         setIsTransitioning(false)
         setCurrentIndex(newsItems.length - 1)
-      }, 700)
+      }, 500)
 
       setTimeout(() => {
         setIsTransitioning(true)
-      }, 750)
+      }, 550)
     }
   }, [currentIndex])
 
@@ -167,13 +167,16 @@ export function NewsUpdates() {
   const actualIndex = currentIndex + newsItems.length
 
   return (
-    <div className="pt-20 pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="pt-20 pb-24 bg-gradient-to-br from-emerald-50 via-green-50/30 to-teal-50 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.08),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(5,150,105,0.06),transparent_50%)]" />
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
             Latest Updates and Features
           </h2>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Stay updated with our newest features and improvements
           </p>
         </div>
@@ -185,27 +188,8 @@ export function NewsUpdates() {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          {/* Navigation Arrows - Design più vicino e integrato */}
-          {/* Left Arrow */}
-          <button
-            onClick={goToPrevious}
-            className="hidden md:flex absolute left-2 sm:left-3 md:left-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
-            aria-label="Previous update"
-          >
-            <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" />
-          </button>
-
-          {/* Right Arrow */}
-          <button
-            onClick={goToNext}
-            className="hidden md:flex absolute right-2 sm:right-3 md:right-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
-            aria-label="Next update"
-          >
-            <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" />
-          </button>
-
           {/* Cards Container */}
-          <div className="flex items-center justify-center w-full px-2 sm:px-4 md:px-16 lg:px-24 overflow-visible md:overflow-hidden">
+          <div className="flex items-center justify-center w-full px-2 sm:px-4 md:px-8 lg:px-12 overflow-visible md:overflow-hidden">
             <div className="relative w-full max-w-5xl h-[560px] sm:h-[520px] md:h-[420px] flex items-center justify-center">
               {extendedItems.map((item, idx) => {
                 const offset = idx - actualIndex
@@ -226,7 +210,7 @@ export function NewsUpdates() {
                       opacity: isCenter ? 1 : 0.4,
                       zIndex: isCenter ? 10 : 1,
                       transition: isTransitioning
-                        ? "all 0.7s ease-in-out"
+                        ? "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)"
                         : "none",
                     }}
                   >
@@ -234,14 +218,18 @@ export function NewsUpdates() {
                     <div className="relative group">
                       {/* Decorative rotated background frame - only for center card */}
                       {isCenter && (
-                        <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+                        <>
+                          <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+                          {/* Glow effect */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
+                        </>
                       )}
                       
                       <div
-                        className={`relative bg-white rounded-3xl shadow-xl border-2 overflow-hidden transition-all duration-700 ${
+                        className={`relative bg-white rounded-3xl shadow-xl border-2 overflow-hidden transition-all duration-500 ${
                           isCenter
-                            ? "border-green-500 w-[90vw] md:w-[620px] ring-4 ring-green-100"
-                            : "border-gray-200 bg-gray-50/50 w-[75vw] md:w-[500px]"
+                            ? "border-green-500 w-[90vw] md:w-[620px] ring-4 ring-green-100 hover:ring-green-200 hover:shadow-2xl hover:scale-[1.02]"
+                            : "border-gray-200 bg-gray-50/50 w-[75vw] md:w-[500px] hover:border-gray-300 hover:shadow-lg"
                         }`}
                       >
                         <div className="p-6 md:p-8">
@@ -279,7 +267,7 @@ export function NewsUpdates() {
                           </div>
 
                           <h3
-                            className={`text-2xl md:text-3xl font-bold mb-4 transition-colors ${
+                            className={`text-2xl md:text-3xl font-bold mb-4 transition-colors tracking-tight ${
                               isCenter ? "text-gray-900" : "text-gray-600"
                             }`}
                           >
@@ -313,10 +301,10 @@ export function NewsUpdates() {
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
-                className={`h-3 rounded-full transition-all duration-300 ${
+                className={`h-3 rounded-full transition-all duration-500 ${
                   index === normalizedIndex
-                    ? "bg-green-600 w-12 shadow-md"
-                    : "bg-gray-300 hover:bg-gray-400 w-3"
+                    ? "bg-gradient-to-r from-green-600 to-emerald-600 w-12 shadow-lg hover:shadow-xl scale-110"
+                    : "bg-gray-300 hover:bg-gradient-to-r hover:from-gray-400 hover:to-gray-500 w-3 hover:w-8 hover:scale-105"
                 }`}
                 aria-label={`Go to update ${index + 1}`}
               />

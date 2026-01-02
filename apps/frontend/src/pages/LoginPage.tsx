@@ -877,7 +877,7 @@ export function LoginPage() {
       }}
     >
       {/* Header - Professional Design */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+      <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
           <div className="hidden md:flex justify-end pt-3">
             <div className="flex items-center gap-4">
@@ -905,11 +905,15 @@ export function LoginPage() {
           </div>
 
           {/* Main Header Row */}
-          <div className="flex items-center justify-between py-1 md:py-1.5">
+          <div className="flex items-center justify-between py-1 md:py-1.5 max-h-[70px]">
             {/* Left: Logo + Brand */}
             <div className="flex items-center justify-start gap-1">
-               
-              <span className="text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot.AI</span>
+              <img 
+                src="/logo.png" 
+                alt="eChatbot Logo" 
+                className="hidden md:block w-[110px] h-[110px] mt-[-6px]"
+              />
+              <span className="py-2 md:py-[5px] px-2 md:px-0 relative md:left-[-23px] md:top-[-11px] text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot</span>
             </div>
 
             {/* Right: Language Selector + Auth */}
@@ -1108,7 +1112,7 @@ export function LoginPage() {
           </p>
         </div>
         <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
-          <div className="flex justify-center lg:justify-start items-center w-full lg:flex-1">
+          <div className="hidden lg:flex justify-center lg:justify-start items-center w-full lg:flex-1">
             <div className="relative w-full max-w-3xl lg:mr-2 min-h-[32rem]">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
             <div className="relative rounded-[32px] shadow-2xl bg-white min-h-[32rem] overflow-visible">
@@ -1703,9 +1707,6 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* News & Updates Section */}
-      <NewsUpdates />
-
       {/* Pricing Section */}
       <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
         <PricingPlans
@@ -1747,14 +1748,11 @@ export function LoginPage() {
                 {/* Left: Image with badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-green-100 transition-all duration-300">
-                      <img
-                        src="/bellaitalia.webp"
-                        alt="Bellitalia demo"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
+                    <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-green-200 bg-green-50/40 shadow-inner flex items-center justify-center">
+                      <span className="text-green-700 text-2xl font-bold tracking-wide">
+                        🇮🇹 BELLITALIA
+                      </span>
                     </div>
-                    {/* Badge */}
                     <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
                       Live
                     </div>
@@ -1771,7 +1769,7 @@ export function LoginPage() {
                     <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
                       {t("demo.title")}
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed">
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("demo.subtitle")}
                     </p>
                   </div>
@@ -1810,7 +1808,13 @@ export function LoginPage() {
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/40 shadow-inner" aria-hidden="true" />
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-amber-100 transition-all duration-300">
+                      <img
+                        src="/human.png"
+                        alt="Human-in-the-loop support"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1823,7 +1827,7 @@ export function LoginPage() {
                     <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
                       {t("humanLoop.title")}
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed">
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("humanLoop.subtitle")}
                     </p>
                   </div>
@@ -1842,8 +1846,21 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
-                {/* Left: Content */}
+              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
+                {/* Left: Image with effects */}
+                <div className="flex flex-col items-center lg:items-start">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-blue-100 transition-all duration-300">
+                      <img
+                        src="/CRM.jpg"
+                        alt="CRM integration preview"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Right: Content */}
                 <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
@@ -1853,7 +1870,7 @@ export function LoginPage() {
                     <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
                       {t("integration.crm.title")}
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed">
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("integration.crm.subtitle")}
                     </p>
                   </div>
@@ -1870,23 +1887,6 @@ export function LoginPage() {
                         <span>{t("integration.crm.button")}</span>
                       </span>
                     </Button>
-                  </div>
-                </div>
-                
-                {/* Right: Image with effects */}
-                <div className="flex flex-col items-center lg:items-end">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-blue-100 transition-all duration-300">
-                      <img
-                        src="/CRM.jpg"
-                        alt="CRM integration preview"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    </div>
-                    {/* Floating badge */}
-                    <div className="absolute -bottom-3 -left-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
-                      Custom
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1914,10 +1914,6 @@ export function LoginPage() {
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>
-                    {/* Security badge */}
-                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
-                      Secure
-                    </div>
                   </div>
                 </div>
                 
@@ -1931,7 +1927,7 @@ export function LoginPage() {
                     <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
                       {t("privacy.title")}
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed">
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("privacy.subtitle")}
                     </p>
                   </div>
@@ -2175,11 +2171,6 @@ export function LoginPage() {
             {/* Brand Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <img
-                  src="/logo.png"
-                  alt="eChatbot"
-                  className="w-10 h-10 object-contain"
-                />
                 <span className="text-xl font-bold text-white">eChatbot</span>
               </div>
               <p className="text-sm text-slate-400 leading-relaxed max-w-md">
