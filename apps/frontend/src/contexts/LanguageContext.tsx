@@ -363,7 +363,7 @@ const translations = {
     // Hero Section
     "hero.title": "Build your AI sales agent",
     "hero.subtitle":
-      "Customers don’t read emails? Calling feels intrusive? Visiting feels like a disturbance? We meet them where they already are — WhatsApp. That’s our proposal.",
+      "A modern WhatsApp platform where AI agents drive sales, support, and growth.",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Tailored workflows for your team",
     "hero.useCases.sales.title": "Sales teams",

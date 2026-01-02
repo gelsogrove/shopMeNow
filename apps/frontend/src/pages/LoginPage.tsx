@@ -1441,7 +1441,7 @@ export function LoginPage() {
                 AI sales agent
               </h3>
               <p className="text-sm text-slate-600">
-                Create your agent in minutes with guided setup and ready-made flows.
+                Build your intelligent sales assistant in minutes with our guided setup and ready-made conversation flows. Your AI agent showcases products with rich catalogs, handles customer inquiries 24/7, and processes orders seamlessly through WhatsApp - all powered by natural language understanding that makes every interaction feel personal and professional.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
@@ -1452,7 +1452,7 @@ export function LoginPage() {
                 Push messages
               </h3>
               <p className="text-sm text-slate-600">
-                Send targeted WhatsApp pushes, recover abandoned carts, and bring customers back at the right time.
+                Launch strategic WhatsApp campaigns that reach the right customers at the perfect moment. Automatically recover abandoned carts with personalized follow-ups, re-engage inactive customers with targeted promotions, and send bulk messages to segmented lists - all while maintaining compliance and tracking real-time engagement metrics to optimize your conversion rates.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
@@ -1463,7 +1463,7 @@ export function LoginPage() {
                 Customer care
               </h3>
               <p className="text-sm text-slate-600">
-                Handle FAQs, escalate to humans with context, and keep every chat logged.
+                Deliver exceptional customer support with AI that instantly resolves common questions, provides detailed product information, and tracks order status in real-time. When complex issues arise, seamlessly escalate to your team with full conversation history and context - ensuring every customer interaction is logged, searchable, and contributes to continuous service improvement.
               </p>
             </div>
           </div>
