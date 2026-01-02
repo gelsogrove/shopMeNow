@@ -138,6 +138,7 @@ describe("PlatformConfigController", () => {
           canLogin: true,
           canRegister: false,
           workingInProgress: true,
+          cantryDemo: false,
           registerFirst: false,
         },
       })

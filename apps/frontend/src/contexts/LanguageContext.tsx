@@ -81,6 +81,11 @@ const translations = {
     "news.4.category": "Marketing",
     "news.4.desc":
       "Lancia campagne di marketing mirate con la nostra nuova funzionalità di Notifiche Push! Invia messaggi promozionali, offerte speciali e aggiornamenti direttamente ai tuoi clienti tramite WhatsApp. Crea campagne con messaggi personalizzati, programma gli invii per il momento ottimale e traccia i tassi di consegna e il coinvolgimento dei clienti. Perfetto per annunciare nuovi prodotti, vendite flash o aggiornamenti importanti per mantenere i tuoi clienti informati e coinvolti.",
+    "news.5.date": "10 Settembre 2025",
+    "news.5.title": "Supporto per team informativi",
+    "news.5.category": "Supporto",
+    "news.5.desc":
+      "Non vendi online? Nessun problema. eChatbot aiuta anche i team di assistenza a rispondere alle domande, fornire informazioni e guidare i clienti su WhatsApp con risposte sempre aggiornate.",
 
     // Pricing
     "pricing.title": "Scegli il Tuo Piano",
@@ -128,7 +133,7 @@ const translations = {
     
     // Integration Section
     "integration.crm.title": "Integrazione CRM personalizzata",
-    "integration.crm.subtitle": "Connetti il tuo chatbot al tuo CRM e ai dati esterni con accesso API sicuro. Sincronizza i profili dei clienti, recupera lo storico degli ordini e attiva flussi di lavoro basati su eventi in tempo reale così ogni risposta è basata sui tuoi dati.",
+    "integration.crm.subtitle": "Connetti il tuo chatbot al tuo CRM e ai dati esterni con accesso API sicuro. Sincronizza i profili dei clienti, recupera lo storico degli ordini e attiva flussi di lavoro basati su eventi in tempo reale. Integrati con le API del tuo spedizioniere per offrire tracking in tempo reale e sapere sempre dove si trova il tuo carico. Ogni risposta è basata sui tuoi dati.",
     "integration.crm.button": "Richiedi un preventivo",
     
     // Privacy Section
@@ -245,20 +250,66 @@ const translations = {
     "contact.subtitle":
       "Unisciti a migliaia di aziende che vendono già su WhatsApp",
     "contact.cta": "Inizia la Prova Gratuita",
+    "contact.form.title": "Inviaci un messaggio",
+    "contact.form.subtitle": "Dicci di cosa hai bisogno. Rispondiamo velocemente.",
+    "contact.form.success": "Messaggio inviato",
+    "contact.form.successMsg": "Grazie per averci contattato. Ti risponderemo presto.",
+    "contact.form.name": "Nome",
+    "contact.form.namePlaceholder": "Il tuo nome",
+    "contact.form.surname": "Cognome",
+    "contact.form.surnamePlaceholder": "Il tuo cognome",
+    "contact.form.email": "Email",
+    "contact.form.emailPlaceholder": "tu@email.com",
+    "contact.form.phone": "Telefono (opzionale)",
+    "contact.form.phonePlaceholder": "+39 123 456 7890",
+    "contact.form.subject": "Titolo",
+    "contact.form.subjectPlaceholder": "Dicci di cosa hai bisogno",
+    "contact.form.message": "Messaggio",
+    "contact.form.messagePlaceholder": "Scrivi qui il tuo messaggio...",
+    "contact.form.captchaError": "Configurazione Captcha mancante.",
+    "contact.form.sending": "Invio in corso...",
+    "contact.form.send": "Invia Messaggio",
+    
+    // CTA Section
+    "cta.title": "Pronto a trasformare l'esperienza dei tuoi clienti?",
+    "cta.subtitle": "Unisciti a centinaia di aziende che usano eChatbot per automatizzare le vendite, aumentare le conversioni e deliziare i clienti 24/7.",
+    "cta.button.start": "Inizia Gratis",
+    "cta.button.contact": "Contatta le Vendite",
+
+    // How It Works
+    "howItWorks.title": "Inizia in 3 Semplici Passaggi",
+    "howItWorks.subtitle": "Nessun codice, nessuna competenza tecnica richiesta. Inizia a vendere in pochi minuti.",
+    "howItWorks.step1.title": "Collega WhatsApp",
+    "howItWorks.step1.desc": "Collega il tuo account WhatsApp Business con pochi clic. Ti guidiamo attraverso la configurazione.",
+    "howItWorks.step2.title": "Configura Agente AI",
+    "howItWorks.step2.desc": "Carica il tuo catalogo prodotti, imposta le FAQ e personalizza la personalità del tuo chatbot. Ti guidiamo attraverso la configurazione.",
+    "howItWorks.step3.title": "Vai Live!",
+    "howItWorks.step3.desc": "Inizia a servire i clienti 24/7. Monitora le prestazioni e ottimizza con analisi in tempo reale.",
+    
+    // Work in Progress
+    "wip.banner": "Lavori in Corso",
 
     // Footer
     "footer.tagline": "Trasforma WhatsApp nel tuo negozio online",
+    "footer.description": "Professional WhatsApp AI Chatbot Platform for E-commerce Success.",
+    "footer.quickLinks": "Quick Links",
+    "footer.features": "Features",
+    "footer.pricing": "Pricing",
+    "footer.demo": "Demo",
+    "footer.contact": "Contact",
     "footer.company": "Azienda",
     "footer.about": "Chi Siamo",
     "footer.careers": "Carriere",
-    "footer.contact": "Contattaci",
     "footer.support": "Supporto",
     "footer.docs": "Documentazione",
     "footer.help": "Centro Assistenza",
-    "footer.legal": "Legale",
+    "footer.legal": "Legal",
     "footer.privacy": "Privacy Policy",
-    "footer.terms": "Termini di Servizio",
-    "footer.rights": "Tutti i diritti riservati",
+    "footer.terms": "Terms of Service",
+    "footer.refund": "Refund Policy",
+    "footer.rights": "© 2025 eChatbot. All rights reserved.",
+    "footer.poweredBy": "Powered by",
+    "footer.whatsappApi": "WhatsApp Business API",
 
     // Login
     "login.title": "Accedi al tuo account",
@@ -497,6 +548,74 @@ const translations = {
     "validation.lastName.required": "Last name is required",
     "validation.gdpr.required": "You must accept the terms",
     
+    // Navigation
+    "nav.demo": "Demo",
+    "nav.pricing": "Pricing",
+    "nav.contact": "Contact us",
+    "nav.language": "Select Language",
+    "nav.welcome": "Welcome",
+    "nav.yourChannels": "Your Channels",
+    "nav.profile": "Profile",
+    "nav.billing": "Billing",
+    "nav.logout": "Log out",
+    "nav.logoutSuccess": "Logged out successfully",
+    "nav.signin": "Sign in",
+    "nav.getStarted": "Get Started",
+    
+    // Plan Names
+    "plan.free": "Free Trial",
+    "plan.basic": "Basic",
+    "plan.premium": "Premium",
+    "plan.daysLeft": "days left",
+    "plan.credit": "Credit",
+    
+    // How It Works
+    "howItWorks.title": "Get Started in 3 Simple Steps",
+    "howItWorks.subtitle": "No code, no technical skills needed. Start selling in minutes.",
+    "howItWorks.step1.title": "Connect WhatsApp",
+    "howItWorks.step1.desc": "Link your WhatsApp Business account with a few clicks. We guide you through the setup.",
+    "howItWorks.step2.title": "Configure AI Agent",
+    "howItWorks.step2.desc": "Upload your product catalog, set up FAQs, and customize your chatbot's personality. We guide you through the setup.",
+    "howItWorks.step3.title": "Go Live!",
+    "howItWorks.step3.desc": "Start serving customers 24/7. Monitor performance and optimize with real-time analytics.",
+    
+    // Work in Progress
+    "wip.banner": "Work in Progress",
+    
+    // Auth Forms
+    "auth.login": "Login",
+    "auth.createAccount": "Create your account",
+    "auth.error.login": "Login Error",
+    "auth.error.registration": "Registration Error",
+    "auth.signedIn": "You're signed in",
+    "auth.loggedUser": "Logged user",
+    "auth.plan": "Plan",
+    "auth.goToBackoffice": "Go to backoffice",
+    "auth.goToWorkspace": "Go to workspace",
+    "auth.email.placeholder": "your@email.com",
+    "auth.password.placeholder": "********",
+    "auth.rememberMe": "Remember me",
+    "auth.forgotPassword": "Forgot password?",
+    "auth.signingIn": "Signing in...",
+    "auth.signIn": "Sign In",
+    "auth.orContinue": "Or continue with",
+    "auth.google": "Registrati con Google",
+    "auth.noAccount": "Don't have an account?",
+    "auth.createOne": "Create one",
+    "auth.invitation.detected": "Invitation detected",
+    "auth.invitation.text": "invited you to join",
+    "auth.firstName.placeholder": "First name",
+    "auth.lastName.placeholder": "Last name",
+    "auth.email.preFilled": "Email is pre-filled from your invitation",
+    "auth.confirmPassword.placeholder": "Confirm password",
+    "auth.gdpr.agree": "I agree to the",
+    "auth.gdpr.privacy": "Privacy Policy",
+    "auth.gdpr.and": "and",
+    "auth.gdpr.terms": "Terms of Service",
+    "auth.creatingAccount": "Creating account...",
+    "auth.createAccount": "Create account",
+    "auth.alreadyAccount": "Already have an account?",
+    
     // Demo Section
     "demo.title": "Live demo",
     "demo.subtitle": "Bellitalia sells Italian products. Try their AI agent, ask about products, and see how the conversation guides you to the right items. You can add products to the cart and experience a real end-to-end flow.",
@@ -504,7 +623,7 @@ const translations = {
     
     // Integration Section
     "integration.crm.title": "Custom CRM integration",
-    "integration.crm.subtitle": "Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles, pull order history, and trigger workflows based on real-time events so every reply is grounded in your data.",
+    "integration.crm.subtitle": "Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles, pull order history, and trigger workflows based on real-time events. Integrate with your carrier's API to offer real-time tracking and always know where your shipment is. Every reply is grounded in your data.",
     "integration.crm.button": "Request a quote",
     
     // Privacy Section
@@ -623,6 +742,25 @@ const translations = {
     "contact.subtitle":
       "Join thousands of businesses already selling on WhatsApp",
     "contact.cta": "Start Free Trial",
+    "contact.form.title": "Send us a message",
+    "contact.form.subtitle": "Tell us what you need. We reply quickly.",
+    "contact.form.success": "Message sent",
+    "contact.form.successMsg": "Thanks for reaching out. We'll be in touch soon.",
+    "contact.form.name": "Name",
+    "contact.form.namePlaceholder": "Your first name",
+    "contact.form.surname": "Surname",
+    "contact.form.surnamePlaceholder": "Your last name",
+    "contact.form.email": "Email",
+    "contact.form.emailPlaceholder": "you@email.com",
+    "contact.form.phone": "Phone (optional)",
+    "contact.form.phonePlaceholder": "+1 234 567 8900",
+    "contact.form.subject": "Title",
+    "contact.form.subjectPlaceholder": "Tell us what you need",
+    "contact.form.message": "Message",
+    "contact.form.messagePlaceholder": "Write your message here...",
+    "contact.form.captchaError": "Captcha configuration missing.",
+    "contact.form.sending": "Sending...",
+    "contact.form.send": "Send Message",
 
     // Footer
     "footer.tagline": "Transform WhatsApp into your online store",
@@ -637,6 +775,12 @@ const translations = {
     "footer.privacy": "Privacy Policy",
     "footer.terms": "Terms of Service",
     "footer.rights": "All rights reserved",
+
+    // CTA Section
+    "cta.title": "Ready to Transform Your Customer Experience?",
+    "cta.subtitle": "Join hundreds of businesses using eChatbot to automate sales, boost conversions, and delight customers 24/7.",
+    "cta.button.start": "Get Started Free",
+    "cta.button.contact": "Contact Sales",
 
     // Login
     "login.title": "Sign in to your account",
@@ -874,7 +1018,7 @@ const translations = {
     
     // Integration Section
     "integration.crm.title": "Integración CRM personalizada",
-    "integration.crm.subtitle": "Conecta tu chatbot a tu CRM y datos externos con acceso API seguro. Sincroniza perfiles de clientes, obtén historial de pedidos y activa flujos de trabajo basados en eventos en tiempo real para que cada respuesta esté fundamentada en tus datos.",
+    "integration.crm.subtitle": "Conecta tu chatbot a tu CRM y datos externos con acceso API seguro. Sincroniza perfiles de clientes, obtén historial de pedidos y activa flujos de trabajo basados en eventos en tiempo real. Intégrate con la API de tu transportista para ofrecer seguimiento en tiempo real y saber siempre dónde está tu envío. Cada respuesta está fundamentada en tus datos.",
     "integration.crm.button": "Solicita un presupuesto",
     
     // Privacy Section
@@ -937,6 +1081,25 @@ const translations = {
     "contact.title": "¿Listo para Comenzar?",
     "contact.subtitle": "Únete a miles de empresas que ya venden en WhatsApp",
     "contact.cta": "Empezar Prueba Gratuita",
+    "contact.form.title": "Envíanos un mensaje",
+    "contact.form.subtitle": "Cuéntanos qué necesitas. Respondemos rápido.",
+    "contact.form.success": "Mensaje enviado",
+    "contact.form.successMsg": "Gracias por contactarnos. Te responderemos pronto.",
+    "contact.form.name": "Nombre",
+    "contact.form.namePlaceholder": "Tu nombre",
+    "contact.form.surname": "Apellido",
+    "contact.form.surnamePlaceholder": "Tu apellido",
+    "contact.form.email": "Correo electrónico",
+    "contact.form.emailPlaceholder": "tu@email.com",
+    "contact.form.phone": "Teléfono (opcional)",
+    "contact.form.phonePlaceholder": "+34 123 456 789",
+    "contact.form.subject": "Título",
+    "contact.form.subjectPlaceholder": "Cuéntanos qué necesitas",
+    "contact.form.message": "Mensaje",
+    "contact.form.messagePlaceholder": "Escribe tu mensaje aquí...",
+    "contact.form.captchaError": "Falta la configuración del Captcha.",
+    "contact.form.sending": "Enviando...",
+    "contact.form.send": "Enviar Mensaje",
 
     // Footer
     "footer.tagline": "Transforma WhatsApp en tu tienda online",
@@ -951,6 +1114,25 @@ const translations = {
     "footer.privacy": "Política de Privacidad",
     "footer.terms": "Términos de Servicio",
     "footer.rights": "Todos los derechos reservados",
+
+    // CTA Section
+    "cta.title": "¿Listo para transformar la experiencia de tus clientes?",
+    "cta.subtitle": "Únete a cientos de empresas que usan eChatbot para automatizar ventas, aumentar conversiones y deleitar a los clientes 24/7.",
+    "cta.button.start": "Comenzar Gratis",
+    "cta.button.contact": "Contactar Ventas",
+
+    // How It Works
+    "howItWorks.title": "Comienza en 3 Simples Pasos",
+    "howItWorks.subtitle": "Sin código, sin habilidades técnicas necesarias. Comienza a vender en minutos.",
+    "howItWorks.step1.title": "Conecta WhatsApp",
+    "howItWorks.step1.desc": "Vincula tu cuenta de WhatsApp Business con pocos clics. Te guiamos en la configuración.",
+    "howItWorks.step2.title": "Configura Agente AI",
+    "howItWorks.step2.desc": "Carga tu catálogo de productos, configura las preguntas frecuentes y personaliza la personalidad de tu chatbot. Te guiamos en la configuración.",
+    "howItWorks.step3.title": "¡En Vivo!",
+    "howItWorks.step3.desc": "Comienza a servir a los clientes 24/7. Monitorea el rendimiento y optimiza con análisis en tiempo real.",
+    
+    // Work in Progress
+    "wip.banner": "Trabajo en Progreso",
 
     // Login
     "login.title": "Inicia sesión en tu cuenta",
@@ -1201,7 +1383,7 @@ const translations = {
     
     // Integration Section
     "integration.crm.title": "Integração CRM personalizada",
-    "integration.crm.subtitle": "Conecte seu chatbot ao seu CRM e dados externos com acesso API seguro. Sincronize perfis de clientes, obtenha histórico de pedidos e acione fluxos de trabalho baseados em eventos em tempo real para que cada resposta seja fundamentada em seus dados.",
+    "integration.crm.subtitle": "Conecte seu chatbot ao seu CRM e dados externos com acesso API seguro. Sincronize perfis de clientes, obtenha histórico de pedidos e acione fluxos de trabalho baseados em eventos em tempo real. Integre com a API da sua transportadora para oferecer rastreamento em tempo real e sempre saber onde está sua remessa. Cada resposta é fundamentada em seus dados.",
     "integration.crm.button": "Solicite um orçamento",
     
     // Privacy Section
@@ -1266,6 +1448,25 @@ const translations = {
     "contact.subtitle":
       "Junte-se a milhares de empresas que já vendem no WhatsApp",
     "contact.cta": "Começar Teste Gratuito",
+    "contact.form.title": "Envie-nos uma mensagem",
+    "contact.form.subtitle": "Diga-nos o que você precisa. Respondemos rapidamente.",
+    "contact.form.success": "Mensagem enviada",
+    "contact.form.successMsg": "Obrigado por entrar em contato. Responderemos em breve.",
+    "contact.form.name": "Nome",
+    "contact.form.namePlaceholder": "Seu primeiro nome",
+    "contact.form.surname": "Sobrenome",
+    "contact.form.surnamePlaceholder": "Seu sobrenome",
+    "contact.form.email": "E-mail",
+    "contact.form.emailPlaceholder": "voce@email.com",
+    "contact.form.phone": "Telefone (opcional)",
+    "contact.form.phonePlaceholder": "+55 11 12345-6789",
+    "contact.form.subject": "Título",
+    "contact.form.subjectPlaceholder": "Diga-nos o que você precisa",
+    "contact.form.message": "Mensagem",
+    "contact.form.messagePlaceholder": "Escreva sua mensagem aqui...",
+    "contact.form.captchaError": "Configuração do Captcha ausente.",
+    "contact.form.sending": "Enviando...",
+    "contact.form.send": "Enviar Mensagem",
 
     // Footer
     "footer.tagline": "Transforme o WhatsApp em sua loja online",
@@ -1280,6 +1481,12 @@ const translations = {
     "footer.privacy": "Política de Privacidade",
     "footer.terms": "Termos de Serviço",
     "footer.rights": "Todos os direitos reservados",
+
+    // CTA Section
+    "cta.title": "Pronto para transformar a experiência dos seus clientes?",
+    "cta.subtitle": "Junte-se a centenas de empresas que usam o eChatbot para automatizar vendas, aumentar conversões e encantar clientes 24/7.",
+    "cta.button.start": "Comece Grátis",
+    "cta.button.contact": "Contatar Vendas",
 
     // Login
     "login.title": "Entre na sua conta",

@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Globe2,
   Headphones,
+  MessageCircle,
   Megaphone,
   TrendingUp,
 } from "lucide-react"
@@ -62,6 +63,16 @@ const newsItems: NewsItem[] = [
     image: "/logo.png",
     bgGradient: "from-orange-50 to-yellow-50",
   },
+  {
+    id: 5,
+    dateKey: "news.5.date",
+    titleKey: "news.5.title",
+    categoryKey: "news.5.category",
+    descriptionKey: "news.5.desc",
+    icon: <MessageCircle className="w-6 h-6" />,
+    image: "/logo.png",
+    bgGradient: "from-emerald-50 to-teal-50",
+  },
 ]
 
 export function NewsUpdates() {
@@ -70,6 +81,7 @@ export function NewsUpdates() {
   const [isTransitioning, setIsTransitioning] = useState(true)
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const [isMobileView, setIsMobileView] = useState(false)
 
   const minSwipeDistance = 50
 
@@ -128,6 +140,18 @@ export function NewsUpdates() {
     }
   }, [currentIndex])
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      setIsMobileView(false)
+      return
+    }
+    const mediaQuery = window.matchMedia("(max-width: 767px)")
+    const updateMatch = () => setIsMobileView(mediaQuery.matches)
+    updateMatch()
+    mediaQuery.addEventListener("change", updateMatch)
+    return () => mediaQuery.removeEventListener("change", updateMatch)
+  }, [])
+
   // Create array with duplicates for infinite scroll
   const extendedItems = [...newsItems, ...newsItems, ...newsItems]
   const actualIndex = currentIndex + newsItems.length
@@ -136,11 +160,10 @@ export function NewsUpdates() {
     <div className="pt-20 pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-16">
-           
-          <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-3">
-             {t("news.title")}
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+            Latest Updates and Features
           </h2>
-          <p className="text-lg text-slate-600">
+          <p className="text-lg text-gray-600">
             Stay updated with our newest features and improvements
           </p>
         </div>
@@ -156,7 +179,7 @@ export function NewsUpdates() {
           {/* Left Arrow */}
           <button
             onClick={goToPrevious}
-            className="absolute left-2 sm:left-3 md:left-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
+            className="hidden md:flex absolute left-2 sm:left-3 md:left-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
             aria-label="Previous update"
           >
             <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -165,19 +188,20 @@ export function NewsUpdates() {
           {/* Right Arrow */}
           <button
             onClick={goToNext}
-            className="absolute right-2 sm:right-3 md:right-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
+            className="hidden md:flex absolute right-2 sm:right-3 md:right-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
             aria-label="Next update"
           >
             <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
 
           {/* Cards Container */}
-          <div className="flex items-center justify-center w-full px-4 md:px-16 lg:px-24 overflow-hidden">
-            <div className="relative w-full max-w-5xl h-[420px] flex items-center justify-center">
+          <div className="flex items-center justify-center w-full px-2 sm:px-4 md:px-16 lg:px-24 overflow-visible md:overflow-hidden">
+            <div className="relative w-full max-w-5xl h-[560px] sm:h-[520px] md:h-[420px] flex items-center justify-center">
               {extendedItems.map((item, idx) => {
                 const offset = idx - actualIndex
                 const isCenter = offset === 0
                 const isVisible = Math.abs(offset) <= 1
+                const translatePercent = isMobileView ? 85 : 100
 
                 if (!isVisible) return null
 
@@ -186,7 +210,7 @@ export function NewsUpdates() {
                     key={`${item.id}-${idx}`}
                     className="absolute"
                     style={{
-                      transform: `translateX(${offset * 110}%) scale(${
+                      transform: `translateX(${offset * translatePercent}%) scale(${
                         isCenter ? 1 : 0.75
                       })`,
                       opacity: isCenter ? 1 : 0.4,

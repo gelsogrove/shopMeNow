@@ -108,7 +108,7 @@ describe('LoginPage', () => {
       renderLoginPage()
       
       await waitFor(() => {
-        const heroImages = screen.getAllByAltText(/Bellitalia demo|CRM integration preview|Privacy by design/i)
+        const heroImages = screen.getAllByAltText(/WhatsApp AI agent dashboard/i)
         expect(heroImages.length).toBeGreaterThan(0)
       })
     })
@@ -190,7 +190,8 @@ describe('LoginPage', () => {
       const createButton = await screen.findByRole('button', { name: /Create one/i })
       fireEvent.click(createButton)
 
-      expect(await screen.findByText(/Create your account/i)).toBeInTheDocument()
+      const createHeaders = await screen.findAllByText(/Create (your )?account/i)
+      expect(createHeaders.length).toBeGreaterThan(0)
     })
 
     it('should display password validation errors', async () => {
@@ -295,7 +296,7 @@ describe('LoginPage', () => {
       
       await waitFor(() => {
         const logos = screen.getAllByAltText(/eChatbot/i)
-        expect(logos[0]).toHaveClass(/h-\[70px\]/)
+        expect(logos[0]).toHaveClass(/h-\[64px\]/)
       })
     })
   })

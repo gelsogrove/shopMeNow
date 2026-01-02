@@ -152,7 +152,7 @@ export function LoginPage() {
   const isAdminBypass = searchParams.get('admin') === 'true'
   const isLoginDisabled = flagsLoading || (!canLogin && !isAdminBypass)
   const isRegisterDisabled = flagsLoading || !canRegister
-  const isDemoDisabled = flagsLoading || !cantryDemo
+  const isDemoDisabled = flagsLoading || !cantryDemo || workingInProgress
   const isLoginViewDisabled = activeTab === "signin" && isLoginDisabled
   const isRegisterViewDisabled = activeTab === "register" && isRegisterDisabled
   
@@ -180,6 +180,7 @@ export function LoginPage() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [touchStartHero, setTouchStartHero] = useState<number | null>(null)
   const [touchEndHero, setTouchEndHero] = useState<number | null>(null)
+  const [isMobileView, setIsMobileView] = useState(false)
 
   const minSwipeDistance = 50
 
@@ -227,6 +228,18 @@ export function LoginPage() {
     }, 7000)
     return () => clearInterval(interval)
   }, [heroSlides.length])
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      setIsMobileView(false)
+      return
+    }
+    const mediaQuery = window.matchMedia("(max-width: 767px)")
+    const updateMatch = () => setIsMobileView(mediaQuery.matches)
+    updateMatch()
+    mediaQuery.addEventListener("change", updateMatch)
+    return () => mediaQuery.removeEventListener("change", updateMatch)
+  }, [])
 
   useEffect(() => {
     if (!recaptchaSiteKey) {
@@ -870,23 +883,23 @@ export function LoginPage() {
             <div className="flex items-center gap-4">
               <a
                 href="#demo"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
               >
-                Demo
+                {t("nav.demo")}
               </a>
-              <span className="text-green-600 text-xs font-semibold">|</span>
+              <span className="text-slate-900 text-xs font-semibold">|</span>
               <a
                 href="#pricing"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
               >
-                Pricing
+                {t("nav.pricing")}
               </a>
-              <span className="text-green-600 text-xs font-semibold">|</span>
+              <span className="text-slate-900 text-xs font-semibold">|</span>
               <a
                 href="#contact"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
               >
-                Contact us
+                {t("nav.contact")}
               </a>
             </div>
           </div>
@@ -894,23 +907,23 @@ export function LoginPage() {
           {/* Main Header Row */}
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Left: Logo + Brand */}
-            <div className="flex items-center gap-0 -mt-[5px]">
+            <div className="flex items-center justify-start gap-0">
               <img 
                 src="/logo.png" 
                 alt="eChatbot" 
-                className="h-[70px] w-[70px] md:h-[100px] md:w-[100px] object-contain mr-[-10px] md:mr-[-15px]"
+                className="h-[64px] w-[64px] md:h-[88px] md:w-[88px] lg:h-[100px] lg:w-[100px] object-contain mr-[-8px] md:mr-[-15px]"
               />
-              <span className="text-2xl md:text-4xl font-bold text-green-600 tracking-tight">eChatbot</span>
+              <span className="text-2xl md:text-3xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot</span>
             </div>
 
             {/* Right: Language Selector + Auth */}
-            <div className="flex items-center gap-2 md:gap-6">
-              {/* Language Selector */}
+            <div className="flex items-center justify-end gap-2 md:gap-6">
+              {/* Language Selector - Hidden on mobile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+                    className="hidden md:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
                   >
                     <span className="text-xl">
                       {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
@@ -922,7 +935,7 @@ export function LoginPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48" align="end">
-                  <DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider px-2 py-1.5">Select Language</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider px-2 py-1.5">{t("nav.language")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
@@ -1008,7 +1021,7 @@ export function LoginPage() {
                               : 'User'}
                           </p>
                           <p className="text-xs leading-none text-muted-foreground truncate">
-                            {loggedInUser?.email || 'Welcome'}
+                            {loggedInUser?.email || t("nav.welcome")}
                           </p>
                         </div>
                       </DropdownMenuLabel>
@@ -1018,21 +1031,21 @@ export function LoginPage() {
                         onClick={() => navigate("/workspace-selection")}
                       >
                         <MessageSquare className="mr-2 h-4 w-4 text-green-500" fill="currentColor" />
-                        <span>Your Channels</span>
+                        <span>{t("nav.yourChannels")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="p-2 cursor-pointer"
                         onClick={() => navigate("/profile")}
                       >
                         <User className="mr-2 h-4 w-4 text-blue-500" />
-                        <span>Profile</span>
+                        <span>{t("nav.profile")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="p-2 cursor-pointer"
                         onClick={() => navigate("/billing")}
                       >
                         <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
-                        <span>Billing</span>
+                        <span>{t("nav.billing")}</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -1042,11 +1055,11 @@ export function LoginPage() {
                           setIsLoggedIn(false)
                           setLoggedInUser(null)
                           setUserPlan(null)
-                          toast.success('Logged out successfully')
+                          toast.success(t("nav.logoutSuccess"))
                         }}
                       >
                         <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log out</span>
+                        <span>{t("nav.logout")}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -1065,7 +1078,7 @@ export function LoginPage() {
                       }
                     }}
                   >
-                    Sign in
+                    {t("nav.signin")}
                   </Button>
                   <Button
                     className="bg-green-600 hover:bg-green-700 text-white font-medium text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-sm transition-all hover:shadow-md"
@@ -1078,7 +1091,7 @@ export function LoginPage() {
                       }
                     }}
                   >
-                    Get Started
+                    {t("nav.getStarted")}
                   </Button>
                 </div>
               )}
@@ -1098,46 +1111,73 @@ export function LoginPage() {
             {t("hero.subtitle")}
           </p>
         </div>
-        <div className="flex flex-col lg:flex-row gap-10 items-stretch">
+        <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
           <div className="flex justify-center lg:justify-start items-center w-full lg:flex-1">
             <div className="relative w-full max-w-3xl lg:mr-2 min-h-[32rem]">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
-              <div className="relative rounded-[32px] shadow-2xl overflow-hidden bg-white min-h-[32rem]">
-                <div className="absolute top-5 inset-x-0 flex justify-center gap-2 z-10 opacity-0" aria-hidden="true">
-                  {heroSlides.map((_, index) => (
-                    <span
-                      key={`slide-dot-${index}`}
-                      className={`h-2.5 rounded-full transition-all duration-300 ${
-                        index === currentSlide ? "w-8 bg-green-600" : "w-2.5 bg-slate-300"
-                      }`}
-                    />
-                  ))}
+            <div className="relative rounded-[32px] shadow-2xl bg-white min-h-[32rem] overflow-visible">
+                <div className="relative rounded-[28px] overflow-hidden">
+                  <div 
+                    className="relative w-full pt-[85%] sm:pt-[70%] min-h-[20rem] bg-white"
+                    onTouchStart={onTouchStartHero}
+                    onTouchMove={onTouchMoveHero}
+                    onTouchEnd={onTouchEndHero}
+                    style={{ touchAction: "pan-x" }}
+                  >
+                    {isMobileView
+                      ? [-1, 0, 1].map((offset) => {
+                          const slideIndex =
+                            (currentSlide + offset + heroSlides.length) %
+                            heroSlides.length
+                          const slide = heroSlides[slideIndex]
+                          const isCenter = offset === 0
+                          return (
+                            <img
+                              key={`${slide.src}-${offset}`}
+                              src={slide.src}
+                              alt={slide.alt}
+                              className="absolute inset-0 w-full h-full object-cover object-center"
+                              style={{
+                                transform: `translateX(${offset * 85}%) scale(${
+                                  isCenter ? 1 : 0.9
+                                })`,
+                                opacity: isCenter ? 1 : 0.55,
+                                zIndex: isCenter ? 2 : 1,
+                                transition: "transform 0.6s ease, opacity 0.6s ease",
+                              }}
+                            />
+                          )
+                        })
+                      : heroSlides.map((slide, index) => (
+                          <img
+                            key={slide.src}
+                            src={slide.src}
+                            alt={slide.alt}
+                            className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-in-out ${
+                              index === currentSlide
+                                ? "opacity-100 scale-[1.12] sm:scale-100"
+                                : "opacity-0 scale-[1.04] sm:scale-95 pointer-events-none"
+                            }`}
+                          />
+                        ))}
+                  </div>
                 </div>
-                <div 
-                  className="relative w-full pt-[85%] sm:pt-[70%] min-h-[20rem] bg-white"
-                  onTouchStart={onTouchStartHero}
-                  onTouchMove={onTouchMoveHero}
-                  onTouchEnd={onTouchEndHero}
-                >
-                  {heroSlides.map((slide, index) => (
-                    <img
-                      key={slide.src}
-                      src={slide.src}
-                      alt={slide.alt}
-                      className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-in-out ${
-                        index === currentSlide
-                          ? "opacity-100 scale-[1.12] sm:scale-100"
-                          : "opacity-0 scale-[1.04] sm:scale-95 pointer-events-none"
-                      }`}
-                    />
-                  ))}
-                </div>
+              </div>
+              <div className="flex justify-center gap-2 mt-5" aria-hidden="true">
+                {heroSlides.map((_, index) => (
+                  <span
+                    key={`slide-dot-${index}`}
+                    className={`h-2.5 rounded-full transition-all duration-300 ${
+                      index === currentSlide ? "w-8 bg-green-600" : "w-2.5 bg-slate-300"
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           </div>
 
           <div
-            className="relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex"
+            className="relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto lg:mx-0"
             onClickCapture={() => {
               if (isLoginViewDisabled) {
                 setWipFeature("login")
@@ -1151,14 +1191,14 @@ export function LoginPage() {
           >
             {workingInProgress && (
               <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
-                Work in Progress
+                {t("wip.banner")}
               </div>
             )}
             
             <div className="space-y-6 flex-1 flex flex-col">
                 <div className="text-center space-y-2">
                   <h3 className={`text-2xl font-bold text-slate-900 ${isLoginViewDisabled ? "opacity-60" : ""}`}>
-                    {activeTab === "signin" ? "Login" : "Create your account"}
+                    {activeTab === "signin" ? t("auth.login") : t("auth.createAccount")}
                   </h3>
                   <p className={`text-slate-600 ${isLoginViewDisabled ? "opacity-60" : ""}`}>
                     {activeTab === "signin"
@@ -1170,7 +1210,7 @@ export function LoginPage() {
                 {error && (
                   <Alert variant="destructive">
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>{activeTab === "signin" ? "Login Error" : "Registration Error"}</AlertTitle>
+                    <AlertTitle>{activeTab === "signin" ? t("auth.error.login") : t("auth.error.registration")}</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
@@ -1604,11 +1644,11 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
             
-            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-3">
-              Get Started in 3 Simple Steps
+            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">
+              {t("howItWorks.title")}
             </h2>
             <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              No code, no technical skills needed. Start selling in minutes.
+              {t("howItWorks.subtitle")}
             </p>
           </div>
 
@@ -1619,9 +1659,9 @@ export function LoginPage() {
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   1
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">Connect WhatsApp</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step1.title")}</h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Link your WhatsApp Business account in seconds. No technical skills required.
+                  {t("howItWorks.step1.desc")}
                 </p>
               </div>
               {/* Arrow */}
@@ -1638,9 +1678,9 @@ export function LoginPage() {
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   2
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">Configure AI Agent</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step2.title")}</h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Upload your product catalog, set up FAQs, and customize your chatbot's personality.
+                  {t("howItWorks.step2.desc")}
                 </p>
               </div>
               {/* Arrow */}
@@ -1657,9 +1697,9 @@ export function LoginPage() {
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   3
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">Go Live!</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step3.title")}</h3>
                 <p className="text-slate-600 leading-relaxed">
-                  Start serving customers 24/7. Monitor performance and optimize with real-time analytics.
+                  {t("howItWorks.step3.desc")}
                 </p>
               </div>
             </div>
@@ -1698,12 +1738,12 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="group relative">
             {/* Decorative rotated background frame */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
-            <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
-              {!cantryDemo && (
+              <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+              {workingInProgress && (
                 <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
-                  Work in Progress
+                  {t("wip.banner")}
                 </div>
               )}
               
@@ -1726,9 +1766,9 @@ export function LoginPage() {
                 </div>
                 
                 {/* Right: Content */}
-                <div className="space-y-6">
+                <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                       Interactive Demo
                     </div>
@@ -1740,11 +1780,11 @@ export function LoginPage() {
                     </p>
                   </div>
                   
-                  <div className="pt-4">
+                  <div className="pt-4 flex justify-center lg:justify-start">
                     <Button
                       type="button"
                       disabled={isDemoDisabled}
-                      className={`px-10 py-6 text-lg font-semibold rounded-2xl bg-green-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ${isDemoDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                      className={`w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-green-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ${isDemoDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
                       onClick={() => {
                         if (isDemoDisabled) {
                           setWipFeature('demo')
@@ -1769,14 +1809,14 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="group relative">
             {/* Decorative rotated background frame - BLU for enterprise */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
-            <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
                 {/* Left: Content */}
-                <div className="space-y-6">
+                <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
                       <span>🔗</span>
                       Enterprise Feature
                     </div>
@@ -1788,10 +1828,10 @@ export function LoginPage() {
                     </p>
                   </div>
                   
-                  <div className="pt-4">
+                  <div className="pt-4 flex justify-center lg:justify-start">
                     <Button
                       type="button"
-                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                      className="w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                       onClick={() => {
                         document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
                       }}
@@ -1830,9 +1870,9 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="group relative">
             {/* Decorative rotated background frame */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
-            <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
                 {/* Left: Image with security badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
@@ -1852,9 +1892,9 @@ export function LoginPage() {
                 </div>
                 
                 {/* Right: Content */}
-                <div className="space-y-6">
+                <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-sm font-medium">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
                       <span>🛡️</span>
                       GDPR Compliant
                     </div>
@@ -1866,10 +1906,10 @@ export function LoginPage() {
                     </p>
                   </div>
                   
-                  <div className="pt-4">
+                  <div className="pt-4 flex justify-center lg:justify-start">
                     <Button
                       type="button"
-                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                      className="w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                     >
                       <span className="flex items-center gap-3">
                         <span>{t("privacy.button")}</span>
@@ -1885,52 +1925,52 @@ export function LoginPage() {
 
       {/* Contact Form */}
       <div id="contact" className="py-16 bg-white border-t border-slate-200">
-        <div className="max-w-4xl mx-auto px-6 lg:px-8">
-          <div className="text-center space-y-3 mb-10">
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-green-600">
-              Contact us
-            </p>
-            <h3 className="text-3xl font-bold text-slate-900">Send us a message</h3>
-            <p className="text-slate-600">Tell us what you need. We reply quickly.</p>
-          </div>
-
-          {contactSuccess ? (
-            <div className="rounded-3xl border border-emerald-200 bg-emerald-50/60 p-10 text-center shadow-lg">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-8 w-8"
-                  aria-hidden="true"
-                >
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="group relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-green-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg transition-transform duration-500"></div>
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 min-h-[320px]">
+              <div className="text-center space-y-3 mb-10">
+                <h3 className="text-3xl font-bold text-slate-900">{t("contact.form.title")}</h3>
+                <p className="text-slate-600">{t("contact.form.subtitle")}</p>
               </div>
-              <h4 className="text-2xl font-semibold text-slate-900">Message sent</h4>
-              <p className="mt-2 text-slate-600">
-                Thanks for reaching out. We’ll be in touch soon.
-              </p>
-            </div>
-          ) : (
-            <form
-              onSubmit={handleContactSubmit}
-              className="rounded-3xl border border-slate-200 bg-white p-6 lg:p-8 space-y-6 shadow-lg"
-            >
+
+              {contactSuccess ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-8 sm:p-10 text-center shadow-lg">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-8 w-8"
+                      aria-hidden="true"
+                    >
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  </div>
+                  <h4 className="text-2xl font-semibold text-slate-900">Message sent</h4>
+                  <p className="mt-2 text-slate-600">
+                    Thanks for reaching out. We’ll be in touch soon.
+                  </p>
+                </div>
+              ) : (
+                <form
+                  onSubmit={handleContactSubmit}
+                  className="space-y-6"
+                >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="contact-name">
-                    Name
+                    {t("contact.form.name")}
                   </label>
                   <Input
                     ref={contactNameInputRef}
                     id="contact-name"
                     value={contactName}
                     onChange={(event) => setContactName(event.target.value)}
-                    placeholder="Your first name"
+                    placeholder={t("contact.form.namePlaceholder")}
                     className="h-11"
                     required
                   />
@@ -1938,13 +1978,13 @@ export function LoginPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="contact-surname">
-                    Surname
+                    {t("contact.form.surname")}
                   </label>
                   <Input
                     id="contact-surname"
                     value={contactSurname}
                     onChange={(event) => setContactSurname(event.target.value)}
-                    placeholder="Your last name"
+                    placeholder={t("contact.form.surnamePlaceholder")}
                     className="h-11"
                     required
                   />
@@ -1954,14 +1994,14 @@ export function LoginPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="contact-email">
-                    Email
+                    {t("contact.form.email")}
                   </label>
                   <Input
                     id="contact-email"
                     type="email"
                     value={contactEmail}
                     onChange={(event) => setContactEmail(event.target.value)}
-                    placeholder="you@email.com"
+                    placeholder={t("contact.form.emailPlaceholder")}
                     className="h-11"
                     required
                   />
@@ -1969,13 +2009,13 @@ export function LoginPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700" htmlFor="contact-phone">
-                    Phone (optional)
+                    {t("contact.form.phone")}
                   </label>
                   <Input
                     id="contact-phone"
                     value={contactPhone}
                     onChange={(event) => setContactPhone(event.target.value)}
-                    placeholder="+34 244 758 153"
+                    placeholder={t("contact.form.phonePlaceholder")}
                     className="h-11"
                   />
                 </div>
@@ -1983,13 +2023,13 @@ export function LoginPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700" htmlFor="contact-title">
-                  Title
+                  {t("contact.form.subject")}
                 </label>
                 <Input
                   id="contact-title"
                   value={contactTitle}
                   onChange={(event) => setContactTitle(event.target.value)}
-                  placeholder="Tell us what you need"
+                  placeholder={t("contact.form.subjectPlaceholder")}
                   className="h-11"
                   required
                 />
@@ -1997,13 +2037,13 @@ export function LoginPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700" htmlFor="contact-message">
-                  Message
+                  {t("contact.form.message")}
                 </label>
                 <textarea
                   id="contact-message"
                   value={contactMessage}
                   onChange={(event) => setContactMessage(event.target.value)}
-                  placeholder="Write your message here..."
+                  placeholder={t("contact.form.messagePlaceholder")}
                   required
                   className="min-h-[140px] w-full rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                 />
@@ -2027,7 +2067,7 @@ export function LoginPage() {
                     data-callback="onRecaptchaSuccess"
                   />
                 ) : (
-                  <p className="text-sm text-red-600">Captcha configuration missing.</p>
+                  <p className="text-sm text-red-600">{t("contact.form.captchaError")}</p>
                 )}
               </div>
 
@@ -2039,13 +2079,15 @@ export function LoginPage() {
                 <Button
                   type="submit"
                   disabled={contactSubmitting}
-                className="w-56 px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                  className="w-56 px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
                 >
-                  {contactSubmitting ? "Sending..." : "Send message"}
+                  {contactSubmitting ? t("contact.form.sending") : t("contact.form.send")}
                 </Button>
               </div>
-            </form>
-          )}
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2058,11 +2100,10 @@ export function LoginPage() {
         
         <div className="max-w-5xl mx-auto px-6 lg:px-8 text-center relative z-10">
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-            Ready to Transform Your <br className="hidden md:block" />
-            Customer Experience?
+            {t("cta.title")}
           </h2>
           <p className="text-xl md:text-2xl text-green-50 mb-10 leading-relaxed max-w-3xl mx-auto">
-            Join hundreds of businesses using eChatbot to automate sales, boost conversions, and delight customers 24/7.
+            {t("cta.subtitle")}
           </p>
           
           {/* CTA Button */}
@@ -2076,7 +2117,7 @@ export function LoginPage() {
               }}
               className="group px-10 py-5 bg-white text-green-600 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-white/50 hover:scale-105 transition-all duration-300 flex items-center gap-3"
             >
-              <span>Get Started Free</span>
+              <span>{t("cta.button.start")}</span>
               <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
@@ -2090,7 +2131,7 @@ export function LoginPage() {
               }}
               className="px-10 py-5 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 shadow-lg transition-all duration-300"
             >
-              Contact Sales
+              {t("cta.button.contact")}
             </button>
           </div>
         </div>
