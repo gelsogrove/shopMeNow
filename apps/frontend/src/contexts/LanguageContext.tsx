@@ -87,7 +87,7 @@ const translations = {
     "pricing.subtitle": "Inizia gratis e scala mentre cresci",
     "pricing.free.desc": "Per testare la piattaforma",
     "pricing.free.creditDesc":
-      "We offer you the first $23 to test the platform.",
+      "We offer you the first $22 to test the platform.",
     "pricing.basic.desc": "Per aziende in crescita",
     "pricing.premium.desc": "Per aziende consolidate",
     "pricing.enterprise.desc": "Per operazioni su larga scala",
@@ -462,7 +462,7 @@ const translations = {
     "pricing.subtitle": "Start free and scale as you grow",
     "pricing.free.desc": "For testing the platform",
     "pricing.free.creditDesc":
-      "We offer you the first $23 to test the platform.",
+      "We offer you the first $22 to test the platform.",
     "pricing.basic.desc": "For growing businesses",
     "pricing.premium.desc": "For established businesses",
     "pricing.enterprise.desc": "For large-scale operations",
@@ -844,7 +844,7 @@ const translations = {
     "pricing.subtitle": "Comienza gratis y escala mientras creces",
     "pricing.free.desc": "Para probar la plataforma",
     "pricing.free.creditDesc":
-      "We offer you the first $23 to test the platform.",
+      "We offer you the first $22 to test the platform.",
     "pricing.basic.desc": "Para empresas en crecimiento",
     "pricing.premium.desc": "Para empresas consolidadas",
     "pricing.enterprise.desc": "Para operaciones a gran escala",
@@ -1158,7 +1158,7 @@ const translations = {
     "pricing.subtitle": "Comece grátis e escale conforme você cresce",
     "pricing.free.desc": "Para testar a plataforma",
     "pricing.free.creditDesc":
-      "We offer you the first $23 to test the platform.",
+      "We offer you the first $22 to test the platform.",
     "pricing.basic.desc": "Para empresas em crescimento",
     "pricing.premium.desc": "Para empresas estabelecidas",
     "pricing.enterprise.desc": "Para operações em grande escala",

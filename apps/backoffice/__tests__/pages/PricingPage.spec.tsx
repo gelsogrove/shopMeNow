@@ -111,8 +111,8 @@ describe('PricingPage', () => {
       render(<PricingPage />)
       
       await waitFor(() => {
-        // Values are displayed as currency with €
-        expect(screen.getByText('€0.15')).toBeInTheDocument()
+        // Values are displayed as currency with $
+        expect(screen.getByText('$0.15')).toBeInTheDocument()
       })
     })
   })
@@ -213,8 +213,8 @@ describe('PricingPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Pricing Configuration')).toBeInTheDocument()
         expect(screen.getByText(/STARTER_MONTHLY/i)).toBeInTheDocument()
-        // Original price €14.99 displayed as strikethrough in planPrices section
-        expect(screen.getByText(/€14\.99/)).toBeInTheDocument()
+        // Original price $14.99 displayed as strikethrough in planPrices section
+        expect(screen.getByText(/\$14\.99/)).toBeInTheDocument()
       })
     })
 

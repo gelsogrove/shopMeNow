@@ -317,7 +317,7 @@ export class RegistrationController {
       )
       await registrationAttemptsService.clearAttempts(phone, workspace_id)
 
-      // 💰 NOTE: Registration cost (€1.00) is already tracked in welcome message
+      // 💰 NOTE: Registration cost ($1.00) is already tracked in welcome message
       // No additional charge for registration form submission
       logger.info(
         `[REGISTRATION] ✅ Registration completed for ${customer.id} - cost already tracked in welcome message`

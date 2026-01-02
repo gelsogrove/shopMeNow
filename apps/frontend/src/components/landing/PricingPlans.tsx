@@ -160,12 +160,24 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
             : "border-gray-200 bg-white"
 
           const disabledClass = isPast ? "opacity-60" : ""
+          
+          // Frame colors based on plan type
+          const frameColors = {
+            "Free": "from-gray-100 to-slate-100",
+            "Basic": "from-green-100 to-emerald-100",
+            "Premium": "from-purple-100 to-pink-100"
+          }
+          const frameColor = frameColors[plan.name] || "from-gray-100 to-slate-100"
 
           return (
-            <div
-              key={plan.name}
-              className={`relative rounded-2xl border-2 p-8 flex flex-col h-full min-h-[600px] ${highlightClass} ${disabledClass}`}
-            >
+            <div className="relative group">
+              {/* Decorative rotated background frame */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${frameColor} rounded-2xl rotate-1 scale-[1.02] shadow-lg group-hover:rotate-2 transition-transform duration-500`}></div>
+              
+              <div
+                key={plan.name}
+                className={`relative rounded-2xl border-2 p-8 flex flex-col h-full min-h-[600px] ${highlightClass} ${disabledClass}`}
+              >
               <div className="text-center mb-6 flex flex-col justify-between min-h-[110px]">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   {plan.name}
@@ -280,6 +292,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
                 </div>
               ))}
             </div>
+            </div>
           </div>
           )
         })}
@@ -287,53 +300,63 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
 
       {/* Usage-Based Pricing Details */}
       <div className="mt-16">
-        <div className="text-center mb-4 text-gray-700 font-semibold">
+        <div className="text-center mb-8 text-gray-700 font-semibold">
           {t("pricing.usage.title")}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
           {/* Messages - dynamic from database */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-            <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-              <MessageSquare className="w-6 h-6 text-green-600" />
+          <div className="relative group">
+            {/* Decorative rotated background frame */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+            
+            <div className="relative bg-white rounded-xl p-6 border border-gray-200 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-3xl font-bold text-green-600 mb-1">
+                ${messagePrice.current.toFixed(2)}
+              </div>
+              <div className="text-base font-medium text-gray-900 mb-2">
+                {t("pricing.usage.message")}
+              </div>
+              <p className="text-sm text-gray-600">
+                {t("pricing.usage.message.desc")}
+              </p>
             </div>
-            <div className="text-3xl font-bold text-green-600 mb-1">
-              ${messagePrice.current.toFixed(2)}
-            </div>
-            <div className="text-base font-medium text-gray-900 mb-2">
-              {t("pricing.usage.message")}
-            </div>
-            <p className="text-sm text-gray-600">
-              {t("pricing.usage.message.desc")}
-            </p>
           </div>
 
           {/* Push Campaign - dynamic from database */}
-          <div className="bg-white rounded-xl p-6 border border-gray-200 text-center">
-            <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg
-                className="w-6 h-6 text-orange-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
+          <div className="relative group">
+            {/* Decorative rotated background frame */}
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+            
+            <div className="relative bg-white rounded-xl p-6 border border-gray-200 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg
+                  className="w-6 h-6 text-orange-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                  />
+                </svg>
+              </div>
+              <div className="text-3xl font-bold text-orange-600 mb-1">
+                ${pushPrice.current.toFixed(2)}
+              </div>
+              <div className="text-base font-medium text-gray-900 mb-2">
+                {t("pricing.usage.push")}
+              </div>
+              <p className="text-sm text-gray-600">
+                {t("pricing.usage.push.desc")}
+              </p>
             </div>
-            <div className="text-3xl font-bold text-orange-600 mb-1">
-              ${pushPrice.current.toFixed(2)}
-            </div>
-            <div className="text-base font-medium text-gray-900 mb-2">
-              {t("pricing.usage.push")}
-            </div>
-            <p className="text-sm text-gray-600">
-              {t("pricing.usage.push.desc")}
-            </p>
           </div>
         </div>
 

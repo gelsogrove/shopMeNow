@@ -43,6 +43,7 @@ jest.mock('../src/config/database', () => ({
     registrationToken: { deleteMany: jest.fn() },
     // Workspace content tables
     message: { findMany: jest.fn(), deleteMany: jest.fn() },
+    messageArchive: { deleteMany: jest.fn() },
     conversationMessage: { deleteMany: jest.fn() },
     agentConversationLog: { deleteMany: jest.fn() },
     chatSession: { findMany: jest.fn(), deleteMany: jest.fn() },
@@ -98,6 +99,7 @@ jest.mock('../src/config/database', () => ({
         passwordReset: { deleteMany: createDeleteManyMock() },
         registrationToken: { deleteMany: createDeleteManyMock() },
         message: { deleteMany: createDeleteManyMock() },
+        messageArchive: { deleteMany: createDeleteManyMock() },
         conversationMessage: { deleteMany: createDeleteManyMock() },
         agentConversationLog: { deleteMany: createDeleteManyMock() },
         chatSession: { deleteMany: createDeleteManyMock() },

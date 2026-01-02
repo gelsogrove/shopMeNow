@@ -415,8 +415,8 @@ export class MessageRepository {
 
         // Find matching billing record (within 5 seconds of message)
         // 💰 IMPORTANT: Only match billing to the correct message direction:
-        // - MESSAGE ($0.18) → INBOUND (customer message)
-        // - PUSH_CAMPAIGN ($1.18) → OUTBOUND (bot message with push)
+        // - MESSAGE ($0.10) → INBOUND (customer message)
+        // - PUSH_CAMPAIGN ($1.00) → OUTBOUND (bot message with push)
         const matchingBilling = billingRecords.find((billing) => {
           const timeDiff = Math.abs(
             new Date(billing.createdAt).getTime() -

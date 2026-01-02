@@ -136,14 +136,9 @@ export function NewsUpdates() {
     <div className="pt-20 pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 rounded-full mb-4">
-            <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-            <p className="text-sm font-semibold uppercase tracking-wider text-green-700">
-              {t("news.title")}
-            </p>
-          </div>
+           
           <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-3">
-            Latest Updates and Features
+             {t("news.title")}
           </h2>
           <p className="text-lg text-slate-600">
             Stay updated with our newest features and improvements
@@ -157,26 +152,27 @@ export function NewsUpdates() {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          {/* Left Arrow - SEMPRE VISIBILE con design moderno */}
+          {/* Navigation Arrows - Design più vicino e integrato */}
+          {/* Left Arrow */}
           <button
             onClick={goToPrevious}
-            className="absolute left-0 md:left-4 z-20 bg-green-600 hover:bg-green-700 text-white rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-white"
+            className="absolute left-2 sm:left-3 md:left-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
             aria-label="Previous update"
           >
-            <ChevronLeft className="w-7 h-7" />
+            <ChevronLeft className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
 
-          {/* Right Arrow - SEMPRE VISIBILE con design moderno */}
+          {/* Right Arrow */}
           <button
             onClick={goToNext}
-            className="absolute right-0 md:right-4 z-20 bg-green-600 hover:bg-green-700 text-white rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-white"
+            className="absolute right-2 sm:right-3 md:right-[calc(50%-360px-18px)] z-20 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-full p-2.5 lg:p-3 shadow-md hover:shadow-lg transition-all hover:scale-110 active:scale-95 border border-white/60 backdrop-blur-sm"
             aria-label="Next update"
           >
-            <ChevronRight className="w-7 h-7" />
+            <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
 
           {/* Cards Container */}
-          <div className="flex items-center justify-center w-full px-4 md:px-20 overflow-hidden">
+          <div className="flex items-center justify-center w-full px-4 md:px-16 lg:px-24 overflow-hidden">
             <div className="relative w-full max-w-5xl h-[420px] flex items-center justify-center">
               {extendedItems.map((item, idx) => {
                 const offset = idx - actualIndex
@@ -200,62 +196,70 @@ export function NewsUpdates() {
                         : "none",
                     }}
                   >
-                    <div
-                      className={`bg-white rounded-3xl shadow-xl border-2 overflow-hidden transition-all duration-700 ${
-                        isCenter
-                          ? "border-green-500 w-[90vw] md:w-[620px] ring-4 ring-green-100"
-                          : "border-gray-200 bg-gray-50/50 w-[75vw] md:w-[500px]"
-                      }`}
-                    >
-                      <div className="p-6 md:p-8">
-                        <div className="flex items-center gap-3 mb-6">
-                          <div
-                            className={`p-3 rounded-xl transition-all ${
-                              isCenter
-                                ? "bg-green-100 text-green-600 ring-2 ring-green-200"
-                                : "bg-gray-200 text-gray-500"
-                            }`}
-                          >
-                            {item.icon}
+                    {/* Card wrapper with rotated frame effect */}
+                    <div className="relative group">
+                      {/* Decorative rotated background frame - only for center card */}
+                      {isCenter && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+                      )}
+                      
+                      <div
+                        className={`relative bg-white rounded-3xl shadow-xl border-2 overflow-hidden transition-all duration-700 ${
+                          isCenter
+                            ? "border-green-500 w-[90vw] md:w-[620px] ring-4 ring-green-100"
+                            : "border-gray-200 bg-gray-50/50 w-[75vw] md:w-[500px]"
+                        }`}
+                      >
+                        <div className="p-6 md:p-8">
+                          <div className="flex items-center gap-3 mb-6">
+                            <div
+                              className={`p-3 rounded-xl transition-all ${
+                                isCenter
+                                  ? "bg-green-100 text-green-600 ring-2 ring-green-200"
+                                  : "bg-gray-200 text-gray-500"
+                              }`}
+                            >
+                              {item.icon}
+                            </div>
+                            <span
+                              className={`px-4 py-1.5 text-sm rounded-full font-semibold transition-all ${
+                                isCenter
+                                  ? "bg-green-600 text-white shadow-md"
+                                  : "bg-gray-200 text-gray-600"
+                              }`}
+                            >
+                              {t(item.categoryKey)}
+                            </span>
+                            <Calendar
+                              className={`w-4 h-4 ml-auto transition-colors ${
+                                isCenter ? "text-gray-400" : "text-gray-300"
+                              }`}
+                            />
+                            <span
+                              className={`text-sm transition-colors ${
+                                isCenter ? "text-gray-500" : "text-gray-400"
+                              }`}
+                            >
+                              {t(item.dateKey)}
+                            </span>
                           </div>
-                          <span
-                            className={`px-4 py-1.5 text-sm rounded-full font-semibold transition-all ${
-                              isCenter
-                                ? "bg-green-600 text-white shadow-md"
-                                : "bg-gray-200 text-gray-600"
+
+                          <h3
+                            className={`text-2xl md:text-3xl font-bold mb-4 transition-colors ${
+                              isCenter ? "text-gray-900" : "text-gray-600"
                             }`}
                           >
-                            {t(item.categoryKey)}
-                          </span>
-                          <Calendar
-                            className={`w-4 h-4 ml-auto transition-colors ${
-                              isCenter ? "text-gray-400" : "text-gray-300"
-                            }`}
-                          />
-                          <span
-                            className={`text-sm transition-colors ${
-                              isCenter ? "text-gray-500" : "text-gray-400"
+                            {t(item.titleKey)}
+                          </h3>
+
+                          <p
+                            className={`text-base md:text-lg leading-relaxed transition-colors ${
+                              isCenter ? "text-gray-700" : "text-gray-500"
                             }`}
                           >
-                            {t(item.dateKey)}
-                          </span>
+                            {t(item.descriptionKey)}
+                          </p>
                         </div>
-
-                        <h3
-                          className={`text-2xl md:text-3xl font-bold mb-4 transition-colors ${
-                            isCenter ? "text-gray-900" : "text-gray-600"
-                          }`}
-                        >
-                          {t(item.titleKey)}
-                        </h3>
-
-                        <p
-                          className={`text-base md:text-lg leading-relaxed transition-colors ${
-                            isCenter ? "text-gray-700" : "text-gray-500"
-                          }`}
-                        >
-                          {t(item.descriptionKey)}
-                        </p>
                       </div>
                     </div>
                   </div>

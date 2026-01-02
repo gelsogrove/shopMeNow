@@ -19,15 +19,15 @@ import logger from '../utils/logger'
  * │                                                                             │
  * │ 2. TWO SEPARATE BILLING SYSTEMS (CRITICAL)                                  │
  * │    A) SUBSCRIPTION FEE (Monthly Payment)                                    │
- * │       • Fixed monthly cost: €29 Basic, €49 Premium, €129 Enterprise         │
+ * │       • Fixed monthly cost: $22 Basic, $45 Premium, $140 Enterprise         │
  * │       • Paid EXTERNALLY via PayPal/Stripe on 1st of month                   │
  * │       • Covers platform access, features, and limits                        │
  * │       • ❌ DOES NOT TOUCH user.creditBalance field                          │
  * │                                                                             │
  * │    B) CREDIT BALANCE (Pay-as-you-go)                                        │
  * │       • Prepaid credits for WhatsApp operations ONLY                        │
- * │       • Used for: Messages (€0.10), Orders (€1.50), Pushes (€1.00)         │
- * │       • Recharged manually via "Ricarica" button (€10-€1000)                │
+ * │       • Used for: Messages ($0.10), Orders ($1.50), Pushes ($1.00)         │
+ * │       • Recharged manually via "Ricarica" button ($10-$1000)                │
  * │       • ✅ STAYS UNCHANGED during monthly billing                           │
  * │                                                                             │
  * │ 3. SUBSCRIPTION STATUSES                                                    │
@@ -78,7 +78,7 @@ async function processPayment(
   amount: number,
   description: string
 ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
-  logger.info(`[PAYMENT MOCK] 💳 Processing €${amount.toFixed(2)} for user ${userId}`)
+  logger.info(`[PAYMENT MOCK] 💳 Processing $${amount.toFixed(2)} for user ${userId}`)
   logger.info(`[PAYMENT MOCK] Description: ${description}`)
 
   // TODO: Implement real payment processing
@@ -285,7 +285,7 @@ export async function monthlyBillingJob(): Promise<void> {
         await prisma.$transaction([
           // Update billing status (creditBalance stays UNCHANGED)
           // Subscription fee is paid externally (PayPal/Stripe)
-          // Credit balance is ONLY for WhatsApp messages (€0.10 each)
+    // Credit balance is ONLY for WhatsApp messages ($0.10 each)
           prisma.user.update({
             where: { id: owner.id },
             data: {

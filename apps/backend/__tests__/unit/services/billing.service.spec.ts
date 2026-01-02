@@ -122,7 +122,7 @@ describe("Billing Service - Feature 198 Owner-Based Billing", () => {
       })
     })
 
-    it("should use MESSAGE cost from pricing config (€0.10)", async () => {
+    it("should use MESSAGE cost from pricing config ($0.10)", async () => {
       await billingService.trackMessage(mockWorkspaceId, mockCustomerId, "Test message")
 
       // Credit balance should be reduced by message cost

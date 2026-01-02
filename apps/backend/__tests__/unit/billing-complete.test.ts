@@ -9,8 +9,8 @@
  * 3. Upgrade Fee Balance Corruption: UPGRADE_FEE with amount=0 creating wrong balanceAfter
  * 
  * Production Incident Timeline:
- * - Dec 28, 2025 15:02: Balance jumped from 186.90€ to 499.90€ (race condition + positive amount)
- * - Jan 01, 2026 10:42: UPGRADE_FEE recorded balance=499.90€ (photographed corrupted state)
+ * - Dec 28, 2025 15:02: Balance jumped from 186.90$ to 499.90$ (race condition + positive amount)
+ * - Jan 01, 2026 10:42: UPGRADE_FEE recorded balance=499.90$ (photographed corrupted state)
  * 
  * @author Andrea Gelso - eChatbot Platform
  */
@@ -96,7 +96,7 @@ describe("🔒 BILLING SYSTEM - Complete Protection Suite", () => {
   })
 
   describe("Category 1: MESSAGE Deduction - Correct Behavior", () => {
-    it("should deduct €0.10 from owner balance (not workspace)", async () => {
+    it("should deduct $0.10 from owner balance (not workspace)", async () => {
       const balanceBefore = await prisma.user.findUnique({
         where: { id: testUserId },
         select: { creditBalance: true },
@@ -213,7 +213,7 @@ describe("🔒 BILLING SYSTEM - Complete Protection Suite", () => {
         testUserId,
         0, // Amount = 0 (no actual charge, just documentation)
         "UPGRADE_FEE",
-        "Upgrade to Enterprise (€149.00/month)",
+        "Upgrade to Enterprise ($140.00/month)",
         testWorkspaceId
       )
 
@@ -236,7 +236,7 @@ describe("🔒 BILLING SYSTEM - Complete Protection Suite", () => {
         testUserId,
         0,
         "UPGRADE_FEE",
-        "Upgrade to Premium (€39.00/month)",
+        "Upgrade to Premium ($45.00/month)",
         testWorkspaceId
       )
 
@@ -265,7 +265,7 @@ describe("🔒 BILLING SYSTEM - Complete Protection Suite", () => {
         testUserId,
         0,
         "UPGRADE_FEE",
-        "Upgrade to Enterprise (€149.00/month)"
+        "Upgrade to Enterprise ($140.00/month)"
       )
 
       const transaction = await prisma.billingTransaction.findFirst({
@@ -414,7 +414,7 @@ describe("🔒 BILLING SYSTEM - Complete Protection Suite", () => {
 
       const expectedBalance = Number(balanceBefore!.creditBalance) - 0.2
 
-      // 🚨 CRITICAL: Balance should drop by exactly 0.20€, NOT jump to random value like 499.90€
+      // 🚨 CRITICAL: Balance should drop by exactly 0.20$, NOT jump to random value like 499.90$
       expect(Number(balanceAfter!.creditBalance)).toBeCloseTo(expectedBalance, 2)
       expect(Number(balanceAfter!.creditBalance)).not.toBeCloseTo(499.9, 2)
     })

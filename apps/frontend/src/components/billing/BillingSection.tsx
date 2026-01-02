@@ -655,7 +655,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       <p className="font-semibold mb-1">💰 Credit Balance</p>
                       <p className="text-xs">
                         Prepaid credits used ONLY for WhatsApp operations:
-                        Messages ($0.12), Orders ($1.76), Push campaigns ($1.18).
+                        Messages ($0.10), Orders ($1.76), Push campaigns ($1.00).
                         Recharged manually via "Recharge Credit" button.
                         <br /><br />
                         <strong>Note:</strong> Separate from monthly subscription fee.

@@ -2,7 +2,7 @@
  * Unit tests for Pricing Configuration (Platform Config)
  *
  * Tests cover:
- * 1. Basic plan monthly fee is $23 (not $34)
+ * 1. Basic plan monthly fee is $22 (not $34)
  * 2. Premium and Enterprise fees are correct
  * 3. Message and push costs are correct
  */
@@ -43,9 +43,9 @@ describe("Pricing Configuration", () => {
       id: "2",
       key: "BASIC_MONTHLY",
       type: "PRICE" as const,
-      value: "23",
+      value: "22",
       originalValue: "34",
-      description: "Basic plan - $23/month",
+      description: "Basic plan - $22/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -54,9 +54,9 @@ describe("Pricing Configuration", () => {
       id: "3",
       key: "PREMIUM_MONTHLY",
       type: "PRICE" as const,
-      value: "44",
+      value: "45",
       originalValue: null,
-      description: "Premium plan - $44/month",
+      description: "Premium plan - $45/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -65,9 +65,9 @@ describe("Pricing Configuration", () => {
       id: "4",
       key: "ENTERPRISE_MONTHLY",
       type: "PRICE" as const,
-      value: "139",
+      value: "140",
       originalValue: null,
-      description: "Enterprise plan - $139/month",
+      description: "Enterprise plan - $140/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -76,7 +76,7 @@ describe("Pricing Configuration", () => {
       id: "5",
       key: "MESSAGE",
       type: "PRICE" as const,
-      value: "0.12",
+      value: "0.10",
       originalValue: null,
       description: "Cost per message",
       isActive: true,
@@ -87,7 +87,7 @@ describe("Pricing Configuration", () => {
       id: "6",
       key: "PUSH_CAMPAIGN",
       type: "PRICE" as const,
-      value: "1.18",
+      value: "1.00",
       originalValue: null,
       description: "Push campaign message",
       isActive: true,
@@ -105,9 +105,9 @@ describe("Pricing Configuration", () => {
   })
 
   describe("Basic Plan Pricing", () => {
-    it("should have Basic monthly fee of $23", async () => {
+    it("should have Basic monthly fee of $22", async () => {
       await expect(platformConfigService.getPrice("BASIC_MONTHLY")).resolves.toBe(
-        23.0
+        22.0
       )
     })
 
@@ -118,30 +118,30 @@ describe("Pricing Configuration", () => {
   })
 
   describe("Premium Plan Pricing", () => {
-    it("should have Premium monthly fee of $44", async () => {
+    it("should have Premium monthly fee of $45", async () => {
       await expect(platformConfigService.getPrice("PREMIUM_MONTHLY")).resolves.toBe(
-        44.0
+        45.0
       )
     })
   })
 
   describe("Enterprise Plan Pricing", () => {
-    it("should have Enterprise monthly fee of $139", async () => {
+    it("should have Enterprise monthly fee of $140", async () => {
       await expect(
         platformConfigService.getPrice("ENTERPRISE_MONTHLY")
-      ).resolves.toBe(139.0)
+      ).resolves.toBe(140.0)
     })
   })
 
   describe("Message Costs", () => {
-    it("should have message cost of $0.12", async () => {
-      await expect(platformConfigService.getPrice("MESSAGE")).resolves.toBe(0.12)
+    it("should have message cost of $0.10", async () => {
+      await expect(platformConfigService.getPrice("MESSAGE")).resolves.toBe(0.1)
     })
 
-    it("should have push campaign cost of $1.18", async () => {
+    it("should have push campaign cost of $1.00", async () => {
       await expect(
         platformConfigService.getPrice("PUSH_CAMPAIGN")
-      ).resolves.toBe(1.18)
+      ).resolves.toBe(1)
     })
   })
 })

@@ -67,7 +67,7 @@ export const config: Config = {
     defaultPrice: parseFloat(process.env.DEFAULT_LLM_PRICE || "0.15"),
   },
   pushMessaging: {
-    price: parseFloat(process.env.PUSH_MESSAGE_PRICE || "0.50"),
+    price: parseFloat(process.env.PUSH_MESSAGE_PRICE || "1.00"),
   },
   token: {
     expiration: process.env.TOKEN_EXPIRATION || "1h",

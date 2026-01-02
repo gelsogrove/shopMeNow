@@ -16,7 +16,7 @@ export class BillingService {
     try {
       // Get current price from database
       const monthlyChannelCost =
-        (await this.pricingRepository.getValue("MONTHLY_CHANNEL_COST")) ?? 49
+        (await this.pricingRepository.getValue("MONTHLY_CHANNEL_COST")) ?? 45
 
       await this.prisma.billing.create({
         data: {
@@ -37,7 +37,7 @@ export class BillingService {
   }
 
   /**
-   * Track message cost (€0.10) - used for all message interactions
+   * Track message cost ($0.10) - used for all message interactions
    * This deducts from ALL workspace credits (shared across owner's channels)
    * AND records in billingTransactions for Transaction History
    */
@@ -135,7 +135,7 @@ export class BillingService {
         })
 
         logger.info(
-          `[BILLING] 💰 Message: €${messageCost.toFixed(2)} deducted. Balance: €${currentBalance.toFixed(2)} → €${newBalance.toFixed(2)}`
+          `[BILLING] 💰 Message: $${messageCost.toFixed(2)} deducted. Balance: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)}`
         )
       })
     } catch (error) {
@@ -386,7 +386,7 @@ export class BillingService {
       })
 
       logger.info(
-        `[BILLING] 💰 Current month (${currentMonth}/${currentYear}): €${currentMonthData.total.toFixed(2)}`
+        `[BILLING] 💰 Current month (${currentMonth}/${currentYear}): $${currentMonthData.total.toFixed(2)}`
       )
       logger.info(`[BILLING] 📋 History: ${history.length} months`)
 

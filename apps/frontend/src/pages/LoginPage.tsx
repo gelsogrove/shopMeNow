@@ -136,10 +136,11 @@ export function LoginPage() {
     canRegister,
     workingInProgress,
     registerFirst,
+    cantryDemo,
     isLoading: flagsLoading,
   } = useFeatureFlags()
   const [showWIPModal, setShowWIPModal] = useState(false)
-  const [wipFeature, setWipFeature] = useState<'login' | 'register'>('login')
+  const [wipFeature, setWipFeature] = useState<'login' | 'register' | 'demo'>('login')
   
   // 🔗 Extract returnUrl from query params (for invitation flow)
   const [searchParams] = useSearchParams()
@@ -151,6 +152,7 @@ export function LoginPage() {
   const isAdminBypass = searchParams.get('admin') === 'true'
   const isLoginDisabled = flagsLoading || (!canLogin && !isAdminBypass)
   const isRegisterDisabled = flagsLoading || !canRegister
+  const isDemoDisabled = flagsLoading || !cantryDemo
   const isLoginViewDisabled = activeTab === "signin" && isLoginDisabled
   const isRegisterViewDisabled = activeTab === "register" && isRegisterDisabled
   
@@ -204,6 +206,7 @@ export function LoginPage() {
   }
   const [contactName, setContactName] = useState("")
   const [contactSurname, setContactSurname] = useState("")
+  const [contactEmail, setContactEmail] = useState("")
   const [contactTitle, setContactTitle] = useState("")
   const [contactMessage, setContactMessage] = useState("")
   const [contactPhone, setContactPhone] = useState("")
@@ -369,6 +372,14 @@ export function LoginPage() {
                 })
             }
           }).catch(err => {
+            if (err?.response?.status === 401) {
+              logger.warn('🔐 [LOGIN PAGE] Token invalid while fetching workspaces - clearing auth')
+              storage.clearAuth()
+              setIsLoggedIn(false)
+              setLoggedInUser(null)
+              setUserPlan(null)
+              return
+            }
             logger.error('Failed to fetch workspaces for plan:', err)
           })
         } catch (e) {
@@ -704,6 +715,23 @@ export function LoginPage() {
       return
     }
 
+    const normalizedEmail = contactEmail.trim()
+    if (!normalizedEmail) {
+      setContactError("Please enter your email.")
+      return
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setContactError("Please enter a valid email address.")
+      return
+    }
+
+    const normalizedPhone = contactPhone.trim()
+    if (normalizedPhone && !/^[+()0-9\s.-]{7,20}$/.test(normalizedPhone)) {
+      setContactError("Please enter a valid phone number.")
+      return
+    }
+
     if (!contactCaptchaToken) {
       setContactError("Please complete the security check.")
       return
@@ -726,9 +754,10 @@ export function LoginPage() {
       await api.post("/contact", {
         name: contactName.trim(),
         surname: contactSurname.trim(),
+        email: normalizedEmail,
         title: contactTitle.trim(),
         message: contactMessage.trim(),
-        phone: contactPhone.trim() || undefined,
+        phone: normalizedPhone || undefined,
         captchaToken: contactCaptchaToken,
         website: contactHoneypot,
       })
@@ -736,6 +765,7 @@ export function LoginPage() {
       setContactSuccess(true)
       setContactName("")
       setContactSurname("")
+      setContactEmail("")
       setContactTitle("")
       setContactMessage("")
       setContactPhone("")
@@ -1119,13 +1149,14 @@ export function LoginPage() {
               }
             }}
           >
+            {workingInProgress && (
+              <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
+                Work in Progress
+              </div>
+            )}
+            
             <div className="space-y-6 flex-1 flex flex-col">
                 <div className="text-center space-y-2">
-                  {workingInProgress && (
-                    <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px]">
-                      Work in Progress
-                    </div>
-                  )}
                   <h3 className={`text-2xl font-bold text-slate-900 ${isLoginViewDisabled ? "opacity-60" : ""}`}>
                     {activeTab === "signin" ? "Login" : "Create your account"}
                   </h3>
@@ -1566,107 +1597,70 @@ export function LoginPage() {
               </div>
             </div>
         </div>
+      </div>
 
-        {/* Why eChatbot Section - Background Grigio Chiaro */}
-        <div className="pt-24 pb-16 bg-gray-100">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            {/* Header */}
-            <div className="text-center space-y-4 mb-20">
-              <p className="text-sm font-semibold uppercase tracking-widest text-green-600">
-                {t("hero.whyTitle")}
-              </p>
-              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900">
-                {t("hero.useCasesTitle")}
-              </h2>
-            </div>
+      {/* How It Works Section */}
+      <div id="features" className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-12">
             
-            {/* Cards Grid - Mobile: Horizontal Scroll, Desktop: Grid */}
-            <div className="lg:grid lg:grid-cols-3 lg:gap-10 lg:max-w-6xl lg:mx-auto flex lg:flex-none overflow-x-auto gap-8 px-6 lg:px-0 snap-x snap-mandatory scrollbar-hide pb-4">
-              {/* Card 1 - Sales */}
-              <div className="bg-white rounded-3xl pt-12 px-10 pb-10 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 min-w-[320px] lg:min-w-0 snap-center">
-                {/* Number badge */}
-                <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-10 shadow-md">
+            <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-3">
+              Get Started in 3 Simple Steps
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              No code, no technical skills needed. Start selling in minutes.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="relative">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border-2 border-green-200 min-h-[280px] shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   1
                 </div>
-                
-                {/* Icon box */}
-                <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mb-8 mx-auto">
-                  <Bot className="h-10 w-10 text-green-600" />
-                </div>
-                
-                {/* Content */}
-                <div className="text-center space-y-5">
-                  <h3 className="text-2xl font-bold text-slate-900">
-                    {t("hero.useCases.sales.title")}
-                  </h3>
-                  <p className="text-base text-slate-600 leading-relaxed">
-                    {t("hero.useCases.sales.desc")}
-                  </p>
-                </div>
-                
-                {/* Badge */}
-                <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-                  <span className="text-sm text-slate-600 font-medium">AI-Powered</span>
-                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">Connect WhatsApp</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Link your WhatsApp Business account in seconds. No technical skills required.
+                </p>
               </div>
+              {/* Arrow */}
+              <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </div>
+            </div>
 
-              {/* Card 2 - Push Messages */}
-              <div className="bg-white rounded-3xl pt-12 px-10 pb-10 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 min-w-[320px] lg:min-w-0 snap-center">
-                {/* Number badge */}
-                <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-10 shadow-md">
+            {/* Step 2 */}
+            <div className="relative">
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border-2 border-blue-200 min-h-[280px] shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   2
                 </div>
-                
-                {/* Icon box */}
-                <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mb-8 mx-auto">
-                  <Megaphone className="h-10 w-10 text-green-600" />
-                </div>
-                
-                {/* Content */}
-                <div className="text-center space-y-5">
-                  <h3 className="text-2xl font-bold text-slate-900">
-                    {t("hero.useCases.ops.title")}
-                  </h3>
-                  <p className="text-base text-slate-600 leading-relaxed">
-                    {t("hero.useCases.ops.desc")}
-                  </p>
-                </div>
-                
-                {/* Badge */}
-                <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-                  <span className="text-sm text-slate-600 font-medium">Automated</span>
-                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">Configure AI Agent</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Upload your product catalog, set up FAQs, and customize your chatbot's personality.
+                </p>
               </div>
+              {/* Arrow */}
+              <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </div>
+            </div>
 
-              {/* Card 3 - Support */}
-              <div className="bg-white rounded-3xl pt-12 px-10 pb-10 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300 min-w-[320px] lg:min-w-0 snap-center">
-                {/* Number badge */}
-                <div className="w-14 h-14 bg-green-600 rounded-full flex items-center justify-center text-white text-2xl font-bold mb-10 shadow-md">
+            {/* Step 3 */}
+            <div className="relative">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 min-h-[280px] shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   3
                 </div>
-                
-                {/* Icon box */}
-                <div className="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mb-8 mx-auto">
-                  <Headphones className="h-10 w-10 text-green-600" />
-                </div>
-                
-                {/* Content */}
-                <div className="text-center space-y-5">
-                  <h3 className="text-2xl font-bold text-slate-900">
-                    {t("hero.useCases.support.title")}
-                  </h3>
-                  <p className="text-base text-slate-600 leading-relaxed">
-                    {t("hero.useCases.support.desc")}
-                  </p>
-                </div>
-                
-                {/* Badge */}
-                <div className="mt-10 pt-6 border-t border-gray-200 flex items-center justify-center gap-2">
-                  <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-                  <span className="text-sm text-slate-600 font-medium">24/7 Available</span>
-                </div>
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">Go Live!</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Start serving customers 24/7. Monitor performance and optimize with real-time analytics.
+                </p>
               </div>
             </div>
           </div>
@@ -1703,10 +1697,16 @@ export function LoginPage() {
       <div id="demo" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="group relative">
-            {/* Decorative background blob */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-green-400 to-emerald-500 rounded-3xl blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500"></div>
+            {/* Decorative rotated background frame */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
             <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+              {!cantryDemo && (
+                <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
+                  Work in Progress
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
                 {/* Left: Image with badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
@@ -1720,7 +1720,7 @@ export function LoginPage() {
                     </div>
                     {/* Badge */}
                     <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
-                      🎯 Live
+                      Live
                     </div>
                   </div>
                 </div>
@@ -1743,11 +1743,16 @@ export function LoginPage() {
                   <div className="pt-4">
                     <Button
                       type="button"
-                      disabled
-                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white cursor-not-allowed shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                      disabled={isDemoDisabled}
+                      className={`px-10 py-6 text-lg font-semibold rounded-2xl bg-green-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ${isDemoDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                      onClick={() => {
+                        if (isDemoDisabled) {
+                          setWipFeature('demo')
+                          setShowWIPModal(true)
+                        }
+                      }}
                     >
                       <span className="flex items-center gap-3">
-                        <span>🚀</span>
                         <span>{t("demo.button")}</span>
                       </span>
                     </Button>
@@ -1763,10 +1768,10 @@ export function LoginPage() {
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="group relative">
-            {/* Decorative background */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-3xl blur-2xl opacity-15 group-hover:opacity-25 transition-opacity duration-500"></div>
+            {/* Decorative rotated background frame - BLU for enterprise */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
-            <div className="relative bg-gradient-to-br from-white to-slate-50 rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+            <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
                 {/* Left: Content */}
                 <div className="space-y-6">
@@ -1786,13 +1791,12 @@ export function LoginPage() {
                   <div className="pt-4">
                     <Button
                       type="button"
-                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                       onClick={() => {
                         document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
                       }}
                     >
                       <span className="flex items-center gap-3">
-                        <span>💼</span>
                         <span>{t("integration.crm.button")}</span>
                       </span>
                     </Button>
@@ -1810,8 +1814,8 @@ export function LoginPage() {
                       />
                     </div>
                     {/* Floating badge */}
-                    <div className="absolute -bottom-3 -left-3 bg-gradient-to-br from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
-                      🎨 Custom
+                    <div className="absolute -bottom-3 -left-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
+                      Custom
                     </div>
                   </div>
                 </div>
@@ -1825,8 +1829,8 @@ export function LoginPage() {
       <div className="py-20 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="group relative">
-            {/* Decorative background */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 rounded-3xl blur-2xl opacity-15 group-hover:opacity-25 transition-opacity duration-500"></div>
+            {/* Decorative rotated background frame */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
             <div className="relative bg-white rounded-3xl p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
@@ -1841,8 +1845,8 @@ export function LoginPage() {
                       />
                     </div>
                     {/* Security badge */}
-                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-teal-500 to-cyan-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
-                      🔒 Secure
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider">
+                      Secure
                     </div>
                   </div>
                 </div>
@@ -1865,10 +1869,9 @@ export function LoginPage() {
                   <div className="pt-4">
                     <Button
                       type="button"
-                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                      className="px-10 py-6 text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                     >
                       <span className="flex items-center gap-3">
-                        <span>📋</span>
                         <span>{t("privacy.button")}</span>
                       </span>
                     </Button>
@@ -1885,9 +1888,7 @@ export function LoginPage() {
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
           <div className="text-center space-y-3 mb-10">
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-green-600">
-              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
               Contact us
-              <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
             </p>
             <h3 className="text-3xl font-bold text-slate-900">Send us a message</h3>
             <p className="text-slate-600">Tell us what you need. We reply quickly.</p>
@@ -1917,7 +1918,7 @@ export function LoginPage() {
           ) : (
             <form
               onSubmit={handleContactSubmit}
-              className="rounded-3xl border border-slate-200 bg-slate-50 p-6 lg:p-8 space-y-6 shadow-lg"
+              className="rounded-3xl border border-slate-200 bg-white p-6 lg:p-8 space-y-6 shadow-lg"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -1950,17 +1951,34 @@ export function LoginPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700" htmlFor="contact-phone">
-                  Phone (optional)
-                </label>
-                <Input
-                  id="contact-phone"
-                  value={contactPhone}
-                  onChange={(event) => setContactPhone(event.target.value)}
-                  placeholder="+34 244 758 153"
-                  className="h-11"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700" htmlFor="contact-email">
+                    Email
+                  </label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    value={contactEmail}
+                    onChange={(event) => setContactEmail(event.target.value)}
+                    placeholder="you@email.com"
+                    className="h-11"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700" htmlFor="contact-phone">
+                    Phone (optional)
+                  </label>
+                  <Input
+                    id="contact-phone"
+                    value={contactPhone}
+                    onChange={(event) => setContactPhone(event.target.value)}
+                    placeholder="+34 244 758 153"
+                    className="h-11"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -2031,6 +2049,53 @@ export function LoginPage() {
         </div>
       </div>
 
+      {/* CTA Section - Barra Verde con Call to Action */}
+      <div className="py-20 bg-gradient-to-br from-green-600 to-emerald-700 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-600/50 to-transparent"></div>
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl"></div>
+        
+        <div className="max-w-5xl mx-auto px-6 lg:px-8 text-center relative z-10">
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+            Ready to Transform Your <br className="hidden md:block" />
+            Customer Experience?
+          </h2>
+          <p className="text-xl md:text-2xl text-green-50 mb-10 leading-relaxed max-w-3xl mx-auto">
+            Join hundreds of businesses using eChatbot to automate sales, boost conversions, and delight customers 24/7.
+          </p>
+          
+          {/* CTA Button */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button
+              onClick={() => {
+                setActiveTab('register')
+                setTimeout(() => {
+                  document.getElementById("firstName")?.focus()
+                }, 0)
+              }}
+              className="group px-10 py-5 bg-white text-green-600 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-white/50 hover:scale-105 transition-all duration-300 flex items-center gap-3"
+            >
+              <span>Get Started Free</span>
+              <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                const contactSection = document.getElementById('contact')
+                if (contactSection) {
+                  contactSection.scrollIntoView({ behavior: 'smooth' })
+                }
+              }}
+              className="px-10 py-5 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 shadow-lg transition-all duration-300"
+            >
+              Contact Sales
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Footer Semplificato */}
       <footer className="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -2073,9 +2138,9 @@ export function LoginPage() {
               <div>
                 <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Legal</h3>
                 <ul className="space-y-3">
-                  <li><Link to="/privacy" className="text-sm hover:text-green-400 transition-colors">Privacy Policy</Link></li>
-                  <li><Link to="/terms" className="text-sm hover:text-green-400 transition-colors">Terms of Service</Link></li>
-                  <li><Link to="/refund" className="text-sm hover:text-green-400 transition-colors">Refund Policy</Link></li>
+                  <li><Link to="/privacy" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Privacy Policy</Link></li>
+                  <li><Link to="/terms" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Terms of Service</Link></li>
+                  <li><Link to="/refund" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Refund Policy</Link></li>
                 </ul>
               </div>
             </div>

@@ -8,7 +8,7 @@
  *
  * ⚠️ CRITICAL NOTES:
  * 1. NO hardcoded prices anywhere else in the codebase
- * 2. originalValue is for strikethrough display (marketing - "was $29, now $23")
+ * 2. originalValue is for strikethrough display (marketing - "was $29, now $22")
  * 3. Historical billing records preserve the price at transaction time
  * 4. Feature flags control platform access (WIP mode, maintenance, etc.)
  *
@@ -33,39 +33,39 @@ export const platformConfigData: PlatformConfigData[] = [
     key: "FREE_MONTHLY",
     value: "0",
     description:
-      "Free plan - $0/month for 14 days trial with $23 credit included",
+      "Free plan - $0/month for 14 days trial with $22 credit included",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "BASIC_MONTHLY",
-    value: "23", // NEW PRICE: $23
+    value: "22", // NEW PRICE: $22
     originalValue: "34", // OLD PRICE: $34 (strikethrough)
-    description: "Basic plan - $23/month for growing businesses (was $34)",
+    description: "Basic plan - $22/month for growing businesses (was $34)",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "PREMIUM_MONTHLY",
-    value: "44", // NEW PRICE: $44
+    value: "45", // NEW PRICE: $45
     originalValue: "58", // OLD PRICE: $58 (strikethrough)
     description:
-      "Premium plan - $44/month for established businesses (was $58)",
+      "Premium plan - $45/month for established businesses (was $58)",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "ENTERPRISE_MONTHLY",
-    value: "139", // NEW PRICE: $139
+    value: "140", // NEW PRICE: $140
     originalValue: "175", // OLD PRICE: $175 (strikethrough)
     description:
-      "Enterprise plan - $139/month for large scale operations (was $175)",
+      "Enterprise plan - $140/month for large scale operations (was $175)",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "MONTHLY_CHANNEL_COST",
-    value: "44",
+    value: "45",
     description: "Monthly WhatsApp channel cost (included in all paid plans)",
     isActive: true,
   },
@@ -76,7 +76,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "PRICE" as const,
     key: "MESSAGE",
-    value: "0.12",
+    value: "0.10",
     description:
       "Cost per message (AI-powered responses, including support conversations)",
     isActive: true,
@@ -84,7 +84,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "PRICE" as const,
     key: "PUSH_CAMPAIGN",
-    value: "1.18",
+    value: "1.00",
     description: "Cost per push notification sent (all types)",
     isActive: true,
   },
@@ -132,6 +132,14 @@ export const platformConfigData: PlatformConfigData[] = [
       "When true, /index redirects to landing page. When false, redirect users to /auth/login",
     isActive: true,
   },
+  {
+    type: "FLAG" as const,
+    key: "cantryDemo",
+    value: "true",
+    description:
+      "Allow users to try live demo. When false: show WIP popup, disable demo button",
+    isActive: true,
+  },
 
   // ============================================================================
   // 📊 LIMITS (Plan-based thresholds)
@@ -140,7 +148,7 @@ export const platformConfigData: PlatformConfigData[] = [
     type: "LIMIT" as const,
     key: "FREE_MESSAGES",
     value: "200",
-    description: "Free messages included in trial (after this, $0.18/message)",
+    description: "Free messages included in trial (after this, $0.10/message)",
     isActive: true,
   },
   {

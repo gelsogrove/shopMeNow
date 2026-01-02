@@ -86,10 +86,10 @@ export class BillingService {
 
       // Check if sufficient balance on Owner
       if (currentBalance < messageCost) {
-        logger.warn(`[Billing] ⚠️ Insufficient credit for owner ${owner.firstName}: €${currentBalance.toFixed(2)} < €${messageCost.toFixed(2)}`)
+        logger.warn(`[Billing] ⚠️ Insufficient credit for owner ${owner.firstName}: $${currentBalance.toFixed(2)} < $${messageCost.toFixed(2)}`)
         return {
           success: false,
-          error: `Insufficient credit. Balance: €${currentBalance.toFixed(2)}, Required: €${messageCost.toFixed(2)}`
+          error: `Insufficient credit. Balance: $${currentBalance.toFixed(2)}, Required: $${messageCost.toFixed(2)}`
         }
       }
 
@@ -119,7 +119,7 @@ export class BillingService {
         })
       })
 
-      logger.info(`[Billing] 💰 Deducted €${messageCost.toFixed(2)} from owner "${ownerName}" (workspace: ${workspace.name}): €${currentBalance.toFixed(2)} → €${newBalance.toFixed(2)}`)
+      logger.info(`[Billing] 💰 Deducted $${messageCost.toFixed(2)} from owner "${ownerName}" (workspace: ${workspace.name}): $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)}`)
 
       return {
         success: true,

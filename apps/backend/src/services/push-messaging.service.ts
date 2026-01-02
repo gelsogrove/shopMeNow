@@ -182,11 +182,11 @@ export const pushMessagingService = {
           data.type
         )
         logger.info(
-          `[PUSH-MESSAGING] 💰 Cost tracked: €${messagePrice.toFixed(2)} for ${data.type}`
+          `[PUSH-MESSAGING] 💰 Cost tracked: $${messagePrice.toFixed(2)} for ${data.type}`
         )
       } else {
         logger.info(
-          `[PUSH-MESSAGING] 🆓 FREE message: ${data.type} (€${messagePrice.toFixed(2)})`
+          `[PUSH-MESSAGING] 🆓 FREE message: ${data.type} ($${messagePrice.toFixed(2)})`
         )
       }
 
@@ -353,7 +353,7 @@ export const pushMessagingService = {
       })
 
       logger.info(
-        `[PUSH-MESSAGING] ✅ Cost tracked: €${price.toFixed(2)} for ${messageType}`
+        `[PUSH-MESSAGING] ✅ Cost tracked: $${price.toFixed(2)} for ${messageType}`
       )
     } catch (error) {
       logger.error(`[PUSH-MESSAGING] ❌ Error tracking push cost:`, error)

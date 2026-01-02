@@ -2549,33 +2549,33 @@ Sono qui per aiutarti 😊`,
   const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
 
   // ============================================================================
-  // BILLING TRANSACTIONS - Realistic history starting from €19 Free Trial
-  // Story: User starts Free Trial (€19), then upgrades, recharges, uses messages
+  // BILLING TRANSACTIONS - Realistic history starting from $22 Free Trial
+  // Story: User starts Free Trial ($22), then upgrades, recharges, uses messages
   // NOTE: Monthly subscription fees are billed separately (not from credit balance)
   // ============================================================================
 
-  // September 2025: User signs up with Free Trial (€19)
+  // September 2025: User signs up with Free Trial ($22)
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
-      amount: 19.00,
-      balanceAfter: 19.00,
+      amount: 22.00,
+      balanceAfter: 22.00,
       description: "Initial credit - Free Trial",
       createdAt: new Date(2025, 8, 5, 10, 0, 0), // Sep 5, 2025
     },
   })
 
-  // September 15: First recharge +€30 (triggers automatic upgrade from FREE_TRIAL to BASIC)
+  // September 15: First recharge +$30 (triggers automatic upgrade from FREE_TRIAL to BASIC)
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
       amount: 30.00,
-      balanceAfter: 49.00,
-      description: "Credit recharge +€30",
+      balanceAfter: 52.00,
+      description: "Credit recharge +$30",
       createdAt: new Date(2025, 8, 15, 14, 30, 0), // Sep 15, 2025
     },
   })
@@ -2587,22 +2587,22 @@ Sono qui per aiutarti 😊`,
       user: { connect: { id: adminUser.id } },
       type: "UPGRADE_FEE",
       amount: 0,
-      balanceAfter: 49.00,
-      description: "Upgrade from Free Trial to Basic plan (€19.00/month)",
+      balanceAfter: 52.00,
+      description: "Upgrade from Free Trial to Basic plan ($22.00/month)",
       createdAt: new Date(2025, 8, 15, 14, 30, 0), // Sep 15, 2025 (same time)
     },
   })
 
-  // October 1: Payment for September invoice (Plan €19 Basic + Recharges €30 = €49 charged)
-  // After this, balance is 49, invoice is separate charge
+  // October 1: Payment for September invoice (Plan $22 Basic + Recharges $30 = $52 charged)
+  // After this, balance is 52, invoice is separate charge
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "INVOICE_PAID",
       amount: 0,
-      balanceAfter: 49.00,
-      description: "Invoice Sep 2025 paid - Basic plan €19.00 + Recharges €30.00",
+      balanceAfter: 52.00,
+      description: "Invoice Sep 2025 paid - Basic plan $22.00 + Recharges $30.00",
       createdAt: new Date(2025, 9, 1, 6, 0, 0), // Oct 1, 2025 at 06:00
     },
   })
@@ -2614,113 +2614,113 @@ Sono qui per aiutarti 😊`,
       user: { connect: { id: adminUser.id } },
       type: "UPGRADE_FEE",
       amount: 0,
-      balanceAfter: 49.00,
-      description: "Upgrade from Basic to Premium plan (€39.00/month)",
+      balanceAfter: 52.00,
+      description: "Upgrade from Basic to Premium plan ($45.00/month)",
       createdAt: new Date(2025, 9, 1, 7, 0, 0), // Oct 1, 2025 at 07:00
     },
   })
 
-  // October 20: Message usage -€5
+  // October 20: Message usage -$5
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "MESSAGE",
       amount: -5.00,
-      balanceAfter: 44.00,
+      balanceAfter: 47.00,
       description: "50 WhatsApp messages (BellItalia VIP)",
       createdAt: new Date(2025, 9, 20, 16, 45, 0), // Oct 20, 2025
     },
   })
 
-  // November 1: Payment for October invoice (Plan €39 Premium + Recharges €0 = €39 charged)
-  // Balance stays 44 (invoice is separate)
+  // November 1: Payment for October invoice (Plan $45 Premium + Recharges $0 = $45 charged)
+  // Balance stays 47 (invoice is separate)
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "INVOICE_PAID",
       amount: 0,
-      balanceAfter: 44.00,
-      description: "Invoice Oct 2025 paid - Premium plan €39.00 + Recharges €0.00",
+      balanceAfter: 47.00,
+      description: "Invoice Oct 2025 paid - Premium plan $45.00 + Recharges $0.00",
       createdAt: new Date(2025, 10, 1, 6, 0, 0), // Nov 1, 2025 at 06:00
     },
   })
 
-  // November 1: Credit recharge +€49
+  // November 1: Credit recharge +$45
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
-      amount: 49.00,
-      balanceAfter: 93.00,
-      description: "Credit recharge +€49",
+      amount: 45.00,
+      balanceAfter: 92.00,
+      description: "Credit recharge +$45",
       createdAt: new Date(2025, 10, 1, 8, 0, 0), // Nov 1, 2025 at 08:00
     },
   })
 
-  // November 15: Message usage -€3.50
+  // November 15: Message usage -$3.50
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "MESSAGE",
       amount: -3.50,
-      balanceAfter: 89.50,
+      balanceAfter: 88.50,
       description: "35 WhatsApp messages (BellItalia)",
       createdAt: new Date(2025, 10, 15, 11, 30, 0), // Nov 15, 2025
     },
   })
 
-  // December 1: Payment for November invoice (Plan €39 Premium + Recharges €49 = €88 charged)
-  // Balance stays 89.50 (invoice is separate)
+  // December 1: Payment for November invoice (Plan $45 Premium + Recharges $45 = $90 charged)
+  // Balance stays 88.50 (invoice is separate)
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "INVOICE_PAID",
       amount: 0,
-      balanceAfter: 89.50,
-      description: "Invoice Nov 2025 paid - Premium plan €39.00 + Recharges €49.00",
+      balanceAfter: 88.50,
+      description: "Invoice Nov 2025 paid - Premium plan $45.00 + Recharges $45.00",
       createdAt: new Date(2025, 11, 1, 6, 0, 0), // Dec 1, 2025 at 06:00
     },
   })
 
-  // December 1: Credit recharge +€100
+  // December 1: Credit recharge +$100
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
       amount: 100.00,
-      balanceAfter: 189.50,
-      description: "Credit recharge +€100",
+      balanceAfter: 188.50,
+      description: "Credit recharge +$100",
       createdAt: new Date(2025, 11, 1, 8, 0, 0), // Dec 1, 2025 at 08:00
     },
   })
 
-  // December 8: Message usage -€2.50
+  // December 8: Message usage -$2.50
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "MESSAGE",
       amount: -2.50,
-      balanceAfter: 187.00,
+      balanceAfter: 186.00,
       description: "25 WhatsApp messages (BellItalia VIP)",
       createdAt: new Date(2025, 11, 8, 14, 20, 0), // Dec 8, 2025
     },
   })
 
-  // December 10: Today's message -€0.10
+  // December 10: Today's message -$0.10
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "MESSAGE",
       amount: -0.10,
-      balanceAfter: 186.90,
+      balanceAfter: 185.90,
       description: "1 WhatsApp message (BellItalia)",
       createdAt: new Date(), // Today
     },
@@ -2741,10 +2741,10 @@ Sono qui per aiutarti 😊`,
       periodEnd: new Date(2025, 9, 31, 23, 59, 59),
       periodMonth: 10,
       periodYear: 2025,
-      subscriptionAmount: 49.00,
+      subscriptionAmount: 45.00,
       creditUsage: 5.00,
       creditDebt: 0,
-      totalAmount: 54.00,
+      totalAmount: 50.00,
       status: "PAID",
       paidAt: new Date(2025, 10, 1, 10, 0, 0),
       planType: "PREMIUM",
@@ -2764,10 +2764,10 @@ Sono qui per aiutarti 😊`,
       periodEnd: new Date(2025, 10, 30, 23, 59, 59),
       periodMonth: 11,
       periodYear: 2025,
-      subscriptionAmount: 49.00,
+      subscriptionAmount: 45.00,
       creditUsage: 3.50,
       creditDebt: 0,
-      totalAmount: 52.50,
+      totalAmount: 48.50,
       status: "PAID",
       paidAt: new Date(2025, 11, 1, 10, 0, 0),
       planType: "PREMIUM",
@@ -2787,10 +2787,10 @@ Sono qui per aiutarti 😊`,
       periodEnd: new Date(2025, 11, 31, 23, 59, 59),
       periodMonth: 12,
       periodYear: 2025,
-      subscriptionAmount: 49.00,
+      subscriptionAmount: 45.00,
       creditUsage: 2.60,
       creditDebt: 0,
-      totalAmount: 51.60,
+      totalAmount: 47.60,
       status: "DRAFT",
       planType: "PREMIUM",
       itemsBreakdown: {

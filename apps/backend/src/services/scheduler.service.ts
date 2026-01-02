@@ -83,7 +83,7 @@ export class SchedulerService {
 
   /**
    * Verifica se è necessario addebitare il costo mensile del canale per i workspace attivi
-   * L'addebito di €19 viene effettuato una volta al mese per ogni workspace
+   * L'addebito di $45 viene effettuato una volta al mese per ogni workspace
    */
   private async trackMonthlyChannelCost(): Promise<void> {
     try {

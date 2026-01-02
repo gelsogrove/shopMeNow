@@ -643,7 +643,7 @@ export class ChatController {
           price: config.llm.defaultPrice,
         })
         logger.info(
-          `[CHAT-SEND] 💰 Usage tracked for operator response: €${config.llm.defaultPrice}`
+          `[CHAT-SEND] 💰 Usage tracked for operator response: $${config.llm.defaultPrice}`
         )
         
         // 💰 FIX #4: Also deduct from workspace creditBalance
@@ -654,7 +654,7 @@ export class ChatController {
         )
         if (deductResult.success) {
           logger.info(
-            `[CHAT-SEND] 💰 Credit deducted - New balance: €${deductResult.newBalance}`
+            `[CHAT-SEND] 💰 Credit deducted - New balance: $${deductResult.newBalance}`
           )
         } else {
           logger.warn(

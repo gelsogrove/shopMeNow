@@ -73,8 +73,8 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   },
   BASIC: {
     name: "Basic",
-    price: 23,
-    priceLabel: "$23",
+    price: 22,
+    priceLabel: "$22",
     description: "For growing businesses",
     descriptionKey: "pricing.basic.desc",
     buttonVariant: "default",
@@ -96,8 +96,8 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   },
   PREMIUM: {
     name: "Premium",
-    price: 44,
-    priceLabel: "$44",
+    price: 45,
+    priceLabel: "$45",
     description: "For established businesses",
     descriptionKey: "pricing.premium.desc",
     buttonVariant: "default",
@@ -119,8 +119,8 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   },
   ENTERPRISE: {
     name: "Enterprise",
-    price: 139,
-    priceLabel: "$139",
+    price: 140,
+    priceLabel: "$140",
     priceSuffix: "/month",
     description: "For large-scale operations",
     descriptionKey: "pricing.enterprise.desc",

@@ -47,7 +47,7 @@ export const checkCredit = (operation: "message" | "order" | "push") => {
 
       if (!creditCheck.hasSufficientCredit) {
         logger.warn(
-          `[BILLING] ⚠️ Credit check failed for ${operation}: €${creditCheck.currentBalance.toFixed(2)} < €${cost.toFixed(2)} (workspace: ${workspaceId})`
+          `[BILLING] ⚠️ Credit check failed for ${operation}: $${creditCheck.currentBalance.toFixed(2)} < $${cost.toFixed(2)} (workspace: ${workspaceId})`
         )
 
         res.status(402).json({
@@ -59,7 +59,7 @@ export const checkCredit = (operation: "message" | "order" | "push") => {
             deficit: creditCheck.deficit,
             operation,
           },
-          message: `Credito insufficiente. Saldo attuale: €${creditCheck.currentBalance.toFixed(2)}, Richiesto: €${cost.toFixed(2)}. Ricarica il tuo credito per continuare.`,
+          message: `Credito insufficiente. Saldo attuale: $${creditCheck.currentBalance.toFixed(2)}, Richiesto: $${cost.toFixed(2)}. Ricarica il tuo credito per continuare.`,
         })
         return
       }

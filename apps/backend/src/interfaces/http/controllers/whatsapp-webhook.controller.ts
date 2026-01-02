@@ -723,7 +723,7 @@ export class WhatsAppWebhookController {
           )
 
           logger.info(
-            `[WEBHOOK] 💰 Welcome message cost tracked: €${welcomeMessagePrice.toFixed(2)} for customer ${tempCustomer.id}`
+            `[WEBHOOK] 💰 Welcome message cost tracked: $${welcomeMessagePrice.toFixed(2)} for customer ${tempCustomer.id}`
           )
         } catch (billingError) {
           logger.error(
@@ -930,7 +930,7 @@ export class WhatsAppWebhookController {
       }
 
       // 🔒 Feature 197: Check workspace access BEFORE billing
-      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -€10), CHANNEL_DISABLED (WIP)
+      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), CHANNEL_DISABLED (WIP)
       const { WorkspaceAccessService } = await import(
         "../../../application/services/workspace-access.service"
       )

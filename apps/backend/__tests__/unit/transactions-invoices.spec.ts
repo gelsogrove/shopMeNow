@@ -3,7 +3,7 @@
  *
  * Tests cover:
  * 1. Transaction descriptions are in English
- * 2. INITIAL_CREDIT (Free Trial €19) excluded from Income totals
+ * 2. INITIAL_CREDIT (Free Trial $22) excluded from Income totals
  * 3. Transactions grouped by month correctly
  * 4. Income/Expenses calculation
  * 5. Billing date is 1st of next month
@@ -78,10 +78,10 @@ describe("Transaction History", () => {
 
   describe("INITIAL_CREDIT Exclusion from Income", () => {
     const transactions = [
-      createMockTransaction("INITIAL_CREDIT", 29, "Free Trial Credit"),
+      createMockTransaction("INITIAL_CREDIT", 22, "Free Trial Credit"),
       createMockTransaction("TOP_UP", 50, "Top-up Credit"),
-      createMockTransaction("UPGRADE_FEE", 49, "Upgrade to Premium"),
-      createMockTransaction("MONTHLY_FEE", 49, "Monthly Fee - Premium"),
+      createMockTransaction("UPGRADE_FEE", 45, "Upgrade to Premium"),
+      createMockTransaction("MONTHLY_FEE", 45, "Monthly Fee - Premium"),
     ]
 
     // Helper function matching frontend logic
@@ -118,7 +118,7 @@ describe("Transaction History", () => {
 
     it("should NOT include INITIAL_CREDIT in income calculation", () => {
       const income = calculateIncome(transactions)
-      // Only TOP_UP (€50) should be counted, not INITIAL_CREDIT (€19)
+      // Only TOP_UP ($50) should be counted, not INITIAL_CREDIT ($22)
       expect(income).toBe(50)
     })
 
@@ -131,17 +131,17 @@ describe("Transaction History", () => {
 
     it("should calculate expenses correctly", () => {
       const expenses = calculateExpenses(transactions)
-      // UPGRADE_FEE (€49) + MONTHLY_FEE (€49) = €98
-      expect(expenses).toBe(98)
+      // UPGRADE_FEE ($45) + MONTHLY_FEE ($45) = $90
+      expect(expenses).toBe(90)
     })
 
     it("should exclude zero-amount upgrade fees from expenses", () => {
       const txsWithZeroUpgrade = [
         createMockTransaction("UPGRADE_FEE", 0, "Upgrade to Basic"),
-        createMockTransaction("MONTHLY_FEE", 29, "Monthly Fee - Basic"),
+        createMockTransaction("MONTHLY_FEE", 22, "Monthly Fee - Basic"),
       ]
       const expenses = calculateExpenses(txsWithZeroUpgrade)
-      expect(expenses).toBe(29) // Only MONTHLY_FEE
+      expect(expenses).toBe(22) // Only MONTHLY_FEE
     })
   })
 
@@ -169,7 +169,7 @@ describe("Transaction History", () => {
       const transactions = [
         createMockTransaction(
           "MONTHLY_FEE",
-          49,
+          45,
           "Monthly Fee",
           new Date("2025-11-05")
         ),
@@ -181,7 +181,7 @@ describe("Transaction History", () => {
         ),
         createMockTransaction(
           "MONTHLY_FEE",
-          49,
+          45,
           "Monthly Fee",
           new Date("2025-11-25")
         ),
@@ -196,19 +196,19 @@ describe("Transaction History", () => {
       const transactions = [
         createMockTransaction(
           "MONTHLY_FEE",
-          49,
+          45,
           "November",
           new Date("2025-11-01")
         ),
         createMockTransaction(
           "MONTHLY_FEE",
-          49,
+          45,
           "December",
           new Date("2025-12-01")
         ),
         createMockTransaction(
           "MONTHLY_FEE",
-          49,
+          45,
           "January",
           new Date("2026-01-01")
         ),
@@ -225,13 +225,13 @@ describe("Transaction History", () => {
       const transactions = [
         createMockTransaction(
           "MONTHLY_FEE",
-          49,
+          45,
           "Dec 2025",
           new Date("2025-12-31")
         ),
         createMockTransaction(
           "MONTHLY_FEE",
-          49,
+          45,
           "Jan 2026",
           new Date("2026-01-01")
         ),
@@ -314,40 +314,40 @@ describe("Monthly Invoices", () => {
 
   describe("Invoice Amount Calculation", () => {
     it("should calculate Premium plan monthly cost correctly", () => {
-      const premiumMonthlyFee = 49
-      const channelCost = 49 // If additional channels
+      const premiumMonthlyFee = 45
+      const channelCost = 45 // If additional channels
       const totalWithOneExtraChannel = premiumMonthlyFee + channelCost
 
-      expect(totalWithOneExtraChannel).toBe(98)
+      expect(totalWithOneExtraChannel).toBe(90)
     })
 
     it("should calculate Basic plan monthly cost correctly", () => {
-      const basicMonthlyFee = 19
-      expect(basicMonthlyFee).toBe(19)
+      const basicMonthlyFee = 22
+      expect(basicMonthlyFee).toBe(22)
     })
 
     it("should calculate Free Trial credit correctly", () => {
-      const freeTrialCredit = 19
-      expect(freeTrialCredit).toBe(19)
+      const freeTrialCredit = 22
+      expect(freeTrialCredit).toBe(22)
     })
   })
 })
 
 describe("Price Configuration", () => {
   describe("Premium Plan Pricing", () => {
-    it("should have Premium monthly fee of €49", () => {
-      const PREMIUM_MONTHLY_FEE = 49
-      expect(PREMIUM_MONTHLY_FEE).toBe(49)
+    it("should have Premium monthly fee of $45", () => {
+      const PREMIUM_MONTHLY_FEE = 45
+      expect(PREMIUM_MONTHLY_FEE).toBe(45)
     })
 
-    it("should have Premium channel cost of €49", () => {
-      const MONTHLY_CHANNEL_COST = 49
-      expect(MONTHLY_CHANNEL_COST).toBe(49)
+    it("should have Premium channel cost of $45", () => {
+      const MONTHLY_CHANNEL_COST = 45
+      expect(MONTHLY_CHANNEL_COST).toBe(45)
     })
 
-    it("should NOT use old €59 pricing", () => {
-      const PREMIUM_MONTHLY_FEE = 49
-      const MONTHLY_CHANNEL_COST = 49
+    it("should NOT use old $59 pricing", () => {
+      const PREMIUM_MONTHLY_FEE = 45
+      const MONTHLY_CHANNEL_COST = 45
 
       expect(PREMIUM_MONTHLY_FEE).not.toBe(59)
       expect(MONTHLY_CHANNEL_COST).not.toBe(59)
@@ -355,16 +355,16 @@ describe("Price Configuration", () => {
   })
 
   describe("Basic Plan Pricing", () => {
-    it("should have Basic monthly fee of €19", () => {
-      const BASIC_MONTHLY_FEE = 19
-      expect(BASIC_MONTHLY_FEE).toBe(19)
+    it("should have Basic monthly fee of $22", () => {
+      const BASIC_MONTHLY_FEE = 22
+      expect(BASIC_MONTHLY_FEE).toBe(22)
     })
   })
 
   describe("Free Trial", () => {
-    it("should have Free Trial credit of €19", () => {
-      const FREE_TRIAL_CREDIT = 19
-      expect(FREE_TRIAL_CREDIT).toBe(19)
+    it("should have Free Trial credit of $22", () => {
+      const FREE_TRIAL_CREDIT = 22
+      expect(FREE_TRIAL_CREDIT).toBe(22)
     })
   })
 })

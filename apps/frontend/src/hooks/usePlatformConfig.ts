@@ -68,6 +68,7 @@ const REQUIRED_FLAG_KEYS = [
   "canRegister",
   "workingInProgress",
   "registerFirst",
+  "cantryDemo",
 ]
 
 const findMissingKeys = (source: Record<string, unknown>, keys: string[]) =>
@@ -229,8 +230,9 @@ export function useFeatureFlags() {
   const [flags, setFlags] = useState({
     canLogin: false,
     canRegister: false,
-    workingInProgress: false,
+    workingInProgress: true,
     registerFirst: false,
+    cantryDemo: false,
     isLoading: true,
     error: null as string | null,
   })

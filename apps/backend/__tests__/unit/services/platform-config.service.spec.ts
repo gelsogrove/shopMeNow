@@ -38,9 +38,9 @@ describe("PlatformConfigService", () => {
       id: "1",
       key: "BASIC_MONTHLY",
       type: "PRICE" as const,
-      value: "23",
+      value: "22",
       originalValue: "34",
-      description: "Basic plan - $23/month",
+      description: "Basic plan - $22/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -49,9 +49,9 @@ describe("PlatformConfigService", () => {
       id: "2",
       key: "PREMIUM_MONTHLY",
       type: "PRICE" as const,
-      value: "44",
+      value: "45",
       originalValue: "58",
-      description: "Premium plan - $44/month",
+      description: "Premium plan - $45/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -60,7 +60,7 @@ describe("PlatformConfigService", () => {
       id: "3",
       key: "MESSAGE",
       type: "PRICE" as const,
-      value: "0.12",
+      value: "0.10",
       originalValue: null,
       description: "Cost per message",
       isActive: true,
@@ -146,7 +146,7 @@ describe("PlatformConfigService", () => {
   describe("getPrice", () => {
     it("should return correct price value", async () => {
       const price = await platformConfigService.getPrice("BASIC_MONTHLY")
-      expect(price).toBe(23)
+      expect(price).toBe(22)
     })
 
     it("should throw for non-existent price", async () => {
@@ -157,7 +157,7 @@ describe("PlatformConfigService", () => {
 
     it("should handle decimal prices correctly", async () => {
       const price = await platformConfigService.getPrice("MESSAGE")
-      expect(price).toBe(0.12)
+      expect(price).toBe(0.1)
     })
   })
 
@@ -165,14 +165,14 @@ describe("PlatformConfigService", () => {
     it("should return current and original prices", async () => {
       const result =
         await platformConfigService.getPriceWithOriginal("BASIC_MONTHLY")
-      expect(result.current).toBe(23)
+      expect(result.current).toBe(22)
       expect(result.original).toBe(34)
     })
 
     it("should return null original when not set", async () => {
       const result =
         await platformConfigService.getPriceWithOriginal("MESSAGE")
-      expect(result.current).toBe(0.12)
+      expect(result.current).toBe(0.1)
       expect(result.original).toBeNull()
     })
   })
@@ -225,11 +225,11 @@ describe("PlatformConfigService", () => {
       const config = await platformConfigService.getPublicConfig()
 
       expect(config.prices.BASIC_MONTHLY).toEqual({
-        current: 23,
+        current: 22,
         original: 34,
       })
       expect(config.prices.MESSAGE).toEqual({
-        current: 0.12,
+        current: 0.1,
         original: null,
       })
 
@@ -246,9 +246,9 @@ describe("PlatformConfigService", () => {
 
       const basicPrice = config.prices.find((p) => p.key === "BASIC_MONTHLY")
       expect(basicPrice).toBeDefined()
-      expect(basicPrice?.current).toBe(23)
+      expect(basicPrice?.current).toBe(22)
       expect(basicPrice?.original).toBe(34)
-      expect(basicPrice?.description).toBe("Basic plan - $23/month")
+      expect(basicPrice?.description).toBe("Basic plan - $22/month")
 
       const canLoginFlag = config.flags.find((f) => f.key === "canLogin")
       expect(canLoginFlag).toBeDefined()

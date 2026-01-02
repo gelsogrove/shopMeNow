@@ -40,15 +40,15 @@ export class PricingController {
    *                   description: Monthly subscription plans
    *                   example:
    *                     FREE_MONTHLY: 0
-   *                     BASIC_MONTHLY: 29
-   *                     PREMIUM_MONTHLY: 49
-   *                     ENTERPRISE_MONTHLY: 149
-   *                     MONTHLY_CHANNEL_COST: 59
+   *                     BASIC_MONTHLY: 22
+   *                     PREMIUM_MONTHLY: 45
+   *                     ENTERPRISE_MONTHLY: 140
+   *                     MONTHLY_CHANNEL_COST: 45
    *                 usage:
    *                   type: object
    *                   description: Pay-per-use pricing
    *                   example:
-   *                     MESSAGE: 0.15
+   *                     MESSAGE: 0.10
    *                     NEW_ORDER: 1.50
    *                     PUSH_CAMPAIGN: 1.00
    *                 thresholds:

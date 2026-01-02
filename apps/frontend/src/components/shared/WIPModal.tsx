@@ -65,7 +65,7 @@ const translations = {
 }
 
 type SupportedLanguage = keyof typeof translations
-type FeatureType = "login" | "register" | "chatbot"
+type FeatureType = "login" | "register" | "chatbot" | "demo"
 
 interface WIPModalProps {
   isOpen: boolean
