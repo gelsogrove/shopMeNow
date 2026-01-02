@@ -42,8 +42,9 @@ import {
   User,
   Crown,
   CreditCard,
+  ChevronDown,
 } from "lucide-react"
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useState, useRef, type FormEvent } from "react"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
@@ -105,11 +106,15 @@ const getPlanPriorityValue = (planType?: string | null) => {
 }
 
 export function LoginPage() {
-  const { t } = useLanguage()
+  const { t, language, setLanguage } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [isValidatingSession, setIsValidatingSession] = useState(true)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
+  
+  // Refs for auto-focus
+  const loginEmailRef = useRef<HTMLInputElement>(null)
+  const registerFirstNameRef = useRef<HTMLInputElement>(null)
   
   // 👤 Logged-in user state (for showing avatar instead of login/register buttons)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -804,6 +809,13 @@ export function LoginPage() {
               </a>
               <span className="text-green-600 text-xs font-semibold">|</span>
               <a
+                href="#pricing"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
+              >
+                Pricing
+              </a>
+              <span className="text-green-600 text-xs font-semibold">|</span>
+              <a
                 href="#contact"
                 className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
               >
@@ -815,17 +827,67 @@ export function LoginPage() {
           {/* Main Header Row */}
           <div className="flex items-center justify-between h-20">
             {/* Left: Logo + Brand */}
-            <div className="flex items-center gap-0 mt-[5px]">
+            <div className="flex items-center gap-0 -mt-[5px]">
               <img 
                 src="/logo.png" 
                 alt="eChatbot" 
-                className="h-[100px] w-[100px] object-contain mr-[-15px] mt-[10px]"
+                className="h-[100px] w-[100px] object-contain mr-[-15px]"
               />
               <span className="text-4xl font-bold text-green-600 tracking-tight">eChatbot</span>
             </div>
 
             {/* Right: Language Selector + Auth */}
             <div className="flex items-center gap-6">
+              {/* Language Selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+                  >
+                    <span className="text-xl">
+                      {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
+                    </span>
+                    <span className="hidden sm:inline text-sm font-medium text-slate-700">
+                      {language === "it" ? "IT" : language === "en" ? "EN" : language === "es" ? "ES" : "PT"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48" align="end">
+                  <DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider px-2 py-1.5">Select Language</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
+                    onClick={() => setLanguage("it")}
+                  >
+                    <span className="text-xl">🇮🇹</span>
+                    <span className="font-medium">Italiano</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
+                    onClick={() => setLanguage("en")}
+                  >
+                    <span className="text-xl">🇬🇧</span>
+                    <span className="font-medium">English</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
+                    onClick={() => setLanguage("es")}
+                  >
+                    <span className="text-xl">🇪🇸</span>
+                    <span className="font-medium">Español</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
+                    onClick={() => setLanguage("pt")}
+                  >
+                    <span className="text-xl">🇵🇹</span>
+                    <span className="font-medium">Português</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {isLoggedIn ? (
                 <div className="flex items-center gap-4">
                   {/* Plan Badge */}
@@ -922,7 +984,39 @@ export function LoginPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              ) : null}
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    className="text-sm font-medium text-slate-700 hover:text-green-600 hover:bg-green-50 transition-colors"
+                    onClick={() => {
+                      if (isAdminBypass || !workingInProgress) {
+                        setActiveTab('signin')
+                        setTimeout(() => loginEmailRef.current?.focus(), 100)
+                      } else {
+                        setWipFeature('login')
+                        setShowWIPModal(true)
+                      }
+                    }}
+                  >
+                    Sign in
+                  </Button>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-all hover:shadow-md"
+                    onClick={() => {
+                      if (isAdminBypass || !workingInProgress) {
+                        setActiveTab('register')
+                        setTimeout(() => registerFirstNameRef.current?.focus(), 100)
+                      } else {
+                        setWipFeature('register')
+                        setShowWIPModal(true)
+                      }
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -930,7 +1024,8 @@ export function LoginPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16 relative z-20">
-        <div className="text-center mb-12 space-y-4">
+        
+        <div className="text-center mb-12 space-y-4 relative">
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
             {t("hero.title")}
           </h1>
@@ -1053,6 +1148,7 @@ export function LoginPage() {
                               type="email"
                               placeholder="your@email.com"
                               {...register("email")}
+                              ref={loginEmailRef}
                               disabled={isLoading || isLoginDisabled}
                               autoComplete="username"
                               className="h-11"
@@ -1222,6 +1318,7 @@ export function LoginPage() {
                           placeholder="First name"
                           autoComplete="off"
                           {...registerForm.register("firstName")}
+                          ref={registerFirstNameRef}
                           disabled={isLoading || isRegisterDisabled}
                           className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
@@ -1436,7 +1533,7 @@ export function LoginPage() {
           <div className="text-center space-y-2 mb-14">
             <p className="text-base font-semibold uppercase tracking-[0.25em] text-green-600">
               <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
-              Why eChatbot?
+              {t("hero.whyTitle")}
               <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
             </p>
           </div>
@@ -1446,10 +1543,10 @@ export function LoginPage() {
                 <Bot className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">
-                AI sales agent
+                {t("hero.useCases.sales.title")}
               </h3>
               <p className="text-lg text-slate-600">
-                Build your intelligent sales assistant in minutes. Showcase products, handle inquiries 24/7, and process orders seamlessly through WhatsApp with natural conversation flows.
+                {t("hero.useCases.sales.desc")}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
@@ -1457,10 +1554,10 @@ export function LoginPage() {
                 <Megaphone className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">
-                Push messages
+                {t("hero.useCases.ops.title")}
               </h3>
               <p className="text-lg text-slate-600">
-                Launch targeted WhatsApp campaigns, recover abandoned carts automatically, and re-engage customers with personalized promotions. Track real-time metrics to optimize conversions.
+                {t("hero.useCases.ops.desc")}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
@@ -1468,10 +1565,10 @@ export function LoginPage() {
                 <Headphones className="h-6 w-6" />
               </div>
               <h3 className="text-2xl font-semibold text-slate-900 mb-3">
-                Customer care
+                {t("hero.useCases.support.title")}
               </h3>
               <p className="text-lg text-slate-600">
-                Resolve customer questions instantly with AI support. Track orders, provide product details, and escalate complex issues to your team with full conversation history.
+                {t("hero.useCases.support.desc")}
               </p>
             </div>
           </div>
@@ -1482,7 +1579,7 @@ export function LoginPage() {
       <NewsUpdates />
 
       {/* Pricing Section */}
-      <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
+      <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
         <PricingPlans
           currentPlan={currentPlanForPricing || null}
           onChangePlan={() => navigate("/billing")}
@@ -1507,7 +1604,7 @@ export function LoginPage() {
       {/* Contact Section */}
       <div id="demo" className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,300px] gap-8 items-center rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-emerald-50/60 to-white p-8 lg:p-10 shadow-xl">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,240px] gap-8 items-center rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-emerald-50/60 to-white p-8 lg:p-10 shadow-xl">
             <div className="flex items-center justify-center">
               <div className="w-48 h-48 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-md">
                 <img
@@ -1518,10 +1615,11 @@ export function LoginPage() {
               </div>
             </div>
             <div className="text-center lg:text-left space-y-2">
-              <h3 className="text-3xl lg:text-4xl font-bold text-slate-900">Demo</h3>
+              <h3 className="text-3xl lg:text-4xl font-bold text-slate-900">Live demo</h3>
               <p className="text-lg text-slate-600">
-                Bellitalia is a distributor of Italian products and has created its own AI Sales Agent.
-                Ask the agent anything about their business and try adding products to your cart.
+                Bellitalia sells Italian products. Try their AI agent, ask about products, and see how the
+                conversation guides you to the right items. You can add products to the cart and experience a
+                real end-to-end flow.
               </p>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -1540,7 +1638,7 @@ export function LoginPage() {
       {/* Integration Section */}
       <div className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,300px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,240px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
             <div className="flex items-center justify-center">
               <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
                 <img
@@ -1553,8 +1651,9 @@ export function LoginPage() {
             <div className="text-center lg:text-left space-y-3">
               <h3 className="text-3xl font-bold text-slate-900">Custom CRM integration</h3>
               <p className="text-lg text-slate-600">
-                With a custom integration on the enterprise plan, you can connect your chatbot to external data sources,
-                trigger workflows, and securely read or write data via protected REST APIs.
+                Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles,
+                pull order history, and trigger workflows based on real-time events so every reply is grounded in
+                your data.
               </p>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -1575,7 +1674,7 @@ export function LoginPage() {
       {/* Privacy Section */}
       <div className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,300px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,240px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
             <div className="flex items-center justify-center">
               <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
                 <img
@@ -1588,9 +1687,9 @@ export function LoginPage() {
             <div className="text-center lg:text-left space-y-3">
               <h3 className="text-3xl font-bold text-slate-900">Privacy by design</h3>
               <p className="text-lg text-slate-600">
-                Every chat interaction is protected with scoped tokens, and sensitive data never flows to third parties or AI
-                models. Your customer information stays under your control, encrypted in transit, and handled with strict
-                access rules.
+                No sensitive data is sent to third parties or AI models. Access is secured with scoped tokens,
+                encrypted in transit, and limited to the minimum data required for each interaction. Your customer
+                data stays under your control.
               </p>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -1615,9 +1714,7 @@ export function LoginPage() {
               <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
             </p>
             <h3 className="text-3xl font-bold text-slate-900">Send us a message</h3>
-            <p className="text-slate-600">
-              Tell us what you want to build and we’ll get back to you shortly.
-            </p>
+            <p className="text-slate-600">Tell us what you need. We reply quickly.</p>
           </div>
 
           {contactSuccess ? (

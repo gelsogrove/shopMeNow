@@ -8,6 +8,13 @@ interface LanguageContextType {
   t: (key: string) => string
 }
 
+export const SUPPORTED_LANGUAGES = [
+  { code: "it" as Language, name: "Italiano", flag: "🇮🇹" },
+  { code: "en" as Language, name: "English", flag: "🇬🇧" },
+  { code: "es" as Language, name: "Español", flag: "🇪🇸" },
+  { code: "pt" as Language, name: "Português", flag: "🇵🇹" },
+]
+
 const LanguageContext = createContext<LanguageContextType | undefined>(
   undefined
 )
@@ -19,20 +26,21 @@ const translations = {
       "Parla con i tuoi clienti attraverso la loro chat preferita",
 
     // Hero Section
-    "hero.title": "Crea il tuo agente AI per WhatsApp",
+    "hero.title": "Crea il tuo agente di vendita AI",
     "hero.subtitle":
-      "Porta un personal shopper dentro WhatsApp. eChatbot ascolta, qualifica, propone bundle, invia pagamenti e aggiorna i clienti senza mai uscire dalla chat.",
+      "Automatizza vendite, supporto e campagne su WhatsApp — in una sola piattaforma.",
+    "hero.subline": "",
     "hero.whyTitle": "Perché eChatbot?",
-    "hero.useCasesTitle": "Flussi pensati per il tuo team",
-    "hero.useCases.sales.title": "Team commerciali",
+    "hero.useCasesTitle": "Progettato per vendite, supporto e crescita.",
+    "hero.useCases.sales.title": "Agente di vendita AI",
     "hero.useCases.sales.desc":
-      "Qualifica i lead, suggerisci assortimenti, invia link di pagamento e chiudi ordini in pochi minuti.",
-    "hero.useCases.support.title": "Customer care",
+      "Qualifica i lead, consiglia prodotti e chiudi gli ordini più velocemente.",
+    "hero.useCases.support.title": "Assistenza clienti",
     "hero.useCases.support.desc":
-      "Filtra le FAQ, passa la conversazione all'operatore con tutto il contesto e registra ogni interazione.",
-    "hero.useCases.ops.title": "Operazioni & logistica",
+      "Rispondi alle domande frequenti, passa agli operatori e registra ogni chat.",
+    "hero.useCases.ops.title": "Messaggi push intelligenti",
     "hero.useCases.ops.desc":
-      "Sincronizza inventario, segui le fasi di evasione e invia aggiornamenti di trasporto in automatico.",
+      "Invia campagne WhatsApp mirate e riporta indietro i clienti.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -363,18 +371,19 @@ const translations = {
     // Hero Section
     "hero.title": "Build your AI sales agent",
     "hero.subtitle":
-      "A modern WhatsApp platform where AI agents drive sales, support, and growth.",
+      "Automate sales, support, and campaigns on WhatsApp — in one platform.",
+    "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
-    "hero.useCasesTitle": "Tailored workflows for your team",
-    "hero.useCases.sales.title": "Sales teams",
+    "hero.useCasesTitle": "Built for sales, support, and growth.",
+    "hero.useCases.sales.title": "AI sales agent",
     "hero.useCases.sales.desc":
-      "Qualify leads, recommend assortments, send payment links, and close orders in minutes.",
-    "hero.useCases.support.title": "Customer support",
+      "Qualify leads, recommend products, and close orders faster.",
+    "hero.useCases.support.title": "Customer care",
     "hero.useCases.support.desc":
-      "Triage FAQs, escalate to humans with full context, and keep every conversation logged.",
-    "hero.useCases.ops.title": "Operations & logistics",
+      "Answer FAQs, route to humans, and keep every chat logged.",
+    "hero.useCases.ops.title": "Smart push messages",
     "hero.useCases.ops.desc":
-      "Sync inventory, follow fulfillment steps, and trigger transport updates automatically.",
+      "Send targeted WhatsApp campaigns and bring customers back.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -702,20 +711,21 @@ const translations = {
     "header.tagline": "Habla con tus clientes a través de la sua chat favorita",
 
     // Hero Section
-    "hero.title": "Crea tu agente AI para WhatsApp",
+    "hero.title": "Crea tu agente de ventas con IA",
     "hero.subtitle":
-      "Lleva un personal shopper a WhatsApp. eChatbot escucha, califica, sugiere combos, envía pagos y mantiene al cliente informado sin salir del chat.",
+      "Automatiza ventas, soporte y campañas en WhatsApp — en una sola plataforma.",
+    "hero.subline": "",
     "hero.whyTitle": "¿Por qué eChatbot?",
-    "hero.useCasesTitle": "Workflows para tu equipo",
-    "hero.useCases.sales.title": "Equipos comerciales",
+    "hero.useCasesTitle": "Diseñado para ventas, soporte y crecimiento.",
+    "hero.useCases.sales.title": "Agente de ventas IA",
     "hero.useCases.sales.desc":
-      "Califica leads, propone surtidos, envía enlaces de pago y cierra pedidos en minutos.",
-    "hero.useCases.support.title": "Soporte al cliente",
+      "Califica prospectos, recomienda productos y cierra pedidos más rápido.",
+    "hero.useCases.support.title": "Atención al cliente",
     "hero.useCases.support.desc":
-      "Filtra las preguntas frecuentes, escala al humano con todo el contexto y registra cada conversación.",
-    "hero.useCases.ops.title": "Operaciones y logística",
+      "Responde preguntas frecuentes, deriva a humanos y registra cada chat.",
+    "hero.useCases.ops.title": "Mensajes push inteligentes",
     "hero.useCases.ops.desc":
-      "Sincroniza inventario, sigue las etapas de fulfillment y envía actualizaciones de transporte automáticamente.",
+      "Envía campañas WhatsApp dirigidas y recupera clientes.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -992,20 +1002,21 @@ const translations = {
     "header.tagline": "Fale com seus clientes através do chat favorito deles",
 
     // Hero Section
-    "hero.title": "Crie seu agente AI para WhatsApp",
+    "hero.title": "Crie seu agente de vendas com IA",
     "hero.subtitle":
-      "Leve um personal shopper para o WhatsApp. eChatbot escuta, qualifica, sugere combos, envia pagamentos e mantém o cliente atualizado sem sair da conversa.",
+      "Automatize vendas, suporte e campanhas no WhatsApp — em uma só plataforma.",
+    "hero.subline": "",
     "hero.whyTitle": "Por que eChatbot?",
-    "hero.useCasesTitle": "Fluxos feitos para o seu time",
-    "hero.useCases.sales.title": "Times comerciais",
+    "hero.useCasesTitle": "Projetado para vendas, suporte e crescimento.",
+    "hero.useCases.sales.title": "Agente de vendas IA",
     "hero.useCases.sales.desc":
-      "Qualifique leads, sugira sortimentos, envie links de pagamento e feche pedidos em minutos.",
+      "Qualifique leads, recomende produtos e feche pedidos mais rápido.",
     "hero.useCases.support.title": "Atendimento ao cliente",
     "hero.useCases.support.desc":
-      "Filtre FAQs, escale para humanos com todo o contexto e registre cada interação.",
-    "hero.useCases.ops.title": "Operações e logística",
+      "Responda perguntas frequentes, encaminhe para humanos e registre cada chat.",
+    "hero.useCases.ops.title": "Mensagens push inteligentes",
     "hero.useCases.ops.desc":
-      "Sincronize estoque, acompanhe o fulfillment e envie atualizações de transporte automaticamente.",
+      "Envie campanhas WhatsApp direcionadas e recupere clientes.",
 
     // Features
     "features.pushNotifications": "Push Notifications",
@@ -1322,7 +1333,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const t = (key: string): string => {
-    return translations[language][key] || key
+    // Try current language first, then English fallback, then return key
+    return translations[language]?.[key] || translations["en"]?.[key] || key
   }
 
   return (
