@@ -300,10 +300,10 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
             <div className="text-3xl font-bold text-green-600 mb-1">
               €{messagePrice.current.toFixed(2)}
             </div>
-            <div className="text-sm font-medium text-gray-900 mb-2">
+            <div className="text-base font-medium text-gray-900 mb-2">
               {t("pricing.usage.message")}
             </div>
-            <p className="text-xs text-gray-600">
+            <p className="text-sm text-gray-600">
               {t("pricing.usage.message.desc")}
             </p>
           </div>
@@ -328,17 +328,17 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
             <div className="text-3xl font-bold text-orange-600 mb-1">
               €{pushPrice.current.toFixed(2)}
             </div>
-            <div className="text-sm font-medium text-gray-900 mb-2">
+            <div className="text-base font-medium text-gray-900 mb-2">
               {t("pricing.usage.push")}
             </div>
-            <p className="text-xs text-gray-600">
+            <p className="text-sm text-gray-600">
               {t("pricing.usage.push.desc")}
             </p>
           </div>
         </div>
 
         <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-base text-gray-600">
             💡 All usage costs are transparent and billed monthly based on
             actual consumption
           </p>

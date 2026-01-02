@@ -795,13 +795,21 @@ export function LoginPage() {
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-8 lg:px-12">
           <div className="flex justify-end pt-3">
-            <a
-              href="#contact"
-              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
-            >
-              <Mail className="h-3.5 w-3.5" />
-              Contact us
-            </a>
+            <div className="flex items-center gap-4">
+              <a
+                href="#demo"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
+              >
+                Demo
+              </a>
+              <span className="text-green-600 text-xs font-semibold">|</span>
+              <a
+                href="#contact"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-green-600 hover:text-green-700"
+              >
+                Contact us
+              </a>
+            </div>
           </div>
 
           {/* Main Header Row */}
@@ -1424,9 +1432,9 @@ export function LoginPage() {
             </div>
         </div>
 
-        <div className="mt-14">
-          <div className="text-center space-y-2 mb-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">
+        <div className="py-16">
+          <div className="text-center space-y-2 mb-14">
+            <p className="text-base font-semibold uppercase tracking-[0.25em] text-green-600">
               <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
               Why eChatbot?
               <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
@@ -1497,9 +1505,9 @@ export function LoginPage() {
       <HomeFAQ />
 
       {/* Contact Section */}
-      <div className="py-14 bg-white border-t border-slate-200">
+      <div id="demo" className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,260px] gap-8 items-center rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-emerald-50/60 to-white p-8 lg:p-10 shadow-xl">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,300px] gap-8 items-center rounded-3xl border border-slate-200 bg-gradient-to-r from-white via-emerald-50/60 to-white p-8 lg:p-10 shadow-xl">
             <div className="flex items-center justify-center">
               <div className="w-48 h-48 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-md">
                 <img
@@ -1520,7 +1528,7 @@ export function LoginPage() {
               <Button
                 type="button"
                 disabled
-                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white cursor-not-allowed shadow-lg shadow-green-200/70 hover:bg-green-600"
+                className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white cursor-not-allowed shadow-lg shadow-green-200/70 hover:bg-green-600"
               >
                 Try our demo
               </Button>
@@ -1532,7 +1540,7 @@ export function LoginPage() {
       {/* Integration Section */}
       <div className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,260px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,300px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
             <div className="flex items-center justify-center">
               <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
                 <img
@@ -1552,7 +1560,7 @@ export function LoginPage() {
             <div className="flex justify-center lg:justify-end">
               <Button
                 type="button"
-                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
                 onClick={() => {
                   document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
                 }}
@@ -1567,7 +1575,7 @@ export function LoginPage() {
       {/* Privacy Section */}
       <div className="py-14 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,260px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr,300px] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
             <div className="flex items-center justify-center">
               <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
                 <img
@@ -1580,7 +1588,7 @@ export function LoginPage() {
             <div className="text-center lg:text-left space-y-3">
               <h3 className="text-3xl font-bold text-slate-900">Privacy by design</h3>
               <p className="text-lg text-slate-600">
-                Every integration is protected with scoped tokens, and sensitive data never flows to third parties or AI
+                Every chat interaction is protected with scoped tokens, and sensitive data never flows to third parties or AI
                 models. Your customer information stays under your control, encrypted in transit, and handled with strict
                 access rules.
               </p>
@@ -1588,7 +1596,7 @@ export function LoginPage() {
             <div className="flex justify-center lg:justify-end">
               <Button
                 type="button"
-                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
               >
                 Go to GDPR
               </Button>
@@ -1739,7 +1747,7 @@ export function LoginPage() {
                 <Button
                   type="submit"
                   disabled={contactSubmitting}
-                className="px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
+                className="w-56 px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
                 >
                   {contactSubmitting ? "Sending..." : "Send message"}
                 </Button>

@@ -107,13 +107,14 @@ export function NewsUpdates() {
   const actualIndex = currentIndex + newsItems.length
 
   return (
-    <div className="py-8 bg-gradient-to-br from-slate-50 to-blue-50 -mt-[35px]">
+    <div className="py-16 bg-gradient-to-br from-slate-50 to-blue-50 -mt-[35px]">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-4">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-14">
+          <p className="text-base font-semibold uppercase tracking-[0.25em] text-green-600">
+            <span className="inline-block align-middle h-[1px] w-6 bg-green-600 mr-2" aria-hidden="true" />
             {t("news.title")}
-          </h2>
-          <p className="text-xl text-gray-600">{t("news.subtitle")}</p>
+            <span className="inline-block align-middle h-[1px] w-6 bg-green-600 ml-2" aria-hidden="true" />
+          </p>
         </div>
 
         {/* Carousel Container */}
