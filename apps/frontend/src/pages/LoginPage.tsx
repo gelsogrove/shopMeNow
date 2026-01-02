@@ -1440,8 +1440,8 @@ export function LoginPage() {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 AI sales agent
               </h3>
-              <p className="text-sm text-slate-600">
-                Build your intelligent sales assistant in minutes with our guided setup and ready-made conversation flows. Your AI agent showcases products with rich catalogs, handles customer inquiries 24/7, and processes orders seamlessly through WhatsApp - all powered by natural language understanding that makes every interaction feel personal and professional.
+              <p className="text-base text-slate-600">
+                Build your intelligent sales assistant in minutes. Showcase products, handle inquiries 24/7, and process orders seamlessly through WhatsApp with natural conversation flows.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
@@ -1451,8 +1451,8 @@ export function LoginPage() {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 Push messages
               </h3>
-              <p className="text-sm text-slate-600">
-                Launch strategic WhatsApp campaigns that reach the right customers at the perfect moment. Automatically recover abandoned carts with personalized follow-ups, re-engage inactive customers with targeted promotions, and send bulk messages to segmented lists - all while maintaining compliance and tracking real-time engagement metrics to optimize your conversion rates.
+              <p className="text-base text-slate-600">
+                Launch targeted WhatsApp campaigns, recover abandoned carts automatically, and re-engage customers with personalized promotions. Track real-time metrics to optimize conversions.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/90 shadow-sm p-6 text-left">
@@ -1462,8 +1462,8 @@ export function LoginPage() {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 Customer care
               </h3>
-              <p className="text-sm text-slate-600">
-                Deliver exceptional customer support with AI that instantly resolves common questions, provides detailed product information, and tracks order status in real-time. When complex issues arise, seamlessly escalate to your team with full conversation history and context - ensuring every customer interaction is logged, searchable, and contributes to continuous service improvement.
+              <p className="text-base text-slate-600">
+                Resolve customer questions instantly with AI support. Track orders, provide product details, and escalate complex issues to your team with full conversation history.
               </p>
             </div>
           </div>
@@ -1559,6 +1559,31 @@ export function LoginPage() {
               >
                 Request a quote
               </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Privacy Section */}
+      <div className="py-14 bg-white border-t border-slate-200">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-8 items-center rounded-3xl border border-slate-200 bg-white p-8 lg:p-10 shadow-lg">
+            <div className="flex items-center justify-center">
+              <div className="w-52 h-52 rounded-3xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm">
+                <img
+                  src="/privacy.jpg"
+                  alt="Privacy by design"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            </div>
+            <div className="text-center lg:text-left space-y-3">
+              <h3 className="text-3xl font-bold text-slate-900">Privacy by design</h3>
+              <p className="text-lg text-slate-600">
+                Every integration is protected with scoped tokens, and sensitive data never flows to third parties or AI
+                models. Your customer information stays under your control, encrypted in transit, and handled with strict
+                access rules.
+              </p>
             </div>
           </div>
         </div>
