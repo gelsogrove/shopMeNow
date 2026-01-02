@@ -187,7 +187,7 @@ describe("Cart Products/Services Separation - Critical Fix", () => {
 
       // "Consulenza Nutrizionale" has qty=1, should NOT have "1x"
       expect(formatted).not.toContain("1x Consulenza")
-      expect(formatted).toContain("Consulenza Nutrizionale - €50.00")
+      expect(formatted).toContain("Consulenza Nutrizionale - $50.00")
 
       // "Degustazione Guidata" has qty=2, SHOULD have "2x"
       expect(formatted).toContain("2x Degustazione Guidata")
@@ -227,7 +227,7 @@ describe("Cart Products/Services Separation - Critical Fix", () => {
       expect(display).toContain("🔧 Servizi:")
       expect(display).toContain("Mozzarella di Bufala")
       expect(display).toContain("Consulenza Nutrizionale")
-      expect(display).toContain("€142.00") // Total: 17 + 15 + 50 + 60 = 142
+      expect(display).toContain("$142.00") // Total: 17 + 15 + 50 + 60 = 142
     })
   })
 

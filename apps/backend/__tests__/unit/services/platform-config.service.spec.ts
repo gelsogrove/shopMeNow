@@ -225,11 +225,11 @@ describe("PlatformConfigService", () => {
       const config = await platformConfigService.getPublicConfig()
 
       expect(config.prices.BASIC_MONTHLY).toEqual({
-        current: 19,
-        original: 29,
+        current: 23,
+        original: 34,
       })
       expect(config.prices.MESSAGE).toEqual({
-        current: 0.1,
+        current: 0.12,
         original: null,
       })
 
@@ -246,9 +246,9 @@ describe("PlatformConfigService", () => {
 
       const basicPrice = config.prices.find((p) => p.key === "BASIC_MONTHLY")
       expect(basicPrice).toBeDefined()
-      expect(basicPrice?.current).toBe(19)
-      expect(basicPrice?.original).toBe(29)
-      expect(basicPrice?.description).toBe("Basic plan - €19/month")
+      expect(basicPrice?.current).toBe(23)
+      expect(basicPrice?.original).toBe(34)
+      expect(basicPrice?.description).toBe("Basic plan - $23/month")
 
       const canLoginFlag = config.flags.find((f) => f.key === "canLogin")
       expect(canLoginFlag).toBeDefined()
@@ -271,7 +271,7 @@ describe("PlatformConfigService", () => {
         type: "PRICE",
         value: "25",
         originalValue: "29",
-        description: "Basic plan - €25/month",
+        description: "Basic plan - $25/month",
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),

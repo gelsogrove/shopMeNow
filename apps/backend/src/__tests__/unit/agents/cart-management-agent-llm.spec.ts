@@ -149,9 +149,9 @@ describe("CartManagementAgentLLM", () => {
       // New format: "Ecco il tuo carrello:" with 🛒 Prodotti section
       expect(result.formattedCart).toContain("Ecco il tuo carrello:")
       expect(result.formattedCart).toContain("🛒 Prodotti:")
-      expect(result.formattedCart).toContain("2x Mozzarella di Bufala - €17.00")
-      expect(result.formattedCart).toContain("1x Prosciutto Crudo - €15.00")
-      expect(result.formattedCart).toContain("💰 totale ordine: €32.00")
+      expect(result.formattedCart).toContain("2x Mozzarella di Bufala - $17.00")
+      expect(result.formattedCart).toContain("1x Prosciutto Crudo - $15.00")
+      expect(result.formattedCart).toContain("💰 totale ordine: $32.00")
       // Should always have action options
       expect(result.formattedCart).toContain("Cosa vuoi fare?")
       expect(result.formattedCart).toContain("<b>1.</b> Confermare l'ordine")
@@ -168,7 +168,7 @@ describe("CartManagementAgentLLM", () => {
       expect(result.formattedCart).toBe("Errore nel caricamento del carrello")
     })
 
-    it("should format prices with euro symbol prefix", () => {
+    it("should format prices with dollar symbol prefix", () => {
       const formatCartResponse = (agent as any).formatCartResponse.bind(agent)
 
       const result = formatCartResponse({
@@ -189,8 +189,8 @@ describe("CartManagementAgentLLM", () => {
         },
       })
 
-      // Format uses €XX.XX (euro prefix with dot separator)
-      expect(result.formattedCart).toContain("€26.00")
+      // Format uses $XX.XX (dollar prefix with dot separator)
+      expect(result.formattedCart).toContain("$26.00")
       // Should show discount message only if discountApplied > 0
       expect(result.formattedCart).not.toContain("sconto riservato")
     })

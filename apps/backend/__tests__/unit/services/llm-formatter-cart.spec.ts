@@ -192,14 +192,14 @@ describe("LLMFormatterService - Cart Templates", () => {
     it("should show services WITHOUT quantity prefix", () => {
       const result = getCartViewTemplate(mixedCartResponse)
       // Services should NOT have "1x" prefix
-      expect(result).toContain("- Consulenza Nutrizionale - €50.00")
-      expect(result).toContain("- Degustazione Guidata - €60.00")
+      expect(result).toContain("- Consulenza Nutrizionale - $50.00")
+      expect(result).toContain("- Degustazione Guidata - $60.00")
       expect(result).not.toContain("1x Consulenza")
     })
 
     it("should show total amount", () => {
       const result = getCartViewTemplate(mixedCartResponse)
-      expect(result).toContain("💰 totale ordine: €142.00")
+      expect(result).toContain("💰 totale ordine: $142.00")
     })
 
     it("should have Prodotti section BEFORE Servizi section", () => {
@@ -324,13 +324,13 @@ describe("LLMFormatterService - Cart Templates", () => {
     it("should show services WITHOUT quantity prefix", () => {
       const result = fallbackCart(mixedCartResponse)
       // Fallback cart services show name without quantity
-      expect(result).toContain("- Consulenza Nutrizionale - €50.00")
-      expect(result).toContain("- Degustazione Guidata - €60.00")
+      expect(result).toContain("- Consulenza Nutrizionale - $50.00")
+      expect(result).toContain("- Degustazione Guidata - $60.00")
     })
 
     it("should show total amount", () => {
       const result = fallbackCart(mixedCartResponse)
-      expect(result).toContain("💰 totale ordine: €142.00")
+      expect(result).toContain("💰 totale ordine: $142.00")
     })
   })
 

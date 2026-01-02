@@ -68,6 +68,11 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
     },
   ]
 
+  // Helper to format limit display (∞ for unlimited plans)
+  const formatLimit = (limit: number): string => {
+    return limit >= 999 ? "∞" : limit.toString()
+  }
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -83,8 +88,8 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
                 <item.icon className="h-4 w-4 text-muted-foreground" />
                 <span>{item.label}</span>
               </div>
-              <span className="font-medium">
-                {item.count} / {item.max}
+              <span className="font-semibold text-lg">
+                {item.count} / {formatLimit(item.max)}
               </span>
             </div>
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200">

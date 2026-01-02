@@ -11,6 +11,7 @@
 const mockFindMany = jest.fn()
 const mockFindFirst = jest.fn()
 const mockFindUnique = jest.fn()
+const mockWorkspaceFindUnique = jest.fn()
 
 const mockPrisma = {
   products: { findMany: mockFindMany },
@@ -20,6 +21,7 @@ const mockPrisma = {
   fAQ: { findMany: mockFindMany },
   customers: { findFirst: mockFindFirst, findUnique: mockFindUnique },
   agentConfig: { findFirst: mockFindFirst, findMany: mockFindMany },
+  workspace: { findUnique: mockWorkspaceFindUnique },
   $disconnect: jest.fn(),
 }
 
@@ -46,6 +48,7 @@ describe("Workspace Data Isolation", () => {
 
     mockFindMany.mockResolvedValue([])
     mockFindFirst.mockResolvedValue(null)
+    mockWorkspaceFindUnique.mockResolvedValue({ currency: "USD" })
   })
 
   describe("MessageRepository - getActiveProducts", () => {
