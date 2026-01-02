@@ -87,7 +87,7 @@ const translations = {
     "pricing.subtitle": "Inizia gratis e scala mentre cresci",
     "pricing.free.desc": "Per testare la piattaforma",
     "pricing.free.creditDesc":
-      "I primi €19 per provare la piattaforma li offriamo noi.",
+      "We offer you the first $23 to test the platform.",
     "pricing.basic.desc": "Per aziende in crescita",
     "pricing.premium.desc": "Per aziende consolidate",
     "pricing.enterprise.desc": "Per operazioni su larga scala",
@@ -100,14 +100,50 @@ const translations = {
     "pricing.usage.customer.desc": "Ogni nuova registrazione cliente",
     "pricing.usage.push": "per messaggio Push",
     "pricing.usage.push.desc": "Ogni messaggio promozionale inviato",
+    "pricing.usage.transparent": "💡 Tutti i costi d'uso sono trasparenti e fatturati mensilmente in base al consumo effettivo",
+    
+    // Login/Register Forms
+    "auth.login.title": "Login",
+    "auth.login.subtitle": "Monitora conversazioni, automazioni e dati nel dashboard di eChatbot.",
+    "auth.register.title": "Crea il tuo account",
+    "auth.register.subtitle": "Inizia ad automatizzare il tuo commercio WhatsApp con eChatbot",
+    
+    // Form Validation
+    "validation.email.invalid": "Indirizzo email non valido",
+    "validation.password.required": "Password richiesta",
+    "validation.password.minLength": "La password deve contenere almeno 8 caratteri",
+    "validation.password.uppercase": "La password deve contenere almeno una lettera maiuscola",
+    "validation.password.lowercase": "La password deve contenere almeno una lettera minuscola",
+    "validation.password.number": "La password deve contenere almeno un numero",
+    "validation.password.special": "La password deve contenere almeno un carattere speciale",
+    "validation.password.match": "Le password non corrispondono",
+    "validation.firstName.required": "Nome richiesto",
+    "validation.lastName.required": "Cognome richiesto",
+    "validation.gdpr.required": "Devi accettare i termini",
+    
+    // Demo Section
+    "demo.title": "Demo live",
+    "demo.subtitle": "Bellitalia vende prodotti italiani. Prova il loro agente AI, chiedi dei prodotti e scopri come la conversazione ti guida verso gli articoli giusti. Puoi aggiungere prodotti al carrello e vivere un'esperienza completa end-to-end.",
+    "demo.button": "Prova la nostra demo",
+    
+    // Integration Section
+    "integration.crm.title": "Integrazione CRM personalizzata",
+    "integration.crm.subtitle": "Connetti il tuo chatbot al tuo CRM e ai dati esterni con accesso API sicuro. Sincronizza i profili dei clienti, recupera lo storico degli ordini e attiva flussi di lavoro basati su eventi in tempo reale così ogni risposta è basata sui tuoi dati.",
+    "integration.crm.button": "Richiedi un preventivo",
+    
+    // Privacy Section
+    "privacy.title": "Privacy by design",
+    "privacy.subtitle": "Nessun dato sensibile viene inviato a terze parti o modelli AI. L'accesso è protetto con token con ambito limitato, crittografato in transito e limitato ai dati minimi richiesti per ogni interazione. I dati dei tuoi clienti restano sotto il tuo controllo.",
+    "privacy.button": "Vai al GDPR",
+    
     "pricing.features.channels": "Canali WhatsApp",
     "pricing.features.channel": "Canale WhatsApp",
     "pricing.features.products": "Prodotti",
     "pricing.features.clients": "Clienti/Leads",
     "pricing.features.support": "Supporto",
     "pricing.features.analytics": "Analisi e Report Avanzati",
-    "pricing.features.branding": "Personalizzazione Brand",
-    "pricing.features.integration": "Integrazione con CRM / database",
+    "pricing.features.branding": "Modello AI Personalizzato",
+    "pricing.features.integration": "Integrazione con proprio CRM (preventivo richiesto)",
     "pricing.features.unlimited": "Illimitati",
     "pricing.features.upto": "Fino a",
     "pricing.features.priority": "Supporto Prioritario 24/7",
@@ -183,7 +219,7 @@ const translations = {
     "billing.channels": "Channels",
     "billing.transactionHistory": "Transaction History",
     "billing.rechargeTitle": "Recharge Credit",
-    "billing.rechargeDescription": "Select an amount or enter a custom amount (min €10, max €1000)",
+    "billing.rechargeDescription": "Select an amount or enter a custom amount (min $12, max $1176)",
     "billing.customAmount": "Custom amount",
     "billing.processing": "Processing...",
     "billing.recharge": "Recharge",
@@ -426,7 +462,7 @@ const translations = {
     "pricing.subtitle": "Start free and scale as you grow",
     "pricing.free.desc": "For testing the platform",
     "pricing.free.creditDesc":
-      "We offer you the first €19 to test the platform.",
+      "We offer you the first $23 to test the platform.",
     "pricing.basic.desc": "For growing businesses",
     "pricing.premium.desc": "For established businesses",
     "pricing.enterprise.desc": "For large-scale operations",
@@ -440,6 +476,42 @@ const translations = {
     "pricing.usage.order.desc": "Each completed order",
     "pricing.usage.push": "per Push message",
     "pricing.usage.push.desc": "Each promotional message sent",
+    "pricing.usage.transparent": "💡 All usage costs are transparent and billed monthly based on actual consumption",
+    
+    // Login/Register Forms
+    "auth.login.title": "Login",
+    "auth.login.subtitle": "Monitor conversations, automations and insights inside the eChatbot dashboard.",
+    "auth.register.title": "Create your account",
+    "auth.register.subtitle": "Start automating your WhatsApp commerce with eChatbot",
+    
+    // Form Validation
+    "validation.email.invalid": "Invalid email address",
+    "validation.password.required": "Password is required",
+    "validation.password.minLength": "Password must be at least 8 characters",
+    "validation.password.uppercase": "Password must contain at least one uppercase letter",
+    "validation.password.lowercase": "Password must contain at least one lowercase letter",
+    "validation.password.number": "Password must contain at least one number",
+    "validation.password.special": "Password must contain at least one special character",
+    "validation.password.match": "Passwords don't match",
+    "validation.firstName.required": "First name is required",
+    "validation.lastName.required": "Last name is required",
+    "validation.gdpr.required": "You must accept the terms",
+    
+    // Demo Section
+    "demo.title": "Live demo",
+    "demo.subtitle": "Bellitalia sells Italian products. Try their AI agent, ask about products, and see how the conversation guides you to the right items. You can add products to the cart and experience a real end-to-end flow.",
+    "demo.button": "Try our demo",
+    
+    // Integration Section
+    "integration.crm.title": "Custom CRM integration",
+    "integration.crm.subtitle": "Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles, pull order history, and trigger workflows based on real-time events so every reply is grounded in your data.",
+    "integration.crm.button": "Request a quote",
+    
+    // Privacy Section
+    "privacy.title": "Privacy by design",
+    "privacy.subtitle": "No sensitive data is sent to third parties or AI models. Access is secured with scoped tokens, encrypted in transit, and limited to the minimum data required for each interaction. Your customer data stays under your control.",
+    "privacy.button": "Go to GDPR",
+    
     "pricing.features.channels": "WhatsApp Channels",
     "pricing.features.channel": "WhatsApp Channel",
     "pricing.features.products": "Products",
@@ -525,7 +597,7 @@ const translations = {
     "billing.channels": "Channels",
     "billing.transactionHistory": "Transaction History",
     "billing.rechargeTitle": "Recharge Credit",
-    "billing.rechargeDescription": "Select an amount or enter a custom amount (min €10, max €1000)",
+    "billing.rechargeDescription": "Select an amount or enter a custom amount (min $12, max $1176)",
     "billing.customAmount": "Custom amount",
     "billing.processing": "Processing...",
     "billing.recharge": "Recharge",
@@ -772,7 +844,7 @@ const translations = {
     "pricing.subtitle": "Comienza gratis y escala mientras creces",
     "pricing.free.desc": "Para probar la plataforma",
     "pricing.free.creditDesc":
-      "Te ofrecemos los primeros 19€ para probar la plataforma.",
+      "We offer you the first $23 to test the platform.",
     "pricing.basic.desc": "Para empresas en crecimiento",
     "pricing.premium.desc": "Para empresas consolidadas",
     "pricing.enterprise.desc": "Para operaciones a gran escala",
@@ -787,14 +859,37 @@ const translations = {
     "pricing.usage.order.desc": "Cada pedido completado",
     "pricing.usage.push": "por mensaje de Push",
     "pricing.usage.push.desc": "Cada mensaje promocional enviado",
+    "pricing.usage.transparent": "💡 Todos los costos de uso son transparentes y se facturan mensualmente según el consumo real",
+    
+    // Login/Register Forms
+    "auth.login.title": "Login",
+    "auth.login.subtitle": "Monitorea conversaciones, automatizaciones y datos en el dashboard de eChatbot.",
+    "auth.register.title": "Crea tu cuenta",
+    "auth.register.subtitle": "Comienza a automatizar tu comercio WhatsApp con eChatbot",
+    
+    // Demo Section
+    "demo.title": "Demo en vivo",
+    "demo.subtitle": "Bellitalia vende productos italianos. Prueba su agente IA, pregunta sobre productos y descubre cómo la conversación te guía hacia los artículos correctos. Puedes agregar productos al carrito y experimentar un flujo completo de principio a fin.",
+    "demo.button": "Prueba nuestra demo",
+    
+    // Integration Section
+    "integration.crm.title": "Integración CRM personalizada",
+    "integration.crm.subtitle": "Conecta tu chatbot a tu CRM y datos externos con acceso API seguro. Sincroniza perfiles de clientes, obtén historial de pedidos y activa flujos de trabajo basados en eventos en tiempo real para que cada respuesta esté fundamentada en tus datos.",
+    "integration.crm.button": "Solicita un presupuesto",
+    
+    // Privacy Section
+    "privacy.title": "Privacidad por diseño",
+    "privacy.subtitle": "Ningún dato sensible se envía a terceros o modelos de IA. El acceso está protegido con tokens de alcance limitado, cifrado en tránsito y limitado a los datos mínimos requeridos para cada interacción. Los datos de tus clientes permanecen bajo tu control.",
+    "privacy.button": "Ir al GDPR",
+    
     "pricing.features.channels": "Canales WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
     "pricing.features.products": "Productos",
     "pricing.features.clients": "Clientes/Leads",
     "pricing.features.support": "Soporte",
     "pricing.features.analytics": "Análisis y Reportes Avanzados",
-    "pricing.features.branding": "Personalización de Marca",
-    "pricing.features.integration": "Integración con CRM / base de datos",
+    "pricing.features.branding": "Modelo IA Personalizado",
+    "pricing.features.integration": "Integración con CRM propio (cotización requerida)",
     "pricing.features.unlimited": "Ilimitados",
     "pricing.features.upto": "Hasta",
     "pricing.features.priority": "Soporte Prioritario 24/7",
@@ -1063,7 +1158,7 @@ const translations = {
     "pricing.subtitle": "Comece grátis e escale conforme você cresce",
     "pricing.free.desc": "Para testar a plataforma",
     "pricing.free.creditDesc":
-      "Oferecemos os primeiros €19 para testar a plataforma.",
+      "We offer you the first $23 to test the platform.",
     "pricing.basic.desc": "Para empresas em crescimento",
     "pricing.premium.desc": "Para empresas estabelecidas",
     "pricing.enterprise.desc": "Para operações em grande escala",
@@ -1078,14 +1173,50 @@ const translations = {
     "pricing.usage.order.desc": "Cada pedido concluído",
     "pricing.usage.push": "por mensagem de Push",
     "pricing.usage.push.desc": "Cada mensagem promocional enviada",
+    "pricing.usage.transparent": "💡 Todos os custos de uso são transparentes e faturados mensalmente com base no consumo real",
+    
+    // Login/Register Forms
+    "auth.login.title": "Login",
+    "auth.login.subtitle": "Monitore conversas, automações e dados no dashboard do eChatbot.",
+    "auth.register.title": "Crie sua conta",
+    "auth.register.subtitle": "Comece a automatizar seu comércio WhatsApp com eChatbot",
+    
+    // Form Validation
+    "validation.email.invalid": "Endereço de e-mail inválido",
+    "validation.password.required": "Senha obrigatória",
+    "validation.password.minLength": "A senha deve ter pelo menos 8 caracteres",
+    "validation.password.uppercase": "A senha deve conter pelo menos uma letra maiúscula",
+    "validation.password.lowercase": "A senha deve conter pelo menos uma letra minúscula",
+    "validation.password.number": "A senha deve conter pelo menos um número",
+    "validation.password.special": "A senha deve conter pelo menos um caractere especial",
+    "validation.password.match": "As senhas não correspondem",
+    "validation.firstName.required": "Nome obrigatório",
+    "validation.lastName.required": "Sobrenome obrigatório",
+    "validation.gdpr.required": "Você deve aceitar os termos",
+    
+    // Demo Section
+    "demo.title": "Demo ao vivo",
+    "demo.subtitle": "Bellitalia vende produtos italianos. Experimente o agente IA deles, pergunte sobre produtos e veja como a conversa te guia para os itens certos. Você pode adicionar produtos ao carrinho e experimentar um fluxo completo de ponta a ponta.",
+    "demo.button": "Experimente nossa demo",
+    
+    // Integration Section
+    "integration.crm.title": "Integração CRM personalizada",
+    "integration.crm.subtitle": "Conecte seu chatbot ao seu CRM e dados externos com acesso API seguro. Sincronize perfis de clientes, obtenha histórico de pedidos e acione fluxos de trabalho baseados em eventos em tempo real para que cada resposta seja fundamentada em seus dados.",
+    "integration.crm.button": "Solicite um orçamento",
+    
+    // Privacy Section
+    "privacy.title": "Privacidade por design",
+    "privacy.subtitle": "Nenhum dado sensível é enviado para terceiros ou modelos de IA. O acesso é protegido com tokens de escopo limitado, criptografado em trânsito e limitado aos dados mínimos necessários para cada interação. Os dados dos seus clientes permanecem sob seu controle.",
+    "privacy.button": "Ir para GDPR",
+    
     "pricing.features.channels": "Canais WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
     "pricing.features.products": "Produtos",
     "pricing.features.clients": "Clientes/Leads",
     "pricing.features.support": "Suporte",
     "pricing.features.analytics": "Análises e Relatórios Avançados",
-    "pricing.features.branding": "Personalização de Marca",
-    "pricing.features.integration": "Integração com CRM / banco de dados",
+    "pricing.features.branding": "Modelo IA Personalizado",
+    "pricing.features.integration": "Integração com CRM próprio (orçamento necessário)",
     "pricing.features.unlimited": "Ilimitados",
     "pricing.features.upto": "Até",
     "pricing.features.priority": "Suporte Prioritário 24/7",

@@ -14,7 +14,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { toast } from "@/lib/toast"
 import { creditNotesApi, type CreditNote } from "@/services/creditNotesApi"
 import type { Order } from "@/services/ordersApi"
-import { formatPrice } from "@/utils/format"
+import { formatPrice, getCurrencySymbol } from "@/utils/format"
 import { Loader2, Receipt, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -38,6 +38,7 @@ export function CreditNoteDialog({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [existingCreditNotes, setExistingCreditNotes] = useState<CreditNote[]>([])
   const [loadingExisting, setLoadingExisting] = useState(false)
+  const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
 
   // Calculate remaining amount that can be credited
   const existingTotal = existingCreditNotes.reduce((sum, cn) => sum + cn.amount, 0)
@@ -103,7 +104,7 @@ export function CreditNoteDialog({
 
     if (parsedAmount > maxAmount) {
       toast.error(
-        `Amount exceeds the remaining order value. Maximum: €${maxAmount.toFixed(2)}`
+        `Amount exceeds the remaining order value. Maximum: ${currencySymbol}${maxAmount.toFixed(2)}`
       )
       return
     }
@@ -242,7 +243,7 @@ export function CreditNoteDialog({
             {/* Form */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Importo (€)</Label>
+                <Label htmlFor="amount">Importo ({currencySymbol})</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -256,7 +257,7 @@ export function CreditNoteDialog({
                 />
                 {maxAmount > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    Importo massimo: €{maxAmount.toFixed(2)}
+                    Importo massimo: {currencySymbol}{maxAmount.toFixed(2)}
                   </p>
                 )}
                 {maxAmount <= 0 && (

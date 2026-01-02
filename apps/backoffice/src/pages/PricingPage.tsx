@@ -10,7 +10,7 @@ import {
   X,
   Loader2,
   XCircle,
-  Euro,
+  DollarSign,
   TrendingDown
 } from 'lucide-react'
 
@@ -190,7 +190,7 @@ export function PricingPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Euro className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Subscription Plans
           </CardTitle>
         </CardHeader>
@@ -223,7 +223,7 @@ export function PricingPage() {
                         />
                       ) : (
                         <span className="text-lg font-semibold text-green-600">
-                          €{price.current.toFixed(2)}
+                          ${price.current.toFixed(2)}
                         </span>
                       )}
                     </td>
@@ -242,7 +242,7 @@ export function PricingPage() {
                       ) : price.original ? (
                         <span className="flex items-center gap-1 text-gray-400">
                           <TrendingDown className="h-4 w-4 text-green-500" />
-                          <span className="line-through">€{price.original.toFixed(2)}</span>
+                          <span className="line-through">${price.original.toFixed(2)}</span>
                         </span>
                       ) : (
                         <span className="text-gray-300">—</span>
@@ -285,7 +285,7 @@ export function PricingPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Euro className="h-5 w-5" />
+            <DollarSign className="h-5 w-5" />
             Usage Costs
           </CardTitle>
         </CardHeader>
@@ -317,7 +317,7 @@ export function PricingPage() {
                         />
                       ) : (
                         <span className="text-lg font-semibold">
-                          €{price.current.toFixed(2)}
+                          ${price.current.toFixed(2)}
                         </span>
                       )}
                     </td>

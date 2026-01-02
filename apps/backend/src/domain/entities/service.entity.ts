@@ -2,6 +2,8 @@
  * Service Entity
  * Represents a service offered by a workspace in the domain
  */
+import { getCurrencySymbol } from "../../utils/currency"
+
 export class Service {
   /**
    * Properties
@@ -67,7 +69,7 @@ export class Service {
     }
 
     if (!this.currency) {
-      this.currency = "EUR" // Default currency
+      this.currency = "USD" // Default currency
     }
 
     return true
@@ -84,12 +86,7 @@ export class Service {
    * Format price with currency
    */
   public formattedPrice(): string {
-    const currencySymbol =
-      this.currency === "EUR"
-        ? "€"
-        : this.currency === "USD"
-          ? "$"
-          : this.currency
+    const currencySymbol = getCurrencySymbol(this.currency)
     return `${currencySymbol}${this.price.toFixed(2)}`
   }
 

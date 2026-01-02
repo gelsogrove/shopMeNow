@@ -28,6 +28,7 @@ import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
+import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { useMutation } from "@tanstack/react-query"
 import { Loader2, Save, Settings, Trash2, HelpCircle } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -39,6 +40,7 @@ interface WorkspaceData {
   whatsappPhoneNumber: string
   adminEmail: string
   url: string
+  currency: string
   channelStatus: boolean // 🆕 Feature 126: Chatbot enabled/disabled (true=enabled, false=WIP mode)
   welcomeMessage: string
   wipMessage: string
@@ -201,6 +203,7 @@ export default function SettingsPage() {
     whatsappPhoneNumber: "",
     adminEmail: "",
     url: "http://localhost:3000",
+    currency: "USD",
     channelStatus: true, // 🆕 Default: chatbot enabled
     welcomeMessage: defaultWelcomeMessage,
     wipMessage: defaultWipMessage,
@@ -239,6 +242,7 @@ export default function SettingsPage() {
       whatsappPhoneNumber: workspace.whatsappPhoneNumber || "",
       adminEmail: workspace.adminEmail || workspace.notificationEmail || "",
       url: workspace.url || "http://localhost:3000",
+      currency: workspace.currency || "USD",
       channelStatus: workspace.channelStatus ?? true, // 🆕 Default to enabled if not set
       welcomeMessage: extractEnglishMessage(workspace.welcomeMessage, defaultWelcomeMessage),
       wipMessage: extractEnglishMessage(workspace.wipMessage, defaultWipMessage),
@@ -365,6 +369,7 @@ export default function SettingsPage() {
         .split(",")
         .map((s) => s.trim())
         .filter((s) => s.length > 0), // 🆕 Security: convert to array
+      currency: formData.currency,
       // 🆕 Channel Configuration (Feature 199)
       sellsProductsAndServices: formData.sellsProductsAndServices,
       hasSalesAgents: formData.hasSalesAgents,
@@ -519,6 +524,27 @@ export default function SettingsPage() {
                       {errors.url && <p className="text-sm text-red-500">{errors.url}</p>}
                       <p className="text-xs text-muted-foreground">
                         Used for short links and redirects
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Currency</Label>
+                      <Select
+                        value={formData.currency}
+                        onValueChange={(value) => handleFieldChange("currency", value)}
+                      >
+                        <SelectTrigger id="currency">
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SUPPORTED_CURRENCIES.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code}>
+                              {currency.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Used for product, service, and order prices in this channel.
                       </p>
                     </div>
 

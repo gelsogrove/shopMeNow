@@ -67,6 +67,7 @@ export interface UpdateWorkspaceData {
   name?: string
   description?: string
   isActive?: boolean
+  currency?: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
   adminEmail?: string

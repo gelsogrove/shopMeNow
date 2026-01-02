@@ -104,7 +104,7 @@ export async function getOrder(
       orderCode: order.orderCode,
       status: order.status || "PENDING",
       totalAmount: order.totalAmount,
-      currency: order.customer?.currency || "EUR",
+      currency: order.customer?.currency || "USD",
       createdAt: order.createdAt.toISOString(),
       deliveryDate: undefined, // Not in schema yet
       shippingAddress: order.shippingAddress || undefined,

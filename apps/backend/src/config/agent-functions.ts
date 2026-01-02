@@ -204,11 +204,11 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
         },
         minPrice: {
           type: "number",
-          description: "Optional minimum price filter in EUR",
+          description: "Optional minimum price filter in USD",
         },
         maxPrice: {
           type: "number",
-          description: "Optional maximum price filter in EUR",
+          description: "Optional maximum price filter in USD",
         },
       },
       required: ["certifications"],

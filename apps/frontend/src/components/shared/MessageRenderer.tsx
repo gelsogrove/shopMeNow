@@ -217,7 +217,10 @@ export function MessageRenderer({
           "<s style='text-decoration: line-through;'>$1</s>"
         ) // Markdown strikethrough (double tilde)
         .replace(/~(.*?)~/g, "<s style='text-decoration: line-through;'>$1</s>") // WhatsApp strikethrough (single tilde)
-        .replace(/→\s*(€[\d.,]+)/g, "→ <strong>$1</strong>")
+        .replace(
+          /→\s*((?:[$€£]|CHF|CA\\$|A\\$|SEK|NOK|DKK|PLN|CZK|HUF|RON)\\s?[\\d.,]+)/g,
+          "→ <strong>$1</strong>"
+        )
 
       // Restore img placeholders
       formatted = formatted.replace(/__IMG_PLACEHOLDER_(\d+)__/g, (_, idx) => {

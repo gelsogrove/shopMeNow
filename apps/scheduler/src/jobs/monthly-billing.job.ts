@@ -17,14 +17,27 @@ import logger from '../utils/logger'
  * │    - Credit balance is SHARED across all owner's workspaces                 │
  * │    - One subscription covers ALL workspaces owned by a user                 │
  * │                                                                             │
- * │ 2. SUBSCRIPTION STATUSES                                                    │
+ * │ 2. TWO SEPARATE BILLING SYSTEMS (CRITICAL)                                  │
+ * │    A) SUBSCRIPTION FEE (Monthly Payment)                                    │
+ * │       • Fixed monthly cost: €29 Basic, €49 Premium, €129 Enterprise         │
+ * │       • Paid EXTERNALLY via PayPal/Stripe on 1st of month                   │
+ * │       • Covers platform access, features, and limits                        │
+ * │       • ❌ DOES NOT TOUCH user.creditBalance field                          │
+ * │                                                                             │
+ * │    B) CREDIT BALANCE (Pay-as-you-go)                                        │
+ * │       • Prepaid credits for WhatsApp operations ONLY                        │
+ * │       • Used for: Messages (€0.10), Orders (€1.50), Pushes (€1.00)         │
+ * │       • Recharged manually via "Ricarica" button (€10-€1000)                │
+ * │       • ✅ STAYS UNCHANGED during monthly billing                           │
+ * │                                                                             │
+ * │ 3. SUBSCRIPTION STATUSES                                                    │
  * │    - ACTIVE: Normal operation, chatbots respond, billing active             │
  * │    - PAUSED: Chatbots blocked, NO billing (skip this owner)                 │
  * │    - PAYMENT_FAILED: Payment failed, access blocked until resolved          │
  * │    - FREE_TRIAL: Free plan, no billing until upgrade or trial expires       │
  * │    - CANCELLED: User cancelled, no billing, access blocked                  │
  * │                                                                             │
- * │ 3. PAUSE/RESUME FLOW                                                        │
+ * │ 4. PAUSE/RESUME FLOW                                                        │
  * │    ┌─────────────────────────────────────────────────────────────────┐      │
  * │    │ USER CLICKS "PAUSE" → IMMEDIATE:                                │      │
  * │    │   • subscriptionStatus = 'PAUSED'                               │      │
@@ -40,13 +53,14 @@ import logger from '../utils/logger'
  * │    │   • NEXT 1st OF MONTH: Billing resumes (this job processes)     │      │
  * │    └─────────────────────────────────────────────────────────────────┘      │
  * │                                                                             │
- * │ 4. MONTHLY BILLING STEPS (this job)                                         │
+ * │ 5. MONTHLY BILLING STEPS (this job)                                         │
  * │    Step 1: Apply pending plan changes (downgrades)                          │
  * │    Step 2: SKIP PAUSED users (no billing, no chatbot)                       │
  * │    Step 3: SKIP FREE_TRIAL users (no billing)                               │
- * │    Step 4: Calculate charge: subscription + credit debt                     │
- * │    Step 5: Process payment                                                  │
- * │    Step 6: On success → reset credit, create transaction                    │
+ * │    Step 4: Calculate charge: subscription + credit debt (if negative)       │
+ * │    Step 5: Process payment (external PayPal/Stripe)                         │
+ * │    Step 6: On success → update status, create transaction                   │
+ * │             ❌ Credit balance NOT touched (stays unchanged)                 │
  * │    Step 7: On failure → set PAYMENT_FAILED status                           │
  * │                                                                             │
  * └─────────────────────────────────────────────────────────────────────────────┘
@@ -269,11 +283,13 @@ export async function monthlyBillingJob(): Promise<void> {
         // PAYMENT SUCCESS - Update User billing fields
         // ═══════════════════════════════════════════════════════════════
         await prisma.$transaction([
-          // Reset credit balance to €0 on User
+          // Update billing status (creditBalance stays UNCHANGED)
+          // Subscription fee is paid externally (PayPal/Stripe)
+          // Credit balance is ONLY for WhatsApp messages (€0.10 each)
           prisma.user.update({
             where: { id: owner.id },
             data: {
-              creditBalance: new Prisma.Decimal(0),
+              // creditBalance: NOT TOUCHED - remains for message payments
               subscriptionStatus: 'ACTIVE',
               paymentFailureCount: 0,
               lastPaymentFailedAt: null,
@@ -288,8 +304,8 @@ export async function monthlyBillingJob(): Promise<void> {
               workspaceId: null, // Owner-level billing, not workspace-specific
               type: 'MONTHLY_FEE',
               amount: new Prisma.Decimal((-totalCharge).toFixed(2)),
-              balanceAfter: new Prisma.Decimal(0),
-              description: `Monthly billing ${monthName} - ${(planConfig as any).displayName} (€${subscriptionFee}) + Credit debt (€${creditDebt.toFixed(2)})`,
+              balanceAfter: new Prisma.Decimal(currentBalance.toFixed(2)), // Credit balance UNCHANGED
+              description: `Monthly billing ${monthName} - ${(planConfig as any).displayName} (€${subscriptionFee})${creditDebt > 0 ? ` + Credit debt (€${creditDebt.toFixed(2)})` : ''} - Paid externally`,
               referenceId: paymentResult.transactionId,
               referenceType: 'payment',
             },

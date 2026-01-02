@@ -18,7 +18,7 @@ import logger from '../utils/logger'
  * 
  * DELETE ORDER (leaf → parent):
  * 1. User-related: TwoFactorResetToken, AuthenticationAttempt, PasswordReset, RegistrationToken
- * 2. Messages & ConversationMessage
+ * 2. Messages, MessageArchive, ConversationMessage, AgentConversationLog
  * 3. ChatSession
  * 4. Campaign-related: CampaignSent, Campaign
  * 5. Product-related: ProductCertification, ProductTransportType, ProductCategory
@@ -30,6 +30,14 @@ import logger from '../utils/logger'
  * 11. UserWorkspace (relation table)
  * 12. Workspaces
  * 13. Users
+ * 
+ * ⚠️ NOT DELETED (for statistics):
+ * - Billing (anonymized to unknownUser)
+ * - BillingTransaction (anonymized to unknownUser)
+ * 
+ * ⚠️ NOT DELETED (for statistics):
+ * - Billing (anonymized to unknownUser)
+ * - BillingTransaction (anonymized to unknownUser)
  */
 
 const DEFAULT_RETENTION_DAYS = 90
@@ -122,6 +130,12 @@ export async function softDeleteCleanupJob(): Promise<void> {
       // Messages
       deletedCounts.message = (await tx.message.deleteMany({
         where: { chatSession: { workspaceId: { in: workspaceIds } } }
+      })).count
+
+      // ⚠️ CRITICAL: Delete archived messages (>6 months old)
+      // MessageArchive has denormalized workspaceId for cleanup
+      deletedCounts.messageArchive = (await tx.messageArchive.deleteMany({
+        where: { workspaceId: { in: workspaceIds } }
       })).count
 
       // ConversationMessage (AgentConversationLog child)
@@ -271,13 +285,10 @@ export async function softDeleteCleanupJob(): Promise<void> {
         where: { workspaceId: { in: workspaceIds } }
       })).count
 
-      deletedCounts.billing = (await tx.billing.deleteMany({
-        where: { workspaceId: { in: workspaceIds } }
-      })).count
-
-      deletedCounts.billingTransaction = (await tx.billingTransaction.deleteMany({
-        where: { workspaceId: { in: workspaceIds } }
-      })).count
+      // ⚠️ BILLING & TRANSACTIONS NOT DELETED
+      // Keep for statistics - will be anonymized to "unknownUser" in queries
+      // deletedCounts.billing = (await tx.billing.deleteMany(...))
+      // deletedCounts.billingTransaction = (await tx.billingTransaction.deleteMany(...))
 
       deletedCounts.adminSession = (await tx.adminSession.deleteMany({
         where: { workspaceId: { in: workspaceIds } }

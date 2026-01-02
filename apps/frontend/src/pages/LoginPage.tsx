@@ -44,7 +44,7 @@ import {
   CreditCard,
   ChevronDown,
 } from "lucide-react"
-import { useEffect, useState, useRef, type FormEvent } from "react"
+import { useEffect, useState, useRef, useMemo, type FormEvent } from "react"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
@@ -112,10 +112,6 @@ export function LoginPage() {
   const [isValidatingSession, setIsValidatingSession] = useState(true)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
   
-  // Refs for auto-focus
-  const loginEmailRef = useRef<HTMLInputElement>(null)
-  const registerFirstNameRef = useRef<HTMLInputElement>(null)
-  
   // 👤 Logged-in user state (for showing avatar instead of login/register buttons)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loggedInUser, setLoggedInUser] = useState<{ 
@@ -180,6 +176,32 @@ export function LoginPage() {
     { src: hero5, alt: "WhatsApp AI agent dashboard view 5" },
   ]
   const [currentSlide, setCurrentSlide] = useState(0)
+  const [touchStartHero, setTouchStartHero] = useState<number | null>(null)
+  const [touchEndHero, setTouchEndHero] = useState<number | null>(null)
+
+  const minSwipeDistance = 50
+
+  const onTouchStartHero = (e: React.TouchEvent) => {
+    setTouchEndHero(null)
+    setTouchStartHero(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMoveHero = (e: React.TouchEvent) => {
+    setTouchEndHero(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEndHero = () => {
+    if (!touchStartHero || !touchEndHero) return
+    const distance = touchStartHero - touchEndHero
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+    if (isLeftSwipe) {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length)
+    }
+    if (isRightSwipe) {
+      setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)
+    }
+  }
   const [contactName, setContactName] = useState("")
   const [contactSurname, setContactSurname] = useState("")
   const [contactTitle, setContactTitle] = useState("")
@@ -191,6 +213,9 @@ export function LoginPage() {
   const [contactSuccess, setContactSuccess] = useState(false)
   const [contactHoneypot, setContactHoneypot] = useState("")
   const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ""
+  
+  // Ref for contact form name input
+  const contactNameInputRef = useRef<HTMLInputElement>(null)
 
 
   useEffect(() => {
@@ -419,7 +444,7 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     // 🚀 Check if login is enabled (bypass if admin access mode)
-    if (isLoginDisabled) {
+    if (isLoginDisabled && !isAdminBypass) {
       setWipFeature('login')
       setShowWIPModal(true)
       return
@@ -519,7 +544,7 @@ export function LoginPage() {
 
   const onRegisterSubmit = async (data: RegisterForm) => {
     // 🚀 Check if registration is enabled
-    if (isRegisterDisabled) {
+    if (isRegisterDisabled && !isAdminBypass) {
       setWipFeature('register')
       setShowWIPModal(true)
       return
@@ -727,6 +752,18 @@ export function LoginPage() {
       setContactSubmitting(false)
     }
   }
+  
+  // Function to scroll to contact form and focus on name input
+  const scrollToContactForm = (e?: React.MouseEvent) => {
+    e?.preventDefault()
+    contactNameInputRef.current?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'center' 
+    })
+    setTimeout(() => {
+      contactNameInputRef.current?.focus()
+    }, 600) // Wait for smooth scroll to complete
+  }
 
   const handleGoogleError = () => {
     toast.error('Google login failed. Please try again.')
@@ -773,9 +810,9 @@ export function LoginPage() {
 
   const formattedCredit =
     userPlan?.creditBalance != null
-      ? new Intl.NumberFormat("it-IT", {
+      ? new Intl.NumberFormat("en-US", {
           style: "currency",
-          currency: "EUR",
+          currency: "USD",
         }).format(userPlan.creditBalance)
       : "--"
 
@@ -798,8 +835,8 @@ export function LoginPage() {
     >
       {/* Header - Professional Design */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-8 lg:px-12">
-          <div className="flex justify-end pt-3">
+        <div className="max-w-7xl mx-auto px-4 lg:px-12">
+          <div className="hidden md:flex justify-end pt-3">
             <div className="flex items-center gap-4">
               <a
                 href="#demo"
@@ -825,19 +862,19 @@ export function LoginPage() {
           </div>
 
           {/* Main Header Row */}
-          <div className="flex items-center justify-between h-20">
+          <div className="flex items-center justify-between h-16 md:h-20">
             {/* Left: Logo + Brand */}
             <div className="flex items-center gap-0 -mt-[5px]">
               <img 
                 src="/logo.png" 
                 alt="eChatbot" 
-                className="h-[100px] w-[100px] object-contain mr-[-15px]"
+                className="h-[70px] w-[70px] md:h-[100px] md:w-[100px] object-contain mr-[-10px] md:mr-[-15px]"
               />
-              <span className="text-4xl font-bold text-green-600 tracking-tight">eChatbot</span>
+              <span className="text-2xl md:text-4xl font-bold text-green-600 tracking-tight">eChatbot</span>
             </div>
 
             {/* Right: Language Selector + Auth */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 md:gap-6">
               {/* Language Selector */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -985,14 +1022,13 @@ export function LoginPage() {
                   </DropdownMenu>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <Button
                     variant="ghost"
-                    className="text-sm font-medium text-slate-700 hover:text-green-600 hover:bg-green-50 transition-colors"
+                    className="text-xs md:text-sm font-medium text-slate-700 hover:text-green-600 hover:bg-green-50 transition-colors px-2 md:px-3"
                     onClick={() => {
                       if (isAdminBypass || !workingInProgress) {
                         setActiveTab('signin')
-                        setTimeout(() => loginEmailRef.current?.focus(), 100)
                       } else {
                         setWipFeature('login')
                         setShowWIPModal(true)
@@ -1002,11 +1038,10 @@ export function LoginPage() {
                     Sign in
                   </Button>
                   <Button
-                    className="bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm transition-all hover:shadow-md"
+                    className="bg-green-600 hover:bg-green-700 text-white font-medium text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-sm transition-all hover:shadow-md"
                     onClick={() => {
                       if (isAdminBypass || !workingInProgress) {
                         setActiveTab('register')
-                        setTimeout(() => registerFirstNameRef.current?.focus(), 100)
                       } else {
                         setWipFeature('register')
                         setShowWIPModal(true)
@@ -1048,7 +1083,12 @@ export function LoginPage() {
                     />
                   ))}
                 </div>
-                <div className="relative w-full pt-[85%] sm:pt-[70%] min-h-[20rem] bg-white">
+                <div 
+                  className="relative w-full pt-[85%] sm:pt-[70%] min-h-[20rem] bg-white"
+                  onTouchStart={onTouchStartHero}
+                  onTouchMove={onTouchMoveHero}
+                  onTouchEnd={onTouchEndHero}
+                >
                   {heroSlides.map((slide, index) => (
                     <img
                       key={slide.src}
@@ -1091,8 +1131,8 @@ export function LoginPage() {
                   </h3>
                   <p className={`text-slate-600 ${isLoginViewDisabled ? "opacity-60" : ""}`}>
                     {activeTab === "signin"
-                      ? "Monitor conversations, automations and insights inside the eChatbot dashboard."
-                      : "Start automating your WhatsApp commerce with eChatbot"}
+                      ? t("auth.login.subtitle")
+                      : t("auth.register.subtitle")}
                   </p>
                 </div>
 
@@ -1148,7 +1188,6 @@ export function LoginPage() {
                               type="email"
                               placeholder="your@email.com"
                               {...register("email")}
-                              ref={loginEmailRef}
                               disabled={isLoading || isLoginDisabled}
                               autoComplete="username"
                               className="h-11"
@@ -1198,9 +1237,9 @@ export function LoginPage() {
                             </div>
                             <Link
                               to="/auth/forgot-password"
-                              className={`text-sm font-medium text-green-600 hover:underline ${isLoginDisabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+                              className={`text-sm font-medium text-green-600 hover:underline ${(isLoginDisabled && !isAdminBypass) ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
                               onClick={(event) => {
-                                if (isLoginDisabled) {
+                                if (isLoginDisabled && !isAdminBypass) {
                                   event.preventDefault()
                                   setWipFeature("login")
                                   setShowWIPModal(true)
@@ -1217,7 +1256,7 @@ export function LoginPage() {
                             disabled={isLoading}
                             aria-disabled={isLoginDisabled}
                             onClick={(event) => {
-                              if (isLoginDisabled) {
+                              if (isLoginDisabled && !isAdminBypass) {
                                 event.preventDefault()
                                 setWipFeature("login")
                                 setShowWIPModal(true)
@@ -1278,7 +1317,7 @@ export function LoginPage() {
                           Don't have an account?{" "}
                           <button
                             onClick={() => {
-                              if (isRegisterDisabled) {
+                              if (isRegisterDisabled && !isAdminBypass) {
                                 setWipFeature('register')
                                 setShowWIPModal(true)
                                 return
@@ -1288,8 +1327,8 @@ export function LoginPage() {
                               setError("")
                               setActiveTab("register")
                             }}
-                            className={`text-green-600 hover:underline font-semibold ${isRegisterDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
-                            aria-disabled={isRegisterDisabled}
+                            className={`text-green-600 hover:underline font-semibold ${(isRegisterDisabled && !isAdminBypass) ? "opacity-50 cursor-not-allowed" : ""}`}
+                            aria-disabled={isRegisterDisabled && !isAdminBypass}
                           >
                             Create one
                           </button>
@@ -1318,7 +1357,6 @@ export function LoginPage() {
                           placeholder="First name"
                           autoComplete="off"
                           {...registerForm.register("firstName")}
-                          ref={registerFirstNameRef}
                           disabled={isLoading || isRegisterDisabled}
                           className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
@@ -1615,11 +1653,9 @@ export function LoginPage() {
               </div>
             </div>
             <div className="text-center lg:text-left space-y-2">
-              <h3 className="text-3xl lg:text-4xl font-bold text-slate-900">Live demo</h3>
+              <h3 className="text-3xl lg:text-4xl font-bold text-slate-900">{t("demo.title")}</h3>
               <p className="text-lg text-slate-600">
-                Bellitalia sells Italian products. Try their AI agent, ask about products, and see how the
-                conversation guides you to the right items. You can add products to the cart and experience a
-                real end-to-end flow.
+                {t("demo.subtitle")}
               </p>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -1628,7 +1664,7 @@ export function LoginPage() {
                 disabled
                 className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white cursor-not-allowed shadow-lg shadow-green-200/70 hover:bg-green-600"
               >
-                Try our demo
+                {t("demo.button")}
               </Button>
             </div>
           </div>
@@ -1649,11 +1685,9 @@ export function LoginPage() {
               </div>
             </div>
             <div className="text-center lg:text-left space-y-3">
-              <h3 className="text-3xl font-bold text-slate-900">Custom CRM integration</h3>
+              <h3 className="text-3xl font-bold text-slate-900">{t("integration.crm.title")}</h3>
               <p className="text-lg text-slate-600">
-                Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles,
-                pull order history, and trigger workflows based on real-time events so every reply is grounded in
-                your data.
+                {t("integration.crm.subtitle")}
               </p>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -1664,7 +1698,7 @@ export function LoginPage() {
                   document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
                 }}
               >
-                Request a quote
+                {t("integration.crm.button")}
               </Button>
             </div>
           </div>
@@ -1685,11 +1719,9 @@ export function LoginPage() {
               </div>
             </div>
             <div className="text-center lg:text-left space-y-3">
-              <h3 className="text-3xl font-bold text-slate-900">Privacy by design</h3>
+              <h3 className="text-3xl font-bold text-slate-900">{t("privacy.title")}</h3>
               <p className="text-lg text-slate-600">
-                No sensitive data is sent to third parties or AI models. Access is secured with scoped tokens,
-                encrypted in transit, and limited to the minimum data required for each interaction. Your customer
-                data stays under your control.
+                {t("privacy.subtitle")}
               </p>
             </div>
             <div className="flex justify-center lg:justify-end">
@@ -1697,7 +1729,7 @@ export function LoginPage() {
                 type="button"
                 className="w-full px-12 py-6 text-base font-semibold rounded-full bg-green-600 text-white shadow-lg shadow-green-200/70 hover:bg-green-600"
               >
-                Go to GDPR
+                {t("privacy.button")}
               </Button>
             </div>
           </div>
@@ -1749,6 +1781,7 @@ export function LoginPage() {
                     Name
                   </label>
                   <Input
+                    ref={contactNameInputRef}
                     id="contact-name"
                     value={contactName}
                     onChange={(event) => setContactName(event.target.value)}
@@ -1781,7 +1814,7 @@ export function LoginPage() {
                   id="contact-phone"
                   value={contactPhone}
                   onChange={(event) => setContactPhone(event.target.value)}
-                  placeholder="+34 654 728 753"
+                  placeholder="+34 244 758 153"
                   className="h-11"
                 />
               </div>
@@ -1875,9 +1908,13 @@ export function LoginPage() {
               <Link to="/terms" className="hover:text-white">
                 Terms of Service
               </Link>
-              <Link to="/support" className="hover:text-white">
+              <a 
+                href="#contact" 
+                onClick={scrollToContactForm}
+                className="hover:text-white cursor-pointer"
+              >
                 Support
-              </Link>
+              </a>
             </div>
           </div>
         </div>

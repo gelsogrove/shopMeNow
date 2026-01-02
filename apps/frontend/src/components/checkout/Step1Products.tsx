@@ -1,5 +1,6 @@
 import React from "react"
 import { ProductCard } from "./ProductCard"
+import { formatPrice } from "@/utils/format"
 
 interface Product {
   id: string
@@ -154,7 +155,7 @@ export const Step1Products: React.FC<Step1ProductsProps> = ({
               {texts.total || "Totale"}:
             </span>
             <span className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
-              €{calculateTotal().toFixed(2)}
+              {formatPrice(calculateTotal())}
             </span>
           </div>
 

@@ -186,6 +186,12 @@ export class ProductSearchAgent {
       }
     }
 
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { currency: true },
+    })
+    const workspaceCurrency = workspace?.currency || "USD"
+
     // STEP 2: Format products with prices
     return products.map((product) => {
       const priceData = priceMap.get(product.id)
@@ -200,7 +206,7 @@ export class ProductSearchAgent {
         price: finalPrice, // ✅ Use discounted price
         originalPrice: originalPrice, // ✅ Include original price for comparison
         hasDiscount: originalPrice !== finalPrice, // ✅ Flag if discount applied
-        currency: "EUR",
+        currency: workspaceCurrency,
         category: product.category?.name || "Uncategorized",
         imageUrl: product.image || undefined,
         available: product.stock > 0,

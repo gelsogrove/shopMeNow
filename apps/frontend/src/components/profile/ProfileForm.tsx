@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button'
+import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -87,7 +88,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         setAddress(profileData.address || '')
       }
       setLanguage(profileData.language || 'en')
-      setCurrency(profileData.currency || 'EUR')
+      setCurrency(profileData.currency || 'USD')
 
       // Initialize invoice address
       if (profileData.invoiceAddress) {
@@ -271,9 +272,11 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="EUR">Euro (€)</option>
-                <option value="USD">US Dollar ($)</option>
-                <option value="GBP">British Pound (£)</option>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <option key={currency.code} value={currency.code}>
+                    {currency.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

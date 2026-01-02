@@ -8,7 +8,7 @@
  *
  * ⚠️ CRITICAL NOTES:
  * 1. NO hardcoded prices anywhere else in the codebase
- * 2. originalValue is for strikethrough display (marketing - "was €29, now €19")
+ * 2. originalValue is for strikethrough display (marketing - "was $29, now $23")
  * 3. Historical billing records preserve the price at transaction time
  * 4. Feature flags control platform access (WIP mode, maintenance, etc.)
  *
@@ -33,39 +33,39 @@ export const platformConfigData: PlatformConfigData[] = [
     key: "FREE_MONTHLY",
     value: "0",
     description:
-      "Free plan - €0/month for 14 days trial with €19 credit included",
+      "Free plan - $0/month for 14 days trial with $23 credit included",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "BASIC_MONTHLY",
-    value: "19", // NEW PRICE: €19
-    originalValue: "29", // OLD PRICE: €29 (strikethrough)
-    description: "Basic plan - €19/month for growing businesses (was €29)",
+    value: "23", // NEW PRICE: $23
+    originalValue: "34", // OLD PRICE: $34 (strikethrough)
+    description: "Basic plan - $23/month for growing businesses (was $34)",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "PREMIUM_MONTHLY",
-    value: "39", // NEW PRICE: €39
-    originalValue: "49", // OLD PRICE: €49 (strikethrough)
+    value: "44", // NEW PRICE: $44
+    originalValue: "58", // OLD PRICE: $58 (strikethrough)
     description:
-      "Premium plan - €39/month for established businesses (was €49)",
+      "Premium plan - $44/month for established businesses (was $58)",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "ENTERPRISE_MONTHLY",
-    value: "129", // NEW PRICE: €129
-    originalValue: "149", // OLD PRICE: €149 (strikethrough)
+    value: "139", // NEW PRICE: $139
+    originalValue: "175", // OLD PRICE: $175 (strikethrough)
     description:
-      "Enterprise plan - €129/month for large scale operations (was €149)",
+      "Enterprise plan - $139/month for large scale operations (was $175)",
     isActive: true,
   },
   {
     type: "PRICE" as const,
     key: "MONTHLY_CHANNEL_COST",
-    value: "49",
+    value: "44",
     description: "Monthly WhatsApp channel cost (included in all paid plans)",
     isActive: true,
   },
@@ -76,7 +76,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "PRICE" as const,
     key: "MESSAGE",
-    value: "0.10",
+    value: "0.12",
     description:
       "Cost per message (AI-powered responses, including support conversations)",
     isActive: true,
@@ -84,7 +84,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "PRICE" as const,
     key: "PUSH_CAMPAIGN",
-    value: "1.00",
+    value: "1.18",
     description: "Cost per push notification sent (all types)",
     isActive: true,
   },
@@ -140,7 +140,7 @@ export const platformConfigData: PlatformConfigData[] = [
     type: "LIMIT" as const,
     key: "FREE_MESSAGES",
     value: "200",
-    description: "Free messages included in trial (after this, €0.15/message)",
+    description: "Free messages included in trial (after this, $0.18/message)",
     isActive: true,
   },
   {

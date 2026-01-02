@@ -49,7 +49,7 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   FREE_TRIAL: {
     name: "Free Trial",
     price: 0,
-    priceLabel: "€0",
+    priceLabel: "$0",
     priceSuffix: "/14 days",
     description: "14-day free trial",
     descriptionKey: "pricing.free.creditDesc",
@@ -73,8 +73,8 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   },
   BASIC: {
     name: "Basic",
-    price: 19,
-    priceLabel: "€19",
+    price: 23,
+    priceLabel: "$23",
     description: "For growing businesses",
     descriptionKey: "pricing.basic.desc",
     buttonVariant: "default",
@@ -96,8 +96,8 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   },
   PREMIUM: {
     name: "Premium",
-    price: 39,
-    priceLabel: "€39",
+    price: 44,
+    priceLabel: "$44",
     description: "For established businesses",
     descriptionKey: "pricing.premium.desc",
     buttonVariant: "default",
@@ -119,8 +119,8 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   },
   ENTERPRISE: {
     name: "Enterprise",
-    price: 129,
-    priceLabel: "€129",
+    price: 139,
+    priceLabel: "$139",
     priceSuffix: "/month",
     description: "For large-scale operations",
     descriptionKey: "pricing.enterprise.desc",

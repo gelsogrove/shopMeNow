@@ -1,31 +1,42 @@
 import { storage } from "@/lib/storage";
 
+export const SUPPORTED_CURRENCIES = [
+  { code: "USD", symbol: "$", label: "US Dollar ($)" },
+  { code: "EUR", symbol: "€", label: "Euro (€)" },
+  { code: "GBP", symbol: "£", label: "British Pound (£)" },
+  { code: "CHF", symbol: "CHF", label: "Swiss Franc (CHF)" },
+  { code: "CAD", symbol: "CA$", label: "Canadian Dollar (CA$)" },
+  { code: "AUD", symbol: "A$", label: "Australian Dollar (A$)" },
+  { code: "JPY", symbol: "¥", label: "Japanese Yen (¥)" },
+  { code: "SEK", symbol: "SEK", label: "Swedish Krona (SEK)" },
+  { code: "NOK", symbol: "NOK", label: "Norwegian Krone (NOK)" },
+  { code: "DKK", symbol: "DKK", label: "Danish Krone (DKK)" },
+  { code: "PLN", symbol: "PLN", label: "Polish Zloty (PLN)" },
+  { code: "CZK", symbol: "CZK", label: "Czech Koruna (CZK)" },
+  { code: "HUF", symbol: "HUF", label: "Hungarian Forint (HUF)" },
+  { code: "RON", symbol: "RON", label: "Romanian Leu (RON)" },
+];
+
 /**
  * Get the currency symbol based on the currency code
  * @param currencyCode The currency code (e.g., USD, EUR, GBP)
  * @returns The currency symbol (e.g., $, €, £)
  */
-export const getCurrencySymbol = (currencyCode: string = 'EUR'): string => {
-  const symbols: Record<string, string> = {
-    USD: '$',
-    EUR: '€',
-    GBP: '£',
-    JPY: '¥',
-    CHF: 'CHF',
-    CAD: 'CA$',
-    AUD: 'A$',
-  };
-  
-  return symbols[currencyCode] || currencyCode;
+export const getCurrencySymbol = (currencyCode: string = "USD"): string => {
+  const symbols: Record<string, string> = Object.fromEntries(
+    SUPPORTED_CURRENCIES.map((currency) => [currency.code, currency.symbol])
+  )
+
+  return symbols[currencyCode] || currencyCode
 };
 
 /**
  * Get workspace currency from storage
- * @returns Currency code from workspace or default 'EUR'
+ * @returns Currency code from workspace or default 'USD'
  */
 const getWorkspaceCurrency = (): string => {
   if (typeof window === 'undefined') {
-    return 'EUR'; // SSR fallback
+    return 'USD'; // SSR fallback
   }
 
   const workspace = storage.getWorkspace<{ currency?: string }>()
@@ -33,7 +44,7 @@ const getWorkspaceCurrency = (): string => {
     return workspace.currency
   }
 
-  return 'EUR'; // Default fallback
+  return 'USD'; // Default fallback
 };
 
 /**
@@ -57,7 +68,7 @@ export const formatPrice = (price: number, currencyCode?: string): string => {
  */
 export const formatCurrency = (
   amount: number,
-  currency: string = "EUR",
+  currency: string = "USD",
   locale: string = "en-US"
 ): string => {
   if (isNaN(amount) || !isFinite(amount)) {

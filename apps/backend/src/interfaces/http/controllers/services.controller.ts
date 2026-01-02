@@ -72,7 +72,6 @@ export class ServicesController {
         code,
         description = "",
         price,
-        currency = "EUR",
         duration,
         isActive,
       } = req.body
@@ -85,7 +84,7 @@ export class ServicesController {
       // Check workspace exists
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { id: true },
+        select: { id: true, currency: true },
       })
 
       if (!workspace) {
@@ -146,7 +145,7 @@ export class ServicesController {
         description: description || "",
         price: numericPrice,
         duration: numericDuration,
-        currency,
+        currency: workspace.currency || "USD",
         isActive: booleanIsActive,
         workspaceId,
       }
@@ -215,8 +214,12 @@ export class ServicesController {
           .json({ error: "Service not found in specified workspace" })
       }
 
-      const { name, code, description, price, currency, duration, isActive } =
-        req.body
+      const { name, code, description, price, duration, isActive } = req.body
+
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { currency: true },
+      })
 
       // Process numeric fields and validate data
       const updateData: any = {}
@@ -225,7 +228,7 @@ export class ServicesController {
       if (name !== undefined) updateData.name = name
       if (code !== undefined) updateData.code = code
       if (description !== undefined) updateData.description = description
-      if (currency !== undefined) updateData.currency = currency
+      if (workspace?.currency) updateData.currency = workspace.currency
 
       // Convert isActive from string "on"/"off" or boolean to proper boolean
       if (isActive !== undefined) {

@@ -174,7 +174,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
                 {plan.name === "Free" ? (
                   <>
                     <span className="text-4xl font-bold text-gray-900">
-                      €0
+                      $0
                     </span>
                     <span className="text-gray-600"> {plan.priceSuffix}</span>
                   </>
@@ -183,11 +183,11 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
                     {/* Show strikethrough original price if different from current */}
                     {plan.originalPrice && plan.originalPrice !== plan.price && (
                       <span className="text-xl text-gray-400 line-through mr-2">
-                        €{plan.originalPrice}
+                        ${plan.originalPrice}
                       </span>
                     )}
                     <span className={`text-4xl font-bold ${plan.originalPrice && plan.originalPrice !== plan.price ? "text-green-600" : "text-gray-900"}`}>
-                      €{plan.price}
+                      ${plan.price}
                     </span>
                     <span className="text-gray-600">/month</span>
                   </>
@@ -298,7 +298,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
               <MessageSquare className="w-6 h-6 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-green-600 mb-1">
-              €{messagePrice.current.toFixed(2)}
+              ${messagePrice.current.toFixed(2)}
             </div>
             <div className="text-base font-medium text-gray-900 mb-2">
               {t("pricing.usage.message")}
@@ -326,7 +326,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
               </svg>
             </div>
             <div className="text-3xl font-bold text-orange-600 mb-1">
-              €{pushPrice.current.toFixed(2)}
+              ${pushPrice.current.toFixed(2)}
             </div>
             <div className="text-base font-medium text-gray-900 mb-2">
               {t("pricing.usage.push")}
@@ -339,8 +339,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
 
         <div className="mt-8 text-center">
           <p className="text-base text-gray-600">
-            💡 All usage costs are transparent and billed monthly based on
-            actual consumption
+            {t("pricing.usage.transparent")}
           </p>
         </div>
       </div>

@@ -1,8 +1,57 @@
 # 💰 eChatbot Billing Flow - Complete Documentation
 
-**Version**: 1.1.0  
-**Last Updated**: January 20, 2025  
+**Version**: 1.2.0  
+**Last Updated**: January 2, 2026  
 **Feature**: 185-subscription-billing-system  
+
+---
+
+## 🔑 CRITICAL: Subscription vs Credit (Two Separate Systems)
+
+### ⚠️ IMPORTANT DISTINCTION
+
+eChatbot uses **TWO INDEPENDENT BILLING SYSTEMS**:
+
+1. **💳 Subscription Fee** (Monthly Payment)
+   - **What**: Fixed monthly cost for the plan (€29 Basic, €49 Premium, €129 Enterprise)
+   - **How Paid**: External payment (PayPal/Stripe) - charged on 1st of each month
+   - **Effect**: Covers platform access, features, and limits
+   - **Does NOT touch**: `user.creditBalance` field
+   - **Transaction Type**: `MONTHLY_FEE`
+
+2. **💰 Credit Balance** (Pay-as-you-go)
+   - **What**: Prepaid credits for WhatsApp operations
+   - **Used For**: Messages (€0.10), Orders (€1.50), Push campaigns (€1.00)
+   - **Recharged**: Manually via "Ricarica" button (€10-€1000)
+   - **Shared**: Across all owner's workspaces
+   - **Field**: `user.creditBalance`
+   - **Transaction Types**: `MESSAGE`, `ORDER`, `PUSH_NOTIFICATION`, `RECHARGE`
+
+### 💡 Example Flow
+
+```
+User: Andrea (Enterprise Plan)
+├─ Monthly Subscription: €129/month → Paid externally (PayPal) on 1st of month
+│   └─ Effect: subscriptionStatus = 'ACTIVE', nextBillingDate updated
+│       ❌ Credit balance NOT touched
+│
+└─ Credit Balance: €196.90 → Used ONLY for WhatsApp operations
+    ├─ Customer message: -€0.10 → Balance: €196.80
+    ├─ Order created: -€1.50 → Balance: €195.30
+    ├─ Push campaign: -€1.00 → Balance: €194.30
+    └─ Manual recharge: +€100 → Balance: €294.30
+```
+
+### 🚨 Common Misconceptions
+
+❌ **WRONG**: "Monthly billing resets credit balance to €0"  
+✅ **CORRECT**: "Monthly billing charges subscription fee externally, credit balance stays unchanged"
+
+❌ **WRONG**: "Credit balance includes subscription fee"  
+✅ **CORRECT**: "Credit balance is ONLY for WhatsApp messages/operations"
+
+❌ **WRONG**: "Subscription fee is deducted from credit balance"  
+✅ **CORRECT**: "Subscription fee is charged externally (PayPal/Stripe), separate from credits"
 
 ---
 

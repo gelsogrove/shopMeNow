@@ -61,6 +61,14 @@ export class CustomerService {
         throw new Error("Name, email and workspace ID are required")
       }
 
+      if (!data.currency) {
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: data.workspaceId },
+          select: { currency: true },
+        })
+        data.currency = workspace?.currency || "USD"
+      }
+
       // Create a customer entity for validation
       const customerToCreate = new Customer(data)
 

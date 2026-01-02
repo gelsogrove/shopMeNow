@@ -68,6 +68,32 @@ export function NewsUpdates() {
   const { t } = useLanguage()
   const [currentIndex, setCurrentIndex] = useState(1)
   const [isTransitioning, setIsTransitioning] = useState(true)
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+    if (isLeftSwipe) {
+      goToNext()
+    }
+    if (isRightSwipe) {
+      goToPrevious()
+    }
+  }
 
   const goToPrevious = () => {
     setCurrentIndex((prev) => prev - 1)
@@ -118,27 +144,32 @@ export function NewsUpdates() {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative flex items-center justify-center">
-          {/* Left Arrow */}
+        <div 
+          className="relative flex items-center justify-center"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Left Arrow - Hidden on mobile */}
           <button
             onClick={goToPrevious}
-            className="absolute -left-2 md:left-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-2 md:p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
+            className="hidden md:block absolute left-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
             aria-label="Previous update"
           >
-            <ChevronLeft className="w-6 h-6 md:w-10 md:h-10" />
+            <ChevronLeft className="w-10 h-10" />
           </button>
 
-          {/* Right Arrow */}
+          {/* Right Arrow - Hidden on mobile */}
           <button
             onClick={goToNext}
-            className="absolute -right-2 md:right-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-2 md:p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
+            className="hidden md:block absolute right-8 z-20 bg-white hover:bg-green-50 text-gray-800 rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-110 border-2 border-gray-200 hover:border-green-500"
             aria-label="Next update"
           >
-            <ChevronRight className="w-6 h-6 md:w-10 md:h-10" />
+            <ChevronRight className="w-10 h-10" />
           </button>
 
           {/* Cards Container */}
-          <div className="flex items-center justify-center w-full px-16 md:px-24 overflow-hidden">
+          <div className="flex items-center justify-center w-full px-4 md:px-24 overflow-hidden">
             <div className="relative w-full max-w-4xl h-[450px] flex items-center justify-center">
               {extendedItems.map((item, idx) => {
                 const offset = idx - actualIndex

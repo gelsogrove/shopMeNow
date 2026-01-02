@@ -1,4 +1,5 @@
 import React from "react"
+import { formatPrice } from "@/utils/format"
 
 // 🖼️ Helper to get full image URL
 const getImageUrl = (
@@ -230,15 +231,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {hasDiscount ? (
                 <div className="flex flex-col items-end gap-0.5">
                   <span className="text-xs text-gray-400 line-through">
-                    €{(product.prezzoOriginale! * product.qty).toFixed(2)}
+                    {formatPrice(product.prezzoOriginale! * product.qty)}
                   </span>
                   <span className="text-lg lg:text-xl font-bold text-green-600">
-                    €{totalPrice.toFixed(2)}
+                    {formatPrice(totalPrice)}
                   </span>
                 </div>
               ) : (
                 <span className="text-lg lg:text-xl font-bold text-gray-900">
-                  €{totalPrice.toFixed(2)}
+                  {formatPrice(totalPrice)}
                 </span>
               )}
             </div>
@@ -301,7 +302,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Price on mobile */}
           <span className="text-base font-bold text-gray-900 flex-1 text-right">
-            €{totalPrice.toFixed(2)}
+            {formatPrice(totalPrice)}
           </span>
 
           {/* Delete Button - MOBILE ONLY */}

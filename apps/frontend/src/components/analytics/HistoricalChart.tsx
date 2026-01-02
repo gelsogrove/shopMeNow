@@ -112,7 +112,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
                 {entry.dataKey === "usageCost"
                   ? new Intl.NumberFormat("en-US", {
                       style: "currency",
-                      currency: "EUR",
+                      currency: "USD",
                       minimumFractionDigits: 3,
                     }).format(entry.value)
                   : entry.value.toLocaleString("en-US")}
@@ -273,7 +273,7 @@ export const HistoricalChart: React.FC<HistoricalChartProps> = ({
                 />
                 <Bar
                   dataKey="usageCost"
-                  name="Costi LLM (€)"
+                  name="Costi LLM ($)"
                   fill="#f97316"
                   radius={[4, 4, 0, 0]}
                 />

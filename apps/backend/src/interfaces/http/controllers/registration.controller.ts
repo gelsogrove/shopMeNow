@@ -199,7 +199,7 @@ export class RegistrationController {
             email: email, // Use the email provided by the user
             company,
             language: language || "ENG",
-            currency: currency || "EUR",
+            currency: currency || "USD",
             last_privacy_version_accepted: "1.0.0", // Current privacy policy version
             privacy_accepted_at: new Date(),
             push_notifications_consent: push_notifications_consent || false,
@@ -222,7 +222,7 @@ export class RegistrationController {
               company,
               workspaceId: workspace_id,
               language: language || "ENG",
-              currency: currency || "EUR",
+              currency: currency || "USD",
               last_privacy_version_accepted: "1.0.0", // Current privacy policy version
               privacy_accepted_at: new Date(),
               push_notifications_consent: push_notifications_consent || false,
@@ -269,7 +269,7 @@ export class RegistrationController {
                 email: email,
                 company,
                 language: language || "ENG",
-                currency: currency || "EUR",
+                currency: currency || "USD",
                 last_privacy_version_accepted: "1.0.0",
                 privacy_accepted_at: new Date(),
                 push_notifications_consent: push_notifications_consent || false,

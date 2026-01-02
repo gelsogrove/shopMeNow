@@ -86,7 +86,7 @@ export class Customer {
     this.company = props.company
     this.discount = props.discount || 0
     this.language = props.language || "ENG"
-    this.currency = props.currency || "EUR"
+    this.currency = props.currency || "USD"
     this.notes = props.notes
     this.serviceIds = props.serviceIds || []
     this.isBlacklisted = props.isBlacklisted || false

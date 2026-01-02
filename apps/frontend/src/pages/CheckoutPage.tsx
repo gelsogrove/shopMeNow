@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import React, { useEffect, useState } from "react"
+import { formatPrice } from "@/utils/format"
 import { useLocation, useSearchParams } from "react-router-dom"
 import {
   ProgressSteps,
@@ -1012,11 +1013,10 @@ const CheckoutPage: React.FC = () => {
                           </p>
                         </div>
                         <p className="font-semibold text-gray-900">
-                          €
-                          {(
+                          {formatPrice(
                             (product.prezzoScontato || product.prezzo) *
-                            (product.qty || 1)
-                          ).toFixed(2)}
+                              (product.qty || 1)
+                          )}
                         </p>
                       </div>
                     ))}
@@ -1025,7 +1025,7 @@ const CheckoutPage: React.FC = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Subtotale:</span>
                       <span className="font-semibold">
-                        €{calculateTotal().toFixed(2)}
+                        {formatPrice(calculateTotal())}
                       </span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-gray-200">
@@ -1033,7 +1033,7 @@ const CheckoutPage: React.FC = () => {
                         Totale:
                       </span>
                       <span className="text-2xl font-bold text-green-600">
-                        €{calculateTotal().toFixed(2)}
+                        {formatPrice(calculateTotal())}
                       </span>
                     </div>
                   </div>
@@ -1283,15 +1283,15 @@ const CheckoutPage: React.FC = () => {
                                       product.finalPrice < product.price ? (
                                         <div className="flex flex-col">
                                           <p className="text-sm text-gray-500 line-through mb-1">
-                                            €{product.price.toFixed(2)}
+                                            {formatPrice(product.price)}
                                           </p>
                                           <p className="text-lg font-bold text-green-600">
-                                            €{product.finalPrice.toFixed(2)}
+                                            {formatPrice(product.finalPrice)}
                                           </p>
                                         </div>
                                       ) : (
                                         <p className="text-lg font-bold text-green-600">
-                                          €{product.price.toFixed(2)}
+                                          {formatPrice(product.price)}
                                         </p>
                                       )}
                                     </div>
@@ -1388,7 +1388,7 @@ const CheckoutPage: React.FC = () => {
                           </h5>
                           <div className="flex items-center justify-between">
                             <p className="text-lg font-bold text-blue-600">
-                              €{(service.price || 0).toFixed(2)}
+                              {formatPrice(service.price || 0)}
                             </p>
                             <button
                               onClick={() => addServiceToCart(service)}

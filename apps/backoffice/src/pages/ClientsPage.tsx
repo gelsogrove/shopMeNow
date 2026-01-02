@@ -32,7 +32,8 @@ import {
   Gift,
   ShieldOff,
   LogIn,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react'
 
 interface OwnedWorkspace {
@@ -132,6 +133,10 @@ export function ClientsPage() {
   
   // Impersonation state (Feature 190)
   const [impersonating, setImpersonating] = useState<string | null>(null)
+  
+  // Delete User modal state (Feature 196 - Soft Delete)
+  const [deleteUserModal, setDeleteUserModal] = useState<{ userId: string; email: string; userName: string } | null>(null)
+  const [deletingUser, setDeletingUser] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -474,6 +479,38 @@ export function ClientsPage() {
     }
   }
 
+  // Handle Delete User - Soft delete with 90-day recovery window (Feature 196)
+  const handleDeleteUser = async () => {
+    if (!deleteUserModal) return
+    
+    setDeletingUser(true)
+    setError(null)
+    
+    try {
+      const response = await api.trash.deleteUser(deleteUserModal.userId, {
+        reason: 'Admin-initiated deletion from backoffice'
+      })
+      
+      if (response.success) {
+        setSuccessMessage(`User ${deleteUserModal.email} soft-deleted. Recoverable for 90 days from Trash.`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+        
+        // Reload users list to update UI
+        await loadUsers()
+        
+        // Close modal
+        setDeleteUserModal(null)
+      } else {
+        setError(response.error || 'Failed to delete user')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete user')
+      console.error('Error deleting user:', err)
+    } finally {
+      setDeletingUser(false)
+    }
+  }
+
   // Filter users: first by search query, then by showAll toggle
   const filteredUsers = users
     .filter(user => {
@@ -760,6 +797,23 @@ export function ClientsPage() {
                     <LogIn className="h-4 w-4" />
                   )}
                   Login as User
+                </Button>
+              )}
+              
+              {/* Delete User Button (Feature 196) - Soft delete with 90-day recovery */}
+              {!user.isPlatformAdmin && !user.isDeveloperUser && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2 gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                  onClick={() => setDeleteUserModal({ 
+                    userId: user.id, 
+                    email: user.email,
+                    userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
+                  })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete User
                 </Button>
               )}
 
@@ -1057,6 +1111,86 @@ export function ClientsPage() {
                   <Clock className="h-4 w-4 mr-2" />
                 )}
                 Extend Trial
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Delete User Confirmation Modal (Feature 196) */}
+      {deleteUserModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete User Account
+            </h2>
+            <p className="text-sm text-gray-600 mb-2">
+              You are about to soft-delete the user:
+            </p>
+            <p className="font-medium text-gray-900 mb-1 bg-gray-50 p-2 rounded">
+              {deleteUserModal.userName}
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              ({deleteUserModal.email})
+            </p>
+            
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-amber-800 mb-2">
+                <strong>⚠️ This will delete:</strong>
+              </p>
+              <ul className="text-xs text-amber-700 space-y-1 ml-4 list-disc">
+                <li>User account and all owned workspaces</li>
+                <li>All customers, orders, and messages (including archived)</li>
+                <li>All products, services, FAQ, categories, offers</li>
+                <li>All campaigns, carts, and chat sessions</li>
+                <li>All workspace configuration and settings</li>
+              </ul>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>🔄 Recovery window:</strong> 90 days from Trash page
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                After 90 days, data will be permanently deleted automatically.
+              </p>
+            </div>
+            
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-green-800">
+                <strong>✅ Preserved for statistics:</strong>
+              </p>
+              <p className="text-xs text-green-700">
+                Billing and transaction records (anonymized to "unknownUser")
+              </p>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              User will <strong>NOT</strong> be able to login after deletion.
+              If they try, they can contact support.
+            </p>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setDeleteUserModal(null)}
+                disabled={deletingUser}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                onClick={handleDeleteUser}
+                disabled={deletingUser}
+              >
+                {deletingUser ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-2" />
+                )}
+                Yes, Delete User
               </Button>
             </div>
           </div>

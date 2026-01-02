@@ -66,7 +66,7 @@ export function BillingTab() {
       setHistory(response.data.history)
 
       logger.info(
-        `[BILLING-TAB] Loaded billing data: current month €${response.data.currentMonth.total.toFixed(
+        `[BILLING-TAB] Loaded billing data: current month $${response.data.currentMonth.total.toFixed(
           2
         )}, ${response.data.history.length} months history`
       )
@@ -217,7 +217,7 @@ export function BillingTab() {
                         </td>
                         <td className="py-3 px-4 text-right">
                           <span className="text-lg font-bold text-blue-600">
-                            €{currentMonth.total.toFixed(2)}
+                            ${currentMonth.total.toFixed(2)}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -238,7 +238,7 @@ export function BillingTab() {
                                       BILLING_TYPE_COLORS[type] || "bg-gray-100"
                                     }`}
                                   >
-                                    {BILLING_TYPE_LABELS[type] || type}: €
+                                    {BILLING_TYPE_LABELS[type] || type}: $
                                     {data.cost.toFixed(2)}
                                   </span>
                                 ))}
@@ -329,7 +329,7 @@ export function BillingTab() {
                                               {record.customerName || "-"}
                                             </td>
                                             <td className="py-2 px-3 text-right font-semibold text-green-600">
-                                              €{record.amount.toFixed(2)}
+                                              ${record.amount.toFixed(2)}
                                             </td>
                                           </tr>
                                         ))}
@@ -393,10 +393,10 @@ export function BillingTab() {
                         <td className="py-3 px-4 text-right">
                           {hasData ? (
                             <span className="text-lg font-bold text-gray-900">
-                              €{month.total.toFixed(2)}
+                              ${month.total.toFixed(2)}
                             </span>
                           ) : (
-                            <span className="text-gray-400">€0.00</span>
+                            <span className="text-gray-400">$0.00</span>
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -426,7 +426,7 @@ export function BillingTab() {
                                     BILLING_TYPE_COLORS[key] || "bg-gray-100"
                                   }`}
                                 >
-                                  {label}: €
+                                  {label}: $
                                   {month.byType[key]?.cost?.toFixed(2) ||
                                     "0.00"}
                                 </span>
@@ -512,7 +512,7 @@ export function BillingTab() {
                                               {record.customerName || "-"}
                                             </td>
                                             <td className="py-2 px-3 text-right font-semibold text-green-600">
-                                              €{record.amount.toFixed(2)}
+                                              ${record.amount.toFixed(2)}
                                             </td>
                                           </tr>
                                         ))}

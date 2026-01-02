@@ -157,7 +157,7 @@ export const MonthlyTopCustomers: React.FC<MonthlyTopCustomersProps> = ({
                           <p className="font-bold text-blue-600">
                             {new Intl.NumberFormat("en-US", {
                               style: "currency",
-                              currency: "EUR",
+                              currency: "USD",
                               minimumFractionDigits: 0,
                             }).format(customer.totalSpent)}
                           </p>
@@ -168,7 +168,7 @@ export const MonthlyTopCustomers: React.FC<MonthlyTopCustomersProps> = ({
                             Avg:{" "}
                             {new Intl.NumberFormat("en-US", {
                               style: "currency",
-                              currency: "EUR",
+                              currency: "USD",
                               minimumFractionDigits: 0,
                             }).format(customer.averageOrderValue)}
                           </p>

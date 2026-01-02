@@ -38,9 +38,9 @@ describe("PlatformConfigService", () => {
       id: "1",
       key: "BASIC_MONTHLY",
       type: "PRICE" as const,
-      value: "19",
-      originalValue: "29",
-      description: "Basic plan - €19/month",
+      value: "23",
+      originalValue: "34",
+      description: "Basic plan - $23/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -49,9 +49,9 @@ describe("PlatformConfigService", () => {
       id: "2",
       key: "PREMIUM_MONTHLY",
       type: "PRICE" as const,
-      value: "39",
-      originalValue: "49",
-      description: "Premium plan - €39/month",
+      value: "44",
+      originalValue: "58",
+      description: "Premium plan - $44/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -60,7 +60,7 @@ describe("PlatformConfigService", () => {
       id: "3",
       key: "MESSAGE",
       type: "PRICE" as const,
-      value: "0.10",
+      value: "0.12",
       originalValue: null,
       description: "Cost per message",
       isActive: true,
@@ -146,7 +146,7 @@ describe("PlatformConfigService", () => {
   describe("getPrice", () => {
     it("should return correct price value", async () => {
       const price = await platformConfigService.getPrice("BASIC_MONTHLY")
-      expect(price).toBe(19)
+      expect(price).toBe(23)
     })
 
     it("should throw for non-existent price", async () => {
@@ -157,7 +157,7 @@ describe("PlatformConfigService", () => {
 
     it("should handle decimal prices correctly", async () => {
       const price = await platformConfigService.getPrice("MESSAGE")
-      expect(price).toBe(0.1)
+      expect(price).toBe(0.12)
     })
   })
 
@@ -165,14 +165,14 @@ describe("PlatformConfigService", () => {
     it("should return current and original prices", async () => {
       const result =
         await platformConfigService.getPriceWithOriginal("BASIC_MONTHLY")
-      expect(result.current).toBe(19)
-      expect(result.original).toBe(29)
+      expect(result.current).toBe(23)
+      expect(result.original).toBe(34)
     })
 
     it("should return null original when not set", async () => {
       const result =
         await platformConfigService.getPriceWithOriginal("MESSAGE")
-      expect(result.current).toBe(0.1)
+      expect(result.current).toBe(0.12)
       expect(result.original).toBeNull()
     })
   })

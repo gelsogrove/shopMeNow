@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { formatPrice } from "@/utils/format"
 
 interface Step4PaymentProps {
   total: number
@@ -269,7 +270,7 @@ export const Step4Payment: React.FC<Step4PaymentProps> = ({
             {texts.totalToPay || "Totale da Pagare"}
           </span>
           <span className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-            €{total.toFixed(2)}
+            {formatPrice(total)}
           </span>
         </div>
         <p className="text-sm lg:text-base opacity-70">

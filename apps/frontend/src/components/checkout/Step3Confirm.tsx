@@ -1,4 +1,5 @@
 import React from "react"
+import { formatPrice } from "@/utils/format"
 
 interface Product {
   id: string
@@ -125,12 +126,12 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
                     </p>
                   )}
                   <p className="text-sm text-gray-500">
-                    {texts.quantity || "Quantità"}: {product.qty} x €
+                    {texts.quantity || "Quantità"}: {product.qty} x {formatPrice(finalPrice)}
                     {finalPrice.toFixed(2)}
                   </p>
                 </div>
                 <p className="font-bold text-gray-900">
-                  €{(finalPrice * product.qty).toFixed(2)}
+                  {formatPrice(finalPrice * product.qty)}
                 </p>
               </div>
             )
@@ -143,7 +144,7 @@ export const Step3Confirm: React.FC<Step3ConfirmProps> = ({
                 {texts.total || "Totale"}:
               </span>
               <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600">
-                €{calculateTotal().toFixed(2)}
+                {formatPrice(calculateTotal())}
               </span>
             </div>
           </div>

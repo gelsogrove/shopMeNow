@@ -405,7 +405,7 @@ export function CartItemEditSheet({
                 <div className="text-right">
                   <p className="text-xs text-gray-500">Total Amount</p>
                   <p className="text-xl font-bold text-gray-900">
-                    €{order.totalAmount.toFixed(2)}
+                    {formatPrice(order.totalAmount)}
                   </p>
                 </div>
               </div>
@@ -881,15 +881,15 @@ export function CartItemEditSheet({
                                 {product.discountApplied ? (
                                   <>
                                     <span className="line-through text-gray-400 ml-1">
-                                      €{product.originalPrice.toFixed(2)}
+                                      {formatPrice(product.originalPrice)}
                                     </span>
                                     <span className="text-green-600 font-semibold ml-1">
-                                      €{product.discountedPrice.toFixed(2)}
+                                      {formatPrice(product.discountedPrice)}
                                     </span>
                                   </>
                                 ) : (
                                   <span className="ml-1">
-                                    €{product.price.toFixed(2)}
+                                    {formatPrice(product.price)}
                                   </span>
                                 )}
                               </span>
@@ -945,7 +945,7 @@ export function CartItemEditSheet({
                       <SelectContent>
                         {services.map((service) => (
                           <SelectItem key={service.id} value={service.id}>
-                            {service.name} - €{service.price}
+                            {service.name} - {formatPrice(service.price)}
                           </SelectItem>
                         ))}
                       </SelectContent>

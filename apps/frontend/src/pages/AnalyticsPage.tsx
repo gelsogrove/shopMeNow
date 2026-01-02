@@ -215,7 +215,7 @@ export function AnalyticsPage() {
                             <p className="font-bold text-green-600">
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "EUR",
+                                currency: "USD",
                                 minimumFractionDigits: 0,
                               }).format(product.revenue)}
                             </p>
@@ -274,7 +274,7 @@ export function AnalyticsPage() {
                             <p className="font-bold text-blue-600">
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "EUR",
+                                currency: "USD",
                                 minimumFractionDigits: 0,
                               }).format(customer.totalSpent)}
                             </p>
@@ -285,7 +285,7 @@ export function AnalyticsPage() {
                               {t.average}:{" "}
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "EUR",
+                                currency: "USD",
                                 minimumFractionDigits: 0,
                               }).format(customer.averageOrderValue)}
                             </p>
@@ -340,7 +340,7 @@ export function AnalyticsPage() {
                             <p className="font-bold text-purple-600">
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "EUR",
+                                currency: "USD",
                                 minimumFractionDigits: 0,
                               }).format(seller.totalRevenue)}
                             </p>
@@ -537,11 +537,11 @@ export function AnalyticsPage() {
                                   )}
                                 </td>
                                 <td className="px-4 py-3 text-right font-semibold text-green-600">
-                                  €{log.amount.toFixed(2)}
+                                  ${log.amount.toFixed(2)}
                                 </td>
                                 <td className="px-4 py-3 text-right font-mono text-xs text-gray-600">
-                                  €{log.previousTotal.toFixed(2)} + €
-                                  {log.amount.toFixed(2)} = €
+                                  ${log.previousTotal.toFixed(2)} + $
+                                  {log.amount.toFixed(2)} = $
                                   {log.newTotal.toFixed(2)}
                                 </td>
                               </tr>
@@ -557,7 +557,7 @@ export function AnalyticsPage() {
                               </td>
                               <td className="px-4 py-4 text-right bg-gradient-to-r from-green-50 to-blue-50">
                                 <span className="text-xl font-bold text-green-600">
-                                  €
+                                  $
                                   {filteredLogs
                                     .reduce((sum, log) => sum + log.amount, 0)
                                     .toFixed(2)}
@@ -571,7 +571,7 @@ export function AnalyticsPage() {
                               </td>
                               <td className="px-4 py-4 text-right bg-gradient-to-r from-green-50 to-blue-50">
                                 <span className="text-base font-bold text-blue-600 font-mono">
-                                  = €
+                                  = $
                                   {logsWithRecalculatedTotals[
                                     logsWithRecalculatedTotals.length - 1
                                   ]?.newTotal.toFixed(2) || "0.00"}

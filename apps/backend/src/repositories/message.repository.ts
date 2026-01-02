@@ -10,10 +10,11 @@ import * as dotenv from "dotenv"
 import OpenAI from "openai"
 import { websocketService } from "../services/websocket.service"
 import logger from "../utils/logger"
+import { getCurrencySymbol } from "../utils/currency"
 
 /**
  * Apply Unicode strikethrough to text
- * Example: "€6.80" → "€̶6̶.̶8̶0̶"
+ * Example: "$6.80" → "$̶6̶.̶8̶0̶"
  * Uses combining long stroke overlay (U+0336)
  */
 function applyStrikethrough(text: string): string {
@@ -414,8 +415,8 @@ export class MessageRepository {
 
         // Find matching billing record (within 5 seconds of message)
         // 💰 IMPORTANT: Only match billing to the correct message direction:
-        // - MESSAGE (€0.15) → INBOUND (customer message)
-        // - PUSH_CAMPAIGN (€1.00) → OUTBOUND (bot message with push)
+        // - MESSAGE ($0.18) → INBOUND (customer message)
+        // - PUSH_CAMPAIGN ($1.18) → OUTBOUND (bot message with push)
         const matchingBilling = billingRecords.find((billing) => {
           const timeDiff = Math.abs(
             new Date(billing.createdAt).getTime() -
@@ -927,7 +928,7 @@ export class MessageRepository {
               isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
               activeChatbot: true, // Enable chatbot to handle registration requests
               language: detectedLanguage,
-              currency: "EUR",
+              currency: "USD",
             },
           })
 
@@ -1251,7 +1252,7 @@ export class MessageRepository {
       const formattedServices = services
         .map((service, index) => {
           const price = service.price
-            ? `€${service.price.toFixed(2)}`
+            ? `${getCurrencySymbol(service.currency || "USD")}${service.price.toFixed(2)}`
             : "Prezzo da definire"
           const description = service.description || "Servizio disponibile"
 
@@ -1356,6 +1357,12 @@ export class MessageRepository {
         {} as Record<string, any[]>
       )
 
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { currency: true },
+      })
+      const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+
       // Formatta l'output con prezzi scontati - versione compatta per evitare troncamento
       let formattedProducts = ""
 
@@ -1407,9 +1414,9 @@ export class MessageRepository {
             : ""
 
           // ✅ Feature 191: Include sku for LLM internal use (not shown to user)
-          // Format: [CODE] NOME formato ~€originalPrice~ → €finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
+          // Format: [CODE] NOME formato ~<currency>originalPrice~ → <currency>finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
           // LLM uses getProductDetails(sku) to get internal code for cart operations
-          formattedProducts += `• [${p.sku}] ${p.name}${formatoStr} ~€${originalPrice}~ → €${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
+          formattedProducts += `• [${p.sku}] ${p.name}${formatoStr} ~${currencySymbol}${originalPrice}~ → ${currencySymbol}${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
         })
         formattedProducts += "\n"
       }
@@ -1925,7 +1932,7 @@ export class MessageRepository {
           isActive: true,
           isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
           activeChatbot: true, // Enable chatbot to handle registration requests
-          currency: "EUR",
+          currency: "USD",
         },
       })
       logger.info(

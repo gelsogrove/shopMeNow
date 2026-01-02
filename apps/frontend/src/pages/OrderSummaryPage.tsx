@@ -9,6 +9,7 @@ import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Label } from "../components/ui/label"
 import { getProductIcon, getServiceIcon } from "../utils/productIcons"
+import { formatPrice } from "@/utils/format"
 
 interface OrderItem {
   itemType: "PRODUCT" | "SERVICE"
@@ -324,7 +325,7 @@ const OrderSummaryPage: React.FC = () => {
                                   : item.serviceCode}
                               </p>
                               <p className="text-sm text-gray-600">
-                                €{item.unitPrice.toFixed(2)} cad.
+                                {formatPrice(item.unitPrice)} cad.
                               </p>
                             </div>
                           </div>
@@ -357,7 +358,7 @@ const OrderSummaryPage: React.FC = () => {
 
                             <div className="text-right">
                               <p className="font-medium">
-                                €{item.totalPrice.toFixed(2)}
+                                {formatPrice(item.totalPrice)}
                               </p>
                             </div>
 
@@ -390,7 +391,7 @@ const OrderSummaryPage: React.FC = () => {
                   <div className="flex justify-between">
                     <span>Total ({items.length} items)</span>
                     <span className="font-bold text-lg">
-                      €{totalAmount.toFixed(2)}
+                      {formatPrice(totalAmount)}
                     </span>
                   </div>
 

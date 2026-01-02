@@ -220,7 +220,7 @@ export function SubscriptionStatusCard({
                   "Pagamento fallito. Aggiorna il metodo di pagamento per ripristinare il servizio."
                 )}
                 {status.blockReason === "CREDIT_EXHAUSTED" && (
-                  `Credito esaurito (€${status.creditBalance.toFixed(2)}). Ricarica per continuare.`
+                  `Credito esaurito ($${status.creditBalance.toFixed(2)}). Ricarica per continuare.`
                 )}
               </AlertDescription>
             </Alert>

@@ -100,10 +100,10 @@ interface RechargeAmountOption {
 }
 
 const RECHARGE_OPTIONS: RechargeAmountOption[] = [
-  { value: 10, label: "€10" },
-  { value: 25, label: "€25" },
-  { value: 50, label: "€50" },
-  { value: 100, label: "€100" },
+  { value: 12, label: "$12" },
+  { value: 29, label: "$29" },
+  { value: 59, label: "$59" },
+  { value: 118, label: "$118" },
 ]
 
 // Plan limits per type (used for downgrade validation)
@@ -473,8 +473,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   const { billing, limits, usage, planConfig } = billingOverview
   const isTrialPlan = billing.planType === "FREE_TRIAL"
-  const isCreditCritical = billing.creditBalance === 0
-  const isCreditLow = billing.creditBalance > 0 && billing.creditBalance < limits.lowBalanceThreshold
+  const isCreditCritical = billing.creditBalance < -12 // CRITICAL: Below -$12 threshold
+  const isCreditLow = billing.creditBalance >= -10 && billing.creditBalance < limits.lowBalanceThreshold
 
   const getPlanBadgeVariant = (planType: PlanType) => {
     switch (planType) {
@@ -504,39 +504,39 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     <div className="space-y-6">
       {/* 🔶 PAUSED: Subscription is paused */}
       {isSubscriptionPaused && (
-        <div className="flex items-center gap-3 p-4 bg-orange-100 dark:bg-orange-950 rounded-lg border-2 border-orange-500">
-          <Pause className="h-6 w-6 text-orange-600 flex-shrink-0" />
+        <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-950 rounded-lg border-2 border-red-500 animate-pulse">
+          <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
           <div className="flex-1">
-            <p className="font-bold text-orange-800 dark:text-orange-200 text-lg">
-              ⏸️ Subscription PAUSED
+            <p className="font-bold text-red-800 dark:text-red-200 text-lg">
+              ⚠️ Your chatbots are DISABLED
             </p>
-            <p className="text-sm text-orange-700 dark:text-orange-300">
-              Your chatbot/s are not responding to customers. Click "Change Plan" to resume your subscription.
+            <p className="text-sm text-red-700 dark:text-red-300">
+              Subscription is PAUSED. Your chatbots will not respond to any customer messages until you resume.
             </p>
           </div>
           {isSuperAdmin && (
             <Button
               onClick={() => setShowUpgradeDialog(true)}
-              variant="outline"
-              className="flex-shrink-0 border-orange-500 text-orange-700 hover:bg-orange-100"
+              variant="destructive"
+              className="flex-shrink-0"
             >
               <Play className="h-4 w-4 mr-2" />
-              Resume
+              Resume Now
             </Button>
           )}
         </div>
       )}
 
-      {/* 🚨 CRITICAL: Credit = 0 Warning - Chatbot is DISABLED */}
+      {/* 🚨 CRITICAL: Credit < -$12 Warning - Chatbots are DISABLED */}
       {isCreditCritical && !billing.isTrialExpired && (
         <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-950 rounded-lg border-2 border-red-500 animate-pulse">
           <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
           <div className="flex-1">
             <p className="font-bold text-red-800 dark:text-red-200 text-lg">
-              ⚠️ Your chatbot is DISABLED
+              ⚠️ Your chatbots are DISABLED
             </p>
             <p className="text-sm text-red-700 dark:text-red-300">
-              Credit balance is €0.00. Your chatbot will not respond to any customer messages until you recharge.
+              Credit balance is {formatCurrency(billing.creditBalance)} (below -$12.00 threshold). Your chatbots will not respond to any customer messages until you recharge.
             </p>
           </div>
           {isSuperAdmin && (
@@ -646,6 +646,23 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <span className="text-sm text-muted-foreground">
                   Available Credit
                 </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-semibold mb-1">💰 Credit Balance</p>
+                      <p className="text-xs">
+                        Prepaid credits used ONLY for WhatsApp operations:
+                        Messages ($0.12), Orders ($1.76), Push campaigns ($1.18).
+                        Recharged manually via "Recharge Credit" button.
+                        <br /><br />
+                        <strong>Note:</strong> Separate from monthly subscription fee.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 {billing.creditBalance < limits.lowBalanceThreshold && (
                   <Badge variant="destructive" className="text-xs">
                     <AlertTriangle className="h-3 w-3 mr-1" />
@@ -673,8 +690,26 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             {/* Plan Details */}
             <div className="space-y-3">
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subscription {planConfig.displayName}:</span>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Subscription {planConfig.displayName}:</span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p className="font-semibold mb-1">💳 Monthly Subscription</p>
+                          <p className="text-xs">
+                            Fixed monthly fee charged externally (PayPal/Stripe) on the 1st of each month.
+                            Covers platform access, features, and usage limits.
+                            <br /><br />
+                            <strong>Note:</strong> Separate from credit balance (used only for WhatsApp messages).
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <span className="font-medium text-emerald-600">
                     {formatCurrency(planConfig.monthlyFee)}
                   </span>
@@ -794,7 +829,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   </h3>
                   <div className="mb-4">
                     <span className="text-3xl font-bold text-gray-900">
-                      €{planConfig?.monthlyFee || 0}
+                      ${planConfig?.monthlyFee || 0}
                     </span>
                     <span className="text-gray-600">/month</span>
                   </div>
@@ -896,7 +931,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   </h3>
                   <div className="mb-4">
                     <span className="text-3xl font-bold text-gray-900">
-                      €{planConfig?.monthlyFee || 0}
+                      ${planConfig?.monthlyFee || 0}
                     </span>
                     <span className="text-gray-600">/month</span>
                   </div>
@@ -987,7 +1022,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     {requiredPlanPrices.MESSAGE && requiredPlanPrices.PUSH_CAMPAIGN
-                      ? `💡 Usage costs are extra: €${requiredPlanPrices.MESSAGE.current.toFixed(2)} per message + €${requiredPlanPrices.PUSH_CAMPAIGN.current.toFixed(2)} per WhatsApp campaign message`
+                      ? `💡 Usage costs are extra: $${requiredPlanPrices.MESSAGE.current.toFixed(2)} per message + $${requiredPlanPrices.PUSH_CAMPAIGN.current.toFixed(2)} per WhatsApp campaign message`
                       : "⚠️ Pricing configuration missing. Plan changes are disabled."}
                   </span>
                 </DialogDescription>
@@ -1032,7 +1067,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     <div className="mb-2">
                       {isFreePlan ? (
                         <>
-                          <span className="text-3xl font-bold text-gray-900">€0</span>
+                          <span className="text-3xl font-bold text-gray-900">$0</span>
                           <span className="text-gray-600">/14 days</span>
                         </>
                       ) : (
@@ -1040,7 +1075,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                           {/* Show strikethrough original price if different from current */}
                           {priceInfo?.original && priceInfo.original !== priceInfo.current && (
                             <span className="text-lg text-gray-400 line-through mr-2">
-                              €{priceInfo.original}
+                              ${priceInfo.original}
                             </span>
                           )}
                           {isPriceMissing ? (
@@ -1050,7 +1085,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                           ) : (
                             <>
                               <span className={`text-3xl font-bold ${priceInfo?.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
-                                €{priceInfo?.current}
+                                ${priceInfo?.current}
                               </span>
                               <span className="text-gray-600">/month</span>
                             </>

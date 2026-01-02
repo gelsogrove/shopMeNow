@@ -161,7 +161,7 @@ For privacy inquiries, please contact our support team.`
       webhookUrl: w.webhookUrl ?? undefined,
       notificationEmail: w.notificationEmail ?? undefined,
       language: w.language ?? 'it',
-      currency: w.currency ?? 'EUR',
+      currency: w.currency ?? 'USD',
       messageLimit: w.messageLimit ?? 1000,
       welcomeMessage: w.welcomeMessage ?? undefined,
       wipMessage: w.wipMessage ?? undefined,

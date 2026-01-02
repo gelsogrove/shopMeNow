@@ -4,7 +4,7 @@
  *
  * Displays in header:
  * - Current credit balance
- * - Low balance warning (if < €5)
+ * - Low balance warning (if < $6)
  * - Trial badge with days remaining
  * - Clickable to navigate to billing page
  */

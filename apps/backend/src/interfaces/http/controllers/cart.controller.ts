@@ -235,7 +235,7 @@ export class CartController {
         cartId: cart.id,
         items: cart.items,
         totalAmount: totalAmount,
-        currency: customer.currency || "EUR",
+        currency: customer.currency || "USD",
         createdAt: new Date().toISOString(),
       }
 

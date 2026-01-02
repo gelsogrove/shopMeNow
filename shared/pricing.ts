@@ -32,7 +32,7 @@ export const formatRoundedCurrency = (
   } = {}
 ): string => {
   const {
-    currencySymbol = "€",
+    currencySymbol = "$",
     locale = "en-US",
     step = DEFAULT_ROUNDING_STEP,
     minimumFractionDigits = 0,

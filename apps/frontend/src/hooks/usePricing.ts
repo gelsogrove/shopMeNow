@@ -11,7 +11,7 @@
  * if (isLoading) return <div>Loading prices...</div>
  * if (error) return <div>Error loading prices</div>
  *
- * return <div>Message cost: €{usage.MESSAGE}</div>
+ * return <div>Message cost: ${usage.MESSAGE}</div>
  * ```
  */
 

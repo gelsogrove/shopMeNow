@@ -2,7 +2,7 @@
  * Unit tests for Pricing Configuration (Platform Config)
  *
  * Tests cover:
- * 1. Basic plan monthly fee is €19 (not €29)
+ * 1. Basic plan monthly fee is $23 (not $34)
  * 2. Premium and Enterprise fees are correct
  * 3. Message and push costs are correct
  */
@@ -34,7 +34,7 @@ describe("Pricing Configuration", () => {
       type: "PRICE" as const,
       value: "0",
       originalValue: null,
-      description: "Free plan - €0",
+      description: "Free plan - $0",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -43,9 +43,9 @@ describe("Pricing Configuration", () => {
       id: "2",
       key: "BASIC_MONTHLY",
       type: "PRICE" as const,
-      value: "19",
-      originalValue: "29",
-      description: "Basic plan - €19/month",
+      value: "23",
+      originalValue: "34",
+      description: "Basic plan - $23/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -54,9 +54,9 @@ describe("Pricing Configuration", () => {
       id: "3",
       key: "PREMIUM_MONTHLY",
       type: "PRICE" as const,
-      value: "49",
+      value: "44",
       originalValue: null,
-      description: "Premium plan - €49/month",
+      description: "Premium plan - $44/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -65,9 +65,9 @@ describe("Pricing Configuration", () => {
       id: "4",
       key: "ENTERPRISE_MONTHLY",
       type: "PRICE" as const,
-      value: "129",
+      value: "139",
       originalValue: null,
-      description: "Enterprise plan - €129/month",
+      description: "Enterprise plan - $139/month",
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -76,7 +76,7 @@ describe("Pricing Configuration", () => {
       id: "5",
       key: "MESSAGE",
       type: "PRICE" as const,
-      value: "0.10",
+      value: "0.12",
       originalValue: null,
       description: "Cost per message",
       isActive: true,
@@ -87,7 +87,7 @@ describe("Pricing Configuration", () => {
       id: "6",
       key: "PUSH_CAMPAIGN",
       type: "PRICE" as const,
-      value: "1.00",
+      value: "1.18",
       originalValue: null,
       description: "Push campaign message",
       isActive: true,
@@ -105,43 +105,43 @@ describe("Pricing Configuration", () => {
   })
 
   describe("Basic Plan Pricing", () => {
-    it("should have Basic monthly fee of €19", async () => {
+    it("should have Basic monthly fee of $23", async () => {
       await expect(platformConfigService.getPrice("BASIC_MONTHLY")).resolves.toBe(
-        19.0
+        23.0
       )
     })
 
-    it("should NOT be €29 (old value)", async () => {
+    it("should NOT be $34 (old value)", async () => {
       const price = await platformConfigService.getPrice("BASIC_MONTHLY")
-      expect(price).not.toBe(29.0)
+      expect(price).not.toBe(34.0)
     })
   })
 
   describe("Premium Plan Pricing", () => {
-    it("should have Premium monthly fee of €49", async () => {
+    it("should have Premium monthly fee of $44", async () => {
       await expect(platformConfigService.getPrice("PREMIUM_MONTHLY")).resolves.toBe(
-        49.0
+        44.0
       )
     })
   })
 
   describe("Enterprise Plan Pricing", () => {
-    it("should have Enterprise monthly fee of €129", async () => {
+    it("should have Enterprise monthly fee of $139", async () => {
       await expect(
         platformConfigService.getPrice("ENTERPRISE_MONTHLY")
-      ).resolves.toBe(129.0)
+      ).resolves.toBe(139.0)
     })
   })
 
   describe("Message Costs", () => {
-    it("should have message cost of €0.10", async () => {
-      await expect(platformConfigService.getPrice("MESSAGE")).resolves.toBe(0.1)
+    it("should have message cost of $0.12", async () => {
+      await expect(platformConfigService.getPrice("MESSAGE")).resolves.toBe(0.12)
     })
 
-    it("should have push campaign cost of €1.00", async () => {
+    it("should have push campaign cost of $1.18", async () => {
       await expect(
         platformConfigService.getPrice("PUSH_CAMPAIGN")
-      ).resolves.toBe(1.0)
+      ).resolves.toBe(1.18)
     })
   })
 })

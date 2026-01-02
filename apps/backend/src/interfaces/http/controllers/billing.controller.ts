@@ -48,7 +48,7 @@ export class BillingController {
           workspaceId,
           customerId: customerId || null,
           currentTotal: currentTotal.toFixed(2),
-          currency: "EUR",
+          currency: "USD",
         },
       })
     } catch (error) {
@@ -83,7 +83,7 @@ export class BillingController {
         data: {
           workspaceId,
           ...summary,
-          currency: "EUR",
+          currency: "USD",
         },
       })
     } catch (error) {
@@ -164,7 +164,7 @@ export class BillingController {
           customerId: customerId || null,
           history: history.reverse(), // Reverse back to show latest first
           currentTotal: runningTotal.toFixed(2),
-          currency: "EUR",
+          currency: "USD",
         },
       })
     } catch (error) {
@@ -205,7 +205,7 @@ export class BillingController {
           workspaceId,
           currentMonth: breakdown.currentMonth,
           history: breakdown.history,
-          currency: "EUR",
+          currency: "USD",
         },
       })
     } catch (error) {
@@ -261,7 +261,7 @@ export class BillingController {
           year: yearNum,
           month: monthNum,
           records: details,
-          currency: "EUR",
+          currency: "USD",
         },
       })
     } catch (error) {

@@ -21,7 +21,7 @@ exports.smartRoundPrice = smartRoundPrice;
  * Format a rounded price with currency symbol and optional locale.
  */
 const formatRoundedCurrency = (value, options = {}) => {
-    const { currencySymbol = "€", locale = "en-US", step = exports.DEFAULT_ROUNDING_STEP, minimumFractionDigits = 0, maximumFractionDigits = 0, useSmartRound = false, } = options;
+    const { currencySymbol = "$", locale = "en-US", step = exports.DEFAULT_ROUNDING_STEP, minimumFractionDigits = 0, maximumFractionDigits = 0, useSmartRound = false, } = options;
     const rounded = useSmartRound ? (0, exports.smartRoundPrice)(value, step) : value;
     const formatter = new Intl.NumberFormat(locale, {
         minimumFractionDigits,

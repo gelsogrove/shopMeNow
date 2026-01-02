@@ -9,6 +9,7 @@
 
 import { AgentType, PrismaClient } from "@echatbot/database"
 import logger from "../../../utils/logger"
+import { getCurrencySymbol } from "../../../utils/currency"
 
 export interface PromptVariables {
   // Workspace Config (16 variables)
@@ -141,7 +142,7 @@ export class VariableResolverService {
     variables.workspaceName = workspace.name || ""
     variables.workspaceUrl = workspace.url || ""
     variables.language = workspace.language || "ITA"
-    variables.currency = workspace.currency || "EUR"
+    variables.currency = workspace.currency || "USD"
     variables.toneOfVoice = workspace.toneOfVoice || "friendly"
     variables.botIdentityResponse = workspace.botIdentityResponse || ""
     variables.welcomeMessage = typeof workspace.welcomeMessage === 'string' 
@@ -269,6 +270,12 @@ export class VariableResolverService {
    * Get active products formatted for prompt
    */
   private async getActiveProducts(workspaceId: string, discount: number): Promise<string> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { currency: true },
+    })
+    const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+
     const products = await this.prisma.products.findMany({
       where: { workspaceId, isActive: true },
       select: {
@@ -288,7 +295,7 @@ export class VariableResolverService {
       const discountedPrice = discount > 0 
         ? (Number(p.price) * (1 - discount / 100)).toFixed(2)
         : Number(p.price).toFixed(2)
-      return `- ${p.name} (${p.sku}): €${discountedPrice} - ${p.category?.name || "Uncategorized"}`
+      return `- ${p.name} (${p.sku}): ${currencySymbol}${discountedPrice} - ${p.category?.name || "Uncategorized"}`
     }).join("\n")
   }
 
@@ -296,6 +303,12 @@ export class VariableResolverService {
    * Get active services formatted for prompt
    */
   private async getActiveServices(workspaceId: string): Promise<string> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { currency: true },
+    })
+    const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+
     const services = await this.prisma.services.findMany({
       where: { workspaceId, isActive: true },
       select: {
@@ -310,8 +323,8 @@ export class VariableResolverService {
 
     if (services.length === 0) return "No services available."
 
-    return services.map(s => 
-      `- ${s.name} (${s.code}): €${Number(s.price).toFixed(2)}`
+    return services.map(s =>
+      `- ${s.name} (${s.code}): ${currencySymbol}${Number(s.price).toFixed(2)}`
     ).join("\n")
   }
 
@@ -372,14 +385,20 @@ export class VariableResolverService {
 
     if (!order) return "No previous orders."
 
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { currency: true },
+    })
+    const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+
     const items = order.items.map(i => 
-      `- ${i.product?.name || "Item"} x${i.quantity}: €${Number(i.unitPrice).toFixed(2)}`
+      `- ${i.product?.name || "Item"} x${i.quantity}: ${currencySymbol}${Number(i.unitPrice).toFixed(2)}`
     ).join("\n")
 
     return `Order: ${order.orderCode}
 Date: ${order.createdAt.toLocaleDateString()}
 Status: ${order.status}
-Total: €${Number(order.totalAmount).toFixed(2)}
+Total: ${currencySymbol}${Number(order.totalAmount).toFixed(2)}
 Items:
 ${items}`
   }

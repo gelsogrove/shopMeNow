@@ -426,7 +426,7 @@ describe('Scheduler Jobs', () => {
 
       mockPrisma.user.findMany.mockResolvedValue([mockOwner])
       mockPrisma.planConfiguration.findMany.mockResolvedValue([mockPlanConfig])
-      mockPrisma.user.update.mockResolvedValue({ ...mockOwner, creditBalance: 71 })
+      mockPrisma.user.update.mockResolvedValue({ ...mockOwner, creditBalance: 100.00 }) // Credit balance UNCHANGED
       mockPrisma.billingTransaction.create.mockResolvedValue({})
 
       await monthlyBillingJob()
@@ -435,6 +435,16 @@ describe('Scheduler Jobs', () => {
       expect(mockPrisma.billingTransaction.create).toHaveBeenCalled()
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('Payment success')
+      )
+      
+      // Verify creditBalance is NOT reset to 0 (stays at 100.00)
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.not.objectContaining({
+            creditBalance: expect.anything(), // Credit balance should NOT be in update
+          }),
+        })
       )
     })
 
@@ -461,7 +471,7 @@ describe('Scheduler Jobs', () => {
 
       mockPrisma.user.findMany.mockResolvedValue([mockOwner])
       mockPrisma.planConfiguration.findMany.mockResolvedValue([mockPlanConfig])
-      mockPrisma.user.update.mockResolvedValue({ ...mockOwner, creditBalance: 0 })
+      mockPrisma.user.update.mockResolvedValue({ ...mockOwner, creditBalance: -5.00 }) // Credit balance UNCHANGED
       mockPrisma.billingTransaction.create.mockResolvedValue({})
 
       await monthlyBillingJob()

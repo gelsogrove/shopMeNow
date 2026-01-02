@@ -388,6 +388,21 @@ class BackofficeApi {
   // Trash Management - Admin endpoints for soft-deleted items (Feature 196)
   trash = {
     /**
+     * Soft-delete a user (sends to trash with 90-day recovery window)
+     */
+    deleteUser: async (userId: string, data: { reason: string }): Promise<ApiResponse<{
+      success: boolean
+      message: string
+      deletedAt: string
+      recoveryWindowDays: number
+    }>> => {
+      return this.fetch(`/admin/users/${userId}/unsubscribe`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+    },
+
+    /**
      * Get soft-deleted users (platform users/admins)
      */
     getUsers: async (page: number = 1, limit: number = 50): Promise<ApiResponse<{

@@ -2,7 +2,7 @@ import React from "react"
 
 /**
  * Simplified Billing Display Component
- * Shows billing information in a single line format: €X.XX + €0.15 = €Y.YY
+ * Shows billing information in a single line format: $X.XX + $0.18 = $Y.YY
  */
 
 interface BillingData {
@@ -26,7 +26,7 @@ export const SimpleBillingDisplay: React.FC<SimpleBillingDisplayProps> = ({
     return (
       <div className="bg-blue-50 border border-blue-200 rounded p-2">
         <div className="text-xs text-blue-700 text-center font-mono font-semibold">
-          💰 €{billing.currentTotal.toFixed(2)} + €{charge.toFixed(2)} = €
+        💰 ${billing.currentTotal.toFixed(2)} + ${charge.toFixed(2)} = $
           {billing.newTotal.toFixed(2)}
         </div>
       </div>
@@ -38,7 +38,7 @@ export const SimpleBillingDisplay: React.FC<SimpleBillingDisplayProps> = ({
   return (
     <div className="bg-blue-50 border border-blue-200 rounded p-2">
       <div className="text-xs text-blue-700 text-center font-mono font-semibold">
-        💰 €{fallbackTotal.toFixed(2)} + €0.15 = €{newTotal.toFixed(2)}
+        💰 ${fallbackTotal.toFixed(2)} + $0.18 = ${newTotal.toFixed(2)}
       </div>
     </div>
   )

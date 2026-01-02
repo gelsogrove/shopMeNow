@@ -1,32 +1,30 @@
 /**
- * 💰 BILLING PRICES - SINGLE SOURCE OF TRUTH
+ * 💰 BILLING PRICES (DEPRECATED)
  *
- * ⚠️ CRITICAL: This is the ONLY place where pricing is defined
- * All backend services and frontend components MUST use these values
- *
- * To change pricing: Update values here, restart backend, frontend will auto-sync via API
+ * ⚠️ Pricing must be read from the database via PlatformConfigService.
+ * This enum is kept only for legacy references and metadata structure.
  *
  * @author Andrea Gelso
  */
 
 export enum BillingPrices {
   // 📱 MESSAGE COSTS
-  MESSAGE = 0.1, // €0.10 - LLM chatbot message (conversational)
-  WELCOME_MESSAGE = 1.0, // €1.00 - First message to new user (includes registration)
+  MESSAGE = 0.12, // $0.12 - LLM chatbot message (conversational)
+  WELCOME_MESSAGE = 1.18, // $1.18 - First message to new user (includes registration)
 
   // 📤 PUSH MESSAGING COSTS
-  PUSH_CHATBOT_REACTIVATED = 0.2, // €0.20 - When admin enables chatbot for customer
-  PUSH_DISCOUNT_NOTIFICATION = 0.2, // €0.00 - FREE - Discount update notification
-  PUSH_ORDER_CONFIRMED = 0.0, // €0.00 - FREE - Order confirmation
-  PUSH_CAMPAIGN = 1.0, // €1.00 - Marketing campaign message
-  PUSH_DEFAULT = 0.2, // €0.20 - Default for other push notifications
+  PUSH_CHATBOT_REACTIVATED = 0.24, // $0.24 - When admin enables chatbot for customer
+  PUSH_DISCOUNT_NOTIFICATION = 0.24, // $0.00 - FREE - Discount update notification
+  PUSH_ORDER_CONFIRMED = 0.0, // $0.00 - FREE - Order confirmation
+  PUSH_CAMPAIGN = 1.18, // $1.18 - Marketing campaign message
+  PUSH_DEFAULT = 0.24, // $0.24 - Default for other push notifications
 
   // 🏢 SUBSCRIPTION PLANS (Monthly)
-  MONTHLY_CHANNEL_COST = 49.0, // €49.00 - Per WhatsApp channel/month (same as Premium)
-  FREE_MONTHLY = 0.0, // €0.00 - Free plan
-  BASIC_MONTHLY = 19.0, // €19.00 - Basic plan
-  PREMIUM_MONTHLY = 49.0, // €49.00 - Premium plan
-  ENTERPRISE_MONTHLY = 129.0, // €129.00 - Enterprise plan
+  MONTHLY_CHANNEL_COST = 44.0, // $44.00 - Per WhatsApp channel/month (same as Premium)
+  FREE_MONTHLY = 0.0, // $0.00 - Free plan
+  BASIC_MONTHLY = 23.0, // $23.00 - Basic plan
+  PREMIUM_MONTHLY = 44.0, // $44.00 - Premium plan
+  ENTERPRISE_MONTHLY = 139.0, // $139.00 - Enterprise plan
 }
 
 /**
