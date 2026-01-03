@@ -1113,12 +1113,12 @@ export function LoginPage() {
         </div>
         <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
           <div className="hidden lg:flex justify-center lg:justify-start items-center w-full lg:flex-1">
-            <div className="relative w-full max-w-3xl lg:mr-2 min-h-[32rem]">
+            <div className="relative w-full max-w-3xl lg:mr-2">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
-            <div className="relative rounded-[32px] shadow-2xl bg-white min-h-[32rem] overflow-visible">
-                <div className="relative rounded-[28px] overflow-hidden">
+            <div className="relative rounded-[32px] shadow-2xl bg-white overflow-visible">
+                <div className="relative rounded-[28px] overflow-hidden bg-slate-900">
                   <div 
-                    className="relative w-full pt-[85%] sm:pt-[70%] min-h-[20rem] bg-white"
+                    className="relative w-full h-[510px]"
                     onTouchStart={onTouchStartHero}
                     onTouchMove={onTouchMoveHero}
                     onTouchEnd={onTouchEndHero}
@@ -1136,7 +1136,7 @@ export function LoginPage() {
                               key={`${slide.src}-${offset}`}
                               src={slide.src}
                               alt={slide.alt}
-                              className="absolute inset-0 w-full h-full object-cover object-center"
+                              className="absolute inset-0 w-full h-full object-cover"
                               style={{
                                 transform: `translateX(${offset * 85}%) scale(${
                                   isCenter ? 1 : 0.9
@@ -1153,11 +1153,11 @@ export function LoginPage() {
                             key={slide.src}
                             src={slide.src}
                             alt={slide.alt}
-                            className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-700 ease-in-out ${
-                              index === currentSlide
-                                ? "opacity-100 scale-[1.12] sm:scale-100"
-                                : "opacity-0 scale-[1.04] sm:scale-95 pointer-events-none"
-                            }`}
+                            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out"
+                            style={{
+                              opacity: index === currentSlide ? 1 : 0,
+                              zIndex: index === currentSlide ? 2 : 1,
+                            }}
                           />
                         ))}
                   </div>
