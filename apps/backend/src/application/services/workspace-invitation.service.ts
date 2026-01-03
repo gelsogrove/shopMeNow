@@ -102,6 +102,7 @@ export class WorkspaceInvitationService {
     success: boolean
     invitation?: { id: string; email: string; expiresAt: Date }
     error?: string
+    code?: string
   }> {
     const email = this.normalizeEmail(input.email)
 
@@ -132,6 +133,65 @@ export class WorkspaceInvitationService {
         return {
           success: false,
           error: "Workspace not found or has no owner",
+        }
+      }
+
+      const owner = await tx.user.findUnique({
+        where: { id: workspace.ownerId },
+        select: { planType: true },
+      })
+
+      if (!owner) {
+        return {
+          success: false,
+          error: "Workspace owner not found",
+        }
+      }
+
+      const planConfig = await tx.planConfiguration.findUnique({
+        where: { planType: owner.planType },
+        select: { maxTeamMembers: true },
+      })
+
+      if (!planConfig) {
+        return {
+          success: false,
+          error: "Plan configuration not found",
+        }
+      }
+
+      if (planConfig.maxTeamMembers === 0) {
+        return {
+          success: false,
+          error:
+            "Team invitations are not available on your plan. Upgrade to Premium or Enterprise to add team members.",
+          code: "TEAM_MEMBER_LIMIT_REACHED",
+        }
+      }
+
+      const [teamMemberCount, pendingInvitesCount] = await Promise.all([
+        tx.userWorkspace.count({
+          where: {
+            userId: { not: workspace.ownerId },
+            workspace: { ownerId: workspace.ownerId },
+          },
+          distinct: ["userId"],
+        }),
+        tx.workspaceInvitation.count({
+          where: {
+            status: "PENDING",
+            workspace: { ownerId: workspace.ownerId },
+          },
+          distinct: ["email"],
+        }),
+      ])
+
+      if (teamMemberCount + pendingInvitesCount >= planConfig.maxTeamMembers) {
+        return {
+          success: false,
+          error:
+            "Team member limit reached for your plan. Upgrade to add more team members.",
+          code: "TEAM_MEMBER_LIMIT_REACHED",
         }
       }
 

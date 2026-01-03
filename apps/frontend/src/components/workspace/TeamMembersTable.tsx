@@ -36,7 +36,8 @@ import {
   Users,
   X,
 } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useBilling } from "@/contexts/BillingContext"
 
 interface TeamMembersTableProps {
   workspaceId: string
@@ -53,11 +54,21 @@ export function TeamMembersTable({
   workspaceId,
   isSuperAdmin,
 }: TeamMembersTableProps) {
+  const { billingOverview } = useBilling()
   const [activeTab, setActiveTab] = useState<TabType>("members")
   const [members, setMembers] = useState<TeamMember[]>([])
   const [invitations, setInvitations] = useState<PendingInvitation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const maxTeamMembers = billingOverview?.limits?.maxTeamMembers ?? 0
+  const isInviteFeatureEnabled = maxTeamMembers !== 0
+  const currentTeamUsage = useMemo(
+    () => members.length + invitations.length,
+    [members.length, invitations.length]
+  )
+  const isInviteLimitReached =
+    maxTeamMembers > 0 &&
+    currentTeamUsage >= maxTeamMembers
 
   // Modal states
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
@@ -217,15 +228,25 @@ export function TeamMembersTable({
               </CardDescription>
             </div>
             {isSuperAdmin ? (
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={() => setInviteModalOpen(true)} 
-                className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
-              >
-                <UserPlus className="h-4 w-4" />
-                Invite Member
-              </Button>
+              isInviteFeatureEnabled && !isInviteLimitReached ? (
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInviteModalOpen(true)} 
+                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invite Member
+                </Button>
+              ) : (
+                renderDisabledButton(
+                  <UserPlus className="h-4 w-4" />,
+                  "Invite Member",
+                  !isInviteFeatureEnabled
+                    ? "Upgrade to Premium or Enterprise to invite team members"
+                    : "Team member limit reached. Upgrade to add more members."
+                )
+              )
             ) : (
               renderDisabledButton(
                 <UserPlus className="h-4 w-4" />,

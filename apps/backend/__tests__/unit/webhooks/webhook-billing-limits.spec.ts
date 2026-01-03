@@ -230,45 +230,6 @@ describe("Webhook Billing & Plan Limits", () => {
   })
 
   // =========================================================================
-  // SCENARIO 4: PRODUCT LIMIT (Admin API only, not webhook)
-  // =========================================================================
-  describe("Product Limit (Admin API)", () => {
-    describe("FREE_TRIAL/BASIC Plan (max 50 products)", () => {
-      it("should BLOCK product #51 via API", () => {
-        /**
-         * Products are created via Admin API, not webhook
-         * The checkPlanLimits("products") middleware blocks the request
-         */
-        const scenario = {
-          planType: "BASIC",
-          currentProducts: 50,
-          maxProducts: 50,
-          expectedResult: {
-            statusCode: 403,
-            productCreated: false,
-          },
-        }
-        expect(scenario.expectedResult.productCreated).toBe(false)
-      })
-    })
-
-    describe("PREMIUM Plan (max 100 products)", () => {
-      it("should BLOCK product #101 via API", () => {
-        const scenario = {
-          planType: "PREMIUM",
-          currentProducts: 100,
-          maxProducts: 100,
-          expectedResult: {
-            statusCode: 403,
-            productCreated: false,
-          },
-        }
-        expect(scenario.expectedResult.productCreated).toBe(false)
-      })
-    })
-  })
-
-  // =========================================================================
   // SCENARIO 5: CHECK ORDER - Billing check priority
   // =========================================================================
   describe("Billing Check Priority Order", () => {

@@ -56,30 +56,30 @@ describe("Billing Middleware", () => {
   })
 
   describe("checkPlanLimits", () => {
-    it("should call next() when under product limit", async () => {
+    it("should call next() when under customer limit", async () => {
       mockCheckPlanLimits.mockResolvedValue({
         withinLimits: true,
         current: 10,
         max: 50,
-        limitType: "products",
+        limitType: "customers",
       })
 
-      const middleware = checkPlanLimits("products")
+      const middleware = checkPlanLimits("customers")
       await middleware(mockReq as Request, mockRes as Response, nextFunction)
 
       expect(nextFunction).toHaveBeenCalled()
       expect(mockRes.status).not.toHaveBeenCalled()
     })
 
-    it("should return 403 when at product limit", async () => {
+    it("should return 403 when at customer limit", async () => {
       mockCheckPlanLimits.mockResolvedValue({
         withinLimits: false,
         current: 50,
         max: 50,
-        limitType: "products",
+        limitType: "customers",
       })
 
-      const middleware = checkPlanLimits("products")
+      const middleware = checkPlanLimits("customers")
       await middleware(mockReq as Request, mockRes as Response, nextFunction)
 
       expect(nextFunction).not.toHaveBeenCalled()
@@ -123,10 +123,30 @@ describe("Billing Middleware", () => {
       expect(payload.message).toContain("canali")
     })
 
+    it("should include limit details when limit is reached", async () => {
+      mockCheckPlanLimits.mockResolvedValue({
+        withinLimits: false,
+        current: 50,
+        max: 50,
+        limitType: "customers",
+      })
+
+      const middleware = checkPlanLimits("customers")
+      await middleware(mockReq as Request, mockRes as Response, nextFunction)
+
+      const payload = (mockRes.json as jest.Mock).mock.calls[0][0]
+      expect(payload.code).toBe("PLAN_LIMIT_REACHED")
+      expect(payload.details).toEqual({
+        limitType: "customers",
+        current: 50,
+        max: 50,
+      })
+    })
+
     it("should return 400 when workspaceId is missing", async () => {
       mockReq = { params: {} }
 
-      const middleware = checkPlanLimits("products")
+      const middleware = checkPlanLimits("customers")
       await middleware(mockReq as Request, mockRes as Response, nextFunction)
 
       expect(mockRes.status).toHaveBeenCalledWith(400)
@@ -140,7 +160,7 @@ describe("Billing Middleware", () => {
     it("should return 500 on service error", async () => {
       mockCheckPlanLimits.mockRejectedValue(new Error("Database error"))
 
-      const middleware = checkPlanLimits("products")
+      const middleware = checkPlanLimits("customers")
       await middleware(mockReq as Request, mockRes as Response, nextFunction)
 
       expect(mockRes.status).toHaveBeenCalledWith(500)

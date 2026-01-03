@@ -25,8 +25,8 @@ export interface PlanConfig {
   features: PlanFeature[]
   limits: {
     channels: number | "unlimited"
-    products: number | "unlimited"
     customers: number | "unlimited"
+    teamMembers: number | "unlimited"
   }
   isPopular?: boolean
   buttonVariant?: "default" | "outline"
@@ -35,8 +35,8 @@ export interface PlanConfig {
 // Feature keys for translation
 export const FEATURE_KEYS = {
   CHANNELS: "channels",
-  PRODUCTS: "products", 
   CUSTOMERS: "customers",
+  TEAM_MEMBERS: "teamMembers",
   MULTI_LANGUAGE: "multiLanguage",
   ANALYTICS: "analytics",
   BRANDING: "branding",
@@ -57,13 +57,13 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
     buttonVariant: "default",
     limits: {
       channels: 1,
-      products: 50,
       customers: 50,
+      teamMembers: 0,
     },
     features: [
       { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.PRODUCTS, included: true },
       { key: FEATURE_KEYS.CUSTOMERS, included: true },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: false },
       { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
       { key: FEATURE_KEYS.ANALYTICS, included: true },
       { key: FEATURE_KEYS.BRANDING, included: false },
@@ -80,13 +80,13 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
     buttonVariant: "default",
     limits: {
       channels: 1,
-      products: 50,
       customers: 50,
+      teamMembers: 0,
     },
     features: [
       { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.PRODUCTS, included: true },
       { key: FEATURE_KEYS.CUSTOMERS, included: true },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: false },
       { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
       { key: FEATURE_KEYS.ANALYTICS, included: true },
       { key: FEATURE_KEYS.BRANDING, included: false },
@@ -103,16 +103,16 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
     buttonVariant: "default",
     limits: {
       channels: 2,
-      products: 100,
       customers: 100,
+      teamMembers: "unlimited",
     },
     features: [
       { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.PRODUCTS, included: true },
       { key: FEATURE_KEYS.CUSTOMERS, included: true },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: true },
       { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
       { key: FEATURE_KEYS.ANALYTICS, included: true },
-      { key: FEATURE_KEYS.BRANDING, included: true },
+      { key: FEATURE_KEYS.BRANDING, included: false },
       { key: FEATURE_KEYS.INTEGRATIONS, included: false },
       { key: FEATURE_KEYS.DEDICATED_SERVER, included: false },
     ],
@@ -127,13 +127,13 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
     buttonVariant: "outline",
     limits: {
       channels: "unlimited",
-      products: "unlimited",
       customers: "unlimited",
+      teamMembers: "unlimited",
     },
     features: [
       { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.PRODUCTS, included: true },
       { key: FEATURE_KEYS.CUSTOMERS, included: true },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: true },
       { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
       { key: FEATURE_KEYS.ANALYTICS, included: true },
       { key: FEATURE_KEYS.BRANDING, included: true },
@@ -159,20 +159,22 @@ export function getFeatureDisplayText(
       return t 
         ? `${limits.channels} ${translate("pricing.features.channel")}${limits.channels > 1 ? "s" : ""}` 
         : `${limits.channels} WhatsApp channel${limits.channels > 1 ? "s" : ""}`
-    case FEATURE_KEYS.PRODUCTS:
-      if (limits.products === "unlimited") {
-        return t ? `${translate("pricing.features.unlimited")} ${translate("pricing.features.products")}` : "Unlimited products"
-      }
-      return t 
-        ? `${translate("pricing.features.upto")} ${limits.products} ${translate("pricing.features.products")}`
-        : `${limits.products} products`
     case FEATURE_KEYS.CUSTOMERS:
       if (limits.customers === "unlimited") {
-        return t ? `${translate("pricing.features.unlimited")} ${translate("pricing.features.clients")}` : "Unlimited customers/leads"
+        return t ? `${translate("pricing.features.unlimited")} ${translate("pricing.features.clients")}` : "Unlimited leads"
       }
       return t
         ? `${translate("pricing.features.upto")} ${limits.customers} ${translate("pricing.features.clients")}`
-        : `${limits.customers} customers/leads`
+        : `${limits.customers} leads`
+    case FEATURE_KEYS.TEAM_MEMBERS:
+      if (limits.teamMembers === "unlimited") {
+        return t
+          ? `${translate("pricing.features.unlimited")} ${translate("pricing.features.teamMembers")}`
+          : "Unlimited team members"
+      }
+      return t
+        ? `${translate("pricing.features.upto")} ${limits.teamMembers} ${translate("pricing.features.teamMembers")}`
+        : `${limits.teamMembers} team members`
     case FEATURE_KEYS.MULTI_LANGUAGE:
       return "Multi-language support"
     case FEATURE_KEYS.ANALYTICS:

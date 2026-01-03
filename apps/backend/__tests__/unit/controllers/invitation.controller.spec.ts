@@ -123,6 +123,23 @@ describe("InvitationController", () => {
       })
     })
 
+    it("should return 403 when team member limit is reached", async () => {
+      mockService.createInvitation.mockResolvedValue({
+        success: false,
+        error: "Team member limit reached for your plan. Upgrade to add more team members.",
+        code: "TEAM_MEMBER_LIMIT_REACHED",
+      })
+
+      await controller.createInvitation(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockRes.status).toHaveBeenCalledWith(403)
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: "Bad Request",
+        message: "Team member limit reached for your plan. Upgrade to add more team members.",
+        code: "TEAM_MEMBER_LIMIT_REACHED",
+      })
+    })
+
     it("should return 500 if email sending fails", async () => {
       mockService.createInvitation.mockRejectedValue(
         new Error("Failed to send invitation email")

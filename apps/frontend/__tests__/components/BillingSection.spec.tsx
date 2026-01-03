@@ -51,8 +51,8 @@ describe("BillingSection", () => {
       nextBillingDate: null,
     },
     limits: {
-      maxProducts: 50,
       maxCustomers: 50,
+      maxTeamMembers: 0,
       maxChannels: 1,
       messageCost: 0.1,
       orderCost: 1.0,
@@ -61,10 +61,9 @@ describe("BillingSection", () => {
     usage: {
       productsCount: 10,
       customersCount: 25,
-      channelsCount: 1,
-      productsPercentage: 20,
+      channelsCount: 0,
       customersPercentage: 50,
-      channelsPercentage: 100,
+      channelsPercentage: 0,
     },
     planConfig: {
       displayName: "Free Trial",
@@ -238,6 +237,51 @@ describe("BillingSection", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Choose a Plan")).toBeInTheDocument()
+      })
+    })
+  })
+
+  // ===========================================================================
+  // PLAN LIMIT ALERT TESTS
+  // ===========================================================================
+
+  describe("Plan Limits Alert", () => {
+    it("should show limit reached warning when usage hits plan limits", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          ...mockBillingOverview,
+          usage: {
+            ...mockBillingOverview.usage,
+            customersCount: 50,
+            productsCount: 50,
+            channelsCount: 1,
+          },
+        },
+        isLoadingOverview: false,
+        refreshOverview: mockRefreshOverview,
+        updateBalanceLocally: mockUpdateBalanceLocally,
+        creditBalance: 25.0,
+        isLoadingBalance: false,
+      } as any)
+
+      render(<BillingSection />)
+
+      await waitFor(() => {
+        expect(screen.getByText("Plan limits reached")).toBeInTheDocument()
+        expect(screen.getByText("Upgrade Plan")).toBeInTheDocument()
+        expect(
+          screen.getByText(/Customers limit reached \(50\/50\)\./)
+        ).toBeInTheDocument()
+      })
+    })
+
+    it("should not show limit warning when usage is below limits", async () => {
+      render(<BillingSection />)
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Plan limits reached")
+        ).not.toBeInTheDocument()
       })
     })
   })

@@ -122,10 +122,7 @@ export function ProductsPage() {
     } catch (error: any) {
       const errorData = error?.response?.data
       if (errorData?.code === "PLAN_LIMIT_REACHED") {
-        toast.error(
-          errorData.message ||
-            "Product limit reached for your plan. Upgrade to add more products."
-        )
+        toast.error(errorData.message || "Plan limit reached.")
       } else {
         toast.error("Failed to create product")
       }

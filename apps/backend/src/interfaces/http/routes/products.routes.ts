@@ -388,7 +388,6 @@ export default function setupProductRoutes(): Router {
     "/",
     authMiddleware,
     workspaceValidationMiddleware,
-    checkPlanLimits("products"),
     uploadImage.array("images", 10), // Supporto per massimo 10 immagini
     handleUploadError,
     productController.createProduct

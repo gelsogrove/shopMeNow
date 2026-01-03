@@ -214,10 +214,10 @@ describe("Billing Security Tests", () => {
         withinLimits: true,
         current: 10,
         max: 50,
-        limitType: "products",
+        limitType: "customers",
       })
 
-      const middleware = checkPlanLimits("products")
+      const middleware = checkPlanLimits("customers")
       await middleware(req as Request, res as Response, mockNext)
 
       expect(mockNext).toHaveBeenCalled()
@@ -231,10 +231,10 @@ describe("Billing Security Tests", () => {
         withinLimits: false,
         current: 50,
         max: 50,
-        limitType: "products",
+        limitType: "customers",
       })
 
-      const middleware = checkPlanLimits("products")
+      const middleware = checkPlanLimits("customers")
       await middleware(req as Request, res as Response, mockNext)
 
       expect(res.status).toHaveBeenCalledWith(403)

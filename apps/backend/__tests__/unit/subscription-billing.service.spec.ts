@@ -85,8 +85,8 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
 
   const mockPlanLimits = {
     maxChannels: 3,
-    maxProducts: 100,
     maxCustomers: 500,
+    maxTeamMembers: 0,
     messageCost: 0.1,
     orderCost: 1.0,
     pushCost: 1.0,
@@ -188,8 +188,6 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
       expect(result.billing.planType).toBe("BASIC")
       expect(result.billing.creditBalance).toBe(50.0)
       expect(result.usage.productsCount).toBe(25)
-      expect(result.usage.productsPercentage).toBe(25) // 25/100 * 100
-      expect(result.limits.maxProducts).toBe(100)
       expect(result.planConfig.displayName).toBe("Basic Plan")
     })
 
@@ -282,8 +280,8 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
           displayName: "Basic",
           monthlyFee: 19.0,
           maxChannels: 3,
-          maxProducts: 100,
           maxCustomers: 500,
+          maxTeamMembers: 0,
           messageCost: 0.1,
           orderCost: 1.0,
           pushCost: 1.0,
@@ -294,8 +292,8 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
           displayName: "Premium",
           monthlyFee: 49.0,
           maxChannels: 10,
-          maxProducts: 500,
           maxCustomers: 2000,
+          maxTeamMembers: 9999,
           messageCost: 0.08,
           orderCost: 0.8,
           pushCost: 0.8,
@@ -583,7 +581,6 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
         displayName: "Premium",
         monthlyFee: 39.0,
         maxChannels: 10,
-        maxProducts: 500,
         maxCustomers: 2000,
       })
       mockPrisma.billingTransaction.deleteMany.mockResolvedValue({ count: 0 })
@@ -673,7 +670,6 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
         displayName: "Basic",
         monthlyFee: 19.0,
         maxChannels: 3,
-        maxProducts: 100,
         maxCustomers: 500,
       })
       mockPrisma.billingTransaction.deleteMany.mockResolvedValue({ count: 0 })
@@ -684,26 +680,6 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
       expect(result.success).toBe(true)
       expect(result.isDowngrade).toBe(true)
       expect(result.newPlan.displayName).toBe("Basic")
-    })
-
-    it("should reject downgrade when products exceed target plan limit", async () => {
-      mockRepository.getOwnerBilling.mockResolvedValue(mockPremiumBilling)
-      mockRepository.getOwnerUsage.mockResolvedValue({
-        productsCount: 150, // BASIC only allows 100
-        customersCount: 200,
-        channelsCount: 2,
-      })
-      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
-        displayName: "Basic",
-        monthlyFee: 19.0,
-        maxChannels: 3,
-        maxProducts: 100,
-        maxCustomers: 500,
-      })
-
-      await expect(service.changeOwnerPlan(mockUserId, "BASIC")).rejects.toThrow(
-        /Too many products/
-      )
     })
 
     it("should reject downgrade when customers exceed target plan limit", async () => {
@@ -717,7 +693,6 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
         displayName: "Basic",
         monthlyFee: 19.0,
         maxChannels: 3,
-        maxProducts: 100,
         maxCustomers: 500,
       })
 
@@ -737,7 +712,6 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
         displayName: "Basic",
         monthlyFee: 19.0,
         maxChannels: 3,
-        maxProducts: 100,
         maxCustomers: 500,
       })
 

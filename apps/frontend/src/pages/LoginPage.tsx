@@ -1925,7 +1925,7 @@ export function LoginPage() {
                       GDPR Compliant
                     </div>
                     <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
-                      {t("privacy.title")}
+                      {t("privacy.sectionTitle")}
                     </h3>
                     <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("privacy.subtitle")}

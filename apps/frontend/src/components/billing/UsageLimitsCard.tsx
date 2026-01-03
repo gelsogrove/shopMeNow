@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { BillingOverview } from "@/services/subscriptionBillingApi"
-import { Package, Users, Radio, Loader2 } from "lucide-react"
+import { Users, Radio, Loader2 } from "lucide-react"
 
 interface UsageLimitsCardProps {
   workspaceId: string
@@ -45,13 +45,6 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
   }
 
   const usageItems = [
-    {
-      icon: Package,
-      label: "Products",
-      count: usage.productsCount,
-      max: limits.maxProducts,
-      percentage: usage.productsPercentage,
-    },
     {
       icon: Users,
       label: "Customers/Leads",

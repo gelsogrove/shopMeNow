@@ -4,6 +4,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { teamMemberApi, invitationApi } from "@/services/teamApi"
 import { toast } from "@/lib/toast"
+import { useBilling } from "@/contexts/BillingContext"
 
 // Mock services
 vi.mock("@/services/teamApi", () => ({
@@ -23,6 +24,10 @@ vi.mock("@/lib/toast", () => ({
     success: vi.fn(),
     error: vi.fn(),
   },
+}))
+
+vi.mock("@/contexts/BillingContext", () => ({
+  useBilling: vi.fn(),
 }))
 
 // Mock InviteMemberModal to avoid complexity
@@ -84,6 +89,11 @@ describe("TeamMembersTable", () => {
     vi.clearAllMocks()
     vi.mocked(teamMemberApi.getMembers).mockResolvedValue(mockMembers)
     vi.mocked(invitationApi.getPending).mockResolvedValue(mockInvitations)
+    vi.mocked(useBilling).mockReturnValue({
+      billingOverview: {
+        limits: { maxTeamMembers: 10 },
+      },
+    } as any)
   })
 
   afterEach(() => {

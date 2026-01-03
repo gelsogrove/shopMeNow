@@ -66,9 +66,11 @@ export class InvitationController {
       })
 
       if (!result.success) {
-        res.status(400).json({
+        const statusCode = result.code === "TEAM_MEMBER_LIMIT_REACHED" ? 403 : 400
+        res.status(statusCode).json({
           error: "Bad Request",
           message: result.error,
+          code: result.code,
         })
         return
       }

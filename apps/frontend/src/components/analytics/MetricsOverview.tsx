@@ -50,12 +50,12 @@ const MetricCard: React.FC<MetricCardProps> = ({
   }
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {icon}
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         <div className="text-2xl font-bold">{formatter(value)}</div>
         {trend !== undefined && (
           <div
@@ -126,11 +126,33 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
     }).format(value)
   }
 
+  // Calculate conversion rate and revenue per order
+  const conversionRate = analytics.overview.totalCustomers > 0 
+    ? (analytics.overview.totalOrders / analytics.overview.totalCustomers) * 100 
+    : 0
+  
+  const revenuePerOrder = analytics.overview.totalOrders > 0
+    ? analytics.overview.totalRevenue / analytics.overview.totalOrders
+    : 0
+
   const metrics = [
+    {
+      title: t.totalRevenue,
+      value: analytics.overview.totalRevenue,
+      icon: <Euro className="h-4 w-4 text-green-600" />,
+      formatter: formatCurrency,
+      trend: previousPeriodAnalytics
+        ? calculateTrend(
+            analytics.overview.totalRevenue,
+            previousPeriodAnalytics.overview.totalRevenue
+          )
+        : undefined,
+      description: t.totalRevenueDesc || "Total sales revenue",
+    },
     {
       title: t.totalOrders,
       value: analytics.overview.totalOrders,
-      icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />,
+      icon: <ShoppingCart className="h-4 w-4 text-blue-600" />,
       formatter: formatNumber,
       trend: previousPeriodAnalytics
         ? calculateTrend(
@@ -143,7 +165,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
     {
       title: t.clients,
       value: analytics.overview.totalCustomers,
-      icon: <Users className="h-4 w-4 text-muted-foreground" />,
+      icon: <Users className="h-4 w-4 text-purple-600" />,
       formatter: formatNumber,
       trend: previousPeriodAnalytics
         ? calculateTrend(
@@ -152,6 +174,27 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
           )
         : undefined,
       description: t.activeClientsDesc,
+    },
+    {
+      title: "Conversione",
+      value: conversionRate,
+      icon: <TrendingUp className="h-4 w-4 text-emerald-600" />,
+      formatter: formatPercentage,
+      trend: undefined,
+      description: "Ordini per cliente",
+    },
+    {
+      title: "Valore Medio Ordine",
+      value: revenuePerOrder,
+      icon: <Euro className="h-4 w-4 text-amber-600" />,
+      formatter: formatCurrency,
+      trend: previousPeriodAnalytics
+        ? calculateTrend(
+            analytics.overview.averageOrderValue,
+            previousPeriodAnalytics.overview.averageOrderValue
+          )
+        : undefined,
+      description: "Revenue / ordini",
     },
     {
       title: "Costo LLM",
@@ -164,7 +207,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
             previousPeriodAnalytics.overview.usageCost
           )
         : undefined,
-      description: undefined,
+      description: "Costi AI messaggi",
     },
   ]
 
@@ -175,7 +218,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
       {/* Main Metrics */}
       <div>
         <h3 className="text-lg font-semibold mb-4">{t.mainMetrics}</h3>
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {metrics.map((metric) => (
             <MetricCard
               key={metric.title}

@@ -5,7 +5,7 @@
  * Displays in Profile page:
  * - Current plan info
  * - Credit balance with recharge button
- * - Usage stats (products, customers, channels)
+ * - Usage stats (customers, channels)
  * - Transaction history
  * - Upgrade button
  *
@@ -109,15 +109,15 @@ const RECHARGE_OPTIONS: RechargeAmountOption[] = [
 // Plan limits per type (used for downgrade validation)
 interface PlanLimitsConfig {
   maxChannels: number
-  maxProducts: number
   maxCustomers: number
+  maxTeamMembers: number
 }
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimitsConfig> = {
-  FREE_TRIAL: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
-  BASIC: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
-  PREMIUM: { maxChannels: 2, maxProducts: 100, maxCustomers: 100 },
-  ENTERPRISE: { maxChannels: 999, maxProducts: 9999, maxCustomers: 9999 },
+  FREE_TRIAL: { maxChannels: 1, maxCustomers: 50, maxTeamMembers: 0 },
+  BASIC: { maxChannels: 1, maxCustomers: 50, maxTeamMembers: 0 },
+  PREMIUM: { maxChannels: 2, maxCustomers: 100, maxTeamMembers: 9999 },
+  ENTERPRISE: { maxChannels: 999, maxCustomers: 9999, maxTeamMembers: 9999 },
 }
 
 // Plan order for upgrade/downgrade logic
@@ -134,13 +134,10 @@ interface DowngradeCheck {
   reasons: string[]
 }
 
-function checkCanDowngrade(usage: { productsCount: number; customersCount: number; channelsCount: number }, targetPlan: PlanType): DowngradeCheck {
+function checkCanDowngrade(usage: { customersCount: number; channelsCount: number }, targetPlan: PlanType): DowngradeCheck {
   const limits = PLAN_LIMITS[targetPlan]
   const reasons: string[] = []
 
-  if (usage.productsCount > limits.maxProducts) {
-    reasons.push(`Too many products: ${usage.productsCount}/${limits.maxProducts}`)
-  }
   if (usage.customersCount > limits.maxCustomers) {
     reasons.push(`Too many customers: ${usage.customersCount}/${limits.maxCustomers}`)
   }
@@ -475,6 +472,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const isTrialPlan = billing.planType === "FREE_TRIAL"
   const isCreditCritical = billing.creditBalance < -12 // CRITICAL: Below -$12 threshold
   const isCreditLow = billing.creditBalance >= -10 && billing.creditBalance < limits.lowBalanceThreshold
+  const isCustomerLimitReached = usage.customersCount >= limits.maxCustomers
+  const isChannelLimitReached = usage.channelsCount >= limits.maxChannels
 
   const getPlanBadgeVariant = (planType: PlanType) => {
     switch (planType) {
@@ -499,6 +498,11 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   // Calculate estimated messages remaining
   const estimatedMessagesRemaining = Math.floor(billing.creditBalance / limits.messageCost)
+  const limitReached = isCustomerLimitReached || isChannelLimitReached
+  const limitMessages = [
+    isCustomerLimitReached && `Customers limit reached (${usage.customersCount}/${limits.maxCustomers}).`,
+    isChannelLimitReached && `Channels limit reached (${usage.channelsCount}/${limits.maxChannels}).`,
+  ].filter(Boolean) as string[]
 
   return (
     <div className="space-y-6">
@@ -572,6 +576,30 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             >
               <Plus className="h-4 w-4 mr-2" />
               Recharge
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* 🚫 Plan limit reached warning */}
+      {limitReached && (
+        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-400">
+          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              Plan limits reached
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              {limitMessages.join(" ")} Upgrade your plan to unlock more capacity.
+            </p>
+          </div>
+          {isSuperAdmin && billing.planType !== "ENTERPRISE" && (
+            <Button
+              onClick={() => setShowUpgradeDialog(true)}
+              variant="outline"
+              className="flex-shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100"
+            >
+              Upgrade Plan
             </Button>
           )}
         </div>

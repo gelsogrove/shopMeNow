@@ -44,6 +44,7 @@ export interface PlanLimits {
   maxChannels: number
   maxProducts: number
   maxCustomers: number
+  maxTeamMembers: number
   messageCost: number
   orderCost: number
   pushCost: number
@@ -110,6 +111,7 @@ export interface PlanInfo {
   maxChannels: number
   maxProducts: number
   maxCustomers: number
+  maxTeamMembers: number
   messageCost: number
   orderCost: number
   pushCost: number

@@ -837,24 +837,9 @@ export class SubscriptionBillingController {
       })
       const workspaceIds = ownerWorkspaces.map((w) => w.id)
 
-      const productCount = await this.prisma.products.count({
-        where: { workspaceId: { in: workspaceIds }, isActive: true },
-      })
       const customerCount = await this.prisma.customers.count({
         where: { workspaceId: { in: workspaceIds }, deletedAt: null },
       })
-
-      if (productCount > newPlanConfig.maxProducts) {
-        res.status(400).json({
-          error: `Hai ${productCount} prodotti attivi totali, ma il piano ${newPlanConfig.displayName} ne permette solo ${newPlanConfig.maxProducts}. Riduci i prodotti prima di fare il downgrade.`,
-          code: "PRODUCTS_EXCEED_LIMIT",
-          details: {
-            current: productCount,
-            limit: newPlanConfig.maxProducts,
-          },
-        })
-        return
-      }
 
       if (customerCount > newPlanConfig.maxCustomers) {
         res.status(400).json({

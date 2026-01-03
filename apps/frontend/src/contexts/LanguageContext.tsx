@@ -95,7 +95,7 @@ const translations = {
     // Human-in-the-loop Section
     "humanLoop.title": "Supporto human-in-the-loop",
     "humanLoop.subtitle":
-      "Passa a un operatore quando serve mantenendo tutto il contesto. Il team resta in controllo, con l'AI che fa il lavoro pesante.",
+      "Passa a un operatore quando serve mantenendo tutto il contesto. L'agente riceve una notifica WhatsApp per intervenire immediatamente. Il team resta in controllo, con l'AI che fa il lavoro pesante.",
 
     // Pricing
     "pricing.title": "Scegli il Tuo Piano",
@@ -147,16 +147,17 @@ const translations = {
     "integration.crm.button": "Richiedi un preventivo",
     
     // Privacy Section
-    "privacy.title": "Privacy by design",
+    "privacy.sectionTitle": "Privacy by design",
     "privacy.subtitle": "Nessun dato sensibile viene inviato a terze parti o modelli AI. L'accesso è protetto con token con ambito limitato, crittografato in transito e limitato ai dati minimi richiesti per ogni interazione. I dati dei tuoi clienti restano sotto il tuo controllo.",
     "privacy.button": "Vai al GDPR",
     
     "pricing.features.channels": "Canali WhatsApp",
     "pricing.features.channel": "Canale WhatsApp",
     "pricing.features.products": "Prodotti",
-    "pricing.features.clients": "Clienti/Leads",
+    "pricing.features.clients": "Leads",
+    "pricing.features.teamMembers": "Membri del team",
     "pricing.features.support": "Supporto",
-    "pricing.features.analytics": "Analisi e Report Avanzati",
+    "pricing.features.analytics": "Analisi Avanzate",
     "pricing.features.branding": "Modello AI Personalizzato",
     "pricing.features.integration": "Integrazione con proprio CRM (preventivo richiesto)",
     "pricing.features.unlimited": "Illimitati",
@@ -299,25 +300,41 @@ const translations = {
     // Work in Progress
     "wip.banner": "Lavori in Corso",
 
+    // Navigation
+    "nav.demo": "Demo",
+    "nav.pricing": "Prezzi",
+    "nav.contact": "Contatti",
+    "nav.contactUs": "Contattaci",
+    "nav.language": "Seleziona Lingua",
+    "nav.welcome": "Benvenuto",
+    "nav.yourChannels": "I Tuoi Canali",
+    "nav.profile": "Profilo",
+    "nav.billing": "Fatturazione",
+    "nav.logout": "Esci",
+    "nav.logoutSuccess": "Uscita effettuata con successo",
+    "nav.signin": "Accedi",
+    "nav.getStarted": "Inizia Ora",
+
     // Footer
     "footer.tagline": "Trasforma WhatsApp nel tuo negozio online",
     "footer.description": "Professional WhatsApp AI Chatbot Platform for E-commerce Success.",
-    "footer.quickLinks": "Quick Links",
-    "footer.features": "Features",
-    "footer.pricing": "Pricing",
+    "footer.quickLinks": "Link Rapidi",
+    "footer.features": "Funzionalità",
+    "footer.pricing": "Prezzi",
     "footer.demo": "Demo",
-    "footer.contact": "Contact",
+    "footer.contact": "Contatti",
     "footer.company": "Azienda",
     "footer.about": "Chi Siamo",
     "footer.careers": "Carriere",
+    "footer.contactUs": "Contattaci",
     "footer.support": "Supporto",
     "footer.docs": "Documentazione",
     "footer.help": "Centro Assistenza",
-    "footer.legal": "Legal",
+    "footer.legal": "Legale",
     "footer.privacy": "Privacy Policy",
-    "footer.terms": "Terms of Service",
-    "footer.refund": "Refund Policy",
-    "footer.rights": "© 2025 eChatbot. All rights reserved.",
+    "footer.terms": "Termini di Servizio",
+    "footer.refund": "Politica di Rimborso",
+    "footer.rights": "© 2025 eChatbot. Tutti i diritti riservati.",
     "footer.poweredBy": "Powered by",
     "footer.whatsappApi": "WhatsApp Business API",
 
@@ -531,7 +548,7 @@ const translations = {
     // Human-in-the-loop Section
     "humanLoop.title": "Human-in-the-loop support",
     "humanLoop.subtitle":
-      "Escalate to a human when needed while keeping full context. Your team stays in control, with the AI doing the heavy lifting.",
+      "Escalate to a human when needed while keeping full context. The agent receives a WhatsApp notification to intervene immediately. Your team stays in control, with the AI doing the heavy lifting.",
 
     // Pricing
     "pricing.title": "Choose Your Plan",
@@ -609,7 +626,7 @@ const translations = {
     
     // Auth Forms
     "auth.login": "Login",
-    "auth.createAccount": "Create your account",
+    "auth.createAccount": "Create account",
     "auth.error.login": "Login Error",
     "auth.error.registration": "Registration Error",
     "auth.signedIn": "You're signed in",
@@ -638,7 +655,7 @@ const translations = {
     "auth.gdpr.and": "and",
     "auth.gdpr.terms": "Terms of Service",
     "auth.creatingAccount": "Creating account...",
-    "auth.createAccount": "Create account",
+    
     "auth.alreadyAccount": "Already have an account?",
     
     // Demo Section
@@ -652,16 +669,17 @@ const translations = {
     "integration.crm.button": "Request a quote",
     
     // Privacy Section
-    "privacy.title": "Privacy by design",
+    "privacy.sectionTitle": "Privacy by design",
     "privacy.subtitle": "No sensitive data is sent to third parties or AI models. Access is secured with scoped tokens, encrypted in transit, and limited to the minimum data required for each interaction. Your customer data stays under your control.",
     "privacy.button": "Go to GDPR",
     
     "pricing.features.channels": "WhatsApp Channels",
     "pricing.features.channel": "WhatsApp Channel",
     "pricing.features.products": "Products",
-    "pricing.features.clients": "Customers/Leads",
+    "pricing.features.clients": "Leads",
+    "pricing.features.teamMembers": "Team members",
     "pricing.features.support": "Support",
-    "pricing.features.analytics": "Advanced Analytics & Reports",
+    "pricing.features.analytics": "Advanced Analytics",
     "pricing.features.branding": "Custom AI Model",
     "pricing.features.integration": "Integration with own CRM (quote required)",
     "pricing.features.unlimited": "Unlimited",
@@ -789,17 +807,25 @@ const translations = {
 
     // Footer
     "footer.tagline": "Transform WhatsApp into your online store",
+    "footer.description": "Professional WhatsApp AI Chatbot Platform for E-commerce Success.",
+    "footer.quickLinks": "Quick Links",
+    "footer.features": "Features",
+    "footer.pricing": "Pricing",
+    "footer.demo": "Demo",
+    "footer.contact": "Contact",
     "footer.company": "Company",
     "footer.about": "About Us",
     "footer.careers": "Careers",
-    "footer.contact": "Contact Us",
     "footer.support": "Support",
     "footer.docs": "Documentation",
     "footer.help": "Help Center",
     "footer.legal": "Legal",
     "footer.privacy": "Privacy Policy",
     "footer.terms": "Terms of Service",
-    "footer.rights": "All rights reserved",
+    "footer.refund": "Refund Policy",
+    "footer.rights": "© 2025 eChatbot. All rights reserved.",
+    "footer.poweredBy": "Powered by",
+    "footer.whatsappApi": "WhatsApp Business API",
 
     // CTA Section
     "cta.title": "Ready to Transform Your Customer Experience?",
@@ -1021,7 +1047,7 @@ const translations = {
     // Human-in-the-loop Section
     "humanLoop.title": "Soporte human-in-the-loop",
     "humanLoop.subtitle":
-      "Escala a un humano cuando sea necesario manteniendo todo el contexto. Tu equipo mantiene el control y la IA hace el trabajo pesado.",
+      "Escala a un humano cuando sea necesario manteniendo todo el contexto. El agente recibe una notificación de WhatsApp para intervenir de inmediato. Tu equipo mantiene el control y la IA hace el trabajo pesado.",
 
     // Pricing
     "pricing.title": "Elige Tu Plan",
@@ -1062,16 +1088,17 @@ const translations = {
     "integration.crm.button": "Solicita un presupuesto",
     
     // Privacy Section
-    "privacy.title": "Privacidad por diseño",
+    "privacy.sectionTitle": "Privacidad por diseño",
     "privacy.subtitle": "Ningún dato sensible se envía a terceros o modelos de IA. El acceso está protegido con tokens de alcance limitado, cifrado en tránsito y limitado a los datos mínimos requeridos para cada interacción. Los datos de tus clientes permanecen bajo tu control.",
     "privacy.button": "Ir al GDPR",
     
     "pricing.features.channels": "Canales WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
     "pricing.features.products": "Productos",
-    "pricing.features.clients": "Clientes/Leads",
+    "pricing.features.clients": "Leads",
+    "pricing.features.teamMembers": "Miembros del equipo",
     "pricing.features.support": "Soporte",
-    "pricing.features.analytics": "Análisis y Reportes Avanzados",
+    "pricing.features.analytics": "Análisis Avanzado",
     "pricing.features.branding": "Modelo IA Personalizado",
     "pricing.features.integration": "Integración con CRM propio (cotización requerida)",
     "pricing.features.unlimited": "Ilimitados",
@@ -1141,20 +1168,6 @@ const translations = {
     "contact.form.sending": "Enviando...",
     "contact.form.send": "Enviar Mensaje",
 
-    // Footer
-    "footer.tagline": "Transforma WhatsApp en tu tienda online",
-    "footer.company": "Empresa",
-    "footer.about": "Sobre Nosotros",
-    "footer.careers": "Carreras",
-    "footer.contact": "Contáctanos",
-    "footer.support": "Soporte",
-    "footer.docs": "Documentación",
-    "footer.help": "Centro de Ayuda",
-    "footer.legal": "Legal",
-    "footer.privacy": "Política de Privacidad",
-    "footer.terms": "Términos de Servicio",
-    "footer.rights": "Todos los derechos reservados",
-
     // CTA Section
     "cta.title": "¿Listo para transformar la experiencia de tus clientes?",
     "cta.subtitle": "Únete a cientos de empresas que usan eChatbot para automatizar ventas, aumentar conversiones y deleitar a los clientes 24/7.",
@@ -1173,6 +1186,44 @@ const translations = {
     
     // Work in Progress
     "wip.banner": "Trabajo en Progreso",
+
+    // Navigation
+    "nav.demo": "Demo",
+    "nav.pricing": "Precios",
+    "nav.contact": "Contacto",
+    "nav.contactUs": "Contáctanos",
+    "nav.language": "Seleccionar Idioma",
+    "nav.welcome": "Bienvenido",
+    "nav.yourChannels": "Tus Canales",
+    "nav.profile": "Perfil",
+    "nav.billing": "Facturación",
+    "nav.logout": "Cerrar sesión",
+    "nav.logoutSuccess": "Sesión cerrada correctamente",
+    "nav.signin": "Iniciar sesión",
+    "nav.getStarted": "Comenzar Ahora",
+
+    // Footer
+    "footer.tagline": "Transforma WhatsApp en tu tienda en línea",
+    "footer.description": "Plataforma profesional de chatbot AI de WhatsApp para el éxito del comercio electrónico.",
+    "footer.quickLinks": "Enlaces Rápidos",
+    "footer.features": "Características",
+    "footer.pricing": "Precios",
+    "footer.demo": "Demo",
+    "footer.contact": "Contacto",
+    "footer.company": "Empresa",
+    "footer.about": "Sobre Nosotros",
+    "footer.careers": "Carreras",
+    "footer.contactUs": "Contáctanos",
+    "footer.support": "Soporte",
+    "footer.docs": "Documentación",
+    "footer.help": "Centro de Ayuda",
+    "footer.legal": "Legal",
+    "footer.privacy": "Política de Privacidad",
+    "footer.terms": "Términos de Servicio",
+    "footer.refund": "Política de Reembolso",
+    "footer.rights": "© 2025 eChatbot. Todos los derechos reservados.",
+    "footer.poweredBy": "Desarrollado por",
+    "footer.whatsappApi": "WhatsApp Business API",
 
     // Login
     "login.title": "Inicia sesión en tu cuenta",
@@ -1388,7 +1439,7 @@ const translations = {
     // Human-in-the-loop Section
     "humanLoop.title": "Suporte human-in-the-loop",
     "humanLoop.subtitle":
-      "Escale para um humano quando necessario mantendo todo o contexto. Sua equipe fica no controle e a IA faz o trabalho pesado.",
+      "Escale para um humano quando necessário mantendo todo o contexto. O agente recebe uma notificação do WhatsApp para intervir imediatamente. Sua equipe fica no controle e a IA faz o trabalho pesado.",
 
     // Pricing
     "pricing.title": "Escolha Seu Plano",
@@ -1442,16 +1493,17 @@ const translations = {
     "integration.crm.button": "Solicite um orçamento",
     
     // Privacy Section
-    "privacy.title": "Privacidade por design",
+    "privacy.sectionTitle": "Privacidade por design",
     "privacy.subtitle": "Nenhum dado sensível é enviado para terceiros ou modelos de IA. O acesso é protegido com tokens de escopo limitado, criptografado em trânsito e limitado aos dados mínimos necessários para cada interação. Os dados dos seus clientes permanecem sob seu controle.",
     "privacy.button": "Ir para GDPR",
     
     "pricing.features.channels": "Canais WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
     "pricing.features.products": "Produtos",
-    "pricing.features.clients": "Clientes/Leads",
+    "pricing.features.clients": "Leads",
+    "pricing.features.teamMembers": "Membros da equipe",
     "pricing.features.support": "Suporte",
-    "pricing.features.analytics": "Análises e Relatórios Avançados",
+    "pricing.features.analytics": "Análises Avançadas",
     "pricing.features.branding": "Modelo IA Personalizado",
     "pricing.features.integration": "Integração com CRM próprio (orçamento necessário)",
     "pricing.features.unlimited": "Ilimitados",
@@ -1523,20 +1575,6 @@ const translations = {
     "contact.form.sending": "Enviando...",
     "contact.form.send": "Enviar Mensagem",
 
-    // Footer
-    "footer.tagline": "Transforme o WhatsApp em sua loja online",
-    "footer.company": "Empresa",
-    "footer.about": "Sobre Nós",
-    "footer.careers": "Carreiras",
-    "footer.contact": "Fale Conosco",
-    "footer.support": "Suporte",
-    "footer.docs": "Documentação",
-    "footer.help": "Centro de Ajuda",
-    "footer.legal": "Legal",
-    "footer.privacy": "Política de Privacidade",
-    "footer.terms": "Termos de Serviço",
-    "footer.rights": "Todos os direitos reservados",
-
     // CTA Section
     "cta.title": "Pronto para transformar a experiência dos seus clientes?",
     "cta.subtitle": "Junte-se a centenas de empresas que usam o eChatbot para automatizar vendas, aumentar conversões e encantar clientes 24/7.",
@@ -1555,6 +1593,44 @@ const translations = {
     
     // Work in Progress
     "wip.banner": "Trabalho em Andamento",
+
+    // Navigation
+    "nav.demo": "Demo",
+    "nav.pricing": "Preços",
+    "nav.contact": "Contato",
+    "nav.contactUs": "Fale Conosco",
+    "nav.language": "Selecionar Idioma",
+    "nav.welcome": "Bem-vindo",
+    "nav.yourChannels": "Seus Canais",
+    "nav.profile": "Perfil",
+    "nav.billing": "Faturamento",
+    "nav.logout": "Sair",
+    "nav.logoutSuccess": "Logout realizado com sucesso",
+    "nav.signin": "Entrar",
+    "nav.getStarted": "Começar Agora",
+
+    // Footer
+    "footer.tagline": "Transforme o WhatsApp em sua loja online",
+    "footer.description": "Plataforma profissional de chatbot AI do WhatsApp para o sucesso do comércio eletrônico.",
+    "footer.quickLinks": "Links Rápidos",
+    "footer.features": "Recursos",
+    "footer.pricing": "Preços",
+    "footer.demo": "Demo",
+    "footer.contact": "Contato",
+    "footer.company": "Empresa",
+    "footer.about": "Sobre Nós",
+    "footer.careers": "Carreiras",
+    "footer.contactUs": "Fale Conosco",
+    "footer.support": "Suporte",
+    "footer.docs": "Documentação",
+    "footer.help": "Centro de Ajuda",
+    "footer.legal": "Legal",
+    "footer.privacy": "Política de Privacidade",
+    "footer.terms": "Termos de Serviço",
+    "footer.refund": "Política de Reembolso",
+    "footer.rights": "© 2025 eChatbot. Todos os direitos reservados.",
+    "footer.poweredBy": "Desenvolvido por",
+    "footer.whatsappApi": "WhatsApp Business API",
 
     // Login
     "login.title": "Entre na sua conta",

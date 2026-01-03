@@ -1530,14 +1530,13 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 0.1: Check if first message → Return Welcome Message
       // ========================================================================
-      // Count previous messages from this customer in this workspace
-      const previousMessageCount = await this.prisma.message.count({
+      // Count previous USER messages from this customer in this workspace
+      // 🐛 FIX: Use conversationMessage table (where messages are actually saved)
+      const previousMessageCount = await this.prisma.conversationMessage.count({
         where: {
-          chatSession: {
-            customerId: input.customerId,
-            workspaceId: input.workspaceId,
-          },
-          deletedAt: null,
+          customerId: input.customerId,
+          workspaceId: input.workspaceId,
+          role: "user", // Only count user messages
         },
       })
 
@@ -1551,11 +1550,21 @@ export class ChatEngineService {
 
       // If first message and welcomeMessage is configured, return it directly
       if (isFirstMessage && workspaceConfig.welcomeMessage) {
-        const welcomeText = typeof workspaceConfig.welcomeMessage === "string"
-          ? workspaceConfig.welcomeMessage
-          : typeof workspaceConfig.welcomeMessage === "object" && workspaceConfig.welcomeMessage?.text
-            ? workspaceConfig.welcomeMessage.text
-            : JSON.stringify(workspaceConfig.welcomeMessage)
+        // 🌍 Extract welcome message in customer's language
+        let welcomeText: string
+        
+        if (typeof workspaceConfig.welcomeMessage === "string") {
+          welcomeText = workspaceConfig.welcomeMessage
+        } else if (typeof workspaceConfig.welcomeMessage === "object") {
+          // JSON format: { "it": "...", "en": "...", "es": "...", "pt": "..." }
+          const customerLang = this.normalizeLanguageCode(input.customerLanguage || "it")
+          welcomeText = workspaceConfig.welcomeMessage[customerLang] 
+            || workspaceConfig.welcomeMessage["it"] 
+            || workspaceConfig.welcomeMessage["en"]
+            || JSON.stringify(workspaceConfig.welcomeMessage) // Last resort fallback
+        } else {
+          welcomeText = "Welcome!" // Ultimate fallback
+        }
 
         logger.info("👋 [ChatEngine] Returning welcome message for first-time customer", {
           customerId: input.customerId,

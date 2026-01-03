@@ -23,7 +23,7 @@
  * }
  *
  * // Check limits
- * const maxProducts = limits.BASIC_PRODUCTS // 50
+ * const maxProducts = limits.BASIC_PRODUCTS
  * ```
  *
  * @author Andrea Gelso - eChatbot Platform

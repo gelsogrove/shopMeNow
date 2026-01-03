@@ -1292,6 +1292,7 @@ model PlanConfiguration {
   maxChannels          Int
   maxProducts          Int
   maxCustomers         Int
+  maxTeamMembers       Int
   messageCost          Decimal   @db.Decimal(10, 2) // €0.10
   orderCost            Decimal   @db.Decimal(10, 2) // €1.00
   pushCost             Decimal   @db.Decimal(10, 2) // €1.00

@@ -37,7 +37,7 @@ export interface PlanLimitCheckResult {
   withinLimits: boolean
   current: number
   max: number
-  limitType: "products" | "customers" | "channels"
+  limitType: "customers" | "channels"
 }
 
 export interface BillingOverview {
@@ -47,7 +47,6 @@ export interface BillingOverview {
     productsCount: number
     customersCount: number
     channelsCount: number
-    productsPercentage: number
     customersPercentage: number
     channelsPercentage: number
   }
@@ -99,15 +98,15 @@ export class SubscriptionBillingService {
       limits,
       usage: {
         ...usage,
-        productsPercentage: Math.round(
-          (usage.productsCount / limits.maxProducts) * 100
-        ),
-        customersPercentage: Math.round(
-          (usage.customersCount / limits.maxCustomers) * 100
-        ),
-        channelsPercentage: Math.round(
-          (usage.channelsCount / limits.maxChannels) * 100
-        ),
+        productsPercentage: 0,
+        customersPercentage:
+          limits.maxCustomers > 0
+            ? Math.round((usage.customersCount / limits.maxCustomers) * 100)
+            : 0,
+        channelsPercentage:
+          limits.maxChannels > 0
+            ? Math.round((usage.channelsCount / limits.maxChannels) * 100)
+            : 0,
       },
       planConfig: {
         displayName: planConfig?.displayName || billing.planType,
@@ -165,6 +164,7 @@ export class SubscriptionBillingService {
       maxChannels: plan.maxChannels,
       maxProducts: plan.maxProducts,
       maxCustomers: plan.maxCustomers,
+      maxTeamMembers: plan.maxTeamMembers,
       messageCost: Number(plan.messageCost),
       orderCost: Number(plan.orderCost),
       pushCost: Number(plan.pushCost),
@@ -306,7 +306,7 @@ export class SubscriptionBillingService {
    */
   async checkOwnerPlanLimits(
     userId: string,
-    limitType: "products" | "customers" | "channels"
+    limitType: "customers" | "channels"
   ): Promise<PlanLimitCheckResult> {
     const billing = await this.repository.getOwnerBilling(userId)
     if (!billing) {
@@ -324,10 +324,6 @@ export class SubscriptionBillingService {
     let max: number
 
     switch (limitType) {
-      case "products":
-        current = usage.productsCount
-        max = limits.maxProducts
-        break
       case "customers":
         current = usage.customersCount
         max = limits.maxCustomers
@@ -352,7 +348,7 @@ export class SubscriptionBillingService {
    */
   async checkPlanLimits(
     workspaceId: string,
-    limitType: "products" | "customers" | "channels"
+    limitType: "customers" | "channels"
   ): Promise<PlanLimitCheckResult> {
     const billing = await this.repository.getWorkspaceBilling(workspaceId)
     if (!billing) {
@@ -370,10 +366,6 @@ export class SubscriptionBillingService {
     let max: number
 
     switch (limitType) {
-      case "products":
-        current = usage.productsCount
-        max = limits.maxProducts
-        break
       case "customers":
         current = usage.customersCount
         max = limits.maxCustomers
@@ -735,7 +727,7 @@ export class SubscriptionBillingService {
       const usage = await this.repository.getOwnerUsage(userId)
       const targetPlanConfig = await this.prisma.planConfiguration.findUnique({
         where: { planType: newPlanType },
-        select: { maxChannels: true, maxProducts: true, maxCustomers: true },
+        select: { maxChannels: true, maxProducts: true, maxCustomers: true, maxTeamMembers: true },
       })
 
       if (!targetPlanConfig) {
@@ -744,12 +736,9 @@ export class SubscriptionBillingService {
 
       const violations: string[] = []
 
-      if (usage.productsCount > targetPlanConfig.maxProducts) {
-        violations.push(`Too many products: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
-      }
-      if (usage.customersCount > targetPlanConfig.maxCustomers) {
-        violations.push(`Too many customers: ${usage.customersCount}/${targetPlanConfig.maxCustomers}`)
-      }
+    if (usage.customersCount > targetPlanConfig.maxCustomers) {
+      violations.push(`Too many customers: ${usage.customersCount}/${targetPlanConfig.maxCustomers}`)
+    }
       if (usage.channelsCount > targetPlanConfig.maxChannels) {
         violations.push(`Too many channels: ${usage.channelsCount}/${targetPlanConfig.maxChannels}`)
       }
@@ -842,7 +831,7 @@ export class SubscriptionBillingService {
     const usage = await this.repository.getOwnerUsage(userId)
     const targetPlanConfig = await this.prisma.planConfiguration.findUnique({
       where: { planType: newPlanType },
-      select: { maxChannels: true, maxProducts: true, maxCustomers: true },
+      select: { maxChannels: true, maxProducts: true, maxCustomers: true, maxTeamMembers: true },
     })
 
     if (!targetPlanConfig) {
@@ -851,9 +840,6 @@ export class SubscriptionBillingService {
 
     const violations: string[] = []
 
-    if (usage.productsCount > targetPlanConfig.maxProducts) {
-      violations.push(`Prodotti: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
-    }
     if (usage.customersCount > targetPlanConfig.maxCustomers) {
       violations.push(`Clienti: ${usage.customersCount}/${targetPlanConfig.maxCustomers}`)
     }

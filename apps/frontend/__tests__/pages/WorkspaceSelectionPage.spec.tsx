@@ -49,10 +49,10 @@ vi.mock("@/components/workspace/TeamMembersTable", () => ({
 vi.mock("@/components/billing/BillingSection", () => ({
   BillingSection: () => <div data-testid="billing-section">Billing</div>,
   PLAN_LIMITS: {
-    FREE_TRIAL: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
-    BASIC: { maxChannels: 1, maxProducts: 50, maxCustomers: 50 },
-    PREMIUM: { maxChannels: 2, maxProducts: 100, maxCustomers: 100 },
-    ENTERPRISE: { maxChannels: 999, maxProducts: 9999, maxCustomers: 9999 },
+    FREE_TRIAL: { maxChannels: 1, maxCustomers: 50, maxTeamMembers: 0 },
+    BASIC: { maxChannels: 1, maxCustomers: 50, maxTeamMembers: 0 },
+    PREMIUM: { maxChannels: 2, maxCustomers: 100, maxTeamMembers: 9999 },
+    ENTERPRISE: { maxChannels: 999, maxCustomers: 9999, maxTeamMembers: 9999 },
   },
 }))
 

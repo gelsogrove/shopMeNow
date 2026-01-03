@@ -32,7 +32,7 @@ eChatbot implements multiple blocking mechanisms to ensure:
 | `PLAN_LIMIT_REACHED` | 403 | Products/Channels >= max | Creation blocked |
 | `CHANNEL_LIMIT_EXCEEDED` | 403 | Channels >= plan max | New channel blocked |
 | `OWNER_REQUIRED` | 403 | Non-owner billing action | Action blocked |
-| `BLACKLISTED` | 200* | Too many reg attempts | Silent block |
+| `BLACKLISTED` | 200* | Admin manually blocks customer | Silent block |
 | `WORKSPACE_REQUIRED` | 400 | Missing workspaceId | Request rejected |
 
 *Returns 200 to prevent information leak to attackers
@@ -417,28 +417,31 @@ if (userWorkspace.role !== "SUPER_ADMIN") {
 
 ---
 
-### 7. BLACKLISTED (Registration Attempts)
+### 7. BLACKLISTED (Manual Admin Block Only)
 
 **When it triggers:**
-- Same phone number fails registration 3+ times
-- Protection against spam/abuse
+- Admin manually blocks customer via Admin Panel
+- Protection against spam/abuse/problematic customers
 
 **Where it's checked:**
-- `whatsapp-webhook.controller.ts` → `RegistrationAttemptsService`
-- `whatsapp.routes.ts` → same service
+- `routes/index.ts` → `checkCustomerBlacklist()` helper function
 
 **Code location:**
 ```typescript
-// backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts
-const isBlocked = await registrationAttemptsService.isBlocked(phoneNumber, workspaceId)
+// backend/src/routes/index.ts
+const customer = await prisma.customers.findFirst({
+  where: {
+    phone: phoneNumber.replace(/\s+/g, ""),
+    isActive: true,
+  },
+  select: { isBlacklisted: true }
+})
 
-if (isBlocked) {
-  logger.info(`🚫 User ${phoneNumber} is blocked due to too many registration attempts`)
+if (customer?.isBlacklisted) {
+  logger.info(`🚫 Customer ${phoneNumber} is blacklisted - IGNORING MESSAGE`)
   res.status(200).json({
     success: true,
-    data: {
-      message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED"
-    }
+    data: { message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED" }
   })
   return
 }
@@ -451,25 +454,127 @@ if (isBlocked) {
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  Blocked phone number sends message:                             │
-│  ┌────────────────────────────────┐                             │
+│  ┌────────────────────────────────────┐                             │
 │  │ "Ciao?"                        │ → NO RESPONSE               │
-│  └────────────────────────────────┘   (Permanent silent block)  │
+│  └────────────────────────────────┘   (Silent block)            │
 │                                                                  │
 │  Admin Panel - Customer List:                                    │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │  🚫 +39 333 1234567                                        │ │
 │  │  Status: BLACKLISTED                                       │ │
-│  │  Reason: Too many registration attempts (3+)               │ │
+│  │  Reason: Manually blocked by admin                         │ │
 │  │                                                             │ │
-│  │  [Remove from Blacklist]                                    │ │
+│  │  [Unblock Customer]                                         │ │
 │  └────────────────────────────────────────────────────────────┘ │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 **Recovery:**
-- Admin can manually remove from blacklist
-- Contact support
+- Admin clicks "Unblock Customer" in Admin Panel
+- `isBlacklisted` flag is set to `false`
+
+**Note:** ❌ Automatic blocking after registration attempts has been removed. Users can now send unlimited messages and registration is required only for specific functions (cart, orders, profile).
+
+---
+
+### 8. Function-Level Registration Guard
+
+**Philosophy:**
+- ✅ Users can chat **freely without registration**
+- ✅ Registration required **only for personalized functions** (cart, orders, profile)
+- ❌ No preventive blocking or message limits
+
+**When it triggers:**
+- User (non-registered: `customer.isActive=false`) attempts protected function
+- Protected functions: cart operations, order management, profile access
+
+**Where it's checked:**
+- `FunctionExecutorService.execute()` → before function execution
+
+**Protected Functions (10 total):**
+
+| Category | Functions |
+|----------|-----------|
+| **Cart Management** | `addToCart`, `viewCart`, `clearCart` |
+| **Order Tracking** | `getLinkOrderByCode`, `repeatOrder`, `getOrderDetails`, `confirmOrder`, `showCheckout` |
+| **Profile Management** | `handlePushNotifications`, `getProfileLink` |
+
+**Public Functions (always work):**
+- `getProductDetails`, `getServiceDetails`, `searchProductForStatistic`, `contactOperator`
+
+**Code location:**
+```typescript
+// backend/src/services/function-executor.service.ts
+const FUNCTIONS_REQUIRING_REGISTRATION = [
+  'addToCart', 'viewCart', 'clearCart',
+  'getLinkOrderByCode', 'repeatOrder', 'getOrderDetails', 'confirmOrder', 'showCheckout',
+  'handlePushNotifications', 'getProfileLink'
+]
+
+async execute(context: ExecutionContext): Promise<ExecutionResult> {
+  // GUARD: Check registration requirement
+  if (FUNCTIONS_REQUIRING_REGISTRATION.includes(context.functionName)) {
+    if (!context.customerIsActive) {
+      return {
+        success: false,
+        error: 'REGISTRATION_REQUIRED',
+        message: `Per utilizzare "${context.functionName}" devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]`
+      }
+    }
+  }
+
+  // Execute function normally
+  switch (context.functionName) {
+    case 'addToCart': return await this.addToCart(context)
+    // ... other cases
+  }
+}
+```
+
+**User experience:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│            FUNCTION-LEVEL REGISTRATION GUARD                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Non-registered user can ask questions:                          │
+│  ┌────────────────────────────────────┐                         │
+│  │ "Quanto costa questo prodotto?"   │ → ✅ LLM RESPONSE       │
+│  └────────────────────────────────────┘                         │
+│                                                                  │
+│  Non-registered user tries to order:                             │
+│  ┌────────────────────────────────────┐                         │
+│  │ "Aggiungi al carrello"            │ → LLM: "Per usare il    │
+│  └────────────────────────────────────┘    carrello registrati: │
+│                                            https://..."          │
+│                                                                  │
+│  After registration (isActive=true):                             │
+│  ┌────────────────────────────────────┐                         │
+│  │ "Aggiungi al carrello"            │ → ✅ CART UPDATED       │
+│  └────────────────────────────────────┘                         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Token Replacement:**
+```typescript
+// backend/src/services/llm.service.ts
+case '[LINK_REGISTRATION_WITH_TOKEN]':
+  const registrationLink = await this.generateRegistrationLink(
+    customer.phone,
+    workspace.id
+  )
+  finalMessage = finalMessage.replace(token, registrationLink)
+  break
+```
+
+**Post-Registration Behavior:**
+- New customers: `isActive=true`, `isBlacklisted=false`, `activeChatbot=true`
+- **Immediate activation** - no admin approval needed
+- Can use all protected functions instantly
+
+
 
 ---
 
@@ -478,7 +583,7 @@ if (isBlocked) {
 When processing a WhatsApp message, blocks are checked in this order:
 
 ```
-1. BLACKLISTED           → Check first (security)
+1. BLACKLISTED           → Check first (manual admin block only)
          ↓
 2. TRIAL_EXPIRED         → Check trial validity
          ↓
@@ -487,7 +592,11 @@ When processing a WhatsApp message, blocks are checked in this order:
 4. CUSTOMER_LIMIT_REACHED → Check customer count (new users only)
          ↓
 5. ✅ Process message
+         ↓
+6. Function Execution → Check registration guard (if function requires it)
 ```
+
+**Note:** Registration guard is checked **during function execution**, not at message level. Users can freely chat; registration is required only when calling protected functions.
 
 ---
 
@@ -539,7 +648,7 @@ cd backend && npm run test:security
 | PLAN_LIMIT_REACHED | `billing.middleware.ts:checkPlanLimits` |
 | CHANNEL_LIMIT_EXCEEDED | `workspace.controller.ts:187` |
 | OWNER_REQUIRED | `billing.middleware.ts:requireOwnerForBilling` |
-| BLACKLISTED | `whatsapp-webhook.controller.ts:316` |
+| BLACKLISTED | `routes/index.ts:checkCustomerBlacklist` |
 
 ---
 

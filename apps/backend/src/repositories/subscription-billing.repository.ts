@@ -32,6 +32,7 @@ export interface PlanLimits {
   maxChannels: number
   maxProducts: number
   maxCustomers: number
+  maxTeamMembers: number
   messageCost: number
   orderCost: number
   pushCost: number
@@ -162,6 +163,7 @@ export class SubscriptionBillingRepository {
       maxChannels: config.maxChannels,
       maxProducts: config.maxProducts,
       maxCustomers: config.maxCustomers,
+      maxTeamMembers: config.maxTeamMembers,
       messageCost: Number(config.messageCost),
       orderCost: Number(config.orderCost),
       pushCost: Number(config.pushCost),

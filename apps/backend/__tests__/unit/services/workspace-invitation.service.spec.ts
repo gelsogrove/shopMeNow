@@ -20,10 +20,14 @@ const mockPrisma = {
   user: {
     findUnique: jest.fn(),
   },
+  planConfiguration: {
+    findUnique: jest.fn(),
+  },
   userWorkspace: {
     findFirst: jest.fn(),
     findUnique: jest.fn(),
     create: jest.fn(),
+    count: jest.fn(),
   },
 }
 
@@ -67,6 +71,7 @@ describe("WorkspaceInvitationService", () => {
           workspaceInvitation: {
             findFirst: jest.fn().mockResolvedValue(null),
             create: jest.fn().mockResolvedValue(mockInvitation),
+            count: jest.fn().mockResolvedValue(0),
           },
           workspace: {
             findUnique: jest.fn().mockResolvedValue({
@@ -77,6 +82,7 @@ describe("WorkspaceInvitationService", () => {
           user: {
             findUnique: jest
               .fn()
+              .mockResolvedValueOnce({ planType: "PREMIUM" }) // owner
               .mockResolvedValueOnce(null) // invitee not found
               .mockResolvedValueOnce({
                 firstName: "John",
@@ -84,8 +90,12 @@ describe("WorkspaceInvitationService", () => {
                 email: "inviter@test.com",
               }),
           },
+          planConfiguration: {
+            findUnique: jest.fn().mockResolvedValue({ maxTeamMembers: 9999 }),
+          },
           userWorkspace: {
             findFirst: jest.fn().mockResolvedValue(null),
+            count: jest.fn().mockResolvedValue(0),
           },
         }
         return callback(tx)
@@ -122,6 +132,7 @@ describe("WorkspaceInvitationService", () => {
         const tx = {
           workspaceInvitation: {
             findFirst: jest.fn().mockResolvedValue(null),
+            count: jest.fn().mockResolvedValue(0),
           },
           workspace: {
             findUnique: jest.fn().mockResolvedValue({
@@ -130,10 +141,17 @@ describe("WorkspaceInvitationService", () => {
             }),
           },
           user: {
-            findUnique: jest.fn().mockResolvedValue({ id: "existing-user" }),
+            findUnique: jest
+              .fn()
+              .mockResolvedValueOnce({ planType: "PREMIUM" }) // owner
+              .mockResolvedValueOnce({ id: "existing-user" }), // invitee
+          },
+          planConfiguration: {
+            findUnique: jest.fn().mockResolvedValue({ maxTeamMembers: 9999 }),
           },
           userWorkspace: {
             findFirst: jest.fn().mockResolvedValue({ userId: "existing-user" }),
+            count: jest.fn().mockResolvedValue(1),
           },
         }
         return callback(tx)
@@ -179,6 +197,7 @@ describe("WorkspaceInvitationService", () => {
               email: data.data.email,
               expiresAt: data.data.expiresAt,
             })),
+            count: jest.fn().mockResolvedValue(0),
           },
           workspace: {
             findUnique: jest.fn().mockResolvedValue({
@@ -189,6 +208,7 @@ describe("WorkspaceInvitationService", () => {
           user: {
             findUnique: jest
               .fn()
+              .mockResolvedValueOnce({ planType: "PREMIUM" }) // owner
               .mockResolvedValueOnce(null)
               .mockResolvedValueOnce({
                 firstName: "John",
@@ -196,8 +216,12 @@ describe("WorkspaceInvitationService", () => {
                 email: "inviter@test.com",
               }),
           },
+          planConfiguration: {
+            findUnique: jest.fn().mockResolvedValue({ maxTeamMembers: 9999 }),
+          },
           userWorkspace: {
             findFirst: jest.fn().mockResolvedValue(null),
+            count: jest.fn().mockResolvedValue(0),
           },
         }
         return callback(tx)

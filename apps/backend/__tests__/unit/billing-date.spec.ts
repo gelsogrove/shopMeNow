@@ -134,8 +134,8 @@ describe("Billing Date Logic - 1st of Next Month (Feature 198)", () => {
         displayName: "Premium",
         monthlyFee: 49,
         maxChannels: 10,
-        maxProducts: 500,
         maxCustomers: 2000,
+        maxTeamMembers: 9999,
       })
       mockPrisma.user.update.mockResolvedValue({
         id: mockUserId,
