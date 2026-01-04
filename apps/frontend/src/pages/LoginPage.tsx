@@ -279,6 +279,7 @@ export function LoginPage() {
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+    mode: "onChange",
     defaultValues: {
       email: isDev ? "admin@echatbot.ai" : "",
       password: isDev ? "Venezia44" : "",
@@ -1275,7 +1276,6 @@ export function LoginPage() {
                               type="email"
                               placeholder="your@email.com"
                               {...register("email")}
-                              ref={loginEmailInputRef}
                               disabled={isLoading || isLoginDisabled}
                               autoComplete="username"
                               className="h-11"
