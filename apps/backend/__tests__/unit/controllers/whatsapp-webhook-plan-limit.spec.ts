@@ -10,13 +10,9 @@ const mockGetOperationCost = jest.fn()
 const mockCheckCredit = jest.fn()
 const mockCheckPlanLimits = jest.fn()
 
-const mockTx = {
-  registrationAttempts: {
-    findUnique: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-  },
-}
+// 🆕 Feature 174: Removed registrationAttempts mock - table no longer used
+
+const mockTx = {}
 
 const mockPrisma = {
   $queryRaw: jest.fn(),
@@ -55,11 +51,7 @@ describe("WhatsAppWebhookController - Plan limit", () => {
     mockPrisma.$queryRaw.mockResolvedValue([])
     mockPrisma.customers.findUnique.mockResolvedValue(null)
     mockPrisma.customers.findFirst.mockResolvedValue(null)
-    mockTx.registrationAttempts.findUnique.mockResolvedValue(null)
-    mockTx.registrationAttempts.create.mockResolvedValue({
-      attemptCount: 1,
-      isBlocked: false,
-    })
+    // 🆕 Feature 174: Removed registrationAttempts mocks
     mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockTx))
 
     mockIsTrialValid.mockResolvedValue({ isTrialPlan: false, isValid: true })

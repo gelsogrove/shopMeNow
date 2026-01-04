@@ -327,13 +327,31 @@ export class LLMRouterService {
     const startTime = Date.now()
     let totalTokens = 0
     let customerDiscount = 0
+    let customerIsActive = false // 🔒 Registration status for function-level guard
     let explicitOptionMapping: AgentOptionMapping | null = null
+    let workspace: any = null // 🛍️ Workspace config for sellsProductsAndServices check
 
     try {
+      // 🛍️ Load workspace config (for sellsProductsAndServices check)
+      workspace = await this.prisma.workspace.findUnique({
+        where: { id: params.workspaceId },
+      })
+
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${params.workspaceId}`)
+      }
+
       customerDiscount = await this.getCustomerDiscountPercent(
         params.workspaceId,
         params.customerId
       )
+
+      // 🔒 Feature 174: Get customer registration status for function-level guard
+      const customerForGuard = await this.prisma.customers.findFirst({
+        where: { id: params.customerId, workspaceId: params.workspaceId },
+        select: { isActive: true },
+      })
+      customerIsActive = customerForGuard?.isActive ?? false
 
       logger.info("🎯 Routing message", {
         workspaceId: params.workspaceId,
@@ -341,6 +359,8 @@ export class LLMRouterService {
         conversationId: params.conversationId,
         isSystemMessage: params.isSystemMessage || false,
         customerDiscount,
+        customerIsActive, // 🔒 Feature 174
+        sellsProductsAndServices: workspace.sellsProductsAndServices, // 🛍️ Feature 174
       })
 
       // 🆕 Feature 127: SYSTEM MESSAGE FAST-PATH
@@ -623,12 +643,7 @@ export class LLMRouterService {
       if (isChannelDisabled) {
         const executionTimeMs = Date.now() - startTime
 
-        // Get WIP message from workspace settings
-        const workspace = await this.prisma.workspace.findUnique({
-          where: { id: params.workspaceId },
-          select: { wipMessage: true },
-        })
-
+        // Get WIP message from workspace settings (already loaded)
         const wipMessages = (workspace?.wipMessage as any) || {}
         const wipMessage =
           wipMessages[params.customerLanguage?.toLowerCase() || "en"] ||
@@ -818,44 +833,32 @@ export class LLMRouterService {
         throw new Error(`Customer ${params.customerId} not found in workspace ${params.workspaceId}`)
       }
 
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: params.workspaceId },
-        select: {
-          id: true,
-          name: true,
-          url: true,
-          language: true,
-          // 🆕 Feature 199: Channel Configuration fields
-          toneOfVoice: true,
-          botIdentityResponse: true,
-          hasHumanSupport: true,
-          humanSupportInstructions: true,
-          operatorContactMethod: true,
-          operatorWhatsappNumber: true,
-          hasSalesAgents: true,
-          notificationEmail: true,
-          allowedExternalLinks: true, // 🆕 Security: allowed domains for links
-          sellsProductsAndServices: true, // 🆕 Dynamic function routing
-          address: true, // 🆕 Location info for "where are you?" questions
-          customAiRules: true, // 🆕 Custom AI rules that override defaults
-        },
-      })
+      // Workspace already loaded at the top of routeMessage
 
       const messageRepo =
         new (require("../repositories/message.repository").MessageRepository)()
 
       const directIntentIndexPromise = this.getDirectIntentIndex(params.workspaceId)
 
+      // 🛍️ Filter catalog data based on workspace type
+      // E-commerce channels: Load products, categories, offers
+      // Informational channels: Load only services and FAQs
       const [categories, offers, products, services, faqs, lastOrder, directIntentIndex] =
         await Promise.all([
-          messageRepo.getActiveCategories(params.workspaceId),
-          messageRepo.getActiveOffers(params.workspaceId),
-          messageRepo.getActiveProducts(
-            params.workspaceId,
-            customer.discount || 0
-          ),
-          messageRepo.getActiveServices(params.workspaceId),
-          messageRepo.getActiveFaqs(params.workspaceId),
+          workspace.sellsProductsAndServices
+            ? messageRepo.getActiveCategories(params.workspaceId)
+            : Promise.resolve([]),
+          workspace.sellsProductsAndServices
+            ? messageRepo.getActiveOffers(params.workspaceId)
+            : Promise.resolve([]),
+          workspace.sellsProductsAndServices
+            ? messageRepo.getActiveProducts(
+                params.workspaceId,
+                customer.discount || 0
+              )
+            : Promise.resolve([]),
+          messageRepo.getActiveServices(params.workspaceId), // ✅ Always load (informational)
+          messageRepo.getActiveFaqs(params.workspaceId), // ✅ Always load (informational)
           this.prisma.orders.findFirst({
             where: { customerId: customer.id },
             orderBy: { createdAt: "desc" },
@@ -863,6 +866,15 @@ export class LLMRouterService {
           }),
           directIntentIndexPromise,
         ])
+
+      logger.info("📦 Catalog data loaded", {
+        productsCount: products.length,
+        categoriesCount: categories.length,
+        offersCount: offers.length,
+        servicesCount: services.length,
+        faqsCount: faqs.length,
+        sellsProductsAndServices: workspace.sellsProductsAndServices,
+      })
 
       // If the user explicitly mentions a known product or category (e.g., "mozzarella" or "salumi"),
       // normalize the message to point the Router directly to that entity instead of regrouping.
@@ -1020,7 +1032,9 @@ export class LLMRouterService {
         userMessage: userMessageForRouter,
         params,
         customerDiscount,
+        customerIsActive, // 🔒 Feature 174: Pass registration status
         sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
+        workspace: workspace!, // 🛍️ Pass workspace for catalog filtering
         preprocessResult, // 🆕 FASE 2: Pass for deterministic fast-path delegation
       })
 
@@ -1708,7 +1722,9 @@ export class LLMRouterService {
     userMessage: string
     params: RouteMessageParams
     customerDiscount: number
+    customerIsActive: boolean // 🔒 Feature 174: Registration status for function-level guard
     sellsProductsAndServices: boolean
+    workspace: any // 🛍️ Workspace object for catalog filtering
     preprocessResult?: PreprocessResult // 🆕 FASE 2: Deterministic delegation
   }): Promise<{
     response: string
@@ -1725,7 +1741,9 @@ export class LLMRouterService {
       userMessage,
       params,
       customerDiscount,
+      customerIsActive, // 🔒 Feature 174
       sellsProductsAndServices,
+      workspace,
       preprocessResult,
     } = options
 
@@ -1878,6 +1896,8 @@ export class LLMRouterService {
             customerName: params.customerName,
             customerLanguage: params.customerLanguage,
             customerDiscount: customerDiscount, // 💰 Pass customer discount for cart price calculations
+            customerIsActive: customerIsActive, // 🔒 Feature 174: Registration status for function-level guard
+            sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true, // 🛍️ Registration link only if workspace sells products
           }
         )
         const functionExecutionTime = Date.now() - functionExecutionStart
@@ -1910,27 +1930,27 @@ export class LLMRouterService {
             throw new Error(`Customer not found: ${params.customerId} in workspace ${params.workspaceId}`)
           }
 
-          // Get workspace info
-          const workspace = await this.prisma.workspace.findUnique({
-            where: { id: params.workspaceId },
-          })
-
-          if (!workspace) {
-            throw new Error(`Workspace not found: ${params.workspaceId}`)
-          }
+          // Workspace already loaded at the top of routeMessage (reuse it)
 
           // Get catalog data for sub-agent
           const customerDiscountForCatalog = customer.discount || 0
           const messageRepo =
             new (require("../repositories/message.repository").MessageRepository)()
 
+          // 🛍️ Filter catalog data based on workspace type (delegation context)
           const [categories, offers, products, lastOrder] = await Promise.all([
-            messageRepo.getActiveCategories(params.workspaceId),
-            messageRepo.getActiveOffers(params.workspaceId),
-            messageRepo.getActiveProducts(
-              params.workspaceId,
-              customerDiscountForCatalog
-            ),
+            workspace!.sellsProductsAndServices
+              ? messageRepo.getActiveCategories(params.workspaceId)
+              : Promise.resolve([]),
+            workspace!.sellsProductsAndServices
+              ? messageRepo.getActiveOffers(params.workspaceId)
+              : Promise.resolve([]),
+            workspace!.sellsProductsAndServices
+              ? messageRepo.getActiveProducts(
+                  params.workspaceId,
+                  customerDiscountForCatalog
+                )
+              : Promise.resolve([]),
             this.prisma.orders.findFirst({
               where: { customerId: customer.id },
               orderBy: { createdAt: "desc" },
@@ -1941,7 +1961,7 @@ export class LLMRouterService {
           // 🆕 BUILD PROMPT VARIABLES using centralized builder (for delegation)
           const delegationPromptVariables = PromptVariableBuilder.build(
             customer,
-            workspace,
+            workspace!,
             {
               products,
               categories,

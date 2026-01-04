@@ -587,6 +587,7 @@ export class TrashController {
           await tx.billingTransaction.deleteMany({ where: { workspaceId: wsId } })
           await tx.adminSession.deleteMany({ where: { workspaceId: wsId } })
           await tx.workspaceInvitation.deleteMany({ where: { workspaceId: wsId } })
+          // 🆕 Feature 174: Removed registrationAttempts.deleteMany - table will be dropped
           await tx.registrationToken.deleteMany({ where: { workspaceId: wsId } })
           await tx.softDeleteAuditLog.deleteMany({ where: { workspaceId: wsId } })
           
@@ -691,6 +692,7 @@ export class TrashController {
             await tx.billingTransaction.deleteMany({ where: { workspaceId: wsId } })
             await tx.adminSession.deleteMany({ where: { workspaceId: wsId } })
             await tx.workspaceInvitation.deleteMany({ where: { workspaceId: wsId } })
+            // 🆕 Feature 174: Removed registrationAttempts.deleteMany - table will be dropped
             await tx.registrationToken.deleteMany({ where: { workspaceId: wsId } })
             await tx.softDeleteAuditLog.deleteMany({ where: { workspaceId: wsId } })
             

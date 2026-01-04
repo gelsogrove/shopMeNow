@@ -660,6 +660,22 @@ export class LLMService {
       }
     })
 
+    // 🔐 Feature 174: Normalize registration link tokens
+    const wrongRegistrationPatterns = [
+      /\[link registrazione\]/gi,
+      /\[link registration\]/gi,
+      /\[registrazione\]/gi,
+      /\{\{link_registration_with_token\}\}/gi, // LLM might use double braces
+      /\{\{LINK_REGISTRATION_WITH_TOKEN\}\}/gi,
+      /link registrazione(?!\w)/gi,
+    ]
+    wrongRegistrationPatterns.forEach(pattern => {
+      if (pattern.test(finalResponse)) {
+        logger.warn(`⚠️ LLM wrote wrong registration token, normalizing to [LINK_REGISTRATION_WITH_TOKEN]`)
+        finalResponse = finalResponse.replace(pattern, "[LINK_REGISTRATION_WITH_TOKEN]")
+      }
+    })
+
     // 🔗 Lista completa dei token supportati
     const SUPPORTED_TOKENS = [
       "[LINK_CHECKOUT_WITH_TOKEN]",
@@ -744,9 +760,17 @@ export class LLMService {
           }
 
           case "[LINK_REGISTRATION_WITH_TOKEN]": {
-            // TODO: Implementare la logica per il token di registrazione
-            logger.warn(
-              `⚠️ [TOKEN-REPLACE] Token ${token} found but not implemented yet`
+            // 🔐 Feature 174: Generate registration link for non-registered users
+            logger.info(
+              `🔗 [TOKEN-REPLACE] Generating registration link for customer ${customer.phone}`
+            )
+            const registrationLink = await this.generateRegistrationLink(
+              customer.phone,
+              workspace.id
+            )
+            finalResponse = finalResponse.replace(token, registrationLink)
+            logger.info(
+              `✅ [TOKEN-REPLACE] Registration link generated successfully`
             )
             break
           }

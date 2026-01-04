@@ -383,6 +383,7 @@ export class WhatsAppWebhookController {
           "[WEBHOOK] 📨 Billing checks passed - sending welcome message",
           {
             phoneNumber,
+            attemptCount: registrationAttempt.attemptCount,
             creditBalance: creditCheck.currentBalance,
             customersUsed: customerLimitCheck.current,
             customersMax: customerLimitCheck.max,
@@ -468,6 +469,7 @@ export class WhatsAppWebhookController {
             input: {
               phoneNumber: phoneNumber,
               language: detectedLanguage,
+              attemptCount: registrationAttempt.attemptCount,
             },
             output: {
               welcomeMessage: rawWelcomeMessage,
@@ -602,6 +604,7 @@ export class WhatsAppWebhookController {
                 registrationLink: registrationLink,
                 timestamp: new Date().toISOString(),
                 flow: ["welcome", "safety", "save", "whatsapp"],
+                attemptCount: registrationAttempt.attemptCount,
                 messagePrice: welcomeMessagePrice,
                 debugSteps: debugSteps,
               }),
@@ -667,6 +670,7 @@ export class WhatsAppWebhookController {
             registrationLink,
             customerId: tempCustomer.id,
             sessionId: chatSession.id,
+            attemptCount: registrationAttempt.attemptCount,
           }
         )
 
@@ -677,6 +681,7 @@ export class WhatsAppWebhookController {
           registrationLink,
           customerId: tempCustomer.id,
           sessionId: chatSession.id,
+          attemptCount: registrationAttempt.attemptCount,
         })
         return
       }

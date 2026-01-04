@@ -75,11 +75,7 @@ export const customersRouter = (controller: CustomersController): Router => {
     return controller.countUnknownCustomers(req, res, next)
   })
 
-  // 🗑️ Delete a registration attempt (blocked unregistered user)
-  router.delete(
-    "/:workspaceId/registration-attempts/:attemptId",
-    controller.deleteRegistrationAttempt.bind(controller)
-  )
+  // 🆕 Feature 174: Removed deleteRegistrationAttempt route - RegistrationAttempts table no longer used
 
   logger.info("Customers routes setup complete")
   return router
@@ -144,11 +140,7 @@ export const workspaceCustomersRouter = (
     controller.countUnknownCustomers.bind(controller)
   )
 
-  // 🗑️ Delete a registration attempt (blocked unregistered user)
-  router.delete(
-    "/:workspaceId/registration-attempts/:attemptId",
-    controller.deleteRegistrationAttempt.bind(controller)
-  )
+  // 🆕 Feature 174: Removed deleteRegistrationAttempt route - RegistrationAttempts table no longer used
 
   logger.info("Workspace customers routes setup complete")
   return router

@@ -1,14 +1,16 @@
 # Registration Flow
 
-**Version**: 2.0.0  
+**Version**: 2.1.0  
 **Last Updated**: January 3, 2026  
-**Status**: ACTIVE - Post RegistrationAttempts Removal
+**Status**: ACTIVE - Post RegistrationAttempts Removal + sellsProductsAndServices Integration
 
 ---
 
 ## Overview
 
 Il sistema eChatbot implementa un flusso di registrazione **permissivo**: gli utenti possono interagire liberamente con il chatbot senza registrarsi. La registrazione è richiesta solo per function specifiche che richiedono personalizzazione (cart, orders, profile).
+
+**🆕 Feature**: La registrazione è disponibile **SOLO per canali e-commerce** (`sellsProductsAndServices=true`). Canali informativi non mostrano il link di registrazione.
 
 ---
 
@@ -26,10 +28,11 @@ Il sistema eChatbot implementa un flusso di registrazione **permissivo**: gli ut
 - **Nessun blocking preventivo**
 - **Messaggi illimitati** per tutti gli utenti
 - **Registrazione richiesta solo per function specifiche**
+- **Registrazione disponibile solo se `sellsProductsAndServices=true`** 🆕
 - **Attivazione immediata** post-registrazione
 - `isActive=true`, `isBlacklisted=false`, `activeChatbot=true` dopo registrazione
 
-**Rationale**: Gli utenti devono poter esplorare il chatbot liberamente. La registrazione diventa necessaria solo quando vogliono usare funzionalità personalizzate (carrello, ordini, profilo).
+**Rationale**: Gli utenti devono poter esplorare il chatbot liberamente. La registrazione diventa necessaria solo quando vogliono usare funzionalità personalizzate (carrello, ordini, profilo). Per canali informativi (FAQ, supporto), la registrazione non è necessaria.
 
 ---
 
@@ -37,7 +40,7 @@ Il sistema eChatbot implementa un flusso di registrazione **permissivo**: gli ut
 
 ### Protected Functions (10)
 
-Richiedono `customer.isActive=true`:
+Richiedono `customer.isActive=true` **E** `workspace.sellsProductsAndServices=true`:
 
 | Category | Functions | Description |
 |----------|-----------|-------------|
@@ -92,10 +95,13 @@ const FUNCTIONS_REQUIRING_REGISTRATION = [
 
 interface ExecutionContext {
   functionName: string
+interface ExecutionContext {
+  functionName: string
   parameters: Record<string, any>
   workspaceId: string
   customerId: string
-  customerIsActive: boolean  // ← NEW field
+  customerIsActive: boolean  // ← Registration status
+  sellsProductsAndServices: boolean  // ← NEW: Workspace sells products (enables registration flow)
   sessionId: string
 }
 
@@ -103,10 +109,20 @@ async execute(context: ExecutionContext): Promise<ExecutionResult> {
   // GUARD: Check registration requirement
   if (FUNCTIONS_REQUIRING_REGISTRATION.includes(context.functionName)) {
     if (!context.customerIsActive) {
-      return {
-        success: false,
-        error: 'REGISTRATION_REQUIRED',
-        message: `Per utilizzare "${context.functionName}" devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]`
+      // 🛍️ Registration link only if workspace sells products/services
+      if (context.sellsProductsAndServices) {
+        return {
+          success: false,
+          error: 'REGISTRATION_REQUIRED',
+          message: `Per utilizzare "${context.functionName}" devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]`
+        }
+      } else {
+        // 🚫 Function not available if workspace doesn't sell products
+        return {
+          success: false,
+          error: 'FEATURE_NOT_AVAILABLE',
+          message: `La funzione "${context.functionName}" non è disponibile per questo canale.`
+        }
       }
     }
   }
@@ -260,7 +276,7 @@ async register(req: Request, res: Response, next: NextFunction) {
 
 ## Flow Diagrams
 
-### Non-Registered User Flow
+### Non-Registered User Flow (E-commerce Channel)
 
 ```
 Customer → Send Message "Voglio ordinare"
@@ -276,24 +292,60 @@ Customer → Send Message "Voglio ordinare"
            │         └─ Add product to cart
            │         └─ Return success
            │
-           └─ NO  → Return REGISTRATION_REQUIRED
-                    ↓
-                LLM receives error:
-                { 
-                  success: false,
-                  error: "REGISTRATION_REQUIRED",
-                  message: "Per aggiungere al carrello devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]"
-                }
-                    ↓
-                LLM formats natural message:
-                "Per usare il carrello devi completare la registrazione: [LINK_REGISTRATION_WITH_TOKEN]"
-                    ↓
-            LLMService.replaceLinkTokens()
-                    ↓
-            Token replaced with actual JWT link (24h validity)
-                    ↓
-         Customer receives message:
-         "Per usare il carrello devi completare la registrazione: https://echatbot.ai/register?token=xxx"
+           └─ NO  → Check sellsProductsAndServices?
+                    ├─ YES (E-commerce) → Return REGISTRATION_REQUIRED
+                    │                     ↓
+                    │              LLM receives error:
+                    │              { 
+                    │                success: false,
+                    │                error: "REGISTRATION_REQUIRED",
+                    │                message: "Per aggiungere al carrello devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]"
+                    │              }
+                    │                     ↓
+                    │              Token replaced with actual JWT link (24h validity)
+                    │                     ↓
+                    │         Customer receives message with registration link
+                    │
+                    └─ NO (Informational) → Return FEATURE_NOT_AVAILABLE
+                                           ↓
+                                    LLM receives error:
+                                    { 
+                                      success: false,
+                                      error: "FEATURE_NOT_AVAILABLE",
+                                      message: "La funzione 'addToCart' non è disponibile per questo canale."
+                                    }
+                                           ↓
+                                    Customer receives message: feature not available
+```
+
+### Non-Registered User Flow (Informational Channel)
+
+```
+Customer → Send Message "Voglio ordinare"
+           ↓
+       Chat Engine
+           ↓
+       LLM Router (Intent: ADD_TO_CART)
+           ↓
+   Function Executor → addToCart()
+           ↓
+       GUARD CHECK: customerIsActive?
+           └─ NO  → Check sellsProductsAndServices?
+                    └─ NO (Informational channel)
+                              ↓
+                    Return FEATURE_NOT_AVAILABLE
+                              ↓
+                    LLM receives error:
+                    { 
+                      success: false,
+                      error: "FEATURE_NOT_AVAILABLE",
+                      message: "La funzione 'addToCart' non è disponibile per questo canale."
+                    }
+                              ↓
+                    LLM formats natural message:
+                    "Mi dispiace, questa funzionalità non è disponibile per questo canale."
+                              ↓
+         Customer receives message: feature not available
 ```
 
 ### Post-Registration Flow
@@ -483,6 +535,55 @@ describe('Post-Registration Flow', () => {
 | Non-registered messages | Limited (5 in 24h) | Unlimited |
 | Registration trigger | Preventive (after few messages) | On-demand (when function needs it) |
 | Post-registration | Admin approval needed | Immediate activation |
+| Registration availability | All channels | **Only e-commerce channels** (`sellsProductsAndServices=true`) 🆕 |
+| Hardcoded patterns | `"fattura"/"invoice"` detected in data-loader | **Removed** - LLM handles all intent detection 🆕 |
+
+---
+
+## Recent Updates (v2.1.0)
+
+### 1. sellsProductsAndServices Integration (January 3, 2026)
+
+**Changes**:
+- Registration link now shown **ONLY** for e-commerce channels (`sellsProductsAndServices=true`)
+- Informational channels return `FEATURE_NOT_AVAILABLE` instead of registration link
+- Function executor receives `workspace.sellsProductsAndServices` in execution context
+
+**Files Modified**:
+- `apps/backend/src/services/function-executor.service.ts`: Added `sellsProductsAndServices` check
+- `apps/backend/src/services/llm-router.service.ts`: Pass workspace flag to function executor
+
+**Rationale**: Informational channels (FAQ, support) don't need registration. Only e-commerce features (cart, orders, checkout) require user accounts.
+
+### 2. Hardcoded Pattern Removal (January 3, 2026)
+
+**Changes**:
+- **Removed**: `if (lowerLabel.includes("fattura") || lowerLabel.includes("invoice"))` pattern from data-loader
+- **Why**: Violates Principle XV (User Context Freedom) - no hardcoded phrase detection
+- **Now**: LLM Intent Parser handles ALL phrase-based intent detection
+
+**Files Modified**:
+- `apps/backend/src/application/data-loader/data-loader.service.ts`: Removed invoice hardcode
+
+**Rationale**: Users can switch context freely. Hardcoded patterns break with typos, synonyms, and other languages. LLM provides flexible intent detection.
+
+### 3. Catalog Data Filtering (January 3, 2026)
+
+**Changes**:
+- **Conditional Loading**: Products, categories, and offers now loaded ONLY if `sellsProductsAndServices=true`
+- **Always Loaded**: Services and FAQs (informational content for all channel types)
+- **Token Savings**: Informational channels save ~50k+ tokens by not loading e-commerce catalog
+
+**Files Modified**:
+- `apps/backend/src/services/llm-router.service.ts`: Added conditional data loading (2 locations: main route + delegation)
+
+**Behavior**:
+| Channel Type | sellsProductsAndServices | Products/Categories/Offers | Services/FAQs | Available Agents |
+|--------------|--------------------------|----------------------------|---------------|------------------|
+| E-commerce | `true` | ✅ Loaded | ✅ Loaded | All 9 agents |
+| Informational | `false` | ❌ Empty arrays | ✅ Loaded | 6 agents (no product/cart/order) |
+
+**Rationale**: Informational channels (FAQ, support) don't need product catalog. Loading it wastes tokens and creates confusion. Agents are already filtered via `getFunctionsForRouter()`, now data is filtered too.
 
 ---
 

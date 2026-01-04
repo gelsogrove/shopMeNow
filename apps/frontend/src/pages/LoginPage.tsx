@@ -220,6 +220,10 @@ export function LoginPage() {
   
   // Ref for contact form name input
   const contactNameInputRef = useRef<HTMLInputElement>(null)
+  
+  // Refs for login/register form first inputs
+  const loginEmailInputRef = useRef<HTMLInputElement>(null)
+  const registerEmailInputRef = useRef<HTMLInputElement>(null)
 
 
   useEffect(() => {
@@ -1072,6 +1076,12 @@ export function LoginPage() {
                     onClick={() => {
                       if (isAdminBypass || !workingInProgress) {
                         setActiveTab('signin')
+                        // Scroll to login form and focus first input
+                        setTimeout(() => {
+                          const loginSection = document.querySelector('[data-form="signin"]')
+                          loginSection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          setTimeout(() => loginEmailInputRef.current?.focus(), 300)
+                        }, 100)
                       } else {
                         setWipFeature('login')
                         setShowWIPModal(true)
@@ -1085,6 +1095,12 @@ export function LoginPage() {
                     onClick={() => {
                       if (isAdminBypass || !workingInProgress) {
                         setActiveTab('register')
+                        // Scroll to register form and focus first input
+                        setTimeout(() => {
+                          const registerSection = document.querySelector('[data-form="register"]')
+                          registerSection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                          setTimeout(() => registerEmailInputRef.current?.focus(), 300)
+                        }, 100)
                       } else {
                         setWipFeature('register')
                         setShowWIPModal(true)
@@ -1251,7 +1267,7 @@ export function LoginPage() {
                         </button>
                       </div>
                     ) : (
-                      <div className={isLoginViewDisabled ? "opacity-60 text-slate-500" : ""}>
+                      <div className={isLoginViewDisabled ? "opacity-60 text-slate-500" : ""} data-form="signin">
                         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                           <div className="space-y-2">
                             <Input
@@ -1259,6 +1275,7 @@ export function LoginPage() {
                               type="email"
                               placeholder="your@email.com"
                               {...register("email")}
+                              ref={loginEmailInputRef}
                               disabled={isLoading || isLoginDisabled}
                               autoComplete="username"
                               className="h-11"
@@ -1408,7 +1425,7 @@ export function LoginPage() {
                     )}
                   </>
                 ) : (
-                  <div className={isRegisterViewDisabled ? "opacity-60 text-slate-500" : ""}>
+                  <div className={isRegisterViewDisabled ? "opacity-60 text-slate-500" : ""} data-form="register">
                     {inviteData && (
                       <div className="rounded-xl border border-green-100 bg-green-50 p-4 text-sm text-green-800 space-y-2">
                         <div className="font-semibold">Invitation detected</div>
@@ -1428,6 +1445,7 @@ export function LoginPage() {
                           placeholder="First name"
                           autoComplete="off"
                           {...registerForm.register("firstName")}
+                          ref={registerEmailInputRef}
                           disabled={isLoading || isRegisterDisabled}
                           className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />

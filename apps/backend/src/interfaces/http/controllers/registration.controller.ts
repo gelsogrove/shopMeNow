@@ -207,8 +207,8 @@ export class RegistrationController {
               ? new Date()
               : null,
             isActive: true, // CRITICAL: Activate the customer after registration!
-            isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
-            activeChatbot: false, // 🚨 CHATBOT DISABLED after registration (admin must enable)
+            isBlacklisted: false, // 🆕 Feature 174: User NOT blocked after registration (can chat freely)
+            activeChatbot: true, // 🆕 Feature 174: Chatbot ENABLED after registration
           },
         })
       } else {
@@ -230,8 +230,8 @@ export class RegistrationController {
                 ? new Date()
                 : null,
               isActive: true,
-              isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
-              activeChatbot: false, // 🚨 CHATBOT DISABLED after registration (admin must enable)
+              isBlacklisted: false, // 🆕 Feature 174: User NOT blocked after registration (can chat freely)
+              activeChatbot: true, // 🆕 Feature 174: Chatbot ENABLED after registration
             },
           })
         } catch (createError: any) {
@@ -308,14 +308,7 @@ export class RegistrationController {
       // Mark token as used using SecureTokenService
       await this.secureTokenService.markTokenAsUsed(token)
 
-      // Clear registration attempts since user successfully registered
-      const { RegistrationAttemptsService } = await import(
-        "../../../application/services/registration-attempts.service"
-      )
-      const registrationAttemptsService = new RegistrationAttemptsService(
-        prisma
-      )
-      await registrationAttemptsService.clearAttempts(phone, workspace_id)
+      // 🆕 Feature 174: Removed clearAttempts - RegistrationAttempts no longer used
 
       // 💰 NOTE: Registration cost ($1.00) is already tracked in welcome message
       // No additional charge for registration form submission

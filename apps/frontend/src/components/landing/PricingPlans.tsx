@@ -154,9 +154,9 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
           const isFuture = currentOrder !== null && order > (currentOrder as number)
 
           const highlightClass = isCurrent
-            ? "border-blue-500 bg-gradient-to-br from-blue-50 via-white to-green-50 shadow-xl scale-100 sm:scale-105"
+            ? "border-blue-500 bg-gradient-to-br from-blue-50 via-white to-green-50 shadow-xl scale-105"
             : plan.isPopular && !isPast
-            ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl scale-100 sm:scale-105"
+            ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl scale-105"
             : "border-gray-200 bg-white"
 
           const disabledClass = isPast ? "opacity-60" : ""
@@ -170,11 +170,12 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
           const frameColor = frameColors[plan.name] || "from-gray-100 to-slate-100"
 
           return (
-            <div key={plan.name} className="relative group mx-2 sm:mx-0">
+            <div className="relative group">
               {/* Decorative rotated background frame */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${frameColor} rounded-2xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.02] shadow-lg group-hover:rotate-2 transition-transform duration-500`}></div>
+              <div className={`absolute inset-0 bg-gradient-to-br ${frameColor} rounded-2xl rotate-1 scale-[1.02] shadow-lg group-hover:rotate-2 transition-transform duration-500`}></div>
               
               <div
+                key={plan.name}
                 className={`relative rounded-2xl border-2 p-8 flex flex-col h-full min-h-[600px] ${highlightClass} ${disabledClass}`}
               >
               <div className="text-center mb-6 flex flex-col justify-between min-h-[110px]">
@@ -359,7 +360,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
           </div>
         </div>
 
-        <div className="mt-4 sm:mt-6 text-center">
+        <div className="mt-8 text-center">
           <p className="text-base text-gray-600">
             {t("pricing.usage.transparent")}
           </p>

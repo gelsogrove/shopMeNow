@@ -98,7 +98,6 @@ export class SubscriptionBillingService {
       limits,
       usage: {
         ...usage,
-        productsPercentage: 0,
         customersPercentage:
           limits.maxCustomers > 0
             ? Math.round((usage.customersCount / limits.maxCustomers) * 100)

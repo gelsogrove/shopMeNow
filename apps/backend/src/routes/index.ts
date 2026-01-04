@@ -33,7 +33,6 @@ import { loginBlockingMiddleware } from "../interfaces/http/middlewares/soft-del
 // ============================================================================
 import { AuthService } from "../application/services/auth.service"
 import { OtpService } from "../application/services/otp.service"
-import { RegistrationAttemptsService } from "../application/services/registration-attempts.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import { UserService } from "../application/services/user.service"
 
@@ -300,52 +299,8 @@ async function handleNewUserWelcomeFlow(
     // Initialize services
     const secureTokenService = new SecureTokenService()
     const messageRepository = new MessageRepository()
-    const registrationAttemptsService = new RegistrationAttemptsService(prisma)
 
-    // Check if user is blocked due to too many registration attempts
-    const isBlocked = await registrationAttemptsService.isBlocked(
-      phoneNumber,
-      workspaceId
-    )
-    if (isBlocked) {
-      // ✅ REGISTRATION ATTEMPTS CHECK ENABLED - Block users with too many attempts
-      logger.info(
-        `🚫 ${format}: User ${phoneNumber} is blocked due to too many registration attempts - IGNORING MESSAGE`
-      )
-      res.status(200).json({
-        success: true,
-        data: {
-          sessionId: null,
-          message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED",
-        },
-      })
-      return true
-    }
-
-    // Record this registration attempt
-    const attempt = await registrationAttemptsService.recordAttempt(
-      phoneNumber,
-      workspaceId
-    )
-    logger.info(
-      `📊 ${format}: Registration attempt ${attempt.attemptCount}/3 for ${phoneNumber}`
-    )
-
-    // If user is now blocked after this attempt, ignore completely (blacklist totale)
-    if (attempt.isBlocked) {
-      // ✅ REGISTRATION ATTEMPTS CHECK ENABLED - Block users after too many attempts
-      logger.info(
-        `🚫 ${format}: User ${phoneNumber} blocked after ${attempt.attemptCount} attempts - IGNORING MESSAGE`
-      )
-      res.status(200).json({
-        success: true,
-        data: {
-          sessionId: null,
-          message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED",
-        },
-      })
-      return true
-    }
+    // 🆕 Feature 174: Removed RegistrationAttempts check - users can receive welcome message freely
 
     // If no customer is found, this is a new user
     // 🔒 USE LLMService.handleNewUserWelcome() - ENSURES Safety & Translation layer
@@ -374,7 +329,7 @@ async function handleNewUserWelcomeFlow(
       debugInfo: JSON.stringify({
         isNewUser: true,
         detectedLanguage,
-        attemptCount: attempt.attemptCount,
+        // 🆕 Feature 174: Removed attemptCount - RegistrationAttempts no longer tracked
         ...result.debugInfo,
       }),
     })

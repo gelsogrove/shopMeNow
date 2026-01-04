@@ -175,14 +175,12 @@ export class WorkspaceInvitationService {
             userId: { not: workspace.ownerId },
             workspace: { ownerId: workspace.ownerId },
           },
-          distinct: ["userId"],
         }),
         tx.workspaceInvitation.count({
           where: {
             status: "PENDING",
             workspace: { ownerId: workspace.ownerId },
           },
-          distinct: ["email"],
         }),
       ])
 

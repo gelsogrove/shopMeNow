@@ -31,6 +31,10 @@ jest.mock("@prisma/client", () => {
     chatSession: {
       findFirst: jest.fn(),
     },
+    agentConversationLog: {
+      create: jest.fn().mockResolvedValue({ id: "mock-log-id" }),
+      findMany: jest.fn(),
+    },
     $transaction: jest.fn((fn) => fn(mockPrisma)),
     $disconnect: jest.fn(),
   }
@@ -95,6 +99,17 @@ describe("Blocked User Handling - P1 Security", () => {
         workspaceId,
       })
 
+      // Mock workspace (required for sellsProductsAndServices check)
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: workspaceId,
+        name: "Test Workspace",
+        sellsProductsAndServices: true,
+        activeChatbot: true,
+      })
+
+      // Mock agentConfig (to prevent TRANSLATION agent errors)
+      mockPrisma.agentConfig.findFirst.mockResolvedValue(null)
+
       const result = await service.routeMessage({
         workspaceId,
         customerId,
@@ -117,6 +132,17 @@ describe("Blocked User Handling - P1 Security", () => {
         workspaceId,
       })
 
+      // Mock workspace (required)
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: workspaceId,
+        name: "Test Workspace",
+        sellsProductsAndServices: true,
+        activeChatbot: true,
+      })
+
+      // Mock agentConfig (to prevent TRANSLATION agent errors)
+      mockPrisma.agentConfig.findFirst.mockResolvedValue(null)
+
       await service.routeMessage({
         workspaceId,
         customerId,
@@ -136,6 +162,17 @@ describe("Blocked User Handling - P1 Security", () => {
         isBlacklisted: true,
         workspaceId,
       })
+
+      // Mock workspace (required)
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: workspaceId,
+        name: "Test Workspace",
+        sellsProductsAndServices: true,
+        activeChatbot: true,
+      })
+
+      // Mock agentConfig (to prevent TRANSLATION agent errors)
+      mockPrisma.agentConfig.findFirst.mockResolvedValue(null)
 
       await service.routeMessage({
         workspaceId,

@@ -737,12 +737,9 @@ export class DataLoaderService {
     }
     
     // ========================================================================
-    // ORDER ACTIONS - Invoice, Repeat, Credit Note
+    // ORDER ACTIONS - Repeat, Credit Note
     // ========================================================================
-    if (lowerLabel.includes("fattura") || lowerLabel.includes("invoice") || lowerLabel.includes("scarica fattura")) {
-      logger.info("🧠 [Inference] Matched: SEND_INVOICE")
-      return { type: "ORDER_ACTION", action: "SEND_INVOICE" }
-    }
+    // NOTE: "fattura"/"invoice" patterns removed - LLM Intent Parser handles these
     
     if (lowerLabel.includes("ripeti") || lowerLabel.includes("repeat") || lowerLabel.includes("riordina")) {
       logger.info("🧠 [Inference] Matched: REPEAT_ORDER")

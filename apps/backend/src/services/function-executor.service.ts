@@ -23,12 +23,40 @@ import { ServiceRepository } from "../repositories/service.repository"
 import { contactOperator } from "../domain/calling-functions/contactOperator"
 import logger from "../utils/logger"
 
+/**
+ * Functions that require customer registration (isActive=true)
+ * 
+ * Philosophy: Users can chat freely without registration.
+ * Registration is required ONLY for personalized functions (cart, orders, profile).
+ */
+const FUNCTIONS_REQUIRING_REGISTRATION = [
+  // Cart Management (3)
+  'addItemToCart',
+  'addToCart',
+  'viewCart',
+  'clearCart',
+  
+  // Order Tracking (5)
+  'getLinkOrderByCode',
+  'repeatOrder',
+  'repeatLastOrder',
+  'getOrderDetails',
+  'confirmOrder',
+  'showCheckout',
+  
+  // Profile Management (2)
+  'handlePushNotifications',
+  'getProfileLink',
+]
+
 export interface ExecutionContext {
   workspaceId: string
   customerId: string
   customerName?: string
   customerLanguage?: string
   customerDiscount?: number // Customer's discount percentage (e.g., 10 for 10%)
+  customerIsActive?: boolean // NEW: Customer registration status
+  sellsProductsAndServices?: boolean // NEW: Workspace sells products/services (enables registration)
 }
 
 export interface FunctionResult {
@@ -85,7 +113,49 @@ export class FunctionExecutor {
         workspaceId: context.workspaceId,
         customerId: context.customerId,
         args,
+        customerIsActive: context.customerIsActive,
       })
+
+      // 🔐 REGISTRATION GUARD: Check if function requires registration
+      if (FUNCTIONS_REQUIRING_REGISTRATION.includes(functionName)) {
+        if (!context.customerIsActive) {
+          // 🛍️ Registration link only if workspace sells products/services
+          if (context.sellsProductsAndServices) {
+            logger.warn(`🚫 Registration required for function: ${functionName}`, {
+              customerId: context.customerId,
+              workspaceId: context.workspaceId,
+            })
+            
+            return {
+              success: false,
+              error: 'REGISTRATION_REQUIRED',
+              data: {
+                message: `Per utilizzare "${functionName}" devi completare la registrazione: [LINK_REGISTRATION_WITH_TOKEN]`,
+                functionName,
+                requiresRegistration: true,
+              },
+              executionTimeMs: Date.now() - startTime,
+            }
+          } else {
+            // 🚫 Function not available if workspace doesn't sell products
+            logger.warn(`🚫 Function not available (workspace doesn't sell products): ${functionName}`, {
+              customerId: context.customerId,
+              workspaceId: context.workspaceId,
+            })
+            
+            return {
+              success: false,
+              error: 'FEATURE_NOT_AVAILABLE',
+              data: {
+                message: `La funzione "${functionName}" non è disponibile per questo canale.`,
+                functionName,
+                requiresRegistration: false,
+              },
+              executionTimeMs: Date.now() - startTime,
+            }
+          }
+        }
+      }
 
       // Route to correct implementation
       let result: any

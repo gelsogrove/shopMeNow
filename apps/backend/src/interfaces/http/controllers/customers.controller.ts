@@ -470,46 +470,8 @@ export class CustomersController {
     }
   }
 
-  /**
-   * 🗑️ Delete a registration attempt (blocked unregistered user)
-   */
-  async deleteRegistrationAttempt(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { workspaceId, attemptId } = req.params
+  // 🆕 Feature 174: Removed deleteRegistrationAttempt() - RegistrationAttempts table no longer used
 
-      logger.info(`🗑️ Deleting registration attempt: ${attemptId} in workspace: ${workspaceId}`)
-
-      // Verify the attempt exists and belongs to this workspace
-      const attempt = await prisma.registrationAttempts.findFirst({
-        where: {
-          id: attemptId,
-          workspaceId,
-        },
-      })
-
-      if (!attempt) {
-        return res.status(404).json({
-          success: false,
-          error: "Registration attempt not found",
-        })
-      }
-
-      // Delete the attempt
-      await prisma.registrationAttempts.delete({
-        where: { id: attemptId },
-      })
-
-      logger.info(`✅ Registration attempt deleted: ${attemptId}`)
-
-      return res.json({
-        success: true,
-        message: "Registration attempt deleted successfully",
-      })
-    } catch (error) {
-      logger.error("Error deleting registration attempt:", error)
-      next(error)
-    }
-  }
 
   /**
    * Count all "Unknown Customer" records in a workspace

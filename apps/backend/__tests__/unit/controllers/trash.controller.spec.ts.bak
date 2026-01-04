@@ -83,6 +83,7 @@ const createMockPrisma = () => ({
   billingTransaction: { deleteMany: jest.fn() },
   adminSession: { deleteMany: jest.fn() },
   workspaceInvitation: { deleteMany: jest.fn() },
+  registrationAttempts: { deleteMany: jest.fn() },
   registrationToken: { deleteMany: jest.fn() },
   twoFactorResetToken: { deleteMany: jest.fn() },
   authenticationAttempt: { deleteMany: jest.fn() },
@@ -697,6 +698,7 @@ describe('TrashController', () => {
         billingTransaction: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
         adminSession: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         workspaceInvitation: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        registrationAttempts: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         registrationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         softDeleteAuditLog: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         userWorkspace: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -778,6 +780,7 @@ describe('TrashController', () => {
         billingTransaction: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
         adminSession: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         workspaceInvitation: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        registrationAttempts: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         registrationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         softDeleteAuditLog: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         userWorkspace: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -1140,6 +1143,7 @@ describe('TrashController - Full Cascade Delete Tests', () => {
     txMock.billingTransaction.deleteMany = trackDelete('billingTransaction')
     txMock.adminSession.deleteMany = trackDelete('adminSession')
     txMock.workspaceInvitation.deleteMany = trackDelete('workspaceInvitation')
+    txMock.registrationAttempts.deleteMany = trackDelete('registrationAttempts')
     txMock.registrationToken.deleteMany = trackDelete('registrationToken')
     txMock.softDeleteAuditLog.deleteMany = trackDelete('softDeleteAuditLog')
     txMock.userWorkspace.deleteMany = trackDelete('userWorkspace')
@@ -1255,6 +1259,7 @@ describe('TrashController - Full Cascade Delete Tests', () => {
       billingTransaction: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       adminSession: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       workspaceInvitation: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      registrationAttempts: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       registrationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       softDeleteAuditLog: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
     }

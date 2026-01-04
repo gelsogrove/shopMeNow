@@ -14,7 +14,7 @@ export default defineConfig({
   },
   datasource: {
     url: process.env.DATABASE_URL
-      ? `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}sslmode=require`
+      ? `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}sslmode=${process.env.NODE_ENV === 'production' ? 'require' : 'disable'}`
       : '',
   },
 })

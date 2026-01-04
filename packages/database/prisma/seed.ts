@@ -66,7 +66,8 @@ async function main() {
     await prisma.usage.deleteMany()
     await prisma.adminSession.deleteMany()
     await prisma.shortUrls.deleteMany()
-    await prisma.registrationAttempts.deleteMany()
+    // ❌ Feature 174: RegistrationAttempts model removed
+    // await prisma.registrationAttempts.deleteMany()
     await prisma.carts.deleteMany()
     await prisma.orders.deleteMany()
     await prisma.customers.deleteMany()
