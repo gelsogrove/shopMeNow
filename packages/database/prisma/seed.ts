@@ -30,26 +30,16 @@ import { products } from "./data/products"
 import { services } from "./data/services"
 import { workspaceSettings } from "./data/workspaceSettings"
 
-// 🔧 PRODUCTION FIX: Use direct connection (like migrations), not adapter with security restrictions
-const isProduction = process.env.NODE_ENV === 'production'
+// 🔧 HEROKU FIX: Always use adapter (direct connection causes initialization error in production build)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('heroku')
+    ? { rejectUnauthorized: false }
+    : false
+})
 
-let prisma: PrismaClient
-
-if (isProduction) {
-  // Production: Direct connection (same as Prisma migrations - no adapter restrictions)
-  console.log("🔌 Using DIRECT connection for production seed (bypass adapter security)")
-  prisma = new PrismaClient()
-} else {
-  // Development: Use adapter for connection pooling
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('heroku')
-      ? { rejectUnauthorized: false }
-      : false
-  })
-  const adapter = new PrismaPg(pool)
-  prisma = new PrismaClient({ adapter })
-}
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log("🌱 Starting database seed...")
