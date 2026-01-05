@@ -12,10 +12,10 @@
   "scripts": {
     "build": "tsc -p ./tsconfig.json && cp -r src/generated dist/src/",
     "generate": "prisma generate",
-    "migrate:dev": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run migrate:dev in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && dotenv -e ../../.env -- prisma migrate dev",
+    "migrate:dev": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run migrate:dev in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "migrate:reset": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run migrate:reset in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && dotenv -e ../../.env -- ts-node scripts/safe-reset.ts",
-    "migrate:reset:force": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run migrate:reset:force in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && dotenv -e ../../.env -- prisma migrate reset --force",
+    "migrate:reset": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run migrate:reset in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && ts-node scripts/safe-reset.ts",
+    "migrate:reset:force": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run migrate:reset:force in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && prisma migrate reset --force",
     "seed": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run seed in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && ts-node prisma/seed.ts",
     "seed:production": "ts-node --transpile-only -O '{\"module\":\"commonjs\"}' prisma/seed.ts",
     "update:prompts": "dotenv -e ../../.env -- ts-node scripts/update-prompts.ts",
