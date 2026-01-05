@@ -45,6 +45,19 @@ const prisma = new PrismaClient({ adapter })
 async function main() {
   console.log("🌱 Starting database seed...")
 
+  // 🔓 SECURITY: Allow seed in production only with explicit permission
+  const allowDestructive = process.env.ALLOW_DESTRUCTIVE_OPERATIONS === 'true'
+  const isProduction = process.env.NODE_ENV === 'production'
+
+  if (isProduction && !allowDestructive) {
+    console.error('❌ Cannot run seed in production!')
+    process.exit(1)
+  }
+
+  if (isProduction && allowDestructive) {
+    console.log('⚠️  SEED RUNNING IN PRODUCTION WITH DESTRUCTIVE OPERATIONS')
+  }
+
   // 1. Clear existing data (in correct order to avoid FK constraints)
   console.log("🧹 Cleaning existing data...")
 
