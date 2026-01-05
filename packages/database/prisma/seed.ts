@@ -46,6 +46,7 @@ async function main() {
 
   // 🔓 SECURITY: Allow seed in production only with explicit permission
   const allowDestructive = process.env.ALLOW_DESTRUCTIVE_OPERATIONS === 'true'
+  const isProduction = process.env.NODE_ENV === 'production'
 
   if (isProduction && !allowDestructive) {
     console.error('❌ Cannot run seed in production!')
