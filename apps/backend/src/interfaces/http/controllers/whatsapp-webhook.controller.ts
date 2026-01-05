@@ -15,6 +15,13 @@ import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { normalizePhoneNumber } from "../../../utils/phone"
 
 /**
+ * 🔒 CONCURRENCY CONTROL: Customer-level message processing locks
+ * Prevents race conditions when customer sends multiple messages rapidly
+ * See Constitution Principle VI: Chat Isolation & Concurrency Safety
+ */
+const customerMessageLocks = new Map<string, Promise<void>>()
+
+/**
  * WhatsApp Webhook Controller
  *
  * Single Responsibility: Handle INBOUND messages from WhatsApp
@@ -78,8 +85,70 @@ export class WhatsAppWebhookController {
    * - ✅ Verifica firma HMAC (CRITICO - previene messaggi fake!)
    * - ✅ Solo numeri registrati nel database
    * - ✅ Rate limiting applicato
+   * - ✅ Customer-level locking (prevents race conditions)
    */
   async receiveMessage(req: Request, res: Response): Promise<void> {
+    // 🔒 STEP 0: Extract phone number FIRST for locking (before any processing)
+    let phoneNumberForLock: string | undefined
+    
+    try {
+      const data = req.body
+      const entry = data.entry?.[0]
+      const changes = entry?.changes?.[0]
+      const value = changes?.value
+      const messages = value?.messages
+      
+      // 🔧 FIX: Use EXACT phone number for lock (no normalization)
+      // This ensures lock key matches the phone saved in database
+      if (messages && messages.length > 0) {
+        phoneNumberForLock = messages[0].from?.startsWith("+") 
+          ? messages[0].from.trim() 
+          : `+${messages[0].from?.trim() || ""}`
+      } else if (data.message && data.phoneNumber) {
+        phoneNumberForLock = data.phoneNumber.trim()
+      } else if (data.phoneNumber) {
+        phoneNumberForLock = data.phoneNumber.trim()
+      }
+    } catch (error) {
+      logger.error("[WEBHOOK] ❌ Failed to extract phone for locking", error)
+    }
+    
+    // 🔒 STEP 1: ACQUIRE CUSTOMER LOCK (prevents concurrent message processing)
+    if (phoneNumberForLock) {
+      const lockKey = `customer:${phoneNumberForLock}`
+      
+      // Wait for any existing lock to release
+      while (customerMessageLocks.has(lockKey)) {
+        logger.info("[WEBHOOK] ⏳ Waiting for customer lock", { phone: phoneNumberForLock })
+        await customerMessageLocks.get(lockKey)
+      }
+      
+      // Create new lock
+      let releaseLock: () => void
+      const lockPromise = new Promise<void>((resolve) => { 
+        releaseLock = resolve 
+      })
+      customerMessageLocks.set(lockKey, lockPromise)
+      
+      try {
+        // Process message with lock held
+        await this._receiveMessageLocked(req, res)
+      } finally {
+        // Always release lock
+        customerMessageLocks.delete(lockKey)
+        releaseLock!()
+        logger.info("[WEBHOOK] 🔓 Released customer lock", { phone: phoneNumberForLock })
+      }
+    } else {
+      // No phone number - process without lock
+      await this._receiveMessageLocked(req, res)
+    }
+  }
+  
+  /**
+   * Internal method - processes message with lock held
+   */
+  private async _receiveMessageLocked(req: Request, res: Response): Promise<void> {
     try {
       // 🔒 SECURITY NOTE: HMAC verification removed for frontend compatibility
       // TODO: Re-enable HMAC when using real WhatsApp API webhook
@@ -245,7 +314,12 @@ export class WhatsAppWebhookController {
         }
       }
 
-      const normalizedPhone = normalizePhoneNumber(phoneNumber)
+      // 🔍 DEBUG: Log phone lookup
+      logger.info("[WEBHOOK] 📞 Phone lookup debug", {
+        phoneNumber: phoneNumber,
+        workspaceId,
+      })
+      
       const customerSelect = {
         id: true,
         phone: true,
@@ -267,41 +341,26 @@ export class WhatsAppWebhookController {
 
       let customer = null
 
-      if (normalizedPhone) {
-        try {
-          const normalizedMatch = await prisma.$queryRaw<
-            Array<{ id: string }>
-          >`
-            SELECT "id"
-            FROM "customers"
-            WHERE "workspaceId" = ${workspaceId}
-              AND regexp_replace(COALESCE("phone", ''), '\\D', '', 'g') = ${normalizedPhone}
-            LIMIT 1
-          `
-
-          const normalizedCustomerId = normalizedMatch?.[0]?.id
-          if (normalizedCustomerId) {
-            customer = await prisma.customers.findUnique({
-              where: { id: normalizedCustomerId },
-              select: customerSelect,
-            })
-          }
-        } catch (error) {
-          logger.error("[WEBHOOK] ❌ Error searching customer by normalized phone", {
-            workspaceId,
-            normalizedPhone,
-            error,
-          })
-        }
-      }
-
-      if (!customer) {
-        customer = await prisma.customers.findFirst({
-          where: {
-            phone: phoneNumber,
-            workspaceId,
-          },
-          select: customerSelect,
+      // 🔧 SIMPLE LOOKUP: Search by exact phone number (no normalization magic)
+      // This is more reliable and avoids race conditions
+      customer = await prisma.customers.findFirst({
+        where: {
+          phone: phoneNumber,
+          workspaceId,
+        },
+        select: customerSelect,
+      })
+      
+      if (customer) {
+        logger.info("[WEBHOOK] ✅ Customer found by EXACT phone match", {
+          customerId: customer.id,
+          phone: customer.phone,
+          phoneSearched: phoneNumber,
+        })
+      } else {
+        logger.info("[WEBHOOK] ❌ Customer NOT found", {
+          phoneSearched: phoneNumber,
+          workspaceId,
         })
       }
 
@@ -550,9 +609,10 @@ export class WhatsAppWebhookController {
         const { tempCustomer, chatSession } = await prisma.$transaction(async (tx) => {
           // ✅ STEP 5: CREATE TEMPORARY CUSTOMER RECORD (will be updated after registration)
           // This allows us to save the welcome message in chat history
+          // 🔧 FIX: Save phone EXACTLY as received (with international prefix) to avoid normalization issues
           const tempCustomer = await tx.customers.create({
             data: {
-              phone: normalizedPhone || phoneNumber,
+              phone: phoneNumber, // Save EXACTLY as received (e.g., +39111222333)
               workspaceId: workspaceId,
               name: "New Customer", // Temporary name
               email: `temp_${phoneNumber.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)
@@ -564,6 +624,7 @@ export class WhatsAppWebhookController {
           logger.info("[WEBHOOK] ✅ Customer created", {
             customerId: tempCustomer.id,
             workspaceId: tempCustomer.workspaceId,
+            phoneSaved: tempCustomer.phone,
           })
 
           // ✅ STEP 6: CREATE CHAT SESSION
@@ -579,6 +640,21 @@ export class WhatsAppWebhookController {
             sessionId: chatSession.id,
             workspaceId: chatSession.workspaceId,
             customerId: chatSession.customerId,
+          })
+
+          // ✅ STEP 7: SAVE USER MESSAGE IN CHAT HISTORY (CRITICAL for first message detection)
+          // This is ESSENTIAL so ChatEngine can detect that user already sent a message
+          await tx.conversationMessage.create({
+            data: {
+              workspaceId: workspaceId,
+              customerId: tempCustomer.id,
+              conversationId: chatSession.id,
+              role: "user", // User message
+              content: messageText,
+              agentType: "CUSTOMER",
+              tokensUsed: 0,
+              deliveryStatus: "delivered", // User messages are always "delivered"
+            },
           })
 
           // ✅ STEP 8: SAVE WELCOME MESSAGE IN CHAT HISTORY
@@ -611,7 +687,7 @@ export class WhatsAppWebhookController {
           return { tempCustomer, chatSession }
         })
 
-        // ✅ STEP 7: SAVE debugSteps for Message Flow Timeline (AFTER transaction)
+        // ✅ STEP 9: SAVE debugSteps for Message Flow Timeline (AFTER transaction)
         debugSteps.push({
           type: "save",
           agent: "Database Save",
@@ -988,10 +1064,16 @@ export class WhatsAppWebhookController {
 
       // 📤 Return success to client WITH THE RESPONSE MESSAGE
       res.status(200).json({
+        success: true,
         status: "processed",
+        data: {
+          message: routerResult.response,
+          sessionId: chatSession.id,
+          customerId: customer.id,
+        },
         agentUsed: routerResult.agentUsed,
         tokensUsed: routerResult.tokensUsed,
-        response: routerResult.response, // ✅ CRITICAL: Return actual response to user!
+        response: routerResult.response, // ✅ Backwards-compatible field
         debugInfo: routerResult.debugInfo, // ✅ Include debug info for frontend debugging
       })
     } catch (error: any) {

@@ -181,6 +181,7 @@ export class ProductSearchAgentLLM {
       // 🔧 OPTIMIZATION: Use pre-loaded customerData from Router if available (avoids duplicate DB queries)
       let customerDataForPrompt: any
       let customerDiscount: number
+      let customerIsActive: boolean = true // 🔒 Feature 174: Default to registered if not specified
 
       if (context.customerData) {
         // Router already loaded customer data - use it directly
@@ -202,13 +203,15 @@ export class ProductSearchAgentLLM {
             }
           : {}
         customerDiscount = customer?.discount || 0
+        customerIsActive = customer?.isActive ?? false // 🔒 Feature 174: Get registration status
         logger.warn(`⚠️ Fallback: Loaded customer from DB (consider passing customerData from Router)`)
       }
 
       // Load dynamic content (products, categories, etc.) with customer discount applied
       const productsText = await messageRepo.getActiveProducts(
         context.workspaceId,
-        customerDiscount // 🔴 CRITICAL: Pass customer discount to calculate prices correctly
+        customerDiscount, // 🔴 CRITICAL: Pass customer discount to calculate prices correctly
+        customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
       )
       const categoriesText = await messageRepo.getActiveCategories(
         context.workspaceId

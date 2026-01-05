@@ -51,6 +51,13 @@ export interface PromptVariables {
    */
   customerDiscount: number
   
+  /** 🔒 Feature 174: Registration status (controls price visibility)
+   * Template: {{customerIsActive}}
+   * Source: customer.isActive || false
+   * If false: hide prices, show registration prompt
+   */
+  customerIsActive?: boolean
+  
   /** Lingua del cliente (display name)
    * Template: {{languageUser}}
    * Source: getLanguageDisplayName(customer.language) || 'ITALIANO'

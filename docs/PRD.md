@@ -624,6 +624,8 @@ AND non vede MAI i prodotti del workspace B
 - [x] Storage Service (Local/Cloudinary) 
 - [x] Invoice Generation (PDF)
 - [x] Terraform Infrastructure
+- [x] FAQ System Integration (January 2026) - Dynamic FAQ loading in CustomerSupportAgent
+- [x] Price Visibility Control (Feature 174.2) - Hide prices for non-registered users
 
 ---
 

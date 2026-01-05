@@ -119,6 +119,10 @@ export class CustomerSupportAgentLLM {
           name: true,
           botIdentityResponse: true,
           notificationEmail: true,
+          humanSupportInstructions: true,
+          frustrationEscalationInstructions: true,
+          allowedExternalLinks: true,
+          sellsProductsAndServices: true,
         },
       })
 
@@ -178,12 +182,22 @@ export class CustomerSupportAgentLLM {
         workspaceName: workspace?.name,
       })
       
+      // 🔧 STEP 1.7: Load FAQs for customer support
+      const MessageRepository = require("../../repositories/message.repository").MessageRepository
+      const messageRepo = new MessageRepository()
+      const faqsFormatted = await messageRepo.getActiveFaqs(context.workspaceId)
+      
+      logger.info(`📚 Loaded FAQs for CUSTOMER_SUPPORT`, {
+        hasFaqs: faqsFormatted.length > 0,
+        formattedLength: faqsFormatted.length,
+      })
+      
       const processedPrompt = await promptProcessor.preProcessPrompt(
         systemPrompt,
         context.workspaceId,
         customerDataForPrompt,
         {
-          faqs: "", // FAQ loaded via functions, not in prompt
+          faqs: faqsFormatted, // 🔧 FIX: getActiveFaqs() already returns formatted string
           products: "",
           categories: "",
           services: "",
@@ -191,16 +205,33 @@ export class CustomerSupportAgentLLM {
         },
         undefined, // workspaceUrl
         {
+          sellsProductsAndServices: workspace?.sellsProductsAndServices ?? false, // 🔧 Informational workspace
+          hasHumanSupport: !!workspace?.notificationEmail, // 🔧 True if admin email exists
+          hasSalesAgents: false, // 🔧 Informational workspaces don't have sales agents
           address: workspace?.address || "",
           customAiRules: workspace?.customAiRules || "",
           botIdentityResponse: context.customerData?.botIdentityResponse || workspace?.botIdentityResponse || "",
+          humanSupportInstructions: workspace?.humanSupportInstructions || "", // 🔧 Custom escalation instructions
+          frustrationEscalationInstructions: workspace?.frustrationEscalationInstructions || "", // 🔧 Custom frustration triggers
           adminEmail: context.customerData?.adminEmail || workspace?.notificationEmail || "", // 🆕 For support/escalation
+          allowedExternalLinks: workspace?.allowedExternalLinks || [], // 🔧 Allowed domains for links
         }
       )
 
       logger.info(`✅ Variables replaced in CUSTOMER_SUPPORT prompt`, {
         originalLength: systemPrompt.length,
         processedLength: processedPrompt.length,
+      })
+
+      // 🔍 DEBUG: Log if FAQs section is present in final prompt
+      const hasFaqSection = processedPrompt.includes("FREQUENTLY ASKED QUESTIONS")
+      const hasFaqContent = processedPrompt.includes("D:") && processedPrompt.includes("R:")
+      
+      logger.info(`🔍 [DEBUG] FAQ presence check:`, {
+        hasFaqSection,
+        hasFaqContent,
+        faqsFormattedLength: faqsFormatted.length,
+        promptPreview: processedPrompt.substring(0, 500) + "...",
       })
 
       // STEP 2: Build messages for LLM

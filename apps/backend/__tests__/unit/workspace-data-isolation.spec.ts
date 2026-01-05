@@ -305,7 +305,7 @@ describe("PromptProcessorService - Empty Content Handling", () => {
     expect(result).toContain("Non abbiamo offerte")
   })
 
-  it("should replace empty {{faq}} with warning message", async () => {
+  it("should keep placeholder when FAQ is empty", async () => {
     const processor = new PromptProcessorService()
     const promptWithFaq = "FAQ: {{faq}}"
 
@@ -322,7 +322,8 @@ describe("PromptProcessorService - Empty Content Handling", () => {
       }
     )
 
-    expect(result).toContain("Non abbiamo FAQ")
+    // Changed behavior: empty placeholders remain as-is
+    expect(result).toContain("{{faq}}")
   })
 
   it("should keep real content when data exists", async () => {

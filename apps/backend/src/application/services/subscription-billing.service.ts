@@ -110,9 +110,10 @@ export class SubscriptionBillingService {
       planConfig: {
         displayName: planConfig?.displayName || billing.planType,
         monthlyFee: Number(planConfig?.monthlyFee || 0),
-        features: planConfig?.features
-          ? JSON.parse(planConfig.features as string)
-          : [],
+        features:
+          typeof planConfig?.features === "string"
+            ? JSON.parse(planConfig.features)
+            : planConfig?.features ?? [],
       },
     }
   }
@@ -167,7 +168,10 @@ export class SubscriptionBillingService {
       messageCost: Number(plan.messageCost),
       orderCost: Number(plan.orderCost),
       pushCost: Number(plan.pushCost),
-      features: plan.features ? JSON.parse(plan.features as string) : [],
+      features:
+        typeof plan.features === "string"
+          ? JSON.parse(plan.features)
+          : plan.features ?? [],
     }))
   }
 

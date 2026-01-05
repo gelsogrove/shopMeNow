@@ -41,6 +41,14 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
   // Get sessionId from sessionStorage (unique per browser session)
   const sessionId = storage.getSessionId()
 
+  // 🔍 DEBUG: Log query conditions
+  logger.info("[ChatListContext] Query conditions:", {
+    workspaceId,
+    sessionId,
+    fetchEnabled,
+    queryEnabled: !!(workspaceId && fetchEnabled), // 🔥 FIX: Removed sessionId from condition
+  })
+
   // Use React Query to handle chat list fetching
   // 🚀 WEBSOCKET: No polling - updates via WebSocket events
   // 🔑 KEY FIX: Include sessionId in query key to isolate cache per login session!
@@ -50,8 +58,8 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
     isLoading,
     refetch: queryRefetch,
   } = useQuery({
-    queryKey: ["chats", sessionId], // 🚨 FIX: sessionId nella key!
-    enabled: !!(workspaceId && sessionId && fetchEnabled), // 🔥 Only run if enabled AND we have IDs
+    queryKey: ["chats", sessionId], // 🚨 FIX: sessionId nella key per cache isolation!
+    enabled: !!(workspaceId && fetchEnabled), // 🔥 FIX: Removed sessionId - only need workspace + enable
     queryFn: async () => {
       try {
         if (!workspaceId) {

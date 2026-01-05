@@ -44,7 +44,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe("REGISTRATION_REQUIRED")
-      expect(result.data.message).toContain("[LINK_REGISTRATION_WITH_TOKEN]")
+      expect(result.data.message).toContain("[LINK_REGISTRATION]")
       expect(result.data.requiresRegistration).toBe(true)
     })
 
@@ -95,7 +95,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
       expect(result.success).toBe(false)
       expect(result.error).toBe("FEATURE_NOT_AVAILABLE")
       expect(result.data.message).toContain("non è disponibile")
-      expect(result.data.message).not.toContain("[LINK_REGISTRATION_WITH_TOKEN]")
+      expect(result.data.message).not.toContain("[LINK_REGISTRATION]")
       expect(result.data.requiresRegistration).toBe(false)
     })
 
@@ -111,7 +111,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe("FEATURE_NOT_AVAILABLE")
-      expect(result.data.message).not.toContain("[LINK_REGISTRATION_WITH_TOKEN]")
+      expect(result.data.message).not.toContain("[LINK_REGISTRATION]")
     })
 
     it("should return FEATURE_NOT_AVAILABLE for order tracking functions", async () => {
@@ -223,7 +223,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
 
       // Undefined is falsy, so behaves like informational channel
       expect(result.error).toBe("FEATURE_NOT_AVAILABLE")
-      expect(result.data.message).not.toContain("[LINK_REGISTRATION_WITH_TOKEN]")
+      expect(result.data.message).not.toContain("[LINK_REGISTRATION]")
     })
 
     it("should handle all protected functions consistently", async () => {

@@ -218,6 +218,10 @@ export class ChatEngineService {
   
   // Translation layer (applied as final step in routeMessage wrapper)
   private translationAgent: TranslationAgent
+  
+  // 🆕 NEW: Routing orchestration services
+  private welcomeMessageHandler: any // WelcomeMessageHandler
+  private routerOrchestration: any // RouterOrchestrationService
 
   constructor(private prisma: PrismaClient) {
     // Initialize core pipeline
@@ -238,6 +242,12 @@ export class ChatEngineService {
     
     // Initialize translation layer
     this.translationAgent = new TranslationAgent(prisma)
+    
+    // 🆕 NEW: Initialize routing orchestration
+    const { WelcomeMessageHandler } = require("../../utils/welcome-message.handler")
+    const { RouterOrchestrationService } = require("../../services/router-orchestration.service")
+    this.welcomeMessageHandler = new WelcomeMessageHandler(prisma)
+    this.routerOrchestration = new RouterOrchestrationService(prisma)
   }
 
   /**
@@ -1321,6 +1331,28 @@ export class ChatEngineService {
     return ecommerceIntents.includes(intentType)
   }
 
+  /**
+   * Check if intent should go to CustomerSupportAgentLLM for informational workspaces
+   * These intents should ALWAYS use FAQ when available
+   */
+  private isInformationalIntent(intentType: string): boolean {
+    const informationalIntents = [
+      "GENERAL_QUESTION",
+      "COMPANY_INFO", 
+      "CONTACT_INFO",
+      "BUSINESS_HOURS",
+      "LOCATION",
+      "SERVICES_INFO",
+      "PRODUCT_INFO",
+      "FAQ",
+      "HELP",
+      "GREETING", // Sometimes contains product questions
+      "ASK_BUSINESS_INFO", // ← AGGIUNTO!
+    ]
+
+    return informationalIntents.includes(intentType)
+  }
+
   private shouldUseCatalogQuery(intent: Intent): boolean {
     const supportedIntents = new Set(["SEARCH_PRODUCTS"])
     return supportedIntents.has(intent.type)
@@ -1530,78 +1562,24 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 0.1: Check if first message → Return Welcome Message
       // ========================================================================
-      // Count previous USER messages from this customer in this workspace
-      // 🐛 FIX: Use conversationMessage table (where messages are actually saved)
-      const previousMessageCount = await this.prisma.conversationMessage.count({
-        where: {
-          customerId: input.customerId,
-          workspaceId: input.workspaceId,
-          role: "user", // Only count user messages
-        },
-      })
-
-      const isFirstMessage = previousMessageCount === 0
-
-      logger.info("👋 [ChatEngine] First message check", {
+      // 🆕 NEW: Use WelcomeMessageHandler instead of inline logic
+      const welcomeResult = await this.welcomeMessageHandler.handleWelcomeMessage({
         customerId: input.customerId,
-        previousMessageCount,
-        isFirstMessage,
+        workspaceId: input.workspaceId,
+        customerLanguage: input.customerLanguage,
+        customerMessage: input.message,
+        conversationId: input.conversationId,
       })
 
-      // If first message and welcomeMessage is configured, return it directly
-      if (isFirstMessage && workspaceConfig.welcomeMessage) {
-        // 🌍 Extract welcome message in customer's language
-        let welcomeText: string
-        
-        if (typeof workspaceConfig.welcomeMessage === "string") {
-          welcomeText = workspaceConfig.welcomeMessage
-        } else if (typeof workspaceConfig.welcomeMessage === "object") {
-          // JSON format: { "it": "...", "en": "...", "es": "...", "pt": "..." }
-          const customerLang = this.normalizeLanguageCode(input.customerLanguage || "it")
-          welcomeText = workspaceConfig.welcomeMessage[customerLang] 
-            || workspaceConfig.welcomeMessage["it"] 
-            || workspaceConfig.welcomeMessage["en"]
-            || JSON.stringify(workspaceConfig.welcomeMessage) // Last resort fallback
-        } else {
-          welcomeText = "Welcome!" // Ultimate fallback
-        }
-
-        logger.info("👋 [ChatEngine] Returning welcome message for first-time customer", {
+      if (welcomeResult.isWelcomeMessage) {
+        logger.info("👋 [ChatEngine] Returning welcome message from handler", {
           customerId: input.customerId,
           workspaceId: input.workspaceId,
-          welcomeMessageLength: welcomeText.length,
+          welcomeMessageLength: welcomeResult.welcomeText?.length,
         })
 
-        const conversationId = input.conversationId || `temp-${input.customerId}`
-
-        // Save messages to history
-        const savedMessages = await this.saveMessages(
-          input.workspaceId,
-          input.customerId,
-          conversationId,
-          input.message,
-          welcomeText,
-          "WELCOME",
-          0,
-          {
-            loadedDataType: "WELCOME_MESSAGE",
-            responseType: "WELCOME_MESSAGE",
-            llmUsed: false,
-            steps: [{
-              type: "welcome",
-              agent: "👋 Welcome",
-              timestamp: new Date().toISOString(),
-              input: { textContent: input.message.substring(0, 100) },
-              output: { textContent: "First message - returning configured welcome message" },
-              duration: 0,
-            }],
-            totalTokens: 0,
-            executionTimeMs: Date.now() - startTime,
-          }
-        )
-
         return {
-          message: welcomeText,
+          message: welcomeResult.welcomeText!,
           agentType: AgentType.ROUTER,
           wasHandled: true,
           intent: "GREETING",
@@ -1610,7 +1588,7 @@ export class ChatEngineService {
           processingTimeMs: Date.now() - startTime,
           tokensUsed: 0,
           agentUsed: "WELCOME",
-          _assistantMessageId: savedMessages.assistantMessageId,
+          _assistantMessageId: welcomeResult.assistantMessageId,
         }
       }
 
@@ -3306,50 +3284,126 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       }
 
       // ========================================================================
-      // STEP 2.25: Handle UNKNOWN intent - Return "didn't understand" message
+      // STEP 2.25: Handle UNKNOWN intent - Delegate to RouterOrchestrationService
       // ========================================================================
-      // The IntentParser already uses LLM fallback for classification.
-      // If we still get UNKNOWN, it means the LLM couldn't classify it either.
-      // Instead of trying product search, return a polite "didn't understand" message.
+      // 🆕 NEW ARCHITECTURE: IntentParser returned UNKNOWN (no pattern/keyword match)
+      // This means we have a complex query that needs LLM routing.
+      // Delegate to RouterOrchestrationService which will:
+      // - Informational workspace → CUSTOMER_SUPPORT (FAQ system)
+      // - E-commerce workspace → Full Router LLM (all agents)
       if (intentResult.intent.type === "UNKNOWN") {
-        const processingTimeMs = Date.now() - startTime
-        
-        // Polite "didn't understand" message - will be translated by translation layer
-        const unknownResponse = "Mi dispiace, non ho capito. Potresti riformulare la domanda? 🤔"
-        
-        // Save messages
-        const savedMessages = await this.saveMessages(
-          input.workspaceId,
-          input.customerId,
-          conversationId,
-          input.message,
-          unknownResponse
-        )
-        
-        logger.info("❓ [ChatEngine] UNKNOWN intent - returning didn't understand message", {
+        logger.info("❓ [ChatEngine] UNKNOWN intent - delegating to RouterOrchestrationService", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
-          originalMessage: input.message.substring(0, 50),
+          messagePreview: input.message.substring(0, 50),
         })
+
+        const routingStart = Date.now()
         
-        return {
-          message: unknownResponse,
-          agentType: AgentType.ROUTER,
-          wasHandled: true,
-          intent: "UNKNOWN",
-          confidence: "LOW",
-          source: "PATTERN",
-          processingTimeMs,
-          debugInfo: {
-            steps: debugSteps,
-          },
-          response: unknownResponse,
-          agentUsed: AgentType.ROUTER,
-          tokensUsed: 0,
-          executionTimeMs: processingTimeMs,
-          _assistantMessageId: savedMessages.assistantMessageId,
-          wasFAQ: false,
-          isBlocked: false,
+        try {
+          // Call RouterOrchestrationService
+          const routingResult = await this.routerOrchestration.route({
+            workspaceId: input.workspaceId,
+            customerId: input.customerId,
+            customerName: input.customerName,
+            customerLanguage: input.customerLanguage,
+            message: input.message,
+            conversationId,
+            isSystemMessage: false,
+            sessionId: input.conversationId,
+          })
+
+          const routingTime = Date.now() - routingStart
+          totalTokens += routingResult.totalTokens || 0
+
+          // Merge debug steps from routing
+          if (routingResult.debugSteps) {
+            debugSteps.push(...routingResult.debugSteps)
+          }
+
+          logger.info("✅ [ChatEngine] RouterOrchestrationService completed", {
+            workspaceId: input.workspaceId,
+            agentType: routingResult.agentType,
+            totalTokens: routingResult.totalTokens,
+            executionTimeMs: routingTime,
+          })
+
+          // Save messages
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            routingResult.response,
+            routingResult.agentType,
+            routingResult.totalTokens || 0,
+            {
+              steps: debugSteps,
+              totalTokens,
+              executionTimeMs: Date.now() - startTime,
+            }
+          )
+
+          const processingTimeMs = Date.now() - startTime
+
+          return {
+            message: routingResult.response,
+            agentType: routingResult.agentType,
+            wasHandled: true,
+            intent: "ROUTER_DELEGATED",
+            confidence: "HIGH",
+            source: "LLM_CONTEXT",
+            processingTimeMs,
+            debugInfo: {
+              steps: debugSteps,
+              totalTokens,
+              executionTimeMs: processingTimeMs,
+            },
+            response: routingResult.response,
+            agentUsed: routingResult.agentType,
+            tokensUsed: routingResult.totalTokens || 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            _assistantMessageId: savedMessages.assistantMessageId,
+            isBlocked: false,
+          }
+
+        } catch (error) {
+          logger.error("❌ [ChatEngine] RouterOrchestrationService failed", {
+            workspaceId: input.workspaceId,
+            error: error.message,
+          })
+          
+          // Fallback: Return polite "didn't understand" message
+          const processingTimeMs = Date.now() - startTime
+          const unknownResponse = "Mi dispiace, si è verificato un errore. Potresti riprovare? 🤔"
+          
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            unknownResponse,
+            AgentType.ROUTER,
+            0,
+            { steps: debugSteps, totalTokens, executionTimeMs: processingTimeMs }
+          )
+          
+          return {
+            message: unknownResponse,
+            agentType: AgentType.ROUTER,
+            wasHandled: true,
+            intent: "ERROR",
+            confidence: "LOW",
+            source: "PATTERN",
+            processingTimeMs,
+            debugInfo: { steps: debugSteps, totalTokens, executionTimeMs: processingTimeMs },
+            response: unknownResponse,
+            agentUsed: AgentType.ROUTER,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            _assistantMessageId: savedMessages.assistantMessageId,
+          }
         }
       }
 
@@ -3608,37 +3662,19 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       }
 
       // ========================================================================
-      // STEP 2.5: Check if e-commerce intent is allowed
+      // STEP 2.5: Informational Workspace - Override intent for FAQ-based response
+      // 🔒 Feature 174: If workspace doesn't sell products, force CUSTOMER_SUPPORT agent (with FAQ)
+      // This allows normal flow continuation (translation + link replacement)
       // ========================================================================
-      if (this.isEcommerceIntent(intentResult.intent.type) && !workspaceConfig.sellsProductsAndServices) {
-        // E-commerce not enabled - redirect to support response
-        logger.info("🚫 [ChatEngine] E-commerce disabled, redirecting to support", {
-          intentType: intentResult.intent.type,
+      if ((this.isEcommerceIntent(intentResult.intent.type) || this.isInformationalIntent(intentResult.intent.type)) && !workspaceConfig.sellsProductsAndServices) {
+        logger.info("🔀 [ChatEngine] Informational workspace: forcing CUSTOMER_SUPPORT intent", {
+          originalIntent: intentResult.intent.type,
+          workspaceId: input.workspaceId
         })
         
-        const processingTimeMs = Date.now() - startTime
-        const supportMessage = this.getEcommerceDisabledMessage(input.customerLanguage || "it")
-        
-        return {
-          message: supportMessage,
-          agentType: AgentType.CUSTOMER_SUPPORT,
-          wasHandled: true,
-          intent: "ECOMMERCE_DISABLED",
-          confidence: "HIGH",
-          source: "PATTERN",
-          processingTimeMs,
-          debugInfo: {
-            loadedDataType: "NONE",
-            responseType: "ECOMMERCE_DISABLED",
-            llmUsed: false,
-          },
-          response: supportMessage,
-          agentUsed: AgentType.CUSTOMER_SUPPORT,
-          tokensUsed: 0,
-          executionTimeMs: processingTimeMs,
-          wasFAQ: false,
-          isBlocked: false,
-        }
+        // Override intent to force CUSTOMER_SUPPORT routing (continues normal flow)
+        intentResult.intent.type = "CUSTOMER_SUPPORT"
+        intentResult.source = "INFORMATIONAL_OVERRIDE"
       }
 
       if (intentResult.intent.type === "REQUEST_HUMAN") {
@@ -4375,7 +4411,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       const formatTime = Date.now() - formatStart
 
       // 🆕 Add LLM Formatter debug step
-      const agentType = this.mapIntentToAgentType(intentResult.intent.type)
+      const agentType = this.mapIntentToAgentType(intentResult.intent.type, workspaceConfig)
       debugSteps.push({
         type: "sub_agent",
         agent: `✨ ${agentType} (LLM Formatter)`,
@@ -4872,8 +4908,18 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
   /**
    * Map intent type to AgentType for logging/analytics
+   * 🔒 Feature 174: Informational workspaces route e-commerce intents to CUSTOMER_SUPPORT with FAQ
    */
-  private mapIntentToAgentType(intentType: string): AgentType {
+  private mapIntentToAgentType(intentType: string, workspaceConfig?: WorkspaceConfig): AgentType {
+    // 🆕 If informational workspace + e-commerce intent → route to CUSTOMER_SUPPORT (has FAQ in template)
+    if (
+      workspaceConfig &&
+      !workspaceConfig.sellsProductsAndServices &&
+      this.isEcommerceIntent(intentType)
+    ) {
+      return AgentType.CUSTOMER_SUPPORT
+    }
+
     const mapping: Record<string, AgentType> = {
       // Product search intents
       SHOW_CATEGORIES: AgentType.PRODUCT_SEARCH,

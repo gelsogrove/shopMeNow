@@ -21,7 +21,6 @@ import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
 import { getAllForWorkspace, Client } from "@/services/clientsApi"
-import axios from "axios"
 import { Headphones, MessageCircle, Send, X, UserPlus, Users } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { MessageRenderer } from "./MessageRenderer"
@@ -425,18 +424,11 @@ export function WhatsAppChatModal({
 
     try {
       // Call the API to process the initial message - USE SAME WEBHOOK AS NORMAL MESSAGES
-      const apiUrl = `${
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001/api"
-          : `${window.location.origin}/api`)
-      }/whatsapp/webhook`
-
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
 
       // Include isNewConversation flag for new chats
-      const response = await axios.post(apiUrl, {
+      const response = await api.post("/whatsapp/webhook", {
         message: userMessage.content,
         phoneNumber: userPhoneNumber,
         workspaceId: currentWorkspaceId,
@@ -630,18 +622,10 @@ export function WhatsAppChatModal({
 
     try {
       // Call the webhook API (same as real WhatsApp messages)
-      const apiUrl = `${
-        import.meta.env.VITE_API_URL ||
-        (window.location.hostname === "localhost"
-          ? "http://localhost:3001/api"
-          : `${window.location.origin}/api`)
-      }/whatsapp/webhook`
-
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
 
-      logger.info("🔄 FRONTEND DEBUG: Making API call to webhook:", apiUrl)
-      const response = await axios.post(apiUrl, {
+      const response = await api.post("/whatsapp/webhook", {
         entry: [
           {
             changes: [

@@ -704,6 +704,9 @@ export default function SettingsPage() {
                           rows={4}
                           placeholder="Welcome! How can I help you today?"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          Token: [LINK_REGISTRATION]
+                        </p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="wipMessage">Maintenance Message</Label>

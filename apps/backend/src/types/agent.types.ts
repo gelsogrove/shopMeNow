@@ -32,12 +32,18 @@ export { PromptVariables }
  * const promptVariables = PromptVariableBuilder.build(customer, workspace, dynamicContent)
  */
 export interface CustomerData {
+  /** Customer ID (for workspace strategy) */
+  id?: string
   /** Customer display name (e.g., "Mario Rossi") */
   nameUser: string
+  /** Customer name (alias for nameUser) */
+  name?: string
   /** Customer email */
   email: string
   /** Customer phone (WhatsApp format) */
-  phone: string
+  phone?: string
+  /** Customer registration status */
+  isActive?: boolean
   /** Customer discount percentage (0-100) */
   discountUser: number
   /** Company/workspace name for {{companyName}} replacement */
@@ -73,6 +79,14 @@ export interface WorkspaceConfig {
   sellsProductsAndServices: boolean
   /** Human support escalation enabled */
   hasHumanSupport: boolean
+  /** Human support escalation instructions */
+  humanSupportInstructions?: string
+  /** Frustration escalation triggers */
+  frustrationEscalationInstructions?: string
+  /** Operator contact method (EMAIL, WHATSAPP, etc.) */
+  operatorContactMethod?: string
+  /** Operator WhatsApp number */
+  operatorWhatsappNumber?: string
   /** Sales agents feature enabled */
   hasSalesAgents: boolean
   /** Bot identity response for "chi siete?" */

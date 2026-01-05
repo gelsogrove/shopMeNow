@@ -50,7 +50,7 @@ describe("FunctionExecutorService - Registration Guard (Feature 174)", () => {
 
         expect(result.success).toBe(false)
         expect(result.error).toBe("REGISTRATION_REQUIRED")
-        expect(result.data.message).toContain("[LINK_REGISTRATION_WITH_TOKEN]")
+        expect(result.data.message).toContain("[LINK_REGISTRATION]")
         expect(result.data.functionName).toBe(name)
         expect(result.data.requiresRegistration).toBe(true)
       })
@@ -119,7 +119,7 @@ describe("FunctionExecutorService - Registration Guard (Feature 174)", () => {
         success: false,
         error: "REGISTRATION_REQUIRED",
         data: {
-          message: expect.stringContaining("[LINK_REGISTRATION_WITH_TOKEN]"),
+          message: expect.stringContaining("[LINK_REGISTRATION]"),
           functionName: "addToCart",
           requiresRegistration: true,
         },

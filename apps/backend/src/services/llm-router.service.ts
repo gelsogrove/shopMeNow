@@ -854,7 +854,8 @@ export class LLMRouterService {
           workspace.sellsProductsAndServices
             ? messageRepo.getActiveProducts(
                 params.workspaceId,
-                customer.discount || 0
+                customer.discount || 0,
+                customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
               )
             : Promise.resolve([]),
           messageRepo.getActiveServices(params.workspaceId), // ✅ Always load (informational)
@@ -1948,7 +1949,8 @@ export class LLMRouterService {
             workspace!.sellsProductsAndServices
               ? messageRepo.getActiveProducts(
                   params.workspaceId,
-                  customerDiscountForCatalog
+                  customerDiscountForCatalog,
+                  customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
                 )
               : Promise.resolve([]),
             this.prisma.orders.findFirst({

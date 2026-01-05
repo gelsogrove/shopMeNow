@@ -28,8 +28,26 @@ Classify user intent ONLY. The CODE handles everything else:
 ## 📊 INTENT CLASSIFICATION OUTPUT
 
 Return intent type only. Examples:
+
+**Identity & General Information:**
 - "chi sei?" → ASK_IDENTITY
 - "dove siete?" → ASK_LOCATION
+- "How long does onboarding take?" → CUSTOMER_SUPPORT
+- "What are your pricing plans?" → CUSTOMER_SUPPORT
+- "Do you support X feature?" → CUSTOMER_SUPPORT
+- "Can I integrate with...?" → CUSTOMER_SUPPORT
+- "Tell me about your service" → CUSTOMER_SUPPORT
+- "How does the trial work?" → CUSTOMER_SUPPORT
+- "What is included in Starter plan?" → CUSTOMER_SUPPORT
+
+**Products & Catalog:**
 - "voglio un prodotto" → SEARCH_PRODUCTS
+- "mostrami le categorie" → SEARCH_PRODUCTS
+
+**Cart:**
 - "mostra carrello" → VIEW_CART
+- "aggiungi al carrello" → ADD_TO_CART
+
+**Orders:**
 - "i miei ordini" → LIST_ORDERS
+- "dove è il mio ordine?" → TRACK_ORDER

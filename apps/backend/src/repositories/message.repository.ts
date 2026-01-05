@@ -1279,7 +1279,8 @@ export class MessageRepository {
    */
   async getActiveProducts(
     workspaceId: string,
-    customerDiscount: number = 0
+    customerDiscount: number = 0,
+    customerIsActive: boolean = true // 🔒 Feature 174: Control price visibility
   ): Promise<string> {
     try {
       const products = await this.prisma.products.findMany({
@@ -1416,7 +1417,18 @@ export class MessageRepository {
           // ✅ Feature 191: Include sku for LLM internal use (not shown to user)
           // Format: [CODE] NOME formato ~<currency>originalPrice~ → <currency>finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
           // LLM uses getProductDetails(sku) to get internal code for cart operations
-          formattedProducts += `• [${p.sku}] ${p.name}${formatoStr} ~${currencySymbol}${originalPrice}~ → ${currencySymbol}${finalPrice}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
+          
+          // 🔒 Feature 174: Hide prices for non-registered customers
+          let priceSection = ''
+          if (customerIsActive) {
+            // Registered customer: show prices
+            priceSection = ` ~${currencySymbol}${originalPrice}~ → ${currencySymbol}${finalPrice}`
+          } else {
+            // Non-registered customer: hide prices, show registration prompt
+            priceSection = ` | 💳 Registrati per vedere i prezzi: [LINK_REGISTRATION]`
+          }
+          
+          formattedProducts += `• [${p.sku}] ${p.name}${formatoStr}${priceSection}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
         })
         formattedProducts += "\n"
       }

@@ -72,3 +72,11 @@ C'è altro che posso fare per te?
 ```
 
 ## 🏢 WORKSPACE: {{workspaceName}}
+
+{{#if faqs}}
+## 📚 FREQUENTLY ASKED QUESTIONS
+
+Use these to answer customer questions:
+
+{{faqs}}
+{{/if}}

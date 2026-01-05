@@ -99,6 +99,18 @@ const mockPrisma = {
           message.role === where.role
       ).length
     }),
+    create: jest.fn(async ({ data }) => {
+      const id = `msg-${messageIdCounter++}`
+      messageStore.push({
+        id,
+        role: data.role,
+        content: data.content,
+        workspaceId: data.workspaceId,
+        customerId: data.customerId,
+        conversationId: data.conversationId,
+      })
+      return { id }
+    }),
     update: jest.fn(async () => ({ id: "mock-message" })),
     deleteMany: jest.fn(async ({ where }) => {
       for (let index = messageStore.length - 1; index >= 0; index -= 1) {

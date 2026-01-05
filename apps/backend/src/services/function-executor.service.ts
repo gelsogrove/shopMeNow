@@ -130,7 +130,7 @@ export class FunctionExecutor {
               success: false,
               error: 'REGISTRATION_REQUIRED',
               data: {
-                message: `Per utilizzare "${functionName}" devi completare la registrazione: [LINK_REGISTRATION_WITH_TOKEN]`,
+                message: `Per utilizzare "${functionName}" devi completare la registrazione: [LINK_REGISTRATION]`,
                 functionName,
                 requiresRegistration: true,
               },

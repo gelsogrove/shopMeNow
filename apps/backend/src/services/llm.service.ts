@@ -210,9 +210,13 @@ export class LLMService {
     const offers =
       customerData?.OFFERS || (await messageRepo.getActiveOffers(workspace.id))
     const customerDiscount = customer.discount || 0
+    
+    // 🔒 Feature 174: Check registration status for price visibility
+    const customerIsActive = customer.isActive ?? false
+    
     const products =
       customerData?.PRODUCTS ||
-      (await messageRepo.getActiveProducts(workspace.id, customerDiscount)) ||
+      (await messageRepo.getActiveProducts(workspace.id, customerDiscount, customerIsActive)) ||
       ""
 
     // 🔍 DEBUG: Log catalog data
@@ -666,13 +670,13 @@ export class LLMService {
       /\[link registration\]/gi,
       /\[registrazione\]/gi,
       /\{\{link_registration_with_token\}\}/gi, // LLM might use double braces
-      /\{\{LINK_REGISTRATION_WITH_TOKEN\}\}/gi,
+      /\{\{LINK_REGISTRATION\}\}/gi,
       /link registrazione(?!\w)/gi,
     ]
     wrongRegistrationPatterns.forEach(pattern => {
       if (pattern.test(finalResponse)) {
-        logger.warn(`⚠️ LLM wrote wrong registration token, normalizing to [LINK_REGISTRATION_WITH_TOKEN]`)
-        finalResponse = finalResponse.replace(pattern, "[LINK_REGISTRATION_WITH_TOKEN]")
+        logger.warn(`⚠️ LLM wrote wrong registration token, normalizing to [LINK_REGISTRATION]`)
+        finalResponse = finalResponse.replace(pattern, "[LINK_REGISTRATION]")
       }
     })
 
@@ -681,7 +685,7 @@ export class LLMService {
       "[LINK_CHECKOUT_WITH_TOKEN]",
       "[LINK_PROFILE_WITH_TOKEN]",
       "[LINK_CATALOG]",
-      "[LINK_REGISTRATION_WITH_TOKEN]",
+      "[LINK_REGISTRATION]",
     ] as const
 
     // 🔍 Check e replace di tutti i token in sequenza
@@ -759,7 +763,7 @@ export class LLMService {
             break
           }
 
-          case "[LINK_REGISTRATION_WITH_TOKEN]": {
+          case "[LINK_REGISTRATION]": {
             // 🔐 Feature 174: Generate registration link for non-registered users
             logger.info(
               `🔗 [TOKEN-REPLACE] Generating registration link for customer ${customer.phone}`
@@ -1492,20 +1496,19 @@ export class LLMService {
     workspaceId: string,
     welcomeMessage: string
   ): Promise<string> {
+    const token = welcomeMessage.includes("[LINK_REGISTRATION]")
+      ? "[LINK_REGISTRATION]"
+      : null
+
+    if (!token) {
+      return welcomeMessage
+    }
+
     const registrationLink = await this.generateRegistrationLink(
       phone,
       workspaceId
     )
-    if (welcomeMessage.includes("[LINK_REGISTRATION_WITH_TOKEN]")) {
-      return welcomeMessage.replace(
-        "[LINK_REGISTRATION_WITH_TOKEN]",
-        registrationLink
-      )
-    } else {
-      return (
-        welcomeMessage + `\nPer registrarti clicca qui: ${registrationLink}`
-      )
-    }
+    return welcomeMessage.replace(token, registrationLink)
   }
   private async generateRegistrationLink(
     phone: string,

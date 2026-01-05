@@ -238,6 +238,7 @@ export class PromptProcessorService {
       botIdentityResponse?: string
       hasHumanSupport?: boolean
       humanSupportInstructions?: string
+      frustrationEscalationInstructions?: string // 🆕 Feature 203: Custom escalation triggers
       operatorContactMethod?: string
       operatorWhatsappNumber?: string
       hasSalesAgents?: boolean
@@ -266,12 +267,15 @@ export class PromptProcessorService {
         // ✅ FIX: Add hasIdentity, hasFaq, hasCustomAiRules boolean checks for {{#if}} conditionals
         hasIdentity: !!workspaceConfig?.botIdentityResponse,
         hasFaq: !!dynamicContent?.faqs,
+        faqs: dynamicContent?.faqs || "", // ✅ FIX: Add faqs string for template replacement
         hasCustomAiRules: !!workspaceConfig?.customAiRules,
+        hasAddress: !!workspaceConfig?.address, // ✅ FIX: Add hasAddress boolean for {{#if hasAddress}}
         // String variables - ONLY truthiness matters for {{#if}}, actual value substituted later
         address: workspaceConfig?.address || "",
         customAiRules: workspaceConfig?.customAiRules || "",
         botIdentityResponse: workspaceConfig?.botIdentityResponse || "",
         humanSupportInstructions: workspaceConfig?.humanSupportInstructions || "",
+        frustrationEscalationInstructions: workspaceConfig?.frustrationEscalationInstructions || "", // ✅ FIX: Add for custom escalation
         allowedExternalLinks: workspaceConfig?.allowedExternalLinks?.join("\n") || "",
         // Customer booleans (for conditionals)
         hasAgentAssigned: !!(customerData?.agentName),
@@ -294,6 +298,9 @@ export class PromptProcessorService {
     }
     if (workspaceConfig?.humanSupportInstructions) {
       processedPrompt = processedPrompt.replace(/\{\{humanSupportInstructions\}\}/g, workspaceConfig.humanSupportInstructions)
+    }
+    if (workspaceConfig?.frustrationEscalationInstructions) {
+      processedPrompt = processedPrompt.replace(/\{\{frustrationEscalationInstructions\}\}/g, workspaceConfig.frustrationEscalationInstructions)
     }
     if (workspaceConfig?.allowedExternalLinks?.length) {
       processedPrompt = processedPrompt.replace(/\{\{allowedExternalLinks\}\}/g, workspaceConfig.allowedExternalLinks.join("\n"))
@@ -320,13 +327,14 @@ export class PromptProcessorService {
     }
 
     // Sostituzione contenuti dinamici
-    if (processedPrompt.includes("{{faq}}")) {
+    // ✅ FIX: Template uses {{faqs}} (plural) not {{faq}} (singular)
+    if (processedPrompt.includes("{{faqs}}")) {
       // 🚨 CRITICAL: If no FAQ, tell LLM explicitly
       const faqContent = dynamicContent.faqs?.trim()
         ? dynamicContent.faqs
         : "⚠️ Non abbiamo FAQ in questo workspace."
 
-      processedPrompt = processedPrompt.replace("{{faq}}", faqContent)
+      processedPrompt = processedPrompt.replace(/\{\{faqs\}\}/g, faqContent)
     }
 
     if (processedPrompt.includes("{{products}}")) {

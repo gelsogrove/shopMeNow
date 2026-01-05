@@ -649,7 +649,14 @@ Sono qui per aiutarti 😊`,
   }
 
   // Create FAQs for informational workspace (BellItalia)
+  // 🔧 IMPORTANT: FAQs are in multiple languages to ensure LLM gets content regardless of translation pipeline
   const infoFAQs = [
+    // Italian FAQs (primary language for BellItalia workspace)
+    { category: "Products", question: "Quali tipologie di prodotti offre BellItalia?", answer: "Abbiamo a disposizione una vasta gamma di prodotti alimentari italiani e mediterranei — da articoli artigianali realizzati da produttori esclusivi fino a marchi ben noti — ideali per ristoranti, pizzerie, distributori e grande distribuzione." },
+    { category: "Customers", question: "Chi può acquistare da BellItalia (ristoranti / negozi / privati)?", answer: "Il nostro catalogo è progettato principalmente per clienti professionali — pizzerie, ristoranti, distributori e GDO (grande distribuzione)." },
+    { category: "Products", question: "Quanti prodotti avete nel vostro catalogo?", answer: "Offriamo più di 600 riferimenti nel nostro catalogo di prodotti autentici italiani." },
+    
+    // English FAQs (fallback in case translation doesn't work)
     { category: "Products", question: "What kinds of products does BellItalia offer?", answer: "We provide a wide variety of Italian and Mediterranean food products — from artisanal items made by exclusive producers to well-known brand names — ideal for restaurants, pizzerias, distributors and large distribution." },
     { category: "Customers", question: "Who can buy from BellItalia (restaurants / shops / individuals)?", answer: "Our catalogue is designed mainly for professional clients — pizzerias, restaurants, distributors and GDO (large retailers)." },
     { category: "Products", question: "How many products do you have in your catalogue?", answer: "We offer more than 600 references in our catalogue of authentic Italian products." },

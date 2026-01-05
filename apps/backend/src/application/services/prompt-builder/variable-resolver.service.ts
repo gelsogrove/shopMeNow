@@ -38,6 +38,7 @@ export interface PromptVariables {
   customerEmail: string
   customerPhone: string
   customerDiscount: number
+  customerIsActive?: boolean // 🔒 Feature 174: Registration status
   pushNotificationsConsent: boolean
   languageUser: string
   lastOrderCode: string
@@ -187,6 +188,7 @@ export class VariableResolverService {
       variables.customerDiscount = 0
       variables.pushNotificationsConsent = false
       variables.languageUser = variables.language || "it"
+      variables.customerIsActive = false // 🔒 Feature 174: Default to non-registered
       return
     }
 
@@ -196,6 +198,7 @@ export class VariableResolverService {
     variables.customerDiscount = customer.discount || 0
     variables.pushNotificationsConsent = customer.push_notifications_consent ?? false
     variables.languageUser = this.getLanguageDisplayName(customer.language || variables.language || "it")
+    variables.customerIsActive = customer.isActive ?? false // 🔒 Feature 174: Registration status
 
     // Sales agent info
     if (customer.sales) {
@@ -231,7 +234,7 @@ export class VariableResolverService {
     // Product Search needs: PRODUCTS, SERVICES, CATEGORIES, OFFERS
     if (typeKey === "PRODUCT_SEARCH") {
       const [products, services, categories, offers] = await Promise.all([
-        this.getActiveProducts(workspaceId, variables.customerDiscount || 0),
+        this.getActiveProducts(workspaceId, variables.customerDiscount || 0, variables.customerIsActive ?? false),
         this.getActiveServices(workspaceId),
         this.getActiveCategories(workspaceId),
         this.getActiveOffers(workspaceId),
@@ -269,7 +272,7 @@ export class VariableResolverService {
   /**
    * Get active products formatted for prompt
    */
-  private async getActiveProducts(workspaceId: string, discount: number): Promise<string> {
+  private async getActiveProducts(workspaceId: string, discount: number, customerIsActive: boolean): Promise<string> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { currency: true },
@@ -295,7 +298,13 @@ export class VariableResolverService {
       const discountedPrice = discount > 0 
         ? (Number(p.price) * (1 - discount / 100)).toFixed(2)
         : Number(p.price).toFixed(2)
-      return `- ${p.name} (${p.sku}): ${currencySymbol}${discountedPrice} - ${p.category?.name || "Uncategorized"}`
+      
+      // 🔒 Feature 174: Hide prices for non-registered customers
+      const priceSection = customerIsActive 
+        ? `: ${currencySymbol}${discountedPrice}`
+        : ` | Registrati per vedere i prezzi: [LINK_REGISTRATION]`
+      
+      return `- ${p.name} (${p.sku})${priceSection} - ${p.category?.name || "Uncategorized"}`
     }).join("\n")
   }
 
