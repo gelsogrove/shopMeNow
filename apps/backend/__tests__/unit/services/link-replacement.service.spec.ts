@@ -4,7 +4,15 @@
  * TASK17: Test token replacement with plain/markdown formats and regex patterns
  */
 
-import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../../../src/application/services/link-replacement.service"
+const prismaMock = {
+  customers: {
+    findFirst: jest.fn(),
+  },
+}
+
+jest.mock("@echatbot/database", () => ({
+  prisma: prismaMock,
+}))
 
 // Mock SecureTokenService
 jest.mock("../../../src/application/services/secure-token.service", () => ({
@@ -13,14 +21,29 @@ jest.mock("../../../src/application/services/secure-token.service", () => ({
   })),
 }))
 
+jest.mock("../../../src/application/services/token.service", () => ({
+  TokenService: jest.fn().mockImplementation(() => ({
+    createRegistrationToken: jest.fn().mockResolvedValue("mock-registration-token"),
+  })),
+}))
+
+jest.mock("../../../src/services/workspace.service", () => ({
+  workspaceService: {
+    getWorkspaceURL: jest.fn().mockResolvedValue("https://example.com"),
+  },
+}))
+
 // Mock linkGeneratorService
 jest.mock("../../../src/application/services/link-generator.service", () => ({
   linkGeneratorService: {
     generateCheckoutLink: jest.fn().mockResolvedValue("https://echatbot.ai/checkout?token=abc123"),
     generateProfileLink: jest.fn().mockResolvedValue("https://echatbot.ai/profile?token=xyz789"),
     generateCatalogLink: jest.fn().mockResolvedValue("https://echatbot.ai/catalog"),
+    generateRegistrationLink: jest.fn().mockResolvedValue("https://example.com/s/reg123"),
   },
 }))
+
+import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../../../src/application/services/link-replacement.service"
 
 describe("LinkReplacementService - Token Replacement", () => {
   let service: LinkReplacementService
@@ -29,6 +52,7 @@ describe("LinkReplacementService - Token Replacement", () => {
 
   beforeEach(() => {
     service = new LinkReplacementService()
+    prismaMock.customers.findFirst.mockReset()
   })
 
   describe("Token Detection", () => {
@@ -80,6 +104,41 @@ describe("LinkReplacementService - Token Replacement", () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("does not contain any replaceable tokens")
+    })
+  })
+
+  describe("Registration Token", () => {
+    it("should replace LINK_REGISTRATION for non-registered customer", async () => {
+      prismaMock.customers.findFirst.mockResolvedValue({
+        phone: "+1234567890",
+        isActive: false,
+      })
+
+      const params: ReplaceLinkWithTokenParams = {
+        response: "Registrati qui: [LINK_REGISTRATION]",
+      }
+
+      const result = await service.replaceTokens(params, mockCustomerId, mockWorkspaceId)
+
+      expect(result.success).toBe(true)
+      expect(result.response).toContain("https://example.com/s/reg123")
+      expect(result.response).not.toContain("[LINK_REGISTRATION]")
+    })
+
+    it("should remove LINK_REGISTRATION for registered customer", async () => {
+      prismaMock.customers.findFirst.mockResolvedValue({
+        phone: "+1234567890",
+        isActive: true,
+      })
+
+      const params: ReplaceLinkWithTokenParams = {
+        response: "Registrati qui: [LINK_REGISTRATION]",
+      }
+
+      const result = await service.replaceTokens(params, mockCustomerId, mockWorkspaceId)
+
+      expect(result.success).toBe(true)
+      expect(result.response).not.toContain("[LINK_REGISTRATION]")
     })
   })
 

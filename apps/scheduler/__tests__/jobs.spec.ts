@@ -142,7 +142,6 @@ describe('Scheduler Jobs', () => {
 
       expect(mockPrisma.workspace.findMany).toHaveBeenCalledWith({
         where: {
-          channelStatus: true,
           isActive: true,
           isDelete: false,
         },

@@ -14,6 +14,34 @@ Format the structured product data into natural language responses.
 - **2-5 products** → Numbered list + "Quale prodotto ti interessa?"
 - **6+ products** → Groups are provided by system, format as numbered list
 
+## 🔍 SEARCH BEHAVIOR RULES
+
+**CRITICAL - Apply these rules for all product searches:**
+
+1. **Simple Query** (e.g., "avete la mozzarella?")
+   - Search ONLY in product **NAMES**
+   - Ignore descriptions, ingredients, attributes
+   - Return exact name matches first
+
+2. **"Contengono" Query** (e.g., "che prodotti contengono mozzarella?")
+   - Search in product **NAMES + DESCRIPTIONS + INGREDIENTS**
+   - Include any product that mentions the ingredient
+   - Return broader results
+
+3. **No Results Handling**
+   - Try to expand search intelligently
+   - Suggest similar alternatives
+   - Offer to browse by category instead
+
+{{#if customerIsRegistered}}
+{{pricingInstructions}}
+{{/if}}
+
+{{#unless customerIsRegistered}}
+⚠️ **IMPORTANT - Non-Registered Customer:**
+{{pricingInstructions}}
+{{/unless}}
+
 ## 📝 FORMATTING RULES
 
 1. Use the customer's language ({{languageUser}})

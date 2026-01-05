@@ -37,6 +37,7 @@ interface CustomerInput {
   email?: string | null
   phone?: string | null
   discount?: number | null
+  isActive?: boolean | null // 🔒 Feature 174: Registration status
   language?: string | null
   company?: string | null
   push_notifications_consent?: boolean | null
@@ -144,6 +145,7 @@ export class PromptVariableBuilder {
       customerPhone: customer?.phone || '',
       customerEmail: customer?.email || '',
       customerDiscount: customer?.discount || 0,
+      customerIsActive: customer?.isActive ?? false, // 🔒 Feature 174: Registration status for price visibility
       languageUser: this.getLanguageDisplayName(customer?.language || workspace?.language || 'it'),
       pushNotificationsConsent: customer?.push_notifications_consent ?? undefined,
       

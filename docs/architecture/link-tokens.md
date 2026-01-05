@@ -7,7 +7,7 @@
 | `[LINK_CHECKOUT_WITH_TOKEN]` | Cart/checkout page | SecureTokenService | When showing cart summary |
 | `[LINK_PROFILE_WITH_TOKEN]` | Customer profile edit | SecureTokenService | When customer wants to update data |
 | `[LINK_CATALOG]` | Product catalog | linkGeneratorService | When showing product list |
-| `[LINK_REGISTRATION_WITH_TOKEN]` | Registration page | SecureTokenService | For new customer registration |
+| `[LINK_REGISTRATION]` | Registration page | TokenService | For new customer registration |
 | `[LINK_ORDER_WITH_TOKEN]` | Order detail page | SecureTokenService | When showing order confirmation |
 
 ## ❌ DEPRECATED TOKENS (DO NOT USE)
@@ -25,13 +25,14 @@
 ### Token Generation Flow
 1. Agent includes token in response (e.g., `[LINK_CHECKOUT_WITH_TOKEN]`)
 2. `link-replacement.service.ts` detects token
-3. `secure-token.service.ts` generates JWT token
-4. `link-generator.service.ts` creates short URL
-5. Token replaced with actual URL (e.g., `http://localhost:3000/s/abc123`)
+3. Token service generates JWT token (SecureTokenService for checkout/profile/order, TokenService for registration)
+4. `link-generator.service.ts` creates short URL using workspace base URL
+5. Token replaced with actual URL (e.g., `https://workspace-url.test/s/abc123`)
 
 ### Files Involved
 - `apps/backend/src/application/services/link-replacement.service.ts`
 - `apps/backend/src/application/services/secure-token.service.ts`
+- `apps/backend/src/application/services/token.service.ts`
 - `apps/backend/src/application/services/link-generator.service.ts`
 - `apps/backend/src/services/llm.service.ts` (SUPPORTED_TOKENS array)
 

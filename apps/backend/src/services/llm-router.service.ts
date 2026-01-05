@@ -328,6 +328,13 @@ export class LLMRouterService {
     let totalTokens = 0
     let customerDiscount = 0
     let customerIsActive = false // 🔒 Registration status for function-level guard
+
+    // 🔒 DEBUG: ALWAYS log router entry with message
+    logger.info("🔥 ROUTER ENTRY DEBUG:", {
+      message: params.message,
+      customerId: params.customerId,
+      workspaceId: params.workspaceId
+    })
     let explicitOptionMapping: AgentOptionMapping | null = null
     let workspace: any = null // 🛍️ Workspace config for sellsProductsAndServices check
 
@@ -826,7 +833,18 @@ export class LLMRouterService {
       logger.info("Step 4.5: Loading customer data and dynamic content")
       const customer = await this.prisma.customers.findFirst({
         where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔒 Workspace isolation
-        include: { sales: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          discount: true,
+          isActive: true, // 🔒 Feature 174: Must include for price visibility control
+          language: true,
+          company: true,
+          push_notifications_consent: true,
+          sales: { select: { firstName: true, lastName: true, phone: true, email: true } }, // Include sales via select
+        }
       })
 
       if (!customer) {
@@ -858,7 +876,10 @@ export class LLMRouterService {
                 customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
               )
             : Promise.resolve([]),
-          messageRepo.getActiveServices(params.workspaceId), // ✅ Always load (informational)
+          messageRepo.getActiveServices(
+            params.workspaceId,
+            customerIsActive // 🔒 Feature 174: Hide prices for non-registered users (Rule #4)
+          ), // ✅ Always load (informational)
           messageRepo.getActiveFaqs(params.workspaceId), // ✅ Always load (informational)
           this.prisma.orders.findFirst({
             where: { customerId: customer.id },
@@ -911,6 +932,7 @@ export class LLMRouterService {
         email: promptVariables.customerEmail,
         phone: promptVariables.customerPhone,
         discountUser: promptVariables.customerDiscount,
+        isActive: promptVariables.customerIsActive ?? false, // 🔒 Feature 174: Registration status for price visibility
         companyName: promptVariables.companyName,
         lastordercode: promptVariables.lastOrderCode || "",
         languageUser: promptVariables.languageUser,
@@ -921,6 +943,15 @@ export class LLMRouterService {
         botIdentityResponse: promptVariables.botIdentityResponse,
         adminEmail: promptVariables.adminEmail || "", // 🆕 For support/escalation
       }
+
+      // 🔒 DEBUG: Log customerData construction with raw DB customer data
+      logger.info("🔒 DEBUG customerData construction:", {
+        rawCustomerIsActive: customer?.isActive,
+        promptVariablesCustomerIsActive: promptVariables.customerIsActive,
+        finalCustomerDataIsActive: customerData.isActive,
+        customerName: customer?.name,
+        customerEmail: customer?.email
+      })
 
       logger.info("📦 PromptVariables built for Router and sub-agents:", {
         companyName: promptVariables.companyName,
@@ -1922,9 +1953,18 @@ export class LLMRouterService {
           // Get customer full info with sales agent
           const customer = await this.prisma.customers.findFirst({
             where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔐 Workspace isolation
-            include: {
-              sales: true,
-            },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              discount: true,
+              isActive: true, // 🔒 Feature 174: Must include for price visibility control
+              language: true,
+              company: true,
+              push_notifications_consent: true,
+              sales: { select: { firstName: true, lastName: true, phone: true, email: true } }, // Include sales via select
+            }
           })
 
           if (!customer) {

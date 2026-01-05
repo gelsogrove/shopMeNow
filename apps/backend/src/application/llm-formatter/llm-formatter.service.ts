@@ -919,6 +919,12 @@ export class LLMFormatterService {
   private formatProductListPrompt(response: StructuredResponse): string {
     const items = response.data.items || []
     const lines = ["PRODUCTS:"]
+    
+    // 🔒 Feature 174: Check if ANY product has prices hidden
+    const hasPricesHidden = items.some(item => 
+      item.price === null && item.priceWithDiscount === null
+    )
+    
     for (const item of items) {
       // Show only the final price (discounted if applicable)
       // Customer discount is already applied in priceWithDiscount
@@ -930,6 +936,12 @@ export class LLMFormatterService {
     }
     // Add selection prompt - user-friendly, no technical details
     lines.push("")
+    
+    // 🔒 Feature 174: If prices are hidden, instruct LLM explicitly
+    if (hasPricesHidden) {
+      lines.push("⚠️ CRITICAL: Some products DO NOT have prices. DO NOT invent or add prices. If a product has no price shown above, DO NOT include any price in your response for that product. This is intentional - the customer must register first to see prices.")
+    }
+    
     lines.push("IMPORTANT: After the list, ask 'Which product are you interested in? 🛒' or similar. DO NOT show SKU codes or categories to the user. Numbers MUST be bold like **1.** **2.** etc.")
     return lines.join("\n")
   }
@@ -1107,8 +1119,12 @@ CRITICAL:
 
     const detailLines: string[] = [
       `${p.name}`,
-      `Prezzo: ${formatDisplayPrice(displayPrice)}`,
     ]
+    
+    // 🔒 Feature 174: Only show price if customer is registered (Rule #4)
+    if (displayPrice !== null && displayPrice !== undefined) {
+      detailLines.push(`Prezzo: ${formatDisplayPrice(displayPrice)}`)
+    }
 
     detailLines.push(`Foto: ${p.imageUrl ? `<img src="${p.imageUrl}" alt="${p.name}" />` : "(non disponibile)"}`)
 
@@ -1127,9 +1143,23 @@ CRITICAL:
     if (p.transportType) {
       detailLines.push(`Tipo di trasporto: ${p.transportType}`)
     }
-    detailLines.push(`Disponibilità: ${p.isAvailable ? "✅ Disponibile" : "❌ Non disponibile"}`)
-    detailLines.push("")
-    detailLines.push(closingQuestion)
+    
+    // 🔒 Feature 174: Only show availability and cart prompt for registered users
+    const isRegisteredUser = response.context.customerIsActive === true
+    
+    if (isRegisteredUser) {
+      // Registered user - show availability and add to cart
+      detailLines.push(`Disponibilità: ${p.isAvailable ? "✅ Disponibile" : "❌ Non disponibile"}`)
+      detailLines.push("")
+      detailLines.push(closingQuestion)
+    } else {
+      // Non-registered user - show registration prompt only
+      detailLines.push("")
+      const italianRegistration = `Per vedere i prezzi e acquistare, registrati contattando il nostro supporto.`
+      const englishRegistration = `To see prices and purchase, please register by contacting our support.`
+      const registrationMessage = isItalian ? italianRegistration : englishRegistration
+      detailLines.push(registrationMessage)
+    }
 
     const promptLines = [
       "INSTRUCTION: Copy the EXACT_OUTPUT block below verbatim. Do NOT add bullet points, emojis extra, saluti o commenti.",

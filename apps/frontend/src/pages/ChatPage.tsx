@@ -1144,7 +1144,7 @@ export function ChatPage() {
 
       <div className="grid grid-cols-12 gap-4 h-[calc(100vh-12rem)]">
         {/* Chat List - Vertical Sidebar */}
-        <div className="col-span-3 flex flex-col gap-3">
+        <div className="col-span-3 flex flex-col gap-3 h-full min-h-0">
           {/* Channel Logo & Name */}
           <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
             {workspace?.logoUrl ? (
@@ -1199,7 +1199,7 @@ export function ChatPage() {
           </div>
           
           {/* Chat List */}
-          <div className="flex-1 overflow-y-auto chat-scrollbar">
+          <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar">
           <div className="flex flex-col gap-2">
             {chats.length > 0 ? (
               chats.map((chat: Chat) => {
@@ -1327,7 +1327,7 @@ export function ChatPage() {
         </div>
 
         {/* Chat Messages - Right Side */}
-        <Card className="col-span-9 p-4 flex flex-col">
+        <Card className="col-span-9 p-4 flex flex-col h-full min-h-0">
           {selectedChat ? (
             <>
               {/* 🚨 BANNERS ROW - Manual Control + Blocked Customer */}
@@ -1439,12 +1439,7 @@ export function ChatPage() {
               {/* Chat Messages */}
               <div
                 ref={messagesScrollContainerRef}
-                className="chat-scrollbar px-4 py-2"
-                style={{
-                  height: "600px",
-                  overflow: "auto",
-                  backgroundColor: "white",
-                }}
+                className="chat-scrollbar flex-1 min-h-0 overflow-y-auto px-4 py-2 bg-white"
               >
                 {/* 📋 Load Button - Shows when there are more messages available */}
                 {hasMore && messages.length > 0 && (

@@ -9,11 +9,14 @@
  * This is a utility service, NOT a calling function for LLM.
  */
 
+import { prisma } from "@echatbot/database"
 import logger from "../../utils/logger"
 
 import { config } from "../../config"
 import { linkGeneratorService } from "./link-generator.service"
 import { SecureTokenService } from "./secure-token.service"
+import { TokenService } from "./token.service"
+import { workspaceService } from "../../services/workspace.service"
 
 export interface ReplaceLinkWithTokenParams {
   response: string
@@ -103,12 +106,14 @@ export class LinkReplacementService {
       const hasCartConfirmToken = response.includes("LINK_CHECKOUT_CONFIRM")
       const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
       const hasCatalogToken = response.includes("LINK_CATALOG")
+      const hasRegistrationToken = response.includes("LINK_REGISTRATION")
 
       if (
         !hasCartToken &&
         !hasCartConfirmToken &&
         !hasProfileToken &&
-        !hasCatalogToken
+        !hasCatalogToken &&
+        !hasRegistrationToken
       ) {
         return {
           success: false,
@@ -374,6 +379,71 @@ export class LinkReplacementService {
             /\[LINK_CATALOG\]/g,
             "https://laltrait.com/wp-content/uploads/LAltra-Italia-Catalogo-Agosto-2024-v2.pdf"
           )
+        }
+      }
+
+      if (hasRegistrationToken) {
+        try {
+          const customer = await prisma.customers.findFirst({
+            where: { id: customerId, workspaceId },
+            select: { phone: true, isActive: true },
+          })
+
+          if (customer?.isActive) {
+            // Registered users don't need registration links
+            replacedResponse = replacedResponse
+              .replace(/\[([^\]]+)\]\(\[LINK_REGISTRATION\]\)/g, "$1")
+              .replace(/\[([^\]]+)\]\(LINK_REGISTRATION\)/g, "$1")
+              .replace(/\[LINK_REGISTRATION\]/g, "")
+              .replace(/LINK_REGISTRATION/g, "")
+          } else if (customer?.phone) {
+            const tokenService = new TokenService()
+            const token = await tokenService.createRegistrationToken(
+              customer.phone,
+              workspaceId
+            )
+            const workspaceUrl = await workspaceService.getWorkspaceURL(workspaceId)
+            const registrationLink =
+              await linkGeneratorService.generateRegistrationLink(
+                token,
+                workspaceUrl,
+                workspaceId
+              )
+
+            replacedResponse = replacedResponse.replace(
+              /\[([^\]]+)\]\(\[LINK_REGISTRATION\]\)([\.!?,;:]?)/g,
+              (match, text, punctuation) =>
+                `[${text}](${registrationLink})${punctuation}`
+            )
+
+            replacedResponse = replacedResponse.replace(
+              /\[([^\]]+)\]\(LINK_REGISTRATION\)([\.!?,;:]?)/g,
+              (match, text, punctuation) =>
+                `[${text}](${registrationLink})${punctuation}`
+            )
+
+            replacedResponse = replacedResponse.replace(
+              /\[LINK_REGISTRATION\]([\)\.]?[\.!?,]?)/g,
+              (match, suffix) => {
+                const cleanSuffix = suffix.replace(/\)/g, "")
+                return cleanSuffix
+                  ? `${registrationLink}${cleanSuffix}`
+                  : registrationLink
+              }
+            )
+
+            replacedResponse = replacedResponse.replace(
+              /LINK_REGISTRATION/g,
+              registrationLink
+            )
+          } else {
+            logger.warn("⚠️ Missing customer phone for registration link", {
+              customerId,
+              workspaceId,
+            })
+          }
+        } catch (error) {
+          logger.error("❌ Error generating registration link:", error)
         }
       }
 

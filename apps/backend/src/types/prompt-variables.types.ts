@@ -230,6 +230,20 @@ export interface PromptVariables {
    */
   cartContents?: string
   
+  /** 🔒 Feature 174: Registration status flag for LLM (explicit)
+   * Template: {{customerIsRegistered}}
+   * Source: customerIsActive ?? false
+   * Used by: PRODUCT_SEARCH, CART agents to check registration
+   */
+  customerIsRegistered?: boolean
+  
+  /** 🔒 Feature 174: Pricing instructions for LLM (explicit warning)
+   * Template: {{pricingInstructions}}
+   * Source: "Non registrato" → warning, "Registrato" → empty
+   * Used by: PRODUCT_SEARCH agent to enforce price hiding
+   */
+  pricingInstructions?: string
+  
   /** Durata token (human readable)
    * Template: {{TOKEN_DURATION}}
    * Source: formatTokenDuration(process.env.TOKEN_EXPIRATION)

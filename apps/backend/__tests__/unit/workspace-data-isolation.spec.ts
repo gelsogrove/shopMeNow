@@ -347,4 +347,55 @@ describe("PromptProcessorService - Empty Content Handling", () => {
     expect(result).toContain("Parmigiano")
     expect(result).not.toContain("CATALOGO VUOTO")
   })
+
+  it("should inject allowed external links list when configured", async () => {
+    const processor = new PromptProcessorService()
+    const prompt = "Security rules:\n{{ALLOWED_EXTERNAL_LINKS}}"
+
+    const result = await processor.preProcessPrompt(
+      prompt,
+      "workspace-id",
+      {},
+      {
+        faqs: "",
+        products: "",
+        categories: "",
+        services: "",
+        offers: "",
+      },
+      undefined,
+      {
+        allowedExternalLinks: ["example.com", "stripe.com"],
+      }
+    )
+
+    expect(result).toContain("Domini autorizzati per link esterni:")
+    expect(result).toContain("- example.com")
+    expect(result).toContain("- stripe.com")
+    expect(result).toContain("NON includere MAI link")
+  })
+
+  it("should block all external links when whitelist is empty", async () => {
+    const processor = new PromptProcessorService()
+    const prompt = "Security rules:\n{{ALLOWED_EXTERNAL_LINKS}}"
+
+    const result = await processor.preProcessPrompt(
+      prompt,
+      "workspace-id",
+      {},
+      {
+        faqs: "",
+        products: "",
+        categories: "",
+        services: "",
+        offers: "",
+      },
+      undefined,
+      {
+        allowedExternalLinks: [],
+      }
+    )
+
+    expect(result).toContain("NON includere MAI link esterni")
+  })
 })

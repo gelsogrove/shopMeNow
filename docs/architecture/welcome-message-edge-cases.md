@@ -23,7 +23,7 @@ INCOMING MESSAGE
     │   └─ ⚠️ Salva messaggio, NO LLM, NO risposta
     ├─ 💾 Get/Create ChatSession
     ├─ 🔒 WORKSPACE ACCESS CHECK
-    │   ├─ channelStatus = false (WIP) → Salva + WIP message
+    │   ├─ channelStatus = false (WIP) → Salva + WIP message + enqueue WhatsApp
     │   └─ PAUSED/PAYMENT_FAILED/CREDIT_EXHAUSTED → SILENT BLOCK
     ├─ 💰 BILLING CHECK (credit availability)
     │   └─ ❌ No credit → return 402
@@ -47,7 +47,7 @@ INCOMING MESSAGE
 | # | Caso | count=0 | Riceve Welcome? | Return Code | Test Priority |
 |---|------|---------|-----------------|-------------|---------------|
 | 1 | ❌ ~~Utente bloccato (attemptCount >= 4)~~ | - | - | - | **REMOVED** |
-| 2 | Canale disabilitato (channelStatus=false) | ✅ | ❌ (WIP msg) | 200 "channel_disabled" | 🔴 HIGH |
+| 2 | Canale disabilitato (channelStatus=false) | ✅ | ❌ (WIP msg + enqueue) | 200 "channel_disabled" | 🔴 HIGH |
 | 3 | Workspace senza credito | ✅ | ❌ | 402 SILENT | 🔴 HIGH |
 | 4 | Workspace cancellato | ✅ | ❌ | 402 SILENT | 🟡 MEDIUM |
 | 5 | activeChatbot=false | ✅ | ❌ | 200 "message_saved" | 🔴 HIGH |
@@ -72,8 +72,8 @@ INCOMING MESSAGE
 4. `FunctionExecutorService.execute()` esegue guard check
 5. Guard rileva `customerIsActive=false`
 6. Return error: `{ success: false, error: "REGISTRATION_REQUIRED", message: "..." }`
-7. LLM riceve error e formula messaggio: "Per aggiungere al carrello devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]"
-8. `LLMService.replaceLinkTokens()` sostituisce token con JWT link valido 24h
+7. LLM riceve error e formula messaggio: "Per aggiungere al carrello devi registrarti: [LINK_REGISTRATION]"
+8. `LinkReplacementService` sostituisce token con JWT link valido 24h
 9. Customer riceve messaggio con link registrazione
 
 **Expected Message**:
@@ -84,8 +84,8 @@ INCOMING MESSAGE
 
 **Implementation**:
 - Guard: `function-executor.service.ts` (linea ~50)
-- Token replacement: `llm.service.ts` (linea ~577)
-- Link generation: `SecureTokenService.generateToken()`
+- Token replacement: `apps/backend/src/application/services/link-replacement.service.ts`
+- Link generation: `TokenService.createRegistrationToken()`
 
 **Protected Functions (10)**:
 | Category | Functions |
@@ -145,7 +145,7 @@ it('should block addToCart for non-registered user', async () => {
   
   expect(result.success).toBe(false)
   expect(result.error).toBe('REGISTRATION_REQUIRED')
-  expect(result.message).toContain('[LINK_REGISTRATION_WITH_TOKEN]')
+  expect(result.message).toContain('[LINK_REGISTRATION]')
 })
 
 // Test 3: Post-registration immediate activation

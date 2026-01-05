@@ -114,7 +114,7 @@ async execute(context: ExecutionContext): Promise<ExecutionResult> {
         return {
           success: false,
           error: 'REGISTRATION_REQUIRED',
-          message: `Per utilizzare "${context.functionName}" devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]`
+          message: `Per utilizzare "${context.functionName}" devi registrarti: [LINK_REGISTRATION]`
         }
       } else {
         // 🚫 Function not available if workspace doesn't sell products
@@ -142,60 +142,34 @@ async execute(context: ExecutionContext): Promise<ExecutionResult> {
 
 ### 2. Token Replacement
 
-**File**: `apps/backend/src/services/llm.service.ts`
+**File**: `apps/backend/src/application/services/link-replacement.service.ts`
 
 ```typescript
 /**
- * Replace all [LINK_*_WITH_TOKEN] placeholders with actual links
+ * Replace all [LINK_*] placeholders with actual links
  */
 private async replaceLinkTokens(
-  message: string, 
-  customer: Customer, 
-  workspace: Workspace
-): Promise<string> {
-  const tokens = message.match(/\[LINK_[A-Z_]+\]/g) || []
-  
-  let finalMessage = message
-  
-  for (const token of tokens) {
-    switch (token) {
-      case '[LINK_REGISTRATION_WITH_TOKEN]':
-        const registrationLink = await this.generateRegistrationLink(
-          customer.phone,
-          workspace.id
-        )
-        finalMessage = finalMessage.replace(token, registrationLink)
-        logger.info(`Replaced ${token} with registration link`)
-        break
-        
-      case '[LINK_CHECKOUT_WITH_TOKEN]':
-        // ... other token replacements
-        break
-        
-      default:
-        logger.warn(`Unknown token: ${token}`)
-    }
-  }
-  
-  return finalMessage
-}
-
-/**
- * Generate registration link with JWT token (24h validity)
- */
-private async generateRegistrationLink(
-  phone: string, 
+  message: string,
+  customer: Customer,
   workspaceId: string
 ): Promise<string> {
-  const token = await this.secureTokenService.generateToken({
-    type: 'registration',
-    phone,
-    workspaceId,
-    expiresIn: '24h'
-  })
-  
-  const baseUrl = process.env.FRONTEND_URL || 'https://echatbot.ai'
-  return `${baseUrl}/register?token=${token}`
+  if (!message.includes("[LINK_REGISTRATION]")) {
+    return message
+  }
+
+  const tokenService = new TokenService()
+  const token = await tokenService.createRegistrationToken(
+    customer.phone,
+    workspaceId
+  )
+  const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+  const registrationLink = await linkGeneratorService.generateRegistrationLink(
+    token,
+    baseUrl,
+    workspaceId
+  )
+
+  return message.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
 }
 ```
 
@@ -299,7 +273,7 @@ Customer → Send Message "Voglio ordinare"
                     │              { 
                     │                success: false,
                     │                error: "REGISTRATION_REQUIRED",
-                    │                message: "Per aggiungere al carrello devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]"
+                    │                message: "Per aggiungere al carrello devi registrarti: [LINK_REGISTRATION]"
                     │              }
                     │                     ↓
                     │              Token replaced with actual JWT link (24h validity)
@@ -423,7 +397,7 @@ describe('FunctionExecutorService - Registration Guard', () => {
 
         expect(result.success).toBe(false)
         expect(result.error).toBe('REGISTRATION_REQUIRED')
-        expect(result.message).toContain('[LINK_REGISTRATION_WITH_TOKEN]')
+        expect(result.message).toContain('[LINK_REGISTRATION]')
       })
 
       it(`should allow "${functionName}" for registered customer`, async () => {

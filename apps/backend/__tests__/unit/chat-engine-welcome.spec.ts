@@ -60,6 +60,17 @@ const mockPrisma = {
       customerStore.set(where.id, next)
       return next
     }),
+    findFirst: jest.fn(async ({ where }) => {
+      for (const [id, customer] of customerStore.entries()) {
+        if (customer.id === where.id && customer.workspaceId === where.workspaceId) {
+          return customer
+        }
+      }
+      return null
+    }),
+    findUnique: jest.fn(async ({ where }) => {
+      return customerStore.get(where.id) || null
+    }),
     deleteMany: jest.fn(async ({ where }) => {
       for (const [id, customer] of customerStore.entries()) {
         if (customer.workspaceId === where.workspaceId) {

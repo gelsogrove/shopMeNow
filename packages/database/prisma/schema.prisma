@@ -35,6 +35,7 @@ model Workspace {
   allowedExternalLinks      String[]          @default([]) // Security Agent: allowed external domains (e.g., ["shopme.com", "stripe.com"])
   logoUrl                   String?                            // Channel logo URL (circular display)
   logoKey                   String?                            // 💾 Storage key for cleanup
+  websiteUrl                String?           @db.Text         // Custom domain/base URL for this workspace (e.g., "https://shop.acme.com")
   
   // ============================================================================
   // 🆕 Channel Configuration (from Wizard - Feature 199)
@@ -319,7 +320,7 @@ model Customers {
   createdAt                     DateTime           @default(now())
   updatedAt                     DateTime           @updatedAt
   deletedAt                     DateTime?
-  isActive                      Boolean            @default(true)
+  isActive                      Boolean            @default(false) // 🔒 Feature 174: Rule #4 - New customers are NOT registered by default
   workspaceId                   String
   last_privacy_version_accepted String?
   privacy_accepted_at           DateTime?

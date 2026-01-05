@@ -219,6 +219,7 @@ export interface ResponseContext {
   disableGrouping?: boolean     // Force simple lists even when count > threshold
   userMessage?: string          // Last user utterance (used for contextual ranking)
   enableCategoryRanking?: boolean // Enable category prioritization based on user query
+  customerIsActive?: boolean    // 🔒 Feature 174: Customer registration status for price visibility
 }
 
 // ================================================================================
@@ -284,6 +285,7 @@ export class ResponseBuilderService {
       disableGrouping?: boolean
       userMessage?: string
       enableCategoryRanking?: boolean
+      customerIsActive?: boolean  // 🔒 Feature 174: Customer registration status
     },
     enrichmentOptions?: EnrichmentOptions
   ): StructuredResponse {
@@ -304,6 +306,7 @@ export class ResponseBuilderService {
       disableGrouping: options.disableGrouping,
       userMessage: options.userMessage,
       enableCategoryRanking: options.enableCategoryRanking,
+      customerIsActive: options.customerIsActive ?? false, // 🔒 Feature 174: Default false
     }
 
     // Handle errors first

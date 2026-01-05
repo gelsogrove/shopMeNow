@@ -1220,11 +1220,15 @@ export class MessageRepository {
   /**
    * Recupera i servizi attivi dal database e li formatta per il prompt.
    * @param workspaceId L'ID del workspace.
+   * @param customerIsActive If false, hides prices (Feature 174 - Rule #4)
    * @returns Una stringa con i servizi formattati in lista numerata.
    */
-  async getActiveServices(workspaceId: string): Promise<string> {
+  async getActiveServices(
+    workspaceId: string,
+    customerIsActive: boolean = true // 🔒 Feature 174: Control price visibility
+  ): Promise<string> {
     try {
-      logger.info("🔍 getActiveServices called", { workspaceId })
+      logger.info("🔍 getActiveServices called", { workspaceId, customerIsActive })
       
       const services = await this.prisma.services.findMany({
         where: {
@@ -1251,13 +1255,23 @@ export class MessageRepository {
       // LLM uses getServiceDetails(serviceCode) to get internal code for cart operations
       const formattedServices = services
         .map((service, index) => {
-          const price = service.price
-            ? `${getCurrencySymbol(service.currency || "USD")}${service.price.toFixed(2)}`
-            : "Prezzo da definire"
+          // 🔒 Feature 174: Hide prices for non-registered customers (Rule #4)
+          let priceSection = ''
+          if (customerIsActive) {
+            // Registered customer: show price
+            const price = service.price
+              ? `${getCurrencySymbol(service.currency || "USD")}${service.price.toFixed(2)}`
+              : "Prezzo da definire"
+            priceSection = ` - ${price}`
+          } else {
+            // Non-registered customer: hide price, show registration prompt
+            priceSection = ` | 💳 Registrati per vedere i prezzi: [LINK_REGISTRATION]`
+          }
+          
           const description = service.description || "Servizio disponibile"
 
           return [
-            `${index + 1}. [${service.code}] **${service.name}** - ${price}`,
+            `${index + 1}. [${service.code}] **${service.name}**${priceSection}`,
             `   📝 Descrizione: ${description}`,
             `   ⏰ Disponibilità: Sempre disponibile`,
           ].join("\n")
@@ -1374,61 +1388,23 @@ export class MessageRepository {
         // Mostra tutti i prodotti della categoria
         const productsToShow = productList
 
-        // Formato: ogni prodotto su una riga separata con description, stock, certifications
+        // Formato: ogni prodotto su una riga separata - SEMPLICE per template LLM
+        // ✅ Generico: funziona per panettoni, borse, qualsiasi prodotto
         productsToShow.forEach((p) => {
-          const originalPrice = Number(p.originalPrice).toFixed(2)
-          const finalPrice = Number(p.finalPrice).toFixed(2)
-          const description = p.description ? ` - ${p.description}` : ""
           const formatoStr = p.formato ? ` ${p.formato}` : ""
-
-          // Stock indicator
-          let stockIcon = "✅"
-          if (p.stock === 0) stockIcon = "❌"
-          else if (p.stock < 5) stockIcon = "⚠️"
-          const stockStr = ` | Stock: ${stockIcon} ${p.stock}`
-
-          // ✅ Feature 178: Extract certification names from many-to-many relation
-          const certificationNames: string[] =
-            p.productCertifications?.map(
-              (pc: any) => pc.certification.name
-            ) || []
-
-          // Display certifications directly from database (already in Italian)
-          const certBadges: string[] = certificationNames.filter(Boolean)
-
-          const certificationsStr =
-            certBadges.length > 0 ? ` | 🔖 ${certBadges.join(", ")}` : ""
-
-          // ✅ Feature 123 - C2: Add supplier and region to formatted output
-          const supplierStr = p.supplier?.companyName
-            ? ` | 🏷️ ${p.supplier.companyName}`
-            : ""
-          const regionStr = p.region ? ` | 🌍 ${p.region}` : ""
-          const transportStr = p.transportType
-            ? ` | ${
-                p.transportType === "Trasporto refrigerato"
-                  ? "❄️"
-                  : p.transportType === "Trasporto congelato"
-                    ? "🧊"
-                    : "📦"
-              } ${p.transportType}`
-            : ""
-
-          // ✅ Feature 191: Include sku for LLM internal use (not shown to user)
-          // Format: [CODE] NOME formato ~<currency>originalPrice~ → <currency>finalPrice - description | Stock: ✅ N | 🔖 Certifications | 🏷️ Supplier | 🌍 Region | ❄️ Transport
-          // LLM uses getProductDetails(sku) to get internal code for cart operations
           
-          // 🔒 Feature 174: Hide prices for non-registered customers
+          // 🔒 Feature 174: Hide prices for non-registered customers - SEMPLICE
           let priceSection = ''
           if (customerIsActive) {
-            // Registered customer: show prices
-            priceSection = ` ~${currencySymbol}${originalPrice}~ → ${currencySymbol}${finalPrice}`
-          } else {
-            // Non-registered customer: hide prices, show registration prompt
-            priceSection = ` | 💳 Registrati per vedere i prezzi: [LINK_REGISTRATION]`
+            // Registered customer: show basic price
+            const finalPrice = Number(p.finalPrice).toFixed(2)
+            priceSection = ` - ${currencySymbol}${finalPrice}`
           }
+          // Non-registered: no price section at all (cleaner template)
           
-          formattedProducts += `• [${p.sku}] ${p.name}${formatoStr}${priceSection}${description}${stockStr}${certificationsStr}${supplierStr}${regionStr}${transportStr}\n`
+          // TEMPLATE FORMAT: Simple list for LLM to format as numbered list
+          // • [SKU] Nome Formato - €price (only if registered)
+          formattedProducts += `• [${p.sku}] ${p.name}${formatoStr}${priceSection}\n`
         })
         formattedProducts += "\n"
       }

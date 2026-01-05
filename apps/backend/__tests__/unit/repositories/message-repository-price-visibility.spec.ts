@@ -86,8 +86,8 @@ describe("Feature 174: Price Visibility Control", () => {
       )
 
       expect(productsString).toContain("Mozzarella di Bufala")
-      expect(productsString).toContain("€7.80") // Original price
       expect(productsString).toContain("€7.10") // Discounted price (rounded)
+      expect(productsString).toContain("MOZ001") // SKU visible
     })
   })
 
@@ -100,25 +100,26 @@ describe("Feature 174: Price Visibility Control", () => {
       )
 
       expect(productsString).toContain("Mozzarella di Bufala")
-      expect(productsString).not.toContain("€7.80") // Price hidden
-      expect(productsString).toContain("Registrati per vedere i prezzi: [LINK_REGISTRATION]")
+      expect(productsString).toContain("MOZ001") // SKU still visible
+      expect(productsString).not.toContain("€") // NO price symbols at all
+      // ✅ NEW FORMAT: Clean list without prices, no registration message needed
     })
 
-    it("should show product details but hide prices", async () => {
+    it("should show product info but hide prices", async () => {
       const productsString = await messageRepo.getActiveProducts(
         workspaceId,
         0,
         false // non-registered
       )
 
-      // Should contain product info
+      // Should contain basic product info
       expect(productsString).toContain("Mozzarella di Bufala")
       expect(productsString).toContain("MOZ001") // SKU visible
-      expect(productsString).toContain("Prodotto fresco di alta qualità") // Description visible
-      expect(productsString).toContain("Stock: ✅ 10") // Stock visible
+      expect(productsString).toContain("TEST CATEGORY") // Category visible
 
-      // Should NOT contain prices
-      expect(productsString).not.toMatch(/€\d+\.\d+/)
+      // Should NOT contain any price symbols
+      expect(productsString).not.toContain("€")
+      expect(productsString).not.toContain("7.80")
     })
   })
 
@@ -126,7 +127,7 @@ describe("Feature 174: Price Visibility Control", () => {
     it("should show prices when customerIsActive not provided (default true)", async () => {
       const productsString = await messageRepo.getActiveProducts(
         workspaceId,
-        0
+        0, // no discount
         // customerIsActive not provided → defaults to true
       )
 

@@ -181,13 +181,19 @@ export class ProductSearchAgentLLM {
       // 🔧 OPTIMIZATION: Use pre-loaded customerData from Router if available (avoids duplicate DB queries)
       let customerDataForPrompt: any
       let customerDiscount: number
-      let customerIsActive: boolean = true // 🔒 Feature 174: Default to registered if not specified
+      let customerIsActive: boolean = false // 🔒 Feature 174: Default to NON-registered (safe default)
 
       if (context.customerData) {
         // Router already loaded customer data - use it directly
         customerDataForPrompt = context.customerData
         customerDiscount = context.customerData.discountUser || 0
-        logger.info(`✅ Using pre-loaded customerData from Router (0 extra queries)`)
+        customerIsActive = context.customerData.isActive ?? false // 🔒 Feature 174: Get registration status from Router
+        logger.info(`✅ Using pre-loaded customerData from Router (0 extra queries)`, {
+          customerIsActive,
+          customerName: context.customerData.nameUser,
+          // 🔒 DEBUG: Log full customerData to see what Router passed
+          fullCustomerData: context.customerData
+        })
       } else {
         // Fallback: Load customer data from DB (legacy behavior)
         const customer = await this.prisma.customers.findUnique({
@@ -213,11 +219,22 @@ export class ProductSearchAgentLLM {
         customerDiscount, // 🔴 CRITICAL: Pass customer discount to calculate prices correctly
         customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
       )
+      
+      // 🔒 DEBUG: Log what getActiveProducts returns
+      logger.info(`🔍 ProductSearch DEBUG: getActiveProducts result`, {
+        customerIsActive,
+        productsLength: productsText.length,
+        productsPreview: productsText.substring(0, 200) + "...",
+        containsPrices: productsText.includes("€") || productsText.includes("$")
+      })
       const categoriesText = await messageRepo.getActiveCategories(
         context.workspaceId
       )
       const offersText = await messageRepo.getActiveOffers(context.workspaceId)
-      const servicesText = await messageRepo.getActiveServices(context.workspaceId)
+      const servicesText = await messageRepo.getActiveServices(
+        context.workspaceId,
+        customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
+      )
 
       logger.info(`📦 Loaded dynamic content`, {
         productsLength: productsText.length,

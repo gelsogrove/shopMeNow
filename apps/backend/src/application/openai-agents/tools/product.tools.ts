@@ -104,7 +104,8 @@ export const searchProductsTool = tool({
         .map(({ item: p }) => {
           const product = p as any
           const customerDiscount = ctx.customerDiscount || 0
-          const discountedPrice = customerDiscount > 0 
+          // 🔒 Feature 174: Handle null prices for non-registered users
+          const discountedPrice = (customerDiscount > 0 && product.price !== null) 
             ? product.price * (1 - customerDiscount / 100) 
             : undefined
           
@@ -201,7 +202,8 @@ export const getProductDetailsTool = tool({
       }
       
       const customerDiscount = ctx.customerDiscount || 0
-      const discountedPrice = customerDiscount > 0 
+      // 🔒 Feature 174: Handle null prices for non-registered users
+      const discountedPrice = (customerDiscount > 0 && product.price !== null) 
         ? product.price * (1 - customerDiscount / 100) 
         : undefined
       

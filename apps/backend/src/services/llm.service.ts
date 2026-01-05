@@ -201,7 +201,14 @@ export class LLMService {
     // 5. Pre-processing:
     const userLanguage = customer.language || workspace.language || "it"
     const faqs = await messageRepo.getActiveFaqs(workspace.id)
-    const services = await messageRepo.getActiveServices(workspace.id)
+    
+    // 🔒 Feature 174: Check registration status for price visibility (Rule #4)
+    const customerIsActive = customer.isActive ?? false
+    
+    const services = await messageRepo.getActiveServices(
+      workspace.id,
+      customerIsActive // 🔒 Hide prices for non-registered customers
+    )
 
     // Use customerData if provided (from delegation), otherwise fetch from DB
     const categories =
@@ -210,9 +217,6 @@ export class LLMService {
     const offers =
       customerData?.OFFERS || (await messageRepo.getActiveOffers(workspace.id))
     const customerDiscount = customer.discount || 0
-    
-    // 🔒 Feature 174: Check registration status for price visibility
-    const customerIsActive = customer.isActive ?? false
     
     const products =
       customerData?.PRODUCTS ||

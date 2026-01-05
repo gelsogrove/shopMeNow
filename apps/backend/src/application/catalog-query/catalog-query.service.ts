@@ -46,6 +46,7 @@ interface ProcessOptions {
   customerDiscount?: number
   intentType: string
   customerLanguage?: string
+  customerIsActive?: boolean // 🔒 Feature 174: For price visibility control
 }
 
 export class CatalogQueryService {
@@ -56,7 +57,16 @@ export class CatalogQueryService {
   }
 
   async process(options: ProcessOptions): Promise<CatalogQueryProcessingResult> {
-    const { workspaceId, message, customerDiscount = 0, intentType, customerLanguage = "it" } = options
+    const { workspaceId, message, customerDiscount = 0, intentType, customerLanguage = "it", customerIsActive = false } = options
+
+    // 🔒 DEBUG: Log customerIsActive per tracking Rule #4
+    logger.info("🔒 CatalogQueryService.process() - Rule #4 Debug", {
+      workspaceId,
+      message: message.substring(0, 50),
+      customerIsActive,
+      intentType,
+      timestamp: new Date().toISOString()
+    })
 
     const builderResult = await this.builder.build(message)
     const finalQuery: CatalogQuery = { ...builderResult.query }
@@ -74,7 +84,7 @@ export class CatalogQueryService {
         },
       ]
     }
-    const products = await this.loadProducts(workspaceId, customerDiscount)
+    const products = await this.loadProducts(workspaceId, customerDiscount, customerIsActive)
 
     if (products.length === 0) {
       return {
@@ -203,7 +213,7 @@ export class CatalogQueryService {
     }
   }
 
-  private async loadProducts(workspaceId: string, customerDiscount: number): Promise<ProductData[]> {
+  private async loadProducts(workspaceId: string, customerDiscount: number, customerIsActive: boolean = false): Promise<ProductData[]> {
     try {
       const products = await this.prisma.products.findMany({
         where: { workspaceId, isActive: true },
@@ -233,15 +243,30 @@ export class CatalogQueryService {
         orderBy: { name: "asc" },
       })
 
-      return products.map((product) => this.mapProduct(product, customerDiscount))
+      return products.map((product) => this.mapProduct(product, customerDiscount, customerIsActive))
     } catch (error) {
       logger.error("❌ [CatalogQueryService] Failed to load products", { error })
       return []
     }
   }
 
-  private mapProduct(product: any, customerDiscount: number): ProductData {
+  private mapProduct(product: any, customerDiscount: number, customerIsActive: boolean = false): ProductData {
+    // 🔒 Feature 174: Hide prices for non-registered users
     const discount = customerDiscount > 0 ? product.price * (1 - customerDiscount / 100) : undefined
+    const finalPrice = customerIsActive ? (discount || product.price) : null // Hide price if not registered
+    
+    // 🔒 DEBUG: Log price hiding logic
+    if (product.name.toLowerCase().includes('mozzarella')) {
+      logger.info("🔒 CatalogQueryService.mapProduct() - Price Hiding Debug", {
+        productName: product.name,
+        originalPrice: product.price,
+        customerIsActive,
+        finalPrice,
+        discount,
+        priceHidden: !customerIsActive
+      })
+    }
+    
     const certs = Array.isArray(product.productCertifications)
       ? product.productCertifications
           .map((pc: any) => pc.certification?.name)
@@ -255,8 +280,8 @@ export class CatalogQueryService {
       name: product.name,
       sku: product.sku || undefined,
       description: product.description || undefined,
-      price: product.price,
-      priceWithDiscount: discount,
+      price: finalPrice, // 🔒 Feature 174: null if user not registered
+      priceWithDiscount: customerIsActive ? discount : null, // 🔒 Feature 174: null if user not registered
       stock: product.stock,
       imageUrl: Array.isArray(product.imageUrl) && product.imageUrl.length > 0 ? String(product.imageUrl[0]) : undefined,
       categoryId: product.productCategories?.[0]?.category?.id,

@@ -53,8 +53,8 @@ export interface ProductData {
   name: string
   sku?: string
   description?: string
-  price: number
-  priceWithDiscount?: number
+  price: number | null // 🔒 Feature 174: null when user is not registered (Rule #4)
+  priceWithDiscount?: number | null // 🔒 Feature 174: null when user is not registered (Rule #4)
   stock: number
   imageUrl?: string
   categoryId?: string
@@ -319,7 +319,8 @@ export class DataLoaderService {
     intent: Intent,
     workspaceId: string,
     customerId: string,
-    customerDiscount: number = 0
+    customerDiscount: number = 0,
+    customerIsActive: boolean = false // 🔒 Feature 174: For price visibility control
   ): Promise<LoadedData> {
     logger.info("📦 [DataLoader] Loading data for intent", {
       intentType: intent.type,
@@ -337,7 +338,7 @@ export class DataLoaderService {
         case "SHOW_CATEGORY":
           return this.loadProductsByCategory(workspaceId, customerDiscount, (intent as ShowCategoryIntent).categoryName)
         case "SHOW_PRODUCT":
-          return this.loadProductByName(workspaceId, customerDiscount, (intent as ShowProductIntent).productName)
+          return this.loadProductByName(workspaceId, customerDiscount, (intent as ShowProductIntent).productName, customerIsActive)
         case "SEARCH_PRODUCTS": {
           const query = (intent as SearchProductsIntent).query
           const categoryMatches = await this.matchCategoriesFromQuery(workspaceId, query)
@@ -446,10 +447,10 @@ export class DataLoaderService {
             logger.info("📦 [DataLoader] Loading product by SKU (reliable)", {
               sku: selectIntent.skus[0],
             })
-            return this.loadProductBySku(workspaceId, customerDiscount, selectIntent.skus[0])
+            return this.loadProductBySku(workspaceId, customerDiscount, selectIntent.skus[0], customerIsActive)
           }
           // Fallback to name search (less reliable)
-          return this.loadProductByName(workspaceId, customerDiscount, cleanedValue)
+          return this.loadProductByName(workspaceId, customerDiscount, cleanedValue, customerIsActive)
         
         case "ORDERS":
           // User selected an order → load order details
@@ -1112,7 +1113,8 @@ export class DataLoaderService {
   private async loadProductBySku(
     workspaceId: string,
     customerDiscount: number,
-    sku: string
+    sku: string,
+    customerIsActive: boolean = false // 🔒 Feature 174
   ): Promise<LoadedData> {
     try {
       const product = await this.prisma.products.findFirst({
@@ -1152,7 +1154,7 @@ export class DataLoaderService {
         productName: product.name 
       })
       
-      const productData = this.mapProduct(product, customerDiscount)
+      const productData = this.mapProduct(product, customerDiscount, customerIsActive)
       return { type: "PRODUCT_DETAIL", product: productData }
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading product by SKU", { sku, error })
@@ -1163,7 +1165,8 @@ export class DataLoaderService {
   private async loadProductByName(
     workspaceId: string,
     customerDiscount: number,
-    productName: string
+    productName: string,
+    customerIsActive: boolean = false // 🔒 Feature 174: For price visibility control
   ): Promise<LoadedData> {
     try {
       const products = await this.prisma.products.findMany({
@@ -1200,7 +1203,7 @@ export class DataLoaderService {
       const rankedProducts = this.rankProductsByName(products, productName)
       const bestMatch = rankedProducts[0]
 
-      const productData = this.mapProduct(bestMatch, customerDiscount)
+      const productData = this.mapProduct(bestMatch, customerDiscount, customerIsActive)
       return { type: "PRODUCT_DETAIL", product: productData }
     } catch (error) {
       logger.error("❌ [DataLoader] Error loading product", { error })
@@ -2360,7 +2363,8 @@ export class DataLoaderService {
   async loadProductsBySkus(
     workspaceId: string,
     skus: string[],
-    customerDiscount: number = 0
+    customerDiscount: number = 0,
+    customerIsActive: boolean = false // 🔒 Feature 174
   ): Promise<ProductData[]> {
     try {
       logger.info("📦 [DataLoader] Loading products by SKUs", {
@@ -2403,7 +2407,7 @@ export class DataLoaderService {
         return []
       }
 
-      const productData = products.map((p) => this.mapProduct(p, customerDiscount))
+      const productData = products.map((p) => this.mapProduct(p, customerDiscount, customerIsActive))
 
       logger.info("📦 [DataLoader] Products loaded by SKUs", {
         requested: skus.length,
@@ -2678,12 +2682,16 @@ export class DataLoaderService {
   // HELPERS
   // ================================================================================
 
-  private mapProducts(products: any[], customerDiscount: number): ProductData[] {
-    return products.map((p) => this.mapProduct(p, customerDiscount))
+  private mapProducts(products: any[], customerDiscount: number, customerIsActive: boolean = false): ProductData[] {
+    return products.map((p) => this.mapProduct(p, customerDiscount, customerIsActive))
   }
 
-  private mapProduct(p: any, customerDiscount: number): ProductData {
-    const discountedPrice = customerDiscount > 0 ? p.price * (1 - customerDiscount / 100) : undefined
+  private mapProduct(p: any, customerDiscount: number, customerIsActive: boolean = false): ProductData {
+    // 🔒 Feature 174: Hide prices for non-registered users (Rule #4)
+    const discount = (customerDiscount > 0 && p.price !== null) ? p.price * (1 - customerDiscount / 100) : undefined
+    const finalPrice = customerIsActive ? p.price : null
+    const finalDiscountedPrice = customerIsActive ? discount : null
+    
     // Extract certifications from productCertifications relation (preferred) or fallback to deprecated field
     let certs: string[] = []
     if (p.productCertifications && Array.isArray(p.productCertifications)) {
@@ -2703,8 +2711,8 @@ export class DataLoaderService {
       name: p.name,
       sku: p.sku || undefined,
       description: p.description || undefined,
-      price: p.price,
-      priceWithDiscount: discountedPrice,
+      price: finalPrice, // 🔒 Feature 174: null if user not registered
+      priceWithDiscount: finalDiscountedPrice, // 🔒 Feature 174: null if user not registered
       stock: p.stock,
       imageUrl: this.getFirstImageUrl(p.imageUrl),
       categoryId: p.productCategories?.[0]?.category?.id,

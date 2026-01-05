@@ -35,9 +35,11 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 
 ### 3. **Server Auto-Restart**
 
-- Backend/frontend have hot-reload enabled via `ts-node-dev` and `vite`
+- Backend/frontend have **hot-reload enabled** via `ts-node-dev` and `vite`
 - **NEVER** manually restart servers or open new terminals
+- **Servers auto-restart on file changes** - just save and wait 1-2 seconds
 - Watch for compilation errors in existing terminal output
+- Only restart manually if process crashes or hangs
 
 ### 4. **Environment Protection**
 

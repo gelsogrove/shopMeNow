@@ -1107,12 +1107,13 @@ export class CallingFunctionsService {
 
 
       try {
-        // Get customer discount for price calculation
+        // Get customer discount and registration status for price calculation
         const customer = await prisma.customers.findFirst({
           where: { id: customerId, workspaceId },
-          select: { discount: true }
+          select: { discount: true, isActive: true } // 🔒 Feature 174: Must include isActive
         })
         const customerDiscount = customer?.discount || 0
+        const customerIsActive = customer?.isActive ?? false // 🔒 Feature 174: Default to false (non-registered)
 
         // Normalize search terms: trim and lowercase
         const searchName = productName.trim().toLowerCase()
@@ -1215,7 +1216,8 @@ export class CallingFunctionsService {
             return {
               name: p.name,
               formato: p.formato,
-              price: pricing?.finalPrice || p.price, // Use calculated final price
+              // 🔒 Feature 174: Hide prices for non-registered customers
+              price: customerIsActive ? (pricing?.finalPrice || p.price) : null,
             }
           })
           
@@ -1227,6 +1229,7 @@ export class CallingFunctionsService {
             products: options,
             message: `Ho trovato ${matchedProducts.length} prodotti simili. Quale intendi?`,
             timestamp: new Date().toISOString(),
+            isRegistered: customerIsActive, // 🔒 Feature 174: Flag for LLM
           }
         }
 
@@ -1268,8 +1271,8 @@ export class CallingFunctionsService {
             sku: product.sku,
             name: product.name,
             formato: product.formato,
-            // ✅ Use finalPrice from PriceCalculationService (already discounted and rounded)
-            price: pricing?.finalPrice || product.price,
+            // 🔒 Feature 174: Hide prices for non-registered customers (Rule #4)
+            price: customerIsActive ? (pricing?.finalPrice || product.price) : null,
             description: product.description,
             stock: product.stock,
             category: product.category?.name,
@@ -1279,6 +1282,8 @@ export class CallingFunctionsService {
             // ✅ Include full image URL for display
             imageUrl: getFullImageUrl(Array.isArray(product.imageUrl) ? product.imageUrl[0] : product.imageUrl),
             isAvailable: product.stock > 0,
+            // 🔒 Feature 174: Add flag for LLM to show registration prompt if non-registered
+            isRegistered: customerIsActive,
           },
           timestamp: new Date().toISOString(),
         }

@@ -235,7 +235,7 @@ export class VariableResolverService {
     if (typeKey === "PRODUCT_SEARCH") {
       const [products, services, categories, offers] = await Promise.all([
         this.getActiveProducts(workspaceId, variables.customerDiscount || 0, variables.customerIsActive ?? false),
-        this.getActiveServices(workspaceId),
+        this.getActiveServices(workspaceId, variables.customerIsActive ?? false), // 🔒 Feature 174: Hide prices
         this.getActiveCategories(workspaceId),
         this.getActiveOffers(workspaceId),
       ])
@@ -246,6 +246,12 @@ export class VariableResolverService {
       variables.offers = offers
       variables.productsCount = products.split("\n").filter(l => l.trim()).length
       variables.offersActive = offers.length > 0
+      
+      // 🔒 Feature 174: Flag per LLM
+      const vars = variables as Record<string, any>
+      vars.customerIsRegistered = variables.customerIsActive ?? false
+      const isRegistered = variables.customerIsActive === true
+      vars.pricingInstructions = isRegistered ? "" : "[WARNING] Non-registered customer - do not show prices"
     }
 
     // Order Tracking needs: lastOrder
@@ -299,19 +305,25 @@ export class VariableResolverService {
         ? (Number(p.price) * (1 - discount / 100)).toFixed(2)
         : Number(p.price).toFixed(2)
       
-      // 🔒 Feature 174: Hide prices for non-registered customers
+      // 🔒 Feature 174: Hide prices for non-registered customers - GENERICO
       const priceSection = customerIsActive 
-        ? `: ${currencySymbol}${discountedPrice}`
-        : ` | Registrati per vedere i prezzi: [LINK_REGISTRATION]`
+        ? ` - ${currencySymbol}${discountedPrice}`
+        : "" // No price section for non-registered (cleaner template)
       
+      // GENERICO: Funziona per panettoni, borse, qualsiasi prodotto
+      // Format: - Nome (SKU) - €prezzo - Categoria (only if registered gets price)
       return `- ${p.name} (${p.sku})${priceSection} - ${p.category?.name || "Uncategorized"}`
     }).join("\n")
   }
 
   /**
    * Get active services formatted for prompt
+   * @param customerIsActive If false, hides prices (Feature 174 - Rule #4)
    */
-  private async getActiveServices(workspaceId: string): Promise<string> {
+  private async getActiveServices(
+    workspaceId: string,
+    customerIsActive: boolean = true
+  ): Promise<string> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { currency: true },
@@ -332,9 +344,14 @@ export class VariableResolverService {
 
     if (services.length === 0) return "No services available."
 
-    return services.map(s =>
-      `- ${s.name} (${s.code}): ${currencySymbol}${Number(s.price).toFixed(2)}`
-    ).join("\n")
+    return services.map(s => {
+      // 🔒 Feature 174: Hide prices for non-registered customers (Rule #4)
+      if (customerIsActive) {
+        return `- ${s.name} (${s.code}): ${currencySymbol}${Number(s.price).toFixed(2)}`
+      } else {
+        return `- ${s.name} (${s.code}): 💳 Registrati per vedere i prezzi: [LINK_REGISTRATION]`
+      }
+    }).join("\n")
   }
 
   /**

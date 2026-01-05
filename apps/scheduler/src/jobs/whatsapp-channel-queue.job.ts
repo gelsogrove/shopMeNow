@@ -139,10 +139,9 @@ export async function whatsappChannelQueueJob(): Promise<void> {
   try {
     const securityAgent = new SecurityAgentService()
     
-    // Find workspaces with active channel
+    // Find workspaces with active channel (or WIP mode for WIP-only delivery)
     const workspaces = await prisma.workspace.findMany({
       where: {
-        channelStatus: true,  // Channel must be active
         isActive: true,
         isDelete: false,
       },
@@ -152,6 +151,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
         whatsappApiKey: true,
         whatsappPhoneNumber: true,
         debugMode: true,
+        channelStatus: true,
       },
     })
 
@@ -191,6 +191,40 @@ export async function whatsappChannelQueueJob(): Promise<void> {
       const results = await Promise.allSettled(
         pendingMessages.map(async (message: (typeof pendingMessages)[number]) => {
           try {
+            if (workspace.channelStatus === false) {
+              if (!message.conversationMessageId) {
+                logger.info('[WhatsApp Queue] Channel disabled - skipping non-WIP message (no conversationMessageId)', {
+                  queueId: message.id,
+                  workspaceId: workspace.id,
+                })
+                return
+              }
+
+              const conversationMessage = await prisma.conversationMessage.findUnique({
+                where: { id: message.conversationMessageId },
+                select: { debugInfo: true },
+              })
+
+              const debugInfo = conversationMessage?.debugInfo
+              const isWipMessage = (() => {
+                if (!debugInfo) return false
+                try {
+                  const parsed = JSON.parse(debugInfo)
+                  return Boolean(parsed?.channelDisabled)
+                } catch {
+                  return false
+                }
+              })()
+
+              if (!isWipMessage) {
+                logger.info('[WhatsApp Queue] Channel disabled - skipping non-WIP message', {
+                  queueId: message.id,
+                  workspaceId: workspace.id,
+                })
+                return
+              }
+            }
+
             // 🔒 SECURITY CHECK: Pass through Security Agent LLM before sending
             const securityStartTime = Date.now()
             const securityCheck = await securityAgent.validateMessage({

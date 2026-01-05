@@ -201,17 +201,23 @@ export class CustomersController {
       if (isActive !== undefined) customerData.isActive = isActive
 
       // 🔄 AUTO-ACTIVATE: If customer was inactive (temporary from new channel)
-      // and is being updated with a valid name, activate them automatically
-      // Note: Only require valid name - email can still be temporary
+      // and is being updated with a valid name AND real email, activate them automatically
+      // 🚨 CRITICAL: Do NOT auto-activate if email is still temporary (temp_*@pending.com)
+      // This prevents showing prices to non-registered users (Rule #4)
+      const hasRealEmail = email 
+        ? !email.includes('@pending.com')
+        : originalCustomer.email && !originalCustomer.email.includes('@pending.com')
+      
       if (
         originalCustomer.isActive === false &&
         isActive === undefined &&
         name !== undefined &&
         name.trim() !== "" &&
-        name !== "New Customer"
+        name !== "New Customer" &&
+        hasRealEmail // 🔒 NEW: Require real email for auto-activation
       ) {
         customerData.isActive = true
-        logger.info(`Auto-activating customer ${id} - valid name provided`)
+        logger.info(`Auto-activating customer ${id} - valid name AND real email provided`)
       }
       if (company !== undefined) customerData.company = company
       if (discount !== undefined) customerData.discount = discount

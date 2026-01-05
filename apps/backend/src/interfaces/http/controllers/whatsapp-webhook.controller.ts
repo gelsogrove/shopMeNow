@@ -6,6 +6,7 @@ import { prisma } from "../../../lib/prisma"
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../../middlewares/rateLimiter"
 // 🆕 Chat Engine - Main conversation processor
 import { ChatEngineService, getChatEngine } from "../../../application/chat-engine"
+import { workspaceService } from "../../../services/workspace.service"
 import {
   detectLanguageFromPhonePrefix,
   getRegistrationText,
@@ -328,6 +329,7 @@ export class WhatsAppWebhookController {
         language: true,
         workspaceId: true,
         isActive: true,
+        isBlacklisted: true,
         activeChatbot: true,
         discount: true,
         workspace: {
@@ -357,6 +359,18 @@ export class WhatsAppWebhookController {
           phone: customer.phone,
           phoneSearched: phoneNumber,
         })
+
+        if (customer.isBlacklisted) {
+          logger.warn("[WEBHOOK] 🚫 Blocked customer - returning 410", {
+            customerId: customer.id,
+            workspaceId: customer.workspaceId,
+          })
+          res.status(410).json({
+            status: "blocked",
+            message: "Customer is blocked",
+          })
+          return
+        }
       } else {
         logger.info("[WEBHOOK] ❌ Customer NOT found", {
           phoneSearched: phoneNumber,
@@ -487,7 +501,8 @@ export class WhatsAppWebhookController {
           undefined // customerId - not yet created (registration)
         )
 
-        const registrationUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/registration?token=${registrationToken}`
+        const workspaceUrl = await workspaceService.getWorkspaceURL(workspaceId)
+        const registrationUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${registrationToken}`
 
         // Create short URL that expires in 24 hours
         const expiresAt = new Date()
@@ -499,7 +514,7 @@ export class WhatsAppWebhookController {
           expiresAt
         )
 
-        const registrationLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/s/${shortUrl.shortCode}`
+        const registrationLink = `${workspaceUrl.replace(/\/$/, "")}/s/${shortUrl.shortCode}`
 
         // Get localized registration texts
         const registrationTexts = getRegistrationText(detectedLanguage)
@@ -913,6 +928,43 @@ export class WhatsAppWebhookController {
             customerId: customer.id,
           })
           
+          const workspace = await prisma.workspace.findUnique({
+            where: { id: customer.workspaceId },
+            select: { wipMessage: true },
+          })
+
+          const wipMessages = (workspace?.wipMessage as any) || {}
+          const customerLanguage = (customer.language || "en").toLowerCase()
+          const rawWipMessage =
+            wipMessages[customerLanguage] ||
+            wipMessages.en ||
+            wipMessages.it ||
+            "Work in progress. Please contact us later."
+
+          let finalWipMessage = rawWipMessage
+          let safetyTokensUsed = 0
+
+          try {
+            const {
+              SafetyTranslationAgent,
+            } = require("../../../application/agents/SafetyTranslationAgent")
+            const safetyAgent = new SafetyTranslationAgent(prisma)
+
+            const safetyResult = await safetyAgent.process({
+              workspaceId: customer.workspaceId,
+              response: rawWipMessage,
+              targetLanguage: customer.language || "it",
+              customerName: customer.name || "Customer",
+            })
+
+            if (safetyResult.safe) {
+              finalWipMessage = safetyResult.translatedText || rawWipMessage
+              safetyTokensUsed = safetyResult.tokensUsed || 0
+            }
+          } catch (error) {
+            logger.error("[WEBHOOK] ❌ Safety agent error for WIP message", error)
+          }
+
           // Save WIP message to history so operator can see customer tried to contact
           await prisma.conversationMessage.create({
             data: {
@@ -931,11 +983,49 @@ export class WhatsAppWebhookController {
               }),
             },
           })
+
+          const assistantMessage = await prisma.conversationMessage.create({
+            data: {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: "assistant",
+              content: finalWipMessage,
+              agentType: "ROUTER",
+              tokensUsed: safetyTokensUsed,
+              deliveryStatus: "pending",
+              debugInfo: JSON.stringify({
+                channelDisabled: true,
+                reason: "workspace.channelStatus = false (WIP mode)",
+                timestamp: new Date().toISOString(),
+                source: "whatsapp-webhook",
+              }),
+            },
+          })
+
+          try {
+            const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
+            const queueService = new WhatsAppQueueService(prisma)
+            await queueService.enqueue({
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              messageContent: finalWipMessage,
+              conversationMessageId: assistantMessage.id,
+            })
+          } catch (error) {
+            logger.error("[WEBHOOK] ❌ Failed to enqueue WIP message", {
+              error,
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+            })
+          }
           
           res.status(200).json({
             status: "channel_disabled",
             code: "CHANNEL_DISABLED",
             message: "Channel is in maintenance mode. Your message has been saved.",
+            wipMessage: finalWipMessage,
           })
           return
         }

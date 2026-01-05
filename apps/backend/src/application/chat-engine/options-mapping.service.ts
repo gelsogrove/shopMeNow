@@ -708,6 +708,10 @@ export class OptionsMappingService {
    * "Carciofi alla Romana Surgelati (FROZ-CAR-001) - €8.50 [Surgelati]" → "Carciofi alla Romana Surgelati"
    */
   static cleanLabel(label: string): string {
+    // 🔒 Safety check: handle undefined/null
+    if (!label) {
+      return ""
+    }
     return label
       .replace(/^#/, "") // Strip # prefix from order codes (e.g., #ORD-048-2025-9 → ORD-048-2025-9)
       .replace(/\s*\(\d+\s*(prodotti|items|servizi)?\)\s*/gi, " ") // (7 prodotti)

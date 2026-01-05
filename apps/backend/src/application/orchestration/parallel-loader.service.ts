@@ -64,7 +64,9 @@ export class ParallelLoaderService {
         return await this.dataLoader.loadForIntent(
           i.intent as Intent,
           params.workspaceId,
-          params.customerId
+          params.customerId,
+          0, // customerDiscount
+          false // customerIsActive - parallel loader doesn't handle product details
         )
       } catch (error) {
         logger.error("[Orchestration] Data load failed", {

@@ -381,6 +381,18 @@ export class ChatEngineService {
     return value === 1 ? "1 hour" : `${value} hours`
   }
 
+  private async isCustomerBlacklisted(
+    customerId: string,
+    workspaceId: string
+  ): Promise<boolean> {
+    const customer = await this.prisma.customers.findFirst({
+      where: { id: customerId, workspaceId },
+      select: { isBlacklisted: true },
+    })
+
+    return Boolean(customer?.isBlacklisted)
+  }
+
   private getHumanSupportTemplate(
     workspaceConfig: WorkspaceConfig,
     options?: { reason?: string }
@@ -484,7 +496,8 @@ export class ChatEngineService {
         faqIntent,
         input.workspaceId,
         input.customerId,
-        input.customerDiscount || 0
+        input.customerDiscount || 0,
+        false // FAQ doesn't need price visibility check
       )
 
       if (loadedData.type !== "FAQ" || !loadedData.faqs?.length) {
@@ -1343,6 +1356,8 @@ export class ChatEngineService {
       "BUSINESS_HOURS",
       "LOCATION",
       "SERVICES_INFO",
+      "VIEW_SERVICES",
+      "SHOW_SERVICE",
       "PRODUCT_INFO",
       "FAQ",
       "HELP",
@@ -1405,6 +1420,7 @@ export class ChatEngineService {
    * @returns Translated response ready for delivery
    */
   async routeMessage(input: ChatEngineInput): Promise<ChatEngineOutput> {
+    const startTime = Date.now()
     // 🔒 CONCURRENCY LOCK: Ensure sequential processing per customer
     const lockKey = `customer:${input.customerId}`
     
@@ -1424,6 +1440,40 @@ export class ChatEngineService {
     logger.info(`🔒 [ChatEngine] Lock acquired: ${lockKey}`)
     
     try {
+      const isBlockedCustomer = await this.isCustomerBlacklisted(
+        input.customerId,
+        input.workspaceId
+      )
+
+      if (isBlockedCustomer) {
+        const processingTimeMs = Date.now() - startTime
+        logger.warn("🚫 [ChatEngine] Blocked customer - skipping processing", {
+          customerId: input.customerId,
+          workspaceId: input.workspaceId,
+        })
+
+        return {
+          message: "",
+          agentType: AgentType.ROUTER,
+          wasHandled: false,
+          intent: "BLOCKED",
+          confidence: "HIGH",
+          source: "PATTERN",
+          processingTimeMs,
+          debugInfo: {
+            steps: [],
+            blockReason: "CUSTOMER_BLACKLISTED",
+            executionTimeMs: processingTimeMs,
+          },
+          response: "",
+          agentUsed: AgentType.ROUTER,
+          tokensUsed: 0,
+          executionTimeMs: processingTimeMs,
+          wasFAQ: false,
+          isBlocked: true,
+        }
+      }
+
       // STEP 1: Process message through business logic pipeline
       const result = await this.processMessageInternal(input)
     
@@ -1572,6 +1622,19 @@ export class ChatEngineService {
       })
 
       if (welcomeResult.isWelcomeMessage) {
+        debugSteps.push({
+          type: "router",
+          agent: "👋 Welcome Message",
+          timestamp: new Date().toISOString(),
+          input: {
+            userMessage: input.message,
+          },
+          output: {
+            decision: "welcome_message",
+            textResponse: welcomeResult.welcomeText?.substring(0, 200),
+          },
+        })
+
         logger.info("👋 [ChatEngine] Returning welcome message from handler", {
           customerId: input.customerId,
           workspaceId: input.workspaceId,
@@ -1586,6 +1649,11 @@ export class ChatEngineService {
           confidence: "HIGH",
           source: "PATTERN",
           processingTimeMs: Date.now() - startTime,
+          debugInfo: {
+            steps: debugSteps,
+            totalTokens: 0,
+            executionTimeMs: Date.now() - startTime,
+          },
           tokensUsed: 0,
           agentUsed: "WELCOME",
           _assistantMessageId: welcomeResult.assistantMessageId,
@@ -1822,7 +1890,8 @@ export class ChatEngineService {
             showIntent,
             input.workspaceId,
             input.customerId,
-            input.customerDiscount
+            input.customerDiscount,
+            false // Categories don't need price visibility check
           )
           
           const structuredResponse = this.responseBuilder.build(showIntent, loadedData, {
@@ -1897,6 +1966,11 @@ export class ChatEngineService {
         if (optionsMapping?.options?.length) {
           const normalizedMessage = OptionsMappingService.cleanLabel(input.message).toLowerCase()
           const matchedOption = optionsMapping.options.find((opt) => {
+            // 🔒 Safety check: opt.label might be undefined
+            if (!opt.label) {
+              logger.warn("⚠️ [ChatEngine] Option has no label", { opt })
+              return false
+            }
             const normalizedLabel = OptionsMappingService.cleanLabel(opt.label).toLowerCase()
             return normalizedLabel === normalizedMessage
           })
@@ -2128,12 +2202,23 @@ export class ChatEngineService {
               optionMetadata: (selectedOption as any).metadata,
             }
             
+            // 🔒 Feature 174: Load customer isActive for price visibility (Rule #4)
+            let customerIsActive = false
+            if (selectIntent.listType === "PRODUCTS") {
+              const customer = await this.prisma.customers.findUnique({
+                where: { id: input.customerId },
+                select: { isActive: true }
+              })
+              customerIsActive = customer?.isActive ?? false
+            }
+            
             // Load data using this intent
             const loadedData = await this.dataLoader.loadForIntent(
               selectIntent,
               input.workspaceId,
               input.customerId,
-              input.customerDiscount
+              input.customerDiscount,
+              customerIsActive
             )
             
             // Build and format response
@@ -2148,6 +2233,7 @@ export class ChatEngineService {
                 disableGrouping: selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS",
                 userMessage: input.message,
                 enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+                customerIsActive, // 🔒 Feature 174: Pass registration status for price visibility
               }
             )
             
@@ -2482,7 +2568,8 @@ export class ChatEngineService {
                   categoriesIntent,
                   input.workspaceId,
                   input.customerId,
-                  input.customerDiscount
+                  input.customerDiscount,
+                  false // Categories don't need price visibility check
                 )
                 
                 const structuredResp = this.responseBuilder.build(
@@ -2562,7 +2649,8 @@ export class ChatEngineService {
                   cartIntent,
                   input.workspaceId,
                   input.customerId,
-                  input.customerDiscount
+                  input.customerDiscount,
+                  false // Cart doesn't use customerIsActive param
                 )
                 
                 const structuredResp = this.responseBuilder.build(
@@ -3673,8 +3761,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         })
         
         // Override intent to force CUSTOMER_SUPPORT routing (continues normal flow)
-        intentResult.intent.type = "CUSTOMER_SUPPORT"
-        intentResult.source = "INFORMATIONAL_OVERRIDE"
+        intentResult.intent.type = "ASK_FAQ" as any // Force FAQ routing
+        intentResult.source = "PATTERN" // Use valid source type
       }
 
       if (intentResult.intent.type === "REQUEST_HUMAN") {
@@ -4211,6 +4299,23 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
       if (this.shouldUseCatalogQuery(intentResult.intent)) {
         const catalogStart = Date.now()
+        
+        // 🔒 Feature 174: Load customer registration status for price visibility
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: input.customerId },
+          select: { isActive: true, name: true, phone: true }
+        })
+        const customerIsActive = customer?.isActive ?? false
+        
+        // 🔒 DEBUG: Log customer registration status per Rule #4
+        logger.info("🔒 ChatEngine - Customer Registration Debug", {
+          customerId: input.customerId,
+          customerName: customer?.name,
+          customerPhone: customer?.phone,
+          customerIsActive,
+          message: input.message.substring(0, 30)
+        })
+        
         try {
           const catalogResult = await this.catalogQueryService.process({
             workspaceId: input.workspaceId,
@@ -4218,6 +4323,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             customerDiscount: input.customerDiscount || 0,
             intentType: intentResult.intent.type,
             customerLanguage: input.customerLanguage || "it",
+            customerIsActive, // 🔒 Feature 174: Pass registration status for price control
           })
 
           const shouldUseCatalogResult =
@@ -4300,11 +4406,23 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
       if (!loadedData) {
         const dataLoadStart = Date.now()
+        
+        // 🔒 Feature 174: Load customer isActive for price visibility (Rule #4)
+        let customerIsActive = false
+        if (intentResult.intent.type === "SHOW_PRODUCT") {
+          const customer = await this.prisma.customers.findUnique({
+            where: { id: input.customerId },
+            select: { isActive: true }
+          })
+          customerIsActive = customer?.isActive ?? false
+        }
+        
         loadedData = await this.dataLoader.loadForIntent(
           intentResult.intent,
           input.workspaceId,
           input.customerId,
-          input.customerDiscount || 0
+          input.customerDiscount,
+          customerIsActive
         )
         const dataLoadTime = Date.now() - dataLoadStart
 

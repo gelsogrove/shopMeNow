@@ -32,10 +32,10 @@ eChatbot implements multiple blocking mechanisms to ensure:
 | `PLAN_LIMIT_REACHED` | 403 | Products/Channels >= max | Creation blocked |
 | `CHANNEL_LIMIT_EXCEEDED` | 403 | Channels >= plan max | New channel blocked |
 | `OWNER_REQUIRED` | 403 | Non-owner billing action | Action blocked |
-| `BLACKLISTED` | 200* | Admin manually blocks customer | Silent block |
+| `BLACKLISTED` | 410* | Admin manually blocks customer | Silent block (no customer reply) |
 | `WORKSPACE_REQUIRED` | 400 | Missing workspaceId | Request rejected |
 
-*Returns 200 to prevent information leak to attackers
+*Returns 410 in the webhook (no customer reply) to avoid retry loops while keeping the block silent to the user.
 
 ---
 
@@ -424,24 +424,20 @@ if (userWorkspace.role !== "SUPER_ADMIN") {
 - Protection against spam/abuse/problematic customers
 
 **Where it's checked:**
-- `routes/index.ts` → `checkCustomerBlacklist()` helper function
+- `apps/backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts` → early return before processing
+- `apps/backend/src/application/chat-engine/chat-engine.service.ts` → guard inside `routeMessage()`
 
 **Code location:**
 ```typescript
-// backend/src/routes/index.ts
-const customer = await prisma.customers.findFirst({
-  where: {
-    phone: phoneNumber.replace(/\s+/g, ""),
-    isActive: true,
-  },
-  select: { isBlacklisted: true }
-})
-
-if (customer?.isBlacklisted) {
-  logger.info(`🚫 Customer ${phoneNumber} is blacklisted - IGNORING MESSAGE`)
-  res.status(200).json({
-    success: true,
-    data: { message: "EVENT_RECEIVED_CUSTOMER_BLACKLISTED" }
+// apps/backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts
+if (customer.isBlacklisted) {
+  logger.warn("[WEBHOOK] 🚫 Blocked customer - returning 410", {
+    customerId: customer.id,
+    workspaceId: customer.workspaceId,
+  })
+  res.status(410).json({
+    status: "blocked",
+    message: "Customer is blocked",
   })
   return
 }
@@ -519,7 +515,7 @@ async execute(context: ExecutionContext): Promise<ExecutionResult> {
       return {
         success: false,
         error: 'REGISTRATION_REQUIRED',
-        message: `Per utilizzare "${context.functionName}" devi registrarti: [LINK_REGISTRATION_WITH_TOKEN]`
+        message: `Per utilizzare "${context.functionName}" devi registrarti: [LINK_REGISTRATION]`
       }
     }
   }
@@ -559,14 +555,18 @@ async execute(context: ExecutionContext): Promise<ExecutionResult> {
 
 **Token Replacement:**
 ```typescript
-// backend/src/services/llm.service.ts
-case '[LINK_REGISTRATION_WITH_TOKEN]':
-  const registrationLink = await this.generateRegistrationLink(
-    customer.phone,
-    workspace.id
+// apps/backend/src/application/services/link-replacement.service.ts
+if (message.includes("[LINK_REGISTRATION]")) {
+  const tokenService = new TokenService()
+  const token = await tokenService.createRegistrationToken(customer.phone, workspaceId)
+  const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+  const registrationLink = await linkGeneratorService.generateRegistrationLink(
+    token,
+    baseUrl,
+    workspaceId
   )
-  finalMessage = finalMessage.replace(token, registrationLink)
-  break
+  finalMessage = finalMessage.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
+}
 ```
 
 **Post-Registration Behavior:**
@@ -648,7 +648,7 @@ cd backend && npm run test:security
 | PLAN_LIMIT_REACHED | `billing.middleware.ts:checkPlanLimits` |
 | CHANNEL_LIMIT_EXCEEDED | `workspace.controller.ts:187` |
 | OWNER_REQUIRED | `billing.middleware.ts:requireOwnerForBilling` |
-| BLACKLISTED | `routes/index.ts:checkCustomerBlacklist` |
+| BLACKLISTED | `apps/backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts` |
 
 ---
 

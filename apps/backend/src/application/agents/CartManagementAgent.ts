@@ -201,6 +201,14 @@ export class CartManagementAgent {
 
         item = product
         itemName = product.name
+        // 🔒 Feature 174: Non-registered users cannot add to cart (price would be null)
+        if (product.price === null) {
+          return {
+            success: false,
+            error: "PRICE_NOT_AVAILABLE",
+            message: `Price not available. Please register to see prices and add items to cart.`,
+          }
+        }
         // Apply customer discount and smart rounding (matching getCart logic)
         let discountedPrice = product.price * discountMultiplier
         itemPrice = smartRoundPrice(discountedPrice, DEFAULT_ROUNDING_STEP)
