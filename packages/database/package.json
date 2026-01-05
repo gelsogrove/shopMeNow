@@ -16,7 +16,7 @@
     "migrate:deploy": "prisma migrate deploy",
     "migrate:reset": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run migrate:reset in production!' && exit 1; fi && dotenv -e ../../.env -- ts-node scripts/safe-reset.ts",
     "migrate:reset:force": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run migrate:reset:force in production!' && exit 1; fi && dotenv -e ../../.env -- prisma migrate reset --force",
-    "seed": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run seed in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && npx dotenv -e ../../.env -- ts-node prisma/seed.ts",
+    "seed": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run seed in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && ts-node prisma/seed.ts",
     "seed:production": "ts-node --transpile-only -O '{\"module\":\"commonjs\"}' prisma/seed.ts",
     "update:prompts": "dotenv -e ../../.env -- ts-node scripts/update-prompts.ts",
     "studio": "dotenv -e ../../.env -- prisma studio",
