@@ -30,24 +30,32 @@ import { products } from "./data/products"
 import { services } from "./data/services"
 import { workspaceSettings } from "./data/workspaceSettings"
 
-// Initialize the PostgreSQL adapter for Prisma 7 with SSL config for Heroku
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('heroku')
-    ? { rejectUnauthorized: false }
-    : false
-})
+// 🔧 PRODUCTION FIX: Use direct connection (like migrations), not adapter with security restrictions
+const isProduction = process.env.NODE_ENV === 'production'
 
-const adapter = new PrismaPg(pool)
+let prisma: PrismaClient
 
-const prisma = new PrismaClient({ adapter })
+if (isProduction) {
+  // Production: Direct connection (same as Prisma migrations - no adapter restrictions)
+  console.log("🔌 Using DIRECT connection for production seed (bypass adapter security)")
+  prisma = new PrismaClient()
+} else {
+  // Development: Use adapter for connection pooling
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('heroku')
+      ? { rejectUnauthorized: false }
+      : false
+  })
+  const adapter = new PrismaPg(pool)
+  prisma = new PrismaClient({ adapter })
+}
 
 async function main() {
   console.log("🌱 Starting database seed...")
 
   // 🔓 SECURITY: Allow seed in production only with explicit permission
   const allowDestructive = process.env.ALLOW_DESTRUCTIVE_OPERATIONS === 'true'
-  const isProduction = process.env.NODE_ENV === 'production'
 
   if (isProduction && !allowDestructive) {
     console.error('❌ Cannot run seed in production!')
