@@ -59,7 +59,10 @@ async function main() {
   }
 
   // 1. Clear existing data (in correct order to avoid FK constraints)
-  console.log("🧹 Cleaning existing data...")
+  // NOTE: In production with Heroku, user has no DELETE privileges after migrate reset.
+  // The reset itself clears the database, so we skip deleteMany() calls in production.
+  if (!isProduction) {
+    console.log("🧹 Cleaning existing data...")
 
     // Delete all child tables with FK dependencies first
     await prisma.orderItems.deleteMany()
@@ -122,7 +125,10 @@ async function main() {
     // Finally delete workspace
     await prisma.workspace.deleteMany()
 
-  console.log("✅ Database cleaned")
+    console.log("✅ Database cleaned")
+  } else {
+    console.log("⏭️  Skipped data cleanup in production (database already reset via migrate reset --force)")
+  }
 
   // 2. Create Admin User
   console.log("👤 Creating admin user...")
