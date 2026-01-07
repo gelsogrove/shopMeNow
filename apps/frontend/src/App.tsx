@@ -32,6 +32,7 @@ import OrdersPage from "./pages/OrdersPage"
 import OrderSummaryPage from "./pages/OrderSummaryPage"
 import { PrivacyPage } from "./pages/PrivacyPage"
 import { TermsPage } from "./pages/TermsPage"
+import { RefundPolicy } from "./pages/RefundPolicy"
 
 import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
@@ -74,11 +75,11 @@ export function App() {
               <Toaster position="top-right" duration={800} />
               <Routes>
                 {/* ROOT: Login is the homepage */}
-                <Route path="/" element={<Navigate to="/auth/login" replace />} />
+                <Route path="/" element={<LoginPage />} />
 
                 {/* Auth Routes - accessibili senza autenticazione */}
                 <Route path="/auth">
-                  <Route path="login" element={<LoginPage />} />
+                  <Route path="login" element={<Navigate to="/" replace />} />
                   <Route path="signup" element={<SignupPage />} />
                   <Route path="register" element={<Navigate to="/auth/login?action=register" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
@@ -104,6 +105,7 @@ export function App() {
                 {/* Public Legal Pages */}
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
                 {/* Direct route for /forgot-password to avoid 404 */}
                 <Route
                   path="/forgot-password"

@@ -90,7 +90,7 @@ api.interceptors.response.use(
     // Handle authentication errors (401) - includes INVALID SESSION
     if (error.response && error.response.status === 401) {
       // Skip if already on login page to avoid loops
-      if (window.location.pathname === "/auth/login") {
+      if (window.location.pathname === "/") {
         return Promise.reject(error)
       }
 
@@ -116,7 +116,7 @@ api.interceptors.response.use(
       logger.warn("🔐 Auth error (401) - cleared all tokens, redirecting to login")
 
       // Redirect immediately to prevent retry loops
-      window.location.href = "/auth/login"
+      window.location.href = "/"
 
       // Prevent further retries by throwing an error that won't be retried
       throw new Error("Authentication expired")

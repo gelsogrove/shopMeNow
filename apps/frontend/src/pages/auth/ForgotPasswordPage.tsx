@@ -173,6 +173,10 @@ export default function ForgotPasswordPage() {
               <Link to="/terms" className="hover:underline">
                 {t("footer.terms")}
               </Link>
+              <span>•</span>
+              <Link to="/refund-policy" className="hover:underline">
+                {t("refund.title")}
+              </Link>
             </div>
           </CardFooter>
         </Card>

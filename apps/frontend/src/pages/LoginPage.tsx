@@ -2220,7 +2220,7 @@ export function LoginPage() {
                 <ul className="space-y-3">
                   <li><Link to="/privacy" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Privacy Policy</Link></li>
                   <li><Link to="/terms" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Terms of Service</Link></li>
-                  <li><Link to="/refund" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Refund Policy</Link></li>
+                  <li><Link to="/refund-policy" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Refund Policy</Link></li>
                 </ul>
               </div>
             </div>
