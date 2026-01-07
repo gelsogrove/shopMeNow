@@ -1223,23 +1223,29 @@ export class DataLoaderService {
         return null
       }
 
+      const matchingTokens = tokens.filter((token) =>
+        categories.some((category) =>
+          this.normalizeText(category.name).includes(token)
+        )
+      )
+
+      if (matchingTokens.length === 0) {
+        return null
+      }
+
+      if (matchingTokens.length < 2 && tokens.length > 1) {
+        return null
+      }
+
       const scored = categories
         .map((category, index) => ({
           category,
           index,
-          score: this.calculateCategoryMatchScore(category.name, tokens),
+          score: this.calculateCategoryMatchScore(category.name, matchingTokens),
         }))
         .filter((entry) => entry.score > 0)
 
       if (scored.length === 0) {
-        return null
-      }
-
-      const tokensCovered = tokens.every((token) =>
-        scored.some((entry) => this.normalizeText(entry.category.name).includes(token))
-      )
-
-      if (!tokensCovered) {
         return null
       }
 
