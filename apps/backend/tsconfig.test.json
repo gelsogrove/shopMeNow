@@ -4,6 +4,6 @@
     "isolatedModules": true,
     "types": ["node", "jest"]
   },
-  "include": ["src/**/*", "src/__tests__/**/*"],
+  "include": ["src/**/*", "src/__tests__/**/*", "../../test/integration/**/*"],
   "exclude": ["node_modules"]
 }

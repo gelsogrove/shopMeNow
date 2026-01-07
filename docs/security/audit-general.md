@@ -537,7 +537,7 @@ router.post(
 
 1. **Token-Based Routes**: Routes using token-based authentication (cart, checkout, public-orders) need proper token validation and rate limiting to prevent abuse.
 
-2. **WhatsApp Webhooks**: WhatsApp webhook security relies on HMAC signature verification. Ensure this is correctly implemented in the controller layer.
+2. **WhatsApp Webhooks**: HMAC signature verification is currently disabled in `whatsapp-webhook.controller.ts` (dev flow). **TODO (must-do before production)**: re-enable HMAC validation when real WhatsApp integration is live.
 
 3. **Multi-tenant Isolation**: All routes handling workspace data MUST include `workspaceValidationMiddleware` or `validateWorkspaceOperation` to prevent cross-tenant data access.
 

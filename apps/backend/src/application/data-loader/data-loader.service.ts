@@ -235,83 +235,6 @@ export interface CartRemovalItemData {
 export class DataLoaderService {
   constructor(private prisma: PrismaClient) {}
 
-  private readonly categoryStopwords = new Set<string>([
-    // Italian
-    "cerco",
-    "cercando",
-    "voglio",
-    "vorrei",
-    "fammi",
-    "mostra",
-    "mostrami",
-    "avete",
-    "hai",
-    "per",
-    "con",
-    "senza",
-    "anche",
-    "all",
-    "alla",
-    "alle",
-    "degli",
-    "dei",
-    "delle",
-    "del",
-    "dell",
-    "questo",
-    "questa",
-    "questi",
-    "queste",
-    "quello",
-    "quelle",
-    "quali",
-    "qualcosa",
-    "serve",
-    "servono",
-    "sto",
-    "stiamo",
-    "potete",
-    "potrei",
-    "posso",
-    // English
-    "show",
-    "showing",
-    "need",
-    "needed",
-    "needs",
-    "want",
-    "wanted",
-    "looking",
-    "look",
-    "please",
-    "have",
-    "about",
-    "with",
-    "without",
-    "some",
-    "for",
-    "from",
-    "your",
-    "any",
-    "can",
-    "you",
-    "sell",
-    "selling",
-    "give",
-    "find",
-    "search",
-    "and",
-    "nor",
-    "but",
-    "ora",
-    "o",
-    "oppure",
-    "e",
-    "ed",
-    "either",
-    "or",
-  ])
-
   /**
    * Main entry point - load data based on intent
    */
@@ -1295,11 +1218,6 @@ export class DataLoaderService {
         return null
       }
 
-      const meaningfulTokens = tokens.filter((token) => !this.categoryStopwords.has(token))
-      if (meaningfulTokens.length === 0) {
-        return null
-      }
-
       const categories = await this.fetchCategories(workspaceId)
       if (categories.length === 0) {
         return null
@@ -1309,7 +1227,7 @@ export class DataLoaderService {
         .map((category, index) => ({
           category,
           index,
-          score: this.calculateCategoryMatchScore(category.name, meaningfulTokens),
+          score: this.calculateCategoryMatchScore(category.name, tokens),
         }))
         .filter((entry) => entry.score > 0)
 
@@ -1317,7 +1235,7 @@ export class DataLoaderService {
         return null
       }
 
-      const tokensCovered = meaningfulTokens.every((token) =>
+      const tokensCovered = tokens.every((token) =>
         scored.some((entry) => this.normalizeText(entry.category.name).includes(token))
       )
 

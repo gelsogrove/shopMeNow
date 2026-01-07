@@ -13,10 +13,10 @@
 ### 1. SummaryAgentLLM
 **File**: `apps/backend/src/services/summary-agent-llm.service.ts`
 **Current**: Loads from file `docs/prompts/summary-agent.md`
-**Problem**: File does NOT exist
+**Problem**: File does NOT exist in repo (missing)
 **Used by**: `contactOperator` calling function
 **Status**: ⚠️ WILL FAIL at runtime
-**Fix needed**: Either create file OR migrate to DB agentConfig table
+**Fix needed**: Create `docs/prompts/summary-agent.md` OR migrate SummaryAgent to DB `agentConfig`
 
 ## ✅ CORRECT Pattern (Database)
 

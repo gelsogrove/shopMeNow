@@ -407,7 +407,34 @@ describe('Workspace Isolation Security Tests', () => {
 
 ---
 
-## 📌 CONCLUSION
+## � FUTURE SECURITY CONSIDERATIONS
+
+### WhatsApp Webhook WorkspaceId Validation (To Be Implemented)
+**Issue**: `whatsapp-webhook.controller.ts` currently accepts `workspaceId` from the webhook payload (from WhatsApp or FE simulator)
+
+**Current Risk**: 
+- If payload contains incorrect `workspaceId`, could cause routing to wrong workspace
+- Currently acceptable because WhatsApp integration is NOT LIVE yet
+
+**Planned Fix** (when WhatsApp integration goes live):
+- Derive `workspaceId` from `customer.workspaceId` in database instead of trusting payload
+- Verify customer exists and belongs to claimed workspace
+- Implementation pattern:
+  ```typescript
+  // ❌ CURRENT (trusts payload)
+  const workspaceId = req.body.workspaceId
+  
+  // ✅ FUTURE FIX (derive from DB)
+  const customer = await customerRepository.findById(customerId)
+  const workspaceId = customer.workspaceId  // source of truth
+  ```
+
+**Timeline**: When WhatsApp production testing begins (Phase 2)  
+**Tracker**: Add to pre-production security checklist
+
+---
+
+## �📌 CONCLUSION
 
 The eChatbot codebase has **generally good workspace isolation**, with the majority of repositories properly filtering by `workspaceId`. However, there are **12 specific issues** that need attention, with **4 being critical** security vulnerabilities in the Cart and WhatsApp Queue repositories.
 

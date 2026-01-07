@@ -399,26 +399,12 @@ export class ChatEngineService {
     workspaceConfig: WorkspaceConfig,
     options?: { reason?: string }
   ): string {
-    const reason = options?.reason?.toLowerCase()
     const hasSupport = workspaceConfig.hasHumanSupport
     if (!hasSupport) {
       if (workspaceConfig.humanSupportInstructions?.trim()) {
         return workspaceConfig.humanSupportInstructions.trim()
       }
       return `Ciao {{nameUser}}, manda una email a {{adminEmail}} con i dettagli e ti risponderemo il prima possibile.`
-    }
-
-    const isFrustration =
-      reason === "frustration" ||
-      reason === "frustrated" ||
-      reason === "angry" ||
-      reason === "complaint"
-
-    if (isFrustration) {
-      if (workspaceConfig.hasSalesAgents) {
-        return `Ciao {{nameUser}}, capisco la tua frustrazione e mi dispiace per l'inconveniente.\nMi sto mettendo in contatto con l'agente {{agentName}}. Ti richiamera' al piu' presto (tel: {{agentPhone}} - email: {{agentEmail}}).\nDisattivo il chatbot finche' non ricevi risposta.`
-      }
-      return `Ciao {{nameUser}}, capisco la tua frustrazione e voglio risolvere subito.\nMi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto e disattivo il chatbot finche' non ricevi assistenza.`
     }
 
     if (workspaceConfig.humanSupportInstructions?.trim()) {
@@ -446,9 +432,7 @@ export class ChatEngineService {
   }
 
   private shouldCheckFaqBeforeHumanSupport(reason?: string): boolean {
-    if (!reason) return false
-    const normalized = reason.trim().toLowerCase()
-    return ["frustration", "frustrated", "angry", "complaint"].includes(normalized)
+    return Boolean(reason?.trim())
   }
 
   private async tryHandleFAQBeforeHumanSupport(params: {
@@ -3625,8 +3609,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           if (pendingAction.type === "ADD_TO_CART" && pendingAction.productId) {
             // Extract quantity from message if present (e.g., "sì, 2 pezzi", "yes, 2 pieces", "sí, 2 unidades")
             // Multilingual: pezzi/pezz|pieces|units|unidades|peças|stück
-            const quantityMatch = input.message.match(/(\d+)\s*(pezz[oi]|unit[aà]|pieces?|units?|unidades?|peças?|stück|x)?/i)
-            const quantity = quantityMatch ? parseInt(quantityMatch[1]) : (pendingAction.quantity || 1)
+            const quantityMatch = input.message.match(/(\d+)/)
+            const quantity = quantityMatch
+              ? parseInt(quantityMatch[1], 10)
+              : (pendingAction.quantity || 1)
             const itemLabel = pendingAction.itemType === "SERVICE" ? "servizio" : "prodotto"
             
             // Delegate to CartManagementAgentLLM for intelligent cart handling

@@ -22,7 +22,7 @@ Applicazione **SaaS multi-tenant** per chatbot WhatsApp:
 
 ### Principi Chiave:
 - ❌ **NO hardcoding** - Niente valori fissi (nomi prodotti, categorie)
-- ❌ **NO regex per decisioni LLM** - L'LLM decide tutto
+- ❌ **NO regex o keyword per decisioni LLM** - Nessun pattern testuale hardcoded (multilingua). Solo selezioni numeriche/boolean.
 - ✅ **Database-First** - Tutto viene dal DB (prodotti, prompt, config)
 - ✅ **Multi-tenant** - Ogni workspace isolato con `workspaceId`
 - ✅ **Generico** - Funziona per qualsiasi tipo di negozio (alimentari, abbigliamento, automotive, gioielli, elettronica, servizi)
@@ -800,4 +800,3 @@ User Message
 │       └── ❌ BLOCKED → Log + non invia                          │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
-

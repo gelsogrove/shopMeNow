@@ -25,7 +25,7 @@ The FAQ system enables the chatbot to answer frequently asked questions using co
    ↓
 4. Load FAQs from database (MessageRepository.getActiveFaqs)
    ↓
-5. Inject FAQs into prompt via {{faqs}} variable
+5. Render template via TemplateLoaderService (CUSTOMER_SUPPORT) with FAQs injected
    ↓
 6. LLM matches question to FAQ and generates natural response
    ↓
@@ -88,30 +88,19 @@ R: Certainly. You can plug in your own OpenAI/Anthropic keys, set model policies
 
 **File**: `apps/backend/src/application/agents/CustomerSupportAgentLLM.ts`
 
-**Key Code (lines ~175-195)**:
+**Key Code (current)**:
 ```typescript
 // Load FAQs for customer support
 const MessageRepository = require("../../repositories/message.repository").MessageRepository
 const messageRepo = new MessageRepository()
-const faqs = await messageRepo.getActiveFaqs(context.workspaceId)
+const faqsFormatted = await messageRepo.getActiveFaqs(context.workspaceId)
 
-logger.info(`📚 Loaded FAQs for CUSTOMER_SUPPORT`, {
-  faqsLength: faqs.length,
-  hasFaqs: faqs.length > 0,
-})
+logger.info(`📚 Loaded FAQs for CUSTOMER_SUPPORT`, { hasFaqs: !!faqsFormatted })
 
-const processedPrompt = await promptProcessor.preProcessPrompt(
-  systemPrompt,
+const systemPrompt = await templateLoader.loadAndRenderTemplate(
+  "CUSTOMER_SUPPORT",
   context.workspaceId,
-  customerDataForPrompt,
-  {
-    faqs: faqs, // ✅ FAQs injected into prompt
-    products: "",
-    categories: "",
-    services: "",
-    offers: "",
-  },
-  // ... other params
+  { faq: faqsFormatted }
 )
 ```
 
@@ -143,6 +132,13 @@ No FAQs available. Answer questions to the best of your knowledge.
 
 {{/if}}
 ```
+
+---
+
+## Debug/Logging
+
+- Prompt debug files are **not** saved to disk by default.
+- Logs include FAQ preview/length and a “FAQ presence check” to confirm injection.
 
 ---
 
