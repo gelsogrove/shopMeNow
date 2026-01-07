@@ -81,7 +81,11 @@ export class TemplateLoaderService {
    * 
    * Performance: < 5ms (cached template + cached workspace settings)
    */
-  async loadAndRenderTemplate(agentType: string, workspaceId: string): Promise<string> {
+  async loadAndRenderTemplate(
+    agentType: string,
+    workspaceId: string,
+    extraConditionals: Record<string, any> = {}
+  ): Promise<string> {
     const startTime = performance.now()
 
     try {
@@ -92,7 +96,10 @@ export class TemplateLoaderService {
       const template = this.loadTemplate(agentType, settings.sellsProductsAndServices)
 
       // 3. Process conditionals (pure CPU, no I/O)
-      const rendered = this.templateEngine.process(template, settings)
+      const rendered = this.templateEngine.process(template, {
+        ...settings,
+        ...extraConditionals,
+      })
 
       const elapsed = performance.now() - startTime
       logger.debug(`⚡ Template loaded in ${elapsed.toFixed(2)}ms`, { agentType, chars: rendered.length })

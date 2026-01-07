@@ -21,10 +21,18 @@
 import { AgentType, PrismaClient, Workspace } from "@echatbot/database"
 import logger from "../utils/logger"
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
+import { LinkReplacementService } from "../application/services/link-replacement.service"
+import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
 
 export class InformationalWorkspaceStrategy implements RoutingStrategy {
-  constructor(private prisma: PrismaClient) {}
+  private linkReplacementService: LinkReplacementService
+  private safetyAgent: SafetyTranslationAgent
+
+  constructor(private prisma: PrismaClient) {
+    this.linkReplacementService = new LinkReplacementService()
+    this.safetyAgent = new SafetyTranslationAgent(prisma)
+  }
 
   /**
    * This strategy handles informational workspaces
@@ -99,6 +107,29 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
         executionTimeMs: executionTime,
       })
 
+      // � STEP 1: Link Replacement ([LINK_*] tokens → actual URLs)
+      logger.debug("🔗 Replacing [LINK_*] tokens in informational response")
+      const linkReplacedResponse = await this.linkReplacementService.replaceTokens(
+        { response: agentResponse.output },
+        context.customerId,
+        context.workspaceId
+      )
+
+      // 🔒 STEP 2: Safety + Translation (to customer's language)
+      logger.debug("🔒 Translating informational response with SafetyTranslationAgent")
+      const safetyResult = await this.safetyAgent.process({
+        workspaceId: context.workspaceId,
+        response: linkReplacedResponse.response || agentResponse.output,
+        targetLanguage: customerData.language || "it",
+        customerName: customerData.name,
+      })
+
+      // Final response after filters
+      const finalResponse =
+        safetyResult.safe && safetyResult.translatedText
+          ? safetyResult.translatedText
+          : linkReplacedResponse.response || agentResponse.output
+
       // Build debug steps for timeline
       const debugSteps: any[] = [
         {
@@ -143,10 +174,11 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
       ]
 
       return {
-        response: agentResponse.output,
+        response: finalResponse, // ✅ NOW with Safety + LinkReplacement + Translation
         agentType: "CUSTOMER_SUPPORT" as AgentType,
         debugSteps,
-        totalTokens: agentResponse.tokensUsed || 0,
+        totalTokens:
+          (agentResponse.tokensUsed || 0) + (safetyResult.tokensUsed || 0),
         conversationId: context.conversationId,
       }
 

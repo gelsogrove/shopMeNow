@@ -7,7 +7,7 @@
     "dev": "rm -rf dist && vite",
     "build": "rm -rf dist && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

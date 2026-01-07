@@ -22,17 +22,14 @@ declare global {
   }
 }
 
-// Import scheduler service
-import { SchedulerService } from "./services/scheduler.service"
-
 // Initialize Express app
 const app = express()
 // Use process.cwd() for monorepo root (on Heroku cwd = /app = monorepo root)
 const backendRoot = process.cwd()
 
-// Initialize and start scheduler service
-const schedulerService = new SchedulerService()
-schedulerService.startScheduledTasks()
+// ⚠️  NOTE: Scheduler is now a separate microservice (apps/scheduler)
+// Run with: npm run dev:all (starts backend + frontend + scheduler)
+// Scheduler handles: WhatsApp queue, billing, cleanups, etc.
 
 // Logging middleware should be first
 app.use(loggingMiddleware)

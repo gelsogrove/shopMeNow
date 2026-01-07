@@ -85,5 +85,8 @@
     "supertest": "^7.1.4",
     "ts-jest": "^29.1.2",
     "ts-node-dev": "^2.0.0"
+  },
+  "optionalDependencies": {
+    "axios": "^1.13.2"
   }
 }

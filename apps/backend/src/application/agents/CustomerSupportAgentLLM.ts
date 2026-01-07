@@ -100,16 +100,6 @@ export class CustomerSupportAgentLLM {
         query: context.query.substring(0, 100),
       })
 
-      // STEP 1: Load system prompt from template files
-      let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
-        "CUSTOMER_SUPPORT",
-        context.workspaceId
-      )
-
-      logger.info(`📋 Loaded CUSTOMER_SUPPORT template from files`, {
-        promptLength: systemPrompt.length,
-      })
-
       // 🆕 STEP 1.5: Load workspace config for address and other dynamic fields
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: context.workspaceId },
@@ -123,10 +113,29 @@ export class CustomerSupportAgentLLM {
           frustrationEscalationInstructions: true,
           allowedExternalLinks: true,
           sellsProductsAndServices: true,
+          hasHumanSupport: true, // ✅ FIX: Include hasHumanSupport flag
         },
       })
 
       // Build dynamic context to inject into prompt
+      // 🔧 STEP 1.7: Load FAQs for customer support
+      const MessageRepository = require("../../repositories/message.repository").MessageRepository
+      const messageRepo = new MessageRepository()
+      const faqsFormatted = await messageRepo.getActiveFaqs(context.workspaceId)
+      
+      logger.info(`📚 Loaded FAQs for CUSTOMER_SUPPORT`, {
+        hasFaqs: faqsFormatted.length > 0,
+        formattedLength: faqsFormatted.length,
+        preview: faqsFormatted.substring(0, 300),
+      })
+      
+      // STEP 1.8: Load system prompt from template files (include FAQ presence for conditionals)
+      let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
+        "CUSTOMER_SUPPORT",
+        context.workspaceId,
+        { faq: faqsFormatted }
+      )
+      
       // Inject address if available
       if (workspace?.address) {
         const addressSection = `\n\n## OUR LOCATION\nWhen customer asks "where are you?", "your address?", "dove siete?", "indirizzo?":\nRespond with: "${workspace.address}"\n`
@@ -182,16 +191,16 @@ export class CustomerSupportAgentLLM {
         workspaceName: workspace?.name,
       })
       
-      // 🔧 STEP 1.7: Load FAQs for customer support
-      const MessageRepository = require("../../repositories/message.repository").MessageRepository
-      const messageRepo = new MessageRepository()
-      const faqsFormatted = await messageRepo.getActiveFaqs(context.workspaceId)
-      
       logger.info(`📚 Loaded FAQs for CUSTOMER_SUPPORT`, {
         hasFaqs: faqsFormatted.length > 0,
         formattedLength: faqsFormatted.length,
+        preview: faqsFormatted.substring(0, 300),
       })
-      
+
+      logger.info(`📋 Loaded CUSTOMER_SUPPORT template from files`, {
+        promptLength: systemPrompt.length,
+      })
+
       const processedPrompt = await promptProcessor.preProcessPrompt(
         systemPrompt,
         context.workspaceId,
@@ -206,7 +215,7 @@ export class CustomerSupportAgentLLM {
         undefined, // workspaceUrl
         {
           sellsProductsAndServices: workspace?.sellsProductsAndServices ?? false, // 🔧 Informational workspace
-          hasHumanSupport: !!workspace?.notificationEmail, // 🔧 True if admin email exists
+          hasHumanSupport: workspace?.hasHumanSupport ?? false, // ✅ FIX: Use actual hasHumanSupport flag
           hasSalesAgents: false, // 🔧 Informational workspaces don't have sales agents
           address: workspace?.address || "",
           customAiRules: workspace?.customAiRules || "",
@@ -221,6 +230,15 @@ export class CustomerSupportAgentLLM {
       logger.info(`✅ Variables replaced in CUSTOMER_SUPPORT prompt`, {
         originalLength: systemPrompt.length,
         processedLength: processedPrompt.length,
+        hasFaqPlaceholder: processedPrompt.includes("{{faq}}"),
+        hasFaqSection: processedPrompt.includes("FREQUENTLY ASKED QUESTIONS"),
+        faqSnippet: processedPrompt.includes("FREQUENTLY ASKED QUESTIONS")
+          ? processedPrompt
+              .slice(
+                processedPrompt.indexOf("FREQUENTLY ASKED QUESTIONS"),
+                processedPrompt.indexOf("FREQUENTLY ASKED QUESTIONS") + 400
+              )
+          : undefined,
       })
 
       // 🔍 DEBUG: Log if FAQs section is present in final prompt
@@ -231,7 +249,6 @@ export class CustomerSupportAgentLLM {
         hasFaqSection,
         hasFaqContent,
         faqsFormattedLength: faqsFormatted.length,
-        promptPreview: processedPrompt.substring(0, 500) + "...",
       })
 
       // STEP 2: Build messages for LLM
@@ -443,7 +460,13 @@ export class CustomerSupportAgentLLM {
         tokensUsed: response.data.usage?.total_tokens || 0,
       }
     } catch (error) {
-      logger.error("❌ OpenRouter API call failed:", error)
+      const errorInfo = {
+        message: error instanceof Error ? error.message : String(error),
+        status: (error as any)?.response?.status,
+        statusText: (error as any)?.response?.statusText,
+        data: (error as any)?.response?.data,
+      }
+      logger.error("❌ OpenRouter API call failed:", errorInfo)
       throw error
     }
   }

@@ -40,7 +40,9 @@ import {
   messagePreprocessorService,
 } from "../../services/message-preprocessor.service"
 import { CartManagementAgentLLM } from "../agents/CartManagementAgentLLM"
+import { CustomerSupportAgentLLM } from "../agents/CustomerSupportAgentLLM"
 import { ProductContextAgentLLM, ProductContextData } from "../agents/ProductContextAgentLLM"
+import { SafetyTranslationAgent } from "../agents/SafetyTranslationAgent"
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
 import {
   ConversationStateService, 
@@ -1362,7 +1364,9 @@ export class ChatEngineService {
       "FAQ",
       "HELP",
       "GREETING", // Sometimes contains product questions
-      "ASK_BUSINESS_INFO", // ← AGGIUNTO!
+      "ASK_BUSINESS_INFO",
+      "UPDATE_PROFILE", // ✅ FIX: Profile updates should go through Router in informational workspaces
+      "CHANGE_LANGUAGE", // ✅ FIX: Language changes should go through Router in informational workspaces
     ]
 
     return informationalIntents.includes(intentType)
@@ -1658,6 +1662,18 @@ export class ChatEngineService {
           agentUsed: "WELCOME",
           _assistantMessageId: welcomeResult.assistantMessageId,
         }
+      }
+
+      // ========================================================================
+      // STEP 0.2: Informational Workspace - Force CUSTOMER_SUPPORT prompt flow
+      // ========================================================================
+      if (!workspaceConfig.sellsProductsAndServices) {
+        return await this.handleInformationalMessage({
+          input,
+          workspaceConfig,
+          startTime,
+          debugSteps,
+        })
       }
 
       // ========================================================================
@@ -3324,6 +3340,22 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       })
 
       // ========================================================================
+      // STEP 2.19: Informational Workspace - Override intent for FAQ-based response
+      // 🔒 Feature 174: If workspace doesn't sell products, force CUSTOMER_SUPPORT agent (with FAQ)
+      // This ensures GREETING, UPDATE_PROFILE, CHANGE_LANGUAGE go through unified Router flow
+      // ========================================================================
+      if ((this.isEcommerceIntent(intentResult.intent.type) || this.isInformationalIntent(intentResult.intent.type)) && !workspaceConfig.sellsProductsAndServices) {
+        logger.info("🔀 [ChatEngine] Informational workspace: forcing Router flow", {
+          originalIntent: intentResult.intent.type,
+          workspaceId: input.workspaceId
+        })
+        
+        // Override intent to force Router routing (continues normal flow with LinkReplacement + Translation)
+        intentResult.intent.type = "ASK_FAQ" as any // Force FAQ routing
+        intentResult.source = "PATTERN" // Use valid source type
+      }
+
+      // ========================================================================
       // STEP 2.20: Handle GREETING intent - Simple greeting response
       // ========================================================================
       if (intentResult.intent.type === "GREETING") {
@@ -3747,22 +3779,6 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             intentResult.intent = { type: "SHOW_CATEGORIES" }
           }
         }
-      }
-
-      // ========================================================================
-      // STEP 2.5: Informational Workspace - Override intent for FAQ-based response
-      // 🔒 Feature 174: If workspace doesn't sell products, force CUSTOMER_SUPPORT agent (with FAQ)
-      // This allows normal flow continuation (translation + link replacement)
-      // ========================================================================
-      if ((this.isEcommerceIntent(intentResult.intent.type) || this.isInformationalIntent(intentResult.intent.type)) && !workspaceConfig.sellsProductsAndServices) {
-        logger.info("🔀 [ChatEngine] Informational workspace: forcing CUSTOMER_SUPPORT intent", {
-          originalIntent: intentResult.intent.type,
-          workspaceId: input.workspaceId
-        })
-        
-        // Override intent to force CUSTOMER_SUPPORT routing (continues normal flow)
-        intentResult.intent.type = "ASK_FAQ" as any // Force FAQ routing
-        intentResult.source = "PATTERN" // Use valid source type
       }
 
       if (intentResult.intent.type === "REQUEST_HUMAN") {
@@ -5022,6 +5038,210 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       "HUMAN_SUPPORT",
     ]
     return simpleTypes.includes(type)
+  }
+
+  private async handleInformationalMessage(params: {
+    input: ChatEngineInput
+    workspaceConfig: WorkspaceConfig
+    startTime: number
+    debugSteps: DebugStep[]
+  }): Promise<ChatEngineOutput> {
+    const { input, workspaceConfig, startTime, debugSteps } = params
+    const conversationId = input.conversationId || `temp-${input.customerId}`
+
+    const customer = await this.prisma.customers.findFirst({
+      where: { id: input.customerId, workspaceId: input.workspaceId },
+      select: {
+        name: true,
+        email: true,
+        phone: true,
+        language: true,
+        discount: true,
+      },
+    })
+
+    const customerName = input.customerName || customer?.name || "Cliente"
+    const customerLanguage =
+      input.customerLanguage || customer?.language || "it"
+
+    debugSteps.push({
+      type: "router",
+      agent: "📚 Informational Workspace",
+      timestamp: new Date().toISOString(),
+      input: {
+        userMessage: input.message,
+      },
+      output: {
+        decision: "route_to_customer_support",
+        textResponse: "sellsProductsAndServices=false",
+      },
+    })
+
+    let agentResponse = {
+      success: false,
+      output: "",
+      tokensUsed: 0,
+      executionTimeMs: 0,
+      functionCalls: [],
+    }
+
+    try {
+      const customerSupportAgent = new CustomerSupportAgentLLM(this.prisma)
+      agentResponse = await customerSupportAgent.handleQuery({
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+        customerName,
+        customerLanguage,
+        query: input.message,
+        customerData: {
+          nameUser: customerName,
+          email: customer?.email || "",
+          phone: customer?.phone || "",
+          discountUser: customer?.discount || 0,
+          companyName: workspaceConfig.name || "Shop",
+          lastordercode: "",
+          languageUser: customerLanguage,
+          adminEmail: workspaceConfig.adminEmail || "",
+          botIdentityResponse: workspaceConfig.botIdentityResponse || "",
+          agentName: workspaceConfig.name || "Shop",
+          agentPhone: "",
+          agentEmail: workspaceConfig.adminEmail || "",
+        },
+      })
+    } catch (error) {
+      logger.error("❌ [ChatEngine] Informational support agent failed", {
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+        error: error.message,
+      })
+    }
+
+    let totalTokens = agentResponse.tokensUsed || 0
+    let finalMessage = agentResponse.output
+
+    if (!agentResponse.success || !finalMessage) {
+      const fallbackIdentity =
+        workspaceConfig.botIdentityResponse ||
+        "Sono l'assistente virtuale di questo canale."
+      const fallbackSupport = workspaceConfig.hasHumanSupport
+        ? `Se preferisci supporto umano, puoi contattarci a ${workspaceConfig.adminEmail || "support@echatbot.ai"}.`
+        : "Al momento il supporto umano non è disponibile."
+      finalMessage = `${fallbackIdentity} Come posso aiutarti? ${fallbackSupport}`
+
+      debugSteps.push({
+        type: "router",
+        agent: "📚 Informational Workspace",
+        timestamp: new Date().toISOString(),
+        output: {
+          decision: "customer_support_failed_fallback",
+          textResponse: "CustomerSupportAgentLLM failed or empty response",
+        },
+      })
+    }
+
+    try {
+      const safetyAgent = new SafetyTranslationAgent(this.prisma)
+      const safetyResult = await safetyAgent.process({
+        workspaceId: input.workspaceId,
+        response: finalMessage,
+        targetLanguage: customerLanguage,
+        customerName,
+      })
+
+      totalTokens += safetyResult.tokensUsed || 0
+
+      debugSteps.push({
+        type: "safety",
+        agent: "SafetyTranslationAgent",
+        timestamp: new Date().toISOString(),
+        input: {
+          userMessage: finalMessage,
+          targetLanguage: customerLanguage,
+        },
+        output: {
+          textResponse: safetyResult.translatedText,
+          translated: true,
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: safetyResult.tokensUsed || 0,
+          totalTokens: safetyResult.tokensUsed || 0,
+        },
+      })
+
+      if (safetyResult.safe && safetyResult.translatedText) {
+        finalMessage = safetyResult.translatedText
+      }
+    } catch (error) {
+      logger.error("❌ [ChatEngine] Informational safety/translation failed", {
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+        error: error.message,
+      })
+    }
+
+    const messageBeforeReplacement = finalMessage
+    const replacementResult = await this.linkReplacementService.replaceTokens(
+      { response: finalMessage, linkType: "auto" },
+      input.customerId,
+      input.workspaceId
+    )
+
+    if (replacementResult.success && replacementResult.response) {
+      finalMessage = replacementResult.response
+      if (messageBeforeReplacement !== finalMessage) {
+        debugSteps.push({
+          type: "link-replacement",
+          agent: "🔗 Link Replacement",
+          timestamp: new Date().toISOString(),
+          input: {
+            textContent: "Scanning for [LINK_*] placeholders",
+          },
+          output: {
+            textContent: "Tokens replaced with secure URLs",
+          },
+        })
+      }
+    }
+
+    const processingTimeMs = Date.now() - startTime
+
+    const savedMessages = await this.saveMessages(
+      input.workspaceId,
+      input.customerId,
+      conversationId,
+      input.message,
+      finalMessage,
+      AgentType.CUSTOMER_SUPPORT,
+      totalTokens,
+      {
+        steps: debugSteps,
+        totalTokens,
+        executionTimeMs: processingTimeMs,
+      }
+    )
+
+    return {
+      message: finalMessage,
+      agentType: AgentType.CUSTOMER_SUPPORT,
+      wasHandled: true,
+      intent: "ASK_FAQ",
+      confidence: "HIGH",
+      source: "LLM_FALLBACK",
+      processingTimeMs,
+      debugInfo: {
+        steps: debugSteps,
+        totalTokens,
+        executionTimeMs: processingTimeMs,
+      },
+      response: finalMessage,
+      agentUsed: AgentType.CUSTOMER_SUPPORT,
+      tokensUsed: totalTokens,
+      executionTimeMs: processingTimeMs,
+      wasFAQ: false,
+      isBlocked: false,
+      _assistantMessageId: savedMessages?.assistantMessageId,
+    }
   }
 
   /**

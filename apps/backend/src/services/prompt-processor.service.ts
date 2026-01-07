@@ -1,6 +1,4 @@
 import { prisma } from "@echatbot/database"
-import fs from "fs"
-import path from "path"
 import { TemplateEngineService } from "../application/services/prompt-builder/template-engine.service"
 import { MessageRepository } from "../repositories/message.repository"
 import logger from "../utils/logger"
@@ -67,6 +65,8 @@ export class PromptProcessorService {
         botIdentityResponse: variables.botIdentityResponse,
         humanSupportInstructions: variables.humanSupportInstructions,
         allowedExternalLinks: variables.allowedExternalLinks,
+        faq: variables.faqs,
+        faqs: variables.faqs,
       }
       
       result = this.templateEngine.process(result, conditionalVars)
@@ -267,6 +267,7 @@ export class PromptProcessorService {
         // ✅ FIX: Add hasIdentity, hasFaq, hasCustomAiRules boolean checks for {{#if}} conditionals
         hasIdentity: !!workspaceConfig?.botIdentityResponse,
         hasFaq: !!dynamicContent?.faqs,
+        faq: dynamicContent?.faqs || "",
         faqs: dynamicContent?.faqs || "", // ✅ FIX: Add faqs string for template replacement
         hasCustomAiRules: !!workspaceConfig?.customAiRules,
         hasAddress: !!workspaceConfig?.address, // ✅ FIX: Add hasAddress boolean for {{#if hasAddress}}
@@ -335,6 +336,14 @@ export class PromptProcessorService {
         : "⚠️ Non abbiamo FAQ in questo workspace."
 
       processedPrompt = processedPrompt.replace(/\{\{faqs\}\}/g, faqContent)
+    }
+
+    if (processedPrompt.includes("{{faq}}")) {
+      // Keep placeholder if FAQ content is empty (backward compatibility)
+      const faqContent = dynamicContent.faqs?.trim()
+      if (faqContent) {
+        processedPrompt = processedPrompt.replace(/\{\{faq\}\}/g, faqContent)
+      }
     }
 
     if (processedPrompt.includes("{{products}}")) {
@@ -538,9 +547,6 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
     }
 
     // Remove duplicate CATEGORIES check since it's already handled above
-
-    // DEBUG: Salva il prompt finale per debugging
-    await this.saveDebugPrompt(processedPrompt, workspaceId)
 
     return processedPrompt
   }
@@ -832,40 +838,5 @@ Stato: ${lastOrder.status}`
     return Math.ceil(text.length / 4)
   }
 
-  /**
-   * Salva il prompt finale per debugging.
-   * @param prompt Il prompt processato.
-   * @param workspaceId L'ID del workspace.
-   */
-  private async saveDebugPrompt(
-    prompt: string,
-    workspaceId: string
-  ): Promise<void> {
-    try {
-      const logsDir = path.join(process.cwd(), "logs")
-      if (!fs.existsSync(logsDir)) {
-        fs.mkdirSync(logsDir, { recursive: true })
-      }
-
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
-      const filename = `prompt-debug-${workspaceId}-${timestamp}.txt`
-      const filepath = path.join(logsDir, filename)
-
-      const debugContent = `
-================== PROMPT DEBUG ==================
-Timestamp: ${new Date().toISOString()}
-Workspace ID: ${workspaceId}
-================== FINAL PROMPT ==================
-
-${prompt}
-
-================== END PROMPT ==================
-`
-
-      fs.writeFileSync(filepath, debugContent, "utf8")
-      logger.info(`[DEBUG] Prompt salvato in: ${filepath}`)
-    } catch (error) {
-      logger.error("[DEBUG] Errore nel salvare il prompt:", error)
-    }
-  }
+  // Prompt file logging removed: use targeted logs instead of writing to disk.
 }

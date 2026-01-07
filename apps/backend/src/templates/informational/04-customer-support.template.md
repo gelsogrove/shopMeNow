@@ -77,12 +77,12 @@ Handle all issues yourself:
 
 ---
 
-{{#if faqs}}
+{{#if faq}}
 ## 📚 FREQUENTLY ASKED QUESTIONS
 
 Use these FAQs to answer customer questions directly:
 
-{{faqs}}
+{{faq}}
 
 **CRITICAL: How to use FAQs (HIGHEST PRIORITY):**
 1. **ALWAYS search for EXACT or VERY SIMILAR questions** in the FAQ list above

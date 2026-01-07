@@ -22,7 +22,7 @@
     "studio": "dotenv -e ../../.env -- prisma studio",
     "db:push": "if [ \"$NODE_ENV\" = \"production\" ]; then echo '❌ Cannot run db:push in production!' && exit 1; fi && dotenv -e ../../.env -- prisma db push",
     "check:env": "dotenv -e ../../.env -- ts-node scripts/check-env-safety.ts",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.1.0",

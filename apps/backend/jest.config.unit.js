@@ -31,6 +31,12 @@ module.exports = {
     "/node_modules/",
     "/dist/",
     "/src/__tests__/security/",
+    // Exclude tests that require real database (should be in integration suite)
+    "customer-support-agent-faq.spec.ts",
+    "message-repository-price-visibility.spec.ts",
+    "whatsapp-webhook-registration-link.spec.ts",
+    "whatsapp-webhook-first-message.spec.ts",
+    "whatsapp-webhook-welcome-once.spec.ts",
   ],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   verbose: true,

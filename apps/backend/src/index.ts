@@ -1,5 +1,42 @@
-// Load environment variables BEFORE any other imports
-import "dotenv/config"
+// Load environment variables BEFORE any other imports (single root .env)
+import * as dotenv from "dotenv"
+import fs from "fs"
+import path from "path"
+
+const findWorkspaceRoot = (startDir: string): string | null => {
+  let current = startDir
+  while (true) {
+    const pkgPath = path.join(current, "package.json")
+    if (fs.existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"))
+        if (Array.isArray(pkg.workspaces)) {
+          return current
+        }
+      } catch {
+        // Ignore invalid package.json during traversal
+      }
+    }
+    const parent = path.dirname(current)
+    if (parent === current) return null
+    current = parent
+  }
+}
+
+const workspaceRoot =
+  findWorkspaceRoot(__dirname) || findWorkspaceRoot(process.cwd())
+const envPath = workspaceRoot ? path.join(workspaceRoot, ".env") : null
+
+if (envPath && fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath })
+} else {
+  dotenv.config()
+}
+
+const openRouterKeyLength = process.env.OPENROUTER_API_KEY?.length || 0
+console.info(
+  `[ENV] OPENROUTER_API_KEY loaded: ${openRouterKeyLength > 0} (length=${openRouterKeyLength})`
+)
 
 if (process.env.NODE_ENV === "production") {
   // Map tsconfig-style aliases at runtime for compiled JS (e.g. @shared/*).

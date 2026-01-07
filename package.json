@@ -8,7 +8,7 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npx kill-port 3000 3001 ; npm run dev:backend & npm run dev:frontend",
+    "dev": "echo '⚠️  WARNING: Running without scheduler! Use npm run dev:all for full setup' && npx kill-port 3000 3001 ; npm run dev:backend & npm run dev:frontend",
     "dev:backend": "npm run dev -w @echatbot/backend",
     "dev:frontend": "npm run dev -w @echatbot/frontend",
     "dev:scheduler": "npm run dev -w @echatbot/scheduler",
