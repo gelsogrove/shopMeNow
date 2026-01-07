@@ -260,7 +260,7 @@ Sono qui per aiutarti 😊`,
 - Per tutti gli altri casi, rispondi normalmente senza escalation`,
       operatorContactMethod: "EMAIL",
       toneOfVoice: "FRIENDLY",
-      botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products!",
+      botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products! 🇮🇹",
       chatbotName: "Sofia",
       businessType: "food",
     },
@@ -350,7 +350,7 @@ Sono qui per aiutarti 😊`,
 ⚠️ IMPORTANTE: Prima verifica SEMPRE se la risposta è nelle FAQ o nella knowledge base`,
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
-      botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products!",
+      botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products and services! 📚",
       chatbotName: "Marco",
       businessType: "food",
     },
@@ -745,7 +745,7 @@ Sono qui per aiutarti 😊`,
       url: "https://echatbot.ai/support",
       channelStatus: true,
       welcomeMessage:
-        "Hi! I'm your eChatbot product assistant. Ask me anything about plans, integrations or onboarding.",
+        "Hi! I'm your eChatbot product assistant. Ask me anything about plans, integrations or onboarding. 🚀",
       wipMessage:
         "Our assistants are being updated. If you need immediate help please write to support@echatbot.ai.",
       ownerId: adminUser.id,
@@ -770,7 +770,7 @@ Sono qui per aiutarti 😊`,
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
       botIdentityResponse:
-        "I'm the eChatbot product specialist. I can explain pricing, automation features, integrations and connect you with a human consultant anytime.",
+        "I'm the eChatbot product specialist. Automate sales, support, and campaigns on WhatsApp — in one platform. 💼 How can I help you today?",
     },
   })
 
@@ -825,6 +825,7 @@ Sono qui per aiutarti 😊`,
         agent.type
       )
   )
+
   for (const config of supportAgents) {
     await prisma.agentConfig.create({
       data: {

@@ -181,6 +181,8 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
         storage.clearSelectedChatId()  // 🔥 CRITICAL: ChatContext reads this!
         // Invalidate react-query cache by triggering storage event
         storage.setWorkspaceChanged()
+        // 🔥 Ensure same-tab listeners react immediately
+        window.dispatchEvent(new Event("workspace-changed"))
       }
     }
     

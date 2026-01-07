@@ -2060,6 +2060,21 @@ export class ChatEngineService {
           groupMappingKeys: optionsMapping?.groupMapping ? Object.keys(optionsMapping.groupMapping) : [],
           firstOptionSkus: optionsMapping?.options?.[0]?.skus?.slice(0, 2),
         })
+
+        if (!optionsMapping || (!optionsMapping.options?.length && !optionsMapping.groupMapping)) {
+          logger.info("⏳ [ChatEngine] Numeric selection without active mapping - republishing categories", {
+            number: preprocessResult.extractedNumber,
+            workspaceId: input.workspaceId,
+            customerId: input.customerId,
+          })
+          return await this.handleExpiredNumericSelection({
+            input,
+            workspaceConfig,
+            conversationId,
+            startTime,
+            debugSteps,
+          })
+        }
         
         // 🆕 PRIORITY 1: Check groupMapping first (for smart grouping like "Formaggi Freschi")
         // This contains the SKUs for each numbered group created by LLM
@@ -5237,6 +5252,123 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       response: finalMessage,
       agentUsed: AgentType.CUSTOMER_SUPPORT,
       tokensUsed: totalTokens,
+      executionTimeMs: processingTimeMs,
+      wasFAQ: false,
+      isBlocked: false,
+      _assistantMessageId: savedMessages?.assistantMessageId,
+    }
+  }
+
+  private async handleExpiredNumericSelection(params: {
+    input: ChatEngineInput
+    workspaceConfig: WorkspaceConfig
+    conversationId: string
+    startTime: number
+    debugSteps: DebugStep[]
+  }): Promise<ChatEngineOutput> {
+    const { input, workspaceConfig, conversationId, startTime, debugSteps } = params
+    const customerName = input.customerName || "Cliente"
+
+    const history = await this.conversationManager.loadHistory(
+      input.workspaceId,
+      conversationId
+    )
+
+    const showIntent: Intent = { type: "SHOW_CATEGORIES" } as Intent
+    const loadedData = await this.dataLoader.loadForIntent(
+      showIntent,
+      input.workspaceId,
+      input.customerId,
+      input.customerDiscount,
+      false
+    )
+
+    const structuredResponse = this.responseBuilder.build(showIntent, loadedData, {
+      workspaceId: input.workspaceId,
+      customerLanguage: input.customerLanguage || "it",
+      customerName: input.customerName,
+      customerDiscount: input.customerDiscount,
+      userMessage: input.message,
+      enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+    })
+
+    const formatterResult = await this.formatWithCustomRules(
+      structuredResponse,
+      input.customerLanguage || "it",
+      workspaceConfig,
+      undefined,
+      { customerName: input.customerName, isFirstMessage: history.length === 0 }
+    )
+
+    let finalMessage = `Bentornato ${customerName}, come posso esserti utile oggi?\n\n${formatterResult.text}`
+    const messageBeforeReplacement = finalMessage
+    const replacementResult = await this.linkReplacementService.replaceTokens(
+      { response: finalMessage, linkType: "auto" },
+      input.customerId,
+      input.workspaceId
+    )
+    if (replacementResult.success && replacementResult.response) {
+      finalMessage = replacementResult.response
+      if (finalMessage !== messageBeforeReplacement) {
+        debugSteps.push({
+          type: "link-replacement",
+          agent: "🔗 Link Replacement",
+          timestamp: new Date().toISOString(),
+          input: { textContent: "Scanning for [LINK_*] placeholders" },
+          output: { textContent: "Tokens replaced with secure URLs" },
+        })
+      }
+    }
+
+    const responseWithSkus = finalMessage
+    finalMessage = finalMessage
+      .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, "")
+      .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, "")
+
+    const itemsWithSkus = structuredResponse.data?.items?.map((item: any) => ({
+      number: item.number,
+      name: item.name,
+      sku: item.sku,
+      id: item.id,
+    }))
+
+    await this.optionsMappingService.saveMapping({
+      workspaceId: input.workspaceId,
+      conversationId,
+      customerId: input.customerId,
+      responseText: responseWithSkus,
+      items: itemsWithSkus,
+      listType: "CATEGORIES",
+    })
+
+    const processingTimeMs = Date.now() - startTime
+    const savedMessages = await this.saveMessages(
+      input.workspaceId,
+      input.customerId,
+      conversationId,
+      input.message,
+      finalMessage
+    )
+
+    return {
+      message: finalMessage,
+      agentType: AgentType.PRODUCT_SEARCH,
+      wasHandled: true,
+      intent: "SHOW_CATEGORIES",
+      confidence: "HIGH",
+      source: "FAST_PATH",
+      processingTimeMs,
+      debugInfo: {
+        loadedDataType: loadedData.type,
+        responseType: structuredResponse.type,
+        llmUsed: !formatterResult.cached,
+        steps: debugSteps,
+        totalTokens: formatterResult.tokensUsed || 0,
+        executionTimeMs: processingTimeMs,
+      },
+      response: finalMessage,
+      agentUsed: AgentType.PRODUCT_SEARCH,
+      tokensUsed: formatterResult.tokensUsed || 0,
       executionTimeMs: processingTimeMs,
       wasFAQ: false,
       isBlocked: false,

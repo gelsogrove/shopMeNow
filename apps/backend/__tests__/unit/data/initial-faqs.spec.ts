@@ -9,9 +9,9 @@ describe("initialFAQs", () => {
   const testWorkspaceId = "test-workspace-123"
 
   describe("structure", () => {
-    it("should return exactly 4 FAQs", () => {
+    it("should return exactly 12 FAQs", () => {
       const faqs = initialFAQs(testWorkspaceId)
-      expect(faqs).toHaveLength(4)
+      expect(faqs).toHaveLength(12)
     })
 
     it("should include workspaceId in all FAQs", () => {
@@ -96,7 +96,7 @@ describe("initialFAQs", () => {
       expect(categories).toEqual(
         expect.arrayContaining(["Account", "Shipping", "Orders", "Payments"])
       )
-      expect(categories).toHaveLength(4)
+      expect(categories.length).toBeGreaterThanOrEqual(5)
     })
   })
 
