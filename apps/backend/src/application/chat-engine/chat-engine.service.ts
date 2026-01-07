@@ -5356,7 +5356,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       wasHandled: true,
       intent: "SHOW_CATEGORIES",
       confidence: "HIGH",
-      source: "FAST_PATH",
+      source: "PATTERN",
       processingTimeMs,
       debugInfo: {
         loadedDataType: loadedData.type,
