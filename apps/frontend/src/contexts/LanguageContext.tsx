@@ -146,6 +146,11 @@ const translations = {
     "integration.crm.subtitle": "Connetti il tuo chatbot al tuo CRM e ai dati esterni con accesso API sicuro. Sincronizza i profili dei clienti, recupera lo storico degli ordini e attiva flussi di lavoro basati su eventi in tempo reale. Integrati con le API del tuo spedizioniere per offrire tracking in tempo reale e sapere sempre dove si trova il tuo carico. Ogni risposta è basata sui tuoi dati.",
     "integration.crm.button": "Richiedi un preventivo",
     
+    // Team Collaboration Section
+    "teamCollaboration.title": "Collaborazione in team per vendite complesse",
+    "teamCollaboration.subtitle": "Per chi ha un team di vendita, condividi l'accesso al backoffice con i tuoi colleghi. Lo stesso agente AI risponde ai clienti su WhatsApp, mentre il team può gestire ordini, prodotti e clienti dalla stessa piattaforma. Coordinamento perfetto tra AI e team umano.",
+    "teamCollaboration.button": "Inizia gratis",
+    
     // Privacy Section
     "privacy.sectionTitle": "Privacy by design",
     "privacy.subtitle": "Nessun dato sensibile viene inviato a terze parti o modelli AI. L'accesso è protetto con token con ambito limitato, crittografato in transito e limitato ai dati minimi richiesti per ogni interazione. I dati dei tuoi clienti restano sotto il tuo controllo.",
@@ -255,6 +260,13 @@ const translations = {
     "billing.transactionTypes.UPGRADE_FEE": "Upgrade Fee",
     "billing.transactionTypes.ADJUSTMENT": "Adjustment",
     "billing.transactionTypes.INITIAL_CREDIT": "Initial Credit",
+
+    // Team Members Limits
+    "billing.teamMembers": "Team Members",
+    "error.teamMemberLimitReached": "Team member limit reached",
+    "error.teamMemberLimitInfo": "Your {{planName}} plan supports up to {{max}} team members. You currently have {{current}}.",
+    "error.teamMemberLimitUpgrade": "Upgrade to a higher plan for unlimited team members.",
+    "billing.inviteDisabled": "Invite disabled - team member limit reached",
 
     // Contact
     "contact.title": "Pronto per Iniziare?",
@@ -504,6 +516,13 @@ const translations = {
     "refund.appeal.desc": "Se la tua richiesta di rimborso è stata negata: (1) Hai 30 giorni per appellarti della decisione, (2) Invia l'appello con documentazione aggiuntiva a: legal@echatbot.ai, (3) Condurremo una revisione finale entro 10 giorni lavorativi, (4) La decisione è finale e vincolante. Arbitrato disponibile per controversie superiori a €500.",
     "refund.contact.title": "9. Contattaci",
     "refund.contact.desc": "Richieste di rimborso: refunds@echatbot.ai. Domande di fatturazione: billing@echatbot.ai. Controversie: legal@echatbot.ai. Problemi di pagamento: support@echatbot.ai. Tempo di risposta: 2 giorni lavorativi. Per richieste di eliminazione dati: dpo@echatbot.ai.",
+
+    // Team Members Limits
+    "billing.teamMembers": "Membri del team",
+    "error.teamMemberLimitReached": "Limite di membri team raggiunto",
+    "error.teamMemberLimitInfo": "Il tuo piano {{planName}} supporta fino a {{max}} membri del team. Ne hai {{current}}.",
+    "error.teamMemberLimitUpgrade": "Passa a un piano superiore per illimitati membri del team.",
+    "billing.inviteDisabled": "Invito disabilitato - limite di membri team raggiunto",
   },
   en: {
     // Header
@@ -694,6 +713,11 @@ const translations = {
     "integration.crm.title": "Custom CRM integration",
     "integration.crm.subtitle": "Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles, pull order history, and trigger workflows based on real-time events. Integrate with your carrier's API to offer real-time tracking and always know where your shipment is. Every reply is grounded in your data.",
     "integration.crm.button": "Request a quote",
+    
+    // Team Collaboration Section
+    "teamCollaboration.title": "Team collaboration for complex sales",
+    "teamCollaboration.subtitle": "For sales teams, share backoffice access with your colleagues. The same AI agent responds to customers on WhatsApp, while the team can manage orders, products, and customers from the same platform. Perfect coordination between AI and human team.",
+    "teamCollaboration.button": "Start free",
     
     // Privacy Section
     "privacy.sectionTitle": "Privacy by design",
@@ -1141,6 +1165,11 @@ const translations = {
     "integration.crm.subtitle": "Conecta tu chatbot a tu CRM y datos externos con acceso API seguro. Sincroniza perfiles de clientes, obtén historial de pedidos y activa flujos de trabajo basados en eventos en tiempo real. Intégrate con la API de tu transportista para ofrecer seguimiento en tiempo real y saber siempre dónde está tu envío. Cada respuesta está fundamentada en tus datos.",
     "integration.crm.button": "Solicita un presupuesto",
     
+    // Team Collaboration Section
+    "teamCollaboration.title": "Colaboración en equipo para ventas complejas",
+    "teamCollaboration.subtitle": "Para equipos de ventas, comparte el acceso al backoffice con tus colegas. El mismo agente IA responde a los clientes en WhatsApp, mientras el equipo puede gestionar pedidos, productos y clientes desde la misma plataforma. Coordinación perfecta entre IA y equipo humano.",
+    "teamCollaboration.button": "Empieza gratis",
+    
     // Privacy Section
     "privacy.sectionTitle": "Privacidad por diseño",
     "privacy.subtitle": "Ningún dato sensible se envía a terceros o modelos de IA. El acceso está protegido con tokens de alcance limitado, cifrado en tránsito y limitado a los datos mínimos requeridos para cada interacción. Los datos de tus clientes permanecen bajo tu control.",
@@ -1545,6 +1574,11 @@ const translations = {
     "integration.crm.title": "Integração CRM personalizada",
     "integration.crm.subtitle": "Conecte seu chatbot ao seu CRM e dados externos com acesso API seguro. Sincronize perfis de clientes, obtenha histórico de pedidos e acione fluxos de trabalho baseados em eventos em tempo real. Integre com a API da sua transportadora para oferecer rastreamento em tempo real e sempre saber onde está sua remessa. Cada resposta é fundamentada em seus dados.",
     "integration.crm.button": "Solicite um orçamento",
+    
+    // Team Collaboration Section
+    "teamCollaboration.title": "Colaboração em equipe para vendas complexas",
+    "teamCollaboration.subtitle": "Para equipes de vendas, compartilhe o acesso ao backoffice com seus colegas. O mesmo agente IA responde aos clientes no WhatsApp, enquanto a equipe pode gerenciar pedidos, produtos e clientes da mesma plataforma. Coordenação perfeita entre IA e equipe humana.",
+    "teamCollaboration.button": "Comece grátis",
     
     // Privacy Section
     "privacy.sectionTitle": "Privacidade por design",

@@ -1293,7 +1293,7 @@ model PlanConfiguration {
   maxChannels          Int
   maxProducts          Int
   maxCustomers         Int
-  maxTeamMembers       Int
+  maxTeamMembers       Int?      @map("max_team_members") // NULL = unlimited (for PREMIUM/ENTERPRISE)
   messageCost          Decimal   @db.Decimal(10, 2) // €0.10
   orderCost            Decimal   @db.Decimal(10, 2) // €1.00
   pushCost             Decimal   @db.Decimal(10, 2) // €1.00

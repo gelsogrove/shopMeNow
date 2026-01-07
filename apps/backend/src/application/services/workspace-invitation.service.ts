@@ -184,7 +184,9 @@ export class WorkspaceInvitationService {
         }),
       ])
 
-      if (teamMemberCount + pendingInvitesCount >= planConfig.maxTeamMembers) {
+      // ✅ ENTERPRISE (maxTeamMembers = null) = unlimited, skip limit check
+      if (planConfig.maxTeamMembers !== null && 
+          teamMemberCount + pendingInvitesCount >= planConfig.maxTeamMembers) {
         return {
           success: false,
           error:

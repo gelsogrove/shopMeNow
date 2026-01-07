@@ -2517,7 +2517,7 @@ Sono qui per aiutarti 😊`,
       maxChannels: 2,
       maxProducts: 9999,
       maxCustomers: 100,
-      maxTeamMembers: 9999,
+      maxTeamMembers: 3,
       messageCost: 0.10,
       orderCost: 1.00,
       pushCost: 1.00,
@@ -2541,7 +2541,7 @@ Sono qui per aiutarti 😊`,
       maxChannels: 999, // Unlimited
       maxProducts: 9999, // Unlimited
       maxCustomers: 9999, // Unlimited
-      maxTeamMembers: 9999,
+      maxTeamMembers: null,
       messageCost: 0.10,
       orderCost: 1.00,
       pushCost: 1.00,

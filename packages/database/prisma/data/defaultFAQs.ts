@@ -430,4 +430,57 @@ export const defaultFAQs = (
     order: 22,
     isActive: true,
   },
+  {
+    workspaceId,
+    question: "How do I invite team members to my workspace?",
+    answer:
+      'To invite team members:\n1. Go to Settings → Team section\n2. Click "Invite Member" button (green)\n3. Enter their email address\n4. They will receive an invitation email with a secure link\n\n⚠️ Available on Premium (max 3 members) and Enterprise (unlimited) plans only.',
+    keywords: [
+      "invite",
+      "team",
+      "members",
+      "add user",
+      "invite colleague",
+      "team member",
+      "collaboration",
+      "staff",
+    ],
+    category: "Account",
+    order: 23,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "What happens when I accept a team invitation?",
+    answer:
+      'When you receive a team invitation email:\n1. Click "Accept Invitation" in the email\n2. If you already have an account → automatic acceptance\n3. If you are new → register with the invited email\n4. You will be added to the workspace with ADMIN role\n\n✅ Invitations expire after 7 days for security.',
+    keywords: [
+      "accept invitation",
+      "team invitation",
+      "join team",
+      "invitation email",
+      "accept invite",
+      "team access",
+    ],
+    category: "Account",
+    order: 24,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "How many team members can I add to my workspace?",
+    answer:
+      'Team member limits by plan:\n\n🆓 Free Trial: Team members not available\n📊 Basic: Team members not available\n💎 Premium: Up to 3 team members\n🏢 Enterprise: Unlimited team members\n\nUpgrade your plan to add more team members!',
+    keywords: [
+      "team limit",
+      "how many members",
+      "team size",
+      "member limit",
+      "max team members",
+      "team capacity",
+    ],
+    category: "Account",
+    order: 25,
+    isActive: true,
+  },
 ]

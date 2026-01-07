@@ -54,21 +54,43 @@ export function TeamMembersTable({
   workspaceId,
   isSuperAdmin,
 }: TeamMembersTableProps) {
-  const { billingOverview } = useBilling()
+  const { billingOverview, isLoadingOverview } = useBilling()
   const [activeTab, setActiveTab] = useState<TabType>("members")
   const [members, setMembers] = useState<TeamMember[]>([])
   const [invitations, setInvitations] = useState<PendingInvitation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const maxTeamMembers = billingOverview?.limits?.maxTeamMembers ?? 0
-  const isInviteFeatureEnabled = maxTeamMembers !== 0
+  // ✅ Fix: null = unlimited (ENTERPRISE), undefined = not loaded yet (allow), 0 = disabled (FREE_TRIAL/BASIC)
+  const maxTeamMembers = billingOverview?.limits?.maxTeamMembers
+  const isInviteFeatureEnabled = 
+    maxTeamMembers === undefined || // Not loaded yet - allow
+    maxTeamMembers === null ||      // ENTERPRISE unlimited - allow
+    maxTeamMembers > 0              // PREMIUM with limit - allow
   const currentTeamUsage = useMemo(
     () => members.length + invitations.length,
     [members.length, invitations.length]
   )
   const isInviteLimitReached =
+    maxTeamMembers !== null && 
+    maxTeamMembers !== undefined && 
     maxTeamMembers > 0 &&
     currentTeamUsage >= maxTeamMembers
+
+  // DEBUG LOGGING
+  useEffect(() => {
+    console.log('[TeamMembersTable] Debug info:', {
+      isSuperAdmin,
+      isLoadingOverview,
+      maxTeamMembers,
+      isInviteFeatureEnabled,
+      isInviteLimitReached,
+      currentTeamUsage,
+      members: members.length,
+      invitations: invitations.length,
+      billingOverviewExists: !!billingOverview,
+      billingOverview: billingOverview
+    })
+  }, [isSuperAdmin, isLoadingOverview, maxTeamMembers, isInviteFeatureEnabled, isInviteLimitReached, currentTeamUsage, members.length, invitations.length, billingOverview])
 
   // Modal states
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
@@ -227,33 +249,52 @@ export function TeamMembersTable({
                 Manage your team members and pending invitations
               </CardDescription>
             </div>
-            {isSuperAdmin ? (
-              isInviteFeatureEnabled && !isInviteLimitReached ? (
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInviteModalOpen(true)} 
-                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Invite Member
-                </Button>
-              ) : (
-                renderDisabledButton(
-                  <UserPlus className="h-4 w-4" />,
-                  "Invite Member",
-                  !isInviteFeatureEnabled
-                    ? "Upgrade to Premium or Enterprise to invite team members"
-                    : "Team member limit reached. Upgrade to add more members."
-                )
-              )
-            ) : (
-              renderDisabledButton(
-                <UserPlus className="h-4 w-4" />,
-                "Invite Member",
-                "Only the workspace owner can invite new members"
-              )
-            )}
+            {/* ✅ ALWAYS show button - enabled for SUPER_ADMIN unless explicitly disabled */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        !isSuperAdmin ||
+                        (isInviteFeatureEnabled === false) ||
+                        isInviteLimitReached
+                      }
+                      onClick={() => setInviteModalOpen(true)}
+                      className={`gap-1.5 ${
+                        isSuperAdmin &&
+                        isInviteFeatureEnabled !== false &&
+                        !isInviteLimitReached
+                          ? "text-green-600 border-green-600 hover:bg-green-50"
+                          : ""
+                      }`}
+                    >
+                      {isLoadingOverview ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-4 w-4" />
+                      )}
+                      Invite Member
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {(!isSuperAdmin ||
+                  isInviteFeatureEnabled === false ||
+                  isInviteLimitReached) && (
+                  <TooltipContent>
+                    <p>
+                      {!isSuperAdmin
+                        ? "Only the workspace owner can invite new members"
+                        : isInviteFeatureEnabled === false
+                        ? "Upgrade to Premium or Enterprise to invite team members"
+                        : "Team member limit reached. Upgrade to add more members."}
+                    </p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardHeader>
 

@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/lib/toast"
 import { invitationApi } from "@/services/teamApi"
-import { Loader2, Mail, Send } from "lucide-react"
+import { useLanguage } from "@/contexts/LanguageContext"
+import { Loader2, Mail, Send, AlertCircle } from "lucide-react"
 import { useState } from "react"
 
 interface InviteMemberModalProps {
@@ -24,6 +25,12 @@ interface InviteMemberModalProps {
 /**
  * Modal dialog for inviting new team members via email
  * Only SUPER_ADMIN can use this - validation is done at API level
+ * 
+ * Error handling:
+ * - TEAM_MEMBER_LIMIT_REACHED: Shows upgrade message with i18n translations
+ * - PLAN_LIMIT_REACHED: Generic plan limit error
+ * - INVALID_EMAIL: Email validation error
+ * - Other errors: Shows error message from backend
  */
 export function InviteMemberModal({
   open,
@@ -31,15 +38,18 @@ export function InviteMemberModal({
   workspaceId,
   onSuccess,
 }: InviteMemberModalProps) {
+  const { t } = useLanguage()
   const [email, setEmail] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setErrorCode(null)
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -63,7 +73,30 @@ export function InviteMemberModal({
       onSuccess()
       onOpenChange(false)
     } catch (err: any) {
-      const message = err.response?.data?.message || err.response?.data?.error || err.message || "Failed to send invitation"
+      const status = err.response?.status
+      const data = err.response?.data
+      const code = data?.code || data?.error
+
+      // Handle plan limit errors with translations
+      if (status === 403 && code === "TEAM_MEMBER_LIMIT_REACHED") {
+        setErrorCode("TEAM_MEMBER_LIMIT_REACHED")
+        const errorMessage = t("error.teamMemberLimitReached")
+        setError(errorMessage)
+        toast.error(errorMessage)
+        return
+      }
+
+      // Handle generic plan limit errors
+      if (status === 403 && code === "PLAN_LIMIT_REACHED") {
+        setErrorCode("PLAN_LIMIT_REACHED")
+        const errorMessage = data?.message || t("error.planLimitReached") || "Plan limit reached"
+        setError(errorMessage)
+        toast.error(errorMessage)
+        return
+      }
+
+      // Default error handling
+      const message = data?.message || data?.error || err.message || "Failed to send invitation"
       setError(message)
       toast.error(message)
     } finally {
@@ -77,6 +110,7 @@ export function InviteMemberModal({
       setFirstName("")
       setLastName("")
       setError(null)
+      setErrorCode(null)
       onOpenChange(false)
     }
   }
@@ -95,6 +129,17 @@ export function InviteMemberModal({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Plan limit error banner */}
+        {errorCode === "TEAM_MEMBER_LIMIT_REACHED" && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <p className="text-amber-800 font-medium">{t("error.teamMemberLimitReached")}</p>
+              <p className="text-amber-700 mt-1">{t("error.teamMemberLimitUpgrade")}</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
           <div className="space-y-4 py-4">
             {/* Name fields */}
@@ -107,7 +152,7 @@ export function InviteMemberModal({
                   placeholder="John"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  disabled={isLoading}
+                  disabled={isLoading || errorCode === "TEAM_MEMBER_LIMIT_REACHED"}
                   autoComplete="new-password"
                   data-lpignore="true"
                   data-form-type="other"
@@ -121,7 +166,7 @@ export function InviteMemberModal({
                   placeholder="Doe"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  disabled={isLoading}
+                  disabled={isLoading || errorCode === "TEAM_MEMBER_LIMIT_REACHED"}
                   autoComplete="new-password"
                   data-lpignore="true"
                   data-form-type="other"
@@ -139,13 +184,13 @@ export function InviteMemberModal({
                 placeholder="colleague@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || errorCode === "TEAM_MEMBER_LIMIT_REACHED"}
                 autoFocus
                 autoComplete="new-password"
                 data-lpignore="true"
                 data-form-type="other"
               />
-              {error && (
+              {error && errorCode !== "TEAM_MEMBER_LIMIT_REACHED" && (
                 <p className="text-sm text-red-600">{error}</p>
               )}
             </div>
@@ -162,7 +207,7 @@ export function InviteMemberModal({
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !email.trim()}
+              disabled={isLoading || !email.trim() || errorCode === "TEAM_MEMBER_LIMIT_REACHED"}
               className="gap-2"
             >
               {isLoading ? (

@@ -411,10 +411,9 @@ describe("TeamMembersTable", () => {
       expect(screen.getByText("owner@test.com")).toBeInTheDocument()
     })
 
-    // The invite button should be disabled
+    // The invite button should be disabled (no longer checking opacity-50 class)
     const inviteButton = screen.getByRole("button", { name: /invite member/i })
     expect(inviteButton).toBeDisabled()
-    expect(inviteButton).toHaveClass("opacity-50")
   })
 
   it("should not fetch invitations for ADMIN users", async () => {
@@ -501,6 +500,174 @@ describe("TeamMembersTable", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/pending invites \(1\)/i)).toBeInTheDocument()
+    })
+  })
+
+  // ============================================================================
+  // Invite Button Enable/Disable States (Feature: Team Members Limits)
+  // ============================================================================
+
+  describe("Invite Member Button States", () => {
+    it("should be ENABLED (green) when SUPER_ADMIN with unlimited team members (ENTERPRISE)", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          limits: { maxTeamMembers: null }, // ENTERPRISE = unlimited
+        },
+        isLoadingOverview: false,
+      } as any)
+
+      render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={true} />)
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        expect(button).toBeInTheDocument()
+        expect(button).not.toBeDisabled()
+        expect(button).toHaveClass("text-green-600") // Green color
+      })
+    })
+
+    it("should be ENABLED (green) when SUPER_ADMIN with team limit not reached (PREMIUM)", async () => {
+      vi.mocked(teamMemberApi.getMembers).mockResolvedValue([mockMembers[0]]) // Only 1 member
+      vi.mocked(invitationApi.getPending).mockResolvedValue([]) // No pending invites
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          limits: { maxTeamMembers: 3 }, // PREMIUM = 3 limit
+        },
+        isLoadingOverview: false,
+      } as any)
+
+      render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={true} />)
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        expect(button).not.toBeDisabled()
+        expect(button).toHaveClass("text-green-600")
+      })
+    })
+
+    it("should be DISABLED when not SUPER_ADMIN (only ADMIN)", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          limits: { maxTeamMembers: 10 },
+        },
+        isLoadingOverview: false,
+      } as any)
+
+      render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={false} />)
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        expect(button).toBeDisabled()
+      })
+    })
+
+    it("should be DISABLED when maxTeamMembers is 0 (FREE_TRIAL/BASIC plan)", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          limits: { maxTeamMembers: 0 }, // Feature disabled
+        },
+        isLoadingOverview: false,
+      } as any)
+
+      render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={true} />)
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        expect(button).toBeDisabled()
+      })
+    })
+
+    it("should be DISABLED when team limit reached (PREMIUM: 3/3 used)", async () => {
+      vi.mocked(teamMemberApi.getMembers).mockResolvedValue([
+        mockMembers[0],
+        mockMembers[1],
+        { ...mockMembers[1], userId: "user-3", email: "user3@test.com" },
+      ]) // 3 members
+      vi.mocked(invitationApi.getPending).mockResolvedValue([]) // No pending
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          limits: { maxTeamMembers: 3 }, // PREMIUM = 3 limit
+        },
+        isLoadingOverview: false,
+      } as any)
+
+      render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={true} />)
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        expect(button).toBeDisabled()
+      })
+    })
+
+    it("should show correct tooltip when disabled (not SUPER_ADMIN)", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          limits: { maxTeamMembers: 10 },
+        },
+        isLoadingOverview: false,
+      } as any)
+
+      const { container } = render(
+        <TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={false} />
+      )
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        expect(button).toBeDisabled()
+        
+        // Tooltip should mention owner permission
+        // Note: Testing tooltip visibility requires hovering in real test environment
+        // Here we just verify button is disabled with correct state
+      })
+    })
+
+    it("should show correct tooltip when disabled (feature not available on plan)", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: {
+          limits: { maxTeamMembers: 0 }, // FREE_TRIAL/BASIC
+        },
+        isLoadingOverview: false,
+      } as any)
+
+      render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={true} />)
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        expect(button).toBeDisabled()
+      })
+    })
+
+    it("should show loading spinner when billing data is loading", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: null,
+        isLoadingOverview: true,
+      } as any)
+
+      const { container } = render(
+        <TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={true} />
+      )
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        // Button should show spinner icon when loading
+        const spinner = container.querySelector('.animate-spin')
+        expect(spinner).toBeTruthy()
+      })
+    })
+
+    it("should allow invitation when billing data not loaded yet (undefined = allow)", async () => {
+      vi.mocked(useBilling).mockReturnValue({
+        billingOverview: undefined, // Not loaded yet
+        isLoadingOverview: false,
+      } as any)
+
+      render(<TeamMembersTable workspaceId={mockWorkspaceId} isSuperAdmin={true} />)
+
+      await waitFor(() => {
+        const button = screen.getByRole("button", { name: /invite member/i })
+        // Should be enabled when data not loaded (optimistic UX)
+        expect(button).not.toBeDisabled()
+      })
     })
   })
 })

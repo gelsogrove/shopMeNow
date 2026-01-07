@@ -3,12 +3,15 @@
  * Feature 185: Subscription & Billing System
  * 
  * SINGLE SOURCE OF TRUTH for plan features.
+ * Built from API data at runtime (no hardcoded values).
  * Used by:
  * - PricingPlans.tsx (homepage)
  * - BillingSection.tsx (profile/billing dialog)
  * 
- * When you change a feature here, it updates everywhere!
+ * When you change plan limits in database, it updates everywhere!
  */
+
+import { PlanInfo } from "@/services/subscriptionBillingApi"
 
 export interface PlanFeature {
   key: string
@@ -44,8 +47,99 @@ export const FEATURE_KEYS = {
   DEDICATED_SERVER: "dedicatedServer",
 } as const
 
-// Plan configurations - SINGLE SOURCE OF TRUTH
-export const PLAN_CONFIGS: Record<string, PlanConfig> = {
+// ============================================================================
+// RUNTIME PLAN CONFIGURATION
+// ============================================================================
+
+/**
+ * Convert API PlanInfo to PlanConfig (includes display metadata)
+ * @param plans - Array of PlanInfo from API
+ * @returns Record of PlanConfig by planType
+ */
+export function buildPlanConfigsFromApi(plans: PlanInfo[]): Record<string, PlanConfig> {
+  const configs: Record<string, PlanConfig> = {}
+
+  // Map of plan-specific metadata (not in API)
+  const planMetadata: Record<string, {
+    description: string
+    descriptionKey: string
+    isPopular?: boolean
+    buttonVariant?: "default" | "outline"
+    priceSuffix?: string
+  }> = {
+    FREE_TRIAL: {
+      description: "14-day free trial",
+      descriptionKey: "pricing.free.creditDesc",
+      isPopular: true,
+      buttonVariant: "default",
+      priceSuffix: "/14 days",
+    },
+    BASIC: {
+      description: "For growing businesses",
+      descriptionKey: "pricing.basic.desc",
+      buttonVariant: "default",
+    },
+    PREMIUM: {
+      description: "For established businesses",
+      descriptionKey: "pricing.premium.desc",
+      buttonVariant: "default",
+    },
+    ENTERPRISE: {
+      description: "For large-scale operations",
+      descriptionKey: "pricing.enterprise.desc",
+      buttonVariant: "outline",
+      priceSuffix: "/month",
+    },
+  }
+
+  for (const plan of plans) {
+    const metadata = planMetadata[plan.planType]
+    if (!metadata) continue
+
+    // Determine feature inclusion based on plan
+    const isBasic = plan.planType === "BASIC" || plan.planType === "FREE_TRIAL"
+    const isPremium = plan.planType === "PREMIUM"
+    const isEnterprise = plan.planType === "ENTERPRISE"
+
+    // Helper to determine if limit is unlimited
+    const isUnlimited = (limit: number | null): boolean => limit === null || limit === 999
+
+    configs[plan.planType] = {
+      name: plan.displayName,
+      price: Math.floor(plan.monthlyFee),
+      priceLabel: `$${Math.floor(plan.monthlyFee)}`,
+      priceSuffix: metadata.priceSuffix,
+      description: metadata.description,
+      descriptionKey: metadata.descriptionKey,
+      isPopular: metadata.isPopular,
+      buttonVariant: metadata.buttonVariant,
+      limits: {
+        channels: isUnlimited(plan.maxChannels) ? "unlimited" : plan.maxChannels,
+        customers: isUnlimited(plan.maxCustomers) ? "unlimited" : plan.maxCustomers,
+        teamMembers: isUnlimited(plan.maxTeamMembers) ? "unlimited" : plan.maxTeamMembers,
+      },
+      features: [
+        { key: FEATURE_KEYS.CHANNELS, included: true },
+        { key: FEATURE_KEYS.CUSTOMERS, included: true },
+        { key: FEATURE_KEYS.TEAM_MEMBERS, included: isPremium || isEnterprise },
+        { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
+        { key: FEATURE_KEYS.ANALYTICS, included: true },
+        { key: FEATURE_KEYS.BRANDING, included: isPremium || isEnterprise },
+        { key: FEATURE_KEYS.INTEGRATIONS, included: isEnterprise },
+        { key: FEATURE_KEYS.DEDICATED_SERVER, included: isEnterprise },
+      ],
+    }
+  }
+
+  return configs
+}
+
+/**
+ * FALLBACK: Hardcoded defaults for initial render (before API data loads)
+ * Used only when API is not yet available
+ * @deprecated - Should only be used as fallback
+ */
+export const PLAN_CONFIGS_FALLBACK: Record<string, PlanConfig> = {
   FREE_TRIAL: {
     name: "Free Trial",
     price: 0,
@@ -104,7 +198,7 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
     limits: {
       channels: 2,
       customers: 100,
-      teamMembers: "unlimited",
+      teamMembers: 3,
     },
     features: [
       { key: FEATURE_KEYS.CHANNELS, included: true },
@@ -141,6 +235,21 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
       { key: FEATURE_KEYS.DEDICATED_SERVER, included: true },
     ],
   },
+}
+
+/**
+ * Default PLAN_CONFIGS: Initially uses fallback, can be updated at runtime via buildPlanConfigsFromApi()
+ * This ensures UI renders immediately even if API hasn't loaded yet
+ */
+export let PLAN_CONFIGS = { ...PLAN_CONFIGS_FALLBACK }
+
+/**
+ * Update PLAN_CONFIGS at runtime from API data
+ * Call this when PlanInfo data is fetched from /subscription/plans
+ * @param plans - Array of PlanInfo from API
+ */
+export function updatePlanConfigs(plans: PlanInfo[]): void {
+  PLAN_CONFIGS = buildPlanConfigsFromApi(plans)
 }
 
 // Helper to get feature display text (with optional translation)
@@ -190,7 +299,7 @@ export function getFeatureDisplayText(
   }
 }
 
-// Get features with display text for a plan (sorted: included first, then excluded)
+// Get features with display text for a plan (maintains consistent order across all plans)
 export function getPlanFeaturesWithText(
   planType: keyof typeof PLAN_CONFIGS,
   t?: (key: string) => string
@@ -203,7 +312,7 @@ export function getPlanFeaturesWithText(
     included: feature.included,
   }))
   
-  // Sort: included (true) first, then excluded (false)
+  // Sort: included features first, disabled features at the bottom
   return features.sort((a, b) => {
     if (a.included === b.included) return 0
     return a.included ? -1 : 1

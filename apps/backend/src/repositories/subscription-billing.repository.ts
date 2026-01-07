@@ -32,7 +32,7 @@ export interface PlanLimits {
   maxChannels: number
   maxProducts: number
   maxCustomers: number
-  maxTeamMembers: number
+  maxTeamMembers: number | null  // null = unlimited (PREMIUM/ENTERPRISE)
   messageCost: number
   orderCost: number
   pushCost: number
@@ -533,6 +533,7 @@ export class SubscriptionBillingRepository {
     productsCount: number
     customersCount: number
     channelsCount: number
+    teamMembersCount: number
   }> {
     // Get all workspaces owned by this user (exclude soft-deleted)
     const ownerWorkspaces = await this.prisma.workspace.findMany({
@@ -543,23 +544,33 @@ export class SubscriptionBillingRepository {
     const ownerWorkspaceIds = ownerWorkspaces.map(w => w.id)
 
     if (ownerWorkspaceIds.length === 0) {
-      return { productsCount: 0, customersCount: 0, channelsCount: 0 }
+      return { productsCount: 0, customersCount: 0, channelsCount: 0, teamMembersCount: 0 }
     }
 
     // Aggregate counts across ALL owner's workspaces
-    const [productsCount, customersCount] = await Promise.all([
+    const [productsCount, customersCount, teamMembersCount] = await Promise.all([
       this.prisma.products.count({
         where: { workspaceId: { in: ownerWorkspaceIds }, isActive: true },
       }),
       this.prisma.customers.count({
         where: { workspaceId: { in: ownerWorkspaceIds }, isActive: true },
       }),
+      // Count UNIQUE users across all owner's workspaces
+      this.prisma.userWorkspace.findMany({
+        where: { 
+          workspaceId: { in: ownerWorkspaceIds },
+          user: { deletedAt: null }
+        },
+        select: { userId: true },
+        distinct: ['userId']
+      }).then(records => records.length),
     ])
 
     return {
       productsCount,
       customersCount,
       channelsCount: ownerWorkspaces.length,
+      teamMembersCount,
     }
   }
 
@@ -571,6 +582,7 @@ export class SubscriptionBillingRepository {
     productsCount: number
     customersCount: number
     channelsCount: number
+    teamMembersCount: number
   }> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
@@ -579,15 +591,23 @@ export class SubscriptionBillingRepository {
 
     if (!workspace?.ownerId) {
       // Fallback: count only for this workspace
-      const [productsCount, customersCount] = await Promise.all([
+      const [productsCount, customersCount, teamMembersCount] = await Promise.all([
         this.prisma.products.count({
           where: { workspaceId, isActive: true },
         }),
         this.prisma.customers.count({
           where: { workspaceId, isActive: true },
         }),
+        this.prisma.userWorkspace.findMany({
+          where: { 
+            workspaceId,
+            user: { deletedAt: null }
+          },
+          select: { userId: true },
+          distinct: ['userId']
+        }).then(records => records.length),
       ])
-      return { productsCount, customersCount, channelsCount: 1 }
+      return { productsCount, customersCount, channelsCount: 1, teamMembersCount }
     }
 
     return this.getOwnerUsage(workspace.ownerId)

@@ -65,7 +65,14 @@ export class SubscriptionBillingController {
         return
       }
 
+      logger.info(`[BILLING] getBillingOverview called for workspace: ${workspaceId}`)
       const overview = await this.billingService.getBillingOverview(workspaceId)
+      logger.info(`[BILLING] Overview retrieved:`, { 
+        hasBilling: !!overview.billing, 
+        hasLimits: !!overview.limits,
+        hasUsage: !!overview.usage,
+        limits: overview.limits
+      })
 
       res.json({
         success: true,

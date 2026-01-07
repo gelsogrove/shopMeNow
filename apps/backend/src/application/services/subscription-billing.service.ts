@@ -106,6 +106,10 @@ export class SubscriptionBillingService {
           limits.maxChannels > 0
             ? Math.round((usage.channelsCount / limits.maxChannels) * 100)
             : 0,
+        teamMembersPercentage:
+          limits.maxTeamMembers > 0 && limits.maxTeamMembers < 999
+            ? Math.round((usage.teamMembersCount / limits.maxTeamMembers) * 100)
+            : 0,
       },
       planConfig: {
         displayName: planConfig?.displayName || billing.planType,
@@ -351,7 +355,7 @@ export class SubscriptionBillingService {
    */
   async checkPlanLimits(
     workspaceId: string,
-    limitType: "customers" | "channels"
+    limitType: "customers" | "channels" | "teamMembers"
   ): Promise<PlanLimitCheckResult> {
     const billing = await this.repository.getWorkspaceBilling(workspaceId)
     if (!billing) {
@@ -366,7 +370,7 @@ export class SubscriptionBillingService {
     const usage = await this.repository.getWorkspaceUsage(workspaceId)
 
     let current: number
-    let max: number
+    let max: number | null
 
     switch (limitType) {
       case "customers":
@@ -376,6 +380,10 @@ export class SubscriptionBillingService {
       case "channels":
         current = usage.channelsCount
         max = limits.maxChannels
+        break
+      case "teamMembers":
+        current = usage.teamMembersCount
+        max = limits.maxTeamMembers ?? 999  // null = unlimited, treat as 999
         break
     }
 

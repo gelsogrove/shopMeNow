@@ -56,9 +56,11 @@ export interface UsageStats {
   productsCount: number
   customersCount: number
   channelsCount: number
+  teamMembersCount: number
   productsPercentage: number
   customersPercentage: number
   channelsPercentage: number
+  teamMembersPercentage: number
 }
 
 export interface PlanConfig {

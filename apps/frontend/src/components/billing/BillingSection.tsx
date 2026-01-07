@@ -110,14 +110,14 @@ const RECHARGE_OPTIONS: RechargeAmountOption[] = [
 interface PlanLimitsConfig {
   maxChannels: number
   maxCustomers: number
-  maxTeamMembers: number
+  maxTeamMembers: number | null  // ✅ null = unlimited (ENTERPRISE)
 }
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimitsConfig> = {
   FREE_TRIAL: { maxChannels: 1, maxCustomers: 50, maxTeamMembers: 0 },
   BASIC: { maxChannels: 1, maxCustomers: 50, maxTeamMembers: 0 },
-  PREMIUM: { maxChannels: 2, maxCustomers: 100, maxTeamMembers: 9999 },
-  ENTERPRISE: { maxChannels: 999, maxCustomers: 9999, maxTeamMembers: 9999 },
+  PREMIUM: { maxChannels: 2, maxCustomers: 100, maxTeamMembers: 3 },  // ✅ Updated from 9999 to 3
+  ENTERPRISE: { maxChannels: 999, maxCustomers: 9999, maxTeamMembers: null },  // ✅ Updated from 9999 to null
 }
 
 // Plan order for upgrade/downgrade logic

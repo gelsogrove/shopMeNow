@@ -17,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { BillingOverview } from "@/services/subscriptionBillingApi"
-import { Users, Radio, Loader2 } from "lucide-react"
+import { Users, Radio, Loader2, Users2 } from "lucide-react"
 
 interface UsageLimitsCardProps {
   workspaceId: string
@@ -59,11 +59,19 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
       max: limits.maxChannels,
       percentage: usage.channelsPercentage,
     },
+    {
+      icon: Users2,
+      label: "Team Members",
+      count: usage.teamMembersCount,
+      max: limits.maxTeamMembers,
+      percentage: usage.teamMembersPercentage,
+    },
   ]
 
   // Helper to format limit display (∞ for unlimited plans)
-  const formatLimit = (limit: number): string => {
-    return limit >= 999 ? "∞" : limit.toString()
+  const formatLimit = (limit: number | null): string => {
+    if (limit === null || limit >= 999) return "∞"
+    return limit.toString()
   }
 
   return (
