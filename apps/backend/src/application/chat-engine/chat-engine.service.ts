@@ -59,6 +59,9 @@ import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/ca
 import { confirmOrder } from "../../domain/calling-functions/confirmOrder"
 import { LLMRouterService } from "../../services/llm-router.service"
 import { getUnifiedChatRouter, UnifiedChatRouter } from "../services/unified-chat-router.service"
+import { UnifiedRoutingService } from "../services/unified-routing.service"
+import { SimpleIntentHandler, LLMIntentHandler } from "./handlers"
+import { CacheService } from "../services/cache.service"
 
 type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 
@@ -224,6 +227,12 @@ export class ChatEngineService {
   // 🆕 NEW: Routing orchestration services
   private welcomeMessageHandler: any // WelcomeMessageHandler
   private routerOrchestration: any // RouterOrchestrationService
+  
+  // 🆕 NEW: Unified routing with handlers (PHASE 4)
+  private unifiedRoutingService: UnifiedRoutingService
+  private simpleIntentHandler: SimpleIntentHandler
+  private llmIntentHandler: LLMIntentHandler
+  private cacheService: CacheService
 
   constructor(private prisma: PrismaClient) {
     // Initialize core pipeline
@@ -250,6 +259,12 @@ export class ChatEngineService {
     const { RouterOrchestrationService } = require("../../services/router-orchestration.service")
     this.welcomeMessageHandler = new WelcomeMessageHandler(prisma)
     this.routerOrchestration = new RouterOrchestrationService(prisma)
+    
+    // 🆕 NEW: Initialize unified routing services (PHASE 4)
+    this.cacheService = new CacheService()
+    this.unifiedRoutingService = new UnifiedRoutingService(prisma, this.intentParser, this.cacheService)
+    this.simpleIntentHandler = new SimpleIntentHandler()
+    this.llmIntentHandler = new LLMIntentHandler(this.llmRouterService)
   }
 
   /**
@@ -3256,6 +3271,116 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             }
           }
         }
+      }
+
+      // ========================================================================
+      // STEP 0.8: 🆕 OPTIONAL: Try unified routing handler (PHASE 4)
+      // ========================================================================
+      // NEW ARCHITECTURE: Attempt handler-based routing for common intents
+      // This is optional/experimental - if handler doesn't route, continue with normal pipeline
+      // Handlers pre-compute data loading and provide faster responses for simple cases
+      const tryHandlerRouting = async (): Promise<ChatEngineOutput | null> => {
+        try {
+          // Load workspace config for handler context
+          const workspace = await this.unifiedRoutingService.getWorkspace(input.workspaceId)
+          if (!workspace) return null
+          
+          // Detect intent (pattern → keyword → LLM fallback)
+          const intent = await this.unifiedRoutingService.detectIntent({
+            message: input.message,
+            customerId: input.customerId,
+            conversationId,
+            workspaceId: input.workspaceId,
+          })
+          
+          // Check if intent is simple enough for handler routing
+          const isSimpleIntent = ["SHOW_PRODUCTS", "ADD_TO_CART", "VIEW_CART", "REPEAT_ORDER", "CONTINUE_CHECKOUT"].includes(intent.type)
+          if (!isSimpleIntent || intent.type === "INCOMPREHENSIBLE") return null
+          
+          // Select routing path (SIMPLE, LLM, FAQ)
+          const path = this.unifiedRoutingService.selectRoutingPath(workspace, intent)
+          if (path !== "SIMPLE") return null // Only handle SIMPLE path via handlers
+          
+          // Load data for intent
+          const loadedData = await this.unifiedRoutingService.loadDataForIntent(workspace, intent)
+          
+          // Create context for handler
+          const handlerContext = {
+            message: input.message,
+            customerId: input.customerId,
+            conversationId,
+            workspaceId: input.workspaceId,
+            workspace,
+            loadedData,
+            conversationHistory: [],
+          }
+          
+          // Call simple intent handler
+          const result = await this.simpleIntentHandler.handle(intent, handlerContext)
+          
+          // Log routing decision
+          this.unifiedRoutingService.logRoutingDecision({
+            intent,
+            path: "SIMPLE",
+            workspace,
+            confidence: intent.confidence,
+            source: intent.source,
+            timestamp: new Date(),
+            dataLoaded: {
+              workspace: true,
+              products: loadedData.products?.length > 0 || false,
+              faqs: loadedData.faqs?.length > 0 || false,
+              services: loadedData.services?.length > 0 || false,
+              offers: loadedData.offers?.length > 0 || false,
+            },
+          })
+          
+          // Save messages
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            result.message
+          )
+          
+          logger.info("✅ [ChatEngine] Handler routing succeeded (PHASE 4)", {
+            intent: intent.type,
+            agentUsed: result.agentUsed,
+            timeMs: Date.now() - startTime,
+          })
+          
+          return {
+            message: result.message,
+            agentType: AgentType.ROUTER,
+            wasHandled: true,
+            intent: intent.type,
+            confidence: "HIGH",
+            source: "PATTERN",
+            processingTimeMs: Date.now() - startTime,
+            debugInfo: { steps: debugSteps, handlerUsed: true },
+            response: result.message,
+            agentUsed: result.agentUsed,
+            tokensUsed: 0,
+            executionTimeMs: Date.now() - startTime,
+            wasFAQ: false,
+            isBlocked: false,
+            _assistantMessageId: savedMessages?.assistantMessageId,
+          }
+        } catch (error) {
+          // Handler routing failed - log and continue with normal pipeline
+          logger.debug("⚠️ [ChatEngine] Handler routing failed (fallback to normal pipeline)", {
+            error: error.message,
+            intent: (error as any).intent,
+          })
+          return null
+        }
+      }
+      
+      // Try handler routing (experimental - PHASE 4)
+      const handlerResult = await tryHandlerRouting()
+      if (handlerResult) {
+        return handlerResult
       }
 
       // ========================================================================

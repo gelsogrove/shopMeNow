@@ -1,5 +1,11 @@
 /**
- * RouterOrchestrationService
+ * @deprecated Consolidated into UnifiedRoutingService + Handler Pattern
+ * See: apps/backend/src/application/services/unified-routing.service.ts
+ * See: apps/backend/src/application/chat-engine/handlers/
+ * 
+ * Do not use in new code. This service will be removed in next major version.
+ * 
+ * RouterOrchestrationService (DEPRECATED)
  * 
  * Decides routing strategy based on workspace configuration.
  * Replaces direct IntentParser calls in ChatEngine.
@@ -20,6 +26,9 @@ import { InformationalWorkspaceStrategy } from "../strategies/informational-work
 import { EcommerceWorkspaceStrategy } from "../strategies/ecommerce-workspace.strategy"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "../strategies/routing-strategy.interface"
 
+/**
+ * @deprecated Use UnifiedRoutingService instead
+ */
 export class RouterOrchestrationService {
   private strategies: RoutingStrategy[]
 
@@ -33,6 +42,7 @@ export class RouterOrchestrationService {
 
   /**
    * Route message using appropriate strategy based on workspace configuration
+   * @deprecated Use UnifiedRoutingService.detectIntent() + selectRoutingPath() instead
    */
   async route(context: RoutingContext): Promise<RoutingResult> {
     const startTime = Date.now()
