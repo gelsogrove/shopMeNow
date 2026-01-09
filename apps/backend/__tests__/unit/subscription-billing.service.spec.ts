@@ -200,6 +200,70 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
     })
   })
 
+  describe("recordOwnerPaymentFailure", () => {
+    it("should increment failure count and block after threshold", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        paymentFailureCount: 2,
+        subscriptionStatus: "ACTIVE",
+      })
+
+      const result = await service.recordOwnerPaymentFailure(mockUserId)
+
+      expect(mockRepository.updateOwnerSubscriptionStatus).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({
+          paymentFailureCount: 3,
+          subscriptionStatus: "PAYMENT_FAILED",
+          lastPaymentFailedAt: expect.any(Date),
+        })
+      )
+      expect(result.paymentFailureCount).toBe(3)
+      expect(result.subscriptionStatus).toBe("PAYMENT_FAILED")
+      expect(result.blocked).toBe(true)
+    })
+
+    it("should keep status when threshold not reached", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        paymentFailureCount: 0,
+        subscriptionStatus: "ACTIVE",
+      })
+
+      const result = await service.recordOwnerPaymentFailure(mockUserId)
+
+      expect(mockRepository.updateOwnerSubscriptionStatus).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({
+          paymentFailureCount: 1,
+          subscriptionStatus: "ACTIVE",
+          lastPaymentFailedAt: expect.any(Date),
+        })
+      )
+      expect(result.blocked).toBe(false)
+      expect(result.paymentFailureCount).toBe(1)
+    })
+  })
+
+  describe("resetOwnerPaymentFailures", () => {
+    it("should reset failure count and restore ACTIVE if previously PAYMENT_FAILED", async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        subscriptionStatus: "PAYMENT_FAILED",
+      })
+
+      const result = await service.resetOwnerPaymentFailures(mockUserId)
+
+      expect(mockRepository.updateOwnerSubscriptionStatus).toHaveBeenCalledWith(
+        mockUserId,
+        expect.objectContaining({
+          paymentFailureCount: 0,
+          lastPaymentFailedAt: null,
+          subscriptionStatus: "ACTIVE",
+        })
+      )
+      expect(result.subscriptionStatus).toBe("ACTIVE")
+      expect(result.paymentFailureCount).toBe(0)
+    })
+  })
+
   describe("getBillingOverview (backward compatibility)", () => {
     it("should get owner billing from workspaceId", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({ ownerId: mockUserId })

@@ -7,6 +7,7 @@ import {
   CreditCard,
   Shield,
   Clock,
+  FileText,
   LogOut,
   Settings,
   Trash2,
@@ -15,6 +16,7 @@ import {
 const menuItems = [
   { path: '/platforms', label: 'Platforms', icon: LayoutDashboard },
   { path: '/clients', label: 'Clients', icon: Users },
+  { path: '/collections', label: 'Collections', icon: FileText },
   { path: '/pricing', label: 'Pricing', icon: CreditCard },
   { path: '/gdpr', label: 'GDPR', icon: Shield },
   { path: '/schedulers', label: 'Schedulers', icon: Clock },

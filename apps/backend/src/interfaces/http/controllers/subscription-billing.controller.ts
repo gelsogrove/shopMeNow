@@ -131,6 +131,8 @@ export class SubscriptionBillingController {
           creditBalance: balance,
           planType: overview.billing.planType,
           isLowBalance: balance < overview.limits.lowBalanceThreshold,
+          lowBalanceThreshold: overview.limits.lowBalanceThreshold,
+          creditMinThreshold: overview.thresholds.creditMinThreshold,
           trialInfo: trialInfo.isTrialPlan
             ? {
                 isTrialPlan: true,
@@ -1721,6 +1723,48 @@ export class SubscriptionBillingController {
       logger.error("[BILLING] Error getting invoice by ID:", error)
       res.status(500).json({
         error: "Errore nel recupero della fattura",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * GET /subscription-billing/invoices/:invoiceId/pdf
+   * Download invoice PDF for authenticated owner
+   */
+  downloadInvoicePdf = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+      const { invoiceId } = req.params
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const invoice = await this.prisma.monthlyInvoice.findFirst({
+        where: { id: invoiceId, userId },
+        select: { id: true },
+      })
+
+      if (!invoice) {
+        res.status(404).json({ error: "Fattura non trovata" })
+        return
+      }
+
+      const { invoiceService } = await import("../../../application/services/invoice.service")
+      const pdfBuffer = await invoiceService.generateInvoicePdf(invoiceId)
+
+      res.setHeader("Content-Type", "application/pdf")
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=invoice-${invoiceId}.pdf`
+      )
+      res.status(200).send(pdfBuffer)
+    } catch (error) {
+      logger.error("[BILLING] Error downloading invoice PDF:", error)
+      res.status(500).json({
+        error: "Errore download fattura",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }

@@ -74,6 +74,15 @@ export class UserUnsubscribeService {
     permanentDeleteDate.setDate(permanentDeleteDate.getDate() + 90)
 
     try {
+      // Finalize current month invoice before deletion
+      try {
+        const { invoiceService } = await import("../application/services/invoice.service")
+        const invoice = await invoiceService.getOrCreateCurrentInvoice(userId)
+        await invoiceService.finalizeInvoice(invoice.id)
+      } catch (invoiceError) {
+        logger.error("Failed to finalize invoice before unsubscribe:", invoiceError)
+      }
+
       const result = await this.prisma.$transaction(async (tx) => {
         // 1. Verify chain: User -> Workspace
         const user = await tx.user.findUnique({ where: { id: userId } })
@@ -149,8 +158,23 @@ export class UserUnsubscribeService {
         }
 
         // Finally delete workspace and owner user
-        await tx.workspace.update({ where: { id: workspaceId }, data: { deletedAt: deletedDate } })
-        await tx.user.update({ where: { id: userId }, data: { deletedAt: deletedDate } })
+        await tx.workspace.update({
+          where: { id: workspaceId },
+          data: {
+            deletedAt: deletedDate,
+            isDelete: true,
+            isActive: false,
+            channelStatus: false,
+          },
+        })
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            deletedAt: deletedDate,
+            subscriptionStatus: "PAUSED",
+            pausedAt: deletedDate,
+          },
+        })
 
         // 4. Log to audit trail
         await tx.softDeleteAuditLog.create({

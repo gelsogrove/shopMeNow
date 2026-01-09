@@ -20,6 +20,7 @@ module.exports = {
   },
   testEnvironment: "node",
   testTimeout: 60000,
+  roots: ["<rootDir>/../../test/integration", "<rootDir>"],
   coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
   testMatch: ["<rootDir>/../../test/integration/**/*.ts"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],

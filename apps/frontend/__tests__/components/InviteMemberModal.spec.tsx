@@ -19,6 +19,12 @@ vi.mock("@/lib/toast", () => ({
   },
 }))
 
+vi.mock("@/contexts/LanguageContext", () => ({
+  useLanguage: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
 describe("InviteMemberModal", () => {
   const mockWorkspaceId = "workspace-123"
   const defaultProps = {

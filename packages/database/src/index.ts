@@ -86,6 +86,8 @@ export {
   SearchConversationState,
   SubscriptionStatus, // Feature 197: Subscription status enum
   InvoiceStatus,      // Feature 197: Invoice status enum
+  PayPalStatus,
+  PayPalTransactionStatus,
 } from './generated/prisma/index.js'
 
 // Export common types
@@ -141,6 +143,7 @@ export type {
   SecureToken,
   ProductSearch,
   MonthlyInvoice,     // Feature 197: Monthly invoices
+  PayPalTransaction,
 } from './generated/prisma/index.js'
 
 // Export prisma as default

@@ -30,7 +30,10 @@ afterAll(async () => {
     if (prisma && typeof prisma.$disconnect === 'function') {
       await Promise.race([
         prisma.$disconnect(),
-        new Promise(resolve => setTimeout(resolve, 1000)) // 1s timeout
+        new Promise(resolve => {
+          const timeout = setTimeout(resolve, 1000)
+          timeout.unref?.()
+        }) // 1s timeout
       ])
     }
   } catch (error) {

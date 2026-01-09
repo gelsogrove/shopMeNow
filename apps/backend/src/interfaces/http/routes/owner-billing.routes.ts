@@ -353,3 +353,29 @@ ownerBillingRoutes.get(
   authMiddleware,
   controller.getInvoiceById
 )
+
+/**
+ * @swagger
+ * /api/subscription-billing/invoices/{invoiceId}/pdf:
+ *   get:
+ *     summary: Download invoice PDF
+ *     tags: [Owner Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Invoice PDF
+ *       404:
+ *         description: Invoice not found
+ */
+ownerBillingRoutes.get(
+  "/invoices/:invoiceId/pdf",
+  authMiddleware,
+  controller.downloadInvoicePdf
+)

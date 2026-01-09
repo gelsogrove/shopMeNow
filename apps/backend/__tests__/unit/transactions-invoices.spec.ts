@@ -44,17 +44,11 @@ describe("Transaction History", () => {
       expect(description).toMatch(/^Monthly Fee - (Basic|Premium)$/)
     })
 
-    it("should have channel cost description in English format", () => {
-      const description = "Additional Channel"
-      expect(description).toBe("Additional Channel")
-    })
-
     it("should NOT contain Italian text", () => {
       const validDescriptions = [
         "Upgrade to Premium",
         "Downgrade to Basic",
         "Monthly Fee - Premium",
-        "Additional Channel",
         "Free Trial Credit",
         "Top-up Credit",
       ]
@@ -105,10 +99,9 @@ describe("Transaction History", () => {
     function calculateExpenses(txs: typeof transactions): number {
       return txs
         .filter((tx) => {
-          // Count actual costs: monthly fees, channel costs, upgrade/downgrade fees with amount > 0
+          // Count actual costs: monthly fees, upgrade/downgrade fees with amount > 0
           return (
             tx.type === "MONTHLY_FEE" ||
-            tx.type === "MONTHLY_CHANNEL_COST" ||
             ((tx.type === "UPGRADE_FEE" || tx.type === "DOWNGRADE_FEE") &&
               tx.amount > 0)
           )
@@ -315,10 +308,7 @@ describe("Monthly Invoices", () => {
   describe("Invoice Amount Calculation", () => {
     it("should calculate Premium plan monthly cost correctly", () => {
       const premiumMonthlyFee = 45
-      const channelCost = 45 // If additional channels
-      const totalWithOneExtraChannel = premiumMonthlyFee + channelCost
-
-      expect(totalWithOneExtraChannel).toBe(90)
+      expect(premiumMonthlyFee).toBe(45)
     })
 
     it("should calculate Basic plan monthly cost correctly", () => {
@@ -340,17 +330,10 @@ describe("Price Configuration", () => {
       expect(PREMIUM_MONTHLY_FEE).toBe(45)
     })
 
-    it("should have Premium channel cost of $45", () => {
-      const MONTHLY_CHANNEL_COST = 45
-      expect(MONTHLY_CHANNEL_COST).toBe(45)
-    })
-
     it("should NOT use old $59 pricing", () => {
       const PREMIUM_MONTHLY_FEE = 45
-      const MONTHLY_CHANNEL_COST = 45
 
       expect(PREMIUM_MONTHLY_FEE).not.toBe(59)
-      expect(MONTHLY_CHANNEL_COST).not.toBe(59)
     })
   })
 

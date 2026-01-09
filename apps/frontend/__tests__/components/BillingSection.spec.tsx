@@ -70,6 +70,10 @@ describe("BillingSection", () => {
       monthlyFee: 0,
       features: [],
     },
+    thresholds: {
+      creditMinThreshold: -12,
+      lowBalanceThreshold: 5,
+    },
   }
 
   beforeEach(() => {
@@ -150,16 +154,17 @@ describe("BillingSection", () => {
 
       render(<BillingSection />)
 
-      await waitFor(() => {
-        expect(
-          screen.getByText("⚠️ Your chatbots are DISABLED")
-        ).toBeInTheDocument()
-        expect(
-          screen.getByText(
-            /Credit balance is \$-13.00 \(below -\$12.00 threshold\). Your chatbots will not respond/
-          )
-        ).toBeInTheDocument()
-      })
+      expect(
+        screen.getByText("Your chatbots are DISABLED", { exact: false })
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText((content) =>
+          content.includes("Credit balance is") &&
+          content.includes("$-13.00") &&
+          content.includes("$-12.00") &&
+          content.includes("chatbots will not respond")
+        )
+      ).toBeInTheDocument()
     })
 
     it("should show Recharge Now button when credit is below -$12", async () => {

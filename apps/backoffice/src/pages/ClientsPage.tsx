@@ -136,6 +136,33 @@ export function ClientsPage() {
   
   // Delete User modal state (Feature 196 - Soft Delete)
   const [deleteUserModal, setDeleteUserModal] = useState<{ userId: string; email: string; userName: string } | null>(null)
+  const [paypalModal, setPaypalModal] = useState<{ userId: string; email: string } | null>(null)
+  const [paypalInfo, setPaypalInfo] = useState<{
+    owner: {
+      id: string
+      email: string
+      paypalStatus: string
+      paypalClientId: string | null
+      paypalMerchantId: string | null
+      paypalEmail: string | null
+      paypalEnvironment: string | null
+      paypalConnectedAt: string | null
+    }
+    transactions: Array<{
+      id: string
+      invoiceId: string | null
+      amount: number
+      currency: string
+      status: string
+      notes: string | null
+      createdAt: string
+    }>
+  } | null>(null)
+  const [paypalLoading, setPaypalLoading] = useState(false)
+  const [subscriptionModal, setSubscriptionModal] = useState<{ userId: string; email: string; currentStatus: string } | null>(null)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'ACTIVE' | 'PAUSED' | 'PAYMENT_FAILED'>('ACTIVE')
+  const [subscriptionNotes, setSubscriptionNotes] = useState('')
+  const [updatingSubscription, setUpdatingSubscription] = useState(false)
   const [deletingUser, setDeletingUser] = useState(false)
 
   useEffect(() => {
@@ -511,6 +538,70 @@ export function ClientsPage() {
     }
   }
 
+  const openPaypalModal = async (userId: string, email: string) => {
+    setPaypalModal({ userId, email })
+    setPaypalLoading(true)
+    setError(null)
+
+    try {
+      const response = await api.users.getPayPalInfo(userId)
+
+      if (!response.success || !response.data) {
+        setError(response.error || 'Failed to load PayPal info')
+        setPaypalInfo(null)
+        return
+      }
+
+      setPaypalInfo(response.data)
+    } catch (err) {
+      setError('Failed to load PayPal info')
+      setPaypalInfo(null)
+      console.error('Error loading PayPal info:', err)
+    } finally {
+      setPaypalLoading(false)
+    }
+  }
+
+  const handleSubscriptionStatusUpdate = async () => {
+    if (!subscriptionModal) return
+
+    setUpdatingSubscription(true)
+    setError(null)
+
+    try {
+      const response = await api.users.updateSubscriptionStatus(subscriptionModal.userId, {
+        subscriptionStatus,
+        adminNotes: subscriptionNotes.trim() || undefined,
+      })
+
+      if (response.success && response.data) {
+        setUsers((prev) =>
+          prev.map((user) =>
+            user.id === subscriptionModal.userId
+              ? {
+                  ...user,
+                  subscriptionStatus: response.data.subscriptionStatus,
+                  pausedAt: response.data.pausedAt,
+                  pauseRequestedAt: response.data.pauseRequestedAt,
+                }
+              : user
+          )
+        )
+        setSuccessMessage(`Subscription status updated for ${subscriptionModal.email}`)
+        setTimeout(() => setSuccessMessage(null), 4000)
+        setSubscriptionModal(null)
+        setSubscriptionNotes('')
+      } else {
+        setError(response.error || 'Failed to update subscription status')
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update subscription status')
+      console.error('Error updating subscription status:', err)
+    } finally {
+      setUpdatingSubscription(false)
+    }
+  }
+
   // Filter users: first by search query, then by showAll toggle
   const filteredUsers = users
     .filter(user => {
@@ -751,6 +842,45 @@ export function ClientsPage() {
                     >
                       <Clock className="h-4 w-4" />
                       Extend Trial ({getTrialDaysRemaining(user.planStartedAt || user.ownedWorkspaces[0].planStartedAt)} days left)
+                    </Button>
+                  )}
+
+                  {/* Subscription Status Button */}
+                  {!user.isPlatformAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2 gap-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200"
+                      onClick={() => {
+                        setSubscriptionModal({
+                          userId: user.id,
+                          email: user.email,
+                          currentStatus: user.subscriptionStatus,
+                        })
+                        setSubscriptionStatus(user.subscriptionStatus as 'ACTIVE' | 'PAUSED' | 'PAYMENT_FAILED')
+                        setSubscriptionNotes('')
+                      }}
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      Update Subscription
+                    </Button>
+                  )}
+
+                  {/* PayPal Details Button */}
+                  {!user.isPlatformAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2 gap-2 text-sky-600 hover:text-sky-700 hover:bg-sky-50 border-sky-200"
+                      onClick={() => openPaypalModal(user.id, user.email)}
+                      disabled={paypalLoading && paypalModal?.userId === user.id}
+                    >
+                      {paypalLoading && paypalModal?.userId === user.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4" />
+                      )}
+                      PayPal Details
                     </Button>
                   )}
                 </div>
@@ -1196,7 +1326,195 @@ export function ClientsPage() {
           </div>
         </div>
       )}
+
+      {/* Subscription Status Modal */}
+      {subscriptionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-purple-500" />
+              Update Subscription Status
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {subscriptionModal.email} · Current: <strong>{subscriptionModal.currentStatus}</strong>
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  className="w-full border rounded-md px-3 py-2 text-sm"
+                  value={subscriptionStatus}
+                  onChange={(e) =>
+                    setSubscriptionStatus(e.target.value as 'ACTIVE' | 'PAUSED' | 'PAYMENT_FAILED')
+                  }
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="PAUSED">PAUSED</option>
+                  <option value="PAYMENT_FAILED">PAYMENT_FAILED</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Admin notes
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Optional notes"
+                  value={subscriptionNotes}
+                  onChange={(e) => setSubscriptionNotes(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setSubscriptionModal(null)
+                  setSubscriptionNotes('')
+                }}
+                disabled={updatingSubscription}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-purple-600 hover:bg-purple-700"
+                onClick={handleSubscriptionStatusUpdate}
+                disabled={updatingSubscription}
+              >
+                {updatingSubscription ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PayPal Modal */}
+      {paypalModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-xl">
+            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-sky-500" />
+              PayPal Details
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">{paypalModal.email}</p>
+
+            {paypalLoading ? (
+              <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Loading PayPal data...
+              </div>
+            ) : paypalInfo ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Status</div>
+                    <div className="font-medium text-gray-900">{paypalInfo.owner.paypalStatus}</div>
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Environment</div>
+                    <div className="font-medium text-gray-900">
+                      {paypalInfo.owner.paypalEnvironment || '—'}
+                    </div>
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">PayPal Email</div>
+                    <div className="font-medium text-gray-900">
+                      {paypalInfo.owner.paypalEmail || '—'}
+                    </div>
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Merchant ID</div>
+                    <div className="font-medium text-gray-900 break-all">
+                      {paypalInfo.owner.paypalMerchantId || '—'}
+                    </div>
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Client ID</div>
+                    <div className="font-medium text-gray-900 break-all">
+                      {paypalInfo.owner.paypalClientId || '—'}
+                    </div>
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Connected At</div>
+                    <div className="font-medium text-gray-900">
+                      {paypalInfo.owner.paypalConnectedAt
+                        ? new Date(paypalInfo.owner.paypalConnectedAt).toLocaleString('it-IT')
+                        : '—'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded border border-gray-200">
+                  <div className="border-b border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
+                    Transactions
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {paypalInfo.transactions.length === 0 ? (
+                      <div className="px-4 py-4 text-sm text-gray-500">No PayPal transactions yet.</div>
+                    ) : (
+                      <div className="divide-y divide-gray-200 text-sm">
+                        {paypalInfo.transactions.map((tx) => (
+                          <div key={tx.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                            <div className="space-y-1">
+                              <div className="font-medium text-gray-900">
+                                {tx.amount.toFixed(2)} {tx.currency}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(tx.createdAt).toLocaleString('it-IT')}
+                                {tx.invoiceId ? ` · Invoice ${tx.invoiceId}` : ''}
+                              </div>
+                              {tx.notes && (
+                                <div className="text-xs text-gray-600">
+                                  Notes: {tx.notes}
+                                </div>
+                              )}
+                            </div>
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                tx.status === 'SUCCESS'
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-rose-100 text-rose-700'
+                              }`}
+                            >
+                              {tx.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">No PayPal data available.</div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPaypalModal(null)
+                  setPaypalInfo(null)
+                  setPaypalLoading(false)
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

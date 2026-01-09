@@ -533,6 +533,14 @@ model User {
   // Payment tracking
   lastPaymentFailedAt       DateTime?         // Last payment failure timestamp
   paymentFailureCount       Int               @default(0) // Consecutive failed payments
+
+  // PayPal configuration (owner-level)
+  paypalStatus              PayPalStatus      @default(DISCONNECTED)
+  paypalClientId            String?
+  paypalMerchantId          String?
+  paypalEmail               String?
+  paypalEnvironment         String?           // "sandbox" | "live"
+  paypalConnectedAt         DateTime?
   
   workspaces         UserWorkspace[]
   ownedWorkspaces    Workspace[]              @relation("OwnedWorkspaces") // Workspaces where user is owner/SUPER_ADMIN
@@ -544,6 +552,9 @@ model User {
   adminInitiatedResets TwoFactorResetToken[] @relation("AdminInitiatedResets") // Resets initiated by this admin
   billingTransactions BillingTransaction[]   // Owner's billing transaction history
   monthlyInvoices    MonthlyInvoice[]        // Feature 197: Monthly invoices for this owner
+  invoiceCreditNotes InvoiceCreditNote[]     // Credit notes for monthly invoices
+  paypalTransactions PayPalTransaction[]
+  paypalAdminTransactions PayPalTransaction[] @relation("PayPalAdmin")
 
   @@index([deletedAt])
   @@index([planType])
@@ -1235,6 +1246,28 @@ model BillingTransaction {
   @@map("billing_transactions")
 }
 
+model PayPalTransaction {
+  id            String                   @id @default(cuid())
+  userId        String
+  invoiceId     String?
+  amount        Decimal                  @db.Decimal(10, 2)
+  currency      String                   @default("EUR")
+  status        PayPalTransactionStatus
+  notes         String?
+  createdAt     DateTime                 @default(now())
+  adminUserId   String?
+
+  user          User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice       MonthlyInvoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  adminUser     User?                    @relation("PayPalAdmin", fields: [adminUserId], references: [id])
+
+  @@index([userId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("paypal_transactions")
+}
+
 // Feature 197: Monthly Invoice for billing tracking
 // Tracks subscription fees + credit usage per month per owner
 enum InvoiceStatus {
@@ -1243,6 +1276,16 @@ enum InvoiceStatus {
   PAID        // Successfully charged
   FAILED      // Payment failed
   CANCELLED   // Invoice cancelled (e.g., user deleted)
+}
+
+enum PayPalStatus {
+  DISCONNECTED
+  CONNECTED
+}
+
+enum PayPalTransactionStatus {
+  SUCCESS
+  FAILED
 }
 
 model MonthlyInvoice {
@@ -1259,12 +1302,19 @@ model MonthlyInvoice {
   subscriptionAmount  Decimal       @db.Decimal(10, 2)  // €19/€49/€99 monthly fee
   creditUsage         Decimal       @db.Decimal(10, 2)  // Total consumption from wallet
   creditDebt          Decimal       @default(0) @db.Decimal(10, 2)  // Negative balance carried over
+  creditNotesTotal    Decimal       @default(0) @db.Decimal(10, 2)
+  subtotalAmount      Decimal       @default(0) @db.Decimal(10, 2)
+  taxRate             Decimal       @default(0.22) @db.Decimal(5, 4)
+  taxAmount           Decimal       @default(0) @db.Decimal(10, 2)
   totalAmount         Decimal       @db.Decimal(10, 2)  // Total to charge
   
   // Status
   status              InvoiceStatus @default(DRAFT)
   paidAt              DateTime?
   paypalTransactionId String?
+  adminNotes          String?
+  adminMarkedById     String?
+  adminMarkedAt       DateTime?
   
   // Metadata
   planType            PlanType      // Plan during this period
@@ -1276,12 +1326,32 @@ model MonthlyInvoice {
   
   // Relations
   user                User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditNotes         InvoiceCreditNote[]
+  paypalTransactions  PayPalTransaction[]
 
   @@unique([userId, periodYear, periodMonth])
   @@index([userId])
   @@index([status])
   @@index([periodYear, periodMonth])
   @@map("monthly_invoices")
+}
+
+model InvoiceCreditNote {
+  id             String         @id @default(cuid())
+  invoiceId      String
+  userId         String
+  amount         Decimal        @db.Decimal(10, 2)
+  reason         String?
+  createdAt      DateTime       @default(now())
+  createdById    String?
+  createdByEmail String?
+
+  invoice        MonthlyInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([userId])
+  @@map("invoice_credit_notes")
 }
 
 // Plan configuration - dynamic limits from database

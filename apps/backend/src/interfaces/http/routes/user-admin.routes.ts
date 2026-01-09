@@ -10,17 +10,66 @@
  */
 
 import { Router, Request, Response } from "express"
-import { prisma, UserStatus } from "@echatbot/database"
+import { prisma, UserStatus, InvoiceStatus, TransactionType, PayPalTransactionStatus } from "@echatbot/database"
 import jwt, { SignOptions } from "jsonwebtoken"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { platformAdminMiddleware } from "../middlewares/platform-admin.middleware"
 import logger from "../../../utils/logger"
 import { config } from "../../../config"
 import { AdminSessionService } from "../../../application/services/admin-session.service"
+import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
+import { invoiceService } from "../../../application/services/invoice.service"
+
+export const buildSubscriptionStatusUpdateData = (
+  subscriptionStatus: "ACTIVE" | "PAUSED" | "PAYMENT_FAILED",
+  existingFailureCount: number,
+  now: Date
+) => {
+  const updateData: any = { subscriptionStatus }
+
+  if (subscriptionStatus === "PAUSED") {
+    updateData.pausedAt = now
+    updateData.pauseRequestedAt = now
+  } else {
+    updateData.pausedAt = null
+    updateData.pauseRequestedAt = null
+  }
+
+  if (subscriptionStatus === "PAYMENT_FAILED") {
+    updateData.paymentFailureCount = Math.max(3, existingFailureCount)
+    updateData.lastPaymentFailedAt = now
+  } else {
+    updateData.paymentFailureCount = 0
+    updateData.lastPaymentFailedAt = null
+  }
+
+  return updateData
+}
+
+export const applyUserStatusCascade = async (
+  prismaClient: typeof prisma,
+  userId: string,
+  status: UserStatus
+) => {
+  const enableChannels = status === UserStatus.ACTIVE
+
+  await prismaClient.workspace.updateMany({
+    where: {
+      ownerId: userId,
+      deletedAt: null,
+      isDelete: false,
+    },
+    data: {
+      isActive: enableChannels,
+      channelStatus: enableChannels,
+    },
+  })
+}
 
 const router = Router()
 // prisma imported
 const adminSessionService = new AdminSessionService()
+const subscriptionBillingService = new SubscriptionBillingService(prisma)
 
 /**
  * @swagger
@@ -170,6 +219,806 @@ router.get(
       res.status(500).json({
         success: false,
         error: "Failed to fetch users",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/current:
+ *   get:
+ *     summary: Get current month invoices for all owners
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of owners with current invoice
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Platform admin access required
+ */
+router.get(
+  "/admin/invoices/current",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const owners = await prisma.user.findMany({
+        where: {
+          status: UserStatus.ACTIVE,
+          ownedWorkspaces: {
+            some: {
+              isActive: true,
+              isDelete: false,
+              deletedAt: null,
+            },
+          },
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          companyName: true,
+          planType: true,
+          subscriptionStatus: true,
+          creditBalance: true,
+          paymentFailureCount: true,
+          lastPaymentFailedAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      })
+
+      const results = await Promise.all(
+        owners.map(async (owner) => {
+          const invoice = await invoiceService.getOrCreateCurrentInvoice(
+            owner.id
+          )
+
+          return {
+            owner: {
+              id: owner.id,
+              email: owner.email,
+              firstName: owner.firstName,
+              lastName: owner.lastName,
+              companyName: owner.companyName,
+              planType: owner.planType,
+              subscriptionStatus: owner.subscriptionStatus,
+              creditBalance: Number(owner.creditBalance),
+              paymentFailureCount: owner.paymentFailureCount ?? 0,
+              lastPaymentFailedAt: owner.lastPaymentFailedAt ?? null,
+            },
+            invoice: {
+              id: invoice.id,
+              periodMonth: invoice.periodMonth,
+              periodYear: invoice.periodYear,
+              totalAmount: invoice.totalAmount,
+              subtotalAmount: (invoice as any).subtotalAmount ?? 0,
+              taxAmount: (invoice as any).taxAmount ?? 0,
+              creditNotesTotal: (invoice as any).creditNotesTotal ?? 0,
+              status: invoice.status,
+              paidAt: invoice.paidAt,
+              adminNotes: (invoice as any).adminNotes ?? null,
+              adminMarkedById: (invoice as any).adminMarkedById ?? null,
+              adminMarkedAt: (invoice as any).adminMarkedAt ?? null,
+            },
+          }
+        })
+      )
+
+      res.json({
+        success: true,
+        data: results,
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching current invoices:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch current invoices",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}:
+ *   get:
+ *     summary: Get invoice details (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Invoice details
+ */
+router.get(
+  "/admin/invoices/:invoiceId",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+
+      const invoice = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              companyName: true,
+            },
+          },
+        },
+      })
+
+      if (!invoice) {
+        res.status(404).json({ success: false, error: "Invoice not found" })
+        return
+      }
+
+      res.json({
+        success: true,
+        data: {
+          ...invoice,
+          totalAmount: Number(invoice.totalAmount),
+          subscriptionAmount: Number(invoice.subscriptionAmount),
+          creditUsage: Number(invoice.creditUsage),
+          creditDebt: Number(invoice.creditDebt),
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching invoice:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch invoice",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/pdf:
+ *   get:
+ *     summary: Download invoice PDF (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.get(
+  "/admin/invoices/:invoiceId/pdf",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const invoice = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { id: true },
+      })
+
+      if (!invoice) {
+        res.status(404).json({ success: false, error: "Invoice not found" })
+        return
+      }
+
+      const pdfBuffer = await invoiceService.generateInvoicePdf(invoiceId)
+
+      res.setHeader("Content-Type", "application/pdf")
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=invoice-${invoiceId}.pdf`
+      )
+      res.status(200).send(pdfBuffer)
+    } catch (error) {
+      logger.error("[ADMIN] Error downloading invoice PDF:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to download invoice PDF",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}:
+ *   patch:
+ *     summary: Update invoice status/notes (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.patch(
+  "/admin/invoices/:invoiceId",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const { status, adminNotes } = req.body as {
+        status?: InvoiceStatus
+        adminNotes?: string
+      }
+
+      if (!status) {
+        res.status(400).json({
+          success: false,
+          error: "Status is required",
+        })
+        return
+      }
+
+      const allowedStatuses: InvoiceStatus[] = [
+        "PENDING",
+        "PAID",
+        "FAILED",
+        "CANCELLED",
+        "DRAFT",
+      ]
+
+      if (!allowedStatuses.includes(status)) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid status",
+        })
+        return
+      }
+
+      const adminUser = (req as any).user
+
+      const updateData: any = {
+        status,
+        adminNotes: adminNotes ?? null,
+        adminMarkedById: adminUser?.id ?? null,
+        adminMarkedAt: new Date(),
+      }
+
+      if (status === "PAID") {
+        updateData.paidAt = new Date()
+      }
+
+      const invoice = await prisma.monthlyInvoice.update({
+        where: { id: invoiceId },
+        data: updateData,
+      })
+
+      res.json({
+        success: true,
+        data: {
+          id: invoice.id,
+          status: invoice.status,
+          adminNotes: invoice.adminNotes,
+          adminMarkedById: invoice.adminMarkedById,
+          adminMarkedAt: invoice.adminMarkedAt,
+          paidAt: invoice.paidAt,
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error updating invoice:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to update invoice",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/credit-notes:
+ *   get:
+ *     summary: Get credit notes for an invoice (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.get(
+  "/admin/invoices/:invoiceId/credit-notes",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const notes = await prisma.invoiceCreditNote.findMany({
+        where: { invoiceId },
+        orderBy: { createdAt: "desc" },
+      })
+
+      res.json({
+        success: true,
+        data: notes.map((note) => ({
+          id: note.id,
+          amount: Number(note.amount),
+          reason: note.reason,
+          createdAt: note.createdAt,
+          createdById: note.createdById,
+          createdByEmail: note.createdByEmail,
+        })),
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching credit notes:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch credit notes",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/history:
+ *   get:
+ *     summary: Get invoice history for all owners (optional month/year filter)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get(
+  "/admin/invoices/history",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const periodMonth = req.query.periodMonth ? Number(req.query.periodMonth) : null
+      const periodYear = req.query.periodYear ? Number(req.query.periodYear) : null
+      const page = req.query.page ? Number(req.query.page) : 1
+      const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 25
+
+      const where: any = {}
+      if (periodMonth) where.periodMonth = periodMonth
+      if (periodYear) where.periodYear = periodYear
+
+      const [invoices, total] = await Promise.all([
+        prisma.monthlyInvoice.findMany({
+          where,
+          orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                companyName: true,
+                planType: true,
+                subscriptionStatus: true,
+                creditBalance: true,
+                paymentFailureCount: true,
+                lastPaymentFailedAt: true,
+              },
+            },
+          },
+        }),
+        prisma.monthlyInvoice.count({ where }),
+      ])
+
+      const data = invoices.map((invoice) => ({
+        owner: {
+          id: invoice.user?.id,
+          email: invoice.user?.email,
+          firstName: invoice.user?.firstName ?? null,
+          lastName: invoice.user?.lastName ?? null,
+          companyName: invoice.user?.companyName ?? null,
+          planType: invoice.user?.planType,
+          subscriptionStatus: invoice.user?.subscriptionStatus,
+          creditBalance: Number(invoice.user?.creditBalance ?? 0),
+          paymentFailureCount: invoice.user?.paymentFailureCount ?? 0,
+          lastPaymentFailedAt: invoice.user?.lastPaymentFailedAt ?? null,
+        },
+        invoice: {
+          id: invoice.id,
+          periodMonth: invoice.periodMonth,
+          periodYear: invoice.periodYear,
+          totalAmount: Number(invoice.totalAmount),
+          subtotalAmount: Number(invoice.subtotalAmount ?? 0),
+          taxAmount: Number(invoice.taxAmount ?? 0),
+          creditNotesTotal: Number(invoice.creditNotesTotal ?? 0),
+          status: invoice.status,
+          paidAt: invoice.paidAt,
+          adminNotes: invoice.adminNotes ?? null,
+          adminMarkedById: invoice.adminMarkedById ?? null,
+          adminMarkedAt: invoice.adminMarkedAt ?? null,
+        },
+      }))
+
+      res.json({
+        success: true,
+        data,
+        meta: {
+          page,
+          pageSize,
+          total,
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching invoice history:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch invoice history",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/credit-notes/{noteId}:
+ *   patch:
+ *     summary: Update a credit note (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch(
+  "/admin/invoices/:invoiceId/credit-notes/:noteId",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId, noteId } = req.params
+      const { amount, reason } = req.body as { amount: number; reason?: string }
+
+      if (!amount || amount <= 0) {
+        res.status(400).json({
+          success: false,
+          error: "Amount must be greater than 0",
+        })
+        return
+      }
+
+      const note = await prisma.invoiceCreditNote.findFirst({
+        where: { id: noteId, invoiceId },
+      })
+
+      if (!note) {
+        res.status(404).json({
+          success: false,
+          error: "Credit note not found",
+        })
+        return
+      }
+
+      const updated = await prisma.invoiceCreditNote.update({
+        where: { id: noteId },
+        data: {
+          amount,
+          reason: reason ?? null,
+        },
+      })
+
+      await invoiceService.recalculateInvoiceTotals(invoiceId)
+
+      res.json({
+        success: true,
+        data: {
+          id: updated.id,
+          amount: Number(updated.amount),
+          reason: updated.reason,
+          createdAt: updated.createdAt,
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error updating credit note:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to update credit note",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/credit-notes/{noteId}:
+ *   delete:
+ *     summary: Delete a credit note (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete(
+  "/admin/invoices/:invoiceId/credit-notes/:noteId",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId, noteId } = req.params
+      const note = await prisma.invoiceCreditNote.findFirst({
+        where: { id: noteId, invoiceId },
+      })
+
+      if (!note) {
+        res.status(404).json({
+          success: false,
+          error: "Credit note not found",
+        })
+        return
+      }
+
+      await prisma.invoiceCreditNote.delete({
+        where: { id: noteId },
+      })
+
+      await invoiceService.recalculateInvoiceTotals(invoiceId)
+
+      res.json({ success: true })
+    } catch (error) {
+      logger.error("[ADMIN] Error deleting credit note:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete credit note",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/{userId}/paypal:
+ *   get:
+ *     summary: Get PayPal settings and transactions for owner (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get(
+  "/admin/:userId/paypal",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+
+      const owner = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          paypalStatus: true,
+          paypalClientId: true,
+          paypalMerchantId: true,
+          paypalEmail: true,
+          paypalEnvironment: true,
+          paypalConnectedAt: true,
+        },
+      })
+
+      if (!owner) {
+        res.status(404).json({ success: false, error: "User not found" })
+        return
+      }
+
+      const transactions = await prisma.payPalTransaction.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      })
+
+      res.json({
+        success: true,
+        data: {
+          owner,
+          transactions: transactions.map((tx) => ({
+            id: tx.id,
+            invoiceId: tx.invoiceId,
+            amount: Number(tx.amount),
+            currency: tx.currency,
+            status: tx.status,
+            notes: tx.notes,
+            createdAt: tx.createdAt,
+          })),
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching PayPal info:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch PayPal info",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/paypal/mock-payment:
+ *   post:
+ *     summary: Mock PayPal monthly payment (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post(
+  "/admin/invoices/:invoiceId/paypal/mock-payment",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const { notes } = req.body as { notes?: string }
+      const adminUser = (req as any).user
+
+      const invoice = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        include: { user: { select: { id: true } } },
+      })
+
+      if (!invoice) {
+        res.status(404).json({ success: false, error: "Invoice not found" })
+        return
+      }
+
+      const success = Math.random() >= 0.5
+      const status: PayPalTransactionStatus = success ? "SUCCESS" : "FAILED"
+
+      const transaction = await prisma.payPalTransaction.create({
+        data: {
+          userId: invoice.userId,
+          invoiceId: invoice.id,
+          amount: invoice.totalAmount,
+          currency: "EUR",
+          status,
+          notes: notes ?? null,
+          adminUserId: adminUser?.id ?? null,
+        },
+      })
+
+      await prisma.monthlyInvoice.update({
+        where: { id: invoice.id },
+        data: {
+          status: success ? "PAID" : "FAILED",
+          paidAt: success ? new Date() : null,
+          paypalTransactionId: transaction.id,
+        },
+      })
+
+      if (success) {
+        const owner = await prisma.user.findUnique({
+          where: { id: invoice.userId },
+          select: { creditBalance: true },
+        })
+        await prisma.billingTransaction.create({
+          data: {
+            userId: invoice.userId,
+            workspaceId: null,
+            type: TransactionType.INVOICE_PAID,
+            amount: invoice.totalAmount,
+            balanceAfter: owner?.creditBalance ?? 0,
+            description: `Invoice ${invoice.periodMonth}/${invoice.periodYear} paid`,
+            referenceId: invoice.id,
+            referenceType: "invoice",
+          },
+        })
+      }
+
+      res.json({
+        success: true,
+        data: {
+          success,
+          transactionId: transaction.id,
+          status: transaction.status,
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error processing mock PayPal payment:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to process mock payment",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/credit-notes:
+ *   post:
+ *     summary: Create credit note for an invoice (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.post(
+  "/admin/invoices/:invoiceId/credit-notes",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const { amount, reason } = req.body as { amount?: number; reason?: string }
+
+      if (!amount || amount <= 0) {
+        res.status(400).json({
+          success: false,
+          error: "Amount must be greater than 0",
+        })
+        return
+      }
+
+      const invoice = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { userId: true },
+      })
+
+      if (!invoice) {
+        res.status(404).json({
+          success: false,
+          error: "Invoice not found",
+        })
+        return
+      }
+
+      const adminUser = (req as any).user
+      const note = await prisma.invoiceCreditNote.create({
+        data: {
+          invoiceId,
+          userId: invoice.userId,
+          amount,
+          reason: reason || null,
+          createdById: adminUser?.id || null,
+          createdByEmail: adminUser?.email || null,
+        },
+      })
+
+      await invoiceService.recalculateInvoiceTotals(invoiceId)
+
+      res.json({
+        success: true,
+        data: {
+          id: note.id,
+          amount: Number(note.amount),
+          reason: note.reason,
+          createdAt: note.createdAt,
+          createdById: note.createdById,
+          createdByEmail: note.createdByEmail,
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error creating credit note:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to create credit note",
       })
     }
   }
@@ -382,6 +1231,8 @@ router.put(
         },
       })
 
+      await applyUserStatusCascade(prisma, userId, prismaStatus)
+
       // Return status as DISABLED for frontend compatibility
       const responseStatus = updatedUser.status === UserStatus.INACTIVE ? "DISABLED" : "ACTIVE"
 
@@ -401,6 +1252,264 @@ router.put(
       res.status(500).json({
         success: false,
         error: "Failed to update status",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/{userId}/payment-failure:
+ *   post:
+ *     summary: Record a payment failure for a user (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               adminNotes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Payment failure recorded
+ */
+router.post(
+  "/admin/:userId/payment-failure",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { adminNotes } = req.body as { adminNotes?: string }
+      const adminUser = (req as any).user
+
+      const result = await subscriptionBillingService.recordOwnerPaymentFailure(userId)
+
+      if (adminNotes) {
+        const invoice = await invoiceService.getOrCreateCurrentInvoice(userId)
+        await prisma.monthlyInvoice.update({
+          where: { id: invoice.id },
+          data: {
+            adminNotes,
+            adminMarkedById: adminUser?.id ?? null,
+            adminMarkedAt: new Date(),
+          },
+        })
+      }
+
+      res.json({
+        success: true,
+        data: result,
+      })
+    } catch (error) {
+      logger.error("Error recording payment failure:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to record payment failure",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/{userId}/payment-reset:
+ *   post:
+ *     summary: Reset payment failure state for a user (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               adminNotes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Payment failure reset
+ */
+router.post(
+  "/admin/:userId/payment-reset",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { adminNotes } = req.body as { adminNotes?: string }
+      const adminUser = (req as any).user
+
+      const result = await subscriptionBillingService.resetOwnerPaymentFailures(userId)
+
+      if (adminNotes) {
+        const invoice = await invoiceService.getOrCreateCurrentInvoice(userId)
+        await prisma.monthlyInvoice.update({
+          where: { id: invoice.id },
+          data: {
+            adminNotes,
+            adminMarkedById: adminUser?.id ?? null,
+            adminMarkedAt: new Date(),
+          },
+        })
+      }
+
+      res.json({
+        success: true,
+        data: result,
+      })
+    } catch (error) {
+      logger.error("Error resetting payment failure:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to reset payment failure",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/{userId}/subscription-status:
+ *   patch:
+ *     summary: Update subscription status for a user (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               subscriptionStatus:
+ *                 type: string
+ *                 enum: [ACTIVE, PAUSED, PAYMENT_FAILED]
+ *               adminNotes:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Subscription status updated
+ */
+router.patch(
+  "/admin/:userId/subscription-status",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const { subscriptionStatus, adminNotes } = req.body as {
+        subscriptionStatus?: "ACTIVE" | "PAUSED" | "PAYMENT_FAILED"
+        adminNotes?: string
+      }
+
+      if (!subscriptionStatus) {
+        res.status(400).json({
+          success: false,
+          error: "subscriptionStatus is required",
+        })
+        return
+      }
+
+      const allowedStatuses = ["ACTIVE", "PAUSED", "PAYMENT_FAILED"]
+      if (!allowedStatuses.includes(subscriptionStatus)) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid subscriptionStatus",
+        })
+        return
+      }
+
+      const adminUser = (req as any).user
+      const now = new Date()
+      const existingUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { paymentFailureCount: true },
+      })
+
+      if (!existingUser) {
+        res.status(404).json({
+          success: false,
+          error: "User not found",
+        })
+        return
+      }
+
+      const updateData = buildSubscriptionStatusUpdateData(
+        subscriptionStatus,
+        existingUser.paymentFailureCount ?? 0,
+        now
+      )
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+      })
+
+      if (adminNotes) {
+        const invoice = await invoiceService.getOrCreateCurrentInvoice(userId)
+        await prisma.monthlyInvoice.update({
+          where: { id: invoice.id },
+          data: {
+            adminNotes,
+            adminMarkedById: adminUser?.id ?? null,
+            adminMarkedAt: now,
+          },
+        })
+      }
+
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          subscriptionStatus: true,
+          paymentFailureCount: true,
+          lastPaymentFailedAt: true,
+          pausedAt: true,
+          pauseRequestedAt: true,
+        },
+      })
+
+      res.json({
+        success: true,
+        data: {
+          subscriptionStatus: updatedUser?.subscriptionStatus ?? subscriptionStatus,
+          paymentFailureCount: updatedUser?.paymentFailureCount ?? 0,
+          lastPaymentFailedAt: updatedUser?.lastPaymentFailedAt ?? null,
+          pausedAt: updatedUser?.pausedAt ?? null,
+          pauseRequestedAt: updatedUser?.pauseRequestedAt ?? null,
+        },
+      })
+    } catch (error) {
+      logger.error("Error updating subscription status:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to update subscription status",
       })
     }
   }

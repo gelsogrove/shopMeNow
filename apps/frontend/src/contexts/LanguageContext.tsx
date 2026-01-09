@@ -261,13 +261,6 @@ const translations = {
     "billing.transactionTypes.ADJUSTMENT": "Adjustment",
     "billing.transactionTypes.INITIAL_CREDIT": "Initial Credit",
 
-    // Team Members Limits
-    "billing.teamMembers": "Team Members",
-    "error.teamMemberLimitReached": "Team member limit reached",
-    "error.teamMemberLimitInfo": "Your {{planName}} plan supports up to {{max}} team members. You currently have {{current}}.",
-    "error.teamMemberLimitUpgrade": "Upgrade to a higher plan for unlimited team members.",
-    "billing.inviteDisabled": "Invite disabled - team member limit reached",
-
     // Contact
     "contact.title": "Pronto per Iniziare?",
     "contact.subtitle":

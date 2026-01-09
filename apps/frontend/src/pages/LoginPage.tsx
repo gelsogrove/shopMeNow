@@ -2284,7 +2284,8 @@ export function LoginPage() {
         </div>
       </footer>
 
-      {/* WhatsApp Floating Button */}
+      {/* ⏸️ WhatsApp Floating Button - DISABLED (will reactivate later) */}
+      {/* 
       <a
         href="https://wa.me/34654728753"
         target="_blank"
@@ -2304,6 +2305,7 @@ export function LoginPage() {
           +34 654 728 753
         </span>
       </a>
+      */}
 
       {/* WIP Modal - shown when canLogin or canRegister is false */}
       <WIPModal

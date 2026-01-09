@@ -179,8 +179,12 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
    */
   const updateBalanceLocally = useCallback((newBalance: number) => {
     setCreditBalance(newBalance)
-    setIsLowBalance(newBalance < 5) // Default threshold
-  }, [])
+    const lowThreshold =
+      billingOverview?.limits.lowBalanceThreshold ??
+      billingOverview?.thresholds.lowBalanceThreshold ??
+      5
+    setIsLowBalance(newBalance < lowThreshold)
+  }, [billingOverview])
 
   // Fetch balance on workspace change (only if authenticated)
   useEffect(() => {

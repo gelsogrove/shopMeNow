@@ -72,6 +72,10 @@ export interface PlanConfig {
 export interface BillingOverview {
   billing: BillingInfo
   limits: PlanLimits
+  thresholds: {
+    creditMinThreshold: number
+    lowBalanceThreshold: number
+  }
   usage: UsageStats
   planConfig: PlanConfig
 }
@@ -99,6 +103,8 @@ export interface BalanceResponse {
   creditBalance: number
   planType: PlanType
   isLowBalance: boolean
+  lowBalanceThreshold?: number
+  creditMinThreshold?: number
   trialInfo: {
     isTrialPlan: boolean
     daysRemaining: number | null
@@ -746,11 +752,21 @@ export interface Invoice {
   subscriptionAmount: number
   creditUsage: number
   creditDebt: number
+  creditNotesTotal: number
+  subtotalAmount: number
+  taxRate: number
+  taxAmount: number
   totalAmount: number
   status: InvoiceStatus
   paidAt: string | null
   planType: PlanType
   itemsBreakdown: ConsumptionBreakdown
+  creditNotes?: Array<{
+    id: string
+    amount: number
+    reason: string | null
+    createdAt: string
+  }>
   createdAt: string
   updatedAt: string
 }
@@ -798,4 +814,14 @@ export const getCurrentInvoice = async (): Promise<Invoice> => {
 export const getInvoiceById = async (invoiceId: string): Promise<Invoice> => {
   const response = await api.get(`/subscription-billing/invoices/${invoiceId}`)
   return response.data.data
+}
+
+/**
+ * Download invoice PDF for authenticated owner
+ */
+export const downloadInvoicePdf = async (invoiceId: string): Promise<Blob> => {
+  const response = await api.get(`/subscription-billing/invoices/${invoiceId}/pdf`, {
+    responseType: "blob",
+  })
+  return response.data
 }

@@ -65,6 +65,9 @@ import {
   PlanType,
   BillingOverview,
   SubscriptionStatusResponse,
+  getOwnerInvoices,
+  downloadInvoicePdf,
+  Invoice,
 } from "@/services/subscriptionBillingApi"
 import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { toast } from "@/lib/toast"
@@ -225,6 +228,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatusResponse | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
+  const [ownerInvoices, setOwnerInvoices] = useState<Invoice[]>([])
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false)
 
   // External control: open upgrade dialog when prop changes to true
   useEffect(() => {
@@ -359,6 +364,42 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     }
   }
 
+  const loadOwnerInvoices = async () => {
+    setIsLoadingInvoices(true)
+    try {
+      const result = await getOwnerInvoices(1, 50)
+      setOwnerInvoices(result.invoices)
+    } catch (error) {
+      console.error("Failed to load invoices:", error)
+      toast.error("Failed to load invoices")
+    } finally {
+      setIsLoadingInvoices(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showInvoicesDialog) {
+      loadOwnerInvoices()
+    }
+  }, [showInvoicesDialog])
+
+  const handleDownloadInvoice = async (invoice: Invoice) => {
+    try {
+      const blob = await downloadInvoicePdf(invoice.id)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `invoice-${invoice.periodYear}-${String(invoice.periodMonth).padStart(2, "0")}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Failed to download invoice:", error)
+      toast.error("Failed to download invoice")
+    }
+  }
+
   const handleRecharge = async () => {
     if (!effectiveWorkspaceId) return
 
@@ -470,8 +511,12 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   const { billing, limits, usage, planConfig } = billingOverview
   const isTrialPlan = billing.planType === "FREE_TRIAL"
-  const isCreditCritical = billing.creditBalance < -12 // CRITICAL: Below -$12 threshold
-  const isCreditLow = billing.creditBalance >= -10 && billing.creditBalance < limits.lowBalanceThreshold
+  const creditMinThreshold = billingOverview.thresholds.creditMinThreshold
+  const lowBalanceThreshold = billingOverview.thresholds.lowBalanceThreshold
+  const isCreditCritical = billing.creditBalance < creditMinThreshold
+  const isCreditLow =
+    billing.creditBalance >= creditMinThreshold &&
+    billing.creditBalance < lowBalanceThreshold
   const isCustomerLimitReached = usage.customersCount >= limits.maxCustomers
   const isChannelLimitReached = usage.channelsCount >= limits.maxChannels
 
@@ -531,7 +576,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
         </div>
       )}
 
-      {/* 🚨 CRITICAL: Credit < -$12 Warning - Chatbots are DISABLED */}
+      {/* 🚨 CRITICAL: Credit below minimum threshold - Chatbots are DISABLED */}
       {isCreditCritical && !billing.isTrialExpired && (
         <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-950 rounded-lg border-2 border-red-500 animate-pulse">
           <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
@@ -540,7 +585,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               ⚠️ Your chatbots are DISABLED
             </p>
             <p className="text-sm text-red-700 dark:text-red-300">
-              Credit balance is {formatCurrency(billing.creditBalance)} (below -$12.00 threshold). Your chatbots will not respond to any customer messages until you recharge.
+              Credit balance is {formatCurrency(billing.creditBalance)} (below {formatCurrency(creditMinThreshold)} threshold). Your chatbots will not respond to any customer messages until you recharge.
             </p>
           </div>
           {isSuperAdmin && (
@@ -1450,67 +1495,16 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             ) : (
               <div className="space-y-6">
                 {(() => {
-                  // Aggregate all transactions by month
-                  const monthlyInvoices = transactions.reduce((acc, tx) => {
-                    const date = new Date(tx.createdAt)
-                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-                    const monthLabel = date.toLocaleDateString("en-US", { month: "long", year: "numeric" })
-                    
-                    if (!acc[monthKey]) {
-                      acc[monthKey] = {
-                        label: monthLabel,
-                        year: date.getFullYear(),
-                        month: date.getMonth() + 1,
-                        recharges: 0,
-                        messages: 0,
-                        messagesCount: 0,
-                        pushNotifications: 0,
-                        pushCount: 0,
-                        subscriptionFee: 0,
-                        otherExpenses: 0,
-                      }
-                    }
-                    
-                    // Categorize transactions
-                    // INITIAL_CREDIT is a gift - don't count in invoices
-                    if (tx.type === "RECHARGE") {
-                      acc[monthKey].recharges += tx.amount
-                    } else if (tx.type === "MESSAGE") {
-                      acc[monthKey].messages += Math.abs(tx.amount)
-                      acc[monthKey].messagesCount++
-                    } else if (tx.type.startsWith("PUSH_") || tx.type === "PUSH_NOTIFICATION") {
-                      acc[monthKey].pushNotifications += Math.abs(tx.amount)
-                      acc[monthKey].pushCount++
-                    } else if (tx.type === "MONTHLY_FEE" || tx.type === "UPGRADE_FEE") {
-                      acc[monthKey].subscriptionFee += Math.abs(tx.amount)
-                    } else if (tx.amount < 0) {
-                      acc[monthKey].otherExpenses += Math.abs(tx.amount)
-                    }
-                    
-                    return acc
-                  }, {} as Record<string, {
-                    label: string
-                    year: number
-                    month: number
-                    recharges: number
-                    messages: number
-                    messagesCount: number
-                    pushNotifications: number
-                    pushCount: number
-                    subscriptionFee: number
-                    otherExpenses: number
-                  }>)
-                  
-                  // Sort by date (newest first)
-                  const sortedMonths = Object.entries(monthlyInvoices).sort((a, b) => b[0].localeCompare(a[0]))
-                  
-                  // 🔧 FIX: Filter out the current month - invoices only available for COMPLETED months
-                  // An invoice is available from the 1st of the following month
-                  const now = new Date()
-                  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-                  const completedMonths = sortedMonths.filter(([monthKey]) => monthKey < currentMonthKey)
-                  
-                  if (completedMonths.length === 0) {
+                  if (isLoadingInvoices) {
+                    return (
+                      <div className="flex items-center justify-center py-12 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        Loading invoices...
+                      </div>
+                    )
+                  }
+
+                  if (ownerInvoices.length === 0) {
                     return (
                       <div className="text-center py-12 text-muted-foreground">
                         <p>No invoices available yet</p>
@@ -1518,54 +1512,41 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       </div>
                     )
                   }
-                  
-                  // Get current plan subscription fee
-                  const currentPlanConfig = PLAN_CONFIGS[billing.planType as keyof typeof PLAN_CONFIGS]
-                  const monthlySubscriptionFee = currentPlanConfig?.price || 0
-                  
-                  return completedMonths.map(([monthKey, data]) => {
-                    const invoiceNumber = `INV-${data.year}${String(data.month).padStart(2, '0')}`
-                    // Use recorded subscription fee from transactions OR current plan price
-                    const subscriptionFee = data.subscriptionFee > 0 ? data.subscriptionFee : monthlySubscriptionFee
-                    // Taxes 22% on (recharges + subscription fee)
-                    const subtotal = data.recharges + subscriptionFee
-                    const taxes = subtotal * 0.22
-                    // Total = Recharges + Subscription Fee + Taxes
-                    const totalWithTaxes = subtotal + taxes
-                    
+
+                  const sortedInvoices = [...ownerInvoices].sort((a, b) => {
+                    const keyA = `${a.periodYear}-${String(a.periodMonth).padStart(2, "0")}`
+                    const keyB = `${b.periodYear}-${String(b.periodMonth).padStart(2, "0")}`
+                    return keyB.localeCompare(keyA)
+                  })
+
+                  return sortedInvoices.map((invoice) => {
+                    const invoiceNumber = `INV-${invoice.periodYear}${String(invoice.periodMonth).padStart(2, "0")}`
+                    const periodLabel = new Date(invoice.periodYear, invoice.periodMonth - 1).toLocaleDateString(
+                      "en-US",
+                      { month: "long", year: "numeric" }
+                    )
+
                     return (
-                      <div key={monthKey} className="border rounded-lg overflow-hidden">
-                        {/* Month Header */}
+                      <div key={invoice.id} className="border rounded-lg overflow-hidden">
                         <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
                           <div>
-                            <h3 className="font-semibold text-lg capitalize">{data.label}</h3>
+                            <h3 className="font-semibold text-lg capitalize">{periodLabel}</h3>
                             <div className="flex items-center gap-3">
                               <span className="text-sm text-muted-foreground font-mono">{invoiceNumber}</span>
-                              {billing.nextBillingDate && (
-                                <span className="text-sm text-muted-foreground">
-                                  • Next Payment: {new Date(billing.nextBillingDate).toLocaleDateString("en-US", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric"
-                                  })}
-                                </span>
-                              )}
+                              <Badge variant="outline">{invoice.status}</Badge>
                             </div>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
                             className="gap-2"
-                            onClick={() => {
-                              toast.info(`Invoice ${invoiceNumber} - Coming soon`)
-                            }}
+                            onClick={() => handleDownloadInvoice(invoice)}
                           >
                             <Download className="h-4 w-4" />
                             Download PDF
                           </Button>
                         </div>
 
-                        {/* Invoice Details Table */}
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -1574,49 +1555,44 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {/* Recharges */}
-                            {data.recharges > 0 && (
+                            <TableRow>
+                              <TableCell className="font-medium">📋 Subscription Fee ({invoice.planType})</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(invoice.subscriptionAmount)}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">💬 Usage</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatCurrency(invoice.creditUsage)}
+                              </TableCell>
+                            </TableRow>
+                            {invoice.creditDebt > 0 && (
                               <TableRow>
-                                <TableCell className="font-medium">💰 Credit Recharges</TableCell>
+                                <TableCell className="font-medium">📉 Credit Debt</TableCell>
                                 <TableCell className="text-right font-medium">
-                                  {formatCurrency(data.recharges)}
+                                  {formatCurrency(invoice.creditDebt)}
                                 </TableCell>
                               </TableRow>
                             )}
-                            
-                            {/* Subscription Fee - Always show current plan price */}
-                            {subscriptionFee > 0 && (
+                            {invoice.creditNotesTotal > 0 && (
                               <TableRow>
-                                <TableCell className="font-medium">📋 Subscription Fee ({currentPlanConfig?.name || billing.planType})</TableCell>
-                                <TableCell className="text-right font-medium">
-                                  {formatCurrency(subscriptionFee)}
+                                <TableCell className="font-medium">🧾 Credit Notes</TableCell>
+                                <TableCell className="text-right font-medium text-emerald-600">
+                                  -{formatCurrency(invoice.creditNotesTotal)}
                                 </TableCell>
                               </TableRow>
                             )}
-                            
-                            {/* Other Expenses */}
-                            {data.otherExpenses > 0 && (
-                              <TableRow>
-                                <TableCell className="font-medium">📦 Other Charges</TableCell>
-                                <TableCell className="text-right font-medium">
-                                  {formatCurrency(data.otherExpenses)}
-                                </TableCell>
-                              </TableRow>
-                            )}
-                            
-                            {/* Taxes */}
                             <TableRow>
                               <TableCell className="font-medium">Taxes (22% IVA)</TableCell>
                               <TableCell className="text-right font-medium text-emerald-600">
-                                {taxes > 0 ? `+${formatCurrency(taxes)}` : '—'}
+                                {invoice.taxAmount > 0 ? `+${formatCurrency(invoice.taxAmount)}` : '—'}
                               </TableCell>
                             </TableRow>
-                            
-                            {/* Grand Total */}
                             <TableRow className="bg-gray-50 font-bold">
                               <TableCell>Monthly Balance</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatCurrency(totalWithTaxes)}
+                                {formatCurrency(invoice.totalAmount)}
                               </TableCell>
                             </TableRow>
                           </TableBody>

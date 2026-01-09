@@ -6,6 +6,7 @@ import { AuthCallbackPage } from '@/pages/AuthCallbackPage'
 import { PlatformsPage } from '@/pages/PlatformsPage'
 import { PricingPage } from '@/pages/PricingPage'
 import { ClientsPage } from '@/pages/ClientsPage'
+import { CollectionsPage } from '@/pages/CollectionsPage'
 import { SchedulersPage } from '@/pages/SchedulersPage'
 import { TrashPage } from '@/pages/TrashPage'
 import { ComingSoonPage } from '@/pages/ComingSoonPage'
@@ -53,6 +54,7 @@ function AppRoutes() {
         <Route path="platforms" element={<PlatformsPage />} />
         <Route path="pricing" element={<PricingPage />} />
         <Route path="clients" element={<ClientsPage />} />
+        <Route path="collections" element={<CollectionsPage />} />
         <Route 
           path="gdpr" 
           element={

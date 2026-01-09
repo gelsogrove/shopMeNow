@@ -1,22 +1,17 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { logger } from "@/lib/logger"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { FormSheet } from "@/components/shared/FormSheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
-import {
-    Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { FAQ, faqApi } from "@/services/faqApi"
 import { commonStyles } from "@/styles/common"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, Edit2, Trash2, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
 
@@ -25,10 +20,13 @@ export function FAQPage() {
   const [faqs, setFaqs] = useState<FAQ[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null)
+
+  const ITEMS_PER_PAGE = 10
 
   const loadFAQs = async () => {
     if (!workspace?.id) return
@@ -55,58 +53,17 @@ export function FAQPage() {
     )
   )
 
-  const columns = [
-    { header: "Question", accessorKey: "question" as keyof FAQ, size: 300 },
-    {
-      header: "Answer",
-      accessorKey: "answer" as keyof FAQ,
-      size: 700, // Increased from 400 to 700 for a longer column
-      cell: ({ row }: { row: { original: FAQ } }) => {
-        const answer = row.original.answer
-        const maxLength = 200 // Increased from 80 to 200
-        const isTruncated = answer.length > maxLength
+  // Pagination
+  const totalPages = Math.ceil(filteredFAQs.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const paginatedFAQs = filteredFAQs.slice(startIndex, endIndex)
 
-        return (
-          <div>
-            {isTruncated ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="cursor-help">
-                      {answer.substring(0, maxLength)}...
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-2xl p-4 text-sm">
-                    {" "}
-                    {/* Increased max width */}
-                    <p>{answer}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              answer
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      header: "Status",
-      accessorKey: "isActive" as keyof FAQ,
-      size: 100,
-      cell: ({ row }: { row: { original: FAQ } }) => (
-        <span
-          className={`px-2 py-1 rounded-full text-xs ${
-            row.original.isActive
-              ? "bg-green-100 text-green-800"
-              : "bg-gray-100 text-gray-800"
-          }`}
-        >
-          {row.original.isActive ? "Active" : "Inactive"}
-        </span>
-      ),
-    },
-  ]
+  // Reset to page 1 when searching
+  const handleSearch = (value: string) => {
+    setSearchValue(value)
+    setCurrentPage(1)
+  }
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -186,12 +143,12 @@ export function FAQPage() {
     }
   }
 
-  if (isLoadingWorkspace || isLoading) {
-    return <div>Loading...</div>
+  if (!workspace?.id) {
+    return <PageLayout><div>No workspace selected</div></PageLayout>
   }
 
-  if (!workspace?.id) {
-    return <div>No workspace selected</div>
+  if (isLoading) {
+    return <PageLayout><div className="text-center py-12">Loading FAQs...</div></PageLayout>
   }
 
   const renderFormFields = (faq: FAQ | null) => (
@@ -211,7 +168,7 @@ export function FAQPage() {
         <Textarea
           id="answer"
           name="answer"
-          className="min-h-[150px]"
+          className="min-h-[400px]"
           placeholder="Enter detailed answer"
           defaultValue={faq?.answer}
           required
@@ -236,20 +193,135 @@ export function FAQPage() {
 
   return (
     <PageLayout>
-      <CrudPageContent
-        title="FAQ"
-        titleIcon={<HelpCircle className={commonStyles.headerIcon} />}
-        searchValue={searchValue}
-        onSearch={setSearchValue}
-        searchPlaceholder="Search FAQs..."
-        onAdd={() => setShowAddSheet(true)}
-        addButtonText="Add"
-        data={filteredFAQs}
-        columns={columns}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        isLoading={isLoading}
-      />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <HelpCircle className={commonStyles.headerIcon} />
+            <h1 className="text-2xl font-bold text-gray-900">FAQ</h1>
+            <span className="text-sm text-gray-500">({filteredFAQs.length} items)</span>
+          </div>
+          <Button onClick={() => setShowAddSheet(true)} className="bg-green-600 hover:bg-green-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add FAQ
+          </Button>
+        </div>
+
+        {/* Search */}
+        <div>
+          <Input
+            placeholder="Search FAQs..."
+            value={searchValue}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+
+        {/* Cards Grid */}
+        {isLoading ? (
+          <div className="text-center py-12 text-gray-500">Loading FAQs...</div>
+        ) : filteredFAQs.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            No FAQs found. Create one to get started!
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4">
+            {paginatedFAQs.map((faq) => (
+              <Card key={faq.id} className="p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between gap-4">
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Question */}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 hover:line-clamp-none cursor-pointer">
+                      {faq.question}
+                    </h3>
+                    {/* Answer Preview/Full */}
+                    <p className="text-sm text-gray-700 mb-3 line-clamp-3 whitespace-pre-wrap">
+                      {faq.answer}
+                    </p>
+                  </div>
+
+                  {/* Right Side: Status + Actions */}
+                  <div className="flex gap-4 flex-shrink-0 items-center">
+                    {/* Status Badge */}
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                        faq.isActive
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {faq.isActive ? "Active" : "Inactive"}
+                    </span>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(faq)}
+                        className="hover:bg-green-50 text-green-600 hover:text-green-700"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(faq)}
+                        className="hover:bg-red-50 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-6 border-t">
+                <p className="text-sm text-gray-600">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredFAQs.length)} of {filteredFAQs.length} FAQs
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <FormSheet
         open={showAddSheet}

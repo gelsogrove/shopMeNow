@@ -84,7 +84,7 @@ export const checkCredit = (operation: "message" | "order" | "push") => {
  * @param limitType - Type of limit to check
  */
 export const checkPlanLimits = (
-  limitType: "customers" | "channels" | "teamMembers"
+  limitType: "customers" | "channels" | "teamMembers" | "products"
 ) => {
   return async (
     req: Request,
@@ -112,6 +112,7 @@ export const checkPlanLimits = (
           customers: "clienti",
           channels: "canali",
           teamMembers: "membri team",
+          products: "prodotti",
         }
 
         logger.warn(

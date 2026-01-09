@@ -269,7 +269,12 @@ export default function setupProductRoutes(): Router {
    *         description: Unauthorized
    */
   // @ts-ignore
-  router.post("/import", csvUpload.single("file"), productController.importProductsCsv)
+  router.post(
+    "/import",
+    checkPlanLimits("products"),
+    csvUpload.single("file"),
+    productController.importProductsCsv
+  )
 
   /**
    * @swagger
@@ -388,6 +393,7 @@ export default function setupProductRoutes(): Router {
     "/",
     authMiddleware,
     workspaceValidationMiddleware,
+    checkPlanLimits("products"),
     uploadImage.array("images", 10), // Supporto per massimo 10 immagini
     handleUploadError,
     productController.createProduct

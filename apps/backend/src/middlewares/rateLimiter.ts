@@ -17,7 +17,7 @@ class RateLimiter {
     this.maxRequests = maxRequests
 
     // Clean up old entries every minute
-    setInterval(() => {
+    const cleanupInterval = setInterval(() => {
       const now = Date.now()
       for (const [key, entry] of this.requests.entries()) {
         if (now > entry.resetTime) {
@@ -25,6 +25,7 @@ class RateLimiter {
         }
       }
     }, 60000)
+    cleanupInterval.unref?.()
   }
 
   /**

@@ -1,21 +1,17 @@
-import { prisma, BillingType, PrismaClient } from "@echatbot/database"
-import { BillingService } from "../application/services/billing.service"
+import { prisma, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 
 import { CampaignScheduler } from "./campaign-scheduler.service"
 
 export class SchedulerService {
   private prisma: PrismaClient
-  private billingService: BillingService
   private campaignScheduler: CampaignScheduler
   private readonly CHECK_INTERVAL = 5 * 60 * 1000 // 5 minuti
   private readonly URL_CLEANUP_INTERVAL = 60 * 60 * 1000 // 1 ora
-  private readonly BILLING_CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 ore
   private readonly ANALYTICS_CLEANUP_INTERVAL = 7 * 24 * 60 * 60 * 1000 // 7 giorni (weekly cleanup)
 
   constructor() {
     this.prisma = prisma
-    this.billingService = new BillingService(this.prisma)
     this.campaignScheduler = new CampaignScheduler(this.prisma)
   }
 
@@ -82,51 +78,6 @@ export class SchedulerService {
   }
 
   /**
-   * Verifica se è necessario addebitare il costo mensile del canale per i workspace attivi
-   * L'addebito di $45 viene effettuato una volta al mese per ogni workspace
-   */
-  private async trackMonthlyChannelCost(): Promise<void> {
-    try {
-      // Ottiene tutti i workspace attivi (esclude soft-deleted)
-      const workspaces = await this.prisma.workspace.findMany({
-        where: {
-          isActive: true,
-          deletedAt: null, // Exclude soft-deleted workspaces from billing
-        },
-      })
-
-      const today = new Date()
-      const currentMonth = today.getMonth()
-      const currentYear = today.getFullYear()
-
-      // Verifica se è già stato effettuato un addebito questo mese per ogni workspace
-      for (const workspace of workspaces) {
-        // Controlla se esiste già un addebito per questo mese
-        const existingCharge = await this.prisma.billing.findFirst({
-          where: {
-            workspaceId: workspace.id,
-            type: BillingType.MONTHLY_CHANNEL,
-            createdAt: {
-              gte: new Date(currentYear, currentMonth, 1),
-              lt: new Date(currentYear, currentMonth + 1, 1),
-            },
-          },
-        })
-
-        // Se non esiste un addebito per questo mese, effettua l'addebito
-        if (!existingCharge) {
-          await this.billingService.chargeMonthlyChannelCost(workspace.id)
-          logger.info(
-            `Monthly channel cost charged for workspace ${workspace.id}`
-          )
-        }
-      }
-    } catch (error) {
-      logger.error("Error tracking monthly channel cost:", error)
-    }
-  }
-
-  /**
    * 📊 Cleanup old product search analytics data (older than 6 months)
    *
    * Runs weekly to maintain database performance and comply with data retention policy.
@@ -164,7 +115,6 @@ export class SchedulerService {
     // Esegui immediatamente al primo avvio
     this.updateExpiredOffers()
     this.cleanupUrls()
-    this.trackMonthlyChannelCost()
     this.cleanupOldAnalytics() // 🆕 Cleanup analytics on startup
 
     // Imposta gli intervalli per le esecuzioni successive
@@ -176,11 +126,6 @@ export class SchedulerService {
       this.cleanupUrls()
     }, this.URL_CLEANUP_INTERVAL)
 
-    // Verifica giornaliera per l'addebito mensile
-    setInterval(() => {
-      this.trackMonthlyChannelCost()
-    }, this.BILLING_CHECK_INTERVAL)
-
     // 📊 Cleanup analytics settimanale (ogni 7 giorni)
     setInterval(() => {
       this.cleanupOldAnalytics()
@@ -190,7 +135,7 @@ export class SchedulerService {
     this.campaignScheduler.start()
 
     logger.info(
-      "Scheduler service started - managing offers, URLs cleanup, monthly billing, analytics cleanup (6 months), and campaign scheduler"
+      "Scheduler service started - managing offers, URLs cleanup, analytics cleanup (6 months), and campaign scheduler"
     )
   }
 }

@@ -379,7 +379,11 @@ ${JSON.stringify(systemData, null, 2)}
 }
 
 // Cleanup every 5 minutes
-setInterval(() => SystemContextService.cleanup(), 5 * 60 * 1000)
+const cleanupInterval = setInterval(
+  () => SystemContextService.cleanup(),
+  5 * 60 * 1000
+)
+cleanupInterval.unref?.()
 
 // ================================================================================
 // SINGLETON

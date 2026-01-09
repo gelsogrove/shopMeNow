@@ -250,6 +250,259 @@ class BackofficeApi {
     },
 
     /**
+     * Update subscription status (ACTIVE/PAUSED/PAYMENT_FAILED)
+     */
+    updateSubscriptionStatus: async (
+      userId: string,
+      payload: { subscriptionStatus: 'ACTIVE' | 'PAUSED' | 'PAYMENT_FAILED'; adminNotes?: string }
+    ): Promise<ApiResponse<{
+      subscriptionStatus: string
+      paymentFailureCount: number
+      lastPaymentFailedAt: string | null
+      pausedAt: string | null
+      pauseRequestedAt: string | null
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/subscription-status`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    /**
+     * Get current month invoices for all owners
+     */
+    getCurrentInvoices: async (): Promise<ApiResponse<Array<{
+      owner: {
+        id: string
+        email: string
+        firstName: string | null
+        lastName: string | null
+        companyName: string | null
+        planType: string
+        subscriptionStatus: string
+        creditBalance: number
+        paymentFailureCount: number
+        lastPaymentFailedAt: string | null
+      }
+      invoice: {
+        id: string
+        periodMonth: number
+        periodYear: number
+        totalAmount: number
+        status: string
+        paidAt: string | null
+        adminNotes: string | null
+        adminMarkedById: string | null
+        adminMarkedAt: string | null
+      }
+    }>>> => {
+      return this.fetch('/users/admin/invoices/current')
+    },
+
+    /**
+     * Get invoice history for all owners (optional month/year filter)
+     */
+    getInvoiceHistory: async (params: {
+      periodMonth?: number
+      periodYear?: number
+      page?: number
+      pageSize?: number
+    }): Promise<ApiResponse<Array<{
+      owner: {
+        id: string
+        email: string
+        firstName: string | null
+        lastName: string | null
+        companyName: string | null
+        planType: string
+        subscriptionStatus: string
+        creditBalance: number
+        paymentFailureCount: number
+        lastPaymentFailedAt: string | null
+      }
+      invoice: {
+        id: string
+        periodMonth: number
+        periodYear: number
+        totalAmount: number
+        subtotalAmount?: number
+        taxAmount?: number
+        creditNotesTotal?: number
+        status: string
+        paidAt: string | null
+        adminNotes: string | null
+        adminMarkedById: string | null
+        adminMarkedAt: string | null
+      }
+    }>>> => {
+      const searchParams = new URLSearchParams()
+      if (params.periodMonth) searchParams.set('periodMonth', String(params.periodMonth))
+      if (params.periodYear) searchParams.set('periodYear', String(params.periodYear))
+      if (params.page) searchParams.set('page', String(params.page))
+      if (params.pageSize) searchParams.set('pageSize', String(params.pageSize))
+
+      const query = searchParams.toString()
+      return this.fetch(`/users/admin/invoices/history${query ? `?${query}` : ''}`)
+    },
+
+    /**
+     * Record a payment failure for a user (increments failure count)
+     */
+    recordPaymentFailure: async (
+      userId: string,
+      adminNotes?: string
+    ): Promise<ApiResponse<{
+      paymentFailureCount: number
+      subscriptionStatus: string
+      lastPaymentFailedAt: string
+      blocked: boolean
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/payment-failure`, {
+        method: 'POST',
+        body: JSON.stringify({ adminNotes }),
+      })
+    },
+
+    /**
+     * Reset payment failure status for a user
+     */
+    resetPaymentFailure: async (
+      userId: string,
+      adminNotes?: string
+    ): Promise<ApiResponse<{
+      paymentFailureCount: number
+      subscriptionStatus: string
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/payment-reset`, {
+        method: 'POST',
+        body: JSON.stringify({ adminNotes }),
+      })
+    },
+
+    /**
+     * Update invoice status/notes (admin)
+     */
+    updateInvoice: async (
+      invoiceId: string,
+      payload: { status: string; adminNotes?: string }
+    ): Promise<ApiResponse<{
+      id: string
+      status: string
+      adminNotes: string | null
+      adminMarkedById: string | null
+      adminMarkedAt: string | null
+      paidAt: string | null
+    }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    /**
+     * Download invoice PDF (admin)
+     */
+    downloadInvoicePdf: async (invoiceId: string): Promise<Blob> => {
+      const headers: HeadersInit = {
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      }
+      const response = await fetch(`${API_BASE}/users/admin/invoices/${invoiceId}/pdf`, {
+        headers,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download invoice PDF')
+      }
+
+      return response.blob()
+    },
+
+    /**
+     * Create credit note for invoice (admin)
+     */
+    createCreditNote: async (
+      invoiceId: string,
+      payload: { amount: number; reason?: string }
+    ): Promise<ApiResponse<{ id: string; amount: number; reason: string | null; createdAt: string }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/credit-notes`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    /**
+     * Get credit notes for invoice (admin)
+     */
+    getCreditNotes: async (
+      invoiceId: string
+    ): Promise<ApiResponse<Array<{ id: string; amount: number; reason: string | null; createdAt: string }>>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/credit-notes`)
+    },
+
+    /**
+     * Update credit note (admin)
+     */
+    updateCreditNote: async (
+      invoiceId: string,
+      noteId: string,
+      payload: { amount: number; reason?: string }
+    ): Promise<ApiResponse<{ id: string; amount: number; reason: string | null; createdAt: string }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/credit-notes/${noteId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    /**
+     * Delete credit note (admin)
+     */
+    deleteCreditNote: async (invoiceId: string, noteId: string): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/credit-notes/${noteId}`, {
+        method: 'DELETE',
+      })
+    },
+
+    /**
+     * Get PayPal config + transactions for owner
+     */
+    getPayPalInfo: async (userId: string): Promise<ApiResponse<{
+      owner: {
+        id: string
+        email: string
+        paypalStatus: string
+        paypalClientId: string | null
+        paypalMerchantId: string | null
+        paypalEmail: string | null
+        paypalEnvironment: string | null
+        paypalConnectedAt: string | null
+      }
+      transactions: Array<{
+        id: string
+        invoiceId: string | null
+        amount: number
+        currency: string
+        status: string
+        notes: string | null
+        createdAt: string
+      }>
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/paypal`)
+    },
+
+    /**
+     * Mock PayPal monthly payment for invoice
+     */
+    mockPayPalPayment: async (
+      invoiceId: string,
+      notes?: string
+    ): Promise<ApiResponse<{ success: boolean; transactionId: string; status: string }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/paypal/mock-payment`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      })
+    },
+
+    /**
      * Impersonate a user (login as user)
      * Returns a temporary token and sessionId to access the platform as that user
      */

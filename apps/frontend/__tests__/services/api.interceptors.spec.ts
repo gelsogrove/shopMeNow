@@ -149,7 +149,7 @@ describe("API Interceptors", () => {
       // Setup
       const originalLocation = window.location
       delete (window as any).location
-      window.location = { ...originalLocation, pathname: "/auth/login", href: "" } as any
+      window.location = { ...originalLocation, pathname: "/", href: "/" } as any
 
       mockAxios.onGet("/test").reply(401, { error: "Unauthorized" })
 
@@ -157,7 +157,7 @@ describe("API Interceptors", () => {
       await expect(api.get("/test")).rejects.toThrow()
 
       // Should not have changed href (no redirect)
-      expect(window.location.href).toBe("")
+      expect(window.location.href).toBe("/")
 
       // Restore window.location
       window.location = originalLocation

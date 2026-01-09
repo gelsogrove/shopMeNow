@@ -10,33 +10,6 @@ export class BillingService {
   }
 
   /**
-   * Charge the monthly channel cost on the first day of each month
-   */
-  async chargeMonthlyChannelCost(workspaceId: string): Promise<void> {
-    try {
-      // Get current price from database
-      const monthlyChannelCost =
-        (await this.pricingRepository.getValue("MONTHLY_CHANNEL_COST")) ?? 45
-
-      await this.prisma.billing.create({
-        data: {
-          workspaceId,
-          amount: monthlyChannelCost,
-          type: BillingType.MONTHLY_CHANNEL,
-          description: "Monthly channel subscription cost",
-        },
-      })
-      logger.info(`Charged monthly channel cost for workspace ${workspaceId}`)
-    } catch (error) {
-      logger.error(
-        `Failed to charge monthly channel cost for workspace ${workspaceId}`,
-        error
-      )
-      throw error
-    }
-  }
-
-  /**
    * Track message cost ($0.10) - used for all message interactions
    * This deducts from ALL workspace credits (shared across owner's channels)
    * AND records in billingTransactions for Transaction History

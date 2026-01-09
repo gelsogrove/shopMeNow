@@ -25,6 +25,7 @@ import {
   TransactionRecord,
 } from "../../repositories/subscription-billing.repository"
 import logger from "../../utils/logger"
+import { CREDIT_MIN_THRESHOLD } from "./workspace-access.service"
 
 export interface CreditCheckResult {
   hasSufficientCredit: boolean
@@ -37,18 +38,24 @@ export interface PlanLimitCheckResult {
   withinLimits: boolean
   current: number
   max: number
-  limitType: "customers" | "channels"
+  limitType: "customers" | "channels" | "teamMembers" | "products"
 }
 
 export interface BillingOverview {
   billing: BillingInfo
   limits: PlanLimits
+  thresholds: {
+    creditMinThreshold: number
+    lowBalanceThreshold: number
+  }
   usage: {
     productsCount: number
     customersCount: number
     channelsCount: number
+    teamMembersCount: number
     customersPercentage: number
     channelsPercentage: number
+    teamMembersPercentage: number
   }
   planConfig: {
     displayName: string
@@ -59,6 +66,7 @@ export interface BillingOverview {
 
 export class SubscriptionBillingService {
   private repository: SubscriptionBillingRepository
+  private readonly PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
 
   constructor(private prisma: PrismaClient) {
     this.repository = new SubscriptionBillingRepository(prisma)
@@ -96,6 +104,10 @@ export class SubscriptionBillingService {
     return {
       billing,
       limits,
+      thresholds: {
+        creditMinThreshold: CREDIT_MIN_THRESHOLD,
+        lowBalanceThreshold: limits.lowBalanceThreshold,
+      },
       usage: {
         ...usage,
         customersPercentage:
@@ -313,7 +325,7 @@ export class SubscriptionBillingService {
    */
   async checkOwnerPlanLimits(
     userId: string,
-    limitType: "customers" | "channels"
+    limitType: "customers" | "channels" | "teamMembers" | "products"
   ): Promise<PlanLimitCheckResult> {
     const billing = await this.repository.getOwnerBilling(userId)
     if (!billing) {
@@ -328,7 +340,7 @@ export class SubscriptionBillingService {
     const usage = await this.repository.getOwnerUsage(userId)
 
     let current: number
-    let max: number
+    let max: number | null
 
     switch (limitType) {
       case "customers":
@@ -338,6 +350,14 @@ export class SubscriptionBillingService {
       case "channels":
         current = usage.channelsCount
         max = limits.maxChannels
+        break
+      case "products":
+        current = usage.productsCount
+        max = limits.maxProducts
+        break
+      case "teamMembers":
+        current = usage.teamMembersCount
+        max = limits.maxTeamMembers ?? 999
         break
     }
 
@@ -355,7 +375,7 @@ export class SubscriptionBillingService {
    */
   async checkPlanLimits(
     workspaceId: string,
-    limitType: "customers" | "channels" | "teamMembers"
+    limitType: "customers" | "channels" | "teamMembers" | "products"
   ): Promise<PlanLimitCheckResult> {
     const billing = await this.repository.getWorkspaceBilling(workspaceId)
     if (!billing) {
@@ -380,6 +400,10 @@ export class SubscriptionBillingService {
       case "channels":
         current = usage.channelsCount
         max = limits.maxChannels
+        break
+      case "products":
+        current = usage.productsCount
+        max = limits.maxProducts
         break
       case "teamMembers":
         current = usage.teamMembersCount
@@ -1108,6 +1132,75 @@ export class SubscriptionBillingService {
       pausedAt: status.pausedAt,
       pauseRequestedAt: status.pauseRequestedAt,
       pauseEffectiveDate,
+    }
+  }
+
+  /**
+   * Record a payment failure for an owner.
+   * After N failures, subscriptionStatus becomes PAYMENT_FAILED.
+   */
+  async recordOwnerPaymentFailure(userId: string): Promise<{
+    paymentFailureCount: number
+    subscriptionStatus: SubscriptionStatus
+    lastPaymentFailedAt: Date
+    blocked: boolean
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { paymentFailureCount: true, subscriptionStatus: true },
+    })
+
+    if (!user) {
+      throw new Error("User not found")
+    }
+
+    const now = new Date()
+    const nextCount = (user.paymentFailureCount ?? 0) + 1
+    const shouldBlock = nextCount >= this.PAYMENT_FAILURE_BLOCK_THRESHOLD
+    const nextStatus = shouldBlock ? "PAYMENT_FAILED" : user.subscriptionStatus
+
+    await this.repository.updateOwnerSubscriptionStatus(userId, {
+      paymentFailureCount: nextCount,
+      lastPaymentFailedAt: now,
+      subscriptionStatus: nextStatus,
+    })
+
+    return {
+      paymentFailureCount: nextCount,
+      subscriptionStatus: nextStatus,
+      lastPaymentFailedAt: now,
+      blocked: shouldBlock,
+    }
+  }
+
+  /**
+   * Reset payment failure state for an owner.
+   */
+  async resetOwnerPaymentFailures(userId: string): Promise<{
+    paymentFailureCount: number
+    subscriptionStatus: SubscriptionStatus
+  }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { subscriptionStatus: true },
+    })
+
+    if (!user) {
+      throw new Error("User not found")
+    }
+
+    const nextStatus =
+      user.subscriptionStatus === "PAYMENT_FAILED" ? "ACTIVE" : user.subscriptionStatus
+
+    await this.repository.updateOwnerSubscriptionStatus(userId, {
+      paymentFailureCount: 0,
+      lastPaymentFailedAt: null,
+      subscriptionStatus: nextStatus,
+    })
+
+    return {
+      paymentFailureCount: 0,
+      subscriptionStatus: nextStatus,
     }
   }
 

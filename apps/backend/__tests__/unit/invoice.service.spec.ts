@@ -40,6 +40,10 @@ const mockPrisma = {
   planConfiguration: {
     findUnique: jest.fn(),
   },
+  invoiceCreditNote: {
+    aggregate: jest.fn(),
+    findMany: jest.fn(),
+  },
 }
 
 // Mock modules BEFORE imports
@@ -117,6 +121,8 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     // Default mock for planConfiguration
     mockPrisma.planConfiguration.findUnique.mockResolvedValue({ monthlyFee: 19.0 })
     mockPrisma.user.findUnique.mockResolvedValue(mockUser)
+    mockPrisma.invoiceCreditNote.aggregate.mockResolvedValue({ _sum: { amount: 0 } })
+    mockPrisma.invoiceCreditNote.findMany.mockResolvedValue([])
   })
 
   describe('getOrCreateCurrentInvoice', () => {
@@ -142,9 +148,10 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     })
 
     it('should create new draft invoice if none exists', async () => {
-      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(null)
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValueOnce(null)
       mockPrisma.monthlyInvoice.create.mockResolvedValue(mockInvoice)
       mockPrisma.billingTransaction.findMany.mockResolvedValue([])
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValueOnce(mockInvoice)
       mockPrisma.monthlyInvoice.update.mockResolvedValue(mockInvoice)
 
       const result = await service.getOrCreateCurrentInvoice(mockUserId)
@@ -452,6 +459,55 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
           creditDebt: 15, // Absolute value of negative balance
         }),
       })
+    })
+  })
+
+  describe('recalculateInvoiceTotals', () => {
+    it('should include credit notes and tax in totals', async () => {
+      const invoice = {
+        ...mockInvoice,
+        subscriptionAmount: 0,
+        creditUsage: 0,
+        creditDebt: 0,
+        totalAmount: 0,
+      }
+
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(invoice)
+      mockPrisma.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        creditBalance: -15,
+      })
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({ monthlyFee: 20 })
+      mockPrisma.invoiceCreditNote.aggregate.mockResolvedValue({ _sum: { amount: 5 } })
+
+      jest.spyOn(service, 'calculateConsumption').mockResolvedValue({
+        messages: { count: 10, amount: 4 },
+        orders: { count: 2, amount: 6 },
+        pushNotifications: { count: 0, amount: 0 },
+        adjustments: { count: 0, amount: 0 },
+        totalConsumption: 10,
+      })
+
+      mockPrisma.monthlyInvoice.update.mockResolvedValue(invoice)
+
+      await service.recalculateInvoiceTotals('invoice-123')
+
+      const updateArgs = mockPrisma.monthlyInvoice.update.mock.calls[0][0]
+      expect(updateArgs).toEqual(
+        expect.objectContaining({
+          where: { id: 'invoice-123' },
+          data: expect.objectContaining({
+            subscriptionAmount: 20,
+            creditUsage: 10,
+            creditDebt: 15,
+            creditNotesTotal: 5,
+            subtotalAmount: 40,
+            taxRate: 0.22,
+          }),
+        })
+      )
+      expect(updateArgs.data.taxAmount).toBeCloseTo(8.8, 5)
+      expect(updateArgs.data.totalAmount).toBeCloseTo(48.8, 5)
     })
   })
 

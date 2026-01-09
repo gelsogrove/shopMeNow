@@ -3,16 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, FileText, ChevronLeft, ChevronRight } from "lucide-react"
+import { Loader2, FileText, ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { 
   getCurrentInvoice, 
   getOwnerInvoices, 
   getOwnerBillingOverview,
+  downloadInvoicePdf,
   Invoice, 
   InvoiceStatus,
   BillingOverview
 } from "@/services/subscriptionBillingApi"
 import { format } from "date-fns"
+import { toast } from "@/lib/toast"
 
 const TAX_RATE = 0.22 // 22% IVA
 const ITEMS_PER_PAGE = 10
@@ -69,6 +71,23 @@ export function BillingPage() {
       style: "currency",
       currency: "USD",
     }).format(amount)
+  }
+
+  const handleDownloadInvoice = async (invoiceId: string, periodMonth: number, periodYear: number) => {
+    try {
+      const blob = await downloadInvoicePdf(invoiceId)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `invoice-${periodYear}-${String(periodMonth).padStart(2, "0")}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Failed to download invoice:", error)
+      toast.error("Failed to download invoice")
+    }
   }
 
   const getStatusBadge = (status: InvoiceStatus) => {
@@ -143,6 +162,7 @@ export function BillingPage() {
                     <TableHead>Plan</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Paid On</TableHead>
+                    <TableHead>Download</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -156,6 +176,16 @@ export function BillingPage() {
                       <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                       <TableCell>
                         {invoice.paidAt ? format(new Date(invoice.paidAt), "MMM d, yyyy") : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadInvoice(invoice.id, invoice.periodMonth, invoice.periodYear)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          PDF
+                        </Button>
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(invoice.totalAmount)}

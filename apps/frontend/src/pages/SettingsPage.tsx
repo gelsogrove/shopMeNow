@@ -862,7 +862,7 @@ export default function SettingsPage() {
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">👤</span> Human Support
+                        <span className="text-lg">👤</span> Human Support & Escalation
                       </div>
                       <Switch
                         checked={formData.hasHumanSupport}
@@ -873,34 +873,20 @@ export default function SettingsPage() {
                   
                   {/* HUMAN SUPPORT = TRUE */}
                   {formData.hasHumanSupport && (
-                    <CardContent className="space-y-4 pt-0">
+                    <CardContent className="space-y-6 pt-0">
+                      {/* SECTION 1: Contact Method */}
                       {formData.hasSalesAgents ? (
-                        // Con Sales Team: il cliente ha già un agente assegnato
-                        <>
-                          <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                        <div>
+                          <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-4">
                             <p className="text-sm font-medium text-blue-800 mb-1">👨‍💼 Sales Team Mode</p>
                             <p className="text-xs text-blue-600">
                               Customer will be connected with their assigned sales agent.
                             </p>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="humanSupportInstructions">Message for Customer</Label>
-                            <Textarea
-                              id="humanSupportInstructions"
-                              value={formData.humanSupportInstructions}
-                              onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
-                              rows={6}
-                              placeholder={`Hello {{nameUser}}, I'm sorry for the issue! 😔\nI understand your frustration.\n\nYour dedicated agent is:\n• {{agentName}}\n• 📞 {{agentPhone}}\n• ✉️ {{agentEmail}}\n\n⏸️ Chat is now paused.\nYour agent will contact you as soon as possible!`}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              💡 Variables: {"{{nameUser}}"}, {"{{agentName}}"}, {"{{agentPhone}}"}, {"{{agentEmail}}"} • AI will translate to customer's language
-                            </p>
-                          </div>
-                        </>
+                        </div>
                       ) : (
-                        // Without Sales Team: need to know who to contact and how
-                        <>
-                          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                        <div>
+                          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg mb-4">
                             <p className="text-sm font-medium text-amber-800 mb-1">⚙️ Generic Support Mode</p>
                             <p className="text-xs text-amber-600">
                               Without Sales Team, you need to configure who will receive support requests.
@@ -924,7 +910,7 @@ export default function SettingsPage() {
                           </div>
 
                           {formData.operatorContactMethod === "whatsapp" && (
-                            <div className="space-y-2">
+                            <div className="space-y-2 mt-4">
                               <Label htmlFor="operatorWhatsappNumber">Support WhatsApp Number</Label>
                               <Input
                                 id="operatorWhatsappNumber"
@@ -937,22 +923,95 @@ export default function SettingsPage() {
                               </p>
                             </div>
                           )}
+                        </div>
+                      )}
 
-                          <div className="space-y-2">
-                            <Label htmlFor="humanSupportInstructions">Message for Customer</Label>
+                      {/* DIVIDER */}
+                      <div className="border-t pt-6" />
+
+                      {/* SECTION 2: Escalation Triggers */}
+                      <div>
+                        <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                          <span>🚨</span> Escalation Triggers
+                        </h4>
+                        <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg mb-4">
+                          <p className="text-sm font-medium text-purple-800 mb-1">📋 When should the chatbot call an operator?</p>
+                          <p className="text-xs text-purple-600">
+                            Define the situations where the chatbot should automatically escalate to a human operator.
+                            Leave empty to use default triggers (damaged products, missing delivery, explicit operator requests).
+                            Be explicit that the AI must call <code className="font-mono">contactOperator</code> when these rules match.
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="frustrationEscalationInstructions">Custom Escalation Rules</Label>
+                          <Textarea
+                            id="frustrationEscalationInstructions"
+                            value={formData.frustrationEscalationInstructions}
+                            onChange={(e) => {
+                              if (e.target.value.length <= 5000) {
+                                handleFieldChange("frustrationEscalationInstructions", e.target.value)
+                              }
+                            }}
+                            rows={6}
+                            placeholder={`Call operator when:
+- Customer received wrong product
+- Customer didn't receive their order
+- Customer asks for a custom quote
+- Customer mentions legal action
+- Customer explicitly asks for human help
+- Customer complains about quality issues`}
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>
+                              💡 Write in your catalog language (Italian). AI will understand and apply in any customer language.
+                            </span>
+                            <span className={formData.frustrationEscalationInstructions.length > 4500 ? "text-amber-600" : ""}>
+                              {formData.frustrationEscalationInstructions.length}/5000
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DIVIDER */}
+                      <div className="border-t pt-6" />
+
+                      {/* SECTION 3: Customer Message */}
+                      <div>
+                        <h4 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                          <span>💬</span> Message for Customer
+                        </h4>
+                        {formData.hasSalesAgents ? (
+                          <>
+                            <Label htmlFor="humanSupportInstructions">What customer sees when paused (with assigned agent)</Label>
+                            <Textarea
+                              id="humanSupportInstructions"
+                              value={formData.humanSupportInstructions}
+                              onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
+                              rows={6}
+                              placeholder={`Hello {{nameUser}}, I'm sorry for the issue! 😔\nI understand your frustration.\n\nYour dedicated agent is:\n• {{agentName}}\n• 📞 {{agentPhone}}\n• ✉️ {{agentEmail}}\n\n⏸️ Chat is now paused.\nYour agent will contact you as soon as possible!`}
+                              className="mt-2"
+                            />
+                            <p className="text-xs text-muted-foreground mt-2">
+                              💡 Variables: {"{{nameUser}}"}, {"{{agentName}}"}, {"{{agentPhone}}"}, {"{{agentEmail}}"} • AI will translate to customer's language
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <Label htmlFor="humanSupportInstructions">What customer sees when paused (generic support)</Label>
                             <Textarea
                               id="humanSupportInstructions"
                               value={formData.humanSupportInstructions}
                               onChange={(e) => handleFieldChange("humanSupportInstructions", e.target.value)}
                               rows={4}
                               placeholder="I understand you need assistance. Our team will contact you within 24 hours.\n\n⏸️ Chat is now paused."
+                              className="mt-2"
                             />
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground mt-2">
                               AI will translate to customer's language
                             </p>
-                          </div>
-                        </>
-                      )}
+                          </>
+                        )}
+                      </div>
                     </CardContent>
                   )}
                   
@@ -980,55 +1039,6 @@ export default function SettingsPage() {
                     </CardContent>
                   )}
                 </Card>
-
-                {/* 🆕 Feature 203: Escalation Triggers Card - Only visible when Human Support is enabled */}
-                {formData.hasHumanSupport && (
-                <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <span className="text-lg">🚨</span> Escalation Triggers
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pt-0">
-                    <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-purple-800 mb-1">📋 When should the chatbot call an operator?</p>
-                      <p className="text-xs text-purple-600">
-                        Define the situations where the chatbot should automatically escalate to a human operator.
-                        Leave empty to use default triggers (damaged products, missing delivery, explicit operator requests).
-                        Be explicit that the AI must call <code className="font-mono">contactOperator</code> when these rules match.
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="frustrationEscalationInstructions">Custom Escalation Rules</Label>
-                      <Textarea
-                        id="frustrationEscalationInstructions"
-                        value={formData.frustrationEscalationInstructions}
-                        onChange={(e) => {
-                          if (e.target.value.length <= 5000) {
-                            handleFieldChange("frustrationEscalationInstructions", e.target.value)
-                          }
-                        }}
-                        rows={8}
-                        placeholder={`Call operator when:
-- Customer received wrong product
-- Customer didn't receive their order
-- Customer asks for a custom quote
-- Customer mentions legal action
-- Customer explicitly asks for human help
-- Customer complains about quality issues`}
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          💡 Write in your catalog language (Italian). AI will understand and apply in any customer language.
-                        </span>
-                        <span className={formData.frustrationEscalationInstructions.length > 4500 ? "text-amber-600" : ""}>
-                          {formData.frustrationEscalationInstructions.length}/5000
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                )}
               </div>
 
               {/* Help Panel - 1/3 */}

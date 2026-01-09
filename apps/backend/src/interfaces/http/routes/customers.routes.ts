@@ -99,6 +99,7 @@ export const workspaceCustomersRouter = (
   )
   router.post(
     "/:workspaceId/customers",
+    checkPlanLimits("customers"),
     controller.createCustomer.bind(controller)
   )
   router.get(
