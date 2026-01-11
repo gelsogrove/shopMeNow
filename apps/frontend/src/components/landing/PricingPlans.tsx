@@ -170,12 +170,11 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
           const frameColor = frameColors[plan.name] || "from-gray-100 to-slate-100"
 
           return (
-            <div className="relative group">
+            <div key={plan.name} className="relative group">
               {/* Decorative rotated background frame */}
               <div className={`absolute inset-0 bg-gradient-to-br ${frameColor} rounded-2xl rotate-1 scale-[1.02] shadow-lg group-hover:rotate-2 transition-transform duration-500`}></div>
               
               <div
-                key={plan.name}
                 className={`relative rounded-2xl border-2 p-8 flex flex-col h-full min-h-[600px] ${highlightClass} ${disabledClass}`}
               >
               <div className="text-center mb-6 flex flex-col justify-between min-h-[110px]">

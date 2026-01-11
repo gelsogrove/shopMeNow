@@ -53,10 +53,8 @@ export class PricingController {
    *                     PUSH_CAMPAIGN: 1.00
    *                 thresholds:
    *                   type: object
-   *                   description: Free tier limits and plan restrictions
+   *                   description: Free tier limits and plan restrictions (clients only, no product limits)
    *                   example:
-   *                     FREE_MESSAGES: 200
-   *                     FREE_PRODUCTS: 50
    *                     FREE_CLIENTS: 50
    *       500:
    *         description: Server error

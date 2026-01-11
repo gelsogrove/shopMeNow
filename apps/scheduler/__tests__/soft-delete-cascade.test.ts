@@ -10,10 +10,18 @@ describe('Soft Delete - Complete Cascade Test', () => {
       upsert: jest.fn().mockResolvedValue({}),
     }
 
+    ;(prisma as any).monthlyInvoice = {
+      findMany: jest.fn().mockResolvedValue([]),
+    }
+
     ;(prisma.user.findMany as jest.Mock).mockResolvedValue([{ id: 'user-1' }])
     ;(prisma.workspace.findMany as jest.Mock).mockResolvedValue([{ id: 'ws-1' }])
 
     const tx = {
+      invoiceCreditNote: { deleteMany: createDeleteMany() },
+      invoiceAdjustment: { deleteMany: createDeleteMany() },
+      payPalTransaction: { deleteMany: createDeleteMany() },
+      monthlyInvoice: { deleteMany: createDeleteMany() },
       twoFactorResetToken: { deleteMany: createDeleteMany() },
       authenticationAttempt: { deleteMany: createDeleteMany() },
       passwordReset: { deleteMany: createDeleteMany() },

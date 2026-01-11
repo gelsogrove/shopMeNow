@@ -159,10 +159,6 @@ export function ClientsPage() {
     }>
   } | null>(null)
   const [paypalLoading, setPaypalLoading] = useState(false)
-  const [subscriptionModal, setSubscriptionModal] = useState<{ userId: string; email: string; currentStatus: string } | null>(null)
-  const [subscriptionStatus, setSubscriptionStatus] = useState<'ACTIVE' | 'PAUSED' | 'PAYMENT_FAILED'>('ACTIVE')
-  const [subscriptionNotes, setSubscriptionNotes] = useState('')
-  const [updatingSubscription, setUpdatingSubscription] = useState(false)
   const [deletingUser, setDeletingUser] = useState(false)
 
   useEffect(() => {
@@ -562,46 +558,6 @@ export function ClientsPage() {
     }
   }
 
-  const handleSubscriptionStatusUpdate = async () => {
-    if (!subscriptionModal) return
-
-    setUpdatingSubscription(true)
-    setError(null)
-
-    try {
-      const response = await api.users.updateSubscriptionStatus(subscriptionModal.userId, {
-        subscriptionStatus,
-        adminNotes: subscriptionNotes.trim() || undefined,
-      })
-
-      if (response.success && response.data) {
-        setUsers((prev) =>
-          prev.map((user) =>
-            user.id === subscriptionModal.userId
-              ? {
-                  ...user,
-                  subscriptionStatus: response.data.subscriptionStatus,
-                  pausedAt: response.data.pausedAt,
-                  pauseRequestedAt: response.data.pauseRequestedAt,
-                }
-              : user
-          )
-        )
-        setSuccessMessage(`Subscription status updated for ${subscriptionModal.email}`)
-        setTimeout(() => setSuccessMessage(null), 4000)
-        setSubscriptionModal(null)
-        setSubscriptionNotes('')
-      } else {
-        setError(response.error || 'Failed to update subscription status')
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to update subscription status')
-      console.error('Error updating subscription status:', err)
-    } finally {
-      setUpdatingSubscription(false)
-    }
-  }
-
   // Filter users: first by search query, then by showAll toggle
   const filteredUsers = users
     .filter(user => {
@@ -846,25 +802,6 @@ export function ClientsPage() {
                   )}
 
                   {/* Subscription Status Button */}
-                  {!user.isPlatformAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2 gap-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200"
-                      onClick={() => {
-                        setSubscriptionModal({
-                          userId: user.id,
-                          email: user.email,
-                          currentStatus: user.subscriptionStatus,
-                        })
-                        setSubscriptionStatus(user.subscriptionStatus as 'ACTIVE' | 'PAUSED' | 'PAYMENT_FAILED')
-                        setSubscriptionNotes('')
-                      }}
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      Update Subscription
-                    </Button>
-                  )}
 
                   {/* PayPal Details Button */}
                   {!user.isPlatformAdmin && (
@@ -1327,82 +1264,10 @@ export function ClientsPage() {
         </div>
       )}
 
-      {/* Subscription Status Modal */}
-      {subscriptionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-purple-500" />
-              Update Subscription Status
-            </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              {subscriptionModal.email} · Current: <strong>{subscriptionModal.currentStatus}</strong>
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
-                </label>
-                <select
-                  className="w-full border rounded-md px-3 py-2 text-sm"
-                  value={subscriptionStatus}
-                  onChange={(e) =>
-                    setSubscriptionStatus(e.target.value as 'ACTIVE' | 'PAUSED' | 'PAYMENT_FAILED')
-                  }
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="PAUSED">PAUSED</option>
-                  <option value="PAYMENT_FAILED">PAYMENT_FAILED</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Admin notes
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Optional notes"
-                  value={subscriptionNotes}
-                  onChange={(e) => setSubscriptionNotes(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setSubscriptionModal(null)
-                  setSubscriptionNotes('')
-                }}
-                disabled={updatingSubscription}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-purple-600 hover:bg-purple-700"
-                onClick={handleSubscriptionStatusUpdate}
-                disabled={updatingSubscription}
-              >
-                {updatingSubscription ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                )}
-                Save
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* PayPal Modal */}
       {paypalModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-xl">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl shadow-xl max-h-[85vh] overflow-hidden">
             <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-sky-500" />
               PayPal Details
@@ -1459,7 +1324,7 @@ export function ClientsPage() {
                   <div className="border-b border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
                     Transactions
                   </div>
-                  <div className="max-h-64 overflow-y-auto">
+                  <div className="max-h-80 overflow-y-auto">
                     {paypalInfo.transactions.length === 0 ? (
                       <div className="px-4 py-4 text-sm text-gray-500">No PayPal transactions yet.</div>
                     ) : (
@@ -1487,7 +1352,7 @@ export function ClientsPage() {
                                   : 'bg-rose-100 text-rose-700'
                               }`}
                             >
-                              {tx.status}
+                              {tx.status === 'SUCCESS' ? 'OK' : 'FAILS'}
                             </span>
                           </div>
                         ))}

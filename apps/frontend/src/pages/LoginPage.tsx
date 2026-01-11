@@ -18,11 +18,6 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { useFeatureFlags } from "@/hooks/usePlatformConfig"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
-import hero1 from "@/assets/hero/home_1.png"
-import hero2 from "@/assets/hero/home_2.png"
-import hero3 from "@/assets/hero/home_3.png"
-import hero4 from "@/assets/hero/home_4.png"
-import hero5 from "@/assets/hero/home_5.png"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import {
@@ -51,6 +46,7 @@ import * as z from "zod"
 import { toast } from "../lib/toast"
 import { auth, api } from "../services/api"
 import { workspaceApi } from "../services/workspaceApi"
+import { widgetApi } from "../services/widgetApi"
 import { getBillingOverview, PlanLimits, UsageStats, PlanType } from "../services/subscriptionBillingApi"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com'
@@ -137,6 +133,8 @@ export function LoginPage() {
     workingInProgress,
     registerFirst,
     cantryDemo,
+    showWidgetChatbot,
+    widgetCode,
     isLoading: flagsLoading,
   } = useFeatureFlags()
   const [showWIPModal, setShowWIPModal] = useState(false)
@@ -149,9 +147,26 @@ export function LoginPage() {
   const modeParam = searchParams.get('mode') // 🆕 For invite flow: 'register' opens register tab
   const inviteParam = searchParams.get('invite') // 🆕 For invite flow: pre-fill email from invite
   const logoutParam = searchParams.get('logout') // 🆕 For forcing logout from backoffice
-  const isAdminBypass = searchParams.get('admin') === 'true'
-  const isLoginDisabled = flagsLoading || (!canLogin && !isAdminBypass)
-  const isRegisterDisabled = flagsLoading || !canRegister
+  
+  // 🔓 Admin bypass: check URL param OR sessionStorage
+  const adminParamFromUrl = searchParams.get('admin')
+  
+  // Handle explicit admin parameter values
+  if (adminParamFromUrl === 'true') {
+    // Enable bypass and persist in sessionStorage
+    if (sessionStorage.getItem('adminBypass') !== 'true') {
+      sessionStorage.setItem('adminBypass', 'true')
+    }
+  } else if (adminParamFromUrl === 'false' || adminParamFromUrl === null) {
+    // Explicitly disable bypass and clear sessionStorage
+    // (both ?admin=false and no parameter at all should clear it)
+    sessionStorage.removeItem('adminBypass')
+  }
+  
+  const isAdminBypass = adminParamFromUrl === 'true'
+  
+  const isLoginDisabled = flagsLoading || ((!canLogin || workingInProgress) && !isAdminBypass)
+  const isRegisterDisabled = flagsLoading || ((!canRegister || workingInProgress) && !isAdminBypass)
   const isDemoDisabled = flagsLoading || !cantryDemo || workingInProgress
   const isLoginViewDisabled = activeTab === "signin" && isLoginDisabled
   const isRegisterViewDisabled = activeTab === "register" && isRegisterDisabled
@@ -170,13 +185,23 @@ export function LoginPage() {
   const [showPasswordRegister, setShowPasswordRegister] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  const heroSlides = [
-    { src: hero1, alt: "WhatsApp AI agent dashboard view 1" },
-    { src: hero2, alt: "WhatsApp AI agent dashboard view 2" },
-    { src: hero3, alt: "WhatsApp AI agent dashboard view 3" },
-    { src: hero4, alt: "WhatsApp AI agent dashboard view 4" },
-    { src: hero5, alt: "WhatsApp AI agent dashboard view 5" },
-  ]
+  // 🆕 Remember Me functionality
+  const [rememberMe, setRememberMe] = useState(false)
+  const REMEMBER_ME_KEY = "login_email_remembered"
+
+  // Dynamic hero slides based on language
+  const getHeroSlides = (lang: string) => {
+    const validLang = ["it", "en", "es", "pt"].includes(lang) ? lang : "en"
+    return [
+      { src: `/src/assets/hero/${validLang}/home_1.png`, alt: "WhatsApp AI agent dashboard view 1" },
+      { src: `/src/assets/hero/${validLang}/home_2.png`, alt: "WhatsApp AI agent dashboard view 2" },
+      { src: `/src/assets/hero/${validLang}/home_3.png`, alt: "WhatsApp AI agent dashboard view 3" },
+      { src: `/src/assets/hero/${validLang}/home_4.png`, alt: "WhatsApp AI agent dashboard view 4" },
+      { src: `/src/assets/hero/${validLang}/home_5.png`, alt: "WhatsApp AI agent dashboard view 5" },
+    ]
+  }
+
+  const heroSlides = getHeroSlides(language)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [touchStartHero, setTouchStartHero] = useState<number | null>(null)
   const [touchEndHero, setTouchEndHero] = useState<number | null>(null)
@@ -286,6 +311,16 @@ export function LoginPage() {
     } as LoginForm,
   })
 
+  // 🆕 Load remembered email on component mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem(REMEMBER_ME_KEY)
+    if (rememberedEmail) {
+      form.setValue("email", rememberedEmail)
+      setRememberMe(true)
+      logger.info("📧 [Remember Me] Loaded remembered email:", rememberedEmail)
+    }
+  }, []) // Empty dependency - run only once on mount
+
   const registerForm = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     mode: "onChange",
@@ -307,6 +342,7 @@ export function LoginPage() {
       logger.info('🚪 [LOGOUT] Force logout requested from backoffice - clearing all storage')
       storage.clearAppState()
       // Remove the logout param from URL to prevent re-logout on refresh
+      // But KEEP admin=true if present
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('logout')
       window.history.replaceState({}, '', newUrl.toString())
@@ -495,6 +531,15 @@ export function LoginPage() {
       })
       logger.info("Login successful:", response.data)
 
+      // 🆕 Save email if "Remember Me" is checked
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, data.email!)
+        logger.info("📧 [Remember Me] Email saved to localStorage")
+      } else {
+        localStorage.removeItem(REMEMBER_ME_KEY)
+        logger.info("📧 [Remember Me] Email cleared from localStorage")
+      }
+
       // 🔒 SECURITY: Check if 2FA is required
       if (response.data && response.data.requires2FA) {
         logger.info("🔐 User requires 2FA verification")
@@ -601,6 +646,33 @@ export function LoginPage() {
 
       // 🔒 SECURITY: No sessionId or token from registration
       // User MUST verify 2FA first to get authenticated
+
+      // 🆕 Widget Integration: Convert web visitor to customer
+      // If visitor came from widget, merge chat history and mark as real customer
+      const visitorId = widgetApi.getVisitorId()
+      if (visitorId) {
+        try {
+          logger.info('🔄 [WIDGET] Converting visitor to customer', { visitorId, userId: user.id })
+          
+          // Convert visitor using the widget's "chatbot.AI" workspace (eChatbot support)
+          await widgetApi.convertVisitor({
+            workspaceId: 'chatbot.AI',
+            visitorId,
+            phone: '', // Phone will be added later if needed
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            language: navigator.language || 'en',
+          })
+
+          // Clear chat history from localStorage since it's now merged
+          widgetApi.clearStoredMessages()
+          logger.info('✅ [WIDGET] Visitor converted successfully')
+        } catch (err) {
+          logger.error('⚠️ [WIDGET] Failed to convert visitor (non-blocking):', err)
+          // Don't block registration if conversion fails
+        }
+      }
 
       toast.success('Account created! Please setup 2FA.')
       logger.info('✅ [REGISTER] Success, navigating to 2FA setup')
@@ -858,10 +930,15 @@ export function LoginPage() {
 
   const formattedCredit =
     userPlan?.creditBalance != null
-      ? new Intl.NumberFormat("en-US", {
-          style: "currency",
-          currency: "USD",
-        }).format(userPlan.creditBalance)
+      ? (() => {
+          // Get workspace currency from storage
+          const workspace = storage.getWorkspace<{ currency?: string }>()
+          const currency = workspace?.currency || "EUR"
+          return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: currency,
+          }).format(userPlan.creditBalance)
+        })()
       : "--"
 
   const VALID_PLAN_TYPES: PlanType[] = ["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"]
@@ -1133,9 +1210,9 @@ export function LoginPage() {
             <div className="relative w-full max-w-3xl lg:mr-2">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
             <div className="relative rounded-[32px] shadow-2xl bg-white overflow-visible">
-                <div className="relative rounded-[28px] overflow-hidden bg-slate-900">
+                <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
                   <div 
-                    className="relative w-full h-[510px]"
+                    className="relative w-full"
                     onTouchStart={onTouchStartHero}
                     onTouchMove={onTouchMoveHero}
                     onTouchEnd={onTouchEndHero}
@@ -1153,7 +1230,7 @@ export function LoginPage() {
                               key={`${slide.src}-${offset}`}
                               src={slide.src}
                               alt={slide.alt}
-                              className="absolute inset-0 w-full h-full object-cover"
+                              className="w-full h-auto"
                               style={{
                                 transform: `translateX(${offset * 85}%) scale(${
                                   isCenter ? 1 : 0.9
@@ -1161,6 +1238,10 @@ export function LoginPage() {
                                 opacity: isCenter ? 1 : 0.55,
                                 zIndex: isCenter ? 2 : 1,
                                 transition: "transform 0.6s ease, opacity 0.6s ease",
+                                position: offset === 0 ? 'relative' : 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
                               }}
                             />
                           )
@@ -1170,10 +1251,14 @@ export function LoginPage() {
                             key={slide.src}
                             src={slide.src}
                             alt={slide.alt}
-                            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out"
+                            className="w-full h-auto transition-opacity duration-700 ease-in-out"
                             style={{
                               opacity: index === currentSlide ? 1 : 0,
                               zIndex: index === currentSlide ? 2 : 1,
+                              position: index === currentSlide ? 'relative' : 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
                             }}
                           />
                         ))}
@@ -1206,7 +1291,7 @@ export function LoginPage() {
               }
             }}
           >
-            {workingInProgress && (
+            {workingInProgress && !isAdminBypass && (
               <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
                 {t("wip.banner")}
               </div>
@@ -1257,7 +1342,17 @@ export function LoginPage() {
                           type="button"
                           onClick={() => {
                             if (loggedInUser?.isPlatformAdmin) {
-                              window.location.assign("https://backoffice.echatbot.ai")
+                              const token = storage.getToken()
+                              const backofficeUrl =
+                                import.meta.env.VITE_BACKOFFICE_URL ||
+                                (window.location.hostname === "localhost"
+                                  ? "http://localhost:3002"
+                                  : "https://backoffice.echatbot.ai")
+                              if (token) {
+                                window.location.assign(`${backofficeUrl}/auth/callback?token=${token}`)
+                                return
+                              }
+                              window.location.assign(`${backofficeUrl}/access-denied`)
                               return
                             }
                             navigate("/workspace-selection")
@@ -1313,14 +1408,20 @@ export function LoginPage() {
                             <div
                               className={`flex items-center space-x-2 ${isLoginDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                               aria-disabled={isLoginDisabled}
-                              onClick={() => {
-                                if (isLoginDisabled) {
-                                  setWipFeature("login")
-                                  setShowWIPModal(true)
-                                }
-                              }}
                             >
-                              <Checkbox id="remember-desktop" disabled={isLoginDisabled || isLoading} />
+                              <Checkbox 
+                                id="remember-desktop" 
+                                disabled={isLoginDisabled || isLoading}
+                                checked={rememberMe}
+                                onCheckedChange={(checked) => {
+                                  if (!isLoginDisabled && !isLoading) {
+                                    setRememberMe(checked as boolean)
+                                  } else if (isLoginDisabled) {
+                                    setWipFeature("login")
+                                    setShowWIPModal(true)
+                                  }
+                                }}
+                              />
                               <span className="text-sm text-slate-600">Remember me</span>
                             </div>
                             <Link
@@ -1340,9 +1441,9 @@ export function LoginPage() {
 
                           <Button
                             type="submit"
-                            className={`w-full bg-green-600 hover:bg-green-700 ${isLoginDisabled ? "opacity-60 cursor-not-allowed hover:bg-green-600" : ""}`}
-                            disabled={isLoading}
-                            aria-disabled={isLoginDisabled}
+                            className={`w-full bg-green-600 hover:bg-green-700 ${(isLoginDisabled && !isAdminBypass) ? "opacity-60 cursor-not-allowed hover:bg-green-600" : ""}`}
+                            disabled={isLoading || isLoginDisabled}
+                            aria-disabled={isLoginDisabled && !isAdminBypass}
                             onClick={(event) => {
                               if (isLoginDisabled && !isAdminBypass) {
                                 event.preventDefault()
@@ -1445,7 +1546,6 @@ export function LoginPage() {
                           placeholder="First name"
                           autoComplete="off"
                           {...registerForm.register("firstName")}
-                          ref={registerEmailInputRef}
                           disabled={isLoading || isRegisterDisabled}
                           className={`h-11 ${registerForm.formState.errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
@@ -1539,9 +1639,6 @@ export function LoginPage() {
                         id="gdpr"
                         checked={registerForm.watch("gdprAccepted")}
                         onCheckedChange={async (checked) => {
-                          if (isRegisterDisabled) {
-                            return
-                          }
                           registerForm.setValue("gdprAccepted", checked as boolean)
                           await registerForm.trigger("gdprAccepted")
                         }}
@@ -1573,7 +1670,7 @@ export function LoginPage() {
                     <Button
                       type="submit"
                       className={`w-full bg-green-600 hover:bg-green-700 ${isRegisterDisabled ? "opacity-60 cursor-not-allowed hover:bg-green-600" : ""}`}
-                      disabled={isLoading || !registerForm.formState.isValid}
+                      disabled={isLoading || !registerForm.formState.isValid || isRegisterDisabled}
                       aria-disabled={isRegisterDisabled}
                       onClick={(event) => {
                         if (isRegisterDisabled) {
@@ -1756,7 +1853,7 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
               <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              {workingInProgress && (
+              {workingInProgress && !isAdminBypass && (
                 <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
                   {t("wip.banner")}
                 </div>
@@ -2263,7 +2360,7 @@ export function LoginPage() {
                 <ul className="space-y-3">
                   <li><Link to="/privacy" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Privacy Policy</Link></li>
                   <li><Link to="/terms" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Terms of Service</Link></li>
-                  <li><Link to="/refund-policy" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Refund Policy</Link></li>
+                  <li><Link to="/refund" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Refund Policy</Link></li>
                 </ul>
               </div>
             </div>
@@ -2313,6 +2410,11 @@ export function LoginPage() {
         feature={wipFeature}
         onClose={() => setShowWIPModal(false)}
       />
+
+      {/* Chat Widget - Dynamic from Platform Config */}
+      {showWidgetChatbot && widgetCode && (
+        <div dangerouslySetInnerHTML={{ __html: widgetCode }} />
+      )}
     </div>
   )
 }

@@ -129,6 +129,69 @@ router.get(
 
 /**
  * @swagger
+ * /api/platform-config/widget-code:
+ *   get:
+ *     summary: Get widget chatbot code
+ *     description: Get the embed code for the chatbot widget (public)
+ *     tags: [Platform Config]
+ *     responses:
+ *       200:
+ *         description: Widget code retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     code:
+ *                       type: string
+ *                       nullable: true
+ */
+router.get(
+  "/widget-code",
+  platformConfigController.getWidgetCode.bind(platformConfigController)
+)
+
+/**
+ * @swagger
+ * /api/platform-config/widget-code:
+ *   put:
+ *     summary: Save widget chatbot code
+ *     description: Save the embed code for the chatbot widget (admin only)
+ *     tags: [Platform Config]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *                 description: Widget embed code
+ *     responses:
+ *       200:
+ *         description: Widget code saved
+ *       401:
+ *         description: Unauthorized
+ */
+router.put(
+  "/widget-code",
+  authMiddleware,
+  platformAdminMiddleware,
+  platformConfigController.saveWidgetCode.bind(platformConfigController)
+)
+
+/**
+ * @swagger
  * /api/platform-config/{key}:
  *   put:
  *     summary: Update configuration value

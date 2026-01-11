@@ -28,7 +28,7 @@ const translations = {
     // Hero Section
     "hero.title": "Crea il tuo agente di vendita AI",
     "hero.subtitle":
-      "Automatizza vendite, supporto e campagne su WhatsApp — in una sola piattaforma.",
+      "AI first: Automatizza vendite, supporto e campagne su WhatsApp — in un'unica piattaforma.",
     "hero.subline": "",
     "hero.whyTitle": "Perché eChatbot?",
     "hero.useCasesTitle": "Progettato per vendite, supporto e crescita.",
@@ -454,7 +454,7 @@ const translations = {
     "privacy.rights.title": "5. I Tuoi Diritti (GDPR/CCPA)",
     "privacy.rights.desc": "Hai il diritto di: (1) Accedere ai tuoi dati personali, (2) Correggere o aggiornare informazioni imprecise, (3) Eliminare i tuoi dati (diritto all'oblio), (4) Opporti a determinati trattamenti, (5) Richiedere la portabilità dei dati in formato strutturato, (6) Presentare reclami all'autorità locale per la protezione dei dati. IMPORTANTE: In caso di eliminazione dell'account o risoluzione del servizio, conserviamo i dati solo come richiesto dalla legge (tasse, prevenzione frodi, risoluzione controversie). Contatta privacy@echatbot.ai per esercitare i tuoi diritti con identificazione valida entro 30 giorni.",
     "privacy.cookies.title": "6. Cookie e Tracciamento",
-    "privacy.cookies.desc": "Utilizziamo cookie essenziali per autenticazione e gestione sessione, e cookie di analisi opzionali (Google Analytics) per comprendere i modelli di utilizzo della piattaforma. Puoi disabilitare i cookie non essenziali tramite le impostazioni del browser o il nostro banner cookie. Non vengono utilizzati cookie di tracciamento di terze parti per pubblicità o profilazione comportamentale.",
+    "privacy.cookies.desc": "Utilizziamo SOLO cookie essenziali per autenticazione e gestione sessione del nostro servizio. Non utilizziamo cookie di analisi (Google Analytics), cookie pubblicitari, o cookie di tracciamento di terze parti per profilazione comportamentale. I cookie essenziali non richiedono consenso preventivo secondo il GDPR e le normative ePrivacy.",
     "privacy.retention.title": "7. Conservazione dei Dati",
     "privacy.retention.desc": "I dati dei clienti vengono conservati solo per il tempo necessario alla fornitura del servizio: (1) Dati account attivo: conservati mentre l'account è attivo, (2) Account eliminati: conservati per 90 giorni per scopi di recupero dati, poi eliminati permanentemente, (3) Record di transazioni: conservati per 7 anni per conformarsi alle normative finanziarie, (4) Cronologie chat: conservate secondo le impostazioni della tua policy di conservazione workspace. I backup possono contenere dati archiviati ma sono crittografati e protetti.",
     "privacy.contact.title": "8. Contatti e Autorità per la Protezione dei Dati",
@@ -524,7 +524,7 @@ const translations = {
     // Hero Section
     "hero.title": "Build your AI sales agent",
     "hero.subtitle":
-      "Automate sales, support, and campaigns on WhatsApp — in one platform.",
+      "AI first: Automate sales, support, and campaigns on WhatsApp — in one platform.",
     "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Built for sales, support, and growth.",
@@ -988,7 +988,7 @@ const translations = {
     "privacy.rights.title": "5. Your Rights (GDPR/CCPA)",
     "privacy.rights.desc": "You have the right to: (1) Access your personal data, (2) Correct or update inaccurate information, (3) Delete your data (right to be forgotten), (4) Object to certain processing activities, (5) Request data portability in a structured format, (6) File complaints with your local data protection authority. IMPORTANT: Upon account deletion or service termination, we retain data only as required by law (tax, fraud prevention, dispute resolution). Contact privacy@echatbot.ai to exercise your rights with valid identification within 30 days.",
     "privacy.cookies.title": "6. Cookies & Tracking",
-    "privacy.cookies.desc": "We use essential cookies for authentication and session management, and optional analytics cookies (Google Analytics) to understand platform usage patterns. You can disable non-essential cookies via browser settings or our cookie banner. No third-party tracking cookies are used for advertising or behavioral profiling.",
+    "privacy.cookies.desc": "We use ONLY essential cookies for authentication and session management of our service. We do NOT use analytics cookies (Google Analytics), advertising cookies, or third-party tracking cookies for behavioral profiling. Essential cookies do not require prior consent under GDPR and ePrivacy regulations.",
     "privacy.retention.title": "7. Data Retention",
     "privacy.retention.desc": "Customer data is retained only as long as necessary for service delivery: (1) Active account data: retained while account is active, (2) Deleted accounts: retained for 90 days for data recovery purposes, then permanently deleted, (3) Transaction records: retained for 7 years to comply with financial regulations, (4) Chat histories: retained per your workspace retention policy settings. Backups may contain archived data but are encrypted and secured.",
     "privacy.contact.title": "8. Contact & Data Protection Authority",
@@ -1051,7 +1051,7 @@ const translations = {
     // Hero Section
     "hero.title": "Crea tu agente de ventas con IA",
     "hero.subtitle":
-      "Automatiza ventas, soporte y campañas en WhatsApp — en una sola plataforma.",
+      "AI first: Automatiza ventas, soporte y campañas en WhatsApp — en una única plataforma.",
     "hero.subline": "",
     "hero.whyTitle": "¿Por qué eChatbot?",
     "hero.useCasesTitle": "Diseñado para ventas, soporte y crecimiento.",
@@ -1412,7 +1412,7 @@ const translations = {
     "privacy.rights.title": "5. Sus Derechos",
     "privacy.rights.desc": "Tiene derecho a acceder, corregir o eliminar sus datos personales. También puede oponerse a cierto procesamiento de datos o solicitar portabilidad de datos.",
     "privacy.cookies.title": "6. Cookies y Tecnologías de Seguimiento",
-    "privacy.cookies.desc": "Usamos cookies y tecnologías similares para mejorar su experiencia, analizar el uso y personalizar el contenido. Puede gestionar las preferencias de cookies en la configuración de su navegador.",
+    "privacy.cookies.desc": "Utilizamos SOLO cookies esenciales para autenticación y gestión de sesión de nuestro servicio. NO utilizamos cookies de análisis (Google Analytics), cookies publicitarios, ni cookies de seguimiento de terceros para perfilado comportamental. Las cookies esenciales no requieren consentimiento previo según el GDPR y las regulaciones ePrivacy.",
     "privacy.contact.title": "7. Contáctenos",
     "privacy.contact.desc": "Para preguntas sobre esta Política de Privacidad o nuestras prácticas de manejo de datos, contáctenos en privacy@echatbot.ai",
 
@@ -1448,7 +1448,7 @@ const translations = {
     // Hero Section
     "hero.title": "Crie seu agente de vendas com IA",
     "hero.subtitle":
-      "Automatize vendas, suporte e campanhas no WhatsApp — em uma só plataforma.",
+      "AI first: Automatize vendas, suporte e campanhas no WhatsApp — em uma única plataforma.",
     "hero.subline": "",
     "hero.whyTitle": "Por que eChatbot?",
     "hero.useCasesTitle": "Projetado para vendas, suporte e crescimento.",
@@ -1824,7 +1824,7 @@ const translations = {
     "privacy.rights.title": "5. Seus Direitos",
     "privacy.rights.desc": "Você tem o direito de acessar, corrigir ou excluir seus dados pessoais. Você também pode se opor a certo processamento de dados ou solicitar portabilidade de dados.",
     "privacy.cookies.title": "6. Cookies e Tecnologias de Rastreamento",
-    "privacy.cookies.desc": "Usamos cookies e tecnologias semelhantes para melhorar sua experiência, analisar o uso e personalizar o conteúdo. Você pode gerenciar as preferências de cookies nas configurações do seu navegador.",
+    "privacy.cookies.desc": "Usamos APENAS cookies essenciais para autenticação e gerenciamento de sessão do nosso serviço. NÃO utilizamos cookies de análise (Google Analytics), cookies publicitários, ou cookies de rastreamento de terceiros para perfilamento comportamental. Cookies essenciais não requerem consentimento prévio sob GDPR e regulamentações ePrivacy.",
     "privacy.contact.title": "7. Entre em Contato",
     "privacy.contact.desc": "Para perguntas sobre esta Política de Privacidade ou nossas práticas de tratamento de dados, entre em contato conosco em privacy@echatbot.ai",
 

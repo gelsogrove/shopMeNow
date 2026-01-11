@@ -140,36 +140,41 @@ export const platformConfigData: PlatformConfigData[] = [
       "Allow users to try live demo. When false: show WIP popup, disable demo button",
     isActive: true,
   },
+  {
+    type: "FLAG" as const,
+    key: "showWidgetChatbot",
+    value: "true",
+    description:
+      "Show chatbot widget on login page. When true: display the widget embed code",
+    isActive: true,
+  },
+  {
+    type: "FLAG" as const,
+    key: "widgetChatbotCode",
+    value: `<!-- eChatbot Widget -->
+<script>
+  window.eChatbotConfig = {
+    "workspaceId": "ECHATBOT_SUPPORT_WORKSPACE_ID",
+    "title": "eChatbot Support 💬",
+    "logoUrl": "",
+    "language": "en",
+    "primaryColor": "#22c55e"
+  };
+</script>
+<script src="https://echatbot.ai/widget.js" async></script>`,
+    description:
+      "Widget chatbot embed code for login page (HTML/JS snippet)",
+    isActive: true,
+  },
 
   // ============================================================================
   // 📊 LIMITS (Plan-based thresholds)
   // ============================================================================
   {
     type: "LIMIT" as const,
-    key: "FREE_MESSAGES",
-    value: "200",
-    description: "Free messages included in trial (after this, $0.10/message)",
-    isActive: true,
-  },
-  {
-    type: "LIMIT" as const,
-    key: "FREE_PRODUCTS",
-    value: "50",
-    description: "Maximum products for Free plan",
-    isActive: true,
-  },
-  {
-    type: "LIMIT" as const,
     key: "FREE_CLIENTS",
     value: "50",
     description: "Maximum clients for Free plan",
-    isActive: true,
-  },
-  {
-    type: "LIMIT" as const,
-    key: "BASIC_PRODUCTS",
-    value: "50",
-    description: "Maximum products for Basic plan",
     isActive: true,
   },
   {
@@ -181,23 +186,9 @@ export const platformConfigData: PlatformConfigData[] = [
   },
   {
     type: "LIMIT" as const,
-    key: "PREMIUM_PRODUCTS",
-    value: "100",
-    description: "Maximum products for Premium plan",
-    isActive: true,
-  },
-  {
-    type: "LIMIT" as const,
     key: "PREMIUM_CLIENTS",
     value: "100",
     description: "Maximum clients for Premium plan",
-    isActive: true,
-  },
-  {
-    type: "LIMIT" as const,
-    key: "ENTERPRISE_PRODUCTS",
-    value: "999999",
-    description: "Unlimited products for Enterprise plan",
     isActive: true,
   },
   {

@@ -52,7 +52,7 @@ export const createAgentRouter = (): Router => {
   const router = Router({ mergeParams: true }) // Enable mergeParams to inherit workspaceId
   const agentController = new AgentController()
 
-  logger.info("Setting up agent routes")
+  logger.debug("Setting up agent routes")
 
   // Apply auth middleware first
   router.use(authMiddleware) // ENABLED FOR PROPER AUTHENTICATION

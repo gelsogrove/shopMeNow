@@ -22,8 +22,8 @@
  *   return <WIPModal />
  * }
  *
- * // Check limits
- * const maxProducts = limits.BASIC_PRODUCTS
+ * // Check limits (clients only, no product limits)
+ * const maxClients = limits.BASIC_CLIENTS
  * ```
  *
  * @author Andrea Gelso - eChatbot Platform
@@ -233,6 +233,8 @@ export function useFeatureFlags() {
     workingInProgress: true,
     registerFirst: false,
     cantryDemo: false,
+    showWidgetChatbot: false,
+    widgetCode: null as string | null,
     isLoading: true,
     error: null as string | null,
   })
@@ -240,18 +242,28 @@ export function useFeatureFlags() {
   useEffect(() => {
     const fetchFlags = async () => {
       try {
-        const response = await api.get("/platform-config/flags/check")
+        // Fetch flags and widget code in parallel
+        const [flagsResponse, widgetResponse] = await Promise.all([
+          api.get("/platform-config/flags/check"),
+          api.get("/platform-config/widget-code")
+        ])
 
-        if (response.data.success) {
-          const data = response.data.data || {}
+        if (flagsResponse.data.success) {
+          const data = flagsResponse.data.data || {}
           const missingFlags = findMissingKeys(data, REQUIRED_FLAG_KEYS)
           if (missingFlags.length) {
             throw new Error(
               `Missing platform flag keys: ${missingFlags.join(", ")}`
             )
           }
+          
+          const widgetCode = widgetResponse.data?.success 
+            ? widgetResponse.data.data?.code 
+            : null
+          
           setFlags({
             ...data,
+            widgetCode,
             isLoading: false,
             error: null,
           })

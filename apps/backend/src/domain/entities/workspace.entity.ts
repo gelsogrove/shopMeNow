@@ -46,6 +46,12 @@ export interface WorkspaceProps {
   // 🆕 Logo
   logoUrl?: string | null
   logoKey?: string | null // 💾 Storage key for cleanup
+  // 🆕 Widget Settings
+  widgetLogoUrl?: string | null
+  widgetLogoKey?: string | null
+  widgetTitle?: string | null
+  widgetLanguage?: string | null
+  widgetPrimaryColor?: string | null
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -221,6 +227,26 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get logoUrl(): string | null | undefined {
     return this.props.logoUrl
+  }
+
+  get widgetLogoUrl(): string | null | undefined {
+    return this.props.widgetLogoUrl
+  }
+
+  get widgetLogoKey(): string | null | undefined {
+    return this.props.widgetLogoKey
+  }
+
+  get widgetTitle(): string | null | undefined {
+    return this.props.widgetTitle
+  }
+
+  get widgetLanguage(): string | null | undefined {
+    return this.props.widgetLanguage
+  }
+
+  get widgetPrimaryColor(): string | null | undefined {
+    return this.props.widgetPrimaryColor
   }
 
   // 🆕 Translation Settings getters

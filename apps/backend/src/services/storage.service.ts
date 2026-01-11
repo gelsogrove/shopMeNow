@@ -252,11 +252,15 @@ class StorageService {
       const category: StorageCategory = isPublic ? 'public' : 'private'
       const folderPath = path.join(this.localUploadDir, category, folder)
       
-      // Generate unique filename
+      // Generate unique filename (sanitize: remove spaces and special chars)
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 8)
       const ext = path.extname(file.originalname)
-      const filename = `${path.parse(file.originalname).name}_${timestamp}_${randomString}${ext}`
+      const baseName = path.parse(file.originalname).name
+        .replace(/\s+/g, '_')  // Replace spaces with underscores
+        .replace(/[^a-zA-Z0-9_-]/g, '')  // Remove special characters except underscore and dash
+        .substring(0, 50)  // Limit length to 50 chars
+      const filename = `${baseName}_${timestamp}_${randomString}${ext}`
 
       // Move file to destination
       const destPath = path.join(folderPath, filename)

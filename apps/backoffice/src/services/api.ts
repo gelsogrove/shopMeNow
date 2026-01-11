@@ -72,6 +72,51 @@ class BackofficeApi {
     }
   }
 
+  // Generic HTTP methods for direct use
+  async get(endpoint: string) {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'GET',
+      headers,
+    })
+
+    return response
+  }
+
+  async post(endpoint: string, body: any) {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    })
+
+    return response
+  }
+
+  async put(endpoint: string, body: any) {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(body),
+    })
+
+    return response
+  }
+
   // Platform Config - Public endpoints (no auth needed)
   async getPlatformConfig(): Promise<ApiResponse<{
     prices: Record<string, { current: number; original: number | null }>
@@ -106,6 +151,17 @@ class BackofficeApi {
   async invalidateCache(): Promise<ApiResponse<{ message: string }>> {
     return this.fetch('/platform-config/cache/invalidate', {
       method: 'POST',
+    })
+  }
+
+  async getWidgetCode(): Promise<ApiResponse<{ code: string | null }>> {
+    return this.fetch('/platform-config/widget-code')
+  }
+
+  async saveWidgetCode(code: string): Promise<ApiResponse<{ message: string }>> {
+    return this.fetch('/platform-config/widget-code', {
+      method: 'PUT',
+      body: JSON.stringify({ code }),
     })
   }
 
@@ -286,6 +342,7 @@ class BackofficeApi {
       }
       invoice: {
         id: string
+        invoiceNumber?: string | null
         periodMonth: number
         periodYear: number
         totalAmount: number
@@ -322,6 +379,50 @@ class BackofficeApi {
       }
       invoice: {
         id: string
+        invoiceNumber?: string | null
+        periodMonth: number
+        periodYear: number
+        totalAmount: number
+        subtotalAmount?: number
+        taxAmount?: number
+        creditNotesTotal?: number
+        status: string
+        paidAt: string | null
+        adminNotes: string | null
+        adminMarkedById: string | null
+        adminMarkedAt: string | null
+        creditNotes?: Array<{ id: string; amount: number; reason: string | null; createdAt: string }>
+      }
+    }>>> => {
+      const searchParams = new URLSearchParams()
+      if (params.periodMonth) searchParams.set('periodMonth', String(params.periodMonth))
+      if (params.periodYear) searchParams.set('periodYear', String(params.periodYear))
+      if (params.page) searchParams.set('page', String(params.page))
+      if (params.pageSize) searchParams.set('pageSize', String(params.pageSize))
+
+      const query = searchParams.toString()
+      return this.fetch(`/users/admin/invoices/history${query ? `?${query}` : ''}`)
+    },
+
+    /**
+     * Get unpaid invoices (previous months only)
+     */
+    getUnpaidInvoices: async (): Promise<ApiResponse<Array<{
+      owner: {
+        id: string
+        email: string
+        firstName: string | null
+        lastName: string | null
+        companyName: string | null
+        planType: string
+        subscriptionStatus: string
+        creditBalance: number
+        paymentFailureCount: number
+        lastPaymentFailedAt: string | null
+      }
+      invoice: {
+        id: string
+        invoiceNumber?: string | null
         periodMonth: number
         periodYear: number
         totalAmount: number
@@ -335,14 +436,56 @@ class BackofficeApi {
         adminMarkedAt: string | null
       }
     }>>> => {
-      const searchParams = new URLSearchParams()
-      if (params.periodMonth) searchParams.set('periodMonth', String(params.periodMonth))
-      if (params.periodYear) searchParams.set('periodYear', String(params.periodYear))
-      if (params.page) searchParams.set('page', String(params.page))
-      if (params.pageSize) searchParams.set('pageSize', String(params.pageSize))
+      return this.fetch('/users/admin/invoices/unpaid')
+    },
 
-      const query = searchParams.toString()
-      return this.fetch(`/users/admin/invoices/history${query ? `?${query}` : ''}`)
+    /**
+     * Get failed invoices (previous months only)
+     */
+    getFailedInvoices: async (): Promise<ApiResponse<Array<{
+      owner: {
+        id: string
+        email: string
+        firstName: string | null
+        lastName: string | null
+        companyName: string | null
+        planType: string
+        subscriptionStatus: string
+        creditBalance: number
+        paymentFailureCount: number
+        lastPaymentFailedAt: string | null
+      }
+      invoice: {
+        id: string
+        invoiceNumber?: string | null
+        periodMonth: number
+        periodYear: number
+        totalAmount: number
+        subtotalAmount?: number
+        taxAmount?: number
+        creditNotesTotal?: number
+        status: string
+        paidAt: string | null
+        adminNotes: string | null
+        adminMarkedById: string | null
+        adminMarkedAt: string | null
+      }
+    }>>> => {
+      return this.fetch('/users/admin/invoices/failed')
+    },
+
+    /**
+     * Get monthly invoice summary for analytics
+     */
+    getInvoiceSummary: async (months: number = 12): Promise<ApiResponse<Array<{
+      periodYear: number
+      periodMonth: number
+      totalAmount: number
+      invoiceCount: number
+      userCount: number
+    }>>> => {
+      const query = new URLSearchParams({ months: String(months) })
+      return this.fetch(`/users/admin/invoices/summary?${query.toString()}`)
     },
 
     /**
@@ -400,6 +543,32 @@ class BackofficeApi {
     },
 
     /**
+     * Get invoice details (admin)
+     */
+    getInvoiceDetails: async (
+      invoiceId: string
+    ): Promise<ApiResponse<{
+      id: string
+      periodMonth: number
+      periodYear: number
+      status: string
+      planType: string
+      subscriptionAmount: number
+      creditUsage: number
+      creditDebt: number
+      rechargesTotal: number
+      adjustmentsTotal: number
+      creditNotesTotal: number
+      subtotalAmount: number
+      taxRate: number
+      taxAmount: number
+      totalAmount: number
+      adminNotes: string | null
+    }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}`)
+    },
+
+    /**
      * Download invoice PDF (admin)
      */
     downloadInvoicePdf: async (invoiceId: string): Promise<Blob> => {
@@ -412,6 +581,25 @@ class BackofficeApi {
 
       if (!response.ok) {
         throw new Error('Failed to download invoice PDF')
+      }
+
+      return response.blob()
+    },
+
+    /**
+     * Download credit note PDF (admin)
+     */
+    downloadCreditNotePdf: async (invoiceId: string, noteId: string): Promise<Blob> => {
+      const headers: HeadersInit = {
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      }
+      const response = await fetch(
+        `${API_BASE}/users/admin/invoices/${invoiceId}/credit-notes/${noteId}/pdf`,
+        { headers }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to download credit note PDF')
       }
 
       return response.blob()
@@ -437,6 +625,54 @@ class BackofficeApi {
       invoiceId: string
     ): Promise<ApiResponse<Array<{ id: string; amount: number; reason: string | null; createdAt: string }>>> => {
       return this.fetch(`/users/admin/invoices/${invoiceId}/credit-notes`)
+    },
+
+    /**
+     * Get adjustments for invoice (admin)
+     */
+    getInvoiceAdjustments: async (
+      invoiceId: string
+    ): Promise<ApiResponse<Array<{ id: string; amount: number; reason: string | null; createdAt: string }>>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/adjustments`)
+    },
+
+    /**
+     * Create adjustment for invoice (admin)
+     */
+    createInvoiceAdjustment: async (
+      invoiceId: string,
+      payload: { amount: number; reason?: string }
+    ): Promise<ApiResponse<{ id: string; amount: number; reason: string | null; createdAt: string }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/adjustments`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    /**
+     * Update adjustment for invoice (admin)
+     */
+    updateInvoiceAdjustment: async (
+      invoiceId: string,
+      adjustmentId: string,
+      payload: { amount?: number; reason?: string }
+    ): Promise<ApiResponse<{ id: string; amount: number; reason: string | null; createdAt: string }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/adjustments/${adjustmentId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    /**
+     * Delete adjustment for invoice (admin)
+     */
+    deleteInvoiceAdjustment: async (
+      invoiceId: string,
+      adjustmentId: string
+    ): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/adjustments/${adjustmentId}`, {
+        method: 'DELETE',
+      })
     },
 
     /**

@@ -79,30 +79,9 @@ export const pricingConfigData = [
   // ============================================================================
   {
     type: "THRESHOLD" as const,
-    key: "FREE_MESSAGES",
-    value: 200,
-    description: "Free messages included in trial (after this, $0.10/message)",
-    isActive: true,
-  },
-  {
-    type: "THRESHOLD" as const,
-    key: "FREE_PRODUCTS",
-    value: 50,
-    description: "Maximum products for Free plan",
-    isActive: true,
-  },
-  {
-    type: "THRESHOLD" as const,
     key: "FREE_CLIENTS",
     value: 50,
     description: "Maximum clients for Free plan",
-    isActive: true,
-  },
-  {
-    type: "THRESHOLD" as const,
-    key: "BASIC_PRODUCTS",
-    value: 50,
-    description: "Maximum products for Basic plan",
     isActive: true,
   },
   {
@@ -114,23 +93,9 @@ export const pricingConfigData = [
   },
   {
     type: "THRESHOLD" as const,
-    key: "PREMIUM_PRODUCTS",
-    value: 100,
-    description: "Maximum products for Premium plan",
-    isActive: true,
-  },
-  {
-    type: "THRESHOLD" as const,
     key: "PREMIUM_CLIENTS",
     value: 100,
     description: "Maximum clients for Premium plan",
-    isActive: true,
-  },
-  {
-    type: "THRESHOLD" as const,
-    key: "ENTERPRISE_PRODUCTS",
-    value: 999999,
-    description: "Unlimited products for Enterprise plan",
     isActive: true,
   },
   {

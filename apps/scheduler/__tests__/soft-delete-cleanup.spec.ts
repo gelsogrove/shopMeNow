@@ -36,6 +36,9 @@ jest.mock('../src/config/database', () => ({
       findFirst: jest.fn(),
       deleteMany: jest.fn(),
     },
+    monthlyInvoice: {
+      findMany: jest.fn(),
+    },
     // User-related tables
     twoFactorResetToken: { deleteMany: jest.fn() },
     authenticationAttempt: { deleteMany: jest.fn() },
@@ -89,6 +92,10 @@ jest.mock('../src/config/database', () => ({
     $transaction: jest.fn((callback, options) => {
       // Create transaction mock with all tables
       const txMock = {
+        invoiceCreditNote: { deleteMany: createDeleteManyMock() },
+        invoiceAdjustment: { deleteMany: createDeleteManyMock() },
+        payPalTransaction: { deleteMany: createDeleteManyMock() },
+        monthlyInvoice: { deleteMany: createDeleteManyMock() },
         user: { deleteMany: createDeleteManyMock() },
         workspace: { 
           deleteMany: createDeleteManyMock(),
@@ -162,6 +169,7 @@ describe('Soft Delete Cleanup Job', () => {
     jest.clearAllMocks()
     deletionOrder = []
     delete process.env.SOFT_DELETE_RETENTION_DAYS
+    prisma.monthlyInvoice.findMany.mockResolvedValue([])
   })
 
   describe('Configuration', () => {

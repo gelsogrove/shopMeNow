@@ -27,7 +27,7 @@ import {
 export const invitationRouter = (): Router => {
   const router = Router({ mergeParams: true }) // mergeParams to access :workspaceId
 
-  logger.info("Setting up invitation routes")
+  logger.debug("Setting up invitation routes")
 
   // === PROTECTED ROUTES (workspace-scoped) ===
   // These require authentication and workspace validation
@@ -79,7 +79,7 @@ export const invitationRouter = (): Router => {
 export const publicInvitationRouter = (): Router => {
   const router = Router()
 
-  logger.info("Setting up public invitation routes")
+  logger.debug("Setting up public invitation routes")
 
   // Validate token (public)
   router.get(

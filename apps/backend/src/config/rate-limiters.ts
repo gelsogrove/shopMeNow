@@ -317,3 +317,57 @@ export const generalApiLimiter = rateLimit({
     })
   },
 })
+
+/**
+ * 🆕 Widget Chat - Protezione spam chat pubbliche
+ *
+ * Prevents spam/abuse on public widget chat endpoint.
+ * Allows 50 messages per hour per IP address.
+ */
+export const widgetChatLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 50, // 50 messages per IP per hour
+  message: "Too many chat messages from this IP, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for widget chat", {
+      ip: req.ip,
+      path: req.path,
+      workspaceId: req.body?.workspaceId,
+      visitorId: req.body?.visitorId,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Chat rate limit exceeded. Please try again in an hour.",
+      retryAfter: 3600,
+    })
+  },
+})
+
+/**
+ * 🆕 Widget Visitor Conversion - Protezione spam registrazioni
+ *
+ * Prevents spam conversions from visitor to customer.
+ * Allows 10 conversions per hour per IP.
+ */
+export const widgetConversionLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 conversions per IP per hour
+  message: "Too many conversion attempts, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for widget visitor conversion", {
+      ip: req.ip,
+      path: req.path,
+      workspaceId: req.body?.workspaceId,
+      visitorId: req.body?.visitorId,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Conversion rate limit exceeded. Please try again in an hour.",
+      retryAfter: 3600,
+    })
+  },
+})

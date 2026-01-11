@@ -57,6 +57,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       customAiRules: data.customAiRules || null,
       // 🆕 Logo
       logoUrl: data.logoUrl || null,
+      // 🆕 Widget Settings
+      widgetLogoUrl: data.widgetLogoUrl ?? null,
+      widgetLogoKey: data.widgetLogoKey ?? null,
+      widgetTitle: data.widgetTitle ?? null,
+      widgetLanguage: data.widgetLanguage ?? "it",
+      widgetPrimaryColor: data.widgetPrimaryColor ?? "#22c55e",
       // 🆕 Translation Settings
       translateProductNames: data.translateProductNames ?? false,
       translateCategoryNames: data.translateCategoryNames ?? false,
@@ -105,6 +111,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       customAiRules: workspace.customAiRules,
       // 🆕 Logo
       logoUrl: workspace.logoUrl,
+      // 🆕 Widget Settings
+      widgetLogoUrl: workspace.widgetLogoUrl,
+      widgetLogoKey: workspace.widgetLogoKey,
+      widgetTitle: workspace.widgetTitle,
+      widgetLanguage: workspace.widgetLanguage ?? "it",
+      widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
       // 🆕 Translation Settings
       translateProductNames: workspace.translateProductNames,
       translateCategoryNames: workspace.translateCategoryNames,

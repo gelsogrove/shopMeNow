@@ -196,7 +196,7 @@ export function ResetPasswordPage() {
                 {t("footer.terms")}
               </a>
               <span>•</span>
-              <a href="/refund-policy" className="hover:underline">
+              <a href="/refund" className="hover:underline">
                 {t("refund.title")}
               </a>
             </div>

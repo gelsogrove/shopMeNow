@@ -379,3 +379,34 @@ ownerBillingRoutes.get(
   authMiddleware,
   controller.downloadInvoicePdf
 )
+
+/**
+ * @swagger
+ * /api/subscription-billing/invoices/{invoiceId}/credit-notes/{noteId}/pdf:
+ *   get:
+ *     summary: Download credit note PDF
+ *     tags: [Owner Billing]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: noteId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Credit note PDF
+ *       404:
+ *         description: Credit note not found
+ */
+ownerBillingRoutes.get(
+  "/invoices/:invoiceId/credit-notes/:noteId/pdf",
+  authMiddleware,
+  controller.downloadCreditNotePdf
+)

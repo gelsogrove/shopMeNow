@@ -51,10 +51,6 @@ if (process.env.NODE_ENV === "production") {
 const { prisma } = require("@echatbot/database")
 const { createServer } = require("http")
 const app = require("./app").default
-const { startScheduler, stopScheduler } = require("./scheduler")
-// WhatsApp Queue Processor REMOVED - now handled by Scheduler microservice only
-// This prevents duplicate processing of the same messages
-const { startWhatsAppQueueCleanup } = require("./jobs/whatsapp-queue-processor.job")
 const { websocketService } = require("./services/websocket.service")
 const logger = require("./utils/logger").default
 
@@ -77,22 +73,11 @@ async function startServer() {
     httpServer.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`)
       logger.info(`WebSocket server ready on ws://localhost:${PORT}`)
-
-      // Start background scheduler
-      startScheduler()
-
-      // WhatsApp Queue Processor REMOVED - handled by Scheduler microservice
-      // See apps/scheduler/src/jobs/whatsapp-channel-queue.job.ts
-
-      // Start WhatsApp queue cleanup (daily at 2 AM)
-      startWhatsAppQueueCleanup()
     })
 
     // Graceful shutdown
     process.on("SIGTERM", async () => {
       logger.info("SIGTERM received, shutting down gracefully")
-      stopScheduler()
-      // stopWhatsAppQueueProcessor removed - handled by Scheduler
       await websocketService.shutdown()
       await prisma.$disconnect()
       process.exit(0)

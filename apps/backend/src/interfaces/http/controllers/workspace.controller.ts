@@ -149,6 +149,12 @@ export class WorkspaceController {
           address: workspace.address,
           customAiRules: workspace.customAiRules,
           logoUrl: workspace.logoUrl,
+          // 🆕 Widget Settings
+          widgetLogoUrl: workspace.widgetLogoUrl ?? null,
+          widgetLogoKey: workspace.widgetLogoKey ?? null,
+          widgetTitle: workspace.widgetTitle ?? null,
+          widgetLanguage: workspace.widgetLanguage ?? "it",
+          widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
           // 🆕 Translation Settings
           translateProductNames: workspace.translateProductNames,
           translateCategoryNames: workspace.translateCategoryNames,
@@ -327,6 +333,12 @@ export class WorkspaceController {
         address: workspace.address,
         customAiRules: workspace.customAiRules,
         logoUrl: workspace.logoUrl,
+        // 🆕 Widget Settings
+        widgetLogoUrl: workspace.widgetLogoUrl ?? null,
+        widgetLogoKey: workspace.widgetLogoKey ?? null,
+        widgetTitle: workspace.widgetTitle ?? null,
+        widgetLanguage: workspace.widgetLanguage ?? "it",
+        widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
         // 🆕 Translation Settings
         translateProductNames: workspace.translateProductNames,
         translateCategoryNames: workspace.translateCategoryNames,

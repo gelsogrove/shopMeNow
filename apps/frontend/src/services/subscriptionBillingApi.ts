@@ -12,6 +12,8 @@
  */
 
 import { api } from "./api"
+import { roundMoney } from "@/utils/money"
+import { storage } from "@/lib/storage"
 
 // ============================================================================
 // TYPES
@@ -278,7 +280,9 @@ export const rechargeCredit = async (
     throw new Error("Amount must be between $12 and $1176")
   }
 
-  const response = await api.post(`/workspaces/${workspaceId}/subscription-billing/recharge`, {
+  // CRITICAL: Billing is per OWNER (User), not per Workspace
+  // Route uses JWT token only, no workspaceId in URL
+  const response = await api.post(`/subscription-billing/recharge`, {
     amount,
   })
   return response.data.data
@@ -341,15 +345,21 @@ export const getAvailablePlans = async (): Promise<PlanInfo[]> => {
 // ============================================================================
 
 /**
- * Format currency amount
+ * Format currency amount using workspace currency
  */
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (
+  amount: number,
+  currency?: string
+): string => {
+  const resolvedCurrency = currency || "USD"
+  const roundedAmount = roundMoney(amount)
+
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: resolvedCurrency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount)
+  }).format(roundedAmount)
 }
 
 /**
@@ -745,6 +755,7 @@ export interface ConsumptionBreakdown {
 export interface Invoice {
   id: string
   userId: string
+  invoiceNumber?: string | null
   periodStart: string
   periodEnd: string
   periodMonth: number
@@ -823,5 +834,19 @@ export const downloadInvoicePdf = async (invoiceId: string): Promise<Blob> => {
   const response = await api.get(`/subscription-billing/invoices/${invoiceId}/pdf`, {
     responseType: "blob",
   })
+  return response.data
+}
+
+/**
+ * Download credit note PDF for authenticated owner
+ */
+export const downloadCreditNotePdf = async (
+  invoiceId: string,
+  noteId: string
+): Promise<Blob> => {
+  const response = await api.get(
+    `/subscription-billing/invoices/${invoiceId}/credit-notes/${noteId}/pdf`,
+    { responseType: "blob" }
+  )
   return response.data
 }

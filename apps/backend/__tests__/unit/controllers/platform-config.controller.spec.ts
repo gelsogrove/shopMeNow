@@ -140,6 +140,7 @@ describe("PlatformConfigController", () => {
           workingInProgress: true,
           cantryDemo: false,
           registerFirst: false,
+          showWidgetChatbot: false,
         },
       })
     })

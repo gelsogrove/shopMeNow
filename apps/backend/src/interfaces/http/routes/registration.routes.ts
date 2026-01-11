@@ -14,7 +14,7 @@ export const registrationRouter = (controller: RegistrationController): Router =
   // Apply rate limiting to all registration routes
   router.use(registrationLimiter);
   
-  logger.info("Setting up registration routes (with rate limiting)");
+  logger.debug("Setting up registration routes (with rate limiting)");
   
   // Registration routes
   router.get("/token/:token", asyncHandler(controller.validateToken.bind(controller)));

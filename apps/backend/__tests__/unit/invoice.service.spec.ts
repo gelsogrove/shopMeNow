@@ -23,6 +23,8 @@ jest.mock('../../src/utils/logger', () => ({
 
 // Mock Prisma
 const mockPrisma = {
+  $transaction: jest.fn(),
+  $queryRaw: jest.fn(),
   monthlyInvoice: {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
@@ -123,6 +125,8 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     mockPrisma.user.findUnique.mockResolvedValue(mockUser)
     mockPrisma.invoiceCreditNote.aggregate.mockResolvedValue({ _sum: { amount: 0 } })
     mockPrisma.invoiceCreditNote.findMany.mockResolvedValue([])
+    mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma))
+    mockPrisma.$queryRaw.mockResolvedValue([{ value: BigInt(1) }])
   })
 
   describe('getOrCreateCurrentInvoice', () => {
@@ -347,8 +351,16 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
         where: { userId: mockUserId },
         orderBy: [{ periodYear: 'desc' }, { periodMonth: 'desc' }],
         skip: 0,
-        take: 10,
-      })
+        take: 10,        include: {
+          creditNotes: {
+            select: {
+              id: true,
+              amount: true,
+              reason: true,
+              createdAt: true,
+            },
+          },
+        },      })
     })
 
     it('should apply correct pagination skip', async () => {
@@ -463,13 +475,14 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
   })
 
   describe('recalculateInvoiceTotals', () => {
-    it('should include credit notes and tax in totals', async () => {
+    it('should keep credit notes separate from totals', async () => {
       const invoice = {
         ...mockInvoice,
         subscriptionAmount: 0,
         creditUsage: 0,
         creditDebt: 0,
         totalAmount: 0,
+        status: 'PAID',
       }
 
       mockPrisma.monthlyInvoice.findUnique.mockResolvedValue(invoice)
@@ -501,18 +514,21 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
             creditUsage: 10,
             creditDebt: 15,
             creditNotesTotal: 5,
-            subtotalAmount: 40,
+            subtotalAmount: 45,
             taxRate: 0.22,
           }),
         })
       )
-      expect(updateArgs.data.taxAmount).toBeCloseTo(8.8, 5)
-      expect(updateArgs.data.totalAmount).toBeCloseTo(48.8, 5)
+      expect(updateArgs.data.taxAmount).toBeCloseTo(9.9, 5)
+      expect(updateArgs.data.totalAmount).toBeCloseTo(54.9, 5)
     })
   })
 
   describe('markInvoicePaid', () => {
     it('should update status to PAID with paidAt timestamp', async () => {
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue({
+        invoiceNumber: null,
+      })
       mockPrisma.monthlyInvoice.update.mockResolvedValue({
         ...mockInvoice,
         status: 'PAID',
@@ -532,6 +548,9 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     })
 
     it('should work without PayPal transaction ID', async () => {
+      mockPrisma.monthlyInvoice.findUnique.mockResolvedValue({
+        invoiceNumber: null,
+      })
       mockPrisma.monthlyInvoice.update.mockResolvedValue(mockInvoice)
 
       await service.markInvoicePaid('invoice-123')

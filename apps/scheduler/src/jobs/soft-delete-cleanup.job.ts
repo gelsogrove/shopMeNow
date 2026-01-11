@@ -75,7 +75,7 @@ export async function softDeleteCleanupJob(): Promise<void> {
   expiryDate.setDate(expiryDate.getDate() - retentionDays)
 
   // 3. Find expired Users and Workspaces (main entities with deletedAt)
-  const [expiredUsers, expiredWorkspaces] = await Promise.all([
+  const [expiredUsers, expiredWorkspaces, expiredCancelledInvoices] = await Promise.all([
     prisma.user.findMany({
       where: { deletedAt: { not: null, lt: expiryDate } },
       select: { id: true },
@@ -84,22 +84,59 @@ export async function softDeleteCleanupJob(): Promise<void> {
       where: { deletedAt: { not: null, lt: expiryDate } },
       select: { id: true },
     }),
+    prisma.monthlyInvoice.findMany({
+      where: {
+        status: 'CANCELLED',
+        updatedAt: { lt: expiryDate },
+      },
+      select: { id: true },
+    }),
   ])
 
   const userIds = expiredUsers.map((u: { id: string }) => u.id)
   const workspaceIds = expiredWorkspaces.map((w: { id: string }) => w.id)
+  const cancelledInvoiceIds = expiredCancelledInvoices.map((inv: { id: string }) => inv.id)
 
-  if (userIds.length === 0 && workspaceIds.length === 0) {
+  if (userIds.length === 0 && workspaceIds.length === 0 && cancelledInvoiceIds.length === 0) {
     logger.info(`No expired soft-deleted records to hard-delete`)
     return
   }
 
-  logger.info(`Starting hard-delete: ${userIds.length} users, ${workspaceIds.length} workspaces`)
+  logger.info(
+    `Starting hard-delete: ${userIds.length} users, ${workspaceIds.length} workspaces, ${cancelledInvoiceIds.length} cancelled invoices`
+  )
 
   // 4. Hard-delete in transaction (order matters for FK constraints)
   const deletedCounts: Record<string, number> = {}
 
   await prisma.$transaction(async (tx) => {
+    // ===== INVOICE CLEANUP (CANCELLED ONLY) =====
+    if (cancelledInvoiceIds.length > 0) {
+      deletedCounts.invoiceCreditNote = (await tx.invoiceCreditNote.deleteMany({
+        where: { invoiceId: { in: cancelledInvoiceIds } },
+      })).count
+
+      try {
+        deletedCounts.invoiceAdjustment = (await tx.invoiceAdjustment.deleteMany({
+          where: { invoiceId: { in: cancelledInvoiceIds } },
+        })).count
+      } catch (error: any) {
+        if (error?.code === 'P2021') {
+          deletedCounts.invoiceAdjustment = 0
+        } else {
+          throw error
+        }
+      }
+
+      deletedCounts.paypalTransaction = (await tx.payPalTransaction.deleteMany({
+        where: { invoiceId: { in: cancelledInvoiceIds } },
+      })).count
+
+      deletedCounts.monthlyInvoice = (await tx.monthlyInvoice.deleteMany({
+        where: { id: { in: cancelledInvoiceIds } },
+      })).count
+    }
+
     // ===== USER-RELATED TABLES =====
     // Delete user auth/token tables first (FK to User)
     if (userIds.length > 0) {

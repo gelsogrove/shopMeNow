@@ -449,7 +449,57 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 
 ---
 
-## 🔗 Key Files Reference
+## � Recharge Credit - Preset Amounts
+
+### Available Tiers (Updated January 2026)
+
+When users click "Recharge Credit" button, they can choose from:
+
+| Amount | Currency | Use Case |
+|--------|----------|----------|
+| **€5** | EUR | Small top-up for testing |
+| **€10** | EUR | Budget-friendly quick recharge |
+| **€30** | EUR | Standard recharge |
+| **€50** | EUR | Good value option |
+| **€100** | EUR | Large recharge for heavy users |
+
+### Implementation Details
+
+- **File**: `frontend/src/components/billing/BillingSection.tsx`
+- **Constant**: `RECHARGE_OPTIONS` (lines 106-110)
+- **UI**: 4-column button grid in modal dialog
+- **Min amount**: €5 (enforced on backend at €10 minimum)
+- **Max amount**: €1000 (enforced on backend)
+- **Currency**: Dynamic per workspace (defaults to EUR)
+
+### How to Modify Amounts
+
+To change recharge amounts globally:
+
+1. Edit `frontend/src/components/billing/BillingSection.tsx`:
+   ```typescript
+   const RECHARGE_OPTIONS: RechargeAmountOption[] = [
+     { value: 5, label: "$5" },
+     { value: 10, label: "$10" },
+     // ... modify values here
+   ]
+   ```
+
+2. Update tests in `frontend/__tests__/components/BillingSection.spec.tsx`
+
+3. Verify frontend hot-reload applies changes
+
+### Backend Validation
+
+Backend enforces:
+- **Minimum**: €10 (prevent abuse)
+- **Maximum**: €1000 (prevent data errors)
+- **Only owners** can recharge (role check)
+- **Sufficient balance** before deduction
+
+---
+
+## �🔗 Key Files Reference
 
 | Component | File Path |
 |-----------|-----------|
@@ -460,6 +510,38 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 | **Billing Controller** | `backend/src/interfaces/http/controllers/subscription-billing.controller.ts` |
 | **WhatsApp Queue Service** | `backend/src/services/whatsapp-queue.service.ts` |
 | **Message Repository** | `backend/src/repositories/message.repository.ts` |
+
+---
+
+## 🧾 Admin Workflow – Manual Disable & Collections Flow
+
+1. **Manual Disable Only** – The only way to stop a customer is via the **Enabled** toggle on the Clients page (`PUT /api/users/admin/:userId/status`). Toggling to `DISABLED` cascades to all workspaces (sets `isActive=false`, `channelStatus=false`), so chatbots stop responding and logins are blocked. Re‑enabling restores all workspaces. `PAYMENT_FAILED` never triggers a block by itself.
+2. **Collections Tabs**
+   - **Current Month**: tracking only (no payments, no credit notes, no downloads). Use it to monitor the live totals for the current month.
+   - **Previous Month**: this is the month to charge on the 1st. It stays in the list until a payment succeeds. If payment fails, it remains here.
+   - **History**: paid invoices only. Credit notes live **only here**, and each credit note has its own document.
+3. **Process Payment** – The Collections page calls `/api/users/admin/invoices/:invoiceId/paypal/mock-payment`. The button is disabled once the invoice status becomes `PAID`, so we never run the same payment twice. A success updates `paidAt` and moves the invoice into **History**.
+4. **Adjustments vs Credit Notes**
+   - **Adjustments**: only before payment (Previous Month), used to correct totals prior to charging.
+   - **Credit Notes**: only after payment (History), used for post‑charge corrections and refunds.
+5. **Notes** – Admin notes are stored on the invoice and follow it across tabs. Notes are tied to the invoice ID.
+
+### Invoice Numbering (Global Sequence)
+- **Format**: `YYYYMMDD-0001` (example: `20251201-0001`)
+- **When assigned**: at payment time (`paidAt`) so the number reflects the **economic transaction date**.
+- **Uniqueness**: global sequence shared across all owners (not per customer).
+- **PDF naming**:
+  - Invoice: `YYYYMMDD-0001.pdf`
+  - Credit note: `CN-YYYYMMDD-0001.pdf`
+
+### Invoice Totals (formula)
+`total = subscription + usage + credit debt + adjustments + recharges + tax`
+
+> Credit notes are **never** part of the billed total. They are issued as separate documents in **History** only.
+> Recharges are included in the billed total; if this changes, update the formula and UI labels accordingly.
+
+### Rounding (shared)
+All billing totals (subtotals, taxes, totals) are rounded to the nearest **$0.10** for consistency across backoffice, app, and PDFs.
 
 ---
 

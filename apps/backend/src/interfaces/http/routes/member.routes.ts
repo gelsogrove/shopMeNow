@@ -22,7 +22,7 @@ import {
 export const memberRouter = (): Router => {
   const router = Router({ mergeParams: true }) // mergeParams to access :workspaceId
 
-  logger.info("Setting up member routes")
+  logger.debug("Setting up member routes")
 
   // Get current user's role (must be before /:userId to avoid conflict)
   router.get(

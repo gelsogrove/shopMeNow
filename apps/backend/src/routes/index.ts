@@ -32,9 +32,11 @@ import { loginBlockingMiddleware } from "../interfaces/http/middlewares/soft-del
 // 3. SERVICE IMPORTS
 // ============================================================================
 import { AuthService } from "../application/services/auth.service"
+import { CustomerService } from "../application/services/customer.service"
 import { OtpService } from "../application/services/otp.service"
 import { SecureTokenService } from "../application/services/secure-token.service"
 import { UserService } from "../application/services/user.service"
+import { LLMRouterService } from "../services/llm-router.service"
 
 // ============================================================================
 // 4. CONTROLLER IMPORTS
@@ -125,6 +127,10 @@ import { ownerBillingRoutes } from "../interfaces/http/routes/owner-billing.rout
 import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
 import gdprRoutes from "../interfaces/http/routes/gdpr.routes"
+import { legalDocumentRoutes } from "../interfaces/http/routes/legal-documents.routes"
+import { createWidgetRouter } from "../interfaces/http/routes/widget.routes"
+import { WidgetController } from "../interfaces/http/controllers/widget.controller"
+import { widgetEmbedRoutes } from "../interfaces/http/routes/widget-embed.routes"
 import platformConfigRoutes from "../interfaces/http/routes/platform-config.routes"
 import pricingRoutes from "../interfaces/http/routes/pricing.routes"
 import createSettingsRouter from "../interfaces/http/routes/settings.routes"
@@ -382,9 +388,6 @@ const loggingMiddleware = (req: Request, res: Response, next: NextFunction) => {
   next()
 }
 
-// Log router setup
-logger.info("Setting up API routes")
-
 // Create a router instance
 const router = Router()
 
@@ -408,6 +411,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/chat", // WhatsApp compatibility endpoint
   "/cart-tokens", // Support interface
   "/token/", // TOKEN-BASED routes (NO sessionId required)
+  "/widget/", // 🔌 PUBLIC widget routes (NO auth required)
   "/analytics", // Analytics routes (JWT-based authentication)
   "/pricing", // PUBLIC pricing configuration endpoint (no auth required)
   "/subscription/plans", // PUBLIC subscription plans endpoint (Feature 185)
@@ -619,6 +623,18 @@ router.use("/workspaces", workspaceCustomersRouter(customersController))
 router.use("/workspaces", authMiddleware, workspaceRoutes)
 router.use("/workspaces", authMiddleware, workspaceRoutesLegacy)
 
+// 🆕 WIDGET EMBED CODE ROUTES (Protected - workspace admin only)
+// Returns HTML/JS snippet for website integration
+router.use(
+  "/workspaces/:workspaceId/widget",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  widgetEmbedRoutes
+)
+logger.info(
+  "✅ Registered PROTECTED widget embed routes: /api/workspaces/:workspaceId/widget/embed-code"
+)
+
 // 🔒 SECURITY (TASK06): Private file serving with authentication
 router.use("/files", filesRoutes)
 logger.info("✅ Registered PROTECTED file routes: /api/v1/files/private/:category/:folder/:filename")
@@ -718,6 +734,30 @@ router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)
 router.use("/gdpr", gdprRoutes)
 logger.info("Registered GDPR routes (/api/workspaces/:workspaceId/gdpr, /api/gdpr)")
 
+// Mount Legal Documents routes - GLOBAL (eCHATBOT platform, NOT workspace-specific)
+// Security: GET=PUBLIC, PUT=PLATFORM ADMIN ONLY
+router.use("/legal-documents", legalDocumentRoutes)
+logger.info("🌍 Registered GLOBAL legal documents routes: /api/legal-documents (PUBLIC GET, PLATFORM ADMIN PUT)")
+
+// 🆕 Mount Widget routes - PUBLIC (no authentication required)
+// Security: Rate limited (50 msg/hour per IP) + CORS open (*)
+// Apply CORS middleware for widget routes ONLY
+router.use("/widget", (req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*")
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200)
+  }
+  next()
+})
+// Initialize services and controller for widget routes
+const widgetCustomerService = new CustomerService()
+const widgetLlmRouterService = new LLMRouterService(prisma)
+const widgetController = new WidgetController(widgetCustomerService, widgetLlmRouterService)
+router.use("/widget", createWidgetRouter(widgetController))
+logger.info("🔌 Registered PUBLIC widget routes: /api/widget (PUBLIC, rate limited, CORS *)")
+
 // Mount subscription billing routes (Feature 185) - WORKSPACE-SCOPED (DEPRECATED)
 // Note: Public /subscription/plans route is registered earlier in the file
 router.use("/workspaces/:workspaceId/subscription-billing", subscriptionBillingRoutes)
@@ -815,7 +855,5 @@ router.get(
     })
   }
 )
-
-logger.info("API routes setup complete")
 
 export default router

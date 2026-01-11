@@ -1769,4 +1769,52 @@ export class SubscriptionBillingController {
       })
     }
   }
+
+  /**
+   * GET /subscription-billing/invoices/:invoiceId/credit-notes/:noteId/pdf
+   * Download credit note PDF for authenticated owner
+   */
+  downloadCreditNotePdf = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.id
+      const { invoiceId, noteId } = req.params
+
+      if (!userId) {
+        res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      const note = await this.prisma.invoiceCreditNote.findFirst({
+        where: {
+          id: noteId,
+          invoiceId,
+          invoice: {
+            userId,
+          },
+        },
+        select: { id: true },
+      })
+
+      if (!note) {
+        res.status(404).json({ error: "Credit note not found" })
+        return
+      }
+
+      const { invoiceService } = await import("../../../application/services/invoice.service")
+      const pdfBuffer = await invoiceService.generateCreditNotePdf(noteId)
+
+      res.setHeader("Content-Type", "application/pdf")
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=credit-note-${noteId}.pdf`
+      )
+      res.status(200).send(pdfBuffer)
+    } catch (error) {
+      logger.error("[BILLING] Error downloading credit note PDF:", error)
+      res.status(500).json({
+        error: "Errore download nota di credito",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
 }

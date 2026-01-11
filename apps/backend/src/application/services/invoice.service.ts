@@ -17,6 +17,7 @@ import fs from 'fs'
 import path from 'path'
 import PDFDocument from 'pdfkit'
 import logger from '../../utils/logger'
+import { roundMoney } from '../../utils/money'
 
 interface ConsumptionBreakdown {
   messages: { count: number; amount: number }
@@ -33,9 +34,17 @@ interface CreditNoteData {
   createdAt: Date
 }
 
+interface AdjustmentData {
+  id: string
+  amount: number
+  reason: string | null
+  createdAt: Date
+}
+
 interface InvoiceData {
   id: string
   userId: string
+  invoiceNumber: string | null
   periodStart: Date
   periodEnd: Date
   periodMonth: number
@@ -44,6 +53,7 @@ interface InvoiceData {
   creditUsage: number
   creditDebt: number
   creditNotesTotal: number
+  adjustmentsTotal: number
   subtotalAmount: number
   taxRate: number
   taxAmount: number
@@ -53,12 +63,51 @@ interface InvoiceData {
   planType: PlanType
   itemsBreakdown: ConsumptionBreakdown
   creditNotes: CreditNoteData[]
+  adjustments: AdjustmentData[]
   createdAt: Date
   updatedAt: Date
 }
 
 export class InvoiceService {
   private readonly TAX_RATE = 0.22
+
+  private formatInvoiceNumber(issuedAt: Date, sequence: number): string {
+    const datePart = issuedAt.toISOString().slice(0, 10).replace(/-/g, '')
+    return `${datePart}-${String(sequence).padStart(4, '0')}`
+  }
+
+  private async nextInvoiceSequence(tx: typeof prisma): Promise<number> {
+    const result = await tx.$queryRaw<{ value: bigint }[]>`SELECT nextval('invoice_number_seq') AS value`
+    const value = result?.[0]?.value ?? 0
+    return Number(value)
+  }
+
+  async ensureInvoiceNumber(invoiceId: string, issuedAt: Date): Promise<string> {
+    return prisma.$transaction(async (tx) => {
+      const invoice = await tx.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { invoiceNumber: true },
+      })
+
+      if (!invoice) {
+        throw new Error('Invoice not found')
+      }
+
+      if (invoice.invoiceNumber) {
+        return invoice.invoiceNumber
+      }
+
+      const sequence = await this.nextInvoiceSequence(tx as typeof prisma)
+      const invoiceNumber = this.formatInvoiceNumber(issuedAt, sequence)
+
+      const updated = await tx.monthlyInvoice.update({
+        where: { id: invoiceId },
+        data: { invoiceNumber },
+      })
+
+      return updated.invoiceNumber as string
+    })
+  }
 
   private resolveLogoPath(): string | null {
     const candidates = [
@@ -201,14 +250,17 @@ export class InvoiceService {
           } as any, // Cast to any for Prisma JSON compatibility
         },
       })
-      
+
       logger.info(`[Invoice] Created draft invoice for user ${userId} - ${periodMonth}/${periodYear}`)
     }
     
     const updatedInvoice = await this.recalculateInvoiceTotals(invoice.id)
-    const creditNotes = await this.getCreditNotes(invoice.id)
+    const [creditNotes, adjustments] = await Promise.all([
+      this.getCreditNotes(invoice.id),
+      this.getAdjustments(invoice.id),
+    ])
 
-    return this.mapToInvoiceData(updatedInvoice, creditNotes)
+    return this.mapToInvoiceData(updatedInvoice, creditNotes, adjustments)
   }
   
   /**
@@ -292,12 +344,32 @@ export class InvoiceService {
         ],
         skip,
         take: limit,
+        include: {
+          creditNotes: {
+            select: {
+              id: true,
+              amount: true,
+              reason: true,
+              createdAt: true,
+            },
+          },
+        },
       }),
       prisma.monthlyInvoice.count({ where: { userId } }),
     ])
-    
+
     return {
-      invoices: invoices.map((invoice) => this.mapToInvoiceData(invoice)),
+      invoices: invoices.map((invoice) =>
+        this.mapToInvoiceData(
+          invoice,
+          (invoice.creditNotes || []).map((note) => ({
+            id: note.id,
+            amount: Number(note.amount),
+            reason: note.reason ?? null,
+            createdAt: note.createdAt,
+          }))
+        )
+      ),
       total,
     }
   }
@@ -317,8 +389,11 @@ export class InvoiceService {
       return null
     }
 
-    const creditNotes = await this.getCreditNotes(invoice.id)
-    return this.mapToInvoiceData(invoice, creditNotes)
+    const [creditNotes, adjustments] = await Promise.all([
+      this.getCreditNotes(invoice.id),
+      this.getAdjustments(invoice.id),
+    ])
+    return this.mapToInvoiceData(invoice, creditNotes, adjustments)
   }
   
   /**
@@ -353,14 +428,18 @@ export class InvoiceService {
    * Mark invoice as paid
    */
   async markInvoicePaid(invoiceId: string, paypalTransactionId?: string): Promise<void> {
+    const paidAt = new Date()
+
     await prisma.monthlyInvoice.update({
       where: { id: invoiceId },
       data: {
         status: 'PAID',
-        paidAt: new Date(),
+        paidAt,
         paypalTransactionId,
       },
     })
+
+    await this.ensureInvoiceNumber(invoiceId, paidAt)
     
     logger.info(`[Invoice] Marked invoice ${invoiceId} as PAID`)
   }
@@ -382,10 +461,16 @@ export class InvoiceService {
   /**
    * Map Prisma model to InvoiceData interface
    */
-  private mapToInvoiceData(invoice: any, creditNotes: CreditNoteData[] = []): InvoiceData {
+  private mapToInvoiceData(
+    invoice: any,
+    creditNotes: CreditNoteData[] = [],
+    adjustments: AdjustmentData[] = []
+  ): InvoiceData {
+    const adjustmentsTotal = adjustments.reduce((sum, adj) => sum + Number(adj.amount), 0)
     return {
       id: invoice.id,
       userId: invoice.userId,
+      invoiceNumber: invoice.invoiceNumber ?? null,
       periodStart: invoice.periodStart,
       periodEnd: invoice.periodEnd,
       periodMonth: invoice.periodMonth,
@@ -394,6 +479,7 @@ export class InvoiceService {
       creditUsage: Number(invoice.creditUsage),
       creditDebt: Number(invoice.creditDebt),
       creditNotesTotal: Number(invoice.creditNotesTotal ?? 0),
+      adjustmentsTotal,
       subtotalAmount: Number(invoice.subtotalAmount ?? 0),
       taxRate: Number(invoice.taxRate ?? this.TAX_RATE),
       taxAmount: Number(invoice.taxAmount ?? 0),
@@ -403,22 +489,79 @@ export class InvoiceService {
       planType: invoice.planType,
       itemsBreakdown: invoice.itemsBreakdown as ConsumptionBreakdown,
       creditNotes,
+      adjustments,
       createdAt: invoice.createdAt,
       updatedAt: invoice.updatedAt,
     }
   }
 
+  private async getAdjustments(invoiceId: string): Promise<AdjustmentData[]> {
+    const invoiceAdjustment = (prisma as any).invoiceAdjustment
+    if (!invoiceAdjustment) {
+      return []
+    }
+
+    let adjustments: Array<{
+      id: string
+      amount: number
+      reason: string | null
+      createdAt: Date
+    }> = []
+    try {
+      adjustments = await invoiceAdjustment.findMany({
+        where: { invoiceId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          amount: true,
+          reason: true,
+          createdAt: true,
+        },
+      })
+    } catch (error: any) {
+      if (error?.code === 'P2021') {
+        return []
+      }
+      throw error
+    }
+
+    return adjustments.map((adj) => ({
+      id: adj.id,
+      amount: Number(adj.amount),
+      reason: adj.reason,
+      createdAt: adj.createdAt,
+    }))
+  }
+
   private async getCreditNotes(invoiceId: string): Promise<CreditNoteData[]> {
-    const notes = await prisma.invoiceCreditNote.findMany({
-      where: { invoiceId },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        amount: true,
-        reason: true,
-        createdAt: true,
-      },
-    })
+    const invoiceCreditNote = (prisma as any).invoiceCreditNote
+    if (!invoiceCreditNote) {
+      return []
+    }
+
+    let notes: Array<{
+      id: string
+      amount: number
+      reason: string | null
+      createdAt: Date
+    }> = []
+    try {
+      notes = await invoiceCreditNote.findMany({
+        where: { invoiceId },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          amount: true,
+          reason: true,
+          createdAt: true,
+        },
+      })
+    } catch (error: any) {
+      if (error?.code === 'P2021') {
+        return []
+      }
+      throw error
+    }
 
     return notes.map((note) => ({
       id: note.id,
@@ -429,7 +572,12 @@ export class InvoiceService {
   }
 
   private async getRechargeTotal(userId: string, periodStart: Date, periodEnd: Date): Promise<number> {
-    const rechargeSum = await prisma.billingTransaction.aggregate({
+    const billingTransaction = (prisma as any).billingTransaction
+    if (!billingTransaction?.aggregate) {
+      return 0
+    }
+
+    const rechargeSum = await billingTransaction.aggregate({
       where: {
         userId,
         type: "RECHARGE",
@@ -507,17 +655,48 @@ export class InvoiceService {
         }
 
     const creditDebt = Number(user.creditBalance) < 0 ? Math.abs(Number(user.creditBalance)) : 0
-    const creditNotesTotal = await prisma.invoiceCreditNote.aggregate({
-      where: { invoiceId },
-      _sum: { amount: true },
-    })
-    const creditNotesAmount = Number(creditNotesTotal._sum.amount || 0)
+    const invoiceAdjustment = (prisma as any).invoiceAdjustment
+    const invoiceCreditNote = (prisma as any).invoiceCreditNote
+    const [creditNotesTotal, adjustmentsTotal, rechargeTotal] = await Promise.all([
+      invoiceCreditNote?.aggregate
+        ? invoiceCreditNote.aggregate({
+            where: { invoiceId },
+            _sum: { amount: true },
+          }).catch((error: any) => {
+            if (error?.code === 'P2021') {
+              return { _sum: { amount: 0 } }
+            }
+            throw error
+          })
+        : Promise.resolve({ _sum: { amount: 0 } }),
+      invoiceAdjustment
+        ? invoiceAdjustment.aggregate({
+            where: { invoiceId },
+            _sum: { amount: true },
+          }).catch((error: any) => {
+            if (error?.code === 'P2021') {
+              return { _sum: { amount: 0 } }
+            }
+            throw error
+          })
+        : Promise.resolve({ _sum: { amount: 0 } }),
+      this.getRechargeTotal(invoice.userId, invoice.periodStart, invoice.periodEnd),
+    ])
+    const creditNotesAmount =
+      invoice.status === "PAID" ? Number(creditNotesTotal._sum.amount || 0) : 0
+    const adjustmentsAmount = Number(adjustmentsTotal._sum.amount || 0)
+    const rechargesAmount = Number(rechargeTotal || 0)
 
-    const subtotalAmount =
-      Number(subscriptionAmount) + consumption.totalConsumption + creditDebt - creditNotesAmount
+    const subtotalRaw =
+      Number(subscriptionAmount) +
+      consumption.totalConsumption +
+      creditDebt +
+      adjustmentsAmount -
+      rechargesAmount
+    const subtotalAmount = roundMoney(subtotalRaw)
     const taxableBase = Math.max(subtotalAmount, 0)
-    const taxAmount = taxableBase * this.TAX_RATE
-    const totalAmount = subtotalAmount + taxAmount
+    const taxAmount = roundMoney(taxableBase * this.TAX_RATE)
+    const totalAmount = roundMoney(subtotalAmount + taxAmount)
 
     return prisma.monthlyInvoice.update({
       where: { id: invoiceId },
@@ -538,7 +717,7 @@ export class InvoiceService {
   async generateInvoicePdf(invoiceId: string): Promise<Buffer> {
     await this.recalculateInvoiceTotals(invoiceId)
 
-    const invoice = await prisma.monthlyInvoice.findUnique({
+    let invoice = await prisma.monthlyInvoice.findUnique({
       where: { id: invoiceId },
       include: {
         user: {
@@ -559,30 +738,29 @@ export class InvoiceService {
       throw new Error('Invoice not found')
     }
 
-    const creditNotes = await this.getCreditNotes(invoiceId)
+    if (invoice.status === 'PAID' && !invoice.invoiceNumber) {
+      const issuedAt = invoice.paidAt ?? invoice.createdAt
+      const assigned = await this.ensureInvoiceNumber(invoice.id, issuedAt)
+      invoice = { ...invoice, invoiceNumber: assigned }
+    }
+
+    const [creditNotes, adjustments] = await Promise.all([
+      this.getCreditNotes(invoiceId),
+      this.getAdjustments(invoiceId),
+    ])
     const planConfig = await prisma.planConfiguration.findUnique({
       where: { planType: invoice.planType },
       select: { displayName: true },
     })
     const planName = planConfig?.displayName || invoice.planType
-    const rechargeTotal = await this.getRechargeTotal(
-      invoice.userId,
-      invoice.periodStart,
-      invoice.periodEnd
-    )
-    const transactionTotal = await this.getTransactionTotal(
-      invoice.userId,
-      invoice.periodStart,
-      invoice.periodEnd
-    )
-    const breakdown = (invoice.itemsBreakdown || {
-      messages: { count: 0, amount: 0 },
-      orders: { count: 0, amount: 0 },
-      pushNotifications: { count: 0, amount: 0 },
-      adjustments: { count: 0, amount: 0 },
-      totalConsumption: 0,
-    }) as ConsumptionBreakdown
     const logoPath = this.resolveLogoPath()
+    
+    // Pre-calculate recharge total before entering Promise constructor
+    const rechargesTotal = await this.getRechargeTotal(
+      invoice.userId,
+      invoice.periodStart,
+      invoice.periodEnd
+    )
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 })
@@ -595,109 +773,234 @@ export class InvoiceService {
       const pageWidth = doc.page.width
       const margin = 50
       const contentWidth = pageWidth - margin * 2
+      const issuer = {
+        name: 'eChatbot S.r.l.',
+        address: 'Via Roma 123, 00100 Roma, Italia',
+        vat: 'IT12345678901',
+        email: 'hello@echatbot.ai',
+        phone: '+39 06 1234567',
+      }
+      const formatDate = (value: Date) => value.toLocaleDateString('it-IT')
+      const invoiceNumber = invoice.invoiceNumber || 'UNASSIGNED'
+      const periodLabel = `${String(invoice.periodMonth).padStart(2, '0')}/${invoice.periodYear}`
+      const periodRange = `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
       let yPos = margin
 
       if (logoPath) {
         try {
-          doc.image(logoPath, margin, yPos, { width: 80, height: 80 })
+          doc.image(logoPath, margin, yPos, { width: 72, height: 72 })
         } catch (error) {
           logger.warn('[Invoice] Logo load failed', error)
         }
       }
 
       const rightX = pageWidth - margin - 220
-      doc.fontSize(14).font('Helvetica-Bold').text('eChatbot', rightX, yPos, { width: 220, align: 'right' })
-      yPos += 20
-      doc.fontSize(9).font('Helvetica').text('eChatbot HQ', rightX, yPos, { width: 220, align: 'right' })
-      yPos += 14
-      doc.text('hello@echatbot.ai', rightX, yPos, { width: 220, align: 'right' })
-      yPos += 30
-
-      yPos = Math.max(yPos, margin + 100)
-      doc.fontSize(22).font('Helvetica-Bold').text('INVOICE', margin, yPos, { align: 'center' })
-      yPos += 40
-
-      const invoiceNumber = `INV-${invoice.periodYear}${String(invoice.periodMonth).padStart(2, '0')}`
-      doc.fontSize(10).font('Helvetica')
-      doc.text('Invoice No: ', margin, yPos, { continued: true }).font('Helvetica-Bold').text(invoiceNumber)
-      yPos += 14
-      doc.font('Helvetica').text('Period: ', margin, yPos, { continued: true }).font('Helvetica-Bold').text(
-        `${String(invoice.periodMonth).padStart(2, '0')}/${invoice.periodYear}`
-      )
-      yPos += 14
-      doc.font('Helvetica').text('Status: ', margin, yPos, { continued: true }).font('Helvetica-Bold').text(invoice.status)
+      doc.fontSize(18).font('Helvetica-Bold').text('Invoice', rightX, yPos, { width: 220, align: 'right' })
       yPos += 24
-
-      doc.rect(margin, yPos, contentWidth, 80).fillAndStroke('#f8f9fa', '#e5e7eb')
-      yPos += 12
-      doc.fillColor('#111827').fontSize(11).font('Helvetica-Bold').text('BILL TO', margin + 12, yPos)
-      yPos += 18
+      doc.fontSize(10).font('Helvetica').text(`Invoice No: ${invoiceNumber}`, rightX, yPos, {
+        width: 220,
+        align: 'right',
+      })
+      yPos += 14
+      doc.text(`Issued: ${formatDate(invoice.paidAt ?? invoice.createdAt)}`, rightX, yPos, {
+        width: 220,
+        align: 'right',
+      })
+      yPos += 14
+      doc.text(`Period: ${periodLabel}`, rightX, yPos, { width: 220, align: 'right' })
+      yPos += 14
+      doc.text(`Status: ${invoice.status}`, rightX, yPos, { width: 220, align: 'right' })
+      yPos += 26
 
       const customerName =
         invoice.user?.companyName ||
         `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim() ||
         invoice.user?.email ||
         'Customer'
-      doc.fontSize(10).font('Helvetica').text(customerName, margin + 12, yPos)
-      yPos += 14
-      if (invoice.user?.billingAddress) {
-        doc.text(invoice.user.billingAddress, margin + 12, yPos)
-        yPos += 14
-      }
-      if (invoice.user?.vatNumber) {
-        doc.text(`VAT: ${invoice.user.vatNumber}`, margin + 12, yPos)
-        yPos += 14
-      }
-      if (invoice.user?.billingPhone) {
-        doc.text(`Phone: ${invoice.user.billingPhone}`, margin + 12, yPos)
-        yPos += 14
-      }
+      const customerAddress = invoice.user?.billingAddress || 'Via Roma 123, 00100 Roma, Italia'
+      const customerVat = invoice.user?.vatNumber || 'IT00000000000'
+      const customerPhone = invoice.user?.billingPhone || '+39 06 0000000'
 
-      yPos += 20
+      const columnGap = 20
+      const columnWidth = (contentWidth - columnGap) / 2
+      const leftX = margin
+      const rightColX = margin + columnWidth + columnGap
+
+      const blockY = yPos
+      doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold').text('FROM', leftX, blockY)
+      doc.fontSize(10).font('Helvetica').text(issuer.name, leftX, blockY + 14)
+      doc.text(issuer.address, leftX, blockY + 28)
+      doc.text(`VAT: ${issuer.vat}`, leftX, blockY + 42)
+      doc.text(`Email: ${issuer.email}`, leftX, blockY + 56)
+      doc.text(`Phone: ${issuer.phone}`, leftX, blockY + 70)
+
+      doc.fontSize(10).font('Helvetica-Bold').text('BILL TO', rightColX, blockY)
+      doc.fontSize(10).font('Helvetica').text(customerName, rightColX, blockY + 14)
+      doc.text(customerAddress, rightColX, blockY + 28, { width: columnWidth })
+      doc.text(`VAT: ${customerVat}`, rightColX, blockY + 42)
+      doc.text(`Phone: ${customerPhone}`, rightColX, blockY + 56)
+
+      yPos = blockY + 100
+      doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
+      yPos += 18
       doc.fillColor('#111827').fontSize(11).font('Helvetica-Bold').text('DETAILS', margin, yPos)
       yPos += 18
 
+      const lineGap = 18
       const addLine = (label: string, amount: number, isCredit = false) => {
         doc.fontSize(10).font('Helvetica').text(label, margin, yPos, { width: 340 })
-        const formatted = `${isCredit ? '-' : ''}€${amount.toFixed(2)}`
-        doc.font('Helvetica-Bold').text(formatted, pageWidth - margin - 100, yPos, {
+        const formatted = `${isCredit ? '-' : ''}$${amount.toFixed(2)}`
+        doc.font('Helvetica').text(formatted, pageWidth - margin - 100, yPos, {
           width: 100,
           align: 'right',
         })
-        yPos += 16
+        yPos += lineGap
+        doc.moveTo(margin, yPos - 6).lineTo(pageWidth - margin, yPos - 6).stroke('#eef2f7')
       }
 
       addLine(`Subscription fee (${planName})`, Number(invoice.subscriptionAmount))
-      addLine('Usage (messages, orders, pushes)', Number(invoice.creditUsage))
-      if (Number(invoice.creditDebt) > 0) {
-        addLine('Credit debt', Number(invoice.creditDebt))
+      if (Number(rechargesTotal) > 0) {
+        addLine('Recharges', Number(rechargesTotal))
       }
-      creditNotes.forEach((note) => {
-        addLine(`Credit note: ${note.reason || 'Adjustment'}`, note.amount, true)
+      adjustments.forEach((adj) => {
+        const label = `Adjustment: ${adj.reason || 'Manual adjustment'}`
+        const isCredit = Number(adj.amount) < 0
+        addLine(label, Math.abs(Number(adj.amount)), isCredit)
       })
-
-      yPos += 10
-      doc.fontSize(10).font('Helvetica-Bold').text('USAGE BREAKDOWN', margin, yPos)
-      yPos += 16
-      addLine(`Messages (${breakdown.messages.count})`, breakdown.messages.amount)
-      addLine(`Orders (${breakdown.orders.count})`, breakdown.orders.amount)
-      addLine(`Push notifications (${breakdown.pushNotifications.count})`, breakdown.pushNotifications.amount)
-      addLine(`Adjustments (${breakdown.adjustments.count})`, breakdown.adjustments.amount)
-      addLine('Recharges (period)', rechargeTotal)
-      addLine('Transactions total (period)', transactionTotal)
-
       yPos += 10
       doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
       yPos += 12
       addLine('Subtotal', Number(invoice.subtotalAmount))
-      addLine(`VAT (${(Number(invoice.taxRate) * 100).toFixed(0)}%)`, Number(invoice.taxAmount))
+      addLine(`Tax (${(Number(invoice.taxRate) * 100).toFixed(0)}%)`, Number(invoice.taxAmount))
       yPos += 6
       doc.fontSize(12).font('Helvetica-Bold')
       doc.text('Total', margin, yPos)
-      doc.text(`€${Number(invoice.totalAmount).toFixed(2)}`, pageWidth - margin - 100, yPos, {
+      doc.text(`$${Number(invoice.totalAmount).toFixed(2)}`, pageWidth - margin - 100, yPos, {
         width: 100,
         align: 'right',
       })
+      yPos += 24
+      doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
+      doc.text(`Invoice covers ${periodRange}`, margin, yPos)
+
+      doc.end()
+    })
+  }
+
+  async generateCreditNotePdf(noteId: string): Promise<Buffer> {
+    const note = await prisma.invoiceCreditNote.findUnique({
+      where: { id: noteId },
+      include: {
+        invoice: {
+          include: {
+            user: {
+              select: {
+                email: true,
+                firstName: true,
+                lastName: true,
+                companyName: true,
+                vatNumber: true,
+                billingAddress: true,
+                billingPhone: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!note || !note.invoice) {
+      throw new Error('Credit note not found')
+    }
+
+    const invoice = note.invoice
+
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ size: 'A4', margin: 50 })
+      const chunks: Buffer[] = []
+
+      doc.on('data', (chunk) => chunks.push(chunk))
+      doc.on('end', () => resolve(Buffer.concat(chunks)))
+      doc.on('error', reject)
+
+      const logoPath = this.resolveLogoPath()
+      const issuer = {
+        name: 'eChatbot S.r.l.',
+        address: 'Via Roma 123, 00100 Roma, Italia',
+        vat: 'IT12345678901',
+        email: 'hello@echatbot.ai',
+        phone: '+39 06 1234567',
+      }
+      const formatDate = (value: Date) => value.toLocaleDateString('it-IT')
+      const pageWidth = doc.page.width
+      const margin = 50
+
+      if (logoPath) {
+        doc.image(logoPath, margin, 45, { width: 72, height: 72 })
+      }
+
+      const headerRightX = pageWidth - margin - 220
+      doc.fontSize(18).font('Helvetica-Bold').text('Credit note', headerRightX, 50, {
+        width: 220,
+        align: 'right',
+      })
+      doc.fontSize(10).font('Helvetica').text(`Note ID: ${note.id}`, headerRightX, 74, {
+        width: 220,
+        align: 'right',
+      })
+      doc.text(`Issued: ${formatDate(note.createdAt)}`, headerRightX, 88, {
+        width: 220,
+        align: 'right',
+      })
+
+      let yPos = 130
+
+      doc.fontSize(11).font('Helvetica-Bold').text('BILL TO', margin, yPos)
+      yPos += 16
+      doc.fontSize(10).font('Helvetica').text(
+        invoice.user?.companyName ||
+          `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim() ||
+          invoice.user?.email ||
+          'Customer',
+        margin,
+        yPos
+      )
+      yPos += 14
+      const customerAddress = invoice.user?.billingAddress || 'Via Roma 123, 00100 Roma, Italia'
+      const customerVat = invoice.user?.vatNumber || 'IT00000000000'
+      const customerPhone = invoice.user?.billingPhone || '+39 06 0000000'
+      doc.text(customerAddress, margin, yPos)
+      yPos += 14
+      doc.text(`VAT: ${customerVat}`, margin, yPos)
+      yPos += 14
+      doc.text(`Phone: ${customerPhone}`, margin, yPos)
+      yPos += 20
+
+      const issuerX = pageWidth - margin - 220
+      doc.fontSize(11).font('Helvetica-Bold').text('ISSUER', issuerX, 130, { width: 220, align: 'right' })
+      doc.fontSize(10).font('Helvetica').text(issuer.name, issuerX, 146, { width: 220, align: 'right' })
+      doc.text(issuer.address, issuerX, 160, { width: 220, align: 'right' })
+      doc.text(`VAT: ${issuer.vat}`, issuerX, 174, { width: 220, align: 'right' })
+      doc.text(`Email: ${issuer.email}`, issuerX, 188, { width: 220, align: 'right' })
+      doc.text(`Phone: ${issuer.phone}`, issuerX, 202, { width: 220, align: 'right' })
+
+      yPos += 10
+      doc.fontSize(11).font('Helvetica-Bold').text('DETAILS', margin, yPos)
+      yPos += 18
+
+      const relatedInvoiceNumber = invoice.invoiceNumber || `${invoice.periodMonth}/${invoice.periodYear}`
+      doc.fontSize(10).font('Helvetica').text(
+        `Related invoice: ${relatedInvoiceNumber}`,
+        margin,
+        yPos
+      )
+      yPos += 16
+      doc.text(`Reason: ${note.reason || 'Adjustment'}`, margin, yPos)
+      yPos += 24
+
+      const formatted = `-$${Number(note.amount).toFixed(2)}`
+      doc.fontSize(12).font('Helvetica-Bold').text('Total credit', margin, yPos)
+      doc.text(formatted, pageWidth - margin - 100, yPos, { width: 100, align: 'right' })
 
       doc.end()
     })

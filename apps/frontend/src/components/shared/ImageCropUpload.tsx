@@ -28,6 +28,7 @@ interface ImageCropUploadProps {
   circularCrop?: boolean  // Enable circular crop mask
   size?: "sm" | "md" | "lg" | "xl"  // Preview size
   editIconStyle?: boolean  // Show edit icon on hover instead of button
+  isUploading?: boolean  // Show uploading state
 }
 
 const ASPECT_RATIO = 1 // Square aspect ratio
@@ -54,6 +55,7 @@ export function ImageCropUpload({
   circularCrop = false,
   size = "lg",
   editIconStyle = false,
+  isUploading = false,
 }: ImageCropUploadProps) {
   const [imgSrc, setImgSrc] = useState<string>("")
   const [crop, setCrop] = useState<Crop>()
@@ -83,14 +85,21 @@ export function ImageCropUpload({
 
   // Update preview when component mounts if we have a current image
   useEffect(() => {
+    console.log("🟡 ImageCropUpload useEffect triggered. currentImageUrl:", currentImageUrl);
     if (currentImageUrl) {
       // If currentImageUrl starts with http, use it directly
       // Otherwise prepend IMG_BASE_URL
       if (currentImageUrl.startsWith('http')) {
+        console.log("🟡 Using URL directly:", currentImageUrl);
         setPreviewImage(currentImageUrl)
       } else {
-        setPreviewImage(`${IMG_BASE_URL}${currentImageUrl}`)
+        const fullUrl = `${IMG_BASE_URL}${currentImageUrl}`;
+        console.log("🟡 Constructed full URL:", fullUrl);
+        setPreviewImage(fullUrl)
       }
+    } else {
+      console.log("🟡 No currentImageUrl, clearing preview");
+      setPreviewImage(null);
     }
   }, [currentImageUrl])
 
@@ -197,9 +206,8 @@ export function ImageCropUpload({
           type: blob.type,
         })
 
-        // Create a preview URL from the blob
-        const previewUrl = URL.createObjectURL(blob)
-        setPreviewImage(previewUrl)
+        // Don't set preview here - let parent component handle it via currentImageUrl
+        // This prevents the preview from being stuck on a blob URL
 
         onImageSelected(croppedFile)
         setDialogOpen(false)
@@ -281,9 +289,17 @@ export function ImageCropUpload({
           <div className={`flex-shrink-0 ${sizeClasses[size]} border-2 border-dashed border-gray-300 ${circularCrop ? "rounded-full" : "rounded-lg"} overflow-hidden bg-gray-50 flex items-center justify-center`}>
             {previewImage ? (
               <img
+                key={previewImage}
                 src={previewImage}
                 alt="Image Preview"
                 className={`w-full h-full object-cover ${circularCrop ? "rounded-full" : ""}`}
+                onError={(e) => {
+                  console.error("🔴 Image failed to load:", previewImage);
+                  e.currentTarget.style.display = 'none';
+                }}
+                onLoad={() => {
+                  console.log("✅ Image loaded successfully:", previewImage);
+                }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-gray-400">
@@ -302,9 +318,9 @@ export function ImageCropUpload({
               type="button" 
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              className="w-full justify-start"
+              disabled={isUploading}
             >
-              Choose file
+              {isUploading ? "Uploading..." : "Choose file"}
             </Button>
             
             <input
@@ -314,6 +330,7 @@ export function ImageCropUpload({
               onChange={onSelectFile}
               className="hidden"
               id="image-upload"
+              disabled={isUploading}
             />
 
             {error && <p className="text-sm text-red-500">{error}</p>}

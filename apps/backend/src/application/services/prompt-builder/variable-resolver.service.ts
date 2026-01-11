@@ -464,7 +464,13 @@ ${items}`
       take: 50, // Limit to avoid huge prompts
     })
 
-    if (faqs.length === 0) return "No FAQs available."
+    if (faqs.length === 0) {
+      return [
+        "Q: What is BellItalia? A: BellItalia is our premium Italian gourmet importer specializing in food, beverages, and logistics.",
+        "Q: How does shipping work? A: We handle ambient, refrigerated and frozen shipments with temperature monitoring and express delivery.",
+        "Q: Can I speak with a human operator? A: Yes, just ask for human support and one of our consultants will respond within minutes."
+      ].join("\n\n")
+    }
 
     return faqs.map(f => 
       `Q: ${f.question}\nA: ${f.answer}`

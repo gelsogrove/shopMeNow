@@ -30,7 +30,7 @@ import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
-import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -181,7 +181,9 @@ export function WorkspaceSelectionPage() {
         return true
       case 7: // Bot Identity - require some text
         return wizardData.botIdentityResponse.trim().length > 0
-      case 8: // Welcome Message - optional but we auto-generate
+      case 8: // FAQs - optional
+        return true
+      case 9: // Web Widget - always valid (boolean)
         return true
       default:
         return true
@@ -501,7 +503,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     // Use wizard data
     const phoneNumber = wizardData.whatsappNumber
     const channelAlias = wizardData.alias
-    const channelWelcomeMessage = wizardData.welcomeMessage
 
     if (!phoneNumber.trim()) {
       setErrorMessage("Enter a phone number")
@@ -533,7 +534,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         name: channelAlias || phoneNumber,
         whatsappPhoneNumber: phoneNumber,
         language: "en",
-        welcomeMessage: channelWelcomeMessage || undefined,
         adminEmail: wizardData.email || userEmail,
         url: wizardData.website || undefined,
         allowedExternalLinks: allowedLinks,
@@ -1825,7 +1825,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </Button>
                     )}
                     
-                    {wizardStep < 8 ? (
+                    {wizardStep < 9 ? (
                       <Button
                         onClick={handleNextStep}
                         disabled={!validateCurrentStep()}

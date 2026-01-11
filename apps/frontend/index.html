@@ -25,18 +25,6 @@
       content="A modern WhatsApp platform where AI agents drive sales, support, and growth. Build your AI sales agent and automate customer conversations."
     />
     <meta name="twitter:image" content="/logo.png" />
-    <script>
-      ;(function handleRootRedirect() {
-        const path = window.location.pathname
-        if (path !== "/" && path !== "/index.html") {
-          return
-        }
-        const loginUrl = `${window.location.origin}/auth/login`
-        if (loginUrl !== window.location.pathname) {
-          window.location.replace(loginUrl)
-        }
-      })()
-    </script>
   </head>
   <body>
     <div id="root"></div>

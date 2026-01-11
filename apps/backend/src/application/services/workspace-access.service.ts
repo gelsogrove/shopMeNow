@@ -8,9 +8,8 @@
  *
  * Blocking conditions (checked on OWNER, not workspace):
  * 1. owner.subscriptionStatus === 'PAUSED' → User paused subscription
- * 2. owner.subscriptionStatus === 'PAYMENT_FAILED' (>= 3 failures) → Payment failed, service blocked
- * 3. owner.creditBalance < -10 → Credit exhausted below threshold
- * 4. workspace.channelStatus === false → WIP mode (handled separately with WIP message)
+ * 2. owner.creditBalance < -10 → Credit exhausted below threshold
+ * 3. workspace.channelStatus === false → WIP mode (handled separately with WIP message)
  *
  * CRITICAL (Feature 198): Billing fields are on User (Owner), NOT Workspace
  * - subscriptionStatus, creditBalance → checked from workspace.owner (User)
@@ -22,7 +21,8 @@ import logger from "../../utils/logger"
 
 /** Credit minimum threshold - allow negative up to -€10 */
 export const CREDIT_MIN_THRESHOLD = -10
-const PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
+
+export const PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
 
 export type BlockReason =
   | "PAUSED"
@@ -58,9 +58,8 @@ export class WorkspaceAccessService {
    * 1. Workspace inactive (soft deleted) → block
    * 2. No owner → block (shouldn't happen, but safety)
    * 3. Owner subscription paused → block ALL owner's workspaces
-   * 4. Owner payment failed → block ALL owner's workspaces
-   * 5. Owner credit exhausted (< -€10) → block ALL owner's workspaces
-   * 6. Channel disabled → WIP mode (separate handling)
+   * 4. Owner credit exhausted (< -€10) → block ALL owner's workspaces
+   * 5. Channel disabled → WIP mode (separate handling)
    *
    * @param workspaceId - Workspace to check
    * @param skipChannelCheck - Skip channel status check (for internal operations)
@@ -131,6 +130,8 @@ export class WorkspaceAccessService {
 
       const owner = workspace.owner
       const creditBalance = Number(owner.creditBalance)
+      const subscriptionStatus = String(owner.subscriptionStatus || "").toUpperCase()
+      const paymentFailureCount = Number(owner.paymentFailureCount ?? 0)
 
       // 2b. Check if owner is soft-deleted (deletedAt not null)
       if (owner.deletedAt) {
@@ -149,7 +150,7 @@ export class WorkspaceAccessService {
       }
 
       // 3. Check owner subscription status - PAUSED
-      if (owner.subscriptionStatus === "PAUSED") {
+      if (subscriptionStatus === "PAUSED") {
         logger.info(
           `[ACCESS] ⏸️ Owner subscription paused for workspace: ${workspace.name} (owner: ${workspace.ownerId})`
         )
@@ -166,26 +167,14 @@ export class WorkspaceAccessService {
         }
       }
 
-      // NOTE: CANCELLED status not in current schema. When added, uncomment:
-      // if (owner.subscriptionStatus === "CANCELLED") {
-      //   return { canProcess: false, blockReason: "CANCELLED", ... }
-      // }
-
-      // 4. Check owner subscription status - PAYMENT_FAILED
-      const paymentFailureCount = owner.paymentFailureCount ?? 0
-
-      if (
-        owner.subscriptionStatus === "PAYMENT_FAILED" &&
-        paymentFailureCount >= PAYMENT_FAILURE_BLOCK_THRESHOLD
-      ) {
+      if (subscriptionStatus === "PAYMENT_FAILED" && paymentFailureCount >= PAYMENT_FAILURE_BLOCK_THRESHOLD) {
         logger.info(
-          `[ACCESS] 💳 Owner payment failed for workspace: ${workspace.name} (owner: ${workspace.ownerId})`
+          `[ACCESS] ❌ Owner payment failed (count=${paymentFailureCount}) for workspace: ${workspace.name} (owner: ${workspace.ownerId})`
         )
         return {
           canProcess: false,
           blockReason: "PAYMENT_FAILED",
-          message:
-            "Payment failed. Please update your payment method to continue.",
+          message: "Payment failed. Please update your payment method to continue.",
           details: {
             subscriptionStatus: owner.subscriptionStatus,
             creditBalance,
@@ -195,7 +184,12 @@ export class WorkspaceAccessService {
         }
       }
 
-      // 5. Check owner credit balance (allow negative up to -€10)
+      // NOTE: CANCELLED status not in current schema. When added, uncomment:
+      // if (owner.subscriptionStatus === "CANCELLED") {
+      //   return { canProcess: false, blockReason: "CANCELLED", ... }
+      // }
+
+      // 4. Check owner credit balance (allow negative up to -€10)
       if (creditBalance < CREDIT_MIN_THRESHOLD) {
         logger.info(
           `[ACCESS] 💰 Owner credit exhausted for workspace: ${workspace.name} (€${creditBalance.toFixed(2)} < €${CREDIT_MIN_THRESHOLD}, owner: ${workspace.ownerId})`
@@ -213,7 +207,7 @@ export class WorkspaceAccessService {
         }
       }
 
-      // 6. Check channel status (WIP mode) - optional, still per-workspace
+      // 5. Check channel status (WIP mode) - optional, still per-workspace
       if (!skipChannelCheck && workspace.channelStatus === false) {
         logger.info(
           `[ACCESS] 🚧 Channel disabled (WIP mode) for workspace: ${workspace.name}`

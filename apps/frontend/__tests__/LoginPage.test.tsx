@@ -239,22 +239,145 @@ describe('LoginPage', () => {
   })
 
   describe('Admin Bypass', () => {
-    it('should allow login with ?admin=true when workingInProgress is true', async () => {
-      vi.mocked(useFeatureFlags).mockReturnValue({
-        canLogin: false,
-        canRegister: false,
+    beforeEach(() => {
+      // Clear sessionStorage before each test
+      sessionStorage.clear()
+    })
+
+    it('should show WIP banner when workingInProgress=true and no admin param', async () => {
+      mockUseFeatureFlags.mockReturnValue({
+        canLogin: true,
+        canRegister: true,
         workingInProgress: true,
         registerFirst: false,
+        cantryDemo: true,
         isLoading: false,
       })
 
-      // Render with admin param
+      window.history.pushState({}, '', '/')
+      renderLoginPage()
+      
+      await waitFor(() => {
+        // Look for the red banner with specific styling (instead of translated text)
+        const banner = document.querySelector('.bg-red-600.rotate-12')
+        expect(banner).toBeTruthy()
+      })
+    })
+
+    it('should hide WIP banner when ?admin=true', async () => {
+      mockUseFeatureFlags.mockReturnValue({
+        canLogin: true,
+        canRegister: true,
+        workingInProgress: true,
+        registerFirst: false,
+        cantryDemo: true,
+        isLoading: false,
+      })
+
       window.history.pushState({}, '', '?admin=true')
       renderLoginPage()
       
       await waitFor(() => {
-        const emailInput = screen.getByPlaceholderText(/your@email.com/i)
+        const banner = screen.queryByText(/wip\.banner/i)
+        expect(banner).not.toBeInTheDocument()
+      })
+    })
+
+    it('should enable form fields when ?admin=true bypasses WIP', async () => {
+      mockUseFeatureFlags.mockReturnValue({
+        canLogin: false,
+        canRegister: false,
+        workingInProgress: true,
+        registerFirst: false,
+        cantryDemo: false,
+        isLoading: false,
+      })
+
+      window.history.pushState({}, '', '?admin=true')
+      renderLoginPage()
+      
+      await waitFor(() => {
+        const emailInput = screen.getByPlaceholderText(/your@email.com/i) as HTMLInputElement
         expect(emailInput).not.toBeDisabled()
+      })
+    })
+
+    it('should disable form fields when workingInProgress=true and no admin bypass', async () => {
+      mockUseFeatureFlags.mockReturnValue({
+        canLogin: true,
+        canRegister: true,
+        workingInProgress: true,
+        registerFirst: false,
+        cantryDemo: true,
+        isLoading: false,
+      })
+
+      window.history.pushState({}, '', '/')
+      renderLoginPage()
+      
+      await waitFor(() => {
+        const emailInput = screen.getByPlaceholderText(/your@email.com/i) as HTMLInputElement
+        expect(emailInput).toBeDisabled()
+      })
+    })
+
+    it('should clear sessionStorage when no admin param in URL', async () => {
+      // Pre-set sessionStorage
+      sessionStorage.setItem('adminBypass', 'true')
+      
+      mockUseFeatureFlags.mockReturnValue({
+        canLogin: true,
+        canRegister: true,
+        workingInProgress: true,
+        registerFirst: false,
+        cantryDemo: true,
+        isLoading: false,
+      })
+
+      window.history.pushState({}, '', '/')
+      renderLoginPage()
+      
+      await waitFor(() => {
+        expect(sessionStorage.getItem('adminBypass')).toBeNull()
+      })
+    })
+
+    it('should clear sessionStorage when ?admin=false', async () => {
+      // Pre-set sessionStorage
+      sessionStorage.setItem('adminBypass', 'true')
+      
+      mockUseFeatureFlags.mockReturnValue({
+        canLogin: true,
+        canRegister: true,
+        workingInProgress: true,
+        registerFirst: false,
+        cantryDemo: true,
+        isLoading: false,
+      })
+
+      window.history.pushState({}, '', '?admin=false')
+      renderLoginPage()
+      
+      await waitFor(() => {
+        expect(sessionStorage.getItem('adminBypass')).toBeNull()
+      })
+    })
+
+    it('should set sessionStorage when ?admin=true', async () => {
+      mockUseFeatureFlags.mockReturnValue({
+        canLogin: true,
+        canRegister: true,
+        workingInProgress: true,
+        registerFirst: false,
+        cantryDemo: true,
+        isLoading: false,
+      })
+
+      window.history.pushState({}, '', '?admin=true')
+      renderLoginPage()
+      
+      await waitFor(() => {
+        expect(sessionStorage.getItem('adminBypass')).toBe('true')
       })
     })
   })

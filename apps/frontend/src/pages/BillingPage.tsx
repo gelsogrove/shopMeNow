@@ -9,12 +9,14 @@ import {
   getOwnerInvoices, 
   getOwnerBillingOverview,
   downloadInvoicePdf,
+  downloadCreditNotePdf,
   Invoice, 
   InvoiceStatus,
   BillingOverview
 } from "@/services/subscriptionBillingApi"
 import { format } from "date-fns"
 import { toast } from "@/lib/toast"
+import { roundMoney } from "@/utils/money"
 
 const TAX_RATE = 0.22 // 22% IVA
 const ITEMS_PER_PAGE = 10
@@ -70,16 +72,24 @@ export function BillingPage() {
     return new Intl.NumberFormat("de-DE", {
       style: "currency",
       currency: "USD",
-    }).format(amount)
+    }).format(roundMoney(amount))
   }
 
-  const handleDownloadInvoice = async (invoiceId: string, periodMonth: number, periodYear: number) => {
+  const handleDownloadInvoice = async (
+    invoiceId: string,
+    periodMonth: number,
+    periodYear: number,
+    invoiceNumber?: string | null
+  ) => {
     try {
       const blob = await downloadInvoicePdf(invoiceId)
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `invoice-${periodYear}-${String(periodMonth).padStart(2, "0")}.pdf`
+      const safeNumber = invoiceNumber?.trim()
+      link.download = safeNumber
+        ? `${safeNumber}.pdf`
+        : `invoice-${periodYear}-${String(periodMonth).padStart(2, "0")}.pdf`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -87,6 +97,28 @@ export function BillingPage() {
     } catch (error) {
       console.error("Failed to download invoice:", error)
       toast.error("Failed to download invoice")
+    }
+  }
+
+  const handleDownloadCreditNote = async (
+    invoiceId: string,
+    noteId: string,
+    invoiceNumber?: string | null
+  ) => {
+    try {
+      const blob = await downloadCreditNotePdf(invoiceId, noteId)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      const safeNumber = invoiceNumber?.trim()
+      link.download = safeNumber ? `CN-${safeNumber}.pdf` : "credit-note.pdf"
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Failed to download credit note:", error)
+      toast.error("Failed to download credit note")
     }
   }
 
@@ -110,9 +142,9 @@ export function BillingPage() {
   // Calculate current month billing
   const subscriptionFee = billingOverview?.planConfig?.monthlyFee || billingOverview?.limits?.monthlyFee || 0
   const totalRecharges = billingOverview?.billing?.totalRecharges || 0
-  const subtotal = subscriptionFee + totalRecharges
-  const taxAmount = subtotal * TAX_RATE
-  const total = subtotal + taxAmount
+  const subtotal = roundMoney(subscriptionFee + totalRecharges)
+  const taxAmount = roundMoney(subtotal * TAX_RATE)
+  const total = roundMoney(subtotal + taxAmount)
   const nextBillingDate = billingOverview?.billing?.nextBillingDate 
     ? new Date(billingOverview.billing.nextBillingDate) 
     : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1) // 1st of next month
@@ -170,7 +202,14 @@ export function BillingPage() {
                   {pastInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">
-                        {formatPeriod(invoice.periodMonth, invoice.periodYear)}
+                        <div className="space-y-1">
+                          <div>{formatPeriod(invoice.periodMonth, invoice.periodYear)}</div>
+                          {invoice.invoiceNumber && (
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {invoice.invoiceNumber}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{invoice.planType}</TableCell>
                       <TableCell>{getStatusBadge(invoice.status)}</TableCell>
@@ -178,14 +217,38 @@ export function BillingPage() {
                         {invoice.paidAt ? format(new Date(invoice.paidAt), "MMM d, yyyy") : "-"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDownloadInvoice(invoice.id, invoice.periodMonth, invoice.periodYear)}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          PDF
-                        </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                            handleDownloadInvoice(
+                              invoice.id,
+                              invoice.periodMonth,
+                              invoice.periodYear,
+                              invoice.invoiceNumber
+                            )
+                            }
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            PDF
+                          </Button>
+                          {(invoice.creditNotes || []).map((note) => (
+                            <Button
+                              key={note.id}
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleDownloadCreditNote(
+                                invoice.id,
+                                note.id,
+                                invoice.invoiceNumber
+                              )}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Credit PDF
+                            </Button>
+                          ))}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(invoice.totalAmount)}

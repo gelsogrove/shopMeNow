@@ -11,14 +11,17 @@ import {
   LogOut,
   Settings,
   Trash2,
+  Scale,
+  LineChart,
 } from 'lucide-react'
 
 const menuItems = [
   { path: '/platforms', label: 'Platforms', icon: LayoutDashboard },
   { path: '/clients', label: 'Clients', icon: Users },
   { path: '/collections', label: 'Collections', icon: FileText },
+  { path: '/analytics', label: 'Analytics', icon: LineChart },
   { path: '/pricing', label: 'Pricing', icon: CreditCard },
-  { path: '/gdpr', label: 'GDPR', icon: Shield },
+  { path: '/laws-documents', label: 'Laws Documents', icon: Scale },
   { path: '/schedulers', label: 'Schedulers', icon: Clock },
   { path: '/trash', label: 'Trash', icon: Trash2 },
 ]

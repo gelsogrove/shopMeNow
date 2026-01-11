@@ -184,14 +184,13 @@ class PlatformConfigService {
   /**
    * Get a feature flag value
    * @param key - The flag key (e.g., "canLogin", "canRegister")
-   * @returns The flag as a boolean, or true if not found (safe default)
+   * @returns The flag as a boolean
    */
   async getFlag(key: string): Promise<boolean> {
     await this.ensureCache()
     const item = this.cache.flags.get(key)
     if (!item) {
-      logger.error(`[PlatformConfig] Flag not found: ${key}`)
-      throw new Error(`Missing platform flag config: ${key}`)
+      throw new Error("Missing platform flag config")
     }
     return item.value === "true"
   }
@@ -237,7 +236,7 @@ class PlatformConfigService {
 
   /**
    * Get a limit value by key
-   * @param key - The limit key (e.g., "FREE_PRODUCTS", "BASIC_CLIENTS")
+   * @param key - The limit key (e.g., "FREE_CLIENTS", "BASIC_CLIENTS")
    * @returns The limit as a number, or 0 if not found
    */
   async getLimit(key: string): Promise<number> {
@@ -339,12 +338,14 @@ class PlatformConfigService {
       "canRegister",
       "workingInProgress",
       "registerFirst",
+      "showWidgetChatbot",
     ]
     const defaultFlagDescriptions: Record<string, string> = {
       canLogin: "Allow users to login",
       canRegister: "Allow new user registration",
       workingInProgress: "Show Work in Progress badge",
       registerFirst: "Default auth view is registration",
+      showWidgetChatbot: "Show chatbot widget on login page",
     }
     const flagKeys = new Set<string>()
     for (const [key, item] of this.cache.flags) {
@@ -436,6 +437,7 @@ class PlatformConfigService {
       canRegister: "Allow new user registration",
       workingInProgress: "Show Work in Progress badge",
       registerFirst: "Default auth view is registration",
+      showWidgetChatbot: "Show chatbot widget on login page",
     }
 
     await this.prisma.platformConfig.upsert({
@@ -456,6 +458,37 @@ class PlatformConfigService {
 
     await this.invalidateCache()
     return newValue
+  }
+
+  /**
+   * Get widget chatbot code (for login page)
+   */
+  async getWidgetChatbotCode(): Promise<string | null> {
+    const config = await this.prisma.platformConfig.findUnique({
+      where: { key: "widgetChatbotCode" },
+    })
+    return config?.value ?? null
+  }
+
+  /**
+   * Save widget chatbot code (admin only)
+   */
+  async saveWidgetChatbotCode(code: string): Promise<void> {
+    await this.prisma.platformConfig.upsert({
+      where: { key: "widgetChatbotCode" },
+      update: {
+        value: code,
+        updatedAt: new Date(),
+      },
+      create: {
+        key: "widgetChatbotCode",
+        type: "FLAG", // Using FLAG type but storing text
+        value: code,
+        description: "Widget chatbot embed code for login page",
+        isActive: true,
+      },
+    })
+    await this.invalidateCache()
   }
 }
 

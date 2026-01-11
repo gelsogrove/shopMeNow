@@ -153,7 +153,8 @@ app.use(
 
 // 🔒 SECURITY (TASK06): Serve ONLY public uploads directory
 // Private files are served via authenticated endpoint /api/v1/files/:key
-const publicUploadsPath = path.join(backendRoot, "apps/backend/uploads/public")
+// Calculate correct path: in dev __dirname = apps/backend/src, in prod = apps/backend/dist
+const publicUploadsPath = path.resolve(__dirname, "..", "uploads", "public")
 app.use("/uploads/public", express.static(publicUploadsPath))
 logger.info(`[SECURITY] Serving public files from: ${publicUploadsPath}`)
 logger.info(`[SECURITY] Private files require authentication via /api/v1/files/:key`)

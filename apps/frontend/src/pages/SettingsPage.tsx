@@ -1163,25 +1163,26 @@ export default function SettingsPage() {
           <TabsContent value="security" className="space-y-6">
             <div className="grid grid-cols-3 gap-6">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 min-h-[600px]">
+              <div className="col-span-2 min-h-[600px] space-y-6">
+                {/* Allowed Links Section */}
                 <Card>
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <span className="text-lg">🛡️</span> Security
+                      <span className="text-lg">🔗</span> Allowed External Links
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <Label htmlFor="allowedExternalLinks">Allowed External Links</Label>
+                      <Label htmlFor="allowedExternalLinks">Allowed Domains</Label>
                       <Textarea
                         id="allowedExternalLinks"
                         value={formData.allowedExternalLinks}
                         onChange={(e) => handleFieldChange("allowedExternalLinks", e.target.value)}
                         rows={2}
-                        placeholder="echatbot.ai, stripe.com, paypal.com"
+                        placeholder="echatbot.ai, stripe.com, paypal.com, yourwebsite.com"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Comma-separated domains the AI can include in messages. Other links will be blocked.
+                        Comma-separated domains. Used for AI link suggestions AND web widget security (widget only works from these domains).
                       </p>
                     </div>
                   </CardContent>
@@ -1192,27 +1193,27 @@ export default function SettingsPage() {
               <div>
                 <HelpPanel
                   title="🛡️ Security"
-                  description="Control what links the AI can suggest"
+                  description="Control widget access and AI links"
                   sections={[
                     {
+                      icon: "🌐",
+                      title: "Web Widget",
+                      content: "Enable a chat widget on your website. It uses the same AI bot as WhatsApp but is for informational purposes only (no orders)."
+                    },
+                    {
                       icon: "🔗",
-                      title: "What Are Allowed Links?",
-                      content: "These are websites the AI is allowed to mention to customers. All other links are blocked."
+                      title: "Allowed Links",
+                      content: "Domains the AI can mention AND domains where the widget works. Add your website domain here!"
                     },
                     {
-                      icon: "✅",
-                      title: "Which Links to Add?",
-                      content: "Add your website, payment providers (Stripe, PayPal), social media, support tools, and trusted partners."
-                    },
-                    {
-                      icon: "❌",
-                      title: "What Gets Blocked?",
-                      content: "Any link not in this list is blocked. This prevents the AI from suggesting unwanted external sites."
+                      icon: "🔒",
+                      title: "Widget Security",
+                      content: "The widget only works on domains listed in Allowed Links. Requests from other sites are blocked."
                     },
                     {
                       icon: "📝",
                       title: "How to Format",
-                      content: "Just list domain names separated by commas: stripe.com, paypal.com, yoursite.com"
+                      content: "List domain names separated by commas: yoursite.com, stripe.com, paypal.com"
                     }
                   ]}
                 />

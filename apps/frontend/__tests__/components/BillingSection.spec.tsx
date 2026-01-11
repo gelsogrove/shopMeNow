@@ -27,9 +27,13 @@ vi.mock("@/services/subscriptionBillingApi", () => ({
     value !== undefined && value !== null ? `$${value.toFixed(2)}` : "$0.00",
   getTransactionTypeInfo: vi.fn(() => ({ icon: "💰", label: "Message" })),
   rechargeCredit: vi.fn(),
-  getTransactions: vi.fn(),
+  getOwnerTransactions: vi.fn(),
   upgradePlan: vi.fn(),
-  getBillingOverview: vi.fn(),
+  getOwnerBillingOverview: vi.fn(),
+  getOwnerSubscriptionStatus: vi.fn(),
+  getCurrentInvoice: vi.fn(),
+  downloadInvoicePdf: vi.fn(),
+  getOwnerInvoices: vi.fn(),
 }))
 
 vi.mock("@/lib/toast", () => ({
@@ -307,10 +311,11 @@ describe("BillingSection", () => {
 
       await waitFor(() => {
         // Check for preset amounts in the dialog
-        expect(screen.getByText("$12")).toBeInTheDocument()
-        expect(screen.getByText("$29")).toBeInTheDocument()
-        expect(screen.getByText("$59")).toBeInTheDocument()
-        expect(screen.getByText("$118")).toBeInTheDocument()
+        expect(screen.getByText("$5")).toBeInTheDocument()
+        expect(screen.getByText("$10")).toBeInTheDocument()
+        expect(screen.getByText("$30")).toBeInTheDocument()
+        expect(screen.getByText("$50")).toBeInTheDocument()
+        expect(screen.getByText("$100")).toBeInTheDocument()
       })
     })
   })

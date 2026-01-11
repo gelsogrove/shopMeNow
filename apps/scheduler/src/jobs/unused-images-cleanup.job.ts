@@ -93,7 +93,24 @@ export async function unusedImagesCleanupJob(): Promise<void> {
     addFilename(user.logo)
   }
 
-  logger.info(`[Users] Found ${usedFilenames.size} logos referenced in database`)
+  // IMPORTANT: Also protect workspace logos (widget logos are saved in 'users' folder)
+  const workspaceLogos = await prisma.workspace.findMany({
+    select: { 
+      logoUrl: true, 
+      logoKey: true,
+      widgetLogoUrl: true,
+      widgetLogoKey: true
+    },
+  })
+
+  for (const workspace of workspaceLogos) {
+    addFilename(workspace.logoUrl)
+    addFilename(workspace.logoKey)
+    addFilename(workspace.widgetLogoUrl)
+    addFilename(workspace.widgetLogoKey)
+  }
+
+  logger.info(`[Users] Found ${usedFilenames.size} logos referenced in database (users + workspace widgets)`)
   totalDeleted += await cleanupDirectory(userImagesDir, usedFilenames, 'users', 'users')
 
   // ═══════════════════════════════════════════════════════════════

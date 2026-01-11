@@ -9,6 +9,8 @@ import { ClientsPage } from '@/pages/ClientsPage'
 import { SchedulersPage } from '@/pages/SchedulersPage'
 import { TrashPage } from '@/pages/TrashPage'
 import { ComingSoonPage } from '@/pages/ComingSoonPage'
+import { CollectionsPage } from '@/pages/CollectionsPage'
+import { AnalyticsPage } from '@/pages/AnalyticsPage'
 
 // 🌐 Base path for production deployment
 // Standalone SPA - no basename needed (served from root)
@@ -51,6 +53,8 @@ function AppRoutes() {
       >
         <Route index element={<Navigate to="/platforms" replace />} />
         <Route path="platforms" element={<PlatformsPage />} />
+        <Route path="collections" element={<CollectionsPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="pricing" element={<PricingPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route 

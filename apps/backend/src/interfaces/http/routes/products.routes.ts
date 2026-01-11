@@ -3,7 +3,6 @@ import multer from "multer"
 import logger from "../../../utils/logger"
 import { ProductController } from "../controllers/product.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { checkPlanLimits } from "../middlewares/billing.middleware"
 import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
@@ -96,7 +95,7 @@ export default function setupProductRoutes(): Router {
   const router = Router({ mergeParams: true }) // Enable mergeParams to inherit workspaceId
   const productController = new ProductController()
 
-  logger.info("Setting up product routes")
+  logger.debug("Setting up product routes")
 
   // All routes require authentication
   router.use(authMiddleware)
@@ -271,7 +270,6 @@ export default function setupProductRoutes(): Router {
   // @ts-ignore
   router.post(
     "/import",
-    checkPlanLimits("products"),
     csvUpload.single("file"),
     productController.importProductsCsv
   )
@@ -393,7 +391,6 @@ export default function setupProductRoutes(): Router {
     "/",
     authMiddleware,
     workspaceValidationMiddleware,
-    checkPlanLimits("products"),
     uploadImage.array("images", 10), // Supporto per massimo 10 immagini
     handleUploadError,
     productController.createProduct

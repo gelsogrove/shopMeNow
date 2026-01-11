@@ -153,6 +153,8 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
   useEffect(() => {
     if (currentWorkspace) {
       storage.setWorkspace(currentWorkspace)
+      // 🆕 Also save for widget access
+      localStorage.setItem("echatbot-workspace-id", currentWorkspace.id)
       logger.info("🏢 Workspace saved to localStorage:", currentWorkspace.name)
     }
   }, [currentWorkspace])
@@ -188,6 +190,8 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
     
     // Salva nel localStorage PRIMA di settare lo state
     storage.setWorkspace(workspace)
+    // 🆕 Also save for widget access
+    localStorage.setItem("echatbot-workspace-id", workspace.id)
     
     setCurrentWorkspace(workspace)
   }

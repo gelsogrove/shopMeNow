@@ -326,4 +326,35 @@ describe("PlatformConfigService", () => {
       expect(mockPlatformConfig.findMany).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe("showWidgetChatbot flag", () => {
+    it("should be included in getAdminConfig supported flags", async () => {
+      const config = await platformConfigService.getAdminConfig()
+      const flagKeys = config.flags.map(f => f.key)
+      expect(flagKeys).toContain("showWidgetChatbot")
+    })
+
+    it("should return showWidgetChatbot flag value", async () => {
+      // Add showWidgetChatbot to mock data
+      const mockWithWidget = [
+        ...mockConfigData,
+        {
+          id: "10",
+          key: "showWidgetChatbot",
+          type: "FLAG" as const,
+          value: "true",
+          originalValue: null,
+          description: "Show chatbot widget on login page",
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]
+      ;(mockPlatformConfig.findMany as jest.Mock).mockResolvedValue(mockWithWidget)
+      await platformConfigService.invalidateCache()
+
+      const result = await platformConfigService.getFlag("showWidgetChatbot")
+      expect(result).toBe(true)
+    })
+  })
 })

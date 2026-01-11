@@ -23,6 +23,7 @@ import { categories } from "./data/categories"
 import { defaultAgents } from "./data/defaultAgents"
 import { defaultFAQs } from "./data/defaultFAQs"
 import { faqs } from "./data/faqs"
+import { legalDocuments } from "./data/legalDocuments"
 import { offers } from "./data/offers"
 import { platformConfigData } from "./data/platformConfig"
 import { pricingConfigData } from "./data/pricingConfig"
@@ -40,6 +41,36 @@ const pool = new Pool({
 
 const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
+
+let invoiceSequence = 1
+
+const buildInvoiceNumber = (issuedAt: Date) => {
+  const datePart = issuedAt.toISOString().slice(0, 10).replace(/-/g, '')
+  const sequence = String(invoiceSequence).padStart(4, '0')
+  invoiceSequence += 1
+  return `${datePart}-${sequence}`
+}
+
+const ensureInvoiceNumber = async (invoice: {
+  id: string
+  status: string
+  paidAt: Date | null
+  createdAt: Date
+  invoiceNumber?: string | null
+}) => {
+  if (invoice.invoiceNumber || invoice.status !== 'PAID') {
+    return
+  }
+
+  const issuedAt = invoice.paidAt ?? invoice.createdAt
+
+  await prisma.monthlyInvoice.update({
+    where: { id: invoice.id },
+    data: {
+      invoiceNumber: buildInvoiceNumber(issuedAt),
+    },
+  })
+}
 
 async function main() {
   console.log("🌱 Starting database seed...")
@@ -93,6 +124,7 @@ async function main() {
     // await prisma.productChunks.deleteMany()
     await prisma.documents.deleteMany()
     await prisma.fAQ.deleteMany()
+    await prisma.legalDocument.deleteMany()
     await prisma.offers.deleteMany()
     await prisma.services.deleteMany()
     // ✅ Feature 179: Delete pivot tables before parent tables
@@ -146,11 +178,17 @@ async function main() {
       status: "ACTIVE",
       role: "ADMIN",
       planType: "ENTERPRISE", // ✅ Enterprise plan (full feature set)
-      creditBalance: 186.90, // ✅ Reflects final balance from billing history
+      creditBalance: 185.00, // ✅ Reflects final balance from billing history
       isDeveloperUser: true, // ✅ Developer User - skip 2FA for testing
       twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
       twoFactorEnabledAt: null,
       recoveryCodes: [], // Recovery codes generated when 2FA is enabled
+      paypalStatus: "CONNECTED",
+      paypalClientId: "paypal-client-demo-1234",
+      paypalMerchantId: "paypal-merchant-5678",
+      paypalEmail: "billing@echatbot.ai",
+      paypalEnvironment: "sandbox",
+      paypalConnectedAt: new Date(2025, 10, 1, 9, 30, 0),
       // 🧾 Billing Information (Andrea's requirement - sample data)
       companyName: "eChatbot Italia S.r.l.",
       vatNumber: "IT12345678901",
@@ -715,6 +753,25 @@ Sono qui per aiutarti 😊`,
     { category: "Transport", question: "Do you insure shipments against temperature excursions?", answer: "All refrigerated and frozen shipments are insured; if a temperature excursion occurs we trigger a replacement immediately." },
     { category: "Transport", question: "What is the maximum weight per pallet you can ship?", answer: "Standard pallets can reach roughly 900 kg; above that threshold we split the goods into multiple pallets for safety." },
     { category: "Transport", question: "Do you offer dual-compartment trucks for mixed frozen and ambient goods?", answer: "Yes, we collaborate with carriers operating dual-compartment vehicles so frozen and ambient products travel together without risk." },
+    
+    // ========== CUSTOMIZATION & INTEGRATION FAQs (Andrea's FAQs) ==========
+    // Italian Version
+    { category: "Integrazioni", question: "Posso integrare il vostro servizio con il mio CRM?", answer: "Sì, certo! È una customizzazione disponibile con la versione Enterprise. Mandaci una email con tutte le specifiche del vostro CRM (API disponibili, formati dati, autenticazione, etc.) a support@echatbot.ai e provvediamo a farti un preventivo dettagliato." },
+    { category: "Integrazioni", question: "Posso lanciare un webhook quando viene effettuato un ordine?", answer: "Sì, certo! È una customizzazione disponibile con la versione Enterprise. Mandaci una email con l'URL webhook di destinazione, il formato/struttura dati attesi, timing (immediate o batch?), e autenticazione required (API key, OAuth, etc.). Implementiamo un flusso: Ordine completato → Scheduler → Security Check → POST webhook al tuo servizio → Log e retry su failure." },
+    { category: "Integrazioni", question: "Posso leggere la disponibilità dinamicamente dai miei server facendo una chiamata esterna?", answer: "Sì, certo! È una customizzazione disponibile con la versione Enterprise. Mandaci una email con l'URL API del vostro servizio di disponibilità, parametri da inviare (SKU, quantità, warehouse, etc.), formato risposta atteso, e timeout/retry policy. Implementiamo: Cliente chiede → ChatBot chiama API esterna → Risposta dinamica integrata nel flusso." },
+    { category: "Team", question: "Ho una squadra di agenti. Posso inoltrare la richiesta all'agente associato?", answer: "Sì, certo! Ecco come funziona: 1) Vai in Backoffice → Settings → Team Members, 2) Aggiungi agenti con nome, email, skills (Sales, Support, Technical), 3) Configura routing nel Agent Config con regole di assegnazione (round-robin, skill-based, etc.), 4) Quando il cliente scrive, il ChatBot analizza la richiesta, assegna l'agente disponibile, e notifica l'agente per la risposta. Se l'agente è offline, il sistema passa al prossimo in lista." },
+    { category: "Team", question: "Come ricevono le notifiche gli agenti quando viene assegnata una richiesta?", answer: "Gli agenti ricevono notifiche email con il nome del cliente e il contesto della conversazione. Possono rispondere direttamente dalla dashboard. Se attivi la versione Enterprise, le notifiche possono arrivare anche via WhatsApp. Il sistema traccia tutti gli handover per analytics e feedback di soddisfazione cliente." },
+    { category: "FAQ", question: "Ho aggiunto delle FAQs. Puoi metterle nel flusso del chatbot?", answer: "Le FAQs sono già integrate nel flusso! Ecco come funzionano: 1) Aggiungi FAQ in Backoffice → Content → FAQs (Titolo, Risposta, Categorie, Keywords), 2) Quando il cliente chiede qualcosa, il sistema calcola un similarity score (0-100%), 3) Se score > 70% → usa la risposta FAQ istantaneamente (senza LLM latency), 4) Se score < 70% → usa risposta LLM standard. Tutto viene tracciato in analytics." },
+    { category: "FAQ", question: "Quali sono i vantaggi di usare le FAQs nel chatbot?", answer: "I vantaggi delle FAQs sono: ✅ Risposte instant (no LLM latency), ✅ Consistenza (stesse risposte sempre), ✅ Risparmio token (meno costo LLM), ✅ Analytics complete (quante volte usata, click rate, fallback rate). Puoi vedere nel dashboard quali FAQ sono più usate e quali hanno il highest satisfaction rate." },
+    
+    // English Version (Fallback)
+    { category: "Integrations", question: "Can I integrate your service with my CRM?", answer: "Yes, of course! It's a customization available with the Enterprise version. Send us an email with all your CRM specifications (available APIs, data formats, authentication, etc.) to support@echatbot.ai and we'll provide you with a detailed quote." },
+    { category: "Integrations", question: "Can I launch a webhook when an order is placed?", answer: "Yes, of course! It's a customization available with the Enterprise version. Send us an email with: webhook destination URL, expected data format/structure, timing (immediate or batch?), and required authentication (API key, OAuth, etc.). We implement: Order completed → Scheduler → Security Check → POST webhook to your service → Log and retry on failure." },
+    { category: "Integrations", question: "Can I read availability dynamically from my servers by making an external API call?", answer: "Yes, of course! It's a customization available with the Enterprise version. Send us an email with: your availability service API URL, parameters to send (SKU, quantity, warehouse, etc.), expected response format, and timeout/retry policy. We implement: Customer asks → ChatBot calls external API → Dynamic response integrated in the flow." },
+    { category: "Team", question: "I have a team of agents. Can I forward requests to the associated agent?", answer: "Yes, of course! Here's how it works: 1) Go to Backoffice → Settings → Team Members, 2) Add agents with name, email, skills (Sales, Support, Technical), 3) Configure routing in Agent Config with assignment rules (round-robin, skill-based, etc.), 4) When the customer writes, the ChatBot analyzes the request, assigns the available agent, and notifies the agent for response. If the agent is offline, the system moves to the next in the list." },
+    { category: "Team", question: "How do agents receive notifications when a request is assigned to them?", answer: "Agents receive email notifications with the customer name and conversation context. They can reply directly from the dashboard. If you activate the Enterprise version, notifications can also arrive via WhatsApp. The system tracks all handovers for analytics and customer satisfaction feedback." },
+    { category: "FAQ", question: "I've added some FAQs. Can you put them in the chatbot flow?", answer: "FAQs are already integrated into the flow! Here's how it works: 1) Add FAQ in Backoffice → Content → FAQs (Title, Answer, Categories, Keywords), 2) When a customer asks something, the system calculates a similarity score (0-100%), 3) If score > 70% → use the FAQ answer instantly (without LLM latency), 4) If score < 70% → use standard LLM response. Everything is tracked in analytics." },
+    { category: "FAQ", question: "What are the benefits of using FAQs in the chatbot?", answer: "The benefits of FAQs are: ✅ Instant answers (no LLM latency), ✅ Consistency (same answers always), ✅ Token savings (lower LLM cost), ✅ Complete analytics (times used, click rate, fallback rate). You can see in the dashboard which FAQs are most used and which have the highest satisfaction rate." },
   ]
 
   for (const faq of infoFAQs) {
@@ -1137,6 +1194,42 @@ Sono qui per aiutarti 😊`,
   console.log(
     `   - Limits: ${platformConfigData.filter((p) => p.type === "LIMIT").length}`
   )
+
+  // 6c. Create Legal Documents (GDPR, Privacy Policy, Terms, Refund Policy)
+  console.log("📋 Creating legal documents...")
+
+  for (const doc of legalDocuments) {
+    await prisma.legalDocument.upsert({
+      where: {
+        type: doc.type as any,
+      },
+      update: {
+        titleIt: doc.titleIt,
+        titleEn: doc.titleEn,
+        titleEs: doc.titleEs,
+        titlePt: doc.titlePt,
+        contentIt: doc.contentIt,
+        contentEn: doc.contentEn,
+        contentEs: doc.contentEs,
+        contentPt: doc.contentPt,
+        isActive: doc.isActive,
+      },
+      create: {
+        type: doc.type as any,
+        titleIt: doc.titleIt,
+        titleEn: doc.titleEn,
+        titleEs: doc.titleEs,
+        titlePt: doc.titlePt,
+        contentIt: doc.contentIt,
+        contentEn: doc.contentEn,
+        contentEs: doc.contentEs,
+        contentPt: doc.contentPt,
+        isActive: doc.isActive,
+      },
+    })
+  }
+
+  console.log(`✅ Created/Seeded ${legalDocuments.length} legal documents (GDPR, Privacy Policy, Terms of Service, Refund Policy)`)
 
   // 7. Create Categories
   console.log("📂 Creating categories...")
@@ -2609,46 +2702,6 @@ Sono qui per aiutarti 😊`,
     },
   })
 
-  // September 15: Automatic upgrade from FREE_TRIAL to BASIC (same time as recharge)
-  await prisma.billingTransaction.create({
-    data: {
-      workspace: { connect: { id: workspace.id } },
-      user: { connect: { id: adminUser.id } },
-      type: "UPGRADE_FEE",
-      amount: 0,
-      balanceAfter: 52.00,
-      description: "Upgrade from Free Trial to Basic plan ($22.00/month)",
-      createdAt: new Date(2025, 8, 15, 14, 30, 0), // Sep 15, 2025 (same time)
-    },
-  })
-
-  // October 1: Payment for September invoice (Plan $22 Basic + Recharges $30 = $52 charged)
-  // After this, balance is 52, invoice is separate charge
-  await prisma.billingTransaction.create({
-    data: {
-      workspace: { connect: { id: workspace.id } },
-      user: { connect: { id: adminUser.id } },
-      type: "INVOICE_PAID",
-      amount: 0,
-      balanceAfter: 52.00,
-      description: "Invoice Sep 2025 paid - Basic plan $22.00 + Recharges $30.00",
-      createdAt: new Date(2025, 9, 1, 6, 0, 0), // Oct 1, 2025 at 06:00
-    },
-  })
-
-  // October 1: Upgrade to Premium plan (after invoice payment)
-  await prisma.billingTransaction.create({
-    data: {
-      workspace: { connect: { id: workspace.id } },
-      user: { connect: { id: adminUser.id } },
-      type: "UPGRADE_FEE",
-      amount: 0,
-      balanceAfter: 52.00,
-      description: "Upgrade from Basic to Premium plan ($45.00/month)",
-      createdAt: new Date(2025, 9, 1, 7, 0, 0), // Oct 1, 2025 at 07:00
-    },
-  })
-
   // October 20: Message usage -$5
   await prisma.billingTransaction.create({
     data: {
@@ -2659,20 +2712,6 @@ Sono qui per aiutarti 😊`,
       balanceAfter: 47.00,
       description: "50 WhatsApp messages (BellItalia VIP)",
       createdAt: new Date(2025, 9, 20, 16, 45, 0), // Oct 20, 2025
-    },
-  })
-
-  // November 1: Payment for October invoice (Plan $45 Premium + Recharges $0 = $45 charged)
-  // Balance stays 47 (invoice is separate)
-  await prisma.billingTransaction.create({
-    data: {
-      workspace: { connect: { id: workspace.id } },
-      user: { connect: { id: adminUser.id } },
-      type: "INVOICE_PAID",
-      amount: 0,
-      balanceAfter: 47.00,
-      description: "Invoice Oct 2025 paid - Premium plan $45.00 + Recharges $0.00",
-      createdAt: new Date(2025, 10, 1, 6, 0, 0), // Nov 1, 2025 at 06:00
     },
   })
 
@@ -2702,20 +2741,6 @@ Sono qui per aiutarti 😊`,
     },
   })
 
-  // December 1: Payment for November invoice (Plan $45 Premium + Recharges $45 = $90 charged)
-  // Balance stays 88.50 (invoice is separate)
-  await prisma.billingTransaction.create({
-    data: {
-      workspace: { connect: { id: workspace.id } },
-      user: { connect: { id: adminUser.id } },
-      type: "INVOICE_PAID",
-      amount: 0,
-      balanceAfter: 88.50,
-      description: "Invoice Nov 2025 paid - Premium plan $45.00 + Recharges $45.00",
-      createdAt: new Date(2025, 11, 1, 6, 0, 0), // Dec 1, 2025 at 06:00
-    },
-  })
-
   // December 1: Credit recharge +$100
   await prisma.billingTransaction.create({
     data: {
@@ -2742,28 +2767,74 @@ Sono qui per aiutarti 😊`,
     },
   })
 
-  // December 10: Today's message -$0.10
+  // December 10: Today's message -$1.00
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "MESSAGE",
-      amount: -0.10,
-      balanceAfter: 185.90,
+      amount: -1.00,
+      balanceAfter: 185.00,
       description: "1 WhatsApp message (BellItalia)",
       createdAt: new Date(), // Today
     },
   })
 
-  console.log("✅ Created 13 billing transactions (realistic history)")
+  console.log("✅ Created 8 billing transactions (realistic history)")
 
   // ============================================================================
   // MONTHLY INVOICES - Past paid invoices
   // ============================================================================
   console.log("🧾 Creating monthly invoices...")
 
+  const paidHistoryMonths = [
+    { month: 7, year: 2025, usage: 4.2, total: 49.2, paidAt: new Date(2025, 7, 1, 9, 10, 0) },
+    { month: 8, year: 2025, usage: 6.4, total: 51.4, paidAt: new Date(2025, 8, 1, 9, 5, 0) },
+    { month: 9, year: 2025, usage: 5.6, total: 50.6, paidAt: new Date(2025, 9, 1, 9, 12, 0) },
+  ]
+
+  const historicalInvoices: Array<{
+    id: string
+    periodMonth: number
+    periodYear: number
+    totalAmount: number
+    paidAt: Date
+  }> = []
+
+  for (const entry of paidHistoryMonths) {
+    const created = await prisma.monthlyInvoice.create({
+      data: {
+        user: { connect: { id: adminUser.id } },
+        periodStart: new Date(entry.year, entry.month - 1, 1, 0, 0, 0),
+        periodEnd: new Date(entry.year, entry.month, 0, 23, 59, 59),
+        periodMonth: entry.month,
+        periodYear: entry.year,
+        subscriptionAmount: 45.00,
+        creditUsage: entry.usage,
+        creditDebt: 0,
+        totalAmount: entry.total,
+        status: "PAID",
+        paidAt: entry.paidAt,
+        planType: "PREMIUM",
+        itemsBreakdown: {
+          messages: Math.round(entry.usage * 10),
+          orders: Math.max(1, Math.round(entry.usage)),
+          pushNotifications: 1,
+        },
+      },
+    })
+    await ensureInvoiceNumber(created)
+    historicalInvoices.push({
+      id: created.id,
+      periodMonth: created.periodMonth,
+      periodYear: created.periodYear,
+      totalAmount: Number(created.totalAmount),
+      paidAt: created.paidAt as Date,
+    })
+  }
+
   // October 2025 Invoice (PAID)
-  await prisma.monthlyInvoice.create({
+  const octoberInvoice = await prisma.monthlyInvoice.create({
     data: {
       user: { connect: { id: adminUser.id } },
       periodStart: new Date(2025, 9, 1, 0, 0, 0),
@@ -2784,9 +2855,10 @@ Sono qui per aiutarti 😊`,
       },
     },
   })
+  await ensureInvoiceNumber(octoberInvoice)
 
   // November 2025 Invoice (PAID)
-  await prisma.monthlyInvoice.create({
+  const novemberInvoice = await prisma.monthlyInvoice.create({
     data: {
       user: { connect: { id: adminUser.id } },
       periodStart: new Date(2025, 10, 1, 0, 0, 0),
@@ -2807,9 +2879,10 @@ Sono qui per aiutarti 😊`,
       },
     },
   })
+  await ensureInvoiceNumber(novemberInvoice)
 
   // December 2025 Invoice (DRAFT - current month)
-  await prisma.monthlyInvoice.create({
+  const decemberInvoice = await prisma.monthlyInvoice.create({
     data: {
       user: { connect: { id: adminUser.id } },
       periodStart: new Date(2025, 11, 1, 0, 0, 0),
@@ -2822,6 +2895,7 @@ Sono qui per aiutarti 😊`,
       totalAmount: 47.60,
       status: "DRAFT",
       planType: "PREMIUM",
+      adminNotes: "Check credit note before payment",
       itemsBreakdown: {
         messages: 26,
         orders: 2,
@@ -2829,8 +2903,220 @@ Sono qui per aiutarti 😊`,
       },
     },
   })
+  await ensureInvoiceNumber(decemberInvoice)
 
   console.log("✅ Created 3 monthly invoices (Oct, Nov, Dec 2025)")
+
+  const currentDate = new Date()
+  const currentMonth = currentDate.getMonth() + 1
+  const currentYear = currentDate.getFullYear()
+
+  if (!(currentYear === 2025 && currentMonth === 12)) {
+    const currentPeriodStart = new Date(currentYear, currentMonth - 1, 1, 0, 0, 0)
+    const currentPeriodEnd = new Date(currentYear, currentMonth, 0, 23, 59, 59)
+
+    const currentInvoice = await prisma.monthlyInvoice.create({
+      data: {
+        user: { connect: { id: adminUser.id } },
+        periodStart: currentPeriodStart,
+        periodEnd: currentPeriodEnd,
+        periodMonth: currentMonth,
+        periodYear: currentYear,
+        subscriptionAmount: 45.00,
+        creditUsage: 4.20,
+        creditDebt: 0,
+        totalAmount: 49.20,
+        status: "DRAFT",
+        planType: "PREMIUM",
+        adminNotes: "Current month review pending",
+        itemsBreakdown: {
+          messages: 42,
+          orders: 3,
+          pushNotifications: 1,
+        },
+      },
+    })
+    await ensureInvoiceNumber(currentInvoice)
+
+    // Current month stays clean; credit notes are managed only after payment in History.
+  }
+
+  const previousDate = new Date(currentYear, currentMonth - 2, 1)
+  const previousMonth = previousDate.getMonth() + 1
+  const previousYear = previousDate.getFullYear()
+
+  const existingPreviousInvoice = await prisma.monthlyInvoice.findFirst({
+    where: {
+      userId: adminUser.id,
+      periodMonth: previousMonth,
+      periodYear: previousYear,
+    },
+  })
+
+  if (!existingPreviousInvoice) {
+    const previousInvoice = await prisma.monthlyInvoice.create({
+      data: {
+        user: { connect: { id: adminUser.id } },
+        periodStart: new Date(previousYear, previousMonth - 1, 1, 0, 0, 0),
+        periodEnd: new Date(previousYear, previousMonth, 0, 23, 59, 59),
+        periodMonth: previousMonth,
+        periodYear: previousYear,
+        subscriptionAmount: 45.00,
+        creditUsage: 6.75,
+        creditDebt: 0,
+        totalAmount: 51.75,
+        status: "PENDING",
+        planType: "PREMIUM",
+        itemsBreakdown: {
+          messages: 60,
+          orders: 6,
+          pushNotifications: 1,
+        },
+      },
+    })
+
+    await prisma.invoiceAdjustment.create({
+      data: {
+        invoiceId: previousInvoice.id,
+        userId: adminUser.id,
+        amount: -5.25,
+        reason: "Manual discount",
+        createdById: platformAdminUser.id,
+        createdByEmail: platformAdminUser.email,
+        createdAt: new Date(previousYear, previousMonth, 2, 9, 30, 0),
+      },
+    })
+    await ensureInvoiceNumber(previousInvoice)
+  }
+
+  await prisma.invoiceCreditNote.create({
+    data: {
+      invoiceId: novemberInvoice.id,
+      userId: adminUser.id,
+      amount: 5.00,
+      reason: "Goodwill adjustment",
+      createdById: platformAdminUser.id,
+      createdByEmail: platformAdminUser.email,
+      createdAt: new Date(2025, 11, 10, 9, 30, 0),
+    },
+  })
+
+  const failedDate = new Date(currentYear, currentMonth - 3, 1)
+  const failedMonth = failedDate.getMonth() + 1
+  const failedYear = failedDate.getFullYear()
+  const existingFailedInvoice = await prisma.monthlyInvoice.findFirst({
+    where: {
+      userId: adminUser.id,
+      periodMonth: failedMonth,
+      periodYear: failedYear,
+    },
+  })
+
+  if (!existingFailedInvoice) {
+    const failedInvoice = await prisma.monthlyInvoice.create({
+      data: {
+        user: { connect: { id: adminUser.id } },
+        periodStart: new Date(failedYear, failedMonth - 1, 1, 0, 0, 0),
+        periodEnd: new Date(failedYear, failedMonth, 0, 23, 59, 59),
+        periodMonth: failedMonth,
+        periodYear: failedYear,
+        subscriptionAmount: 45.00,
+        creditUsage: 4.10,
+        creditDebt: 0,
+        totalAmount: 49.10,
+        status: "FAILED",
+        planType: "PREMIUM",
+        adminNotes: "Failed payment - retry later",
+        itemsBreakdown: {
+          messages: 41,
+          orders: 4,
+          pushNotifications: 0,
+        },
+      },
+    })
+    await ensureInvoiceNumber(failedInvoice)
+  }
+
+  await prisma.monthlyInvoice.update({
+    where: { id: novemberInvoice.id },
+    data: {
+      adminNotes: "Paid after retry",
+    },
+  })
+
+  // ============================================================================
+  // PAYPAL TRANSACTIONS - Sample history
+  // ============================================================================
+  console.log("💳 Creating PayPal transactions...")
+
+  const historyTransactions = historicalInvoices.map((invoice) => ({
+    userId: adminUser.id,
+    adminUserId: platformAdminUser.id,
+    invoiceId: invoice.id,
+    amount: Number(invoice.totalAmount),
+    currency: "USD",
+    status: "SUCCESS",
+    notes: `Invoice ${String(invoice.periodMonth).padStart(2, "0")}/${invoice.periodYear} paid`,
+    createdAt: invoice.paidAt,
+  }))
+
+  await prisma.payPalTransaction.createMany({
+    data: [
+      ...historyTransactions,
+      {
+        userId: adminUser.id,
+        adminUserId: platformAdminUser.id,
+        invoiceId: octoberInvoice.id,
+        amount: 50.00,
+        currency: "USD",
+        status: "SUCCESS",
+        notes: "October invoice paid",
+        createdAt: new Date(2025, 10, 1, 10, 5, 0),
+      },
+      {
+        userId: adminUser.id,
+        adminUserId: platformAdminUser.id,
+        invoiceId: novemberInvoice.id,
+        amount: 48.50,
+        currency: "USD",
+        status: "FAILED",
+        notes: "Card declined - retry scheduled",
+        createdAt: new Date(2025, 11, 1, 10, 2, 0),
+      },
+      {
+        userId: adminUser.id,
+        adminUserId: platformAdminUser.id,
+        invoiceId: novemberInvoice.id,
+        amount: 48.50,
+        currency: "USD",
+        status: "SUCCESS",
+        notes: "November invoice paid on retry",
+        createdAt: new Date(2025, 11, 2, 9, 15, 0),
+      },
+      {
+        userId: adminUser.id,
+        adminUserId: platformAdminUser.id,
+        invoiceId: decemberInvoice.id,
+        amount: 47.60,
+        currency: "USD",
+        status: "FAILED",
+        notes: "Insufficient funds",
+        createdAt: new Date(2025, 11, 31, 18, 40, 0),
+      },
+      {
+        userId: adminUser.id,
+        adminUserId: platformAdminUser.id,
+        invoiceId: null,
+        amount: 12.00,
+        currency: "USD",
+        status: "SUCCESS",
+        notes: "Manual adjustment",
+        createdAt: new Date(2025, 11, 20, 15, 5, 0),
+      },
+    ],
+  })
+
+  console.log("✅ Created PayPal transaction history")
 
   // Seed Scheduler Job Status (all jobs active by default)
   console.log("⏰ Creating scheduler job status...")

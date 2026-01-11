@@ -25,6 +25,7 @@ export interface CustomerProps {
   name: string
   email: string
   phone?: string
+  customId?: string // 🆕 Widget: visitor tracking ID (e.g., "webvisitor-abc123")
   address?: string
   company?: string
   discount?: number
@@ -56,6 +57,7 @@ export class Customer {
   readonly name: string
   readonly email: string
   readonly phone?: string
+  readonly customId?: string // 🆕 Widget: visitor tracking ID
   readonly address?: string
   readonly company?: string
   readonly discount: number
@@ -82,6 +84,7 @@ export class Customer {
     this.name = props.name
     this.email = props.email
     this.phone = props.phone
+    this.customId = props.customId // 🆕 Widget: visitor tracking ID
     this.address = props.address
     this.company = props.company
     this.discount = props.discount || 0

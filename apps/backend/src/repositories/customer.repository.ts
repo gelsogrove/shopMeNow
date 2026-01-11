@@ -17,6 +17,7 @@ export class CustomerRepository implements ICustomerRepository {
       name: customerData.name,
       email: customerData.email,
       phone: customerData.phone,
+      customId: customerData.customId, // 🆕 Widget: visitor tracking
       address: customerData.address,
       company: customerData.company,
       discount: customerData.discount,
@@ -183,6 +184,7 @@ export class CustomerRepository implements ICustomerRepository {
         isBlacklisted: data.isBlacklisted || false,
         isActive: data.isActive !== undefined ? data.isActive : true,
         workspaceId: data.workspaceId,
+        customId: data.customId, // 🆕 Save widget visitorId
         last_privacy_version_accepted: data.last_privacy_version_accepted,
         privacy_accepted_at: data.privacy_accepted_at,
         push_notifications_consent: data.push_notifications_consent || false,

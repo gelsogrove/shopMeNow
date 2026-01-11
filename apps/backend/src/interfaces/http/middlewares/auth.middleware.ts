@@ -90,6 +90,14 @@ const authMiddlewareAsync = async (
       return next()
     }
 
+    // 🔓 PUBLIC ROUTES: Skip authentication for widget routes (rate-limited instead)
+    if (req.path.includes("/widget/")) {
+      logger.debug(
+        "🔓 Skipping auth for widget route (public endpoint, rate-limited)"
+      )
+      return next()
+    }
+
     // 🛡️ PRIORITY: Authorization header FIRST, then cookies
     // This ensures that when frontend clears localStorage and sends new token in header,
     // we use the new token instead of stale cookie from previous session

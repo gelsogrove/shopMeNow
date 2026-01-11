@@ -14,8 +14,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { useWorkspace } from "./WorkspaceContext"
 import { storage } from "@/lib/storage"
 import {
-  getBalance,
-  getBillingOverview,
+  getOwnerBalance,
+  getOwnerBillingOverview,
   BillingOverview,
   BalanceResponse,
   PlanType,
@@ -116,14 +116,13 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
    * Fetch quick balance info (for header)
    */
   const refreshBalance = useCallback(async () => {
-    // Skip if no workspace or user not authenticated
-    if (!workspaceId || !isAuthenticated()) return
+    if (!isAuthenticated()) return
 
     setIsLoadingBalance(true)
     setError(null)
 
     try {
-      const data = await getBalance(workspaceId)
+      const data = await getOwnerBalance()
       setCreditBalance(data.creditBalance)
       setIsLowBalance(data.isLowBalance)
       setPlanType(data.planType) // Now included in balance response
@@ -143,20 +142,19 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     } finally {
       setIsLoadingBalance(false)
     }
-  }, [workspaceId])
+  }, [])
 
   /**
    * Fetch full billing overview (for profile page)
    */
   const refreshOverview = useCallback(async () => {
-    // Skip if no workspace or user not authenticated
-    if (!workspaceId || !isAuthenticated()) return
+    if (!isAuthenticated()) return
 
     setIsLoadingOverview(true)
     setError(null)
 
     try {
-      const data = await getBillingOverview(workspaceId)
+      const data = await getOwnerBillingOverview()
       setBillingOverview(data)
 
       // Also update quick balance state from overview
@@ -172,7 +170,7 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     } finally {
       setIsLoadingOverview(false)
     }
-  }, [workspaceId])
+  }, [])
 
   /**
    * Update balance locally (after recharge without refetch)
@@ -186,9 +184,9 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     setIsLowBalance(newBalance < lowThreshold)
   }, [billingOverview])
 
-  // Fetch balance on workspace change (only if authenticated)
+  // Fetch balance when auth/workspace changes (owner-level billing)
   useEffect(() => {
-    if (workspaceId && isAuthenticated()) {
+    if (isAuthenticated()) {
       refreshBalance()
     } else {
       // Reset state when no workspace or not authenticated
@@ -205,7 +203,7 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
 
   // Auto-refresh balance every 60 seconds when tab is active (only if authenticated)
   useEffect(() => {
-    if (!workspaceId || !isAuthenticated()) return
+    if (!isAuthenticated()) return
 
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
@@ -215,7 +213,7 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
 
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId]) // Only trigger on workspaceId change
+  }, [workspaceId]) // Recreate interval if workspace context changes
 
   const value: BillingContextState = {
     creditBalance,

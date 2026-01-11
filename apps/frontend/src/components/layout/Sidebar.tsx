@@ -121,6 +121,11 @@ export function Sidebar() {
       label: "Campaigns",
       icon: Megaphone,
     },
+    {
+      href: "/widget-settings",
+      label: "Chat Widget",
+      icon: MessageSquare,
+    },
   ]
 
   const mainLinks = baseLinks

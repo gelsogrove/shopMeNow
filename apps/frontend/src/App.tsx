@@ -1,5 +1,8 @@
 import GdprPage from "@/pages/GdprPage"
 import SettingsPage from "@/pages/SettingsPage"
+import WidgetPage from "@/pages/WidgetPage"
+import WidgetSettingsPage from "@/pages/WidgetSettingsPage"
+import { LegalDocumentPage } from "@/pages/LegalDocumentPage"
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { Toaster } from "sonner"
 import { MinimalLayout } from "./components/layout/MinimalLayout"
@@ -79,7 +82,8 @@ export function App() {
 
                 {/* Auth Routes - accessibili senza autenticazione */}
                 <Route path="/auth">
-                  <Route path="login" element={<Navigate to="/" replace />} />
+                  {/* ✅ Preserve query params (e.g., ?admin=true) during redirect */}
+                  <Route path="login" element={<LoginPage />} />
                   <Route path="signup" element={<SignupPage />} />
                   <Route path="register" element={<Navigate to="/auth/login?action=register" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
@@ -102,10 +106,16 @@ export function App() {
                 {/* Legacy landing route: redirect to login */}
                 <Route path="/landing" element={<Navigate to="/auth/login" replace />} />
                 
-                {/* Public Legal Pages */}
-                <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/refund-policy" element={<RefundPolicy />} />
+                {/* Public Legal Pages - DYNAMIC (from database) */}
+                <Route path="/privacy" element={<LegalDocumentPage docType="PRIVACY_POLICY" />} />
+                <Route path="/terms" element={<LegalDocumentPage docType="TERMS_OF_SERVICE" />} />
+                <Route path="/refund" element={<LegalDocumentPage docType="REFUND_POLICY" />} />
+                <Route path="/gdpr" element={<LegalDocumentPage docType="GDPR" />} />
+                {/* Legacy URLs - redirect to new paths */}
+                <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
+                <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
+                <Route path="/refund-policy" element={<Navigate to="/refund" replace />} />
+                <Route path="/gdpr-policy" element={<Navigate to="/gdpr" replace />} />
                 {/* Direct route for /forgot-password to avoid 404 */}
                 <Route
                   path="/forgot-password"
@@ -137,6 +147,12 @@ export function App() {
                   </Route>
                   <Route path="/agents" element={<MinimalLayout />}>
                     <Route index element={<AgentConfigurationPage />} />
+                  </Route>
+                  <Route path="/widget" element={<MinimalLayout />}>
+                    <Route index element={<WidgetPage />} />
+                  </Route>
+                  <Route path="/widget-settings" element={<MinimalLayout />}>
+                    <Route index element={<WidgetSettingsPage />} />
                   </Route>
                   <Route path="/clients" element={<MinimalLayout />}>
                     <Route index element={<ClientsPage />} />

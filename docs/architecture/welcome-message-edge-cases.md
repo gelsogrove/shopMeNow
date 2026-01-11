@@ -24,7 +24,7 @@ INCOMING MESSAGE
     ├─ 💾 Get/Create ChatSession
     ├─ 🔒 WORKSPACE ACCESS CHECK
     │   ├─ channelStatus = false (WIP) → Salva + WIP message + enqueue WhatsApp
-    │   └─ PAUSED/PAYMENT_FAILED/CREDIT_EXHAUSTED → SILENT BLOCK
+    │   └─ PAUSED/CREDIT_EXHAUSTED → SILENT BLOCK
     ├─ 💰 BILLING CHECK (credit availability)
     │   └─ ❌ No credit → return 402
     └─ ✅ Passa a ChatEngine

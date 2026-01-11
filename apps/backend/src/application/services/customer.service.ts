@@ -277,6 +277,132 @@ export class CustomerService {
       throw error
     }
   }
+
+  /**
+   * 🆕 Widget Feature: Find or create customer by visitorId
+   * Used for anonymous web visitors from embedded widget
+   */
+  async findOrCreateByVisitorId(
+    workspaceId: string,
+    visitorId: string
+  ): Promise<Customer> {
+    try {
+      logger.info(`🔎 Looking for webvisitor: workspaceId=${workspaceId}, visitorId=${visitorId}`)
+      
+      // Try to find existing customer with this visitorId
+      const existing = await prisma.customers.findFirst({
+        where: {
+          workspaceId,
+          customId: visitorId,
+        },
+      })
+
+      if (existing) {
+        logger.info(`🔍 ✅ Found existing webvisitor: ${visitorId} (ID: ${existing.id})`)
+        // Map Prisma record to CustomerProps (invoiceAddress is Json in DB, needs type casting)
+        const customerProps: CustomerProps = {
+          ...existing,
+          invoiceAddress: existing.invoiceAddress as any, // Cast Json to InvoiceAddress
+        }
+        return new Customer(customerProps)
+      }
+
+      // Create new webvisitor customer
+      logger.info(`✨ Creating new webvisitor: ${visitorId}`)
+      const visitorData: CustomerProps = {
+        workspaceId,
+        customId: visitorId,
+        name: "Web Visitor",
+        email: `${visitorId}@webvisitor.temp`, // Temporary email
+        phone: null,
+        isActive: false, // Not registered yet
+        language: "ENG",
+        currency: "USD",
+      }
+
+      const created = await this.customerRepository.create(visitorData)
+      logger.info(`✨ ✅ New webvisitor created: ${visitorId} (ID: ${created.id})`)
+      return created
+    } catch (error) {
+      logger.error(`Error finding/creating webvisitor ${visitorId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * 🆕 Widget Feature: Convert webvisitor to registered customer
+   * Merges visitor data with registration data, preserves chat history
+   */
+  async convertVisitorToCustomer(
+    visitorId: string,
+    customerData: {
+      workspaceId: string
+      phone: string
+      firstName: string
+      lastName: string
+      email: string
+      language?: string
+    }
+  ): Promise<Customer> {
+    try {
+      // Find existing webvisitor
+      const visitor = await prisma.customers.findFirst({
+        where: {
+          customId: visitorId,
+          workspaceId: customerData.workspaceId,
+        },
+      })
+
+      if (!visitor) {
+        throw new Error(`Webvisitor ${visitorId} not found`)
+      }
+
+      logger.info(`🔄 Converting webvisitor ${visitorId} to registered customer`)
+
+      // Check if phone already exists (avoid duplicates)
+      const existingByPhone = await this.customerRepository.findByPhone(
+        customerData.phone,
+        customerData.workspaceId
+      )
+
+      if (existingByPhone && existingByPhone.id !== visitor.id) {
+        throw new Error("Phone number already registered")
+      }
+
+      // Check if email already exists
+      const existingByEmail = await this.customerRepository.findByEmail(
+        customerData.email,
+        customerData.workspaceId
+      )
+
+      if (existingByEmail && existingByEmail.id !== visitor.id) {
+        throw new Error("Email already registered")
+      }
+
+      // Update visitor with real customer data
+      const updatedCustomer = await this.customerRepository.update(
+        visitor.id,
+        customerData.workspaceId,
+        {
+          phone: customerData.phone,
+          name: `${customerData.firstName} ${customerData.lastName}`,
+          email: customerData.email,
+          language: customerData.language || visitor.language,
+          isActive: true, // Now registered
+          customId: null, // Clear visitorId, now it's a real customer
+        }
+      )
+
+      logger.info(
+        `✅ Webvisitor converted: ${visitorId} → Customer ${updatedCustomer.id}`
+      )
+
+      return updatedCustomer
+    } catch (error) {
+      logger.error(`Error converting webvisitor ${visitorId}:`, error)
+      throw error
+    }
+  }
 }
 
 // Export a singleton instance for backward compatibility

@@ -55,9 +55,9 @@ import {
   formatCurrency,
   getTransactionTypeInfo,
   rechargeCredit,
-  getTransactions,
+  getOwnerTransactions,
   changePlan,
-  getBillingOverview,
+  getOwnerBillingOverview,
   pauseOwnerSubscription,
   resumeOwnerSubscription,
   getOwnerSubscriptionStatus,
@@ -66,9 +66,12 @@ import {
   BillingOverview,
   SubscriptionStatusResponse,
   getOwnerInvoices,
+  getCurrentInvoice,
   downloadInvoicePdf,
+  downloadCreditNotePdf,
   Invoice,
 } from "@/services/subscriptionBillingApi"
+import { roundMoney } from "@/utils/money"
 import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { toast } from "@/lib/toast"
 import {
@@ -97,16 +100,19 @@ import {
 // TYPES & CONSTANTS
 // ============================================================================
 
+const formatUsd = (value: number) => formatCurrency(roundMoney(value), "USD")
+
 interface RechargeAmountOption {
   value: number
   label: string
 }
 
 const RECHARGE_OPTIONS: RechargeAmountOption[] = [
-  { value: 12, label: "$12" },
-  { value: 29, label: "$29" },
-  { value: 59, label: "$59" },
-  { value: 118, label: "$118" },
+  { value: 5, label: "$5" },
+  { value: 10, label: "$10" },
+  { value: 30, label: "$30" },
+  { value: 50, label: "$50" },
+  { value: 100, label: "$100" },
 ]
 
 // Plan limits per type (used for downgrade validation)
@@ -230,6 +236,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
   const [ownerInvoices, setOwnerInvoices] = useState<Invoice[]>([])
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false)
+  const [currentInvoice, setCurrentInvoice] = useState<Invoice | null>(null)
+  const [isLoadingCurrentInvoice, setIsLoadingCurrentInvoice] = useState(false)
 
   // External control: open upgrade dialog when prop changes to true
   useEffect(() => {
@@ -258,6 +266,22 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   // Load subscription status on mount and when dialog opens
   useEffect(() => {
     loadSubscriptionStatus()
+  }, [])
+
+  const loadCurrentInvoice = async () => {
+    setIsLoadingCurrentInvoice(true)
+    try {
+      const invoice = await getCurrentInvoice()
+      setCurrentInvoice(invoice)
+    } catch (error) {
+      console.error("Failed to load current invoice:", error)
+    } finally {
+      setIsLoadingCurrentInvoice(false)
+    }
+  }
+
+  useEffect(() => {
+    loadCurrentInvoice()
   }, [])
 
   useEffect(() => {
@@ -290,7 +314,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       // Load directly when using prop workspaceId
       setLocalIsLoading(true)
       try {
-        const data = await getBillingOverview(propWorkspaceId)
+        const data = await getOwnerBillingOverview()
         setLocalBillingOverview(data)
       } catch (error) {
         console.error("Failed to load billing overview:", error)
@@ -301,6 +325,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       // Use context refresh
       contextBilling.refreshOverview()
     }
+    await loadCurrentInvoice()
   }
 
   // Update balance and totalRecharges locally after a recharge
@@ -325,17 +350,17 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   // 🔄 Load billing overview when component mounts
   useEffect(() => {
-    if (effectiveWorkspaceId && !billingOverview && !isLoadingOverview) {
+    if (!billingOverview && !isLoadingOverview) {
       refreshOverview()
     }
-  }, [effectiveWorkspaceId, billingOverview, isLoadingOverview])
+  }, [billingOverview, isLoadingOverview])
 
   // 🔄 Load transactions on mount (needed to check if Invoices button should show)
   useEffect(() => {
-    if (effectiveWorkspaceId && transactions.length === 0) {
+    if (transactions.length === 0) {
       loadTransactions()
     }
-  }, [effectiveWorkspaceId])
+  }, [transactions.length])
 
   // Check if there are billable transactions (not just INITIAL_CREDIT)
   // Also show Invoices button if user has an active paid subscription
@@ -348,11 +373,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   )
 
   const loadTransactions = async () => {
-    if (!effectiveWorkspaceId) return
-
     setIsLoadingTransactions(true)
     try {
-      const data = await getTransactions(effectiveWorkspaceId, { 
+      const data = await getOwnerTransactions({
         limit: 200  // Load more transactions for full history
       })
       setTransactions(data.transactions)
@@ -389,7 +412,10 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `invoice-${invoice.periodYear}-${String(invoice.periodMonth).padStart(2, "0")}.pdf`
+      const safeNumber = invoice.invoiceNumber?.trim()
+      link.download = safeNumber
+        ? `${safeNumber}.pdf`
+        : `invoice-${invoice.periodYear}-${String(invoice.periodMonth).padStart(2, "0")}.pdf`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -397,6 +423,28 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     } catch (error) {
       console.error("Failed to download invoice:", error)
       toast.error("Failed to download invoice")
+    }
+  }
+
+  const handleDownloadCreditNote = async (
+    invoiceId: string,
+    noteId: string,
+    invoiceNumber?: string | null
+  ) => {
+    try {
+      const blob = await downloadCreditNotePdf(invoiceId, noteId)
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      const safeNumber = invoiceNumber?.trim()
+      link.download = safeNumber ? `CN-${safeNumber}.pdf` : "credit-note.pdf"
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error("Failed to download credit note:", error)
+      toast.error("Failed to download credit note")
     }
   }
 
@@ -585,7 +633,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               ⚠️ Your chatbots are DISABLED
             </p>
             <p className="text-sm text-red-700 dark:text-red-300">
-              Credit balance is {formatCurrency(billing.creditBalance)} (below {formatCurrency(creditMinThreshold)} threshold). Your chatbots will not respond to any customer messages until you recharge.
+              Credit balance is {formatUsd(billing.creditBalance)} (below {formatUsd(creditMinThreshold)} threshold). Your chatbots will not respond to any customer messages until you recharge.
             </p>
           </div>
           {isSuperAdmin && (
@@ -745,7 +793,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-4xl font-bold">
-                  {formatCurrency(billing.creditBalance)}
+                  {formatUsd(billing.creditBalance)}
                 </span>
                 {isSuperAdmin && (
                   <Button
@@ -784,13 +832,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     </TooltipProvider>
                   </div>
                   <span className="font-medium text-emerald-600">
-                    {formatCurrency(planConfig.monthlyFee)}
+                    {formatUsd(planConfig.monthlyFee)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Recharges this month:</span>
                   <span className="font-medium text-emerald-600">
-                    {formatCurrency(billing.totalRecharges || 0)}
+                    {formatUsd(billing.totalRecharges || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -799,18 +847,21 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     22%
                   </span>
                 </div>
-                {billing.planType !== "FREE_TRIAL" && (
-                  <div className="flex justify-between items-center pt-3 border-t mt-3">
-                    <span className="font-semibold">
-                      Next monthly charge{billing.nextBillingDate && ` (${new Date(billing.nextBillingDate).toLocaleDateString("it-IT")})`}:
-                    </span>
-                    <span className="text-green-600 font-bold text-lg">
-                      {formatCurrency(
-                        (planConfig.monthlyFee + (billing.totalRecharges || 0)) * 1.22
-                      )}
-                    </span>
-                  </div>
-                )}
+                {billing.planType !== "FREE_TRIAL" && (() => {
+                  const invoiceTotal = currentInvoice?.totalAmount
+                  return (
+                    <div className="flex justify-between items-center pt-3 border-t mt-3">
+                      <span className="font-semibold">
+                        Next monthly charge{billing.nextBillingDate && ` (${new Date(billing.nextBillingDate).toLocaleDateString("it-IT")})`}:
+                      </span>
+                      <span className="text-green-600 font-bold text-lg">
+                        {isLoadingCurrentInvoice || invoiceTotal === undefined
+                          ? "—"
+                          : formatUsd(invoiceTotal)}
+                      </span>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           </div>
@@ -1030,7 +1081,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="font-medium text-gray-900">Billing resumes on 1st of next month</p>
-                        <p className="text-sm text-gray-600">An invoice will be generated for your {PLAN_CONFIGS[billing.planType]?.name || billing.planType} plan ({formatCurrency(planConfig?.monthlyFee || 0)}/month) plus any recharges you make.</p>
+                        <p className="text-sm text-gray-600">An invoice will be generated for your {PLAN_CONFIGS[billing.planType]?.name || billing.planType} plan ({formatUsd(planConfig?.monthlyFee || 0)}/month) plus any recharges you make.</p>
                       </div>
                     </div>
 
@@ -1443,13 +1494,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                                   {tx.description}
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-emerald-600">
-                                  {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `+${formatCurrency(tx.amount)}` : ""}
+                                  {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `+${formatUsd(tx.amount)}` : ""}
                                 </TableCell>
                                 <TableCell className="text-right font-medium text-red-600">
-                                  {tx.amount < 0 && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `-${formatCurrency(Math.abs(tx.amount))}` : ""}
+                                  {tx.amount < 0 && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `-${formatUsd(Math.abs(tx.amount))}` : ""}
                                 </TableCell>
                                 <TableCell className="text-right text-sm font-medium">
-                                  {tx.type !== "INVOICE_PAID" && tx.balanceAfter > 0 ? formatCurrency(tx.balanceAfter) : ""}
+                                  {tx.type !== "INVOICE_PAID" && tx.balanceAfter > 0 ? formatUsd(tx.balanceAfter) : ""}
                                 </TableCell>
                               </TableRow>
                             )
@@ -1520,7 +1571,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   })
 
                   return sortedInvoices.map((invoice) => {
-                    const invoiceNumber = `INV-${invoice.periodYear}${String(invoice.periodMonth).padStart(2, "0")}`
+                    const invoiceNumber = invoice.invoiceNumber ?? null
                     const periodLabel = new Date(invoice.periodYear, invoice.periodMonth - 1).toLocaleDateString(
                       "en-US",
                       { month: "long", year: "numeric" }
@@ -1532,19 +1583,12 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                           <div>
                             <h3 className="font-semibold text-lg capitalize">{periodLabel}</h3>
                             <div className="flex items-center gap-3">
-                              <span className="text-sm text-muted-foreground font-mono">{invoiceNumber}</span>
+                              {invoiceNumber && (
+                                <span className="text-sm text-muted-foreground font-mono">{invoiceNumber}</span>
+                              )}
                               <Badge variant="outline">{invoice.status}</Badge>
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => handleDownloadInvoice(invoice)}
-                          >
-                            <Download className="h-4 w-4" />
-                            Download PDF
-                          </Button>
                         </div>
 
                         <Table>
@@ -1558,20 +1602,20 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                             <TableRow>
                               <TableCell className="font-medium">📋 Subscription Fee ({invoice.planType})</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatCurrency(invoice.subscriptionAmount)}
+                                {formatUsd(invoice.subscriptionAmount)}
                               </TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell className="font-medium">💬 Usage</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatCurrency(invoice.creditUsage)}
+                                {formatUsd(invoice.creditUsage)}
                               </TableCell>
                             </TableRow>
                             {invoice.creditDebt > 0 && (
                               <TableRow>
                                 <TableCell className="font-medium">📉 Credit Debt</TableCell>
                                 <TableCell className="text-right font-medium">
-                                  {formatCurrency(invoice.creditDebt)}
+                                  {formatUsd(invoice.creditDebt)}
                                 </TableCell>
                               </TableRow>
                             )}
@@ -1579,27 +1623,64 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                               <TableRow>
                                 <TableCell className="font-medium">🧾 Credit Notes</TableCell>
                                 <TableCell className="text-right font-medium text-emerald-600">
-                                  -{formatCurrency(invoice.creditNotesTotal)}
+                                  -{formatUsd(invoice.creditNotesTotal)}
                                 </TableCell>
                               </TableRow>
                             )}
-                            <TableRow>
-                              <TableCell className="font-medium">Taxes (22% IVA)</TableCell>
-                              <TableCell className="text-right font-medium text-emerald-600">
-                                {invoice.taxAmount > 0 ? `+${formatCurrency(invoice.taxAmount)}` : '—'}
-                              </TableCell>
-                            </TableRow>
-                            <TableRow className="bg-gray-50 font-bold">
-                              <TableCell>Monthly Balance</TableCell>
-                              <TableCell className="text-right font-medium">
-                                {formatCurrency(invoice.totalAmount)}
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
+                        <TableRow>
+                          <TableCell className="font-medium">Taxes (22%)</TableCell>
+                          <TableCell className="text-right font-medium text-emerald-600">
+                            {invoice.taxAmount > 0 ? `+${formatUsd(invoice.taxAmount)}` : '—'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow className="bg-gray-50 font-bold">
+                          <TableCell>Monthly Balance</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatUsd(invoice.totalAmount)}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+
+                    <div className="border-t bg-white px-4 py-3">
+                      <div className="text-xs font-semibold uppercase text-muted-foreground">
+                        Documents
                       </div>
-                    )
-                  })
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          aria-label="Download invoice PDF"
+                          title="Invoice PDF"
+                          className="text-slate-700"
+                          onClick={() => handleDownloadInvoice(invoice)}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        {(invoice.creditNotes || []).map((note) => (
+                          <Button
+                            key={note.id}
+                            variant="secondary"
+                            size="icon"
+                            aria-label="Download credit note PDF"
+                            title="Credit note PDF"
+                            className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            onClick={() =>
+                              handleDownloadCreditNote(
+                                invoice.id,
+                                note.id,
+                                invoice.invoiceNumber
+                              )
+                            }
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
                 })()}
               </div>
             )}

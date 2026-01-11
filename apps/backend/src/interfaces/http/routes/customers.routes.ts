@@ -11,7 +11,7 @@ export const customersRouter = (controller: CustomersController): Router => {
   // 🔒 SECURITY: All routes require authentication
   router.use(authMiddleware)
 
-  logger.info("Setting up customers routes")
+  logger.debug("Setting up customers routes")
 
   // Routes for customers - adjust paths to work with the router mounting
   router.get(
@@ -90,7 +90,7 @@ export const workspaceCustomersRouter = (
   // All routes require authentication
   router.use(authMiddleware)
 
-  logger.info("Setting up workspace customers routes")
+  logger.debug("Setting up workspace customers routes")
 
   // Routes for customers under workspaces path - prefix è già /workspaces
   router.get(

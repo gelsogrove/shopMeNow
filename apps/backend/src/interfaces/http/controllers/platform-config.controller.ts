@@ -175,13 +175,14 @@ export class PlatformConfigController {
    */
   async checkFlags(_req: Request, res: Response): Promise<Response> {
     try {
-      const [canLogin, canRegister, workingInProgress, registerFirst, cantryDemo] =
+      const [canLogin, canRegister, workingInProgress, registerFirst, cantryDemo, showWidgetChatbot] =
         await Promise.all([
         platformConfigService.canLogin(),
         platformConfigService.canRegister(),
         platformConfigService.isWorkingInProgress(),
         platformConfigService.getFlag("registerFirst"),
         platformConfigService.getFlag("cantryDemo"),
+        platformConfigService.getFlag("showWidgetChatbot"),
       ])
 
       return res.status(200).json({
@@ -192,6 +193,7 @@ export class PlatformConfigController {
           workingInProgress,
           registerFirst,
           cantryDemo,
+          showWidgetChatbot,
         },
       })
     } catch (error) {
@@ -199,6 +201,59 @@ export class PlatformConfigController {
       return res.status(500).json({
         success: false,
         error: "Failed to check feature flags",
+      })
+    }
+  }
+
+  /**
+   * GET /api/platform-config/widget-code
+   * Get widget chatbot embed code (public - for login page)
+   */
+  async getWidgetCode(_req: Request, res: Response): Promise<Response> {
+    try {
+      const code = await platformConfigService.getWidgetChatbotCode()
+
+      return res.status(200).json({
+        success: true,
+        data: { code },
+      })
+    } catch (error) {
+      logger.error("[PlatformConfigController] Error getting widget code:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to fetch widget code",
+      })
+    }
+  }
+
+  /**
+   * PUT /api/platform-config/widget-code
+   * Save widget chatbot embed code (admin only)
+   */
+  async saveWidgetCode(req: Request, res: Response): Promise<Response> {
+    try {
+      const { code } = req.body
+
+      if (code === undefined) {
+        return res.status(400).json({
+          success: false,
+          error: "Widget code is required",
+        })
+      }
+
+      await platformConfigService.saveWidgetChatbotCode(code)
+
+      logger.info("[PlatformConfigController] Widget code saved")
+
+      return res.status(200).json({
+        success: true,
+        message: "Widget code saved successfully",
+      })
+    } catch (error) {
+      logger.error("[PlatformConfigController] Error saving widget code:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to save widget code",
       })
     }
   }

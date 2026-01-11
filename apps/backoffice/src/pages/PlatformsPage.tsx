@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { 
   LogIn, 
   UserPlus, 
@@ -11,7 +12,9 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  MessageCircle,
+  Save
 } from 'lucide-react'
 
 interface FlagConfig {
@@ -27,28 +30,39 @@ export function PlatformsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [widgetCode, setWidgetCode] = useState('')
+  const [isSavingWidget, setIsSavingWidget] = useState(false)
 
   const flagIcons: Record<string, { icon: React.ReactNode; title: string }> = {
     canLogin: { icon: <LogIn className="h-6 w-6" />, title: 'User Login' },
     canRegister: { icon: <UserPlus className="h-6 w-6" />, title: 'User Registration' },
     workingInProgress: { icon: <AlertTriangle className="h-6 w-6" />, title: 'Work in Progress' },
     registerFirst: { icon: <UserPlus className="h-6 w-6" />, title: 'Register First' },
+    showWidgetChatbot: { icon: <MessageCircle className="h-6 w-6" />, title: 'Show Widget Chatbot' },
   }
 
   const fetchConfig = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await api.getAdminConfig()
-      if (response.success && response.data) {
-        const flagsWithIcons = response.data.flags.map((flag) => ({
+      const [configResponse, widgetResponse] = await Promise.all([
+        api.getAdminConfig(),
+        api.getWidgetCode()
+      ])
+      
+      if (configResponse.success && configResponse.data) {
+        const flagsWithIcons = configResponse.data.flags.map((flag) => ({
           ...flag,
           icon: flagIcons[flag.key]?.icon || <CheckCircle className="h-6 w-6" />,
           title: flagIcons[flag.key]?.title || flag.key,
         }))
         setFlags(flagsWithIcons)
       } else {
-        setError(response.error || 'Failed to fetch configuration')
+        setError(configResponse.error || 'Failed to fetch configuration')
+      }
+      
+      if (widgetResponse.success && widgetResponse.data) {
+        setWidgetCode(widgetResponse.data.code || '')
       }
     } catch (err) {
       setError('Failed to connect to server')
@@ -82,6 +96,24 @@ export function PlatformsPage() {
       setIsSaving(null)
     }
   }
+
+  const handleSaveWidgetCode = async () => {
+    setIsSavingWidget(true)
+    try {
+      const response = await api.saveWidgetCode(widgetCode)
+      if (!response.success) {
+        setError(response.error || 'Failed to save widget code')
+      }
+    } catch (err) {
+      setError('Failed to save widget code')
+      console.error(err)
+    } finally {
+      setIsSavingWidget(false)
+    }
+  }
+
+  // Check if showWidgetChatbot flag is enabled
+  const isWidgetEnabled = flags.find(f => f.key === 'showWidgetChatbot')?.value ?? false
 
   if (isLoading) {
     return (
@@ -167,6 +199,50 @@ export function PlatformsPage() {
         ))}
       </div>
 
+      {/* Widget Chatbot Code - Only show if flag is enabled */}
+      {isWidgetEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600" />
+              Widget Chatbot Code
+            </CardTitle>
+            <CardDescription>
+              Paste the widget embed code to display on the login page
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              value={widgetCode}
+              onChange={(e) => setWidgetCode(e.target.value)}
+              placeholder={`<!-- eChatbot Widget -->
+<script>
+  window.eChatbotConfig = {
+    workspaceId: "your-workspace-id",
+    title: "Support",
+    ...
+  };
+</script>
+<script src="https://your-domain/widget.js" async></script>`}
+              rows={10}
+              className="font-mono text-sm"
+            />
+            <Button 
+              onClick={handleSaveWidgetCode} 
+              disabled={isSavingWidget}
+              className="w-full"
+            >
+              {isSavingWidget ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Widget Code
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-semibold text-blue-800 mb-2">ℹ️ About Platform Flags</h3>
@@ -182,6 +258,9 @@ export function PlatformsPage() {
           </li>
           <li>
             <strong>Register First:</strong> Default view on /auth/login is registration instead of login
+          </li>
+          <li>
+            <strong>Show Widget Chatbot:</strong> When enabled, displays the chatbot widget on the login page
           </li>
         </ul>
       </div>
