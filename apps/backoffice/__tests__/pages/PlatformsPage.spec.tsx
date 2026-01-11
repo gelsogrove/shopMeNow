@@ -36,6 +36,10 @@ const mockConfig = {
 describe('PlatformsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    ;(api.getWidgetCode as Mock).mockResolvedValue({
+      success: true,
+      data: { code: '' }
+    })
   })
 
   describe('Loading State', () => {

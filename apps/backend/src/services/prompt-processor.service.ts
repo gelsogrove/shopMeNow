@@ -189,20 +189,29 @@ export class PromptProcessorService {
     const largeVariables = ["products", "offers", "services", "categories"]
 
     for (const variable of largeVariables) {
-      // Match ONLY when variable appears alone or at start/end of line
-      // This excludes instructional text like "scroll to {{products}}"
-      const standaloneRegex = new RegExp(
-        `^\\s*\\{\\{${variable}\\}\\}\\s*$`,
-        "gm"
+      // Check for ANY occurrence of the variable (not just standalone)
+      // CRITICAL: Each large variable can inject 50k+ tokens, duplicates = 100k+ tokens
+      const allOccurrencesRegex = new RegExp(
+        `\\{\\{${variable}\\}\\}`,
+        "g"
       )
-      const matches = prompt.match(standaloneRegex)
+      const matches = prompt.match(allOccurrencesRegex)
 
       if (matches && matches.length > 1) {
-        const errorMessage = `Variable {{${variable}}} can only appear once per prompt. Found ${matches.length} occurrences.`
-        logger.error(`[PromptValidation] ${errorMessage}`)
+        const errorMessage = `CRITICAL: Variable {{${variable}}} can only appear ONCE per prompt. Found ${matches.length} occurrences. Each injection is ~50k tokens, duplicates cause 100k+ token prompts = LLM API failure.`
+        logger.error(`[PromptValidation] ❌ ${errorMessage}`)
         throw new PromptValidationError(errorMessage)
       }
     }
+  }
+
+  /**
+   * PUBLIC API: Validate prompt for duplicate large variables
+   * Used by AgentService before saving prompts to database
+   * CRITICAL for preventing token explosion
+   */
+  public validatePromptForDuplicateVariables(prompt: string): void {
+    this.validatePromptVariables(prompt)
   }
 
   /**

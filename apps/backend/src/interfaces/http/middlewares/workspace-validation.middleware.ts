@@ -106,10 +106,21 @@ export const workspaceValidationMiddleware = async (
       return
     }
 
-    // Check if workspace exists in database
+    // Check if workspace exists in database AND get owner status
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { id: true, name: true, isActive: true, isDelete: true },
+      select: { 
+        id: true, 
+        name: true, 
+        isActive: true, 
+        isDelete: true,
+        ownerId: true,
+        owner: {
+          select: {
+            status: true
+          }
+        }
+      },
     })
 
     if (!workspace) {
@@ -151,6 +162,14 @@ export const workspaceValidationMiddleware = async (
         : debugResponse
 
       res.status(403).json(responsePayload)
+      return
+    }
+
+    // 🔒 CRITICAL: Check owner status - if INACTIVE, block ALL operations silently
+    if (workspace.owner?.status === 'INACTIVE') {
+      logger.warn(`🚫 Owner is DISABLED - silently blocking operation for workspace ${workspaceId}`)
+      // Return 200 with empty success response (silent block)
+      res.status(200).json({ success: true, message: "Operation completed" })
       return
     }
 

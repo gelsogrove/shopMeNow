@@ -1,6 +1,8 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { getFunctionsForAgentType } from "../../config/agent-function-mapping"
 import logger from "../../utils/logger"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
+import { PromptValidationError } from "../../utils/PromptValidationError"
 
 /**
  * Service layer for Agents
@@ -8,9 +10,11 @@ import logger from "../../utils/logger"
  */
 export class AgentService {
   private prisma: PrismaClient
+  private promptProcessor: PromptProcessorService
 
   constructor() {
     this.prisma = prisma
+    this.promptProcessor = new PromptProcessorService()
   }
 
   /**
@@ -180,6 +184,17 @@ export class AgentService {
       if (data.content !== undefined) updateData.systemPrompt = data.content
       if (data.systemPrompt !== undefined)
         updateData.systemPrompt = data.systemPrompt
+
+      // ✅ FEATURE 11: VALIDATE PROMPT VARIABLES BEFORE SAVING
+      if (updateData.systemPrompt) {
+        try {
+          this.promptProcessor.validatePromptForDuplicateVariables(updateData.systemPrompt)
+          logger.info(`✅ Prompt validation passed for agent ${id}`)
+        } catch (validationError) {
+          logger.error(`❌ Prompt validation failed: ${validationError instanceof Error ? validationError.message : String(validationError)}`)
+          throw validationError
+        }
+      }
 
       // These fields can be updated by any authenticated user
       if (data.model !== undefined) updateData.model = data.model

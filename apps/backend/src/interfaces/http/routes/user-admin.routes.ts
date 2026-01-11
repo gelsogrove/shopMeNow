@@ -47,26 +47,6 @@ export const buildSubscriptionStatusUpdateData = (
   return updateData
 }
 
-export const applyUserStatusCascade = async (
-  prismaClient: typeof prisma,
-  userId: string,
-  status: UserStatus
-) => {
-  const enableChannels = status === UserStatus.ACTIVE
-
-  await prismaClient.workspace.updateMany({
-    where: {
-      ownerId: userId,
-      deletedAt: null,
-      isDelete: false,
-    },
-    data: {
-      isActive: enableChannels,
-      channelStatus: enableChannels,
-    },
-  })
-}
-
 const router = Router()
 // prisma imported
 const adminSessionService = new AdminSessionService()
@@ -2068,7 +2048,9 @@ router.put(
         },
       })
 
-      await applyUserStatusCascade(prisma, userId, prismaStatus)
+      // ✅ NO CASCADE: Owner status check is now done in workspaceValidationMiddleware
+      // Channels keep their original state (no accidental re-activation)
+      logger.info(`✅ User status updated to ${prismaStatus} - operations blocked in middleware if INACTIVE`)
 
       // Return status as DISABLED for frontend compatibility
       const responseStatus = updatedUser.status === UserStatus.INACTIVE ? "DISABLED" : "ACTIVE"
