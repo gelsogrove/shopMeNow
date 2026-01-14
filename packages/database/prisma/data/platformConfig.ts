@@ -154,14 +154,15 @@ export const platformConfigData: PlatformConfigData[] = [
     value: `<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = {
-    "workspaceId": "ECHATBOT_SUPPORT_WORKSPACE_ID",
-    "title": "eChatbot Support 💬",
-    "logoUrl": "",
-    "language": "en",
-    "primaryColor": "#22c55e"
-  };
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "apiUrl": "http://localhost:3001/api/v1",
+  "title": "eChatbot HQ",
+  "logoUrl": "http://localhost:3001/uploads/public/users/ChatGPT_Image_Jan_9_2026_08_25_59_PM_1768170913722_10reva.png",
+  "language": "it",
+  "primaryColor": "#22c55e"
+};
 </script>
-<script src="https://echatbot.ai/widget.js" async></script>`,
+<script src="http://localhost:3000/widget.js" async></script>`,
     description:
       "Widget chatbot embed code for login page (HTML/JS snippet)",
     isActive: true,

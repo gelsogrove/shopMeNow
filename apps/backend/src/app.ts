@@ -12,6 +12,7 @@ import { sessionValidationMiddleware } from "./interfaces/http/middlewares/sessi
 import { loggingMiddleware } from "./middlewares/logging.middleware"
 import apiRouter from "./routes"
 import logger from "./utils/logger"
+import { prisma } from "@echatbot/database"
 
 // Extend Request interface to include rawBody
 declare global {
@@ -26,6 +27,64 @@ declare global {
 const app = express()
 // Use process.cwd() for monorepo root (on Heroku cwd = /app = monorepo root)
 const backendRoot = process.cwd()
+
+const workspaceOriginCache = {
+  values: new Set<string>(),
+  lastLoaded: 0,
+  pending: null as Promise<void> | null,
+}
+
+const WORKSPACE_ORIGIN_CACHE_TTL_MS = 60_000
+
+const normalizeOrigin = (value?: string | null): string | null => {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const withScheme = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+  try {
+    const url = new URL(withScheme)
+    return url.origin.toLowerCase()
+  } catch (error) {
+    logger.warn("Invalid workspace website URL for CORS allowlist", { value, error })
+    return null
+  }
+}
+
+const refreshWorkspaceOrigins = async () => {
+  const workspaceUrls = await prisma.workspace.findMany({
+    select: { websiteUrl: true, url: true },
+  })
+
+  const next = new Set<string>()
+  for (const workspace of workspaceUrls) {
+    const websiteOrigin = normalizeOrigin(workspace.websiteUrl)
+    const legacyOrigin = normalizeOrigin(workspace.url)
+    if (websiteOrigin) next.add(websiteOrigin)
+    if (legacyOrigin) next.add(legacyOrigin)
+  }
+
+  workspaceOriginCache.values = next
+  workspaceOriginCache.lastLoaded = Date.now()
+}
+
+const ensureWorkspaceOrigins = async (force = false) => {
+  const isFresh =
+    Date.now() - workspaceOriginCache.lastLoaded < WORKSPACE_ORIGIN_CACHE_TTL_MS
+  if (!force && isFresh) return
+  if (workspaceOriginCache.pending) {
+    return workspaceOriginCache.pending
+  }
+  workspaceOriginCache.pending = refreshWorkspaceOrigins()
+    .catch((error) => {
+      logger.error("Failed to refresh workspace origins for CORS", { error })
+    })
+    .finally(() => {
+      workspaceOriginCache.pending = null
+    })
+  return workspaceOriginCache.pending
+}
 
 // ⚠️  NOTE: Scheduler is now a separate microservice (apps/scheduler)
 // Run with: npm run dev:all (starts backend + frontend + scheduler)
@@ -52,20 +111,45 @@ if (process.env.NODE_ENV === "production") {
 // Other middleware
 app.use(
   cors({
-    origin:
-      process.env.NODE_ENV === "production"
-        ? [
-            "https://echatbot.ai", // Frontend without www
-            "https://www.echatbot.ai", // Frontend with www
-            process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
-            "https://echatbot-backoffice-3497e777ec08.herokuapp.com", // Temporary: Heroku URL until DNS propagates
-          ]
-        : [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002", // 🔐 Backoffice
-            "http://localhost:5173",
-          ],
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true) // Allow requests with no origin (mobile apps, Postman)
+      }
+
+      const allowedOrigins =
+        process.env.NODE_ENV === "production"
+          ? [
+              "https://echatbot.ai", // Frontend without www
+              "https://www.echatbot.ai", // Frontend with www
+              process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
+              "https://echatbot-backoffice-3497e777ec08.herokuapp.com", // Temporary: Heroku URL until DNS propagates
+            ]
+          : [
+              "http://localhost:3000",
+              "http://localhost:3001",
+              "http://localhost:3002", // 🔐 Backoffice
+              "http://localhost:5173",
+            ]
+
+      // Allow app/backoffice origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true)
+      }
+
+      const normalized = origin.toLowerCase()
+      if (workspaceOriginCache.values.has(normalized)) {
+        return callback(null, true)
+      }
+
+      ensureWorkspaceOrigins(true)
+        .then(() => {
+          if (workspaceOriginCache.values.has(normalized)) {
+            return callback(null, true)
+          }
+          return callback(null, false)
+        })
+        .catch(() => callback(null, false))
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: [
@@ -73,6 +157,7 @@ app.use(
       "Authorization",
       "x-workspace-id",
       "X-Session-Id",
+      "x-visitor-id", // 🆕 WIDGET: Visitor tracking
     ],
     exposedHeaders: ["set-cookie", "Location", "location"],
   })
@@ -269,7 +354,6 @@ import { shortUrlRoutes } from "./interfaces/http/routes/short-url.routes"
 app.use("/", shortUrlRoutes)
 
 // PUBLIC SERVICES ENDPOINT (no auth required for checkout page)
-import { prisma } from "@echatbot/database"
 import { workspaceValidationMiddleware } from "./interfaces/http/middlewares/workspace-validation.middleware"
 
 app.get(

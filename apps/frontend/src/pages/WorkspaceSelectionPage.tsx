@@ -441,7 +441,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           "❌ [WorkspaceSelectionPage] CRITICAL: No token found, redirecting to login"
         )
         setErrorMessage("Session expired, please login again")
-        navigate('/auth/login')
+        navigate('/')
         return
       }
 
@@ -621,7 +621,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     storage.clearAppState()
     logger.info('✅ [LOGOUT] Storage cleared completely')
     
-    navigate("/auth/login")
+    navigate("/")
   }
 
   // Handle logo upload
@@ -670,7 +670,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate("/auth/login")}
+                onClick={() => navigate("/")}
                 className="gap-2 text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="h-4 w-4" />

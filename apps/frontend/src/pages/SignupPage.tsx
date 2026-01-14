@@ -137,7 +137,7 @@ export function SignupPage() {
               Sign Up
             </button>
             <div className="text-center text-sm">
-              <a href="/auth/login" className="text-blue-500 hover:underline">
+              <a href="/" className="text-blue-500 hover:underline">
                 Already have an account? Sign in
               </a>
             </div>

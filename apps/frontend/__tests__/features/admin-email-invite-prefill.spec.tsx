@@ -93,7 +93,7 @@ describe("Feature 4: Invite → Registration with Pre-filled Fields", () => {
       }
       
       const encodedInvite = encodeURIComponent(JSON.stringify(inviteData))
-      const url = `/auth/login?mode=register&invite=${encodedInvite}`
+      const url = `/?mode=register&invite=${encodedInvite}`
       
       // Parse the URL as the component would
       const searchParams = new URLSearchParams(url.split("?")[1])
@@ -110,7 +110,7 @@ describe("Feature 4: Invite → Registration with Pre-filled Fields", () => {
     })
 
     it("should handle missing invite data gracefully", () => {
-      const url = `/auth/login?mode=register`
+      const url = `/?mode=register`
       const searchParams = new URLSearchParams(url.split("?")[1])
       const inviteParam = searchParams.get("invite")
       
@@ -118,7 +118,7 @@ describe("Feature 4: Invite → Registration with Pre-filled Fields", () => {
     })
 
     it("should handle malformed invite data gracefully", () => {
-      const url = `/auth/login?mode=register&invite=invalid-json`
+      const url = `/?mode=register&invite=invalid-json`
       const searchParams = new URLSearchParams(url.split("?")[1])
       const inviteParam = searchParams.get("invite")
       
@@ -136,7 +136,7 @@ describe("Feature 4: Invite → Registration with Pre-filled Fields", () => {
 
   describe("Mode Parameter Handling", () => {
     it("should recognize mode=register parameter", () => {
-      const url = `/auth/login?mode=register`
+      const url = `/?mode=register`
       const searchParams = new URLSearchParams(url.split("?")[1])
       const modeParam = searchParams.get("mode")
       
@@ -144,7 +144,7 @@ describe("Feature 4: Invite → Registration with Pre-filled Fields", () => {
     })
 
     it("should recognize action=register parameter (legacy)", () => {
-      const url = `/auth/login?action=register`
+      const url = `/?action=register`
       const searchParams = new URLSearchParams(url.split("?")[1])
       const actionParam = searchParams.get("action")
       
@@ -288,7 +288,7 @@ describe("Integration: Invite Flow to Registration", () => {
     
     const returnUrl = encodeURIComponent(`/accept-invite?token=${token}`)
     const inviteParam = `&invite=${encodeURIComponent(JSON.stringify(inviteData))}`
-    const fullUrl = `/auth/login?returnUrl=${returnUrl}&mode=register${inviteParam}`
+    const fullUrl = `/?returnUrl=${returnUrl}&mode=register${inviteParam}`
     
     // Verify URL structure
     expect(fullUrl).toContain("mode=register")

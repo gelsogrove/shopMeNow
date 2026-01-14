@@ -22,7 +22,7 @@ eChatbot uses **TWO INDEPENDENT BILLING SYSTEMS**:
 2. **💰 Credit Balance** (Pay-as-you-go)
    - **What**: Prepaid credits for WhatsApp operations
    - **Used For**: Messages (€0.10), Orders (€1.50), Push campaigns (€1.00)
-   - **Recharged**: Manually via "Ricarica" button (€10-€1000)
+   - **Recharged**: Manually via "Ricarica" button ($10-$1000)
    - **Shared**: Across all owner's workspaces
    - **Field**: `user.creditBalance`
    - **Transaction Types**: `MESSAGE`, `ORDER`, `PUSH_NOTIFICATION`, `RECHARGE`
@@ -39,7 +39,7 @@ User: Andrea (Enterprise Plan)
     ├─ Customer message: -€0.10 → Balance: €196.80
     ├─ Order created: -€1.50 → Balance: €195.30
     ├─ Push campaign: -€1.00 → Balance: €194.30
-    └─ Manual recharge: +€100 → Balance: €294.30
+   └─ Manual recharge: +$100 → Balance: $294.30
 ```
 
 ### 🚨 Common Misconceptions
@@ -398,7 +398,7 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 │  │ 2. Increment creditBalance          │                        │
 │  │ 3. Create BillingTransaction        │                        │
 │  │    type: RECHARGE                   │                        │
-│  │    amount: +€50.00                  │                        │
+│  │    amount: +$50.00                  │                        │
 │  └─────────────────────────────────────┘                        │
 │         ↓                                                        │
 │  ✅ Credit Updated, Service Resumes                              │
@@ -457,20 +457,19 @@ When users click "Recharge Credit" button, they can choose from:
 
 | Amount | Currency | Use Case |
 |--------|----------|----------|
-| **€5** | EUR | Small top-up for testing |
-| **€10** | EUR | Budget-friendly quick recharge |
-| **€30** | EUR | Standard recharge |
-| **€50** | EUR | Good value option |
-| **€100** | EUR | Large recharge for heavy users |
+| **$10** | USD | Budget-friendly quick recharge |
+| **$30** | USD | Standard recharge |
+| **$50** | USD | Good value option |
+| **$100** | USD | Large recharge for heavy users |
 
 ### Implementation Details
 
 - **File**: `frontend/src/components/billing/BillingSection.tsx`
 - **Constant**: `RECHARGE_OPTIONS` (lines 106-110)
 - **UI**: 4-column button grid in modal dialog
-- **Min amount**: €5 (enforced on backend at €10 minimum)
-- **Max amount**: €1000 (enforced on backend)
-- **Currency**: Dynamic per workspace (defaults to EUR)
+- **Min amount**: $10 (enforced on backend)
+- **Max amount**: $1000 (enforced on backend)
+- **Currency**: USD (billing and recharges)
 
 ### How to Modify Amounts
 
@@ -479,7 +478,6 @@ To change recharge amounts globally:
 1. Edit `frontend/src/components/billing/BillingSection.tsx`:
    ```typescript
    const RECHARGE_OPTIONS: RechargeAmountOption[] = [
-     { value: 5, label: "$5" },
      { value: 10, label: "$10" },
      // ... modify values here
    ]
@@ -492,8 +490,8 @@ To change recharge amounts globally:
 ### Backend Validation
 
 Backend enforces:
-- **Minimum**: €10 (prevent abuse)
-- **Maximum**: €1000 (prevent data errors)
+- **Minimum**: $10 (prevent abuse)
+- **Maximum**: $1000 (prevent data errors)
 - **Only owners** can recharge (role check)
 - **Sufficient balance** before deduction
 

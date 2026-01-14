@@ -10,12 +10,14 @@ import {
   whatsappQueueCleanupJob,
   softDeleteCleanupJob,
 } from './jobs'
+import { widgetTimeoutCleanupJob } from './jobs/widget-timeout-cleanup.job'
 import logger from './utils/logger'
 
 // eChatbot Scheduler Microservice
 //
 // Cron Jobs (ordered by execution time):
 // 1. WhatsApp Channel Queue   - every 5 SECONDS (parallel send, with lock)
+// 1.5. Widget Timeout Cleanup  - every 30 SECONDS (mark timed-out widget messages)
 // 2. Short URLs Cleanup         - daily at 23:00
 // 3. Storage Cleanup            - daily at 23:05 (unused images + temp + invoices)
 // 4. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
@@ -40,6 +42,14 @@ async function main() {
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('*/5 * * * * *', async () => {
     await runJob('whatsapp-channel-queue', whatsappChannelQueueJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 1.5: Widget Timeout Cleanup - every 30 seconds
+  // Marks widget messages as timed out after 30 polling attempts (15 seconds)
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('*/30 * * * * *', async () => {
+    await runJob('widget-timeout-cleanup', widgetTimeoutCleanupJob)
   })
 
   // ═══════════════════════════════════════════════════════════════════════════

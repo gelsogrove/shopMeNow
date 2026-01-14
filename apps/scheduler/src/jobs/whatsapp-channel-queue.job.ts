@@ -272,35 +272,61 @@ export async function whatsappChannelQueueJob(): Promise<void> {
               return { status: 'blocked', messageId: message.id, reason: securityCheck.reason }
             }
 
-            // ✅ Message passed security - proceed with sending
-            const whatsappStartTime = Date.now()
-            // TODO: Implement actual WhatsApp API call here
-            // await sendWhatsAppMessage(workspace, message)
-            const whatsappDuration = Date.now() - whatsappStartTime
+            // ✅ Message passed security - proceed with delivery
+            const deliveryStartTime = Date.now()
+            
+            // 🔀 CHANNEL-SPECIFIC DELIVERY
+            if (message.channel === 'widget') {
+              // Widget: Save response to queue (no API call)
+              // Frontend will poll for this response
+              await prisma.whatsAppQueue.update({
+                where: { id: message.id },
+                data: { 
+                  status: 'sent',
+                  deliveredAt: new Date(),
+                  responsePayload: {
+                    response: message.messageContent, // LLM response already in messageContent
+                    processedAt: new Date().toISOString(),
+                  },
+                },
+              })
+              
+              logger.info(`✅ Widget message delivered (response saved for polling)`, {
+                messageId: message.id,
+                visitorId: message.visitorId,
+              })
+            } else {
+              // WhatsApp: Send via API
+              // TODO: Implement actual WhatsApp API call here
+              // await sendWhatsAppMessage(workspace, message)
+              
+              await prisma.whatsAppQueue.update({
+                where: { id: message.id },
+                data: { 
+                  status: 'sent',
+                  deliveredAt: new Date(),
+                },
+              })
+            }
+            
+            const deliveryDuration = Date.now() - deliveryStartTime
 
-            // Mark as sent
-            await prisma.whatsAppQueue.update({
-              where: { id: message.id },
-              data: { 
-                status: 'sent',
-                deliveredAt: new Date(),
-              },
-            })
-
-            // 📊 Append Send to WhatsApp step to timeline
-            const whatsappTimestamp = new Date()
+            // 📊 Append delivery step to timeline
+            const deliveryTimestamp = new Date()
             await appendTimelineStep(message.conversationMessageId, {
               type: 'sub_agent',
-              agent: 'Send to WhatsApp',
-              timestamp: whatsappTimestamp.toISOString(),
-              model: 'WhatsApp Cloud API',
+              agent: message.channel === 'widget' ? 'Widget Delivery' : 'Send to WhatsApp',
+              timestamp: deliveryTimestamp.toISOString(),
+              model: message.channel === 'widget' ? 'Widget Polling System' : 'WhatsApp Cloud API',
               input: {
-                phoneNumber: message.phoneNumber,
+                phoneNumber: message.phoneNumber || undefined,
                 messageContent: message.messageContent.substring(0, 200) + (message.messageContent.length > 200 ? '...' : ''),
                 queueId: message.id,
               },
               output: {
-                textResponse: `✅ Message delivered to ${message.phoneNumber}\n\n${message.messageContent}`,
+                textResponse: message.channel === 'widget' 
+                  ? `✅ Response saved for polling by visitor ${message.visitorId}\n\n${message.messageContent}`
+                  : `✅ Message delivered to ${message.phoneNumber}\n\n${message.messageContent}`,
               },
             })
 

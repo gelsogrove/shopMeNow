@@ -1,5 +1,6 @@
 import { Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
+import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { UrlShortenerService } from "../../../application/services/url-shortener.service"
 import { platformConfigService } from "../../../services/platform-config.service"
 import { prisma } from "../../../lib/prisma"
@@ -907,6 +908,85 @@ export class WhatsAppWebhookController {
         })
       }
 
+      // 🔒 SECURITY CHECK: Validate message before processing with LLM
+      logger.info("[WEBHOOK] 🔍 Starting security validation for WhatsApp message", {
+        customerId: customer.id,
+        workspaceId: customer.workspaceId,
+        phoneNumber: customer.phone,
+      })
+
+      let securityResults
+      try {
+        securityResults = await SecurityCheckService.validateMessage({
+          workspaceId: customer.workspaceId,
+          visitorId: customer.phone, // Use phone as visitorId for WhatsApp
+          message: messageMarkdown,
+          channel: "whatsapp",
+        })
+        logger.info("[WEBHOOK] ✅ Security validation completed", { 
+          resultsCount: securityResults.length,
+          customerId: customer.id,
+        })
+      } catch (securityError) {
+        logger.error("[WEBHOOK] ❌ Security validation error", {
+          error: securityError instanceof Error ? securityError.message : String(securityError),
+          stack: securityError instanceof Error ? securityError.stack : undefined,
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+        })
+        
+        // Return 500 to prevent message processing
+        res.status(500).json({
+          status: "security_check_error",
+          code: "SECURITY_CHECK_ERROR",
+          message: "Failed to validate message security",
+        })
+        return
+      }
+
+      // Check if any security step failed
+      const failedStep = securityResults.find((result) => !result.passed)
+      if (failedStep) {
+        logger.warn("[WEBHOOK] 🚨 Security check failed - message blocked", {
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          phoneNumber: customer.phone,
+          step: failedStep.step,
+          reason: failedStep.reason,
+        })
+
+        // Save blocked message to history for admin review
+        await prisma.conversationMessage.create({
+          data: {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: "user",
+            content: messageMarkdown,
+            agentType: "NONE",
+            tokensUsed: 0,
+            debugInfo: JSON.stringify({
+              securityBlocked: true,
+              failedStep: failedStep.step,
+              reason: failedStep.reason,
+              timestamp: new Date().toISOString(),
+              source: "whatsapp-webhook",
+            }),
+          },
+        })
+
+        // Return 429 with retry information
+        res.status(429).json({
+          status: "security_blocked",
+          code: failedStep.step,
+          message: failedStep.reason || "Security check failed",
+          retryAfter: failedStep.retryAfter,
+        })
+        return
+      }
+
+      logger.info("[WEBHOOK] ✅ Security validation passed", { customerId: customer.id })
+
       // 🔒 Feature 197: Check workspace access BEFORE billing
       // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), CHANNEL_DISABLED (WIP)
       const { WorkspaceAccessService } = await import(
@@ -1145,6 +1225,48 @@ export class WhatsAppWebhookController {
       // ✅ debugInfo already saved with timeline
       // 💰 BILLING: Credit is deducted by WhatsApp Queue Cronjob when message is actually sent
       //    (not here - we only check credit availability before processing)
+
+      // 📤 QUEUE: Save response to WhatsApp queue for delivery
+      logger.info("[WEBHOOK] 📤 Saving response to WhatsApp queue", {
+        customerId: customer.id,
+        workspaceId: customer.workspaceId,
+        responseLength: routerResult.response.length,
+      })
+
+      try {
+        const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
+        const queueService = new WhatsAppQueueService(prisma)
+        
+        // Find the assistant message that was just created by ChatEngine
+        const assistantMessage = await prisma.conversationMessage.findFirst({
+          where: {
+            conversationId: chatSession.id,
+            role: "assistant",
+            content: routerResult.response,
+          },
+          orderBy: { createdAt: "desc" },
+        })
+
+        await queueService.enqueue({
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+          phoneNumber: customer.phone,
+          messageContent: routerResult.response,
+          conversationMessageId: assistantMessage?.id,
+        })
+
+        logger.info("[WEBHOOK] ✅ Response queued for WhatsApp delivery", {
+          customerId: customer.id,
+          queueStatus: "pending",
+        })
+      } catch (queueError) {
+        logger.error("[WEBHOOK] ❌ Failed to enqueue WhatsApp response", {
+          error: queueError,
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+        })
+        // Don't fail the flow if queue fails - message is already saved in conversation
+      }
 
       logger.info("[WEBHOOK] ✅ Message processed successfully", {
         customerId: customer.id,

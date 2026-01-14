@@ -242,6 +242,7 @@ async function main() {
 
     const ecommerceWorkspace = await prisma.workspace.create({
       data: {
+        id: "bellitalia-vip-ecommerce", // Fixed ID for consistent testing
         name: "BellItalia VIP",
         slug: "bell-italia-vip",
       whatsappPhoneNumber: "+34654728751",
@@ -301,6 +302,19 @@ Sono qui per aiutarti 😊`,
       botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products! 🇮🇹",
       chatbotName: "Sofia",
       businessType: "food",
+      customAiRules: `# Communication Style
+
+- Keep responses UNDER 100 words - be concise and direct
+- Use emoticons to make tone friendly and professional
+- If you include a link, ALWAYS add a line break after it
+- End with an engaging question when appropriate (not always)
+- No walls of text - break into short paragraphs
+
+# Example Communication
+"Sure! Here's your order 🎉
+https://echatbot.ai/order/123
+
+Need anything else?"`,
     },
   })
 
@@ -355,6 +369,7 @@ Sono qui per aiutarti 😊`,
 
   const infoWorkspace = await prisma.workspace.create({
     data: {
+      id: "bellitalia-info-workspace", // Fixed ID for consistent testing
       name: "BellItalia",
       slug: "bell-italia",
       whatsappPhoneNumber: "+34654728752",
@@ -391,6 +406,19 @@ Sono qui per aiutarti 😊`,
       botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products and services! 📚",
       chatbotName: "Marco",
       businessType: "food",
+      customAiRules: `# Communication Style
+
+- Keep responses UNDER 100 words - be concise and direct
+- Use emoticons to make tone friendly and professional
+- If you include a link, ALWAYS add a line break after it
+- End with an engaging question when appropriate (not always)
+- No walls of text - break into short paragraphs
+
+# Example Communication
+"Sure! Here's the information you requested 📚
+https://echatbot.ai/info/products
+
+Would you like details about something specific?"`,
     },
   })
 
@@ -791,6 +819,7 @@ Sono qui per aiutarti 😊`,
 
   const supportWorkspace = await prisma.workspace.create({
     data: {
+      id: "echatbot-hq-support", // Fixed ID for consistent testing
       name: "eChatbot HQ",
       slug: "echatbot-hq",
       whatsappPhoneNumber: "+34654728753",
@@ -816,18 +845,40 @@ Sono qui per aiutarti 😊`,
       humanSupportInstructions:
         "Ciao {{nameUser}}, ti metto subito in contatto con un consulente eChatbot. Riceverai risposta entro 15 minuti da {{agentName}} (tel: {{agentPhone}} / email: {{agentEmail}}).",
       // 🆕 Feature 203: Custom escalation triggers (enterprise support)
-      frustrationEscalationInstructions: `Contatta IMMEDIATAMENTE un consulente umano quando il cliente:
-- Ha problemi TECNICI con la piattaforma (bug, errori, malfunzionamenti)
-- Vuole UPGRADE o DOWNGRADE del piano
-- Ha domande sulla FATTURAZIONE o pagamenti
-- Richiede INTEGRAZIONI personalizzate o API custom
-- Chiede ESPLICITAMENTE di parlare con un CONSULENTE UMANO
+      frustrationEscalationInstructions: `# IMMEDIATE ESCALATION - Contact Human Consultant NOW
 
-⚠️ Prima verifica SEMPRE nella documentazione/FAQ se esiste già una risposta`,
+Escalate IMMEDIATELY (call contactOperator) when customer:
+- Has TECHNICAL ISSUES with platform (bugs, errors, crashes)
+- Requests PLAN UPGRADE or DOWNGRADE
+- Has BILLING or PAYMENT questions
+- Needs CUSTOM INTEGRATIONS or API access
+- EXPLICITLY asks to speak with HUMAN CONSULTANT
+- Reports SECURITY or DATA concerns
+- Shows HIGH FRUSTRATION with our services
+
+⚠️ ALWAYS check FAQ/documentation first before escalating
+
+# Example Escalation
+"I understand you need technical assistance. Let me connect you with our specialist team 🔧"`,
       operatorContactMethod: "EMAIL",
       toneOfVoice: "PROFESSIONAL",
       botIdentityResponse:
         "I'm the eChatbot product specialist. Automate sales, support, and campaigns on WhatsApp — in one platform. 💼 How can I help you today?",
+      chatbotName: "Alex",
+      businessType: "technology",
+      customAiRules: `# Communication Style
+
+- Keep responses UNDER 100 words - be concise and direct
+- Use emoticons to make tone friendly and professional
+- If you include a link, ALWAYS add a line break after it
+- End with an engaging question when appropriate (not always)
+- No walls of text - break into short paragraphs
+
+# Example Communication
+"Sure! Here's our documentation 📚
+https://echatbot.ai/docs
+
+Can I help with anything else?"`,
     },
   })
 
@@ -943,7 +994,13 @@ Sono qui per aiutarti 😊`,
       category: "Security",
       question: "Where is customer data hosted and how is it protected?",
       answer:
-        "Data is hosted in the EU on AWS, encrypted at rest and in transit. We follow multi-tenant isolation, role-based access control and audit logging aligned with GDPR requirements.",
+        "Data is hosted in the EU on Heroku infrastructure, encrypted at rest and in transit. We implement multi-tenant isolation, role-based access control and audit logging fully aligned with GDPR requirements. For more details, see our <a href='https://echatbot.ai/privacy' target='_blank'>Privacy Policy</a>.",
+    },
+    {
+      category: "Security",
+      question: "What happens to my customer data when they chat with the AI?",
+      answer:
+        "Customer messages are processed through OpenRouter's secure API with enterprise-grade encryption. Data is NOT used to train AI models and is processed only to generate responses. All conversations are stored encrypted in our EU servers and comply with GDPR data minimization principles. Full details in our <a href='https://echatbot.ai/privacy' target='_blank'>Privacy Policy</a>.",
     },
     {
       category: "Billing",
@@ -2551,6 +2608,49 @@ Sono qui per aiutarti 😊`,
     console.log("✅ Created 3 WhatsApp queue test messages:")
     console.log("   - 1 sent message (with deliveredAt)")
     console.log("   - 2 error messages (safety validation + invalid phone)")
+    
+    // 🆕 Widget test messages (channel="widget")
+    await prisma.whatsAppQueue.create({
+      data: {
+        workspaceId: workspace.id,
+        customerId: queueCustomers[0].id,
+        phoneNumber: "",
+        messageContent: "Ciao! Vorrei informazioni sui prodotti",
+        status: "pending",
+        channel: "widget",
+        visitorId: "visitor_1726262000000_a7k2m9x1",
+        isAnonymous: true,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // +24 hours
+        pollingAttempts: 0,
+        createdAt: new Date(Date.now() - 30000), // 30 seconds ago
+      },
+    })
+
+    await prisma.whatsAppQueue.create({
+      data: {
+        workspaceId: workspace.id,
+        customerId: queueCustomers[1].id,
+        phoneNumber: "",
+        messageContent: "Quali sono le offerte attive?",
+        status: "sent",
+        channel: "widget",
+        visitorId: "visitor_1726262001000_b8l3n0y2",
+        isAnonymous: true,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        responsePayload: {
+          response: "Abbiamo diverse offerte attive! Ti consiglio di dare un'occhiata alla sezione Offerte.",
+          processedAt: new Date(Date.now() - 60000),
+        },
+        pollingAttempts: 5,
+        lastPolledAt: new Date(Date.now() - 5000), // 5 seconds ago
+        deliveredAt: new Date(Date.now() - 60000), // 1 minute ago
+        createdAt: new Date(Date.now() - 120000), // 2 minutes ago
+      },
+    })
+
+    console.log("✅ Created 2 widget test messages:")
+    console.log("   - 1 pending widget message")
+    console.log("   - 1 sent widget message with response")
   } else {
     console.log("⚠️  Not enough customers to create queue messages")
   }

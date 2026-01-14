@@ -13,11 +13,13 @@ import {
   Trash2,
   Scale,
   LineChart,
+  Inbox,
 } from 'lucide-react'
 
 const menuItems = [
   { path: '/platforms', label: 'Platforms', icon: LayoutDashboard },
   { path: '/clients', label: 'Clients', icon: Users },
+  { path: '/queue', label: 'Queue', icon: Inbox },
   { path: '/collections', label: 'Collections', icon: FileText },
   { path: '/analytics', label: 'Analytics', icon: LineChart },
   { path: '/pricing', label: 'Pricing', icon: CreditCard },

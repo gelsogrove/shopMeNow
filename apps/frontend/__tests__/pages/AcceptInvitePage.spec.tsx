@@ -59,7 +59,7 @@ describe("AcceptInvitePage", () => {
       <MemoryRouter initialEntries={[`/accept-invite?token=${token}`]}>
         <Routes>
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
-          <Route path="/auth/login" element={<div>Login Page</div>} />
+          <Route path="/" element={<div>Login Page</div>} />
           <Route path="/workspace-selection" element={<div>Workspace Selection Page</div>} />
         </Routes>
       </MemoryRouter>
@@ -71,7 +71,7 @@ describe("AcceptInvitePage", () => {
       <MemoryRouter initialEntries={["/accept-invite"]}>
         <Routes>
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
-          <Route path="/auth/login" element={<div>Login Page</div>} />
+          <Route path="/" element={<div>Login Page</div>} />
           <Route path="/workspace-selection" element={<div>Workspace Selection Page</div>} />
         </Routes>
       </MemoryRouter>

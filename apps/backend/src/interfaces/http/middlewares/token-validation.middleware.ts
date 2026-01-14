@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
+import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { prisma } from "../../../lib/prisma"
 import logger from "../../../utils/logger"
 
@@ -121,6 +122,55 @@ export const tokenValidationMiddleware = async (
         workspaceId,
       }
     )
+
+    // 7. 🔒 SECURITY CHECK: Rate limiting and abuse detection for public endpoints
+    logger.info("[TOKEN-VALIDATION-MIDDLEWARE] 🔍 Running security validation", {
+      customerId,
+      workspaceId,
+    })
+
+    try {
+      const securityResults = await SecurityCheckService.validateMessage({
+        workspaceId,
+        visitorId: customerId, // Use customerId as visitorId
+        message: "", // Empty message for access validation only
+        channel: "public-api",
+      })
+
+      // Check if any security step failed
+      const failedStep = securityResults.find((result) => !result.passed)
+      if (failedStep) {
+        logger.warn("[TOKEN-VALIDATION-MIDDLEWARE] 🚨 Security check failed", {
+          customerId,
+          workspaceId,
+          step: failedStep.step,
+          reason: failedStep.reason,
+        })
+
+        return res.status(429).json({
+          success: false,
+          error: failedStep.step,
+          message: failedStep.reason || "Security check failed",
+          retryAfter: failedStep.retryAfter,
+        })
+      }
+
+      logger.info("[TOKEN-VALIDATION-MIDDLEWARE] ✅ Security validation passed", {
+        customerId,
+        workspaceId,
+      })
+    } catch (securityError) {
+      logger.error("[TOKEN-VALIDATION-MIDDLEWARE] ❌ Security check error", {
+        error: securityError instanceof Error ? securityError.message : String(securityError),
+        customerId,
+        workspaceId,
+      })
+      
+      return res.status(500).json({
+        success: false,
+        error: "Security validation failed",
+      })
+    }
 
     next()
   } catch (error) {

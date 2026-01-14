@@ -53,6 +53,7 @@ export class WidgetEmbedController {
   private generateEmbedCodeSnippet(workspaceId: string): string {
     const widgetUrl =
       process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
+    const apiUrl = process.env.API_URL || "http://localhost:3001/api/v1"
 
     return `<!-- eChatbot Widget - Embed this code on your website -->
 <script>
@@ -60,6 +61,7 @@ export class WidgetEmbedController {
     // Widget Configuration
     const eChatbotConfig = {
       workspaceId: "${workspaceId}",
+      apiUrl: "${apiUrl}",
       position: "bottom-right",
       theme: "light"
     };

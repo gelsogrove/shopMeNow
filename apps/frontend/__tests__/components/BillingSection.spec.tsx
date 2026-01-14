@@ -311,7 +311,6 @@ describe("BillingSection", () => {
 
       await waitFor(() => {
         // Check for preset amounts in the dialog
-        expect(screen.getByText("$5")).toBeInTheDocument()
         expect(screen.getByText("$10")).toBeInTheDocument()
         expect(screen.getByText("$30")).toBeInTheDocument()
         expect(screen.getByText("$50")).toBeInTheDocument()

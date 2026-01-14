@@ -215,7 +215,7 @@ describe("LoginPage returnUrl Logic", () => {
       
       // Step 2: AcceptInvitePage redirects to login with returnUrl
       const loginReturnUrl = encodeURIComponent(acceptInviteUrl)
-      const loginUrl = `/auth/login?returnUrl=${loginReturnUrl}`
+      const loginUrl = `/?returnUrl=${loginReturnUrl}`
       
       // Step 3: LoginPage extracts returnUrl (URLSearchParams auto-decodes)
       const searchParams = new URLSearchParams(loginUrl.split('?')[1])
@@ -272,7 +272,7 @@ describe("LoginPage returnUrl Logic", () => {
       
       // Step 2: AcceptInvitePage redirects to login with returnUrl
       const loginReturnUrl = encodeURIComponent(acceptInviteUrl)
-      const loginUrl = `/auth/login?returnUrl=${loginReturnUrl}`
+      const loginUrl = `/?returnUrl=${loginReturnUrl}`
       
       // Step 3: LoginPage extracts returnUrl
       const searchParams = new URLSearchParams(loginUrl.split('?')[1])

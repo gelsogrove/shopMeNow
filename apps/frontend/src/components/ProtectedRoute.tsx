@@ -12,7 +12,7 @@ import { api } from "../services/api"
  * Behavior:
  * 1. On mount: checks if token exists in localStorage
  * 2. If valid: renders <Outlet /> (nested routes)
- * 3. If invalid/missing: redirects to /auth/login
+ * 3. If invalid/missing: redirects to /
  * 4. Shows loading spinner during validation
  *
  * Usage in App.tsx:
@@ -82,7 +82,7 @@ export function ProtectedRoute() {
 
   // If token is invalid, redirect to login with return URL
   if (!isValid) {
-    return <Navigate to="/auth/login" state={{ from: location }} replace />
+    return <Navigate to="/" state={{ from: location }} replace />
   }
 
   // Token is valid, render nested routes via Outlet

@@ -265,7 +265,7 @@ export const getTransactions = async (
 
 /**
  * Recharge credit (Owner only)
- * @param amount - Amount in USD (min $12, max $1176)
+ * @param amount - Amount in USD (min $10, max $1000)
  * If on FREE_TRIAL, auto-upgrades to BASIC
  */
 export const rechargeCredit = async (
@@ -276,8 +276,8 @@ export const rechargeCredit = async (
     throw new Error("Workspace ID is required")
   }
 
-  if (amount < 12 || amount > 1176) {
-    throw new Error("Amount must be between $12 and $1176")
+  if (amount < 10 || amount > 1000) {
+    throw new Error("Amount must be between $10 and $1000")
   }
 
   // CRITICAL: Billing is per OWNER (User), not per Workspace
@@ -664,13 +664,13 @@ export const getOwnerTransactions = async (
 /**
  * Recharge credit for authenticated owner (no workspaceId needed)
  * Feature 198: Owner-based billing
- * @param amount - Amount in USD (min $12, max $1176)
+ * @param amount - Amount in USD (min $10, max $1000)
  */
 export const rechargeOwnerCredit = async (
   amount: number
 ): Promise<{ newBalance: number; amountCharged: number; upgradedToPlan?: string }> => {
-  if (amount < 12 || amount > 1176) {
-    throw new Error("Amount must be between $12 and $1176")
+  if (amount < 10 || amount > 1000) {
+    throw new Error("Amount must be between $10 and $1000")
   }
 
   const response = await api.post("/subscription-billing/recharge", { amount })

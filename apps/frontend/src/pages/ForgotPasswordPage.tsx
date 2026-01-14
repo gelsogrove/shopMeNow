@@ -68,7 +68,7 @@ export function ForgotPasswordPage() {
               Reset Password
             </button>
             <div className="text-center text-sm">
-              <a href="/auth/login" className="text-blue-500 hover:underline">
+              <a href="/" className="text-blue-500 hover:underline">
                 Back to Login
               </a>
             </div>

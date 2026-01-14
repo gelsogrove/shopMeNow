@@ -1863,10 +1863,12 @@ export function LoginPage() {
                 {/* Left: Image with badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl border-2 border-dashed border-green-200 bg-green-50/40 shadow-inner flex items-center justify-center">
-                      <span className="text-green-700 text-2xl font-bold tracking-wide">
-                        🇮🇹 BELLITALIA
-                      </span>
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl">
+                      <img
+                        src="/demo.png"
+                        alt="Demo Preview"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
                       Live
@@ -1967,7 +1969,7 @@ export function LoginPage() {
                   <div className="relative">
                     <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-blue-100 transition-all duration-300">
                       <img
-                        src="/CRM.jpg"
+                        src="/CRM.png"
                         alt="CRM integration preview"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
@@ -2067,7 +2069,7 @@ export function LoginPage() {
                   <div className="relative">
                     <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-teal-100 transition-all duration-300">
                       <img
-                        src="/privacy.jpg"
+                        src="/privacy.png"
                         alt="Privacy by design"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
@@ -2110,13 +2112,15 @@ export function LoginPage() {
       {/* Contact Form */}
       <div id="contact" className="py-16 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="group relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-green-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg transition-transform duration-500"></div>
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 min-h-[320px]">
-              <div className="text-center space-y-3 mb-10">
-                <h3 className="text-3xl font-bold text-slate-900">{t("contact.form.title")}</h3>
-                <p className="text-slate-600">{t("contact.form.subtitle")}</p>
-              </div>
+          <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+            {/* Form Section - 60% */}
+            <div className="flex-1 lg:w-[60%] group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-green-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg transition-transform duration-500"></div>
+              <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 min-h-[320px]">
+                <div className="text-center space-y-3 mb-10">
+                  <h3 className="text-3xl font-bold text-slate-900">{t("contact.form.title")}</h3>
+                  <p className="text-slate-600">{t("contact.form.subtitle")}</p>
+                </div>
 
               {contactSuccess ? (
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-8 sm:p-10 text-center shadow-lg">
@@ -2272,6 +2276,18 @@ export function LoginPage() {
               )}
             </div>
           </div>
+
+          {/* Image Section - 40% */}
+          <div className="flex-1 lg:w-[40%] hidden lg:flex items-center justify-center">
+            <div className="w-full rounded-3xl overflow-hidden shadow-2xl" style={{ height: 'calc(100% - 15px)' }}>
+              <img
+                src="/contactus.png"
+                alt="Contact us"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        </div>
         </div>
       </div>
 
@@ -2283,9 +2299,6 @@ export function LoginPage() {
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl"></div>
         
         <div className="max-w-5xl mx-auto px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-            {t("cta.title")}
-          </h2>
           <p className="text-xl md:text-2xl text-green-50 mb-10 leading-relaxed max-w-3xl mx-auto">
             {t("cta.subtitle")}
           </p>
@@ -2358,9 +2371,9 @@ export function LoginPage() {
               <div>
                 <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Legal</h3>
                 <ul className="space-y-3">
-                  <li><Link to="/privacy" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Privacy Policy</Link></li>
-                  <li><Link to="/terms" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Terms of Service</Link></li>
-                  <li><Link to="/refund" className="text-sm text-green-400 hover:text-green-300 transition-colors font-medium">Refund Policy</Link></li>
+                  <li><button onClick={() => navigate("/privacy")} className="text-sm hover:text-green-400 transition-colors bg-none border-none cursor-pointer p-0">Privacy Policy</button></li>
+                  <li><button onClick={() => navigate("/terms")} className="text-sm hover:text-green-400 transition-colors bg-none border-none cursor-pointer p-0">Terms of Service</button></li>
+                  <li><button onClick={() => navigate("/refund")} className="text-sm hover:text-green-400 transition-colors bg-none border-none cursor-pointer p-0">Refund Policy</button></li>
                 </ul>
               </div>
             </div>
@@ -2371,12 +2384,6 @@ export function LoginPage() {
             <p className="text-xs text-slate-500">
               © 2025 eChatbot. All rights reserved.
             </p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Powered by</span>
-              <div className="bg-green-600/10 border border-green-600/30 rounded px-3 py-1">
-                <span className="text-xs font-semibold text-green-400">WhatsApp Business API</span>
-              </div>
-            </div>
           </div>
         </div>
       </footer>

@@ -20,7 +20,7 @@ export function VerifyOtpPage() {
 
   useEffect(() => {
     if (!userId) {
-      navigate("/auth/login")
+      navigate("/")
       return
     }
 

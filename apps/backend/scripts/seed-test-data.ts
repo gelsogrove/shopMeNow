@@ -63,6 +63,7 @@ async function seed() {
       workspace = await prisma.workspace.upsert({
         where: { slug: "bell-italia-vip" },
         create: {
+          id: "bellitalia-vip-ecommerce", // Fixed ID for consistent testing
           name: "BellItalia VIP",
           slug: "bell-italia-vip",
           whatsappPhoneNumber: "+393334567890",

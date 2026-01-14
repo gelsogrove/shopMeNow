@@ -228,7 +228,7 @@ export default function TwoFactorResetPage() {
                 You can now log in with your new authenticator.
               </p>
               <Button 
-                onClick={() => navigate('/auth/login')}
+                onClick={() => navigate('/')}
                 className="w-full bg-green-600 hover:bg-green-700"
               >
                 Go to Login
@@ -251,7 +251,7 @@ export default function TwoFactorResetPage() {
                 Please contact your administrator for a new reset link.
               </p>
               <Button 
-                onClick={() => navigate('/auth/login')}
+                onClick={() => navigate('/')}
                 variant="outline"
                 className="w-full"
               >

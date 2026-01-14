@@ -273,4 +273,5 @@ export class PromptCacheService {
 }
 
 // Singleton export
-export const promptCacheService = new PromptCacheService(new PrismaClient())
+import { prisma } from "@echatbot/database"
+export const promptCacheService = new PromptCacheService(prisma)

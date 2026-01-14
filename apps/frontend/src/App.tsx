@@ -3,10 +3,11 @@ import SettingsPage from "@/pages/SettingsPage"
 import WidgetPage from "@/pages/WidgetPage"
 import WidgetSettingsPage from "@/pages/WidgetSettingsPage"
 import { LegalDocumentPage } from "@/pages/LegalDocumentPage"
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { Toaster } from "sonner"
 import { MinimalLayout } from "./components/layout/MinimalLayout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
+import { WidgetLoader } from "./components/WidgetLoader"
 import { ChatProvider } from "./contexts/ChatContext"
 import { AcceptInvitePage } from "./pages/AcceptInvitePage"
 import { AgentConfigurationPage } from "./pages/AgentConfigurationPage"
@@ -67,6 +68,11 @@ const OrdersPublicPage = lazy(() => import("./pages/OrdersPublicPage"))
 const FeedbackPage = lazy(() => import("./pages/feedback"))
 const RegisterPage = lazy(() => import("./pages/register"))
 
+function AuthLoginRedirect() {
+  const location = useLocation()
+  return <Navigate to={`/${location.search}`} replace />
+}
+
 export function App() {
   return (
     <WorkspaceProvider>
@@ -83,9 +89,9 @@ export function App() {
                 {/* Auth Routes - accessibili senza autenticazione */}
                 <Route path="/auth">
                   {/* ✅ Preserve query params (e.g., ?admin=true) during redirect */}
-                  <Route path="login" element={<LoginPage />} />
+                  <Route path="login" element={<AuthLoginRedirect />} />
                   <Route path="signup" element={<SignupPage />} />
-                  <Route path="register" element={<Navigate to="/auth/login?action=register" replace />} />
+                  <Route path="register" element={<Navigate to="/?action=register" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
                   <Route path="verify-2fa" element={<Verify2FAPage />} />
                   <Route path="2fa-reset/:token" element={<TwoFactorResetPage />} />
@@ -104,7 +110,7 @@ export function App() {
                 <Route path="/impersonate" element={<ImpersonatePage />} />
 
                 {/* Legacy landing route: redirect to login */}
-                <Route path="/landing" element={<Navigate to="/auth/login" replace />} />
+                <Route path="/landing" element={<Navigate to="/" replace />} />
                 
                 {/* Public Legal Pages - DYNAMIC (from database) */}
                 <Route path="/privacy" element={<LegalDocumentPage docType="PRIVACY_POLICY" />} />
@@ -266,11 +272,11 @@ export function App() {
                 {/* Legacy login redirect */}
                 <Route
                   path="/login"
-                  element={<Navigate to="/auth/login" replace />}
+                  element={<Navigate to="/" replace />}
                 />
 
-                <Route path="/register" element={<Navigate to="/auth/login?action=register" replace />} />
-                <Route path="/signup" element={<Navigate to="/auth/login?action=register" replace />} />
+                <Route path="/register" element={<Navigate to="/?action=register" replace />} />
+                <Route path="/signup" element={<Navigate to="/?action=register" replace />} />
                 <Route
                   path="/registration-success"
                   element={<RegistrationSuccess />}
@@ -342,6 +348,9 @@ export function App() {
 
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
+              
+              {/* Chat Widget - Appears on all pages */}
+              <WidgetLoader />
             </BrowserRouter>
           </ChatListProvider>
         </ChatProvider>

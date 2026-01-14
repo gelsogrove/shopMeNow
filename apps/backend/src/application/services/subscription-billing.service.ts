@@ -558,12 +558,12 @@ export class SubscriptionBillingService {
     userId: string,
     amount: number
   ): Promise<{ success: boolean; newBalance: number; upgradedToPlan?: string }> {
-    if (amount <= 0) {
-      throw new Error("Amount must be positive")
+    if (amount < 10) {
+      throw new Error("Minimum recharge amount is $10")
     }
 
     if (amount > 1000) {
-      throw new Error("Maximum recharge amount is €1000")
+      throw new Error("Maximum recharge amount is $1000")
     }
 
     const billing = await this.repository.getOwnerBilling(userId)
@@ -583,13 +583,13 @@ export class SubscriptionBillingService {
       userId,
       amount,
       TransactionType.RECHARGE,
-      `Credit recharge: €${amount.toFixed(2)}`
+      `Credit recharge: $${amount.toFixed(2)}`
     )
 
     // If upgraded, create UPGRADE_FEE transaction to document the plan change
     if (upgradedToPlan === "BASIC") {
       const basicPlanConfig = await this.repository.getPlanConfiguration("BASIC")
-      const monthlyFeeStr = basicPlanConfig ? `€${basicPlanConfig.monthlyFee.toFixed(2)}/month` : ""
+      const monthlyFeeStr = basicPlanConfig ? `$${basicPlanConfig.monthlyFee.toFixed(2)}/month` : ""
       await this.repository.addCredit(
         userId,
         0,

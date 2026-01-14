@@ -286,20 +286,32 @@ model WhatsAppQueue {
   customerId            String
   phoneNumber           String
   messageContent        String    @db.Text
-  status                String    @default("pending") // pending, sent, error
+  status                String    @default("pending") // pending, sent, error, delivered, failed
   errorMessage          String?   @db.Text
   createdAt             DateTime  @default(now())
   deliveredAt           DateTime?
   conversationMessageId String? // FK to ConversationMessage for timeline tracking
+  
+  // 🆕 Widget Support
+  channel               String    @default("whatsapp") // "whatsapp" | "widget"
+  visitorId             String?   // For anonymous widget users (e.g., "visitor_1726262000000_a7k2m9x1")
+  isAnonymous           Boolean   @default(false) // true for widget visitors without phone
+  expiresAt             DateTime? // Session expiry for anonymous widget sessions (24 hours)
+  responsePayload       Json?     // Response from LLM (cached for polling)
+  pollingAttempts       Int       @default(0) // Track polling attempts
+  lastPolledAt          DateTime? // Last time response was checked
 
   workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer            Customers            @relation(fields: [customerId], references: [id], onDelete: Cascade)
   conversationMessage ConversationMessage? @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status])
+  @@index([workspaceId, channel])
   @@index([customerId])
+  @@index([visitorId])
   @@index([createdAt])
   @@index([conversationMessageId])
+  @@index([expiresAt]) // For cleanup job
   @@map("whatsapp_queue")
 }
 
@@ -667,6 +679,12 @@ model ChatSession {
   customer    Customers @relation(fields: [customerId], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   messages    Message[]
+  
+  // 🆕 Widget Support
+  isAnonymous Boolean   @default(false) // true for widget visitors without phone
+  visitorId   String?   // For anonymous widget users (same format as WhatsAppQueue)
+  expiresAt   DateTime? // Session expiry for anonymous visitors (24 hours)
+  channel     String    @default("whatsapp") // "whatsapp" | "widget"
 
   // 🔒 CONCURRENCY SAFETY: Unique constraint prevents duplicate active sessions
   // Only ONE active session allowed per customer at any time
@@ -678,6 +696,9 @@ model ChatSession {
   @@index([workspaceId, createdAt], name: "idx_workspace_created") // Dashboard stats
   @@index([deletedAt])
   @@index([workspaceId, deletedAt])
+  @@index([visitorId]) // For widget lookups
+  @@index([channel])
+  @@index([expiresAt]) // For cleanup job
   @@map("chat_sessions")
 }
 

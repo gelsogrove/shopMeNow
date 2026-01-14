@@ -288,8 +288,53 @@ router.get(
               adminMarkedAt: (invoice as any).adminMarkedAt ?? null,
             },
           }
-        })
-      )
+  })
+)
+
+/**
+ * @swagger
+ * /api/users/admin/whatsapp-queue:
+ *   get:
+ *     summary: Get all WhatsApp/widget queue messages
+ *     description: Platform admin view of all queue messages across workspaces
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Queue messages list
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Platform admin access required
+ */
+router.get(
+  "/admin/whatsapp-queue",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const queueMessages = await prisma.whatsAppQueue.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          workspace: { select: { id: true, name: true, whatsappPhoneNumber: true } },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
+        },
+      })
+
+      return res.json({
+        success: true,
+        data: queueMessages,
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching WhatsApp queue:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to fetch WhatsApp queue",
+      })
+    }
+  }
+)
 
       res.json({
         success: true,

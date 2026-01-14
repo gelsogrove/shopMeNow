@@ -23,7 +23,36 @@
   // CONFIGURATION & CONSTANTS
   // ============================================================================
 
-  const DEFAULT_API_URL = "https://api.echatbot.ai/api/v1"
+  // Auto-detect API URL based on environment
+  const getDefaultApiUrl = () => {
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:3001/api/v1'
+      }
+      // Production or other environments
+      return `${window.location.protocol}//${hostname}/api/v1`
+    }
+    return 'https://api.echatbot.ai/api/v1'
+  }
+
+  const DEFAULT_API_URL = getDefaultApiUrl()
+  const getDefaultAssetBase = () => {
+    if (typeof document === "undefined") return ""
+    const scripts = document.getElementsByTagName("script")
+    for (let i = 0; i < scripts.length; i++) {
+      const src = scripts[i].getAttribute("src") || ""
+      if (src.includes("widget.js")) {
+        try {
+          return new URL(src, window.location.href).origin
+        } catch (e) {
+          return window.location.origin
+        }
+      }
+    }
+    return window.location.origin
+  }
+  const DEFAULT_LOGO_URL = `${getDefaultAssetBase()}/logo.png`
   const DEFAULT_PRIMARY_COLOR = "#22c55e"
   const STORAGE_KEYS = {
     VISITOR_ID: "echatbot-visitor-id",
@@ -63,34 +92,48 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     }
 
+    .echatbot-widget-container.bottom-right {
+      bottom: 20px;
+      right: 20px;
+    }
+
     .echatbot-widget-button {
       width: 60px;
       height: 60px;
       border-radius: 50%;
-      background-color: #ffffff;
-      border: 2px solid ${primaryColor};
+      background-color: transparent;
+      border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-      transition: all 0.3s ease;
+      box-shadow: 0 8px 32px rgba(34, 197, 94, 0.6);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       padding: 0;
+      overflow: hidden;
     }
 
     .echatbot-widget-button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      transform: scale(1.05);
+      box-shadow: 0 10px 40px rgba(34, 197, 94, 0.7);
     }
 
     .echatbot-widget-button:active {
-      transform: scale(0.95);
+      transform: scale(1.15);
+      transition: transform 0.1s ease;
     }
 
     .echatbot-widget-button img {
-      width: 32px;
-      height: 32px;
-      object-fit: contain;
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      display: block;
+      border-radius: 50%;
+    }
+    
+    .echatbot-widget-button img[src*="data:image"] {
+      width: 60px;
+      height: 60px;
     }
 
     .echatbot-widget-popup {
@@ -99,15 +142,29 @@
       height: 600px;
       background-color: #ffffff;
       border-radius: 12px;
-      box-shadow: 0 5px 40px rgba(0, 0, 0, 0.16);
+      box-shadow: 0 8px 50px rgba(0, 0, 0, 0.25);
       display: none;
       flex-direction: column;
       overflow: hidden;
-      animation: slideUp 0.3s ease;
+      bottom: 0;
+      right: 0;
+      transform-origin: bottom right;
     }
 
     .echatbot-widget-popup.open {
       display: flex;
+      animation: popupOpen 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes popupOpen {
+      from {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
     }
 
     @keyframes slideUp {
@@ -125,10 +182,34 @@
       background-color: ${primaryColor};
       color: #ffffff;
       padding: 20px;
-      text-align: center;
+      text-align: left;
       font-size: 16px;
       font-weight: 600;
       border-bottom: 1px solid #e5e5e5;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .echatbot-widget-close {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .echatbot-widget-close:hover {
+      background-color: rgba(255, 255, 255, 0.2);
     }
 
     .echatbot-widget-messages {
@@ -374,11 +455,20 @@
    */
   function getOrCreateVisitorId() {
     let visitorId = localStorage.getItem(STORAGE_KEYS.VISITOR_ID)
-    if (!visitorId) {
-      visitorId = "webvisitor-" + generateId()
+    if (!visitorId || visitorId.startsWith("webvisitor-")) {
+      visitorId = generateVisitorId()
       localStorage.setItem(STORAGE_KEYS.VISITOR_ID, visitorId)
     }
     return visitorId
+  }
+
+  /**
+   * Resolve widget language from localStorage, browser, or config
+   */
+  function resolveLanguage(configLanguage) {
+    const storedLang = localStorage.getItem("language")
+    const browserLang = navigator.language
+    return (storedLang || browserLang || configLanguage || "en").toLowerCase().split("-")[0]
   }
 
   /**
@@ -386,6 +476,16 @@
    */
   function generateId() {
     return Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
+  }
+
+  /**
+   * Generate visitor ID in backend-compatible format:
+   * visitor_{timestamp}_{hash}
+   */
+  function generateVisitorId() {
+    const timestamp = Date.now()
+    const randomHash = Math.random().toString(36).substring(2, 10)
+    return "visitor_" + timestamp + "_" + randomHash
   }
 
   /**
@@ -438,13 +538,22 @@
 
   class eChatbotWidget {
     constructor(config) {
-      this.config = {
+      const baseConfig = {
+        ...config,
         workspaceId: config.workspaceId,
         position: config.position || "bottom-right",
         theme: config.theme || "light",
         apiUrl: config.apiUrl || DEFAULT_API_URL,
-        logoUrl: config.logoUrl || this.getDefaultLogo(),
-        ...config,
+      }
+
+      const resolvedLogoUrl =
+        baseConfig.logoUrl && baseConfig.logoUrl.trim()
+          ? baseConfig.logoUrl
+          : DEFAULT_LOGO_URL
+
+      this.config = {
+        ...baseConfig,
+        logoUrl: resolvedLogoUrl,
       }
 
       this.isOpen = false
@@ -460,6 +569,7 @@
      * Initialize widget
      */
     init() {
+      this.language = resolveLanguage(this.config.language)
       this.createDOM()
       this.attachEventListeners()
       this.loadStoredMessages()
@@ -482,7 +592,7 @@
      */
     createDOM() {
       // Get translations for current language
-      const lang = this.config.language || "en"
+      const lang = this.language || "en"
       const t = TRANSLATIONS[lang] || TRANSLATIONS.en
 
       // Container
@@ -494,7 +604,17 @@
       this.button = document.createElement("button")
       this.button.className = "echatbot-widget-button"
       this.button.title = t.headerTitle
-      this.button.innerHTML = `<img src="${this.config.logoUrl}" alt="Chat" />`
+      
+      // Create logo image with error handling
+      const logoImg = document.createElement("img")
+      logoImg.src = this.config.logoUrl
+      logoImg.alt = "Chat"
+      logoImg.onerror = () => {
+        console.warn("Failed to load logo, using default")
+        logoImg.src = this.getDefaultLogo()
+      }
+      this.button.appendChild(logoImg)
+      
       this.container.appendChild(this.button)
 
       // Popup
@@ -505,7 +625,18 @@
       // Header - use custom title if provided, otherwise translated default
       const header = document.createElement("div")
       header.className = "echatbot-widget-header"
-      header.textContent = this.config.title || t.headerTitle
+      
+      const headerTitle = document.createElement("span")
+      headerTitle.textContent = this.config.title || t.headerTitle
+      header.appendChild(headerTitle)
+      
+      // Close button
+      const closeButton = document.createElement("button")
+      closeButton.className = "echatbot-widget-close"
+      closeButton.innerHTML = "×"
+      closeButton.onclick = () => this.togglePopup()
+      header.appendChild(closeButton)
+      
       this.popup.appendChild(header)
 
       // Messages container
@@ -593,6 +724,8 @@
     togglePopup() {
       this.isOpen = !this.isOpen
       this.popup.classList.toggle("open", this.isOpen)
+      // Hide button when popup is open
+      this.button.style.display = this.isOpen ? "none" : "flex"
       if (this.isOpen) {
         this.input.focus()
       }
@@ -604,7 +737,7 @@
     loadStoredMessages() {
       // If no messages, show welcome message
       if (this.messages.length === 0) {
-        const lang = this.config.language || "en"
+        const lang = this.language || "en"
         const t = TRANSLATIONS[lang] || TRANSLATIONS.en
         this.displayMessage({ role: "bot", content: t.welcome })
       } else {
@@ -635,15 +768,19 @@
       this.showTypingIndicator()
 
       try {
-        // Call widget API
+        // Resolve current language (sync UI + LLM)
+        const browserLang = resolveLanguage(this.config.language)
+        this.language = browserLang
+
+        // Call widget API (correct endpoint)
         const response = await apiRequest(
-          `${this.config.apiUrl}/widget/message`,
+          `${this.config.apiUrl}/widget/chat/${this.config.workspaceId}`,
           "POST",
           {
-            workspaceId: this.config.workspaceId,
             visitorId: this.visitorId,
             message,
-            language: navigator.language || "en",
+            language: browserLang,
+            sessionId: this.sessionId,
           }
         )
 

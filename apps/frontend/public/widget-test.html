@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eChatbot Widget Test</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      color: #1a202c;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #718096;
+      margin-bottom: 30px;
+    }
+
+    .info-box {
+      background: #f7fafc;
+      border-left: 4px solid #4299e1;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+    }
+
+    .info-box h3 {
+      margin: 0 0 10px 0;
+      color: #2d3748;
+      font-size: 16px;
+    }
+
+    .info-box p {
+      margin: 5px 0;
+      color: #4a5568;
+      font-size: 14px;
+    }
+
+    .content {
+      line-height: 1.6;
+      color: #4a5568;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      background: #48bb78;
+      color: white;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    code {
+      background: #edf2f7;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #e53e3e;
+    }
+
+    .demo-area {
+      margin-top: 40px;
+      padding: 30px;
+      background: #edf2f7;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .demo-area h2 {
+      color: #2d3748;
+      margin-bottom: 15px;
+    }
+
+    .demo-area p {
+      color: #4a5568;
+      margin-bottom: 20px;
+    }
+
+    .demo-button {
+      background: #4299e1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .demo-button:hover {
+      background: #3182ce;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      eChatbot Widget Test Page
+      <span class="status">LIVE</span>
+    </h1>
+    <p class="subtitle">Test the embedded chat widget functionality</p>
+
+    <div class="info-box">
+      <h3>🎯 Purpose</h3>
+      <p>This page tests the eChatbot widget integration. The chat icon should appear in the bottom-right corner.</p>
+    </div>
+
+    <div class="info-box">
+      <h3>🔧 Configuration</h3>
+      <p><strong>Workspace ID:</strong> <code id="workspace-id">Loading...</code></p>
+      <p><strong>API URL:</strong> <code>http://localhost:3001/api/v1</code></p>
+      <p><strong>Widget Script:</strong> <code>http://localhost:3000/widget.js</code></p>
+      <p><strong>Theme:</strong> <code>light</code></p>
+      <p><strong>Position:</strong> <code>bottom-right</code></p>
+    </div>
+
+    <div class="content">
+      <h2>How It Works</h2>
+      <p>
+        This test page loads the eChatbot widget script dynamically. 
+        You should see a chat icon in the bottom-right corner that you can click to open the chat interface.
+      </p>
+      <p>
+        The widget will:
+      </p>
+      <ul>
+        <li>Generate a unique visitor ID (stored in sessionStorage)</li>
+        <li>Send messages to the backend API</li>
+        <li>Process messages through the LLM pipeline</li>
+        <li>Display responses in real-time</li>
+      </ul>
+    </div>
+
+    <div class="demo-area">
+      <h2>📝 Try These Test Messages</h2>
+      <p>Click the chat icon (bottom-right) and try:</p>
+      <ul style="list-style: none; padding: 0;">
+        <li style="margin: 10px 0;">💬 "Ciao! Vorrei informazioni"</li>
+        <li style="margin: 10px 0;">🛍️ "Quali prodotti avete?"</li>
+        <li style="margin: 10px 0;">💰 "Ci sono offerte attive?"</li>
+        <li style="margin: 10px 0;">📦 "Come funziona la spedizione?"</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- eChatbot Widget Script -->
+  <script>
+    // Fetch workspace ID from localStorage or use default
+    const workspaceId = localStorage.getItem('currentWorkspace') || 'cm6a6rs4c001vq7ng15adj4z3';
+    document.getElementById('workspace-id').textContent = workspaceId;
+
+    // Configure widget
+    window.eChatbotConfig = {
+      workspaceId: workspaceId,
+      apiUrl: "http://localhost:3001/api/v1",
+      title: "eChatbot Test",
+      logoUrl: "http://localhost:3001/uploads/public/users/bellaitalia_1768165044005_Q8vxh4f.webp",
+      language: "it",
+      primaryColor: "#22c55e",
+      position: "bottom-right",
+      theme: "light"
+    };
+
+    // Load widget script
+    const script = document.createElement("script");
+    script.src = "http://localhost:3000/widget.js";
+    script.async = true;
+    script.onload = function() {
+      console.log("✅ eChatbot widget loaded successfully!");
+    };
+    script.onerror = function() {
+      console.error("❌ Failed to load eChatbot widget");
+      alert("Failed to load chat widget. Make sure the frontend server is running on port 3000.");
+    };
+    document.head.appendChild(script);
+
+    console.log("🔧 Widget configuration:", window.eChatbotConfig);
+  </script>
+</body>
+</html>

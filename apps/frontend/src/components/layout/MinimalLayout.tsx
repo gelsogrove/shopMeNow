@@ -12,6 +12,7 @@ import { storage } from "@/lib/storage"
 import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
+import { WidgetLoader } from "@/components/WidgetLoader"
 
 /**
  * MinimalLayout - Layout for pages that don't require a workspace context
@@ -99,7 +100,7 @@ export function MinimalLayout() {
 
   const handleLogout = () => {
     storage.clearAuth()
-    navigate("/auth/login")
+    navigate("/")
   }
 
   const handleBack = () => {

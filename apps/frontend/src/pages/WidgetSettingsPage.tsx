@@ -162,8 +162,13 @@ export default function WidgetSettingsPage() {
       typeof window !== "undefined" && window.location.hostname !== "localhost"
         ? `${window.location.origin}/widget.js`
         : "http://localhost:3000/widget.js";
+    const apiUrl =
+      typeof window !== "undefined" && window.location.hostname !== "localhost"
+        ? `${window.location.origin}/api/v1`
+        : "http://localhost:3001/api/v1";
     const config = {
       workspaceId: workspace?.id || "YOUR_WORKSPACE_ID",
+      apiUrl,
       title,
       logoUrl: logoUrl ? `${IMG_BASE_URL}${logoUrl}` : "",
       language,

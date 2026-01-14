@@ -231,6 +231,27 @@ export default function SettingsPage() {
   })
   const { workspace, loading, setCurrentWorkspace } = useWorkspace()
   const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false)
+
+  // 🆕 Fetch workspace fresh from backend (first time only) to get customAiRules
+  useEffect(() => {
+    if (!workspace?.id || workspaceLoaded) return
+    
+    const loadWorkspace = async () => {
+      try {
+        const response = await api.get(`/workspaces/${workspace.id}`)
+        const freshWorkspace = response.data
+        logger.info("✅ Loaded fresh workspace with customAiRules:", freshWorkspace)
+        setCurrentWorkspace(freshWorkspace)
+        setWorkspaceLoaded(true)
+      } catch (error) {
+        logger.error("Failed to load workspace:", error)
+        setWorkspaceLoaded(true) // Still mark as loaded to avoid retries
+      }
+    }
+    
+    loadWorkspace()
+  }, [workspace?.id]) // Only run once when workspace?.id changes
 
   useEffect(() => {
     if (!workspace) return
@@ -311,7 +332,7 @@ export default function SettingsPage() {
       storage.clearAppState()
       
       toast.success("Workspace deleted successfully. You have been logged out.")
-      navigate("/auth/login")
+      navigate("/")
     },
     onError: (error) => {
       logger.error("❌ Error deleting workspace:", error)

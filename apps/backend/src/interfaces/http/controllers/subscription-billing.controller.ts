@@ -292,7 +292,7 @@ export class SubscriptionBillingController {
 
       if (amount < 10) {
         res.status(400).json({
-          error: "Importo minimo €10",
+          error: "Importo minimo $10",
           code: "AMOUNT_TOO_LOW",
         })
         return
@@ -300,7 +300,7 @@ export class SubscriptionBillingController {
 
       if (amount > 1000) {
         res.status(400).json({
-          error: "Importo massimo €1000",
+          error: "Importo massimo $1000",
           code: "AMOUNT_TOO_HIGH",
         })
         return
@@ -320,14 +320,14 @@ export class SubscriptionBillingController {
       }
 
       logger.info(
-        `[BILLING] 💰 Recharge successful: +€${amount.toFixed(2)} (workspace: ${workspaceId})`
+        `[BILLING] 💰 Recharge successful: +$${amount.toFixed(2)} (workspace: ${workspaceId})`
       )
 
       res.json({
         success: true,
         message: result.upgradedToPlan 
-          ? `Ricarica di €${amount.toFixed(2)} completata! Piano aggiornato a ${result.upgradedToPlan}.`
-          : `Ricarica di €${amount.toFixed(2)} completata con successo!`,
+          ? `Ricarica di $${amount.toFixed(2)} completata! Piano aggiornato a ${result.upgradedToPlan}.`
+          : `Ricarica di $${amount.toFixed(2)} completata con successo!`,
         data: {
           newBalance: result.newBalance,
           amountCharged: amount,
@@ -1316,7 +1316,7 @@ export class SubscriptionBillingController {
 
       if (!amount || typeof amount !== "number" || amount < 10 || amount > 1000) {
         res.status(400).json({
-          error: "Importo non valido (min €10, max €1000)",
+          error: "Importo non valido (min $10, max $1000)",
           code: "INVALID_AMOUNT",
         })
         return
@@ -1324,11 +1324,11 @@ export class SubscriptionBillingController {
 
       const result = await this.billingService.rechargeOwnerCredit(userId, amount)
 
-      logger.info(`[BILLING] 💰 Owner ${userId} recharged €${amount}`)
+      logger.info(`[BILLING] 💰 Owner ${userId} recharged $${amount}`)
 
       res.json({
         success: true,
-        message: `Credito ricaricato di €${amount}`,
+        message: `Credito ricaricato di $${amount}`,
         data: result,
       })
     } catch (error) {

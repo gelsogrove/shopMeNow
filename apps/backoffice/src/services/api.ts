@@ -280,6 +280,13 @@ class BackofficeApi {
     },
 
     /**
+     * Get all WhatsApp/widget queue messages (admin)
+     */
+    getQueue: async (): Promise<ApiResponse<any[]>> => {
+      return this.fetch('/users/admin/whatsapp-queue')
+    },
+
+    /**
      * Update user permissions (isPlatformAdmin, isDeveloperUser)
      */
     updatePermissions: async (

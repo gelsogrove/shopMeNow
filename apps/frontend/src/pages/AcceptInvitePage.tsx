@@ -145,7 +145,7 @@ export function AcceptInvitePage() {
     
     const returnUrl = encodeURIComponent(`/accept-invite?token=${token}`)
     const inviteParam = inviteData ? `&invite=${encodeURIComponent(JSON.stringify(inviteData))}` : ''
-    navigate(`/auth/login?returnUrl=${returnUrl}&mode=register${inviteParam}`)
+    navigate(`/?returnUrl=${returnUrl}&mode=register${inviteParam}`)
   }
 
   const renderContent = () => {
@@ -218,7 +218,7 @@ export function AcceptInvitePage() {
             </CardHeader>
             <CardContent>
               <Button
-                onClick={() => navigate("/auth/login")}
+                onClick={() => navigate("/")}
                 variant="outline"
                 className="w-full"
               >
@@ -285,7 +285,7 @@ export function AcceptInvitePage() {
             </CardHeader>
             <CardContent>
               <Button
-                onClick={() => navigate("/auth/login")}
+                onClick={() => navigate("/")}
                 variant="outline"
                 className="w-full"
               >

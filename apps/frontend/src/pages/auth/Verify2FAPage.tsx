@@ -52,7 +52,7 @@ export default function Verify2FAPage() {
   useEffect(() => {
     if (!userId || !email) {
       toast.error(t('auth.error.invalidVerificationLink'))
-      navigate('/auth/login')
+      navigate('/')
     }
   }, [userId, email, navigate])
 
@@ -115,7 +115,7 @@ export default function Verify2FAPage() {
         
         if (errorData.attemptsRemaining === 0) {
           toast.error(t('auth.error.accountLocked'))
-          setTimeout(() => navigate('/auth/login'), 3000)
+          setTimeout(() => navigate('/'), 3000)
         }
       }
     } finally {
@@ -208,7 +208,7 @@ export default function Verify2FAPage() {
             
             <Button 
               variant="outline"
-              onClick={() => navigate('/auth/login')}
+              onClick={() => navigate('/')}
               disabled={loading}
               className="w-full"
             >

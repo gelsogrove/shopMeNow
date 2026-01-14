@@ -1,10 +1,12 @@
 # Widget CORS Whitelist - Future Implementation
 
-## Current Status: CORS Open (`*`)
+## Current Status: Dynamic CORS Allowlist
 
-The widget API currently allows requests from **any domain** (`Access-Control-Allow-Origin: *`).
+The widget API allows requests from:
+- **Frontend/Backoffice domains** (static allowlist)
+- **Workspace `websiteUrl`/`url` origins** (dynamic allowlist)
 
-This is intentional for Phase 1 to allow customers to embed the widget on any of their domains without configuration.
+This means a customer must save a valid Website URL in Settings for their widget to work on that domain.
 
 ## Security Concern
 

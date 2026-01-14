@@ -66,7 +66,7 @@ export function ResetPasswordPage() {
       setSuccess(true)
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        navigate("/auth/login")
+        navigate("/")
       }, 3000)
     } catch (err) {
       const message =
@@ -183,7 +183,7 @@ export function ResetPasswordPage() {
               {loading ? t("resetPassword.button.loading") : t("resetPassword.button")}
             </button>
             <div className="text-center text-sm">
-              <a href="/auth/login" className="text-blue-500 hover:underline">
+              <a href="/" className="text-blue-500 hover:underline">
                 {t("forgotPassword.backToLogin")}
               </a>
             </div>

@@ -1,23 +1,49 @@
+/**
+ * Widget Routes
+ * Public API for web widget chat (unified with WhatsApp queue)
+ * 
+ * Security: Rate limited + 5-step validation (NO auth required)
+ */
+
 import { Router } from "express"
-import { WidgetController } from "../controllers/widget.controller"
-import { widgetChatLimiter, widgetConversionLimiter } from "../../../config/rate-limiters"
+import { WidgetChatController } from "../controllers/widget-chat.controller"
+import rateLimit from "express-rate-limit"
 import logger from "../../../utils/logger"
 
-export function createWidgetRouter(widgetController: WidgetController) {
-  const router = Router()
+const router = Router()
+const controller = new WidgetChatController()
 
-  logger.info("🔌 Setting up PUBLIC widget routes (no authentication required)")
+logger.info("🔧 Widget routes file loaded - defining routes...")
+
+// Rate limiter: 20 requests per minute per IP
+const widgetRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20, // 20 requests per window
+  message: {
+    error: "RATE_LIMIT_EXCEEDED",
+    message: "Too many requests. Please try again later.",
+    retryAfter: 60000,
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
 
 /**
+ * POST /api/v1/widget/chat/:workspaceId
+ * Send a message from widget
+ * 
  * @swagger
- * /api/v1/widget/message:
+ * /api/v1/widget/chat/{workspaceId}:
  *   post:
- *     summary: Send message from widget (PUBLIC - no auth)
- *     description: |
- *       Handles chat messages from embedded widget on external websites.
- *       Creates/finds customer by visitorId, routes message to LLM system.
- *       PUBLIC endpoint - rate limited to 50 messages/hour per IP.
+ *     summary: Send message from widget
  *     tags: [Widget]
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workspace ID
  *     requestBody:
  *       required: true
  *       content:
@@ -25,27 +51,22 @@ export function createWidgetRouter(widgetController: WidgetController) {
  *           schema:
  *             type: object
  *             required:
- *               - workspaceId
  *               - visitorId
  *               - message
  *             properties:
- *               workspaceId:
- *                 type: string
- *                 description: Workspace ID (from widget embed code)
  *               visitorId:
  *                 type: string
- *                 description: Anonymous visitor ID from localStorage (e.g., "webvisitor-abc123")
+ *                 example: visitor_1726262000000_a7k2m9x1
  *               message:
  *                 type: string
- *                 description: User message text
- *               language:
+ *                 example: Ciao! Mi serve aiuto
+ *               sessionId:
  *                 type: string
- *                 enum: [it, en, es, pt, de, fr]
- *                 default: en
- *                 description: User interface language
+ *                 format: uuid
+ *                 example: optional-session-uuid
  *     responses:
  *       200:
- *         description: Message sent successfully, LLM response returned
+ *         description: Message queued successfully
  *         content:
  *           application/json:
  *             schema:
@@ -53,75 +74,85 @@ export function createWidgetRouter(widgetController: WidgetController) {
  *               properties:
  *                 success:
  *                   type: boolean
- *                 response:
+ *                 messageId:
  *                   type: string
- *                   description: LLM assistant response
- *                 customerId:
+ *                 status:
  *                   type: string
- *                   description: Customer ID created/found
- *       429:
- *         description: Rate limit exceeded (50 msg/hour per IP)
+ *                   enum: [pending]
+ *                 retryAfter:
+ *                   type: number
  *       400:
- *         description: Invalid request body
- *       500:
- *         description: Server error
+ *         description: Invalid input
+ *       429:
+ *         description: Rate limited
+ *       503:
+ *         description: Service unavailable
  */
 router.post(
-  "/message",
-  widgetChatLimiter, // 50 requests per hour
-  widgetController.sendMessage.bind(widgetController)
+  "/chat/:workspaceId",
+  widgetRateLimiter,
+  controller.sendMessage.bind(controller)
 )
+
+logger.info("🔧 Widget POST /chat/:workspaceId route registered")
 
 /**
+ * GET /api/v1/widget/poll/:messageId
+ * Poll for message response
+ * 
  * @swagger
- * /api/v1/widget/convert-visitor:
- *   post:
- *     summary: Convert anonymous visitor to registered customer (PUBLIC - no auth)
- *     description: |
- *       Converts webvisitor to real customer during registration.
- *       Merges visitor data with registration data, preserves chat history.
+ * /api/v1/widget/poll/{messageId}:
+ *   get:
+ *     summary: Poll for message response
  *     tags: [Widget]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - workspaceId
- *               - visitorId
- *               - phone
- *               - firstName
- *               - lastName
- *               - email
- *             properties:
- *               workspaceId:
- *                 type: string
- *               visitorId:
- *                 type: string
- *               phone:
- *                 type: string
- *               firstName:
- *                 type: string
- *               lastName:
- *                 type: string
- *               email:
- *                 type: string
- *               language:
- *                 type: string
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Message ID
+ *       - in: header
+ *         name: x-visitor-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Visitor ID
+ *       - in: header
+ *         name: x-workspace-id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workspace ID
  *     responses:
  *       200:
- *         description: Visitor converted successfully
- *       400:
- *         description: Invalid data or visitor not found
- *       500:
- *         description: Server error
+ *         description: Polling response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [pending, ready, blocked, error]
+ *                 message:
+ *                   type: string
+ *                   nullable: true
+ *                 retryAfter:
+ *                   type: number
+ *                   nullable: true
+ *                 isComplete:
+ *                   type: boolean
+ *       404:
+ *         description: Message not found
+ *       403:
+ *         description: Access denied
  */
-router.post(
-  "/convert-visitor",
-  widgetConversionLimiter, // 10 requests per hour
-  widgetController.convertVisitor.bind(widgetController)
+router.get(
+  "/poll/:messageId",
+  widgetRateLimiter,
+  controller.pollMessage.bind(controller)
 )
 
-  return router
-}
+export default router
+

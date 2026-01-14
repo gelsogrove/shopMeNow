@@ -53,7 +53,7 @@ export default function VerifyOtpPage() {
 
   useEffect(() => {
     if (!userId) {
-      navigate("/auth/login")
+      navigate("/")
     }
   }, [userId, navigate])
 

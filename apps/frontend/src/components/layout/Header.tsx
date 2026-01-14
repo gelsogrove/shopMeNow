@@ -170,7 +170,7 @@ export function Header() {
       storage.clearAppState()
       logger.info("✅ [LOGOUT] Storage cleared completely")
 
-      navigate("/auth/login")
+      navigate("/")
     } catch (error) {
       logger.error("Error logging out:", error)
       
@@ -180,7 +180,7 @@ export function Header() {
       logger.info("✅ [LOGOUT FORCE] Storage cleared completely")
       
       toast.error("Failed to logout")
-      navigate("/auth/login")
+      navigate("/")
     }
   }
 
