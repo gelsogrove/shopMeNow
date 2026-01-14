@@ -45,14 +45,14 @@ describe('ChatWidget', () => {
   })
 
   it('should initialize with visitor ID from localStorage', () => {
-    const mockVisitorId = 'webvisitor-test123'
+    const mockVisitorId = 'visitor_1700000000000_test123'
     localStorageMock.getItem.mockReturnValue(mockVisitorId)
 
     render(
       <ChatWidget workspaceId="test-workspace" />
     )
 
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('echatbot-visitor-id')
+    expect(localStorageMock.getItem).toHaveBeenCalledWith('echatbot-visitor-id:test-workspace')
   })
 
   it('should create new visitor ID if not in localStorage', () => {
@@ -63,8 +63,8 @@ describe('ChatWidget', () => {
     )
 
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'echatbot-visitor-id',
-      expect.stringMatching(/^webvisitor-/)
+      'echatbot-visitor-id:test-workspace',
+      expect.stringMatching(/^visitor_\d{13}_/)
     )
   })
 
@@ -124,7 +124,7 @@ describe('ChatWidget', () => {
 
   it('should send message when send button is clicked', async () => {
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -154,7 +154,7 @@ describe('ChatWidget', () => {
     // Verify API call
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/widget/message'),
+        expect.stringContaining('/widget/chat/test-workspace'),
         expect.objectContaining({
           method: 'POST',
           body: expect.stringContaining('Hello'),
@@ -165,7 +165,7 @@ describe('ChatWidget', () => {
 
   it('should display user message after sending', async () => {
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -198,7 +198,7 @@ describe('ChatWidget', () => {
 
   it('should display bot response after sending message', async () => {
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -230,7 +230,7 @@ describe('ChatWidget', () => {
 
   it('should handle send button keyboard shortcut (Enter)', async () => {
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -255,7 +255,7 @@ describe('ChatWidget', () => {
     // Verify message was sent
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/widget/message'),
+        expect.stringContaining('/widget/chat/test-workspace'),
         expect.any(Object)
       )
     })
@@ -263,7 +263,7 @@ describe('ChatWidget', () => {
 
   it('should persist messages to localStorage', async () => {
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -290,7 +290,7 @@ describe('ChatWidget', () => {
     // Verify localStorage save called
     await waitFor(() => {
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'echatbot-messages',
+        'echatbot-messages:test-workspace',
         expect.any(String)
       )
     })
@@ -302,7 +302,7 @@ describe('ChatWidget', () => {
 
   it('should handle 429 rate limit error', async () => {
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: false,
@@ -338,7 +338,7 @@ describe('ChatWidget', () => {
   // ========================================
 
   it('should expose convertVisitor method', async () => {
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     render(
       <ChatWidget workspaceId="test-workspace" />
@@ -350,7 +350,7 @@ describe('ChatWidget', () => {
   })
 
   it('should clear visitor ID after conversion', async () => {
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -373,7 +373,7 @@ describe('ChatWidget', () => {
     })
 
     // Verify visitor ID would be cleared (in real scenario)
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('echatbot-visitor-id')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('echatbot-visitor-id:test-workspace')
   })
 
   // ========================================
@@ -382,7 +382,7 @@ describe('ChatWidget', () => {
 
   it('should include correct headers in API call', async () => {
     const user = userEvent.setup()
-    localStorageMock.getItem.mockReturnValue('webvisitor-test123')
+    localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -429,8 +429,8 @@ describe('ChatWidget', () => {
       { role: 'bot', content: 'Hi there' },
     ])
     localStorageMock.getItem.mockImplementation((key) => {
-      if (key === 'echatbot-messages') return storedMessages
-      if (key === 'echatbot-visitor-id') return 'webvisitor-test123'
+      if (key === 'echatbot-messages:test-workspace') return storedMessages
+      if (key === 'echatbot-visitor-id:test-workspace') return 'visitor_1700000000000_test123'
       return null
     })
 

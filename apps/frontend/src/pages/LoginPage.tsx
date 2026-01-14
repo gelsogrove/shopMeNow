@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { useFeatureFlags } from "@/hooks/usePlatformConfig"
 import { logger } from "@/lib/logger"
@@ -48,6 +49,7 @@ import { auth, api } from "../services/api"
 import { workspaceApi } from "../services/workspaceApi"
 import { widgetApi } from "../services/widgetApi"
 import { getBillingOverview, PlanLimits, UsageStats, PlanType } from "../services/subscriptionBillingApi"
+import { getUnreadCount } from "../services/supportApi"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com'
 
@@ -116,6 +118,7 @@ export function LoginPage() {
     email?: string;
     profilePicture?: string;
     authProvider?: string;
+    isPlatformAdmin?: boolean;
   } | null>(null)
   const [avatarImageError, setAvatarImageError] = useState(false)
   const [userPlan, setUserPlan] = useState<{
@@ -133,8 +136,6 @@ export function LoginPage() {
     workingInProgress,
     registerFirst,
     cantryDemo,
-    showWidgetChatbot,
-    widgetCode,
     isLoading: flagsLoading,
   } = useFeatureFlags()
   const [showWIPModal, setShowWIPModal] = useState(false)
@@ -242,6 +243,9 @@ export function LoginPage() {
   const [contactSuccess, setContactSuccess] = useState(false)
   const [contactHoneypot, setContactHoneypot] = useState("")
   const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ""
+  
+  // Support ticket unread count
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
   
   // Ref for contact form name input
   const contactNameInputRef = useRef<HTMLInputElement>(null)
@@ -507,6 +511,37 @@ export function LoginPage() {
   // 🆕 Session check is now done in the first useEffect above
   // No auto-redirect - we show avatar instead if user is logged in
 
+  // Load support unread count when user is logged in
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setSupportUnreadCount(0)
+      return
+    }
+
+    const loadSupportUnreadCount = async () => {
+      try {
+        const response = await getUnreadCount()
+        setSupportUnreadCount(response.data.unreadCount)
+      } catch (error) {
+        // Silently fail - user might not have support access
+      }
+    }
+
+    loadSupportUnreadCount()
+    const interval = setInterval(loadSupportUnreadCount, 30000)
+
+    // Listen for ticket view events
+    const handleTicketViewed = () => {
+      loadSupportUnreadCount()
+    }
+    window.addEventListener("support-ticket-viewed", handleTicketViewed)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
+    }
+  }, [isLoggedIn])
+
   const onSubmit = async (data: LoginForm) => {
     // 🚀 Check if login is enabled (bypass if admin access mode)
     if (isLoginDisabled && !isAdminBypass) {
@@ -602,12 +637,19 @@ export function LoginPage() {
     } catch (err: any) {
       logger.error("Login error:", err)
 
-      // Mostra messaggio di errore dettagliato
-      const errorMsg =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        err.message ||
-        "Login failed. Please check your credentials."
+      // Get error code or message from backend
+      const errorCode = err.response?.data?.error || err.response?.data?.message
+      
+      // Map backend error codes to translation keys
+      let errorMsg: string
+      if (errorCode === "ACCOUNT_INACTIVE") {
+        errorMsg = t("auth.error.accountInactive")
+      } else if (errorCode === "ACCOUNT_DELETED") {
+        errorMsg = t("auth.error.accountDeleted")
+      } else {
+        // Use backend message directly or fallback
+        errorMsg = errorCode || err.message || "Login failed. Please check your credentials."
+      }
 
       setError(errorMsg)
       toast.error(errorMsg)
@@ -993,9 +1035,9 @@ export function LoginPage() {
               <img 
                 src="/logo.png" 
                 alt="eChatbot Logo" 
-                className="hidden md:block w-[110px] h-[110px] mt-[-6px]"
+                className="hidden md:block w-[110px] h-[110px] mt-[-10px]"
               />
-              <span className="py-2 md:py-[5px] px-2 md:px-0 relative md:left-[-23px] md:top-[-11px] text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot</span>
+              <span className="py-2 md:py-[15px] px-2 md:px-0 relative md:left-[-25px] md:top-[-7px] text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot</span>
             </div>
 
             {/* Right: Language Selector + Auth */}
@@ -1052,6 +1094,33 @@ export function LoginPage() {
 
               {isLoggedIn ? (
                 <div className="flex items-center gap-4">
+                  {/* Support Inbox Icon with Badge */}
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate("/support/tickets")}
+                          className="relative h-9 w-9 p-0 text-slate-600 hover:text-green-600 hover:bg-green-50"
+                        >
+                          <Mail className="h-5 w-5" />
+                          {supportUnreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                              {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                            </span>
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {supportUnreadCount > 0
+                            ? `${supportUnreadCount} unread message${supportUnreadCount > 1 ? "s" : ""}`
+                            : "Support Tickets"}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   {/* Plan Badge */}
                   <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${
                       !userPlan?.planType || userPlan.planType === 'FREE_TRIAL'
@@ -1128,6 +1197,24 @@ export function LoginPage() {
                       >
                         <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
                         <span>{t("nav.billing")}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="p-2 cursor-pointer"
+                        onClick={() => navigate("/support/tickets")}
+                      >
+                        <div className="relative mr-2">
+                          <Mail className="h-4 w-4 text-blue-500" />
+                          {supportUnreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                              {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <span>
+                          {supportUnreadCount > 0
+                            ? `Support (${supportUnreadCount})`
+                            : "Support"}
+                        </span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -1770,12 +1857,12 @@ export function LoginPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Step 1 */}
             <div className="relative">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border-2 border-green-200 min-h-[280px] shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border-2 border-green-200 h-full shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col">
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   1
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step1.title")}</h3>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-slate-600 leading-relaxed flex-1">
                   {t("howItWorks.step1.desc")}
                 </p>
               </div>
@@ -1789,12 +1876,12 @@ export function LoginPage() {
 
             {/* Step 2 */}
             <div className="relative">
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border-2 border-blue-200 min-h-[280px] shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border-2 border-blue-200 h-full shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col">
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   2
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step2.title")}</h3>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-slate-600 leading-relaxed flex-1">
                   {t("howItWorks.step2.desc")}
                 </p>
               </div>
@@ -1808,12 +1895,12 @@ export function LoginPage() {
 
             {/* Step 3 */}
             <div className="relative">
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 min-h-[280px] shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 h-full shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col">
                 <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
                   3
                 </div>
                 <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step3.title")}</h3>
-                <p className="text-slate-600 leading-relaxed">
+                <p className="text-slate-600 leading-relaxed flex-1">
                   {t("howItWorks.step3.desc")}
                 </p>
               </div>
@@ -2418,10 +2505,6 @@ export function LoginPage() {
         onClose={() => setShowWIPModal(false)}
       />
 
-      {/* Chat Widget - Dynamic from Platform Config */}
-      {showWidgetChatbot && widgetCode && (
-        <div dangerouslySetInnerHTML={{ __html: widgetCode }} />
-      )}
     </div>
   )
 }

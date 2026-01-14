@@ -2,10 +2,12 @@ import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { IMG_BASE_URL } from "@/config"
 import { storage } from "@/lib/storage"
+import { getUnreadCount } from "@/services/supportApi"
 import {
   Bot,
   Building2,
   HelpCircle,
+  LifeBuoy,
   LucideIcon,
   Megaphone,
   MessageSquare,
@@ -38,6 +40,7 @@ export function Sidebar() {
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
     ecommerce: false, // Inizialmente chiuso
   })
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
   
   // Check if in impersonation mode (Feature 190)
   const [isImpersonating, setIsImpersonating] = useState(false)
@@ -45,6 +48,24 @@ export function Sidebar() {
   useEffect(() => {
     const { isImpersonating: impersonating } = storage.getImpersonationFlags()
     setIsImpersonating(impersonating)
+  }, [])
+  
+  // Fetch support unread count
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const result = await getUnreadCount()
+        if (result.success) {
+          setSupportUnreadCount(result.data.unreadCount)
+        }
+      } catch (error) {
+        // Silently fail - not critical
+      }
+    }
+    fetchUnread()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchUnread, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Controlla se siamo in una pagina che fa parte del sottomenu E-commerce
@@ -125,6 +146,12 @@ export function Sidebar() {
       href: "/widget-settings",
       label: "Chat Widget",
       icon: MessageSquare,
+    },
+    {
+      href: "/support/tickets",
+      label: "Support",
+      icon: LifeBuoy,
+      badge: supportUnreadCount > 0 ? supportUnreadCount : undefined,
     },
   ]
 

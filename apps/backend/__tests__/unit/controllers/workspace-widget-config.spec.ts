@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express'
 import { WorkspaceController } from '../../../src/interfaces/http/controllers/workspace.controller'
+import { WorkspaceService } from '../../../src/application/services/workspace.service'
 import { prisma } from '@echatbot/database'
 
 // Mock prisma globally
@@ -45,12 +46,16 @@ jest.mock('../../../src/services/storage.service', () => ({
   },
 }))
 
+
 describe('WorkspaceController - Widget Configuration', () => {
   let controller: WorkspaceController
   let mockReq: Partial<Request>
   let mockRes: Partial<Response>
   let mockNext: NextFunction
   const mockPrisma = prisma as jest.Mocked<typeof prisma>
+  let updateSpy: jest.SpyInstance
+  let getByIdSpy: jest.SpyInstance
+  let workspaceServiceInstance: WorkspaceService
 
   const testWorkspaceId = 'test-workspace-id'
   const testUserId = 'test-user-id'
@@ -58,11 +63,15 @@ describe('WorkspaceController - Widget Configuration', () => {
 
   beforeEach(() => {
     controller = new WorkspaceController()
+    workspaceServiceInstance = (controller as any).workspaceService
+    updateSpy = jest.spyOn(workspaceServiceInstance, 'update')
+    getByIdSpy = jest.spyOn(workspaceServiceInstance, 'getById')
     
     mockReq = {
       params: { id: testWorkspaceId },
       body: {},
       user: { id: testUserId },
+      headers: {},
     } as any
 
     mockRes = {
@@ -101,8 +110,7 @@ describe('WorkspaceController - Widget Configuration', () => {
         name: 'Test Workspace',
       })
 
-      // Mock update success
-      ;(prisma.workspace.update as jest.Mock).mockResolvedValue({
+      updateSpy.mockResolvedValue({
         id: testWorkspaceId,
         ...widgetConfig,
         updatedAt: new Date(),
@@ -110,11 +118,10 @@ describe('WorkspaceController - Widget Configuration', () => {
 
       await controller.updateWorkspace(mockReq as Request, mockRes as Response, mockNext)
 
-      expect(prisma.workspace.update).toHaveBeenCalledWith({
-        where: { id: testWorkspaceId },
-        data: expect.objectContaining(widgetConfig),
-        include: { whatsappSettings: true },
-      })
+      expect(updateSpy).toHaveBeenCalledWith(
+        testWorkspaceId,
+        expect.objectContaining(widgetConfig)
+      )
 
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining(widgetConfig)
@@ -137,7 +144,7 @@ describe('WorkspaceController - Widget Configuration', () => {
         widgetPrimaryColor: '#22c55e',
       })
 
-      mockPrisma.workspace.update.mockResolvedValue({
+      updateSpy.mockResolvedValue({
         id: testWorkspaceId,
         widgetTitle: 'New Chat Title',
         widgetLogoUrl: testWidgetLogoUrl, // Unchanged
@@ -172,7 +179,7 @@ describe('WorkspaceController - Widget Configuration', () => {
         id: testWorkspaceId,
       })
 
-      mockPrisma.workspace.update.mockResolvedValue({
+      updateSpy.mockResolvedValue({
         id: testWorkspaceId,
         logoUrl: channelLogo,
         widgetLogoUrl: widgetLogo,
@@ -180,14 +187,13 @@ describe('WorkspaceController - Widget Configuration', () => {
 
       await controller.updateWorkspace(mockReq as Request, mockRes as Response, mockNext)
 
-      expect(mockPrisma.workspace.update).toHaveBeenCalledWith({
-        where: { id: testWorkspaceId },
-        data: expect.objectContaining({
+      expect(updateSpy).toHaveBeenCalledWith(
+        testWorkspaceId,
+        expect.objectContaining({
           logoUrl: channelLogo,
           widgetLogoUrl: widgetLogo,
-        }),
-        include: { whatsappSettings: true },
-      })
+        })
+      )
 
       const response = (mockRes.json as jest.Mock).mock.calls[0][0]
       expect(response.logoUrl).toBe(channelLogo)
@@ -214,7 +220,7 @@ describe('WorkspaceController - Widget Configuration', () => {
         workspaceId: testWorkspaceId,
       })
 
-      mockPrisma.workspace.findUnique.mockResolvedValue(workspaceData)
+      getByIdSpy.mockResolvedValue(workspaceData as any)
 
       await controller.getWorkspaceById(mockReq as Request, mockRes as Response, mockNext)
 
@@ -233,14 +239,14 @@ describe('WorkspaceController - Widget Configuration', () => {
         role: 'SUPER_ADMIN',
       })
 
-      mockPrisma.workspace.findUnique.mockResolvedValue({
+      getByIdSpy.mockResolvedValue({
         id: testWorkspaceId,
         name: 'Test Workspace',
         widgetLogoUrl: null,
         widgetTitle: null,
         widgetLanguage: 'it', // Default
         widgetPrimaryColor: '#22c55e', // Default
-      })
+      } as any)
 
       await controller.getWorkspaceById(mockReq as Request, mockRes as Response, mockNext)
 
@@ -263,11 +269,7 @@ describe('WorkspaceController - Widget Configuration', () => {
         role: 'SUPER_ADMIN',
       })
 
-      mockPrisma.workspace.findUnique.mockResolvedValue({
-        id: testWorkspaceId,
-      })
-
-      mockPrisma.workspace.update.mockResolvedValue({
+      updateSpy.mockResolvedValue({
         id: testWorkspaceId,
         widgetLogoUrl: uploadedLogoUrl,
         logoUrl: '/uploads/channels/old-channel-logo.png', // Unchanged
@@ -275,13 +277,12 @@ describe('WorkspaceController - Widget Configuration', () => {
 
       await controller.updateWorkspace(mockReq as Request, mockRes as Response, mockNext)
 
-      expect(mockPrisma.workspace.update).toHaveBeenCalledWith({
-        where: { id: testWorkspaceId },
-        data: expect.objectContaining({
+      expect(updateSpy).toHaveBeenCalledWith(
+        testWorkspaceId,
+        expect.objectContaining({
           widgetLogoUrl: uploadedLogoUrl,
-        }),
-        include: { whatsappSettings: true },
-      })
+        })
+      )
 
       const response = (mockRes.json as jest.Mock).mock.calls[0][0]
       expect(response.widgetLogoUrl).toBe(uploadedLogoUrl)
@@ -292,28 +293,28 @@ describe('WorkspaceController - Widget Configuration', () => {
     it('should rely on middleware for role checks (controller does not block)', async () => {
       mockReq.body = { widgetTitle: 'Hacked Chat' }
 
-      mockPrisma.workspace.update.mockResolvedValue({
+      updateSpy.mockResolvedValue({
         id: testWorkspaceId,
         widgetTitle: 'Hacked Chat',
       })
 
       await controller.updateWorkspace(mockReq as Request, mockRes as Response, mockNext)
 
-      expect(mockPrisma.workspace.update).toHaveBeenCalled()
+      expect(updateSpy).toHaveBeenCalled()
     })
 
     it('should rely on middleware for workspace isolation (controller does not block)', async () => {
       const otherWorkspaceId = 'other-workspace-id'
       mockReq.params.id = otherWorkspaceId
 
-      mockPrisma.workspace.update.mockResolvedValue({
+      updateSpy.mockResolvedValue({
         id: otherWorkspaceId,
         widgetTitle: 'Updated Chat',
       })
 
       await controller.updateWorkspace(mockReq as Request, mockRes as Response, mockNext)
 
-      expect(mockPrisma.workspace.update).toHaveBeenCalled()
+      expect(updateSpy).toHaveBeenCalled()
     })
   })
 
@@ -329,8 +330,7 @@ describe('WorkspaceController - Widget Configuration', () => {
       // Simulate user saves config
       mockReq.body = savedConfig
       mockPrisma.workspaceMember.findFirst.mockResolvedValue({ role: 'SUPER_ADMIN' })
-      mockPrisma.workspace.findUnique.mockResolvedValue({ id: testWorkspaceId })
-      mockPrisma.workspace.update.mockResolvedValue({
+      updateSpy.mockResolvedValue({
         id: testWorkspaceId,
         ...savedConfig,
       })
@@ -342,10 +342,10 @@ describe('WorkspaceController - Widget Configuration', () => {
 
       // Simulate page refresh (GET request)
       mockPrisma.workspaceMember.findFirst.mockResolvedValue({ role: 'SUPER_ADMIN' })
-      mockPrisma.workspace.findUnique.mockResolvedValue({
+      getByIdSpy.mockResolvedValue({
         id: testWorkspaceId,
         ...savedConfig,
-      })
+      } as any)
 
       await controller.getWorkspaceById(mockReq as Request, mockRes as Response, mockNext)
 

@@ -917,4 +917,236 @@ startxref
       return false
     }
   }
+
+  /**
+   * Send notification when a new support ticket is created
+   */
+  async sendSupportTicketCreatedEmail(data: {
+    ticketCode: string
+    subject: string
+    issueType: string
+    ownerEmail: string
+    ownerName: string
+    workspaceName: string
+    initialMessage: string
+  }): Promise<boolean> {
+    try {
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #7c3aed; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .ticket-info { background: white; padding: 15px; margin: 15px 0; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #fef3c7; color: #92400e; font-size: 14px; }
+        .btn { display: inline-block; padding: 12px 24px; background: #7c3aed; color: white; text-decoration: none; border-radius: 8px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 New Support Ticket Created</h1>
+        </div>
+        <div class="content">
+            <p>Hello,</p>
+            
+            <p>A new support ticket has been created and requires your attention.</p>
+            
+            <div class="ticket-info">
+                <p><strong>Ticket Code:</strong> ${data.ticketCode}</p>
+                <p><strong>Subject:</strong> ${data.subject}</p>
+                <p><strong>Issue Type:</strong> <span class="badge">${data.issueType}</span></p>
+                <p><strong>Customer:</strong> ${data.ownerName} (${data.ownerEmail})</p>
+                <p><strong>Channel:</strong> ${data.workspaceName}</p>
+            </div>
+            
+            <p><strong>Message:</strong></p>
+            <div style="background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #7c3aed;">
+                ${data.initialMessage}
+            </div>
+            
+            <p style="text-align: center;">
+                <a href="${process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai"}/support-tickets" class="btn">
+                    View in Backoffice →
+                </a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>© 2025 eChatbot. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`
+
+      // Send to support email and CC owner
+      const mailOptions = {
+        from: `"eChatbot Support" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+        to: process.env.SUPPORT_EMAIL || "echatbot@gmail.com",
+        cc: data.ownerEmail,
+        subject: `[${data.ticketCode}] New Support Ticket: ${data.subject}`,
+        html: htmlContent,
+      }
+
+      await this.getTransporter().sendMail(mailOptions)
+      logger.info(`Support ticket created notification sent for ${data.ticketCode}`)
+      return true
+    } catch (error) {
+      logger.error("Failed to send support ticket created email:", error)
+      return false
+    }
+  }
+
+  /**
+   * Send notification when admin replies to a support ticket
+   */
+  async sendSupportTicketReplyEmail(data: {
+    ticketCode: string
+    subject: string
+    ownerEmail: string
+    ownerName: string
+    replyMessage: string
+    frontendUrl?: string
+  }): Promise<boolean> {
+    try {
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #7c3aed; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .reply-box { background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #7c3aed; margin: 15px 0; }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+        .btn { display: inline-block; padding: 12px 24px; background: #7c3aed; color: white; text-decoration: none; border-radius: 8px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💬 New Reply to Your Support Ticket</h1>
+        </div>
+        <div class="content">
+            <p>Hello ${data.ownerName},</p>
+            
+            <p>Our support team has responded to your ticket <strong>${data.ticketCode}</strong>:</p>
+            <p><em>"${data.subject}"</em></p>
+            
+            <div class="reply-box">
+                ${data.replyMessage}
+            </div>
+            
+            <p>To view the full conversation and reply, click the button below:</p>
+            
+            <p style="text-align: center;">
+                <a href="${data.frontendUrl || process.env.FRONTEND_URL || "https://app.echatbot.ai"}/support/tickets" class="btn">
+                    View Ticket →
+                </a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>© 2025 eChatbot. All rights reserved.</p>
+            <p>Don't reply directly to this email.</p>
+        </div>
+    </div>
+</body>
+</html>`
+
+      const mailOptions = {
+        from: `"eChatbot Support" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+        to: data.ownerEmail,
+        subject: `[${data.ticketCode}] Support Team Reply: ${data.subject}`,
+        html: htmlContent,
+      }
+
+      await this.getTransporter().sendMail(mailOptions)
+      logger.info(`Support ticket reply notification sent to ${data.ownerEmail} for ${data.ticketCode}`)
+      return true
+    } catch (error) {
+      logger.error("Failed to send support ticket reply email:", error)
+      return false
+    }
+  }
+
+  /**
+   * Send notification when ticket status changes
+   */
+  async sendSupportTicketStatusChangeEmail(data: {
+    ticketCode: string
+    subject: string
+    ownerEmail: string
+    ownerName: string
+    newStatus: string
+  }): Promise<boolean> {
+    try {
+      const statusMessages: Record<string, string> = {
+        IN_PROGRESS: "Our team is now working on your request.",
+        CLOSED: "Your support ticket has been resolved and closed.",
+      }
+
+      const statusEmoji: Record<string, string> = {
+        IN_PROGRESS: "🔄",
+        CLOSED: "✅",
+      }
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #7c3aed; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .status-box { background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 15px 0; }
+        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>${statusEmoji[data.newStatus] || "📋"} Ticket Status Update</h1>
+        </div>
+        <div class="content">
+            <p>Hello ${data.ownerName},</p>
+            
+            <p>The status of your support ticket has been updated.</p>
+            
+            <div class="status-box">
+                <p><strong>Ticket:</strong> ${data.ticketCode}</p>
+                <p><strong>Subject:</strong> ${data.subject}</p>
+                <p style="font-size: 18px; color: #7c3aed;"><strong>New Status: ${data.newStatus.replace("_", " ")}</strong></p>
+            </div>
+            
+            <p>${statusMessages[data.newStatus] || "The status of your ticket has been updated."}</p>
+            
+            ${data.newStatus === "CLOSED" ? "<p>If you need further assistance, please create a new ticket.</p>" : ""}
+        </div>
+        <div class="footer">
+            <p>© 2025 eChatbot. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>`
+
+      const mailOptions = {
+        from: `"eChatbot Support" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+        to: data.ownerEmail,
+        subject: `[${data.ticketCode}] Status Update: ${data.newStatus.replace("_", " ")}`,
+        html: htmlContent,
+      }
+
+      await this.getTransporter().sendMail(mailOptions)
+      logger.info(`Support ticket status change notification sent for ${data.ticketCode}`)
+      return true
+    } catch (error) {
+      logger.error("Failed to send support ticket status change email:", error)
+      return false
+    }
+  }
 }

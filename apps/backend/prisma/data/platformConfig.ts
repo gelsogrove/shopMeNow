@@ -83,6 +83,13 @@ export const platformConfigData: PlatformConfigData[] = [
   },
   {
     type: "PRICE" as const,
+    key: "WIDGET_MESSAGE",
+    value: "0.05",
+    description: "Cost per web widget message (site chat)",
+    isActive: true,
+  },
+  {
+    type: "PRICE" as const,
     key: "PUSH_CAMPAIGN",
     value: "1.00",
     description: "Cost per push notification sent (all types)",

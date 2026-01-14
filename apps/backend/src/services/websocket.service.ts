@@ -67,6 +67,13 @@ export class WebSocketService {
         }
       )
 
+      // Admin joins support room (for receiving all support ticket notifications)
+      socket.on("join-admin-support", (data: { userId?: string }) => {
+        socket.join("admin:support")
+        logger.info(`[WebSocket] Client ${socket.id} joined admin:support room`)
+        socket.emit("admin-support-joined", { success: true })
+      })
+
       // Client disconnects
       socket.on("disconnect", () => {
         this.clientMetadata.delete(socket.id)
@@ -189,6 +196,117 @@ export class WebSocketService {
     logger.info(
       `[WebSocket] Notified ${socketId} of workspace change to ${workspaceId}`
     )
+  }
+
+  /**
+   * Broadcast new support ticket message to user (owner)
+   * Sends to all connected clients of the user across workspaces
+   */
+  notifySupportTicketMessage(
+    userId: string,
+    data: {
+      ticketId: string
+      ticketCode: string
+      subject: string
+      messagePreview: string
+      senderType: "CUSTOMER" | "ADMIN"
+      timestamp: string
+    }
+  ): void {
+    if (!this.io) {
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
+    }
+
+    // Find all sockets for this user
+    const userSockets: string[] = []
+    this.clientMetadata.forEach((metadata, socketId) => {
+      if (metadata.userId === userId) {
+        userSockets.push(socketId)
+      }
+    })
+
+    // Send to all user sockets
+    userSockets.forEach((socketId) => {
+      this.io!.to(socketId).emit("support-ticket-message", data)
+    })
+
+    logger.info(
+      `[WebSocket] Broadcasted support-ticket-message to user ${userId} (${userSockets.length} sockets)`,
+      {
+        ticketId: data.ticketId,
+        ticketCode: data.ticketCode,
+        senderType: data.senderType,
+      }
+    )
+  }
+
+  /**
+   * Broadcast support ticket status change to user (owner)
+   */
+  notifySupportTicketStatusChange(
+    userId: string,
+    data: {
+      ticketId: string
+      ticketCode: string
+      subject: string
+      oldStatus: string
+      newStatus: string
+      timestamp: string
+    }
+  ): void {
+    if (!this.io) {
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
+    }
+
+    // Find all sockets for this user
+    const userSockets: string[] = []
+    this.clientMetadata.forEach((metadata, socketId) => {
+      if (metadata.userId === userId) {
+        userSockets.push(socketId)
+      }
+    })
+
+    // Send to all user sockets
+    userSockets.forEach((socketId) => {
+      this.io!.to(socketId).emit("support-ticket-status", data)
+    })
+
+    logger.info(
+      `[WebSocket] Broadcasted support-ticket-status to user ${userId} (${userSockets.length} sockets)`,
+      {
+        ticketId: data.ticketId,
+        ticketCode: data.ticketCode,
+        newStatus: data.newStatus,
+      }
+    )
+  }
+
+  /**
+   * Broadcast to admin room for new support tickets (platform admins)
+   */
+  notifyAdminNewSupportTicket(data: {
+    ticketId: string
+    ticketCode: string
+    subject: string
+    issueType: string
+    userEmail: string
+    workspaceName: string
+    timestamp: string
+  }): void {
+    if (!this.io) {
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
+    }
+
+    // Broadcast to admin room (admins join this room on connect)
+    this.io.to("admin:support").emit("support-ticket-new", data)
+
+    logger.info(`[WebSocket] Broadcasted support-ticket-new to admin room`, {
+      ticketId: data.ticketId,
+      ticketCode: data.ticketCode,
+    })
   }
 
   /**

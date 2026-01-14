@@ -29,7 +29,7 @@ const createWorkspaceMock = (overrides: {
   workspaceId?: string
   isActive?: boolean
   deletedAt?: Date | null
-  channelStatus?: boolean
+  debugMode?: boolean
   ownerSubscriptionStatus?: string
   ownerCreditBalance?: number
   ownerPaymentFailureCount?: number
@@ -39,7 +39,7 @@ const createWorkspaceMock = (overrides: {
   name: "Test Workspace",
   isActive: overrides.isActive ?? true,
   deletedAt: overrides.deletedAt ?? null,
-  channelStatus: overrides.channelStatus ?? true,
+  debugMode: overrides.debugMode ?? false,
   ownerId: overrides.ownerId ?? "test-owner-id",
   owner: {
     id: overrides.ownerId ?? "test-owner-id",
@@ -84,7 +84,7 @@ describe("WorkspaceAccessService", () => {
           name: "Test Workspace",
           isActive: true,
           deletedAt: null,
-          channelStatus: true,
+          debugMode: false,
           ownerId: "test-owner-id",
           owner: null, // No owner!
         })
@@ -221,9 +221,9 @@ describe("WorkspaceAccessService", () => {
     })
 
     describe("channel disabled (WIP mode)", () => {
-      it("should block when channelStatus is false", async () => {
+      it("should block when debugMode is true (test mode)", async () => {
         mockPrisma.workspace.findUnique.mockResolvedValue(
-          createWorkspaceMock({ channelStatus: false })
+          createWorkspaceMock({ debugMode: true })
         )
 
         const result = await service.canProcessMessages(workspaceId)
@@ -238,7 +238,7 @@ describe("WorkspaceAccessService", () => {
         mockPrisma.workspace.findUnique.mockResolvedValue(
           createWorkspaceMock({
             isActive: true,
-            channelStatus: true,
+            debugMode: false,
             ownerSubscriptionStatus: "ACTIVE",
             ownerCreditBalance: 50,
           })
@@ -339,7 +339,7 @@ describe("WorkspaceAccessService", () => {
 
     it("should return false when CHANNEL_DISABLED (not billing issue)", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
-        createWorkspaceMock({ channelStatus: false })
+        createWorkspaceMock({ debugMode: true })
       )
 
       const result = await service.isBlockedDueToBilling(workspaceId)
@@ -422,7 +422,7 @@ describe("WorkspaceAccessService", () => {
 
     it("should return wip status for channel disabled", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
-        createWorkspaceMock({ channelStatus: false })
+        createWorkspaceMock({ debugMode: true })
       )
 
       const result = await service.getAccessStatus(workspaceId)
@@ -446,7 +446,7 @@ describe("WorkspaceAccessService", () => {
         name: "Test Workspace",
         isActive: true,
         deletedAt: null,
-        channelStatus: true,
+        debugMode: false,
         ownerId: "test-owner-id",
         owner: null,
       })

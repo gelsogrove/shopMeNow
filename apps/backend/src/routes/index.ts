@@ -138,6 +138,8 @@ import { createTokenRouter } from "./token"
 import userAdminRoutes from "../interfaces/http/routes/user-admin.routes"
 import twoFactorResetRoutes from "../interfaces/http/routes/two-factor-reset.routes"
 import { createTrashRoutes } from "../interfaces/http/routes/trash.routes"
+import { supportRouter } from "../interfaces/http/routes/support.routes"
+import { adminSupportRouter } from "../interfaces/http/routes/admin-support.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -814,6 +816,14 @@ router.get(
   settingsController.getDefaultGdprContent.bind(settingsController)
 )
 logger.info("Registered /gdpr/default route for backward compatibility")
+
+// Mount support ticket routes
+router.use("/support", supportRouter)
+logger.info("Registered support ticket routes for customer support")
+
+// Mount admin support ticket routes
+router.use("/admin/support", adminSupportRouter)
+logger.info("Registered admin support ticket routes for backoffice")
 
 // Health check
 router.get("/health", (req, res) => {

@@ -614,14 +614,17 @@ export default function ClientsPage(): JSX.Element {
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="max-w-xs bg-white"
               />
-          <Button
-            variant="default"
-            className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={handleOpenNewChat}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            New Chat
-          </Button>
+          {/* New Chat button - visible ONLY in debugMode */}
+          {workspace?.debugMode === true && (
+            <Button
+              variant="default"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleOpenNewChat}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New Chat (Playground)
+            </Button>
+          )}
         </div>
       </div>
 

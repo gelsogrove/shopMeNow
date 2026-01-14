@@ -1,6 +1,7 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
+import { WhatsAppQueueService } from "../../services/whatsapp-queue.service"
 
 /**
  * Service for handling registration-related functionality
@@ -8,26 +9,33 @@ import logger from "../../utils/logger"
 export class RegistrationService {
   private prisma: PrismaClient
   private messageRepository: MessageRepository
+  private whatsappQueueService: WhatsAppQueueService
 
   constructor() {
     this.prisma = prisma
     this.messageRepository = new MessageRepository()
+    this.whatsappQueueService = new WhatsAppQueueService(prisma)
   }
 
   /**
-   * Send a WhatsApp message using workspace settings
+   * Send a WhatsApp message via Queue (NOT direct!)
+   * ✅ Passes through Security Agent
+   * ✅ Respects Debug Mode  
+   * ✅ Has billing tracking
+   * ✅ Has retry logic
    */
   private async sendWhatsAppMessage(
     phoneNumber: string,
     message: string,
-    workspaceId: string
+    workspaceId: string,
+    customerId: string
   ): Promise<boolean> {
     try {
       logger.info(
-        `[REGISTRATION-WA] 📱 Sending after-registration message to ${phoneNumber}`
+        `[REGISTRATION-WA] 📤 Adding after-registration message to queue for ${phoneNumber}`
       )
 
-      // Get workspace WhatsApp settings
+      // Validate workspace has WhatsApp configured
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: {
@@ -43,44 +51,26 @@ export class RegistrationService {
         return false
       }
 
-      // Send message via WhatsApp Business API
-      const whatsappApiUrl = `https://graph.facebook.com/v18.0/${workspace.whatsappPhoneNumber}/messages`
-
-      const whatsappPayload = {
-        messaging_product: "whatsapp",
-        to: phoneNumber.replace("+", ""),
-        type: "text",
-        text: {
-          body: message,
-        },
-      }
-
-      const response = await fetch(whatsappApiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${workspace.whatsappApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(whatsappPayload),
+      // 📤 ADD TO QUEUE instead of sending directly!
+      const queueEntry = await this.whatsappQueueService.enqueue({
+        workspaceId,
+        customerId,
+        phoneNumber,
+        messageContent: message,
       })
 
-      if (!response.ok) {
-        const errorData = await response.text()
-        logger.error(
-          `[REGISTRATION-WA] WhatsApp API error: ${response.status} ${response.statusText} - ${errorData}`
-        )
-        return false
-      }
-
-      const responseData = await response.json()
       logger.info(
-        `[REGISTRATION-WA] ✅ Message sent successfully:`,
-        responseData
+        `[REGISTRATION-WA] ✅ Message added to queue`,
+        {
+          queueId: queueEntry.id,
+          phoneNumber,
+          status: "pending",
+        }
       )
 
       return true
     } catch (error) {
-      logger.error(`[REGISTRATION-WA] Error sending WhatsApp message:`, error)
+      logger.error(`[REGISTRATION-WA] Error adding message to queue:`, error)
       return false
     }
   }
@@ -173,11 +163,12 @@ export class RegistrationService {
       // Send the message
       if (customer.phone) {
         try {
-          // 1. Send via WhatsApp API
+          // 1. Send via WhatsApp Queue (NOT direct!)
           const whatsappSent = await this.sendWhatsAppMessage(
             customer.phone,
             afterRegistrationMessage,
-            customer.workspaceId
+            customer.workspaceId,
+            customer.id // Pass customerId for queue
           )
 
           if (!whatsappSent) {

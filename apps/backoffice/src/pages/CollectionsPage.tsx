@@ -207,6 +207,9 @@ export function CollectionsPage() {
   const [editingAdjustmentId, setEditingAdjustmentId] = useState<string | null>(null)
   const [editingAdjustmentAmount, setEditingAdjustmentAmount] = useState('')
   const [editingAdjustmentReason, setEditingAdjustmentReason] = useState('')
+  const [rechargesModal, setRechargesModal] = useState<{ userId: string; ownerEmail: string } | null>(null)
+  const [rechargesTransactions, setRechargesTransactions] = useState<any[]>([])
+  const [rechargesLoading, setRechargesLoading] = useState(false)
   const previousDefaults = getPreviousMonthFromDate(new Date())
   const [historyMonth, setHistoryMonth] = useState<number | null>(previousDefaults.month)
   const [historyYear, setHistoryYear] = useState<number | null>(previousDefaults.year)
@@ -365,6 +368,33 @@ export function CollectionsPage() {
       : viewMode === 'failed'
       ? failedRows
       : previousRows
+
+  const loadRechargesTransactions = async (ownerEmail: string) => {
+    setRechargesLoading(true)
+    try {
+      // Get previous month dates
+      const { month, year } = getPreviousMonthFromDate(new Date())
+      const { start, end } = getPeriodRange(month, year)
+      
+      const response = await api.get(
+        `/subscription-billing/transactions?type=RECHARGE&startDate=${start.toISOString()}&endDate=${end.toISOString()}`
+      )
+      
+      if (response.data && response.data.transactions) {
+        setRechargesTransactions(response.data.transactions)
+      }
+    } catch (error) {
+      console.error('Failed to load recharges:', error)
+      toast.error('Failed to load recharge transactions')
+    } finally {
+      setRechargesLoading(false)
+    }
+  }
+
+  const handleRechargesClick = async (userId: string, ownerEmail: string) => {
+    setRechargesModal({ userId, ownerEmail })
+    await loadRechargesTransactions(ownerEmail)
+  }
 
   const handleDownloadInvoice = async (
     invoiceId: string,
@@ -941,7 +971,12 @@ export function CollectionsPage() {
                                 <span>{formatUsd(detail.subscriptionAmount)}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span>Recharges this month</span>
+                                <button 
+                                  onClick={() => handleRechargesClick(row.owner.id, row.owner.email)}
+                                  className="text-left hover:text-blue-600 cursor-pointer transition-colors"
+                                >
+                                  <span>Recharges this month</span>
+                                </button>
                                 <span>{formatUsd(detail.rechargesTotal)}</span>
                               </div>
                               {!isTrackingView && detail.adjustmentsTotal !== 0 && (
@@ -1026,7 +1061,7 @@ export function CollectionsPage() {
                     )}
 
                     {isFailedView && (
-                      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+                      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
                         <Input
                           placeholder="Admin notes..."
                           value={notesByInvoice[invoice.id] || ''}
@@ -1044,6 +1079,14 @@ export function CollectionsPage() {
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Retry Payment
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => handleSaveNotes(invoice.id, 'FAILED')}
+                          disabled={isUpdatingRow}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Move to History
                         </Button>
                         <Button
                           variant="destructive"
@@ -1082,7 +1125,12 @@ export function CollectionsPage() {
                                 <span>{formatUsd(detail.subscriptionAmount)}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span>Recharges this month</span>
+                                <button 
+                                  onClick={() => handleRechargesClick(row.owner.id, row.owner.email)}
+                                  className="text-left hover:text-blue-600 cursor-pointer transition-colors"
+                                >
+                                  <span>Recharges this month</span>
+                                </button>
                                 <span>{formatUsd(detail.rechargesTotal)}</span>
                               </div>
                               {detail.adjustmentsTotal !== 0 && (
@@ -1454,6 +1502,73 @@ export function CollectionsPage() {
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recharges Modal */}
+      <Dialog open={!!rechargesModal} onOpenChange={() => setRechargesModal(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Recharge Transactions - Previous Month</DialogTitle>
+            <DialogDescription>
+              All recharge transactions for {rechargesModal?.ownerEmail}
+            </DialogDescription>
+          </DialogHeader>
+
+          {rechargesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+            </div>
+          ) : rechargesTransactions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No recharge transactions found for the previous month
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-50">
+                      <th className="text-left px-4 py-3 font-semibold">Date</th>
+                      <th className="text-left px-4 py-3 font-semibold">Type</th>
+                      <th className="text-right px-4 py-3 font-semibold">Amount</th>
+                      <th className="text-right px-4 py-3 font-semibold">Balance After</th>
+                      <th className="text-left px-4 py-3 font-semibold">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rechargesTransactions.map((tx) => (
+                      <tr key={tx.id} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          {new Date(tx.createdAt).toLocaleDateString('it-IT')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge className="bg-green-600 text-white">{tx.type}</Badge>
+                        </td>
+                        <td className="text-right px-4 py-3 font-mono text-green-600">
+                          +${Number(tx.amount).toFixed(2)}
+                        </td>
+                        <td className="text-right px-4 py-3 font-mono text-gray-600">
+                          ${Number(tx.balanceAfter).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{tx.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-blue-900">Total Recharges:</span>
+                  <span className="text-lg font-bold text-blue-600">
+                    ${rechargesTransactions.reduce((sum, tx) => sum + Number(tx.amount), 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

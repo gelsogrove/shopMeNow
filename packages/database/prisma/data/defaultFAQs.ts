@@ -483,4 +483,65 @@ export const defaultFAQs = (
     order: 25,
     isActive: true,
   },
+  // ====================================================================
+  // CATEGORY: Billing (New FAQs about pricing and costs)
+  // ====================================================================
+  {
+    workspaceId,
+    question: "How much does it cost to send messages?",
+    answer:
+      "💰 **Message Pricing Structure:**\n\n📱 **WhatsApp Channel**: €0.10 per message\n- You pay only for messages you actually send\n- Each customer message counts as 1 message\n- Replies and notifications also count\n\n🌐 **Web Widget Channel**: €0.05 per message\n- Lower cost for web-based conversations\n- All widget messages count (customer + bot)\n\n📅 **Plus Subscription Fee**:\n- Plan-based subscription (Basic, Premium, Enterprise)\n- Includes team members, features, and dashboard access\n- Billing cycles: Monthly or Annual\n\n💡 **How It Works**:\n1. You choose a subscription plan\n2. Each message sent costs the per-message fee\n3. Total monthly bill = Subscription + (Number of messages × per-message cost)\n4. View real-time costs in your Dashboard → Billing\n\n✅ Free Trial includes 100 messages to test!",
+    keywords: [
+      "cost",
+      "price",
+      "message cost",
+      "pricing",
+      "how much",
+      "fee",
+      "billing",
+      "charge",
+      "whatsapp cost",
+      "widget cost",
+    ],
+    category: "Billing",
+    order: 26,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "What is included in my subscription plan?",
+    answer:
+      "📊 **Subscription Plan Inclusions**:\n\n🆓 **Free Trial** (7 days):\n- 100 free messages to test\n- Full access to all features\n- No credit card required initially\n\n📊 **Basic** (€29/month):\n- Unlimited messages at €0.10 each (WhatsApp) / €0.05 (Widget)\n- Up to 1,000 products in catalog\n- 1 team member\n- Email support\n\n💎 **Premium** (€99/month):\n- Unlimited messages\n- Up to 10,000 products\n- Up to 3 team members\n- Priority support\n- Advanced analytics\n\n🏢 **Enterprise** (Custom pricing):\n- Everything in Premium\n- Unlimited team members\n- Custom integrations\n- Dedicated account manager\n- SLA guarantee\n\n💡 All plans include the per-message cost on top of subscription!",
+    keywords: [
+      "subscription",
+      "plan",
+      "what included",
+      "plan features",
+      "basic plan",
+      "premium plan",
+      "enterprise plan",
+      "included features",
+    ],
+    category: "Billing",
+    order: 27,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "How do I upgrade my plan?",
+    answer:
+      "📈 **To Upgrade Your Plan**:\n\n1. Go to **Dashboard** → **Billing** → **Plans**\n2. Click **Upgrade** on the desired plan\n3. Choose billing frequency: **Monthly** or **Annual** (save 20%)\n4. Complete payment with card or bank transfer\n5. ✅ Plan activated immediately!\n\n💡 **Prorated Billing**: If you upgrade mid-month, you only pay for the remaining days of the current period + full next period.\n\n🔄 **Downgrade**: You can downgrade anytime. Changes take effect on the next billing cycle.",
+    keywords: [
+      "upgrade plan",
+      "change plan",
+      "upgrade",
+      "better plan",
+      "premium",
+      "switch plan",
+      "upgrade billing",
+    ],
+    category: "Billing",
+    order: 28,
+    isActive: true,
+  },
 ]

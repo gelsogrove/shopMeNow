@@ -6,6 +6,20 @@
 import { api } from "./api"
 
 const WIDGET_API_URL = "/api/v1/widget"
+const STORAGE_PREFIX = {
+  visitorId: "echatbot-visitor-id",
+  sessionId: "echatbot-session-id",
+  messages: "echatbot-messages",
+  lastWorkspace: "echatbot-last-workspace-id",
+}
+
+const getWorkspaceKey = (base: string, workspaceId?: string) =>
+  workspaceId ? `${base}:${workspaceId}` : base
+
+const getStoredWorkspaceId = () =>
+  localStorage.getItem(STORAGE_PREFIX.lastWorkspace) ||
+  (window as any)?.eChatbotConfig?.workspaceId ||
+  null
 
 export interface WidgetMessage {
   role: "user" | "bot"
@@ -65,13 +79,12 @@ export const widgetApi = {
     request: SendMessageRequest
   ): Promise<SendMessageResponse> {
     try {
-      const response = await fetch(`${WIDGET_API_URL}/message`, {
+      const response = await fetch(`${WIDGET_API_URL}/chat/${request.workspaceId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          workspaceId: request.workspaceId,
           visitorId: request.visitorId,
           message: request.message,
           language: request.language || navigator.language || "en",
@@ -210,16 +223,22 @@ export const widgetApi = {
   /**
    * Get visitor ID from localStorage
    */
-  getVisitorId(): string | null {
-    return localStorage.getItem("echatbot-visitor-id")
+  getVisitorId(workspaceId?: string): string | null {
+    const resolvedWorkspaceId = workspaceId || getStoredWorkspaceId()
+    return localStorage.getItem(
+      getWorkspaceKey(STORAGE_PREFIX.visitorId, resolvedWorkspaceId || undefined)
+    )
   },
 
   /**
    * Get stored chat messages from localStorage
    */
-  getStoredMessages(): WidgetMessage[] {
+  getStoredMessages(workspaceId?: string): WidgetMessage[] {
     try {
-      const stored = localStorage.getItem("echatbot-messages")
+      const resolvedWorkspaceId = workspaceId || getStoredWorkspaceId()
+      const stored = localStorage.getItem(
+        getWorkspaceKey(STORAGE_PREFIX.messages, resolvedWorkspaceId || undefined)
+      )
       return stored ? JSON.parse(stored) : []
     } catch {
       return []
@@ -229,9 +248,14 @@ export const widgetApi = {
   /**
    * Clear stored chat messages
    */
-  clearStoredMessages(): void {
-    localStorage.removeItem("echatbot-messages")
-    localStorage.removeItem("echatbot-session-id")
+  clearStoredMessages(workspaceId?: string): void {
+    const resolvedWorkspaceId = workspaceId || getStoredWorkspaceId()
+    localStorage.removeItem(
+      getWorkspaceKey(STORAGE_PREFIX.messages, resolvedWorkspaceId || undefined)
+    )
+    localStorage.removeItem(
+      getWorkspaceKey(STORAGE_PREFIX.sessionId, resolvedWorkspaceId || undefined)
+    )
   },
 
   /**

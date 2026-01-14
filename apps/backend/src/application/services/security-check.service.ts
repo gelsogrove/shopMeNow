@@ -205,7 +205,7 @@ export class SecurityCheckService {
       where: { id: context.workspaceId },
       select: {
         isActive: true,
-        channelStatus: true,
+        debugMode: true,
       },
     })
 
@@ -226,11 +226,11 @@ export class SecurityCheckService {
       }
     }
 
-    if (!workspace.channelStatus) {
+    if (workspace.debugMode === true) {
       return {
         step: "BUSINESS_RULES",
         passed: false,
-        reason: "Channel is disabled",
+        reason: "Workspace in debug mode (test mode)",
         retryAfter: 3600 * 1000, // Retry in 1 hour
       }
     }

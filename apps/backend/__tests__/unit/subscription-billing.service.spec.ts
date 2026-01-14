@@ -21,12 +21,17 @@ const mockRepository = {
   deductOwnerCredit: jest.fn(),
   addOwnerCredit: jest.fn(),
   addCredit: jest.fn(),
+  deductCredit: jest.fn(),
   upgradeOwnerPlan: jest.fn(),
   getOwnerTransactionHistory: jest.fn(),
   getCreditBalance: jest.fn(),
   getWorkspaceBilling: jest.fn(),
   updateOwnerSubscriptionStatus: jest.fn(),
   getOwnerSubscriptionStatus: jest.fn(),
+}
+
+const mockPricingRepository = {
+  getValue: jest.fn(),
 }
 
 // Mock Prisma
@@ -63,6 +68,10 @@ const mockPrisma = {
 // Mock the repository module
 jest.mock("../../src/repositories/subscription-billing.repository", () => ({
   SubscriptionBillingRepository: jest.fn().mockImplementation(() => mockRepository),
+}))
+
+jest.mock("../../src/repositories/pricing.repository", () => ({
+  PricingRepository: jest.fn().mockImplementation(() => mockPricingRepository),
 }))
 
 describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
@@ -104,6 +113,7 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
     jest.clearAllMocks()
     service = new SubscriptionBillingService(mockPrisma as any)
     ;(service as any).repository = mockRepository
+    ;(service as any).pricingRepository = mockPricingRepository
   })
 
   describe("getOwnerCreditBalance", () => {
@@ -240,6 +250,36 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
       )
       expect(result.blocked).toBe(false)
       expect(result.paymentFailureCount).toBe(1)
+    })
+  })
+
+  describe("deductOwnerWidgetMessageCredit", () => {
+    it("should use widget message price from pricing config", async () => {
+      mockRepository.getOwnerBilling.mockResolvedValue(mockOwnerBilling)
+      mockRepository.getPlanConfiguration.mockResolvedValue(mockPlanLimits)
+      mockPricingRepository.getValue.mockResolvedValue(0.05)
+      mockRepository.deductCredit.mockResolvedValue({
+        success: true,
+        newBalance: 49.95,
+      })
+
+      const result = await service.deductOwnerWidgetMessageCredit(
+        mockUserId,
+        mockWorkspaceId,
+        "message-1"
+      )
+
+      expect(mockPricingRepository.getValue).toHaveBeenCalledWith("WIDGET_MESSAGE")
+      expect(mockRepository.deductCredit).toHaveBeenCalledWith(
+        mockUserId,
+        0.05,
+        "MESSAGE",
+        "Widget message",
+        mockWorkspaceId,
+        "message-1",
+        "widget_message"
+      )
+      expect(result.success).toBe(true)
     })
   })
 
@@ -841,10 +881,10 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
         subscriptionAmount: 39.0, // Plan cost
         creditUsage: 15.50, // Messages + Orders + Push consumed
         creditDebt: 0, // If went negative
-        totalAmount: 39.0 + 15.50,
+        totalAmount: 39.0,
       }
 
-      expect(invoiceBreakdown.totalAmount).toBe(54.50)
+      expect(invoiceBreakdown.totalAmount).toBe(39.0)
     })
   })
 })

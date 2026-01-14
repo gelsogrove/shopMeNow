@@ -1,4 +1,5 @@
 import { Request, Response } from "express"
+import { prisma } from "@echatbot/database"
 import logger from "../../../utils/logger"
 
 /**
@@ -27,8 +28,7 @@ export class WidgetEmbedController {
         { userId: user.id }
       )
 
-      // Generate the embed code snippet
-      const embedCode = this.generateEmbedCodeSnippet(workspaceId)
+      const embedCode = await this.generateEmbedCodeSnippet(workspaceId)
 
       // Return as downloadable code or inline
       res.status(200).json({
@@ -50,18 +50,37 @@ export class WidgetEmbedController {
    * Generate the complete embed code snippet
    * Returns HTML/JS code that customer can copy/paste
    */
-  private generateEmbedCodeSnippet(workspaceId: string): string {
-    const widgetUrl =
-      process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
+  private async generateEmbedCodeSnippet(workspaceId: string): Promise<string> {
+    const widgetUrl = process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
     const apiUrl = process.env.API_URL || "http://localhost:3001/api/v1"
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        name: true,
+        widgetTitle: true,
+        widgetLogoUrl: true,
+        widgetLanguage: true,
+        widgetPrimaryColor: true,
+      },
+    })
+
+    const title = workspace?.widgetTitle?.trim() || workspace?.name || "Chat with us 💬"
+    const logoUrl = workspace?.widgetLogoUrl?.trim() || ""
+    const language = workspace?.widgetLanguage || "it"
+    const primaryColor = workspace?.widgetPrimaryColor || "#22c55e"
 
     return `<!-- eChatbot Widget - Embed this code on your website -->
 <script>
   (function() {
     // Widget Configuration
-    const eChatbotConfig = {
+    window.eChatbotConfig = {
       workspaceId: "${workspaceId}",
       apiUrl: "${apiUrl}",
+      title: "${title.replace(/"/g, '\\"')}",
+      logoUrl: "${logoUrl.replace(/"/g, '\\"')}",
+      language: "${language}",
+      primaryColor: "${primaryColor}",
       position: "bottom-right",
       theme: "light"
     };
@@ -72,7 +91,7 @@ export class WidgetEmbedController {
     script.async = true;
     script.onload = function() {
       if (window.eChatbotWidget) {
-        window.eChatbotWidget.init(eChatbotConfig);
+        window.eChatbotWidget.init(window.eChatbotConfig);
       }
     };
     script.onerror = function() {

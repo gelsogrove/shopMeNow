@@ -14,7 +14,7 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 import translationSecurityService from "./translation-security.service"
-import { sendToWhatsApp } from "./whatsapp-api.service"
+import { WhatsAppQueueService } from "./whatsapp-queue.service"
 import { config } from "../config"
 
 // Tipi di invio messaggi
@@ -45,14 +45,22 @@ export interface SendMessageResult {
   blockReason?: string
   securityChecked: boolean
   translatedText?: string
+  status?: "queued" | "sent" | "blocked" | "failed" // Queue status indicator
 }
 
 /**
  * Message Sending Service
  * Punto UNICO per tutti gli invii WhatsApp
+ * 
+ * 🎯 IMPORTANTE: Usa la Queue per tutti gli invii!
+ * La queue rispetta debugMode e applica Security Agent nello scheduler
  */
 export class MessageSendingService {
-  constructor(private prisma: PrismaClient) {}
+  private whatsappQueueService: WhatsAppQueueService
+
+  constructor(private prisma: PrismaClient) {
+    this.whatsappQueueService = new WhatsAppQueueService(prisma)
+  }
 
   /**
    * Invia un messaggio WhatsApp con security layer automatico
@@ -157,62 +165,55 @@ export class MessageSendingService {
         })
       }
 
-      // 4. Send to WhatsApp
-      logger.info("📱 [MESSAGE-SEND] Sending to WhatsApp", {
+      // 4. Enqueue to WhatsApp Queue (rispetta debugMode!)
+      logger.info("📱 [MESSAGE-SEND] Enqueueing to WhatsApp Queue", {
         phoneNumber: options.phoneNumber,
         messageLength: finalMessage.length,
+        sendType: options.sendType,
       })
 
-      const whatsappResult = await sendToWhatsApp(
-        options.phoneNumber,
-        finalMessage,
-        options.workspaceId
-      )
-
-      if (!whatsappResult.success) {
-        logger.error("❌ [MESSAGE-SEND] WhatsApp send failed", {
-          error: whatsappResult.error,
-          phoneNumber: options.phoneNumber,
+      // Get customerId for queue entry
+      let customerId = options.customerId
+      if (!customerId && options.phoneNumber) {
+        // Try to find customer by phone
+        const customer = await this.prisma.customers.findFirst({
+          where: {
+            phone: options.phoneNumber,
+            workspaceId: options.workspaceId,
+          },
+          select: { id: true },
         })
-
-        // Update message status to failed
-        if (messageId) {
-          await this.updateMessageStatus(
-            messageId,
-            "failed",
-            whatsappResult.error
-          )
-        }
-
-        return {
-          success: false,
-          error: whatsappResult.error,
-          securityChecked,
-          blocked: false,
-        }
+        customerId = customer?.id
       }
 
-      logger.info("✅ [MESSAGE-SEND] WhatsApp send successful", {
-        messageId: whatsappResult.messageId,
+      const queueEntry = await this.whatsappQueueService.enqueue({
+        workspaceId: options.workspaceId,
+        customerId: customerId || "",
+        phoneNumber: options.phoneNumber,
+        messageContent: finalMessage,
+        conversationMessageId: messageId,
+      })
+
+      logger.info("✅ [MESSAGE-SEND] Message enqueued successfully", {
+        queueId: queueEntry.id,
+        status: queueEntry.status,
+        sendType: options.sendType,
+        securityChecked,
         duration: Date.now() - startTime,
       })
 
-      // 5. Update message status to sent
+      // 5. Update message status to queued (will be updated to sent by scheduler)
       if (messageId) {
-        await this.updateMessageStatus(
-          messageId,
-          "sent",
-          undefined,
-          whatsappResult.messageId
-        )
+        await this.updateMessageStatus(messageId, "pending", undefined, queueEntry.id)
       }
 
       return {
         success: true,
-        messageId: whatsappResult.messageId,
+        messageId: queueEntry.id, // Return queue ID instead of WhatsApp ID
         blocked: false,
         securityChecked,
         translatedText: finalMessage,
+        status: "queued", // Indicate message is in queue, not yet sent
       }
     } catch (error) {
       logger.error("❌ [MESSAGE-SEND] Fatal error", {

@@ -16,6 +16,7 @@ import { PlanInfo } from "@/services/subscriptionBillingApi"
 export interface PlanFeature {
   key: string
   included: boolean
+  order: number  // Display order (1-8)
 }
 
 export interface PlanConfig {
@@ -39,13 +40,25 @@ export interface PlanConfig {
 export const FEATURE_KEYS = {
   CHANNELS: "channels",
   CUSTOMERS: "customers",
-  TEAM_MEMBERS: "teamMembers",
   MULTI_LANGUAGE: "multiLanguage",
   ANALYTICS: "analytics",
+  TEAM_MEMBERS: "teamMembers",
   BRANDING: "branding",
   INTEGRATIONS: "integrations",
   DEDICATED_SERVER: "dedicatedServer",
 } as const
+
+// Fixed display order for features (same across all plans)
+export const FEATURE_DISPLAY_ORDER: Record<string, number> = {
+  [FEATURE_KEYS.CHANNELS]: 1,
+  [FEATURE_KEYS.CUSTOMERS]: 2,
+  [FEATURE_KEYS.MULTI_LANGUAGE]: 3,
+  [FEATURE_KEYS.ANALYTICS]: 4,
+  [FEATURE_KEYS.TEAM_MEMBERS]: 5,
+  [FEATURE_KEYS.BRANDING]: 6,
+  [FEATURE_KEYS.INTEGRATIONS]: 7,
+  [FEATURE_KEYS.DEDICATED_SERVER]: 8,
+}
 
 // ============================================================================
 // RUNTIME PLAN CONFIGURATION
@@ -53,10 +66,15 @@ export const FEATURE_KEYS = {
 
 /**
  * Convert API PlanInfo to PlanConfig (includes display metadata)
+ * Now reads channels and teamMembers limits from platform config (dynamic)
  * @param plans - Array of PlanInfo from API
+ * @param limits - Dynamic limits from platform config (optional, uses fallback if not provided)
  * @returns Record of PlanConfig by planType
  */
-export function buildPlanConfigsFromApi(plans: PlanInfo[]): Record<string, PlanConfig> {
+export function buildPlanConfigsFromApi(
+  plans: PlanInfo[],
+  limits?: Record<string, number>
+): Record<string, PlanConfig> {
   const configs: Record<string, PlanConfig> = {}
 
   // Map of plan-specific metadata (not in API)
@@ -92,6 +110,14 @@ export function buildPlanConfigsFromApi(plans: PlanInfo[]): Record<string, PlanC
     },
   }
 
+  // Helper to get limit from platform config or fallback
+  const getLimit = (key: string, fallback: number): number => {
+    return limits?.[key] ?? fallback
+  }
+
+  // Helper to determine if limit is unlimited
+  const isUnlimited = (value: number): boolean => value >= 999999
+
   for (const plan of plans) {
     const metadata = planMetadata[plan.planType]
     if (!metadata) continue
@@ -101,8 +127,10 @@ export function buildPlanConfigsFromApi(plans: PlanInfo[]): Record<string, PlanC
     const isPremium = plan.planType === "PREMIUM"
     const isEnterprise = plan.planType === "ENTERPRISE"
 
-    // Helper to determine if limit is unlimited
-    const isUnlimited = (limit: number | null): boolean => limit === null || limit === 999
+    // Get dynamic limits from platform config
+    const channelsLimit = getLimit(`${plan.planType}_CHANNELS`, plan.maxChannels || 1)
+    const teamMembersLimit = getLimit(`${plan.planType}_TEAM_MEMBERS`, plan.maxTeamMembers || 0)
+    const customersLimit = plan.maxCustomers || 50
 
     configs[plan.planType] = {
       name: plan.displayName,
@@ -114,19 +142,19 @@ export function buildPlanConfigsFromApi(plans: PlanInfo[]): Record<string, PlanC
       isPopular: metadata.isPopular,
       buttonVariant: metadata.buttonVariant,
       limits: {
-        channels: isUnlimited(plan.maxChannels) ? "unlimited" : plan.maxChannels,
-        customers: isUnlimited(plan.maxCustomers) ? "unlimited" : plan.maxCustomers,
-        teamMembers: isUnlimited(plan.maxTeamMembers) ? "unlimited" : plan.maxTeamMembers,
+        channels: isUnlimited(channelsLimit) ? "unlimited" : channelsLimit,
+        customers: isUnlimited(customersLimit) ? "unlimited" : customersLimit,
+        teamMembers: isUnlimited(teamMembersLimit) ? "unlimited" : teamMembersLimit,
       },
       features: [
-        { key: FEATURE_KEYS.CHANNELS, included: true },
-        { key: FEATURE_KEYS.CUSTOMERS, included: true },
-        { key: FEATURE_KEYS.TEAM_MEMBERS, included: isPremium || isEnterprise },
-        { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
-        { key: FEATURE_KEYS.ANALYTICS, included: true },
-        { key: FEATURE_KEYS.BRANDING, included: isPremium || isEnterprise },
-        { key: FEATURE_KEYS.INTEGRATIONS, included: isEnterprise },
-        { key: FEATURE_KEYS.DEDICATED_SERVER, included: isEnterprise },
+        { key: FEATURE_KEYS.CHANNELS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CHANNELS] },
+        { key: FEATURE_KEYS.CUSTOMERS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CUSTOMERS] },
+        { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.MULTI_LANGUAGE] },
+        { key: FEATURE_KEYS.ANALYTICS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.ANALYTICS] },
+        { key: FEATURE_KEYS.TEAM_MEMBERS, included: isPremium || isEnterprise, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.TEAM_MEMBERS] },
+        { key: FEATURE_KEYS.BRANDING, included: isPremium || isEnterprise, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.BRANDING] },
+        { key: FEATURE_KEYS.INTEGRATIONS, included: isEnterprise, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.INTEGRATIONS] },
+        { key: FEATURE_KEYS.DEDICATED_SERVER, included: isEnterprise, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.DEDICATED_SERVER] },
       ],
     }
   }
@@ -155,14 +183,14 @@ export const PLAN_CONFIGS_FALLBACK: Record<string, PlanConfig> = {
       teamMembers: 0,
     },
     features: [
-      { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.CUSTOMERS, included: true },
-      { key: FEATURE_KEYS.TEAM_MEMBERS, included: false },
-      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
-      { key: FEATURE_KEYS.ANALYTICS, included: true },
-      { key: FEATURE_KEYS.BRANDING, included: false },
-      { key: FEATURE_KEYS.INTEGRATIONS, included: false },
-      { key: FEATURE_KEYS.DEDICATED_SERVER, included: false },
+      { key: FEATURE_KEYS.CHANNELS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CHANNELS] },
+      { key: FEATURE_KEYS.CUSTOMERS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CUSTOMERS] },
+      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.MULTI_LANGUAGE] },
+      { key: FEATURE_KEYS.ANALYTICS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.ANALYTICS] },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.TEAM_MEMBERS] },
+      { key: FEATURE_KEYS.BRANDING, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.BRANDING] },
+      { key: FEATURE_KEYS.INTEGRATIONS, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.INTEGRATIONS] },
+      { key: FEATURE_KEYS.DEDICATED_SERVER, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.DEDICATED_SERVER] },
     ],
   },
   BASIC: {
@@ -178,14 +206,14 @@ export const PLAN_CONFIGS_FALLBACK: Record<string, PlanConfig> = {
       teamMembers: 0,
     },
     features: [
-      { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.CUSTOMERS, included: true },
-      { key: FEATURE_KEYS.TEAM_MEMBERS, included: false },
-      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
-      { key: FEATURE_KEYS.ANALYTICS, included: true },
-      { key: FEATURE_KEYS.BRANDING, included: false },
-      { key: FEATURE_KEYS.INTEGRATIONS, included: false },
-      { key: FEATURE_KEYS.DEDICATED_SERVER, included: false },
+      { key: FEATURE_KEYS.CHANNELS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CHANNELS] },
+      { key: FEATURE_KEYS.CUSTOMERS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CUSTOMERS] },
+      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.MULTI_LANGUAGE] },
+      { key: FEATURE_KEYS.ANALYTICS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.ANALYTICS] },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.TEAM_MEMBERS] },
+      { key: FEATURE_KEYS.BRANDING, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.BRANDING] },
+      { key: FEATURE_KEYS.INTEGRATIONS, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.INTEGRATIONS] },
+      { key: FEATURE_KEYS.DEDICATED_SERVER, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.DEDICATED_SERVER] },
     ],
   },
   PREMIUM: {
@@ -201,14 +229,14 @@ export const PLAN_CONFIGS_FALLBACK: Record<string, PlanConfig> = {
       teamMembers: 3,
     },
     features: [
-      { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.CUSTOMERS, included: true },
-      { key: FEATURE_KEYS.TEAM_MEMBERS, included: true },
-      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
-      { key: FEATURE_KEYS.ANALYTICS, included: true },
-      { key: FEATURE_KEYS.BRANDING, included: false },
-      { key: FEATURE_KEYS.INTEGRATIONS, included: false },
-      { key: FEATURE_KEYS.DEDICATED_SERVER, included: false },
+      { key: FEATURE_KEYS.CHANNELS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CHANNELS] },
+      { key: FEATURE_KEYS.CUSTOMERS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CUSTOMERS] },
+      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.MULTI_LANGUAGE] },
+      { key: FEATURE_KEYS.ANALYTICS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.ANALYTICS] },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.TEAM_MEMBERS] },
+      { key: FEATURE_KEYS.BRANDING, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.BRANDING] },
+      { key: FEATURE_KEYS.INTEGRATIONS, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.INTEGRATIONS] },
+      { key: FEATURE_KEYS.DEDICATED_SERVER, included: false, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.DEDICATED_SERVER] },
     ],
   },
   ENTERPRISE: {
@@ -225,14 +253,14 @@ export const PLAN_CONFIGS_FALLBACK: Record<string, PlanConfig> = {
       teamMembers: "unlimited",
     },
     features: [
-      { key: FEATURE_KEYS.CHANNELS, included: true },
-      { key: FEATURE_KEYS.CUSTOMERS, included: true },
-      { key: FEATURE_KEYS.TEAM_MEMBERS, included: true },
-      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true },
-      { key: FEATURE_KEYS.ANALYTICS, included: true },
-      { key: FEATURE_KEYS.BRANDING, included: true },
-      { key: FEATURE_KEYS.INTEGRATIONS, included: true },
-      { key: FEATURE_KEYS.DEDICATED_SERVER, included: true },
+      { key: FEATURE_KEYS.CHANNELS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CHANNELS] },
+      { key: FEATURE_KEYS.CUSTOMERS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.CUSTOMERS] },
+      { key: FEATURE_KEYS.MULTI_LANGUAGE, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.MULTI_LANGUAGE] },
+      { key: FEATURE_KEYS.ANALYTICS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.ANALYTICS] },
+      { key: FEATURE_KEYS.TEAM_MEMBERS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.TEAM_MEMBERS] },
+      { key: FEATURE_KEYS.BRANDING, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.BRANDING] },
+      { key: FEATURE_KEYS.INTEGRATIONS, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.INTEGRATIONS] },
+      { key: FEATURE_KEYS.DEDICATED_SERVER, included: true, order: FEATURE_DISPLAY_ORDER[FEATURE_KEYS.DEDICATED_SERVER] },
     ],
   },
 }
@@ -247,9 +275,10 @@ export let PLAN_CONFIGS = { ...PLAN_CONFIGS_FALLBACK }
  * Update PLAN_CONFIGS at runtime from API data
  * Call this when PlanInfo data is fetched from /subscription/plans
  * @param plans - Array of PlanInfo from API
+ * @param limits - Dynamic limits from platform config
  */
-export function updatePlanConfigs(plans: PlanInfo[]): void {
-  PLAN_CONFIGS = buildPlanConfigsFromApi(plans)
+export function updatePlanConfigs(plans: PlanInfo[], limits?: Record<string, number>): void {
+  PLAN_CONFIGS = buildPlanConfigsFromApi(plans, limits)
 }
 
 // Helper to get feature display text (with optional translation)
@@ -274,24 +303,29 @@ export function getFeatureDisplayText(
       }
       return t
         ? `${translate("pricing.features.upto")} ${limits.customers} ${translate("pricing.features.clients")}`
-        : `${limits.customers} leads`
+        : `Up to ${limits.customers} leads`
     case FEATURE_KEYS.TEAM_MEMBERS:
       if (limits.teamMembers === "unlimited") {
         return t
           ? `${translate("pricing.features.unlimited")} ${translate("pricing.features.teamMembers")}`
           : "Unlimited team members"
       }
+      if (limits.teamMembers === 0) {
+        return t
+          ? `${translate("pricing.features.upto")} 0 ${translate("pricing.features.teamMembers")}`
+          : "Up to 0 team members"
+      }
       return t
         ? `${translate("pricing.features.upto")} ${limits.teamMembers} ${translate("pricing.features.teamMembers")}`
-        : `${limits.teamMembers} team members`
+        : `Up to ${limits.teamMembers} team members`
     case FEATURE_KEYS.MULTI_LANGUAGE:
       return "Multi-language support"
     case FEATURE_KEYS.ANALYTICS:
-      return t ? translate("pricing.features.analytics") : "Analytics dashboard"
+      return t ? translate("pricing.features.analytics") : "Advanced Analytics"
     case FEATURE_KEYS.BRANDING:
-      return t ? translate("pricing.features.branding") : "Brand customization"
+      return t ? translate("pricing.features.branding") : "Custom AI Model"
     case FEATURE_KEYS.INTEGRATIONS:
-      return t ? translate("pricing.features.integration") : "Custom integrations"
+      return t ? translate("pricing.features.integration") : "Integration with own CRM (quote required)"
     case FEATURE_KEYS.DEDICATED_SERVER:
       return "Dedicated server"
     default:
@@ -307,14 +341,11 @@ export function getPlanFeaturesWithText(
   const plan = PLAN_CONFIGS[planType]
   if (!plan) return []
   
-  const features = plan.features.map((feature) => ({
+  // Sort features by display order
+  const sortedFeatures = [...plan.features].sort((a, b) => a.order - b.order)
+  
+  return sortedFeatures.map((feature) => ({
     name: getFeatureDisplayText(feature.key, plan.limits, t),
     included: feature.included,
   }))
-  
-  // Sort: included features first, disabled features at the bottom
-  return features.sort((a, b) => {
-    if (a.included === b.included) return 0
-    return a.included ? -1 : 1
-  })
 }

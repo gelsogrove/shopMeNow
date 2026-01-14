@@ -13,6 +13,7 @@ import logger from "../../../utils/logger"
 import { VisitorIdService } from "../../../application/services/visitor-id.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { LLMRouterService } from "../../../services/llm-router.service"
+import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import {
   WIDGET_MESSAGE_SCHEMA,
   type WidgetMessageInput,
@@ -51,6 +52,11 @@ export class WidgetChatController {
       // Validate request body
       const validation = WIDGET_MESSAGE_SCHEMA.safeParse(req.body)
       if (!validation.success) {
+        logger.error("❌ Widget message validation failed", {
+          workspaceId,
+          body: req.body,
+          errors: validation.error.errors,
+        })
         return res.status(400).json({
           error: "INVALID_INPUT",
           message: "Invalid request format",
@@ -68,7 +74,10 @@ export class WidgetChatController {
       })
 
       // Validate visitorId format
-      if (!VisitorIdService.validate(visitorId)) {
+      const isValidFormat = VisitorIdService.validate(visitorId)
+      logger.info("🔍 VisitorId format validation", { visitorId, isValidFormat })
+      if (!isValidFormat) {
+        logger.error("❌ Invalid visitorId format", { visitorId })
         return res.status(400).json({
           error: "INVALID_VISITOR_ID",
           message: "Invalid visitor ID format",
@@ -76,7 +85,10 @@ export class WidgetChatController {
       }
 
       // Check if visitorId is expired (older than 24 hours)
-      if (VisitorIdService.isExpired(visitorId)) {
+      const isExpired = VisitorIdService.isExpired(visitorId)
+      logger.info("🔍 VisitorId expiry check", { visitorId, isExpired })
+      if (isExpired) {
+        logger.error("❌ VisitorId expired", { visitorId })
         return res.status(400).json({
           error: "EXPIRED_VISITOR_ID",
           message: "Visitor ID has expired. Please refresh the page.",
@@ -92,6 +104,8 @@ export class WidgetChatController {
           channelStatus: true,
           ownerId: true,
           language: true,
+          debugMode: true,
+          wipMessage: true, // 🚧 For WIP mode response
         },
       })
 
@@ -102,7 +116,30 @@ export class WidgetChatController {
         })
       }
 
-      if (!workspace.isActive || !workspace.channelStatus) {
+
+      // � Debug Mode (debugMode = true): Return WIP message (system in test mode)
+      if (workspace.debugMode === true) {
+        logger.info("🐛 Debug Mode - returning wipMessage (system in test)", {
+          workspaceId,
+          visitorId,
+        })
+        
+        // Extract WIP message in customer's language (or default)
+        const wipMessageObj = workspace.wipMessage as Record<string, string> | null
+        const requestedLanguage = (req.body.language as string)?.toLowerCase() || "it"
+        const wipResponse = wipMessageObj?.[requestedLanguage] 
+          || wipMessageObj?.it 
+          || wipMessageObj?.en 
+          || "Servizio temporaneamente non disponibile. Riprova più tardi."
+        
+        return res.status(200).json({
+          success: true,
+          status: "wip",
+          response: wipResponse,
+        })
+      }
+
+      if (!workspace.isActive) {
         return res.status(503).json({
           error: "SERVICE_UNAVAILABLE",
           message: "Chat service is temporarily unavailable",
@@ -260,6 +297,9 @@ export class WidgetChatController {
         responseLength: llmResult.response?.length,
       })
 
+      // Determine status based on blocking
+      const queueStatus: "sent" | "blocked" = llmResult.isBlocked ? "blocked" : "sent"
+
       // Create message in queue with LLM response already saved
       const queueMessage = await prisma.whatsAppQueue.create({
         data: {
@@ -267,7 +307,7 @@ export class WidgetChatController {
           customerId: customer.id,
           phoneNumber: "", // Empty for widget
           messageContent: message,
-          status: llmResult.isBlocked ? "blocked" : "sent",
+          status: queueStatus,
           channel: "widget",
           visitorId,
           isAnonymous: true,
@@ -284,14 +324,34 @@ export class WidgetChatController {
         },
       })
 
-      logger.info("✅ Message saved to queue with LLM response", {
+      logger.info("✅ Message saved to queue", {
         messageId: queueMessage.id,
         workspaceId,
         visitorId,
         status: queueMessage.status,
       })
 
-      // Return response directly (no need for polling)
+      if (!llmResult.isBlocked && workspace.ownerId) {
+        try {
+          const billingService = new SubscriptionBillingService(prisma)
+          const billingResult = await billingService.deductOwnerWidgetMessageCredit(
+            workspace.ownerId,
+            workspaceId,
+            queueMessage.id
+          )
+          if (!billingResult.success) {
+            logger.warn("⚠️ Widget billing failed", {
+              workspaceId,
+              visitorId,
+              error: billingResult.error,
+            })
+          }
+        } catch (billingError) {
+          logger.error("⚠️ Widget billing error", billingError)
+        }
+      }
+
+      // Return response directly (immediate delivery)
       return res.status(200).json({
         success: true,
         messageId: queueMessage.id,

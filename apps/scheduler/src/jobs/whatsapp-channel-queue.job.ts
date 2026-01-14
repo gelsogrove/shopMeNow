@@ -124,7 +124,7 @@ let isProcessing = false
  * 
  * HOW TO ENABLE/DISABLE?
  * - Start/stop the Scheduler microservice
- * - Or set workspace.channelStatus = false
+ * - Or set workspace.debugMode = true (test mode)
  */
 export async function whatsappChannelQueueJob(): Promise<void> {
   // 🔒 LOCK CHECK: Skip if previous job is still running
@@ -150,8 +150,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
         name: true,
         whatsappApiKey: true,
         whatsappPhoneNumber: true,
-        debugMode: true,
-        channelStatus: true,
+        debugMode: true, // Check if in debug mode (skip processing)
       },
     })
 
@@ -165,13 +164,17 @@ export async function whatsappChannelQueueJob(): Promise<void> {
     let totalErrors = 0
 
     for (const workspace of workspaces) {
-      // 🔧 DEBUG MODE: Skip sending if debugMode is enabled
+      // Skip if debugMode is enabled (playground only mode)
       if (workspace.debugMode === true) {
-        logger.debug(`[WhatsApp Queue] 🔧 DEBUG MODE for "${workspace.name}" - messages stay pending`)
+        logger.info(`[WhatsApp Queue] 🐛 Debug Mode ON for "${workspace.name}" - Skipping real message processing`)
         continue
       }
+      
+      logger.info(`[WhatsApp Queue] 📬 Processing workspace "${workspace.name}" (${workspace.id})`, {
+        debugMode: workspace.debugMode,
+      })
 
-      // Get pending messages from queue
+      // Get pending messages from queue (excluding playground messages)
       // ⚠️ LIMIT TO 10 per workspace per cycle
       const pendingMessages = await prisma.whatsAppQueue.findMany({
         where: {
@@ -191,9 +194,9 @@ export async function whatsappChannelQueueJob(): Promise<void> {
       const results = await Promise.allSettled(
         pendingMessages.map(async (message: (typeof pendingMessages)[number]) => {
           try {
-            if (workspace.channelStatus === false) {
+            if (workspace.debugMode === true) {
               if (!message.conversationMessageId) {
-                logger.info('[WhatsApp Queue] Channel disabled - skipping non-WIP message (no conversationMessageId)', {
+                logger.info('[WhatsApp Queue] Debug mode active - skipping non-WIP message (no conversationMessageId)', {
                   queueId: message.id,
                   workspaceId: workspace.id,
                 })

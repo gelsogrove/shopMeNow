@@ -14,6 +14,7 @@ interface JwtPayload {
   iat?: number
   exp?: number
   workspaces?: any // Per supportare i token esistenti
+  isPlatformAdmin?: boolean // For platform admin access control
 }
 
 declare global {
@@ -154,7 +155,7 @@ const authMiddlewareAsync = async (
         // First check if user exists and is not soft-deleted
         const user = await prisma.user.findUnique({
           where: { id: decoded.userId },
-          select: { id: true, email: true, deletedAt: true },
+          select: { id: true, email: true, deletedAt: true, status: true, isPlatformAdmin: true },
         })
 
         if (!user) {
@@ -167,7 +168,13 @@ const authMiddlewareAsync = async (
           logger.warn(`🚫 Deleted user attempted access: ${user.email}`, {
             deletedAt: user.deletedAt,
           })
-          throw new AppError(403, "Your account has been deleted and cannot be accessed")
+          throw new AppError(403, "ACCOUNT_DELETED")
+        }
+
+        // 🚫 INACTIVE STATUS CHECK: Block inactive users from logging in
+        if (user.status === "INACTIVE") {
+          logger.warn(`🚫 Inactive user attempted login: ${user.email}`)
+          throw new AppError(403, "ACCOUNT_INACTIVE")
         }
 
         logger.info("User found in database:", user.email)
@@ -195,6 +202,10 @@ const authMiddlewareAsync = async (
           slug: uw.workspace.slug,
           role: uw.role,
         }))
+
+        // Add isPlatformAdmin flag for support ticket and admin features
+        decoded.isPlatformAdmin = user.isPlatformAdmin || false
+        logger.info(`🔑 Set isPlatformAdmin=${decoded.isPlatformAdmin} for user ${decoded.email}`)
 
         logger.debug(
           `Loaded ${userWorkspaces.length} workspaces for user ${decoded.userId}`

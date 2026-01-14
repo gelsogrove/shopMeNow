@@ -1,15 +1,25 @@
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { LegalDocumentEditDialog } from "@/components/legal-documents/LegalDocumentEditDialog"
-import { Eye, Edit } from "lucide-react"
+import { Edit } from "lucide-react"
+
+interface LegalDocument {
+  id: string
+  type: string
+  contentIt: string
+  contentEn: string
+  contentEs: string
+  contentPt: string
+  updatedAt: string
+}
 
 export function LawsDocumentsPage() {
-  const [documents, setDocuments] = useState([])
+  const [documents, setDocuments] = useState<LegalDocument[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedDocument, setSelectedDocument] = useState(null)
+  const [selectedDocument, setSelectedDocument] = useState<LegalDocument | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   useEffect(() => {
@@ -42,12 +52,12 @@ export function LawsDocumentsPage() {
     }
   }
 
-  const handleEdit = (document: any) => {
+  const handleEdit = (document: LegalDocument) => {
     setSelectedDocument(document)
     setIsEditDialogOpen(true)
   }
 
-  const handleSave = (updatedDocument: any) => {
+  const handleSave = (updatedDocument: LegalDocument) => {
     setDocuments((prev) =>
       prev.map((doc) => (doc.type === updatedDocument.type ? updatedDocument : doc))
     )
@@ -102,14 +112,6 @@ export function LawsDocumentsPage() {
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Modifica
-                  </Button>
-                  <Button
-                    onClick={() => window.open(`/legal-documents/${document.type}?lang=it`, '_blank')}
-                    variant="outline"
-                    disabled={isLoading}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Visualizza HTML
                   </Button>
                 </div>
               </CardContent>

@@ -5,12 +5,16 @@ import {
   validateWorkspaceOperation,
   validateWorkspaceUpdateData,
 } from "../middlewares/workspace-validation.middleware"
+import { authMiddleware } from "../interfaces/http/middlewares/auth.middleware"
 import { wrapController } from "../utils/controller-wrapper"
 import logger from "../utils/logger"
 
 const router = Router()
 const workspaceController = new WorkspaceController()
 const workspaceService = new WorkspaceService()
+
+// 🔒 CRITICAL SECURITY: Apply auth to ALL routes
+router.use(authMiddleware)
 
 /**
  * @swagger

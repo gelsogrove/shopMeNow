@@ -40,6 +40,10 @@ describe('PlatformsPage', () => {
       success: true,
       data: { code: '' }
     })
+    ;(api.users.getAll as Mock).mockResolvedValue({
+      success: true,
+      data: []
+    })
   })
 
   describe('Loading State', () => {

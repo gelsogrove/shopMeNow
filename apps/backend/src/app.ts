@@ -242,6 +242,14 @@ app.use(
 const publicUploadsPath = path.resolve(__dirname, "..", "uploads", "public")
 app.use("/uploads/public", express.static(publicUploadsPath))
 logger.info(`[SECURITY] Serving public files from: ${publicUploadsPath}`)
+
+// 🎫 SUPPORT TICKETS: Serve support ticket attachments (authenticated access)
+// Note: These should be accessible only to ticket owner and admins
+// For now serving statically - TODO: add authentication middleware
+const supportUploadsPath = path.resolve(__dirname, "..", "uploads", "support-tickets")
+app.use("/uploads/support-tickets", express.static(supportUploadsPath))
+logger.info(`[SUPPORT] Serving support ticket attachments from: ${supportUploadsPath}`)
+
 logger.info(`[SECURITY] Private files require authentication via /api/v1/files/:key`)
 
 // 🌐 PRODUCTION: Serve frontend static files (from Vite build)

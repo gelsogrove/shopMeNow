@@ -758,12 +758,9 @@ export function ClientsPage() {
                       <div className="space-y-1">
                         {user.ownedWorkspaces.filter(ws => ws.whatsappPhoneNumber).map(ws => (
                           <div key={ws.id} className="flex items-center gap-2 text-sm">
-                            <MessageSquare className={`h-3.5 w-3.5 ${ws.channelStatus ? 'text-green-500' : 'text-gray-400'}`} />
-                            <span className={ws.channelStatus ? 'text-green-700' : 'text-gray-500'}>
+                            <MessageSquare className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="text-gray-700">
                               {ws.whatsappPhoneNumber}
-                            </span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded ${ws.channelStatus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                              {ws.channelStatus ? 'ON' : 'OFF'}
                             </span>
                           </div>
                         ))}

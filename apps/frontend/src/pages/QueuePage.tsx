@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import { toast } from "@/lib/toast"
@@ -25,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ListChecks, Trash2, AlertTriangle, Bug } from "lucide-react"
+import { ListChecks, AlertTriangle, Bug, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface QueueMessage {
@@ -46,11 +47,11 @@ interface QueueMessage {
 
 export function QueuePage() {
   const { workspace } = useWorkspace()
+  const { isSuperAdmin, isLoading: isRoleLoading } = useWorkspaceRole(workspace?.id ?? null)
   const [messages, setMessages] = useState<QueueMessage[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterMode, setFilterMode] = useState<"all" | "pending" | "error">("pending")
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [messageToDelete, setMessageToDelete] = useState<QueueMessage | null>(null)
   const [showDeleteMessageDialog, setShowDeleteMessageDialog] = useState(false)
@@ -59,7 +60,10 @@ export function QueuePage() {
 
   // Fetch debug mode status on mount
   useEffect(() => {
-    if (!workspace?.id) return
+    if (!workspace?.id) {
+      setIsLoading(false)
+      return
+    }
 
     const fetchDebugMode = async () => {
       try {
@@ -89,6 +93,7 @@ export function QueuePage() {
       )
       if (response.data.success) {
         setDebugMode(newValue)
+        toast.success(`Debug mode ${newValue ? "enabled" : "disabled"}`, { duration: 2000 })
       } else {
         toast.error("Failed to update debug mode", { duration: 2000 })
       }
@@ -166,28 +171,6 @@ export function QueuePage() {
     return matchesSearch
   })
 
-  // Handle clearing all queue messages
-  const handleClearQueue = async () => {
-    if (!workspace?.id) return
-
-    try {
-      setIsDeleting(true)
-      const response = await api.delete(`/workspaces/${workspace.id}/whatsapp-queue`)
-      
-      if (response.data.success) {
-        setMessages([])
-        setShowDeleteDialog(false)
-      } else {
-        toast.error(response.data.error || "Failed to clear queue", { duration: 1000 })
-      }
-    } catch (error) {
-      logger.error("Error clearing queue:", error)
-      toast.error("Failed to clear queue", { duration: 1000 })
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
   // Handle deleting a single message
   const handleDeleteMessage = async (messageId: string) => {
     if (!workspace?.id) return
@@ -213,6 +196,32 @@ export function QueuePage() {
     }
   }
 
+  // Show message if no workspace selected
+  if (!workspace?.id) {
+    return (
+      <PageLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <ListChecks className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-green-600">Queue</h1>
+              <p className="text-sm text-gray-500">No workspace selected</p>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-gray-500">
+                Please select a workspace to view the queue.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </PageLayout>
+    )
+  }
+
   return (
     <PageLayout>
       <div className="space-y-6">
@@ -224,39 +233,31 @@ export function QueuePage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-green-600">
-                WhatsApp Queue
+                Queue
               </h1>
               <p className="text-sm text-gray-500">
-                Monitor pending messages • Auto-refresh every 5s
+                WhatsApp & Widget messages • Auto-refresh every 5s
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* Debug Mode Toggle */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border">
-              <Bug className={`h-4 w-4 ${debugMode ? "text-orange-500" : "text-gray-400"}`} />
-              <span className="text-sm text-gray-600">Debug Mode</span>
-              <Switch
-                checked={debugMode}
-                onCheckedChange={handleDebugModeToggle}
-                disabled={isUpdatingDebugMode}
-              />
-            </div>
+            {/* Debug Mode Toggle - OWNER ONLY */}
+            {isSuperAdmin && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border">
+                <Bug className={`h-4 w-4 ${debugMode ? "text-orange-500" : "text-gray-400"}`} />
+                <span className="text-sm text-gray-600">Debug Mode</span>
+                <Switch
+                  checked={debugMode}
+                  onCheckedChange={handleDebugModeToggle}
+                  disabled={isUpdatingDebugMode || isRoleLoading}
+                />
+              </div>
+            )}
             {debugMode && (
               <Badge className="bg-orange-100 text-orange-700 border-orange-300">
                 ⚠️ Messages NOT being sent
               </Badge>
             )}
-            {/* Clear Queue Button */}
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowDeleteDialog(true)}
-              className="flex items-center gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear Queue
-            </Button>
           </div>
         </div>
 
@@ -391,34 +392,6 @@ export function QueuePage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Delete Queue Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-              <AlertDialogTitle>Clear Entire Queue?</AlertDialogTitle>
-            </div>
-            <AlertDialogDescription className="mt-4">
-              This action will permanently delete <strong>all {messages.length} messages</strong> from the queue, including pending and error messages.
-              <br />
-              <br />
-              <strong>⚠️ This cannot be undone.</strong>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleClearQueue}
-            disabled={isDeleting}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            {isDeleting ? "Clearing..." : "Delete All Messages"}
-          </AlertDialogAction>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Delete Single Message Dialog */}
       <AlertDialog open={showDeleteMessageDialog} onOpenChange={setShowDeleteMessageDialog}>

@@ -61,6 +61,13 @@ export const pricingConfigData = [
   },
   {
     type: "USAGE" as const,
+    key: "WIDGET_MESSAGE",
+    value: 0.05,
+    description: "Cost per web widget message (site chat)",
+    isActive: true,
+  },
+  {
+    type: "USAGE" as const,
     key: "WELCOME_MESSAGE",
     value: 1.18,
     description: "Cost per new customer registration (welcome message)",
@@ -103,6 +110,70 @@ export const pricingConfigData = [
     key: "ENTERPRISE_CLIENTS",
     value: 999999,
     description: "Unlimited clients for Enterprise plan",
+    isActive: true,
+  },
+
+  // ============================================================================
+  // WHATSAPP CHANNELS LIMITS
+  // ============================================================================
+  {
+    type: "THRESHOLD" as const,
+    key: "FREE_CHANNELS",
+    value: 1,
+    description: "Maximum WhatsApp channels for Free plan",
+    isActive: true,
+  },
+  {
+    type: "THRESHOLD" as const,
+    key: "BASIC_CHANNELS",
+    value: 1,
+    description: "Maximum WhatsApp channels for Basic plan",
+    isActive: true,
+  },
+  {
+    type: "THRESHOLD" as const,
+    key: "PREMIUM_CHANNELS",
+    value: 2,
+    description: "Maximum WhatsApp channels for Premium plan",
+    isActive: true,
+  },
+  {
+    type: "THRESHOLD" as const,
+    key: "ENTERPRISE_CHANNELS",
+    value: 999999,
+    description: "Unlimited WhatsApp channels for Enterprise plan",
+    isActive: true,
+  },
+
+  // ============================================================================
+  // TEAM MEMBERS LIMITS
+  // ============================================================================
+  {
+    type: "THRESHOLD" as const,
+    key: "FREE_TEAM_MEMBERS",
+    value: 0,
+    description: "Maximum team members for Free plan",
+    isActive: true,
+  },
+  {
+    type: "THRESHOLD" as const,
+    key: "BASIC_TEAM_MEMBERS",
+    value: 0,
+    description: "Maximum team members for Basic plan",
+    isActive: true,
+  },
+  {
+    type: "THRESHOLD" as const,
+    key: "PREMIUM_TEAM_MEMBERS",
+    value: 3,
+    description: "Maximum team members for Premium plan",
+    isActive: true,
+  },
+  {
+    type: "THRESHOLD" as const,
+    key: "ENTERPRISE_TEAM_MEMBERS",
+    value: 999999,
+    description: "Unlimited team members for Enterprise plan",
     isActive: true,
   },
 ]

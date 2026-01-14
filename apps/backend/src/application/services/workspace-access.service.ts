@@ -9,7 +9,7 @@
  * Blocking conditions (checked on OWNER, not workspace):
  * 1. owner.subscriptionStatus === 'PAUSED' → User paused subscription
  * 2. owner.creditBalance < -10 → Credit exhausted below threshold
- * 3. workspace.channelStatus === false → WIP mode (handled separately with WIP message)
+ * 3. workspace.debugMode === true → Debug mode / Test mode (WIP message handled separately)
  *
  * CRITICAL (Feature 198): Billing fields are on User (Owner), NOT Workspace
  * - subscriptionStatus, creditBalance → checked from workspace.owner (User)
@@ -78,6 +78,7 @@ export class WorkspaceAccessService {
           name: true,
           isActive: true,
           deletedAt: true,
+          debugMode: true,
           channelStatus: true,
           ownerId: true,
           owner: {
@@ -109,7 +110,6 @@ export class WorkspaceAccessService {
           blockReason: "WORKSPACE_INACTIVE",
           message: "Workspace is not active",
           details: {
-            channelStatus: workspace.channelStatus,
             ownerId: workspace.ownerId || undefined,
           },
         }
@@ -122,9 +122,7 @@ export class WorkspaceAccessService {
           canProcess: false,
           blockReason: "NO_OWNER",
           message: "Workspace has no owner",
-          details: {
-            channelStatus: workspace.channelStatus,
-          },
+          details: {},
         }
       }
 
@@ -132,6 +130,7 @@ export class WorkspaceAccessService {
       const creditBalance = Number(owner.creditBalance)
       const subscriptionStatus = String(owner.subscriptionStatus || "").toUpperCase()
       const paymentFailureCount = Number(owner.paymentFailureCount ?? 0)
+      const channelStatus = workspace.channelStatus ?? true
 
       // 2b. Check if owner is soft-deleted (deletedAt not null)
       if (owner.deletedAt) {
@@ -143,7 +142,6 @@ export class WorkspaceAccessService {
           details: {
             subscriptionStatus: owner.subscriptionStatus,
             creditBalance,
-            channelStatus: workspace.channelStatus,
             ownerId: workspace.ownerId,
           },
         }
@@ -161,7 +159,6 @@ export class WorkspaceAccessService {
           details: {
             subscriptionStatus: owner.subscriptionStatus,
             creditBalance,
-            channelStatus: workspace.channelStatus,
             ownerId: workspace.ownerId,
           },
         }
@@ -178,7 +175,6 @@ export class WorkspaceAccessService {
           details: {
             subscriptionStatus: owner.subscriptionStatus,
             creditBalance,
-            channelStatus: workspace.channelStatus,
             ownerId: workspace.ownerId,
           },
         }
@@ -201,26 +197,21 @@ export class WorkspaceAccessService {
           details: {
             subscriptionStatus: owner.subscriptionStatus,
             creditBalance,
-            channelStatus: workspace.channelStatus,
             ownerId: workspace.ownerId,
           },
         }
       }
 
-      // 5. Check channel status (WIP mode) - optional, still per-workspace
-      if (!skipChannelCheck && workspace.channelStatus === false) {
+      if (!skipChannelCheck && (workspace.debugMode || channelStatus === false)) {
         logger.info(
-          `[ACCESS] 🚧 Channel disabled (WIP mode) for workspace: ${workspace.name}`
+          `[ACCESS] 🛠️ Channel disabled for workspace: ${workspace.name} (debugMode=${workspace.debugMode}, channelStatus=${channelStatus})`
         )
         return {
           canProcess: false,
           blockReason: "CHANNEL_DISABLED",
-          message: "Channel is in maintenance mode",
+          message: "Channel is disabled (WIP mode).",
           details: {
-            subscriptionStatus: owner.subscriptionStatus,
-            creditBalance,
-            channelStatus: workspace.channelStatus,
-            ownerId: workspace.ownerId,
+            ownerId: workspace.ownerId || undefined,
           },
         }
       }
@@ -231,7 +222,6 @@ export class WorkspaceAccessService {
         details: {
           subscriptionStatus: owner.subscriptionStatus,
           creditBalance,
-          channelStatus: workspace.channelStatus,
           ownerId: workspace.ownerId,
         },
       }

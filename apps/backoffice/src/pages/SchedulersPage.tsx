@@ -22,7 +22,6 @@ import {
   CheckCircle,
   RefreshCw,
   LogOut,
-  Timer,
   Calendar,
   AlertTriangle,
   PlayCircle,
@@ -75,67 +74,74 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 // Job name to friendly name mapping with schedule and detailed description
 const jobNames: Record<string, { name: string; description: string; schedule: string; details: string; sortOrder: number }> = {
   'whatsapp-channel-queue': {
-    name: 'WhatsApp Channel Queue',
+    name: 'WhatsApp Queue',
     schedule: 'Every 5 seconds',
-    description: 'Processes queue and sends pending WhatsApp messages',
-    details: 'Validates and sends pending messages for active channels. Applies security checks and updates queue status.',
+    description: 'Processes and sends pending WhatsApp messages for delivery',
+    details: '📤 Processes the queue of pending WhatsApp messages across all active channels. Validates message content, applies security and compliance controls, manages rate limiting to prevent blocks, tracks delivery status in real-time, and implements automatic retry mechanisms for temporary failures.',
     sortOrder: 1
-  },
-  'short-urls-cleanup': {
-    name: 'Short URLs Cleanup',
-    schedule: 'Daily at 23:00',
-    description: 'Removes expired short links from database',
-    details: 'Deletes all short URLs with past expiration date.',
-    sortOrder: 3
-  },
-  'blocked-customers-cleanup': {
-    name: 'Blocked Customers Cleanup',
-    schedule: 'Every 3 days at 23:01',
-    description: 'Unblocks customers after block expiration',
-    details: 'Periodically checks blocked customers and removes block when expired.',
-    sortOrder: 9
-  },
-  'unused-images-cleanup': {
-    name: 'Storage Cleanup',
-    schedule: 'Daily at 23:05',
-    description: 'Cleans orphaned images, temp files and cancelled invoices',
-    details: 'Scans uploads for unreferenced images (products/services/users/channels), removes temp files >24h and deletes invoices from cancelled orders (local).',
-    sortOrder: 4
-  },
-  'monthly-billing': {
-    name: 'Monthly Billing',
-    schedule: '1st of month at 23:30',
-    description: 'Processes monthly billing for active owners',
-    details: 'Calculates subscription fee and debts, attempts payment and updates subscription status.',
-    sortOrder: 8
-  },
-  'messages-archive': {
-    name: 'Messages Archive',
-    schedule: 'Daily at 23:10',
-    description: 'Archives messages older than 6 months',
-    details: '🗄️ Moves old messages to archive table to keep DB lean.',
-    sortOrder: 6
-  },
-  'whatsapp-queue-cleanup': {
-    name: 'WhatsApp Queue Cleanup',
-    schedule: 'Daily at 23:15',
-    description: 'Cleans WhatsApp queue from old errors and sent messages',
-    details: 'Deletes queued messages with error/sent status older than 7 days.',
-    sortOrder: 5
-  },
-  'soft-delete-cleanup': {
-    name: 'Soft Delete Cleanup',
-    schedule: 'Daily at 23:20',
-    description: 'Hard-deletes soft-deleted records after retention',
-    details: 'Permanently deletes soft-deleted records after retention period (default 90 days).',
-    sortOrder: 7
   },
   'campaign-send': {
     name: 'Campaign Send',
     schedule: 'Daily at 10:00',
-    description: 'Sends scheduled campaigns to customers',
-    details: 'Checks active campaigns and queues WhatsApp messages for delivery.',
+    description: 'Sends scheduled campaigns to customers according to calendar',
+    details: '📢 Identifies and processes all active campaigns (feedback, promotions, notifications) based on start date and status. Enqueues WhatsApp messages for each customer, respects maximum frequency limits per customer, verifies opt-in consent, and manages segmentation for targeted campaigns.',
     sortOrder: 2
+  },
+  'short-urls-cleanup': {
+    name: 'Short URLs Cleanup',
+    schedule: 'Daily at 23:00',
+    description: 'Removes expired short links from the database',
+    details: '🔗 Scans the short URL table and identifies all links with expiration dates in the past or with zero click counts. Permanently deletes these records, frees up database space, maintains read performance, and logs the number of deleted links for audit trail purposes.',
+    sortOrder: 3
+  },
+  'unused-images-cleanup': {
+    name: 'Storage Cleanup',
+    schedule: 'Daily at 23:05',
+    description: 'Cleans orphaned images, temporary files and deleted invoices',
+    details: '🗑️ Scans the uploads folder and identifies images not referenced by products, services, users, or channels. Removes temporary files created more than 24 hours ago, deletes invoices associated with soft-deleted orders, supports local storage and S3, maintains cache versions, and records freed space for monitoring.',
+    sortOrder: 4
+  },
+  'whatsapp-queue-cleanup': {
+    name: 'WhatsApp Queue Cleanup',
+    schedule: 'Daily at 23:15',
+    description: 'Removes sent/error messages older than 7 days from queue',
+    details: '🧹 Removes from the `whatsAppQueue` table ONLY messages with "sent" or "error" status that are older than 7 days. Messages with "pending" status (awaiting delivery) are NEVER automatically deleted. Maintains audit trail for debugging, frees memory, and optimizes queue query performance.',
+    sortOrder: 5
+  },
+  'messages-archive': {
+    name: 'Chat History Archive',
+    schedule: 'Daily at 23:10',
+    description: 'Archives conversation history older than 6 months',
+    details: '🗄️ Identifies all messages in the `message` table (permanent chat history) with creation dates older than 6 months. Moves the complete record to the `messageArchive` table for backup, maintains primary DB performance, enables archive consultation for GDPR compliance, and supports restore from backup.',
+    sortOrder: 6
+  },
+  'soft-delete-cleanup': {
+    name: 'Soft Delete Cleanup',
+    schedule: 'Daily at 23:20',
+    description: 'Permanently deletes soft-deleted records after retention',
+    details: '🗃️ Scans all models with soft-delete and identifies deleted records beyond the retention period (default 90 days). Permanently deletes these records ensuring GDPR compliance, frees database space, supports configurable recovery window, maintains deletion audit log, and excludes records with extended retention policies.',
+    sortOrder: 7
+  },
+  'monthly-billing': {
+    name: 'Monthly Billing',
+    schedule: '1st of month at 23:30',
+    description: 'Processes monthly billing for all owners and workspaces',
+    details: '💰 Calculates monthly subscription for each owner including previous debts, attempts automatic charge via PayPal API, updates subscription status, tracks payment failures, applies workspace blocks if payment expires, sends customer notifications, and records transactions for accounting compliance.',
+    sortOrder: 8
+  },
+  'support-attachments-cleanup': {
+    name: 'Support Attachments Cleanup',
+    schedule: 'Daily at 23:25',
+    description: 'Deletes attachments from closed support tickets older than retention period',
+    details: '📎 Scans all support ticket attachments and identifies files from tickets closed more than 90 days ago (configurable via SUPPORT_ATTACHMENTS_RETENTION_DAYS). Removes files from Cloudinary storage, deletes database records, frees cloud storage space, and logs cleanup statistics for audit purposes.',
+    sortOrder: 9
+  },
+  'blocked-customers-cleanup': {
+    name: 'Customer Unblock',
+    schedule: 'Every 3 days at 23:01',
+    description: 'Unblocks customers after temporary block expiration',
+    details: '🔓 Periodically checks all customers with blocked status and verifies if the block period has expired. Automatically removes the block if timeout is exceeded, used for spam prevention and temporary rate limiting, logs the unblock for audit trail, and notifies the customer of unblock.',
+    sortOrder: 10
   },
 }
 
@@ -206,13 +212,6 @@ export function SchedulersPage() {
       minute: '2-digit',
       second: '2-digit'
     })
-  }
-
-  const formatDuration = (ms: number | null) => {
-    if (ms === null) return '-'
-    if (ms < 1000) return `${ms}ms`
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-    return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
   }
 
   const getJobInfo = (jobName: string) => {
@@ -341,20 +340,12 @@ export function SchedulersPage() {
                         </p>
                         
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 ml-8">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 ml-8">
                           <div className="flex items-center gap-2 text-sm">
                             <Calendar className="h-4 w-4 text-gray-400" />
                             <div>
                               <p className="text-gray-500">Last Run</p>
                               <p className="font-medium">{formatDate(job.lastRunAt)}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2 text-sm">
-                            <Timer className="h-4 w-4 text-gray-400" />
-                            <div>
-                              <p className="text-gray-500">Duration</p>
-                              <p className="font-medium">{formatDuration(job.lastDuration)}</p>
                             </div>
                           </div>
                           

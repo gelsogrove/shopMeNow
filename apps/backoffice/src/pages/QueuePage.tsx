@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react"
-import { RefreshCw } from "lucide-react"
+import { RefreshCw, HelpCircle } from "lucide-react"
 import { api } from "@/services/api"
 import { Button } from "@/components/ui/button"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 type QueueMessage = {
   id: string
@@ -16,6 +22,7 @@ type QueueMessage = {
   channel: string
   visitorId?: string | null
   isAnonymous?: boolean
+  responsePayload?: any | null
   workspace?: { id: string; name: string; whatsappPhoneNumber?: string | null }
   customer?: { id: string; name: string; email: string; phone?: string | null }
 }
@@ -42,7 +49,16 @@ export function QueuePage() {
     loadQueue()
   }, [])
 
-  const rows = useMemo(() => items, [items])
+  // Filter messages from last 24 hours
+  const rows = useMemo(() => {
+    const now = new Date()
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    
+    return items.filter(item => {
+      const createdAt = new Date(item.createdAt)
+      return createdAt >= oneDayAgo
+    })
+  }, [items])
 
   return (
     <div className="space-y-6">
@@ -50,7 +66,7 @@ export function QueuePage() {
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">Queue</h1>
           <p className="text-sm text-gray-500">
-            All queued messages across workspaces (WhatsApp + Widget).
+            Messages from last 24 hours across workspaces (WhatsApp + Widget).
           </p>
         </div>
         <Button onClick={loadQueue} variant="outline" className="gap-2">
@@ -112,7 +128,35 @@ export function QueuePage() {
                     </td>
                     <td className="px-4 py-3">{item.phoneNumber || "—"}</td>
                     <td className="px-4 py-3 max-w-xs">
-                      <div className="line-clamp-3 text-gray-700">{item.messageContent}</div>
+                      {item.responsePayload ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-start gap-2 cursor-help">
+                                <div className="line-clamp-3 text-gray-700 flex-1">
+                                  {item.messageContent}
+                                </div>
+                                <HelpCircle className="h-4 w-4 text-blue-500 flex-shrink-0 mt-1" />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent 
+                              side="left" 
+                              className="max-w-sm bg-blue-50 border-blue-200 text-gray-900 max-h-64 overflow-y-auto"
+                            >
+                              <div className="space-y-2">
+                                <div className="font-semibold text-blue-900">💬 LLM Response:</div>
+                                <div className="text-sm whitespace-pre-wrap">
+                                  {typeof item.responsePayload === 'string'
+                                    ? item.responsePayload
+                                    : JSON.stringify(item.responsePayload, null, 2)}
+                                </div>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <div className="line-clamp-3 text-gray-700">{item.messageContent}</div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {new Date(item.createdAt).toLocaleString()}

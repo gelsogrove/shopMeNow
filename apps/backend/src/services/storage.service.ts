@@ -14,6 +14,7 @@ import { v2 as cloudinary } from 'cloudinary'
 import fs from 'fs'
 import path from 'path'
 import logger from '../utils/logger'
+import { config } from '../config'
 
 // Storage types
 type StorageType = 'local' | 'cloudinary'
@@ -121,10 +122,13 @@ class StorageService {
   // ==================== LEGACY COMPATIBILITY METHODS (for InvoiceService) ====================
   
   /**
-   * Upload raw buffer (for PDFs, etc.)
-   * @deprecated Use uploadImage() for images, this is for PDF/documents only
+   * Upload raw buffer (for PDFs, documents, and images)
+   * Used by support ticket attachments and invoice PDFs
    */
   async upload(buffer: Buffer, options: { filename: string; folder: string; contentType: string; isPublic?: boolean }): Promise<{ url: string; key: string }> {
+    // Determine if this is an image based on content type
+    const isImage = options.contentType.startsWith('image/')
+    
     if (this.storageType === 'cloudinary') {
       // For Cloudinary: save buffer to temp file, upload, then delete
       const tempPath = path.join(this.localUploadDir, `temp_${Date.now()}_${options.filename}`)
@@ -133,17 +137,18 @@ class StorageService {
       try {
         const result = await cloudinary.uploader.upload(tempPath, {
           folder: `echatbot/${options.folder}`,
-          resource_type: 'raw', // For non-image files like PDF
+          resource_type: isImage ? 'image' : 'raw', // Use 'image' for images, 'raw' for others
           public_id: path.parse(options.filename).name,
           use_filename: true,
         })
         
         fs.unlinkSync(tempPath) // Cleanup temp file
         
-        logger.info(`☁️ Uploaded buffer to Cloudinary: ${result.secure_url}`)
+        logger.info(`☁️ Uploaded ${isImage ? 'image' : 'file'} to Cloudinary: ${result.secure_url}`)
         return { url: result.secure_url, key: result.public_id }
       } catch (error) {
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath)
+        logger.error(`❌ Failed to upload to Cloudinary:`, error)
         throw error
       }
     } else {
@@ -156,9 +161,11 @@ class StorageService {
       const filePath = path.join(folderPath, options.filename)
       fs.writeFileSync(filePath, buffer)
       
-      const url = `/uploads/${options.folder}/${options.filename}`
-      logger.info(`💾 Uploaded buffer to local: ${url}`)
-      return { url, key: url }
+      // Return full URL with backend base URL (e.g., http://localhost:3001/uploads/...)
+      const relativeUrl = `/uploads/${options.folder}/${options.filename}`
+      const fullUrl = `${config.appUrl}${relativeUrl}`
+      logger.info(`💾 Uploaded ${isImage ? 'image' : 'file'} to local: ${fullUrl}`)
+      return { url: fullUrl, key: relativeUrl }
     }
   }
 

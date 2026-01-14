@@ -32,6 +32,24 @@ interface WebSocketChat {
   unreadCount?: number
 }
 
+interface SupportTicketMessage {
+  ticketId: string
+  ticketCode: string
+  subject: string
+  messagePreview: string
+  senderType: "CUSTOMER" | "ADMIN"
+  timestamp: string
+}
+
+interface SupportTicketStatus {
+  ticketId: string
+  ticketCode: string
+  subject: string
+  oldStatus: string
+  newStatus: string
+  timestamp: string
+}
+
 /**
  * useWebSocket - Real-time chat updates via Socket.io
  *
@@ -248,6 +266,53 @@ export function useWebSocket(options: UseWebSocketOptions) {
       })
     }
 
+    // Support ticket message received
+    const handleSupportTicketMessage = (data: SupportTicketMessage) => {
+      logger.info("[WebSocket] Support ticket message:", data)
+
+      // Invalidate support tickets queries
+      queryClient.invalidateQueries({
+        queryKey: ["support-tickets"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["support-ticket", data.ticketId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["support-unread-count"],
+      })
+
+      // Show toast notification for admin replies
+      if (data.senderType === "ADMIN") {
+        toast.info(`New reply on ticket ${data.ticketCode}: ${data.subject}`, {
+          duration: 5000,
+        })
+      }
+    }
+
+    // Support ticket status changed
+    const handleSupportTicketStatus = (data: SupportTicketStatus) => {
+      logger.info("[WebSocket] Support ticket status changed:", data)
+
+      // Invalidate support tickets queries
+      queryClient.invalidateQueries({
+        queryKey: ["support-tickets"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["support-ticket", data.ticketId],
+      })
+
+      // Show toast notification
+      const statusLabels: Record<string, string> = {
+        PENDING: "Pending",
+        IN_PROGRESS: "In Progress",
+        CLOSED: "Closed",
+      }
+      toast.info(
+        `Ticket ${data.ticketCode} status changed to ${statusLabels[data.newStatus] || data.newStatus}`,
+        { duration: 4000 }
+      )
+    }
+
     socket.off("connect", handleConnect)
     socket.off("disconnect", handleDisconnect)
     socket.off("connect_error", handleConnectError)
@@ -258,6 +323,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.off("user-unblocked", handleUserUnblocked)
     socket.off("new-customer", handleNewCustomer)
     socket.off("workspace-changed", handleWorkspaceChanged)
+    socket.off("support-ticket-message", handleSupportTicketMessage)
+    socket.off("support-ticket-status", handleSupportTicketStatus)
 
     socket.on("connect", handleConnect)
     socket.on("disconnect", handleDisconnect)
@@ -269,6 +336,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     socket.on("user-unblocked", handleUserUnblocked)
     socket.on("new-customer", handleNewCustomer)
     socket.on("workspace-changed", handleWorkspaceChanged)
+    socket.on("support-ticket-message", handleSupportTicketMessage)
+    socket.on("support-ticket-status", handleSupportTicketStatus)
 
     // Cleanup on unmount or workspace change
     return () => {
@@ -283,6 +352,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
       socket.off("user-unblocked", handleUserUnblocked)
       socket.off("new-customer", handleNewCustomer)
       socket.off("workspace-changed", handleWorkspaceChanged)
+      socket.off("support-ticket-message", handleSupportTicketMessage)
+      socket.off("support-ticket-status", handleSupportTicketStatus)
     }
   }, [workspaceId, userId, queryClient]) // 🚨 FIX: Removed callback dependencies to prevent reconnections
 

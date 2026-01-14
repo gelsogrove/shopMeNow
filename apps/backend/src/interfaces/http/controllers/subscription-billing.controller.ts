@@ -1261,6 +1261,13 @@ export class SubscriptionBillingController {
         where.type = type
       }
 
+      // Get user's workspaces for name lookup
+      const userWorkspaces = await this.prisma.workspace.findMany({
+        where: { ownerId: userId, deletedAt: null },
+        select: { id: true, name: true },
+      })
+      const workspaceNameMap = new Map(userWorkspaces.map(w => [w.id, w.name]))
+
       const [transactions, total] = await Promise.all([
         this.prisma.billingTransaction.findMany({
           where,
@@ -1281,9 +1288,17 @@ export class SubscriptionBillingController {
         this.prisma.billingTransaction.count({ where }),
       ])
 
+      // Convert Decimal to Number and add workspaceName for JSON response
+      const formattedTransactions = transactions.map(t => ({
+        ...t,
+        amount: Number(t.amount),
+        balanceAfter: Number(t.balanceAfter),
+        workspaceName: t.workspaceId ? workspaceNameMap.get(t.workspaceId) || null : null,
+      }))
+
       res.json({
         success: true,
-        transactions,
+        transactions: formattedTransactions,
         pagination: {
           page,
           limit,

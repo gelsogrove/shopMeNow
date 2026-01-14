@@ -26,7 +26,7 @@ export async function campaignSendJob(): Promise<void> {
         select: {
           id: true,
           name: true,
-          channelStatus: true,
+          debugMode: true,
         },
       },
     },
@@ -39,9 +39,9 @@ export async function campaignSendJob(): Promise<void> {
 
   for (const campaign of activeCampaigns) {
     try {
-      // Skip if workspace channel is not active
-      if (!campaign.workspace.channelStatus) {
-        logger.info(`[CAMPAIGN] Skipping campaign ${campaign.name} - workspace channel inactive`)
+      // Skip if workspace is in debug mode (test mode)
+      if (campaign.workspace.debugMode === true) {
+        logger.info(`[CAMPAIGN] Skipping campaign ${campaign.name} - workspace in debug mode`)
         continue
       }
 

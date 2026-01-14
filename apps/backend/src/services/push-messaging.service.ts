@@ -2,6 +2,10 @@ import { prisma } from "@echatbot/database"
 import { platformConfigService } from "./platform-config.service"
 import logger from "../utils/logger"
 import { usageService } from "./usage.service"
+import { WhatsAppQueueService } from "./whatsapp-queue.service"
+
+// WhatsApp Queue Service instance
+const whatsappQueueService = new WhatsAppQueueService(prisma)
 
 // prisma imported
 
@@ -362,115 +366,90 @@ export const pushMessagingService = {
   },
 
   /**
-   * 📱 Invio effettivo WhatsApp via Business API o Dev Mode
+   * 📱 Invio WhatsApp via Queue (NON più diretto!)
+   * ✅ Passa da Security Agent
+   * ✅ Rispetta Debug Mode
+   * ✅ Ha billing tracking nel queue job
+   * ✅ Ha retry logic
    */
   async sendWhatsAppMessage(
     phoneNumber: string,
     message: string,
-    workspaceId: string
+    workspaceId: string,
+    customerId?: string
   ) {
     try {
       logger.info(
-        `[PUSH-MESSAGING] 📱 Sending WhatsApp message to ${phoneNumber}`
+        `[PUSH-MESSAGING] 📤 Adding WhatsApp message to queue for ${phoneNumber}`
       )
 
-      // Get workspace WhatsApp settings
+      // Validate workspace exists
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: {
+          id: true,
+          name: true,
           whatsappApiKey: true,
           whatsappPhoneNumber: true,
         },
       })
 
-      if (
-        !workspace ||
-        !workspace.whatsappApiKey ||
-        !workspace.whatsappPhoneNumber
-      ) {
+      if (!workspace || !workspace.whatsappApiKey || !workspace.whatsappPhoneNumber) {
         logger.error(
           `[PUSH-MESSAGING] ❌ WhatsApp settings not configured for workspace ${workspaceId}`
         )
         return { success: false, error: "WhatsApp settings not configured" }
       }
 
-      // 🔧 DEV MODE: Simulate successful sending for development
-      if (workspace.whatsappApiKey === "DEV_MODE_SIMULATOR_TOKEN_FOR_TESTING") {
-        logger.info(
-          `[PUSH-MESSAGING] 🔧 DEV MODE: Simulating WhatsApp message send to ${phoneNumber}`
-        )
-        logger.info(`[PUSH-MESSAGING] 🔧 DEV MODE: Message content: ${message}`)
-
-        const simulatedMessageId = `dev_msg_${Date.now()}_${Math.random().toString(36).substring(7)}`
-
-        logger.info(
-          `[PUSH-MESSAGING] ✅ DEV MODE: Simulated message sent successfully`,
-          {
-            messageId: simulatedMessageId,
-            phoneNumber,
-            workspaceId,
-            note: "This is a simulated message for development - no real WhatsApp message was sent",
-          }
-        )
-
-        return {
-          success: true,
-          messageId: simulatedMessageId,
-          status: "sent",
-          devMode: true,
-        }
+      // Get or create customer ID if not provided
+      let finalCustomerId = customerId
+      if (!finalCustomerId) {
+        const customer = await prisma.customers.findFirst({
+          where: { phone: phoneNumber, workspaceId },
+          select: { id: true },
+        })
+        finalCustomerId = customer?.id
       }
 
-      // PRODUCTION MODE: Real WhatsApp API call
-      const whatsappApiUrl = `https://graph.facebook.com/v18.0/${workspace.whatsappPhoneNumber}/messages`
-
-      const whatsappPayload = {
-        messaging_product: "whatsapp",
-        to: phoneNumber.replace("+", ""),
-        type: "text",
-        text: {
-          body: message,
-        },
+      if (!finalCustomerId) {
+        logger.error(
+          `[PUSH-MESSAGING] ❌ Customer not found for phone ${phoneNumber} in workspace ${workspaceId}`
+        )
+        return { success: false, error: "Customer not found" }
       }
 
-      logger.info(`[PUSH-MESSAGING] 🚀 Calling WhatsApp API: ${whatsappApiUrl}`)
-
-      const response = await fetch(whatsappApiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${workspace.whatsappApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(whatsappPayload),
+      // 📤 ADD TO QUEUE instead of sending directly!
+      // This ensures:
+      // ✅ Security Agent validation
+      // ✅ Debug Mode respect
+      // ✅ Billing tracking
+      // ✅ Retry logic
+      const queueEntry = await whatsappQueueService.enqueue({
+        workspaceId,
+        customerId: finalCustomerId,
+        phoneNumber,
+        messageContent: message,
+        // No conversationMessageId for push messages (they're standalone)
       })
 
-      const responseData = await response.json()
-
-      if (response.ok && responseData.messages?.[0]?.id) {
-        logger.info(
-          `[PUSH-MESSAGING] ✅ WhatsApp message sent successfully to ${phoneNumber}`,
-          {
-            messageId: responseData.messages[0].id,
-            phoneNumber,
-            workspaceId,
-          }
-        )
-
-        return {
-          success: true,
-          messageId: responseData.messages[0].id,
-          status: "sent",
+      logger.info(
+        `[PUSH-MESSAGING] ✅ Message added to queue`,
+        {
+          queueId: queueEntry.id,
+          phoneNumber,
+          workspaceId,
+          status: "pending",
         }
-      } else {
-        logger.error(`[PUSH-MESSAGING] ❌ WhatsApp API error:`, responseData)
-        return {
-          success: false,
-          error: responseData.error?.message || "Unknown WhatsApp API error",
-          details: responseData,
-        }
+      )
+
+      return {
+        success: true,
+        messageId: queueEntry.id,
+        status: "pending", // Will be "sent" after scheduler processes it
+        queuedAt: new Date().toISOString(),
       }
     } catch (error) {
-      logger.error(`[PUSH-MESSAGING] ❌ Error sending WhatsApp message:`, error)
+      logger.error(`[PUSH-MESSAGING] ❌ Error adding message to queue:`, error)
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

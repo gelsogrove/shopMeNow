@@ -2,6 +2,8 @@ import GdprPage from "@/pages/GdprPage"
 import SettingsPage from "@/pages/SettingsPage"
 import WidgetPage from "@/pages/WidgetPage"
 import WidgetSettingsPage from "@/pages/WidgetSettingsPage"
+import WidgetEmbedPage from "@/pages/WidgetEmbedPage"
+import WidgetTestPage from "@/pages/WidgetTestPage"
 import { LegalDocumentPage } from "@/pages/LegalDocumentPage"
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { Toaster } from "sonner"
@@ -42,6 +44,7 @@ import CategoriesPage from "./pages/products/CategoriesPage"
 import { ProductsPage } from "./pages/ProductsPage"
 import ProfilePage from "./pages/ProfilePage"
 import BillingPage from "./pages/BillingPage"
+import SupportTicketsPage from "./pages/SupportTicketsPage"
 import RegistrationSuccess from "./pages/registration-success"
 import { ResetPasswordPage } from "./pages/ResetPasswordPage"
 import SalesPage from "./pages/SalesPage"
@@ -112,6 +115,9 @@ export function App() {
                 {/* Legacy landing route: redirect to login */}
                 <Route path="/landing" element={<Navigate to="/" replace />} />
                 
+                {/* Widget Test Page - Public (for backoffice testing) */}
+                <Route path="/widget-test" element={<WidgetTestPage />} />
+                
                 {/* Public Legal Pages - DYNAMIC (from database) */}
                 <Route path="/privacy" element={<LegalDocumentPage docType="PRIVACY_POLICY" />} />
                 <Route path="/terms" element={<LegalDocumentPage docType="TERMS_OF_SERVICE" />} />
@@ -129,6 +135,8 @@ export function App() {
                 />
                 {/* Accept Invite - public route for team invitation acceptance */}
                 <Route path="/accept-invite" element={<AcceptInvitePage />} />
+                {/* Public widget iframe */}
+                <Route path="/widget-embed" element={<WidgetEmbedPage />} />
 
                 {/* NOTE: Short URLs (/s/:code) are handled by Vite proxy directly to backend */}
                 {/* No React route needed - see vite.config.ts proxy for "^/s/" */}
@@ -190,6 +198,11 @@ export function App() {
 
                   <Route path="/billing" element={<MinimalLayout />}>
                     <Route index element={<BillingPage />} />
+                  </Route>
+
+                  <Route path="/support/tickets" element={<MinimalLayout />}>
+                    <Route index element={<SupportTicketsPage />} />
+                    <Route path=":ticketId" element={<SupportTicketsPage />} />
                   </Route>
 
                   <Route path="/settings" element={<MinimalLayout />}>

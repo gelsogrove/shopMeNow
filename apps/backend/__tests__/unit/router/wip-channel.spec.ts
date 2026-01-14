@@ -1,7 +1,7 @@
 /**
  * Test Suite: WIP Channel Handling
  *
- * Verifies that when workspace channelStatus=false (chatbot disabled):
+ * Verifies that when workspace debugMode=true (chatbot disabled):
  * 1. WIP message is returned in customer's language
  * 2. User message is saved (INBOUND)
  * 3. WIP response is saved (OUTBOUND)
@@ -103,12 +103,12 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
   })
 
   describe("getChannelDisabled()", () => {
-    it("should return WIP message when channelStatus=false", async () => {
+    it("should return WIP message when debugMode=true", async () => {
       // Setup: Channel is DISABLED
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
         name: "Test Workspace",
-        channelStatus: false, // DISABLED
+        debugMode: true, // DISABLED
         wipMessage: multiLanguageWipMessages,
       })
 
@@ -130,7 +130,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
     it("should return WIP message in Italian when customerLanguage=it", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false,
+        debugMode: true,
         wipMessage: multiLanguageWipMessages,
       })
 
@@ -149,7 +149,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
     it("should return WIP message in Spanish when customerLanguage=es", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false,
+        debugMode: true,
         wipMessage: multiLanguageWipMessages,
       })
 
@@ -168,7 +168,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
     it("should fallback to English when customer language not in wipMessage", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false,
+        debugMode: true,
         wipMessage: { en: "Default WIP message" }, // Only English available
       })
 
@@ -187,7 +187,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
     it("should fallback to default message when wipMessage is empty", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false,
+        debugMode: true,
         wipMessage: null, // No custom message
       })
 
@@ -204,11 +204,11 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
       expect(result.response).toBe("Work in progress. Please contact us later.")
     })
 
-    it("should proceed normally when channelStatus=true", async () => {
+    it("should proceed normally when debugMode=false", async () => {
       // Setup: Channel is ACTIVE
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: true, // ACTIVE
+        debugMode: false, // ACTIVE
       })
 
       // Setup customer with full data
@@ -245,7 +245,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
     beforeEach(() => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false,
+        debugMode: true,
         wipMessage: multiLanguageWipMessages,
       })
     })
@@ -299,7 +299,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
     beforeEach(() => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false,
+        debugMode: true,
         wipMessage: multiLanguageWipMessages,
       })
     })
@@ -378,7 +378,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
 
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false, // WIP
+        debugMode: true, // WIP
         wipMessage: multiLanguageWipMessages,
       })
 
@@ -403,7 +403,7 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
     beforeEach(() => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
-        channelStatus: false,
+        debugMode: true,
         wipMessage: multiLanguageWipMessages,
       })
     })

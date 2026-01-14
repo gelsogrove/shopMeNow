@@ -3,6 +3,24 @@ import { api } from "@/services/api"
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'
 
 export const workspaceApi = {
+  async getAll(): Promise<any[]> {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('backoffice_token') || ''}`,
+    }
+
+    const response = await fetch(
+      `${API_BASE}/users/admin/workspaces`,
+      { method: 'GET', headers }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch workspaces')
+    }
+
+    return response.json()
+  },
+
   async getWidgetEmbedCode(workspaceId: string): Promise<{ embedCode: string }> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',

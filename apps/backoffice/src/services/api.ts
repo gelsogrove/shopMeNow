@@ -496,6 +496,34 @@ class BackofficeApi {
     },
 
     /**
+     * Get complete revenue and usage statistics for analytics dashboard
+     */
+    getRevenueStats: async (months: number = 12): Promise<ApiResponse<{
+      monthSeries: Array<{
+        periodYear: number
+        periodMonth: number
+        revenue: number
+        userCount: number
+        whatsappMessages: number
+        widgetMessages: number
+        totalMessages: number
+        pushCampaigns: number
+        pushRecipients: number
+      }>
+      totals: {
+        revenue: number
+        whatsappMessages: number
+        widgetMessages: number
+        totalMessages: number
+        pushCampaigns: number
+        pushRecipients: number
+      }
+    }>> => {
+      const query = new URLSearchParams({ months: String(months) })
+      return this.fetch(`/users/admin/analytics/revenue-stats?${query.toString()}`)
+    },
+
+    /**
      * Record a payment failure for a user (increments failure count)
      */
     recordPaymentFailure: async (

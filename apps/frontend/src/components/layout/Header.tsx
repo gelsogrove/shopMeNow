@@ -21,18 +21,20 @@ import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview } from "@/services/subscriptionBillingApi"
+import { getUnreadCount } from "@/services/supportApi"
 import {
   ArrowLeft,
   Bot,
   CreditCard,
   Crown,
   LogOut,
+  Mail,
   MessageSquare,
   Send,
   Settings,
   User,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 
 export function Header() {
@@ -50,6 +52,37 @@ export function Header() {
   const [userData, setUserData] = useState<any>(null)
   // Real-time plan type from billing API
   const [actualPlanType, setActualPlanType] = useState<string | null>(null)
+  // Support ticket unread count
+  const [supportUnreadCount, setSupportUnreadCount] = useState<number>(0)
+
+  // Load support unread count
+  const loadSupportUnreadCount = useCallback(async () => {
+    try {
+      const response = await getUnreadCount()
+      if (response.success) {
+        setSupportUnreadCount(response.data.unreadCount)
+      }
+    } catch (error) {
+      // Silently fail - user might not have support access
+    }
+  }, [])
+
+  // Poll for unread messages every 30 seconds
+  useEffect(() => {
+    loadSupportUnreadCount()
+    const interval = setInterval(loadSupportUnreadCount, 30000)
+    
+    // Listen for ticket view events to refresh immediately
+    const handleTicketViewed = () => {
+      loadSupportUnreadCount()
+    }
+    window.addEventListener("support-ticket-viewed", handleTicketViewed)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
+    }
+  }, [loadSupportUnreadCount])
 
   // Load user data from storage
   useEffect(() => {
@@ -252,8 +285,36 @@ export function Header() {
             </Button>
           </nav>
 
-          {/* Right side: Plan Badge + Profile menu */}
+          {/* Right side: Support Inbox + Plan Badge + Profile menu */}
           <div className="flex items-center gap-4">
+            {/* Support Inbox Icon with Badge */}
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/support/tickets")}
+                    className="relative p-2 text-gray-600 hover:text-gray-900"
+                  >
+                    <Mail className="h-5 w-5" />
+                    {supportUnreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                        {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                      </span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {supportUnreadCount > 0
+                      ? `${supportUnreadCount} unread message${supportUnreadCount > 1 ? "s" : ""}`
+                      : "Support Tickets"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             {/* Plan Badge - uses actualPlanType from billing API or fallback to workspace.planType */}
             {workspace && (
               <TooltipProvider delayDuration={100}>
@@ -341,11 +402,42 @@ export function Header() {
                     onClick={() => navigate("/queue")}
                   >
                     <Send className="mr-2 h-4 w-4" />
-                    <span>WhatsApp Queue</span>
+                    <span>Queue</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                className="p-2 cursor-pointer"
+                onClick={() => navigate("/profile")}
+              >
+                <User className="mr-2 h-4 w-4 text-blue-500" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="p-2 cursor-pointer"
+                onClick={() => navigate("/billing")}
+              >
+                <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
+                <span>Billing</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="p-2 cursor-pointer relative"
+                onClick={() => navigate("/support/tickets")}
+              >
+                <Mail className="mr-2 h-4 w-4 text-blue-500" />
+                <span>Support</span>
+                {supportUnreadCount > 0 && (
+                  <span className="ml-auto h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                    {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                  </span>
+                )}
+              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 

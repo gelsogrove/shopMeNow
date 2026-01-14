@@ -8,18 +8,51 @@
 
 ## 📋 Overview
 
-Widget chat messages now use the **same LLM processing pipeline** as WhatsApp/Push messages, ensuring consistent AI responses across all channels.
+Widget chat messages use the **same LLM processing pipeline** as WhatsApp/Push messages, ensuring consistent AI responses across all channels.
 
 ### Key Characteristics
 
 - **Immediate Response**: LLM processes message BEFORE queueing (no polling delay)
 - **Unified Queue**: Uses `WhatsAppQueue` table with `channel="widget"`
-- **Anonymous Users**: visitor_ID-based (24-hour expiry)
+- **Anonymous Users**: visitor_ID-based (24-hour expiry) → creates "Visitor" customer
 - **Security**: 5-step validation pipeline (rate limit, content safety, business rules, channel validation, anti-spam)
 
 ---
 
-## 🔄 Message Flow
+## 🏢 Business Channels
+
+eChatbot supports two types of business:
+
+| Channel | `sellsProductsAndServices` | Description |
+|---------|---------------------------|-------------|
+| **E-commerce** | `true` | Sells products/services, cart, orders |
+| **Informativo** | `false` | Info only, FAQ, support, no sales |
+
+Both channels work via **WhatsApp** or **Widget (Web)**.
+
+---
+
+## 👤 User Types
+
+| Communication | New User Type | Customer `customId` |
+|---------------|---------------|---------------------|
+| **WhatsApp** | "Unknown User" | Phone number |
+| **Widget** | "Visitor" | `visitor_TIMESTAMP_HASH` |
+
+---
+
+## 🔄 Widget Flow (Debug Mode Aware)
+
+### Priority Order of Checks
+
+```
+1. Debug Mode = true  → 🚫 BLOCK EVERYTHING (503, no response)
+2. channelStatus = false (WIP) → 📢 Return wipMessage
+3. isActive = false → 503 Service Unavailable
+4. Owner inactive → 503 Service Unavailable
+5. Security Check (5 steps) → Pass or Block
+6. LLM Processing → Response
+```
 
 ### 1. Widget Sends Message
 
@@ -78,7 +111,7 @@ const llmResult = await llmRouterService.routeMessage({
 }
 ```
 
-### 4. Save to Queue with Response
+### 4. Save to Queue (Logging Only)
 
 ```
 WidgetChatController → prisma.whatsAppQueue.create()
@@ -91,11 +124,11 @@ WidgetChatController → prisma.whatsAppQueue.create()
   customerId,
   phoneNumber: "",          // Empty for widget
   messageContent: message,  // Customer's question
-  status: "sent",          // Already processed!
+  status: "sent",           // Widget always "sent" (response is immediate)
   channel: "widget",
   visitorId,
   isAnonymous: true,
-  responsePayload: {
+  responsePayload: {        // LLM response saved for logging
     response: llmResult.response,
     agentUsed: llmResult.agentUsed,
     tokensUsed: llmResult.tokensUsed,
@@ -109,28 +142,61 @@ WidgetChatController → prisma.whatsAppQueue.create()
 
 ### 5. Immediate Response
 
+**Normal Mode**:
 ```json
 {
   "success": true,
   "messageId": "cm5x9y2z0...",
-  "status": "ready",    // Response already available!
-  "retryAfter": 0       // No need to poll
+  "sessionId": "session123",
+  "response": "Certo! Abbiamo diverse categorie...",
+  "status": "ready"
 }
 ```
 
-### 6. Optional Polling
+---
 
-```
-Widget UI → GET /api/v1/widget/poll/:messageId
-```
+## 🚫 Debug Mode Behavior (Widget)
 
-**Response**:
+When `workspace.debugMode = true`:
+
+| Behavior | Widget | WhatsApp |
+|----------|--------|----------|
+| LLM Processing | ❌ BLOCKED | ✅ Normal |
+| Queue Save | ❌ NOTHING | ✅ Saved (pending) |
+| Response | ❌ 503 Error | ✅ Via Scheduler |
+
+**Widget Response when Debug Mode ON**:
 ```json
 {
-  "status": "ready",
-  "message": "Certo! Abbiamo diverse categorie di prodotti..."
+  "error": "SERVICE_UNAVAILABLE",
+  "message": "Chat service is temporarily unavailable"
 }
 ```
+
+> 🔴 **Debug Mode BLOCKS Widget completely** - no LLM, no queue, no response.
+> This is intentional: Debug Mode is for testing WhatsApp flow without affecting live widget users.
+
+---
+
+## 🚧 WIP Mode (Work In Progress)
+
+When `workspace.channelStatus = false`:
+
+| Behavior | Widget | WhatsApp |
+|----------|--------|----------|
+| LLM Processing | ❌ SKIPPED | ❌ SKIPPED |
+| Response | ✅ wipMessage | ✅ wipMessage |
+
+**Widget Response when WIP Mode ON**:
+```json
+{
+  "success": true,
+  "status": "wip",
+  "response": "Stiamo lavorando per migliorare il servizio. Torna presto!"
+}
+```
+
+> 🟡 **WIP Mode sends wipMessage** - user gets friendly message, no LLM processing.
 
 ---
 
@@ -248,49 +314,58 @@ model WhatsAppQueue {
 
 ---
 
-## 📊 Scheduler Integration
+## 📊 Scheduler vs Widget
 
-### Widget-Specific Jobs
+### Key Difference
+
+| | WhatsApp | Widget |
+|---|----------|--------|
+| **Delivery** | Scheduler → WhatsApp API | Direct response (no scheduler) |
+| **Queue Role** | Processing pipeline | Logging only |
+| **Status Flow** | pending → sent | Always "sent" |
+
+The **Scheduler does NOT process Widget messages** - they get immediate response in the controller.
+
+### Widget Cleanup Job
 
 **File**: `apps/scheduler/src/jobs/widget-timeout-cleanup.job.ts`
 
 **Schedule**: Every 30 seconds
 
-**Logic**:
+**Purpose**: Clean up orphaned widget sessions (not delivery)
+
 ```typescript
-// Find messages with 30+ polling attempts
-const timedOutMessages = await prisma.whatsAppQueue.findMany({
+// Find expired sessions
+const expiredSessions = await prisma.whatsAppQueue.findMany({
   where: {
     channel: "widget",
-    status: "pending",
-    pollingAttempts: { gte: 30 }
+    expiresAt: { lt: new Date() }
   }
 })
 
-// Mark as error
+// Mark as expired
 await prisma.whatsAppQueue.updateMany({
-  data: { 
-    status: "error",
-    errorMessage: "Timeout: No response within 15 seconds"
-  }
+  data: { status: "expired" }
 })
 ```
 
-### Channel-Aware Delivery
+### WhatsApp Queue Job (Channel-Aware)
 
 **File**: `apps/scheduler/src/jobs/whatsapp-channel-queue.job.ts`
 
 **Logic**:
 ```typescript
-if (message.channel === 'widget') {
-  // Widget: Save response to queue (no API call)
-  await prisma.whatsAppQueue.update({
-    status: 'sent',
-    responsePayload: { response: llmResponse }
-  })
-} else {
-  // WhatsApp: Send via API (existing logic)
-  await whatsappApi.sendMessage(...)
+// Only process WhatsApp messages (not widget)
+const pendingMessages = await prisma.whatsAppQueue.findMany({
+  where: {
+    channel: "whatsapp",  // IMPORTANT: Exclude widget
+    status: "pending"
+  }
+})
+
+// Send via WhatsApp API
+for (const message of pendingMessages) {
+  await whatsappApi.sendMessage(message.phoneNumber, response)
 }
 ```
 
@@ -379,11 +454,21 @@ npm run test:integration --workspace=@echatbot/backend -- widget-chat-flow.integ
 
 ## 🎯 Summary
 
-Widget LLM integration is **COMPLETE** for Phase 2 Foundational:
+### Architecture Table
+
+| Setting | Widget | WhatsApp |
+|---------|--------|----------|
+| **debugMode=true** | 🚫 503 Block | ✅ Queue → Scheduler → Send |
+| **channelStatus=false (WIP)** | 📢 wipMessage (200) | 📢 wipMessage |
+| **Normal** | ✅ LLM → Response | ✅ LLM → Queue → Send |
+
+### Widget LLM Integration Status
 
 ✅ **LLM Processing**: Immediate response via LLMRouterService  
 ✅ **Unified Queue**: Single table with channel discriminator  
 ✅ **Security**: 5-step validation pipeline  
+✅ **Debug Mode**: Blocks widget completely (503)  
+✅ **WIP Mode**: Returns wipMessage without LLM  
 ✅ **Testing**: Integration tests passing  
 ✅ **Performance**: 1-2 second response time  
 ✅ **Scalability**: Stateless architecture  

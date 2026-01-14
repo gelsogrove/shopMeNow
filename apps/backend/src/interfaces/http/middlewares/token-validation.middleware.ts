@@ -134,7 +134,7 @@ export const tokenValidationMiddleware = async (
         workspaceId,
         visitorId: customerId, // Use customerId as visitorId
         message: "", // Empty message for access validation only
-        channel: "public-api",
+        channel: "whatsapp", // Public API uses whatsapp channel for security checks
       })
 
       // Check if any security step failed

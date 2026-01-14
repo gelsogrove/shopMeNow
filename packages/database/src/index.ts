@@ -88,6 +88,10 @@ export {
   InvoiceStatus,      // Feature 197: Invoice status enum
   PayPalStatus,
   PayPalTransactionStatus,
+  // Support Ticket Enums
+  SupportIssueType,
+  SupportTicketStatus,
+  SupportSenderType,
 } from './generated/prisma/index.js'
 
 // Export common types
@@ -144,6 +148,10 @@ export type {
   ProductSearch,
   MonthlyInvoice,     // Feature 197: Monthly invoices
   PayPalTransaction,
+  // Support Ticket Types
+  SupportTicket,
+  SupportMessage,
+  SupportAttachment,
 } from './generated/prisma/index.js'
 
 // Export prisma as default

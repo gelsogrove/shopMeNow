@@ -40,6 +40,8 @@ interface UpdateWorkspaceData {
   allowedExternalLinks?: string[] // 🛡️ Security: allowed domains for external links
   logoUrl?: string // Logo URL
   logoKey?: string // 💾 Storage key for cleanup
+  debugMode?: boolean // 🐞 Debug mode toggle
+  adminEmail?: string // Admin email for WhatsappSettings
   // 🆕 Channel Configuration (Feature 199)
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
@@ -116,6 +118,7 @@ export const workspaceService = {
         language: true,
         messageLimit: true,
         channelStatus: true,
+        debugMode: true, // 🐞 Debug mode toggle
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
@@ -201,6 +204,7 @@ export const workspaceService = {
         language: true,
         messageLimit: true,
         channelStatus: true,
+        debugMode: true, // 🐞 Debug mode toggle
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
@@ -212,31 +216,31 @@ export const workspaceService = {
   async update(id: string, data: UpdateWorkspaceData) {
     // Separate fields that shouldn't go to Prisma directly
     const { 
-      adminEmail, 
-      channelStatus,
       id: _id,  // Remove id if present (shouldn't update primary key)
+      adminEmail, // Extract adminEmail separately (goes to WhatsappSettings)
       ...workspaceData 
     } = data as UpdateWorkspaceData & {
-      adminEmail?: string
-      channelStatus?: boolean  // Frontend sends channelStatus, but DB uses channelStatus
       id?: string  // Frontend might send id but we shouldn't update it
-    }
-
-    // 🔄 Map channelStatus → channelStatus (frontend uses different name than DB)
-    if (channelStatus !== undefined) {
-      (workspaceData as any).channelStatus = channelStatus
     }
 
     // 🔍 LOG DETTAGLIATO per debug
     logger.info("=== WORKSPACE UPDATE DEBUG ===")
     logger.info("Workspace ID:", id)
     logger.info("Data received:", JSON.stringify(data, null, 2))
-    logger.info("channelStatus from frontend:", channelStatus)
-    logger.info("channelStatus mapped to:", (workspaceData as any).channelStatus)
+    logger.info("debugMode:", data.debugMode, "type:", typeof data.debugMode)
+    logger.info("channelStatus:", data.channelStatus, "type:", typeof data.channelStatus)
     logger.info(
       "whatsappApiKey in data:",
       data.whatsappApiKey ? "✅ PRESENTE" : "❌ ASSENTE"
     )
+    
+    // 🐛 CRITICAL: Check if channelStatus is being passed correctly
+    if (data.channelStatus !== undefined) {
+      logger.info("✅ channelStatus will be updated to:", data.channelStatus)
+    } else {
+      logger.warn("⚠️ channelStatus is UNDEFINED, will NOT be updated")
+    }
+    
     logger.info(
       "Final workspaceData for Prisma:",
       JSON.stringify(workspaceData, null, 2)
@@ -266,6 +270,7 @@ export const workspaceService = {
         language: true,
         messageLimit: true,
         channelStatus: true,
+        debugMode: true, // 🐞 Debug mode toggle
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,

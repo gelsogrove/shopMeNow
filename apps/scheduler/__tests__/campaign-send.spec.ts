@@ -82,15 +82,15 @@ describe('Campaign Send Job', () => {
       expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Found 0 active campaigns'))
     })
 
-    it('should skip campaigns for inactive workspace channels', async () => {
+    it('should skip campaigns for workspaces in debug mode', async () => {
       mockCampaignFindMany.mockResolvedValue([
         {
           id: 'camp-1',
           name: 'Test Campaign',
           workspace: {
             id: 'ws-1',
-            name: 'Inactive Workspace',
-            channelStatus: false, // Inactive channel
+            name: 'Debug Workspace',
+            debugMode: true, // Debug mode - skip campaigns
           },
         },
       ])
@@ -98,7 +98,7 @@ describe('Campaign Send Job', () => {
       await campaignSendJob()
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping campaign Test Campaign - workspace channel inactive')
+        expect.stringContaining('Skipping campaign Test Campaign - workspace in debug mode')
       )
     })
   })
@@ -114,7 +114,7 @@ describe('Campaign Send Job', () => {
           messagePreview: 'Ciao {{nome}}!',
           frequency: 'MONTHLY',
           lastRunAt: null, // Never run
-          workspace: { id: 'ws-1', name: 'Test', channelStatus: true },
+          workspace: { id: 'ws-1', name: 'Test', debugMode: false },
         },
       ])
 
@@ -145,7 +145,7 @@ describe('Campaign Send Job', () => {
           name: 'Weekly Campaign',
           frequency: 'WEEKLY',
           lastRunAt: threeDaysAgo, // Only 3 days ago
-          workspace: { id: 'ws-1', channelStatus: true },
+          workspace: { id: 'ws-1', debugMode: false },
         },
       ])
 
@@ -170,7 +170,7 @@ describe('Campaign Send Job', () => {
           messagePreview: 'Weekly update!',
           frequency: 'WEEKLY',
           lastRunAt: tenDaysAgo,
-          workspace: { id: 'ws-1', channelStatus: true },
+          workspace: { id: 'ws-1', debugMode: false },
         },
       ])
       mockCustomersFindMany.mockResolvedValue([])
@@ -190,7 +190,7 @@ describe('Campaign Send Job', () => {
           name: 'Quarterly Campaign',
           frequency: 'QUARTERLY',
           lastRunAt: fiftyDaysAgo, // Only 50 days ago
-          workspace: { id: 'ws-1', channelStatus: true },
+          workspace: { id: 'ws-1', debugMode: false },
         },
       ])
 
@@ -206,7 +206,7 @@ describe('Campaign Send Job', () => {
           name: 'One-time Campaign',
           frequency: 'ONCE',
           lastRunAt: new Date(), // Just ran
-          workspace: { id: 'ws-1', channelStatus: true },
+          workspace: { id: 'ws-1', debugMode: false },
         },
       ])
 
@@ -225,7 +225,7 @@ describe('Campaign Send Job', () => {
       messagePreview: 'Hello {{nome}}!',
       frequency: 'WEEKLY',
       lastRunAt: null,
-      workspace: { id: 'ws-1', channelStatus: true },
+      workspace: { id: 'ws-1', debugMode: false },
     }
 
     it('should get ALL eligible customers for targetType=ALL', async () => {
@@ -288,7 +288,7 @@ describe('Campaign Send Job', () => {
       frequency: 'WEEKLY',
       lastRunAt: null,
       targetType: 'ALL',
-      workspace: { id: 'ws-1', channelStatus: true },
+      workspace: { id: 'ws-1', debugMode: false },
     }
 
     it('should replace {{nome}} with customer name', async () => {
@@ -359,7 +359,7 @@ describe('Campaign Send Job', () => {
       frequency: 'WEEKLY',
       lastRunAt: null,
       targetType: 'ALL',
-      workspace: { id: 'ws-1', channelStatus: true },
+      workspace: { id: 'ws-1', debugMode: false },
     }
 
     it('should skip customer if already sent today', async () => {
@@ -415,7 +415,7 @@ describe('Campaign Send Job', () => {
           frequency: 'WEEKLY',
           lastRunAt: null,
           targetType: 'ALL',
-          workspace: { id: 'ws-1', channelStatus: true },
+          workspace: { id: 'ws-1', debugMode: false },
         },
       ])
       mockCustomersFindMany.mockResolvedValue([
@@ -451,7 +451,7 @@ describe('Campaign Send Job', () => {
           frequency: 'WEEKLY',
           lastRunAt: null,
           targetType: 'ALL',
-          workspace: { id: 'ws-1', channelStatus: true },
+          workspace: { id: 'ws-1', debugMode: false },
         },
         {
           id: 'camp-success',
@@ -461,7 +461,7 @@ describe('Campaign Send Job', () => {
           frequency: 'WEEKLY',
           lastRunAt: null,
           targetType: 'ALL',
-          workspace: { id: 'ws-2', channelStatus: true },
+          workspace: { id: 'ws-2', debugMode: false },
         },
       ])
 
@@ -497,7 +497,7 @@ describe('Campaign Send Job', () => {
           frequency: 'WEEKLY',
           lastRunAt: null,
           targetType: 'ALL',
-          workspace: { id: 'ws-1', channelStatus: true },
+          workspace: { id: 'ws-1', debugMode: false },
         },
       ])
       mockCustomersFindMany.mockResolvedValue([

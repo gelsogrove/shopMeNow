@@ -260,6 +260,18 @@ export class WorkspaceController {
       const { id } = req.params
       const workspaceData = req.body
 
+      // 🔒 SECURITY CHECK
+      logger.error("=== SECURITY AUDIT ===")
+      logger.error("User from req:", (req as any).user ? "✅ PRESENT" : "❌ MISSING")
+      logger.error("Authorization header:", req.headers.authorization ? "✅ PRESENT" : "❌ MISSING")
+      logger.error("Workspace ID from token:", (req as any).workspaceId)
+      logger.error("Route called:", req.path)
+      
+      if (!(req as any).user) {
+        logger.error("🚨 SECURITY BREACH: Update called without authentication!")
+        return res.status(401).json({ message: "Unauthorized - No user in request" })
+      }
+
       logger.info(`Updating workspace ${id}`)
       logger.info(
         `📦 Workspace data received: ${JSON.stringify(workspaceData, null, 2)}`

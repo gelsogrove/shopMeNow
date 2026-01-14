@@ -874,6 +874,26 @@ Escalate IMMEDIATELY (call contactOperator) when customer:
 - End with an engaging question when appropriate (not always)
 - No walls of text - break into short paragraphs
 
+# Custom Features & Enterprise Requests
+
+When a customer asks about:
+- **Custom integrations** (CRM, ERP, third-party APIs)
+- **Personalized features** or platform modifications
+- **Enterprise-specific needs** not covered by standard plans
+
+**ALWAYS respond:**
+"Le customizzazioni fanno parte del piano Enterprise 🏢
+
+Per fornirti un preventivo accurato, ti chiedo di inviare una email a support@echatbot.ai con:
+- Descrizione dettagliata della customizzazione richiesta
+- Specifiche tecniche (API, formati dati, autenticazione)
+- Piano mensile attuale o desiderato
+- Consumo mensile stimato (numero messaggi/utenti)
+
+Calcoleremo: prezzo piano mensile + consumo mensile + preventivo customizzazioni.
+
+Tempi di risposta: entro 24-48 ore lavorative 📧"
+
 # Example Communication
 "Sure! Here's our documentation 📚
 https://echatbot.ai/docs
@@ -1049,6 +1069,103 @@ Can I help with anything else?"`,
       question: "Do you support custom roadmaps or feature requests?",
       answer:
         "Enterprise contracts include roadmap alignment sessions and private betas. We prioritize features that align with your automation KPIs.",
+    },
+    // === NEW FAQs - Missing from website ===
+    {
+      category: "Setup",
+      question: "Do I need WhatsApp Business API or can I use regular WhatsApp?",
+      answer:
+        "eChatbot requires the official WhatsApp Business API (not the free WhatsApp Business app). We guide you through Meta verification and handle the technical setup. Most businesses get approved within 24-48 hours.",
+    },
+    {
+      category: "Setup",
+      question: "Can I use my existing phone number or do I need a new one?",
+      answer:
+        "You can migrate your existing business number to WhatsApp Business API. However, we recommend a dedicated number for your chatbot to keep personal and business messages separate.",
+    },
+    {
+      category: "Setup",
+      question: "How long does it take to set up eChatbot?",
+      answer:
+        "Basic setup takes about 30 minutes: connect WhatsApp, upload your catalog, configure the AI personality. Full customization with integrations typically takes 1-2 days for Starter, 1-2 weeks for Enterprise.",
+    },
+    {
+      category: "AI Capabilities",
+      question: "Can the AI actually sell my products?",
+      answer:
+        "Yes! The AI guides customers through product discovery, answers questions, handles objections, and facilitates checkout. It can send product images, create carts, and integrate with your payment system.",
+    },
+    {
+      category: "AI Capabilities",
+      question: "How do I upload my product catalog?",
+      answer:
+        "You can upload products via CSV import, connect to Shopify/WooCommerce, or use our API. The dashboard lets you add products manually with images, variants, and pricing.",
+    },
+    {
+      category: "AI Capabilities",
+      question: "Does the AI support multiple languages?",
+      answer:
+        "Yes! The AI auto-detects customer language and responds accordingly. We support Italian, English, Spanish, Portuguese and more. Your catalog stays in one language - the AI translates dynamically.",
+    },
+    {
+      category: "AI Capabilities",
+      question: "Can I customize the chatbot's personality and responses?",
+      answer:
+        "Absolutely. You control tone of voice (formal/friendly), bot name, identity response, and custom rules. You can also add FAQ entries that the AI prioritizes over generated responses.",
+    },
+    {
+      category: "Payments",
+      question: "Can the AI handle payments directly in WhatsApp?",
+      answer:
+        "The AI creates carts and sends secure payment links. We integrate with Stripe, PayPal, and custom payment gateways. WhatsApp Pay is not yet available in all regions.",
+    },
+    {
+      category: "Limits",
+      question: "How many messages can I send per month?",
+      answer:
+        "There's no hard message limit. You pay per conversation (24h window) according to WhatsApp's official rates. Our dashboard shows real-time usage and costs.",
+    },
+    {
+      category: "Limits",
+      question: "How many customers can the chatbot handle simultaneously?",
+      answer:
+        "Unlimited. The AI responds instantly to any number of concurrent conversations. During peak times (Black Friday, promotions), you won't experience slowdowns.",
+    },
+    {
+      category: "Limits",
+      question: "Is there a limit on products in my catalog?",
+      answer:
+        "Starter plans support up to 500 products. Premium handles 5,000+ products. Enterprise has no limits and includes vector search for large catalogs.",
+    },
+    {
+      category: "Trial",
+      question: "Is there a free trial period?",
+      answer:
+        "Yes! Every new workspace gets a 14-day free trial with full features. No credit card required to start. You can test all automations, integrations, and AI capabilities.",
+    },
+    {
+      category: "Billing",
+      question: "Can I cancel my subscription anytime?",
+      answer:
+        "Yes, you can cancel anytime from your dashboard. Monthly plans end at the billing cycle. No cancellation fees. Your data is retained for 30 days after cancellation.",
+    },
+    {
+      category: "Support",
+      question: "Do you offer support in Italian?",
+      answer:
+        "Sì! Our team is based in Italy and we offer full support in Italian, English, Spanish, and Portuguese. Enterprise clients get a dedicated Italian-speaking account manager.",
+    },
+    {
+      category: "Support",
+      question: "What are your support response times?",
+      answer:
+        "Starter: 24h email support. Premium: 4h response, live chat. Enterprise: 1h response, dedicated Slack channel, phone support during business hours.",
+    },
+    {
+      category: "Widget",
+      question: "Can I add the chatbot to my website?",
+      answer:
+        "Yes! We provide an embeddable widget for your website. Just copy-paste a code snippet. The widget syncs with your WhatsApp channel - customers can switch seamlessly.",
     },
   ]
 
@@ -1751,6 +1868,38 @@ Can I help with anything else?"`,
   console.log(
     `   🚫 Last 2 (Maria, John): blacklisted, no consent → NOT eligible for campaigns`
   )
+
+  // 🧪 PLAYGROUND TEST CUSTOMER
+  console.log("🧪 Creating Playground test customer...")
+  const playgroundCustomer = await prisma.customers.create({
+    data: {
+      name: "Test Customer (Playground)",
+      email: "playground@test.echatbot.local",
+      phone: "+39 999 1234567", // Fake non-real test number
+      language: "IT",
+      company: "Playground Test Company",
+      address: JSON.stringify({
+        name: "Test Customer",
+        street: "Via Test 999",
+        city: "Test City",
+        postalCode: "99999",
+        country: "Italia",
+      }),
+      workspaceId: workspace.id,
+      salesId: createdSalesReps[0].id, // Assign first sales rep
+      isActive: true,
+      isBlacklisted: false,
+      activeChatbot: true,
+      currency: "EUR",
+      discount: 0,
+      push_notifications_consent: false,
+      push_notifications_consent_at: null,
+      last_privacy_version_accepted: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  })
+  console.log(`✅ Created Playground test customer: ${playgroundCustomer.phone}`)
 
   // � CREATE CHAT SESSIONS WITH MESSAGE HISTORY
   console.log("\n💬 Creating chat sessions with message history...")
@@ -2771,116 +2920,301 @@ Can I help with anything else?"`,
   const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
 
   // ============================================================================
-  // BILLING TRANSACTIONS - Realistic history starting from $22 Free Trial
-  // Story: User starts Free Trial ($22), then upgrades, recharges, uses messages
+  // BILLING TRANSACTIONS - Realistic history with INDIVIDUAL transactions
+  // In production, each message/push creates a single transaction
+  // Frontend aggregates by day+channel for display
   // NOTE: Monthly subscription fees are billed separately (not from credit balance)
   // ============================================================================
 
-  // September 2025: User signs up with Free Trial ($22)
+  let runningBalance = 0
+
+  // September 5, 2025: User signs up with Free Trial ($22)
+  runningBalance = 22.00
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
       amount: 22.00,
-      balanceAfter: 22.00,
+      balanceAfter: runningBalance,
       description: "Initial credit - Free Trial",
-      createdAt: new Date(2025, 8, 5, 10, 0, 0), // Sep 5, 2025
+      createdAt: new Date(2025, 8, 5, 10, 0, 0),
     },
   })
 
-  // September 15: First recharge +$30 (triggers automatic upgrade from FREE_TRIAL to BASIC)
+  // September 15: First recharge +$30
+  runningBalance += 30.00
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
       amount: 30.00,
-      balanceAfter: 52.00,
+      balanceAfter: runningBalance,
       description: "Credit recharge +$30",
-      createdAt: new Date(2025, 8, 15, 14, 30, 0), // Sep 15, 2025
+      createdAt: new Date(2025, 8, 15, 14, 30, 0),
     },
   })
 
-  // October 20: Message usage -$5
-  await prisma.billingTransaction.create({
-    data: {
-      workspace: { connect: { id: workspace.id } },
-      user: { connect: { id: adminUser.id } },
-      type: "MESSAGE",
-      amount: -5.00,
-      balanceAfter: 47.00,
-      description: "50 WhatsApp messages (BellItalia VIP)",
-      createdAt: new Date(2025, 9, 20, 16, 45, 0), // Oct 20, 2025
-    },
-  })
+  // September 20: 5 individual WhatsApp messages (BellItalia VIP) - $0.10 each
+  for (let i = 0; i < 5; i++) {
+    runningBalance -= 0.10
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: workspace.id } },
+        user: { connect: { id: adminUser.id } },
+        type: "MESSAGE",
+        amount: -0.10,
+        balanceAfter: runningBalance,
+        description: "WhatsApp message",
+        createdAt: new Date(2025, 8, 20, 10 + i, 15, 0), // Sep 20, different hours
+      },
+    })
+  }
 
-  // November 1: Credit recharge +$45
+  // October 15: 3 Push notifications (BellItalia VIP) - $1.00 each
+  for (let i = 0; i < 3; i++) {
+    runningBalance -= 1.00
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: workspace.id } },
+        user: { connect: { id: adminUser.id } },
+        type: "PUSH_NOTIFICATION",
+        amount: -1.00,
+        balanceAfter: runningBalance,
+        description: "Push notification",
+        createdAt: new Date(2025, 9, 15, 9 + i, 0, 0), // Oct 15
+      },
+    })
+  }
+
+  // October 20: 10 WhatsApp messages (BellItalia) - $0.10 each
+  for (let i = 0; i < 10; i++) {
+    runningBalance -= 0.10
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: infoWorkspace.id } }, // Different channel!
+        user: { connect: { id: adminUser.id } },
+        type: "MESSAGE",
+        amount: -0.10,
+        balanceAfter: runningBalance,
+        description: "WhatsApp message",
+        createdAt: new Date(2025, 9, 20, 8 + Math.floor(i / 2), i * 5, 0), // Oct 20
+      },
+    })
+  }
+
+  // November 1: Credit recharge +$50
+  runningBalance += 50.00
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
-      amount: 45.00,
-      balanceAfter: 92.00,
-      description: "Credit recharge +$45",
-      createdAt: new Date(2025, 10, 1, 8, 0, 0), // Nov 1, 2025 at 08:00
+      amount: 50.00,
+      balanceAfter: runningBalance,
+      description: "Credit recharge +$50",
+      createdAt: new Date(2025, 10, 1, 8, 0, 0),
     },
   })
 
-  // November 15: Message usage -$3.50
-  await prisma.billingTransaction.create({
-    data: {
-      workspace: { connect: { id: workspace.id } },
-      user: { connect: { id: adminUser.id } },
-      type: "MESSAGE",
-      amount: -3.50,
-      balanceAfter: 88.50,
-      description: "35 WhatsApp messages (BellItalia)",
-      createdAt: new Date(2025, 10, 15, 11, 30, 0), // Nov 15, 2025
-    },
-  })
+  // November 10: 5 Push notifications each channel (10 total) - same day, different channels
+  for (let i = 0; i < 5; i++) {
+    runningBalance -= 1.00
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: workspace.id } }, // BellItalia VIP
+        user: { connect: { id: adminUser.id } },
+        type: "PUSH_NOTIFICATION",
+        amount: -1.00,
+        balanceAfter: runningBalance,
+        description: "Push notification",
+        createdAt: new Date(2025, 10, 10, 9, i * 10, 0), // Nov 10, morning
+      },
+    })
+  }
+  for (let i = 0; i < 5; i++) {
+    runningBalance -= 1.00
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: infoWorkspace.id } }, // BellItalia (different channel!)
+        user: { connect: { id: adminUser.id } },
+        type: "PUSH_NOTIFICATION",
+        amount: -1.00,
+        balanceAfter: runningBalance,
+        description: "Push notification",
+        createdAt: new Date(2025, 10, 10, 14, i * 10, 0), // Nov 10, afternoon
+      },
+    })
+  }
+
+  // November 20: 8 WhatsApp messages (BellItalia VIP)
+  for (let i = 0; i < 8; i++) {
+    runningBalance -= 0.10
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: workspace.id } },
+        user: { connect: { id: adminUser.id } },
+        type: "MESSAGE",
+        amount: -0.10,
+        balanceAfter: runningBalance,
+        description: "WhatsApp message",
+        createdAt: new Date(2025, 10, 20, 10, i * 5, 0), // Nov 20
+      },
+    })
+  }
 
   // December 1: Credit recharge +$100
+  runningBalance += 100.00
   await prisma.billingTransaction.create({
     data: {
       workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
       type: "RECHARGE",
       amount: 100.00,
-      balanceAfter: 188.50,
+      balanceAfter: runningBalance,
       description: "Credit recharge +$100",
-      createdAt: new Date(2025, 11, 1, 8, 0, 0), // Dec 1, 2025 at 08:00
+      createdAt: new Date(2025, 11, 1, 8, 0, 0),
     },
   })
 
-  // December 8: Message usage -$2.50
+  // December 5: 15 WhatsApp messages (BellItalia VIP) + 10 Push (BellItalia) - same day!
+  for (let i = 0; i < 15; i++) {
+    runningBalance -= 0.10
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: workspace.id } },
+        user: { connect: { id: adminUser.id } },
+        type: "MESSAGE",
+        amount: -0.10,
+        balanceAfter: runningBalance,
+        description: "WhatsApp message",
+        createdAt: new Date(2025, 11, 5, 9, i * 3, 0), // Dec 5
+      },
+    })
+  }
+  for (let i = 0; i < 10; i++) {
+    runningBalance -= 1.00
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: infoWorkspace.id } }, // BellItalia
+        user: { connect: { id: adminUser.id } },
+        type: "PUSH_NOTIFICATION",
+        amount: -1.00,
+        balanceAfter: runningBalance,
+        description: "Push notification",
+        createdAt: new Date(2025, 11, 5, 14, i * 5, 0), // Dec 5, afternoon
+      },
+    })
+  }
+
+  // Today: 3 WhatsApp messages (BellItalia VIP) + 2 Push (BellItalia VIP) + 3 Push (BellItalia)
+  const today = new Date()
+  for (let i = 0; i < 3; i++) {
+    runningBalance -= 0.10
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: workspace.id } },
+        user: { connect: { id: adminUser.id } },
+        type: "MESSAGE",
+        amount: -0.10,
+        balanceAfter: runningBalance,
+        description: "WhatsApp message",
+        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, i * 15, 0),
+      },
+    })
+  }
+  // Push from BellItalia VIP
+  for (let i = 0; i < 2; i++) {
+    runningBalance -= 1.00
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: workspace.id } }, // BellItalia VIP
+        user: { connect: { id: adminUser.id } },
+        type: "PUSH_NOTIFICATION",
+        amount: -1.00,
+        balanceAfter: runningBalance,
+        description: "Push notification",
+        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 11, i * 30, 0),
+      },
+    })
+  }
+  // Push from BellItalia (different channel, same day!)
+  for (let i = 0; i < 3; i++) {
+    runningBalance -= 1.00
+    await prisma.billingTransaction.create({
+      data: {
+        workspace: { connect: { id: infoWorkspace.id } }, // BellItalia (different!)
+        user: { connect: { id: adminUser.id } },
+        type: "PUSH_NOTIFICATION",
+        amount: -1.00,
+        balanceAfter: runningBalance,
+        description: "Push notification",
+        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, i * 20, 0),
+      },
+    })
+  }
+
+  // Update user's credit balance to match
+  await prisma.user.update({
+    where: { id: adminUser.id },
+    data: { creditBalance: runningBalance },
+  })
+
+  // ============================================================================
+  // INVOICE_PAID transactions - Monthly plan payments (NOT affecting credit balance!)
+  // These show in Transaction History but DON'T change the counter
+  // ============================================================================
+  
+  // October 1: Plan payment for September
   await prisma.billingTransaction.create({
     data: {
-      workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
-      type: "MESSAGE",
-      amount: -2.50,
-      balanceAfter: 186.00,
-      description: "25 WhatsApp messages (BellItalia VIP)",
-      createdAt: new Date(2025, 11, 8, 14, 20, 0), // Dec 8, 2025
+      type: "INVOICE_PAID",
+      amount: 0, // Does NOT affect credit balance
+      balanceAfter: 52.00, // Balance at that time (after Sep recharges, before Oct usage)
+      description: "Monthly plan PREMIUM - September 2025",
+      createdAt: new Date(2025, 9, 1, 9, 0, 0), // Oct 1, 2025
     },
   })
 
-  // December 10: Today's message -$1.00
+  // November 1: Plan payment for October  
   await prisma.billingTransaction.create({
     data: {
-      workspace: { connect: { id: workspace.id } },
       user: { connect: { id: adminUser.id } },
-      type: "MESSAGE",
-      amount: -1.00,
-      balanceAfter: 185.00,
-      description: "1 WhatsApp message (BellItalia)",
-      createdAt: new Date(), // Today
+      type: "INVOICE_PAID",
+      amount: 0, // Does NOT affect credit balance
+      balanceAfter: 43.50, // Balance at that time
+      description: "Monthly plan PREMIUM - October 2025",
+      createdAt: new Date(2025, 10, 1, 9, 0, 0), // Nov 1, 2025
     },
   })
 
-  console.log("✅ Created 8 billing transactions (realistic history)")
+  // December 1: Plan payment for November
+  await prisma.billingTransaction.create({
+    data: {
+      user: { connect: { id: adminUser.id } },
+      type: "INVOICE_PAID",
+      amount: 0, // Does NOT affect credit balance
+      balanceAfter: 88.50, // Balance at that time (after Nov recharge)
+      description: "Monthly plan PREMIUM - November 2025",
+      createdAt: new Date(2025, 11, 1, 9, 0, 0), // Dec 1, 2025
+    },
+  })
+
+  // January 1, 2026: Plan payment for December
+  await prisma.billingTransaction.create({
+    data: {
+      user: { connect: { id: adminUser.id } },
+      type: "INVOICE_PAID",
+      amount: 0, // Does NOT affect credit balance
+      balanceAfter: 175.20, // Balance at that time
+      description: "Monthly plan PREMIUM - December 2025",
+      createdAt: new Date(2026, 0, 1, 9, 0, 0), // Jan 1, 2026
+    },
+  })
+
+  console.log(`✅ Created billing transactions with individual records (final balance: $${runningBalance.toFixed(2)})`)
 
   // ============================================================================
   // MONTHLY INVOICES - Past paid invoices
@@ -3155,7 +3489,7 @@ Can I help with anything else?"`,
     invoiceId: invoice.id,
     amount: Number(invoice.totalAmount),
     currency: "USD",
-    status: "SUCCESS",
+    status: "SUCCESS" as const,
     notes: `Invoice ${String(invoice.periodMonth).padStart(2, "0")}/${invoice.periodYear} paid`,
     createdAt: invoice.paidAt,
   }))
@@ -3169,7 +3503,7 @@ Can I help with anything else?"`,
         invoiceId: octoberInvoice.id,
         amount: 50.00,
         currency: "USD",
-        status: "SUCCESS",
+        status: "SUCCESS" as const,
         notes: "October invoice paid",
         createdAt: new Date(2025, 10, 1, 10, 5, 0),
       },
@@ -3179,7 +3513,7 @@ Can I help with anything else?"`,
         invoiceId: novemberInvoice.id,
         amount: 48.50,
         currency: "USD",
-        status: "FAILED",
+        status: "FAILED" as const,
         notes: "Card declined - retry scheduled",
         createdAt: new Date(2025, 11, 1, 10, 2, 0),
       },
@@ -3189,7 +3523,7 @@ Can I help with anything else?"`,
         invoiceId: novemberInvoice.id,
         amount: 48.50,
         currency: "USD",
-        status: "SUCCESS",
+        status: "SUCCESS" as const,
         notes: "November invoice paid on retry",
         createdAt: new Date(2025, 11, 2, 9, 15, 0),
       },
@@ -3199,7 +3533,7 @@ Can I help with anything else?"`,
         invoiceId: decemberInvoice.id,
         amount: 47.60,
         currency: "USD",
-        status: "FAILED",
+        status: "FAILED" as const,
         notes: "Insufficient funds",
         createdAt: new Date(2025, 11, 31, 18, 40, 0),
       },
@@ -3209,7 +3543,7 @@ Can I help with anything else?"`,
         invoiceId: null,
         amount: 12.00,
         currency: "USD",
-        status: "SUCCESS",
+        status: "SUCCESS" as const,
         notes: "Manual adjustment",
         createdAt: new Date(2025, 11, 20, 15, 5, 0),
       },
@@ -3249,6 +3583,11 @@ Can I help with anything else?"`,
     },
     {
       jobName: "soft-delete-cleanup",
+      isActive: true,
+      lastStatus: "NEVER_RUN",
+    },
+    {
+      jobName: "support-attachments-cleanup",
       isActive: true,
       lastStatus: "NEVER_RUN",
     },

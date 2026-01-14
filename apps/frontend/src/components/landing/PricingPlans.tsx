@@ -64,9 +64,10 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
   const premiumPrice = getPriceWithOriginal("PREMIUM_MONTHLY")
   const enterprisePrice = getPriceWithOriginal("ENTERPRISE_MONTHLY")
   const messagePrice = prices.MESSAGE
+  const widgetPrice = prices.WIDGET_MESSAGE
   const pushPrice = prices.PUSH_CAMPAIGN
 
-  if (!freePrice || !basicPrice || !premiumPrice || !enterprisePrice || !messagePrice || !pushPrice) {
+  if (!freePrice || !basicPrice || !premiumPrice || !enterprisePrice || !messagePrice || !widgetPrice || !pushPrice) {
     return (
       <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
         <div className="max-w-7xl mx-auto px-4 text-center">
@@ -303,7 +304,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
           {t("pricing.usage.title")}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {/* Messages - dynamic from database */}
           <div className="relative group">
             {/* Decorative rotated background frame */}
@@ -321,6 +322,26 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
               </div>
               <p className="text-sm text-gray-600">
                 {t("pricing.usage.message.desc")}
+              </p>
+            </div>
+          </div>
+
+          {/* Widget messages - dynamic from database */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+            
+            <div className="relative bg-white rounded-xl p-6 border border-gray-200 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div className="text-3xl font-bold text-emerald-600 mb-1">
+                ${widgetPrice.current.toFixed(2)}
+              </div>
+              <div className="text-base font-medium text-gray-900 mb-2">
+                {t("pricing.usage.widget")}
+              </div>
+              <p className="text-sm text-gray-600">
+                {t("pricing.usage.widget.desc")}
               </p>
             </div>
           </div>

@@ -246,62 +246,6 @@ export class WhatsAppQueueController {
 
   /**
    * @swagger
-   * /api/workspaces/{workspaceId}/whatsapp-queue:
-   *   delete:
-   *     summary: Clear entire queue (delete all messages)
-   *     tags: [WhatsApp Queue]
-   *     security:
-   *       - bearerAuth: []
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         required: true
-   *         schema:
-   *           type: string
-   *     responses:
-   *       200:
-   *         description: Queue cleared successfully
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: object
-   *               properties:
-   *                 success:
-   *                   type: boolean
-   *                 deletedCount:
-   *                   type: number
-   *       401:
-   *         description: Unauthorized
-   *       403:
-   *         description: Forbidden - Invalid workspace
-   */
-  async clearQueue(req: Request, res: Response): Promise<Response> {
-    try {
-      const workspaceId = (req as any).workspaceId
-
-      logger.warn(
-        `[WhatsAppQueueController] User requesting to clear entire queue for workspace: ${workspaceId}`
-      )
-
-      const deletedCount = await this.service.clearQueue(workspaceId)
-
-      return res.json({
-        success: true,
-        deletedCount,
-        message: `Deleted ${deletedCount} messages from queue`,
-      })
-    } catch (error) {
-      logger.error("[WhatsAppQueueController] Error in clearQueue:", error)
-      return res.status(500).json({
-        success: false,
-        error: "Failed to clear queue",
-        message: error instanceof Error ? error.message : "Unknown error",
-      })
-    }
-  }
-
-  /**
-   * @swagger
    * /api/workspaces/{workspaceId}/whatsapp-queue/status:
    *   get:
    *     summary: Get queue enabled/disabled status and debug mode

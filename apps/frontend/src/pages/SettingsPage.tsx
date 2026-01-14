@@ -161,12 +161,17 @@ interface HelpPanelProps {
     content: string
     icon?: string
   }>
+  className?: string
 }
 
-function HelpPanel({ title, description, sections }: HelpPanelProps) {
+function HelpPanel({ title, description, sections, className }: HelpPanelProps) {
   return (
-    <div className="sticky top-6 space-y-4 min-h-[600px]">
-      <Card className="border-blue-200 bg-blue-50">
+    <div className="h-full">
+      <Card
+        className={`h-full rounded-2xl border-blue-200 bg-blue-50/70 shadow-sm flex flex-col ${
+          className || ""
+        }`}
+      >
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2 text-blue-900">
             <HelpCircle className="h-5 w-5 text-blue-600" />
@@ -174,7 +179,7 @@ function HelpPanel({ title, description, sections }: HelpPanelProps) {
           </CardTitle>
           <p className="text-sm text-blue-800 mt-1">{description}</p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 flex-1">
           {sections.map((section, idx) => (
             <div key={idx} className="pb-3 border-b border-blue-200 last:border-b-0 last:pb-0">
               <div className="flex items-start gap-2">
@@ -451,33 +456,84 @@ export default function SettingsPage() {
 
   return (
     <PageLayout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Page Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your channel configuration and preferences
-          </p>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Settings</h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your channel configuration and preferences
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-white px-3 py-2 shadow-sm">
+            <span className="text-xs text-muted-foreground">Channel</span>
+            <span className="text-sm font-medium text-gray-900">
+              {formData.name || "—"}
+            </span>
+            <span className="text-xs text-muted-foreground">·</span>
+            <span
+              className={`text-xs font-medium ${
+                formData.channelStatus ? "text-green-600" : "text-gray-500"
+              }`}
+            >
+              {formData.channelStatus ? "Active" : "Disabled"}
+            </span>
+          </div>
         </div>
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="basic">📱 Basic</TabsTrigger>
-            <TabsTrigger value="personality">🤖 Personality</TabsTrigger>
-            <TabsTrigger value="business">🏪 Business</TabsTrigger>
-            <TabsTrigger value="support">👤 Support</TabsTrigger>
-            <TabsTrigger value="custom-ai">⚙️ Custom AI</TabsTrigger>
-            <TabsTrigger value="translation">🌍 Translation</TabsTrigger>
-            <TabsTrigger value="security">🛡️ Security</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-7 gap-2 rounded-2xl border border-slate-200/70 bg-white/90 p-1 shadow-sm">
+            <TabsTrigger
+              value="basic"
+              className="rounded-xl px-3 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-200"
+            >
+              📱 Basic
+            </TabsTrigger>
+            <TabsTrigger
+              value="personality"
+              className="rounded-xl px-3 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-200"
+            >
+              🤖 Personality
+            </TabsTrigger>
+            <TabsTrigger
+              value="business"
+              className="rounded-xl px-3 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-200"
+            >
+              🏪 Business
+            </TabsTrigger>
+            <TabsTrigger
+              value="support"
+              className="rounded-xl px-3 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-200"
+            >
+              👤 Support
+            </TabsTrigger>
+            <TabsTrigger
+              value="custom-ai"
+              className="rounded-xl px-3 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-200"
+            >
+              ⚙️ Custom AI
+            </TabsTrigger>
+            <TabsTrigger
+              value="translation"
+              className="rounded-xl px-3 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-200"
+            >
+              🌍 Translation
+            </TabsTrigger>
+            <TabsTrigger
+              value="security"
+              className="rounded-xl px-3 py-2 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-emerald-200"
+            >
+              🛡️ Security
+            </TabsTrigger>
           </TabsList>
 
           {/* Basic Info Tab */}
           <TabsContent value="basic" className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 min-h-[600px]">
-                <Card>
+              <div className="min-h-[600px]">
+                <Card className="h-full rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                       <span className="text-lg">📱</span> Basic Information
@@ -582,36 +638,26 @@ export default function SettingsPage() {
                         placeholder="Via Roma 123, 00100 Roma, Italy"
                       />
                     </div>
-
-                    {/* Chatbot Active Toggle */}
-                    <div className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
-                      <div className="space-y-1">
-                        <Label className="text-base">Chatbot Status</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Enable or disable the chatbot for this channel
-                        </p>
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <Label className="text-sm">Chatbot Status</Label>
+                        <p className="text-xs text-muted-foreground">Enable or disable the chatbot for this channel</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium ${formData.channelStatus ? 'text-green-600' : 'text-gray-500'}`}>
-                          {formData.channelStatus ? '🟢 Active' : '🔴 Disabled'}
-                        </span>
-                        <Switch
-                          checked={formData.channelStatus}
-                          onCheckedChange={(checked) =>
-                            handleFieldChange("channelStatus", checked)
-                          }
-                        />
-                      </div>
+                      <Switch
+                        checked={formData.channelStatus}
+                        onCheckedChange={(checked) => handleFieldChange("channelStatus", checked)}
+                      />
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Help Panel - 1/3 */}
-              <div>
+              <div className="min-h-[600px] lg:sticky lg:top-28 h-fit">
                 <HelpPanel
                   title="📚 Basic Information"
                   description="Set up the core details of your channel"
+                  className="h-full"
                   sections={[
                     {
                       icon: "📝",
@@ -637,11 +683,6 @@ export default function SettingsPage() {
                       icon: "📍",
                       title: "Address",
                       content: "Your physical location. When customers ask 'Where are you?' they'll get this."
-                    },
-                    {
-                      icon: "⚡",
-                      title: "Chatbot Status",
-                      content: "Enable to let the AI assistant answer customer questions. Disable to show maintenance mode."
                     }
                   ]}
                 />
@@ -651,10 +692,10 @@ export default function SettingsPage() {
 
           {/* Bot Personality Tab */}
           <TabsContent value="personality" className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 min-h-[600px]">
-                <Card>
+              <div className="min-h-[600px]">
+                <Card className="h-full rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                       <span className="text-lg">🤖</span> Bot Personality
@@ -748,10 +789,11 @@ export default function SettingsPage() {
               </div>
 
               {/* Help Panel - 1/3 */}
-              <div>
+              <div className="min-h-[600px] lg:sticky lg:top-28 h-fit">
                 <HelpPanel
                   title="🤖 Bot Personality"
                   description="Give your bot a unique character and voice"
+                  className="h-full"
                   sections={[
                     {
                       icon: "💬",
@@ -781,10 +823,10 @@ export default function SettingsPage() {
 
           {/* Business Configuration Tab */}
           <TabsContent value="business" className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 min-h-[600px]">
-                <Card>
+              <div className="min-h-[600px]">
+                <Card className="h-full rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                       <span className="text-lg">🏪</span> Business Configuration
@@ -848,10 +890,11 @@ export default function SettingsPage() {
               </div>
 
               {/* Help Panel - 1/3 */}
-              <div>
+              <div className="min-h-[600px] lg:sticky lg:top-28 h-fit">
                 <HelpPanel
                   title="🏪 Business Config"
                   description="Choose what your channel sells"
+                  className="h-full"
                   sections={[
                     {
                       icon: "🏭",
@@ -876,10 +919,10 @@ export default function SettingsPage() {
 
           {/* Human Support Tab */}
           <TabsContent value="support" className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 space-y-6 min-h-[600px]">
-                <Card>
+              <div className="space-y-6 min-h-[600px]">
+                <Card className="h-full rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1063,10 +1106,11 @@ export default function SettingsPage() {
               </div>
 
               {/* Help Panel - 1/3 */}
-              <div>
+              <div className="min-h-[600px] lg:sticky lg:top-28 h-fit">
                 <HelpPanel
                   title="👤 Human Support"
                   description="Let customers reach a real person"
+                  className="h-full"
                   sections={[
                     {
                       icon: "🎯",
@@ -1101,10 +1145,10 @@ export default function SettingsPage() {
 
           {/* Custom AI Tab */}
           <TabsContent value="custom-ai" className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 min-h-[600px]">
-                <Card>
+              <div className="min-h-[600px]">
+                <Card className="h-full rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                       <span className="text-lg">⚙️</span> Custom AI Rules
@@ -1149,10 +1193,11 @@ export default function SettingsPage() {
               </div>
 
               {/* Help Panel - 1/3 */}
-              <div>
+              <div className="min-h-[600px] lg:sticky lg:top-28 h-fit">
                 <HelpPanel
                   title="⚙️ Custom AI Rules"
                   description="Control exactly how your AI behaves"
+                  className="h-full"
                   sections={[
                     {
                       icon: "🎯",
@@ -1182,11 +1227,11 @@ export default function SettingsPage() {
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 min-h-[600px] space-y-6">
+              <div className="space-y-6 min-h-[600px]">
                 {/* Allowed Links Section */}
-                <Card>
+                <Card className="h-full rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                       <span className="text-lg">🔗</span> Allowed External Links
@@ -1211,10 +1256,11 @@ export default function SettingsPage() {
               </div>
 
               {/* Help Panel - 1/3 */}
-              <div>
+              <div className="min-h-[600px] lg:sticky lg:top-28 h-fit">
                 <HelpPanel
                   title="🛡️ Security"
                   description="Control widget access and AI links"
+                  className="h-full"
                   sections={[
                     {
                       icon: "🌐",
@@ -1244,10 +1290,10 @@ export default function SettingsPage() {
 
           {/* Translation Tab */}
           <TabsContent value="translation" className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
               {/* Main Form - 2/3 */}
-              <div className="col-span-2 min-h-[600px]">
-                <Card>
+              <div className="min-h-[600px]">
+                <Card className="h-full rounded-2xl border-slate-200 shadow-sm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base flex items-center gap-2">
                       <span className="text-lg">🌍</span> Translation Settings
@@ -1336,10 +1382,11 @@ export default function SettingsPage() {
               </div>
 
               {/* Help Panel - 1/3 */}
-              <div>
+              <div className="lg:sticky lg:top-28 h-fit">
                 <HelpPanel
                   title="🌍 Translation"
                   description="Control what gets translated for other languages"
+                  className="h-full"
                   sections={[
                     {
                       icon: "🌐",

@@ -1783,20 +1783,22 @@ export function ChatPage() {
         }
       />
 
-      {/* WhatsApp Floating Button - stile OlaClick, solo su /chat */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={handlePlaygroundClick}
-          className="bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 h-16 w-16 p-0 flex items-center justify-center group relative"
-          title="Chat WhatsApp"
-        >
-          <WhatsAppIcon className="h-8 w-8 text-white transition-transform group-hover:scale-110" />
-          <div className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20"></div>
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-            Chatta con noi su WhatsApp
-          </div>
-        </Button>
-      </div>
+      {/* WhatsApp Floating Button - stile OlaClick, solo su /chat e SOLO se debugMode=true */}
+      {workspace?.debugMode === true && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={handlePlaygroundClick}
+            className="bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 h-16 w-16 p-0 flex items-center justify-center group relative"
+            title="Chat WhatsApp (Playground - Debug Mode)"
+          >
+            <WhatsAppIcon className="h-8 w-8 text-white transition-transform group-hover:scale-110" />
+            <div className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20"></div>
+            <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+              Playground (Debug Mode)
+            </div>
+          </Button>
+        </div>
+      )}
       <WhatsAppChatModal
         isOpen={showPlaygroundDialog}
         onClose={handleClosePlayground}

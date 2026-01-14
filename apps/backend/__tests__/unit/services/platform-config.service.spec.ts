@@ -68,6 +68,17 @@ describe("PlatformConfigService", () => {
       updatedAt: new Date(),
     },
     {
+      id: "3b",
+      key: "WIDGET_MESSAGE",
+      type: "PRICE" as const,
+      value: "0.05",
+      originalValue: null,
+      description: "Cost per widget message",
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
       id: "4",
       key: "canLogin",
       type: "FLAG" as const,
@@ -230,6 +241,10 @@ describe("PlatformConfigService", () => {
       })
       expect(config.prices.MESSAGE).toEqual({
         current: 0.1,
+        original: null,
+      })
+      expect(config.prices.WIDGET_MESSAGE).toEqual({
+        current: 0.05,
         original: null,
       })
 

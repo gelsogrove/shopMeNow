@@ -689,9 +689,7 @@ export class InvoiceService {
 
     const subtotalRaw =
       Number(subscriptionAmount) +
-      consumption.totalConsumption +
-      creditDebt +
-      adjustmentsAmount -
+      adjustmentsAmount +
       rechargesAmount
     const subtotalAmount = roundMoney(subtotalRaw)
     const taxableBase = Math.max(subtotalAmount, 0)

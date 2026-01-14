@@ -14,8 +14,16 @@
  */
 
 import { Request, Response } from "express"
+import { prisma } from "@echatbot/database"
 import { platformConfigService } from "../../../services/platform-config.service"
 import logger from "../../../utils/logger"
+
+const WIDGET_WORKSPACE_ID_REGEX = /"workspaceId"\s*:\s*["']([^"']+)["']|workspaceId\s*:\s*["']([^"']+)["']/
+
+const extractWidgetWorkspaceId = (code: string): string | null => {
+  const match = code.match(WIDGET_WORKSPACE_ID_REGEX)
+  return match?.[1] ?? match?.[2] ?? null
+}
 
 export class PlatformConfigController {
   /**
@@ -211,11 +219,51 @@ export class PlatformConfigController {
    */
   async getWidgetCode(_req: Request, res: Response): Promise<Response> {
     try {
-      const code = await platformConfigService.getWidgetChatbotCode()
+      const [code, showWidgetChatbot] = await Promise.all([
+        platformConfigService.getWidgetChatbotCode(),
+        platformConfigService.getFlag("showWidgetChatbot"),
+      ])
+      const workspaceId = code ? extractWidgetWorkspaceId(code) : null
+      let isValid = true
+      let validationError: string | null = null
+
+      if (code && !workspaceId) {
+        isValid = false
+        validationError = "Widget code must include a workspaceId"
+      }
+
+      if (code && workspaceId) {
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: {
+            id: true,
+            isActive: true,
+            sellsProductsAndServices: true,
+            debugMode: true,
+          },
+        })
+
+        if (!workspace || !workspace.isActive) {
+          isValid = false
+          validationError = "Widget workspace not found or inactive"
+        } else if (workspace.debugMode) {
+          isValid = false
+          validationError = "Widget disabled for debug workspaces"
+        } else if (workspace.sellsProductsAndServices) {
+          isValid = false
+          validationError = "Widget must target an informational workspace"
+        }
+      }
 
       return res.status(200).json({
         success: true,
-        data: { code },
+        data: {
+          code,
+          isValid,
+          workspaceId,
+          showWidgetChatbot,
+          error: validationError,
+        },
       })
     } catch (error) {
       logger.error("[PlatformConfigController] Error getting widget code:", error)
@@ -239,6 +287,35 @@ export class PlatformConfigController {
           success: false,
           error: "Widget code is required",
         })
+      }
+
+      if (code !== "") {
+        const workspaceId = extractWidgetWorkspaceId(code)
+        if (!workspaceId) {
+          return res.status(400).json({
+            success: false,
+            error: "Widget code must include a workspaceId",
+          })
+        }
+
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { id: true, isActive: true, sellsProductsAndServices: true },
+        })
+
+        if (!workspace || !workspace.isActive) {
+          return res.status(400).json({
+            success: false,
+            error: "Widget workspace not found or inactive",
+          })
+        }
+
+        if (workspace.sellsProductsAndServices) {
+          return res.status(400).json({
+            success: false,
+            error: "Widget must target an informational workspace",
+          })
+        }
       }
 
       await platformConfigService.saveWidgetChatbotCode(code)

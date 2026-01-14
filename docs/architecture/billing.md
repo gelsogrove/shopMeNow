@@ -21,7 +21,7 @@ eChatbot uses **TWO INDEPENDENT BILLING SYSTEMS**:
 
 2. **💰 Credit Balance** (Pay-as-you-go)
    - **What**: Prepaid credits for WhatsApp operations
-   - **Used For**: Messages (€0.10), Orders (€1.50), Push campaigns (€1.00)
+   - **Used For**: WhatsApp messages ($0.10), widget messages ($0.05), orders ($1.50), push campaigns ($1.00)
    - **Recharged**: Manually via "Ricarica" button ($10-$1000)
    - **Shared**: Across all owner's workspaces
    - **Field**: `user.creditBalance`
@@ -124,7 +124,8 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 
 | Operation | Cost | Enum Key | When Charged |
 |-----------|------|----------|--------------|
-| WhatsApp Message | €0.10 | `MESSAGE` | After successful WhatsApp delivery |
+| WhatsApp Message | $0.10 | `MESSAGE` | After successful WhatsApp delivery |
+| Widget Message | $0.05 | `MESSAGE` | After successful widget response |
 | Welcome Message | €1.00 | `WELCOME_MESSAGE` | On new customer creation |
 | New Order | €1.50 | `NEW_ORDER` | On order creation |
 | New Customer | €1.00 | `NEW_CUSTOMER` | On registration |
@@ -188,7 +189,7 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 │  ┌─────────────────────────────────────┐                        │
 │  │ GATE 2: Has Sufficient Credit?      │                        │
 │  │ billingService.checkCredit()        │                        │
-│  │ Cost: €0.15 (MESSAGE)               │                        │
+│  │ Cost: $0.10 (MESSAGE)               │                        │
 │  └───────────────┬─────────────────────┘                        │
 │         ↓ YES              ↓ NO                                  │
 │         │           ┌──────────────────┐                        │

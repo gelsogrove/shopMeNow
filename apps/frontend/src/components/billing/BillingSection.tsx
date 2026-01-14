@@ -193,6 +193,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     PREMIUM_MONTHLY: getPriceWithOriginal("PREMIUM_MONTHLY"),
     ENTERPRISE_MONTHLY: getPriceWithOriginal("ENTERPRISE_MONTHLY"),
     MESSAGE: getPriceWithOriginal("MESSAGE"),
+    WIDGET_MESSAGE: getPriceWithOriginal("WIDGET_MESSAGE"),
     PUSH_CAMPAIGN: getPriceWithOriginal("PUSH_CAMPAIGN"),
   }
   const missingPriceKeys = Object.entries(requiredPlanPrices)
@@ -766,23 +767,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <span className="text-sm text-muted-foreground">
                   Available Credit
                 </span>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="font-semibold mb-1">💰 Credit Balance</p>
-                      <p className="text-xs">
-                        Prepaid credits used ONLY for WhatsApp operations:
-                        Messages ($0.10), Orders ($1.76), Push campaigns ($1.00).
-                        Recharged manually via "Recharge Credit" button.
-                        <br /><br />
-                        <strong>Note:</strong> Separate from monthly subscription fee.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
                 {billing.creditBalance < limits.lowBalanceThreshold && (
                   <Badge variant="destructive" className="text-xs">
                     <AlertTriangle className="h-3 w-3 mr-1" />
@@ -813,22 +797,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">Subscription {planConfig.displayName}:</span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <p className="font-semibold mb-1">💳 Monthly Subscription</p>
-                          <p className="text-xs">
-                            Fixed monthly fee charged externally (PayPal/Stripe) on the 1st of each month.
-                            Covers platform access, features, and usage limits.
-                            <br /><br />
-                            <strong>Note:</strong> Separate from credit balance (used only for WhatsApp messages).
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
                   </div>
                   <span className="font-medium text-emerald-600">
                     {formatUsd(planConfig.monthlyFee)}
@@ -1144,8 +1112,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     Choose the plan that best suits your needs. The subscription will start in 30 days.
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    {requiredPlanPrices.MESSAGE && requiredPlanPrices.PUSH_CAMPAIGN
-                      ? `💡 Usage costs are extra: $${requiredPlanPrices.MESSAGE.current.toFixed(2)} per message + $${requiredPlanPrices.PUSH_CAMPAIGN.current.toFixed(2)} per WhatsApp campaign message`
+                    {requiredPlanPrices.MESSAGE && requiredPlanPrices.WIDGET_MESSAGE && requiredPlanPrices.PUSH_CAMPAIGN
+                      ? `💡 Usage costs are extra: $${requiredPlanPrices.MESSAGE.current.toFixed(2)} per WhatsApp message + $${requiredPlanPrices.WIDGET_MESSAGE.current.toFixed(2)} per widget message + $${requiredPlanPrices.PUSH_CAMPAIGN.current.toFixed(2)} per WhatsApp campaign message`
                       : "⚠️ Pricing configuration missing. Plan changes are disabled."}
                   </span>
                 </DialogDescription>
@@ -1349,8 +1317,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   // Include transactions with amount != 0 OR plan change transactions
                   const filteredTx = transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE" || tx.type === "INVOICE_PAID")
                   
-                  // Types that should be aggregated by day AND channel - only 2 types!
-                  const AGGREGATABLE_TYPES = ["MESSAGE", "PUSH_CAMPAIGN"]
+                  // Types that should be aggregated by day AND channel
+                  const AGGREGATABLE_TYPES = ["MESSAGE", "PUSH_NOTIFICATION"]
                   
                   const aggregateTransactionsByDay = (txList: Transaction[]) => {
                     // Group by type+day+channel: { "MESSAGE-2025-11-27-workspace123": {...} }
@@ -1397,7 +1365,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       switch (type) {
                         case "MESSAGE":
                           return `${count} WhatsApp message${count > 1 ? 's' : ''}${channelSuffix}`
-                        case "PUSH_CAMPAIGN":
+                        case "PUSH_NOTIFICATION":
                           return `${count} Push notification${count > 1 ? 's' : ''}${channelSuffix}`
                         default:
                           return `${count} ${type}${count > 1 ? 's' : ''}${channelSuffix}`
@@ -1416,10 +1384,18 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       workspaceName: data.workspaceName,
                     }))
                     
-                    // Combine and sort by date
-                    return [...otherTransactions, ...aggregatedTransactions].sort(
-                      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-                    )
+                    // Combine and sort by date, with MONTHLY_FEE invoices always last
+                    return [...otherTransactions, ...aggregatedTransactions].sort((a, b) => {
+                      // Monthly plan invoices (MONTHLY_FEE, UPGRADE_FEE, INVOICE_PAID) always last
+                      const aIsInvoice = a.type === 'MONTHLY_FEE' || a.type === 'UPGRADE_FEE' || a.type === 'INVOICE_PAID'
+                      const bIsInvoice = b.type === 'MONTHLY_FEE' || b.type === 'UPGRADE_FEE' || b.type === 'INVOICE_PAID'
+                      
+                      if (aIsInvoice && !bIsInvoice) return 1  // a goes after b
+                      if (!aIsInvoice && bIsInvoice) return -1 // a goes before b
+                      
+                      // Both invoices or both non-invoices: sort by date descending
+                      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    })
                   }
                   
                   const grouped = filteredTx.reduce((acc, tx) => {
@@ -1474,14 +1450,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                                   {new Date(tx.createdAt).toLocaleDateString("en-US", {
                                     day: "2-digit",
                                     month: "short",
-                                  })}{" "}
-                                  <span className="text-muted-foreground">
-                                    {new Date(tx.createdAt).toLocaleTimeString("en-US", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      hour12: false,
-                                    })}
-                                  </span>
+                                  })}
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="gap-1 text-xs">

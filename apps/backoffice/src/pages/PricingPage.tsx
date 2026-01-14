@@ -159,6 +159,11 @@ export function PricingPage() {
   const planPrices = prices.filter(p => p.key.includes('MONTHLY'))
   const usagePrices = prices.filter(p => !p.key.includes('MONTHLY'))
 
+  // Group limits by category
+  const clientLimits = limits.filter(l => l.key.includes('_CLIENTS'))
+  const channelLimits = limits.filter(l => l.key.includes('_CHANNELS'))
+  const teamMemberLimits = limits.filter(l => l.key.includes('_TEAM_MEMBERS'))
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -360,65 +365,207 @@ export function PricingPage() {
           <CardTitle>Plan Limits</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-3 font-semibold">Limit</th>
-                  <th className="pb-3 font-semibold">Value</th>
-                  <th className="pb-3 font-semibold">Description</th>
-                  <th className="pb-3 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {limits.map((limit) => (
-                  <tr key={limit.key} className="border-b">
-                    <td className="py-4 font-medium">{limit.key}</td>
-                    <td className="py-4">
-                      {limit.isEditing ? (
-                        <Input
-                          type="number"
-                          value={limit.editValue}
-                          onChange={(e) => setLimits(prev => prev.map(l => 
-                            l.key === limit.key ? { ...l, editValue: e.target.value } : l
-                          ))}
-                          className="w-24"
-                        />
-                      ) : (
-                        <span className="text-lg font-semibold">
-                          {limit.value === 999999 ? '∞' : limit.value}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {limit.description}
-                    </td>
-                    <td className="py-4 text-right">
-                      {limit.isEditing ? (
-                        <div className="flex gap-2 justify-end">
-                          {isSaving === limit.key ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <>
-                              <Button size="sm" onClick={() => saveLimit(limit.key)}>
-                                <Save className="h-4 w-4" />
+          <div className="space-y-8">
+            {/* Client Limits */}
+            {clientLimits.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Maximum Clients per Plan</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-3 font-semibold">Limit</th>
+                        <th className="pb-3 font-semibold">Value</th>
+                        <th className="pb-3 font-semibold">Description</th>
+                        <th className="pb-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientLimits.map((limit) => (
+                        <tr key={limit.key} className="border-b">
+                          <td className="py-4 font-medium">{limit.key}</td>
+                          <td className="py-4">
+                            {limit.isEditing ? (
+                              <Input
+                                type="number"
+                                value={limit.editValue}
+                                onChange={(e) => setLimits(prev => prev.map(l => 
+                                  l.key === limit.key ? { ...l, editValue: e.target.value } : l
+                                ))}
+                                className="w-24"
+                              />
+                            ) : (
+                              <span className="text-lg font-semibold">
+                                {limit.value === 999999 ? '∞' : limit.value}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 text-sm text-gray-500 max-w-xs truncate">
+                            {limit.description}
+                          </td>
+                          <td className="py-4 text-right">
+                            {limit.isEditing ? (
+                              <div className="flex gap-2 justify-end">
+                                {isSaving === limit.key ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Button size="sm" onClick={() => saveLimit(limit.key)}>
+                                      <Save className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => cancelEditing(limit.key, 'limit')}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="ghost" onClick={() => startEditing(limit.key, 'limit')}>
+                                <Edit className="h-4 w-4" />
                               </Button>
-                              <Button size="sm" variant="ghost" onClick={() => cancelEditing(limit.key, 'limit')}>
-                                <X className="h-4 w-4" />
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* WhatsApp Channels Limits */}
+            {channelLimits.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Maximum WhatsApp Channels per Plan</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-3 font-semibold">Limit</th>
+                        <th className="pb-3 font-semibold">Value</th>
+                        <th className="pb-3 font-semibold">Description</th>
+                        <th className="pb-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {channelLimits.map((limit) => (
+                        <tr key={limit.key} className="border-b">
+                          <td className="py-4 font-medium">{limit.key}</td>
+                          <td className="py-4">
+                            {limit.isEditing ? (
+                              <Input
+                                type="number"
+                                value={limit.editValue}
+                                onChange={(e) => setLimits(prev => prev.map(l => 
+                                  l.key === limit.key ? { ...l, editValue: e.target.value } : l
+                                ))}
+                                className="w-24"
+                              />
+                            ) : (
+                              <span className="text-lg font-semibold">
+                                {limit.value === 999999 ? '∞' : limit.value}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 text-sm text-gray-500 max-w-xs truncate">
+                            {limit.description}
+                          </td>
+                          <td className="py-4 text-right">
+                            {limit.isEditing ? (
+                              <div className="flex gap-2 justify-end">
+                                {isSaving === limit.key ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Button size="sm" onClick={() => saveLimit(limit.key)}>
+                                      <Save className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => cancelEditing(limit.key, 'limit')}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="ghost" onClick={() => startEditing(limit.key, 'limit')}>
+                                <Edit className="h-4 w-4" />
                               </Button>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <Button size="sm" variant="ghost" onClick={() => startEditing(limit.key, 'limit')}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Team Members Limits */}
+            {teamMemberLimits.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Maximum Team Members per Plan</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b text-left">
+                        <th className="pb-3 font-semibold">Limit</th>
+                        <th className="pb-3 font-semibold">Value</th>
+                        <th className="pb-3 font-semibold">Description</th>
+                        <th className="pb-3 font-semibold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teamMemberLimits.map((limit) => (
+                        <tr key={limit.key} className="border-b">
+                          <td className="py-4 font-medium">{limit.key}</td>
+                          <td className="py-4">
+                            {limit.isEditing ? (
+                              <Input
+                                type="number"
+                                value={limit.editValue}
+                                onChange={(e) => setLimits(prev => prev.map(l => 
+                                  l.key === limit.key ? { ...l, editValue: e.target.value } : l
+                                ))}
+                                className="w-24"
+                              />
+                            ) : (
+                              <span className="text-lg font-semibold">
+                                {limit.value === 999999 ? '∞' : limit.value}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 text-sm text-gray-500 max-w-xs truncate">
+                            {limit.description}
+                          </td>
+                          <td className="py-4 text-right">
+                            {limit.isEditing ? (
+                              <div className="flex gap-2 justify-end">
+                                {isSaving === limit.key ? (
+                                  <Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Button size="sm" onClick={() => saveLimit(limit.key)}>
+                                      <Save className="h-4 w-4" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => cancelEditing(limit.key, 'limit')}>
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <Button size="sm" variant="ghost" onClick={() => startEditing(limit.key, 'limit')}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

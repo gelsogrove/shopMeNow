@@ -634,32 +634,44 @@ export class ChatController {
         // Continue - message is saved even if debug logging fails
       }
 
-      // 📤 STEP 4: Track usage and deduct credit
+      // 📤 STEP 4: Track usage and deduct credit (ONLY if debugMode=false)
       try {
-        // Track usage in Usage table
-        await usageService.trackUsage({
-          workspaceId: workspaceId,
-          clientId: chatSession.customer.id,
-          price: config.llm.defaultPrice,
+        // Check if workspace is in debug mode
+        const workspace = await this.prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { debugMode: true },
         })
-        logger.info(
-          `[CHAT-SEND] 💰 Usage tracked for operator response: $${config.llm.defaultPrice}`
-        )
-        
-        // 💰 FIX #4: Also deduct from workspace creditBalance
-        const billingService = new SubscriptionBillingService(this.prisma)
-        const deductResult = await billingService.deductMessageCredit(
-          workspaceId,
-          savedMessage.id
-        )
-        if (deductResult.success) {
+
+        if (workspace?.debugMode === true) {
           logger.info(
-            `[CHAT-SEND] 💰 Credit deducted - New balance: $${deductResult.newBalance}`
+            `[CHAT-SEND] 🆓 DEBUG MODE: Skipping billing for Payload message (free)`
           )
         } else {
-          logger.warn(
-            `[CHAT-SEND] ⚠️ Credit deduction failed: ${deductResult.error}`
+          // Track usage in Usage table
+          await usageService.trackUsage({
+            workspaceId: workspaceId,
+            clientId: chatSession.customer.id,
+            price: config.llm.defaultPrice,
+          })
+          logger.info(
+            `[CHAT-SEND] 💰 Usage tracked for operator response: $${config.llm.defaultPrice}`
           )
+          
+          // 💰 FIX #4: Also deduct from workspace creditBalance
+          const billingService = new SubscriptionBillingService(this.prisma)
+          const deductResult = await billingService.deductMessageCredit(
+            workspaceId,
+            savedMessage.id
+          )
+          if (deductResult.success) {
+            logger.info(
+              `[CHAT-SEND] 💰 Credit deducted - New balance: $${deductResult.newBalance}`
+            )
+          } else {
+            logger.warn(
+              `[CHAT-SEND] ⚠️ Credit deduction failed: ${deductResult.error}`
+            )
+          }
         }
       } catch (usageError) {
         logger.warn(
@@ -669,23 +681,26 @@ export class ChatController {
         // Continue - message is saved even if usage tracking fails
       }
 
-      // Try to send the message via WhatsApp (use finalMessage after safety check)
+      // 📤 Add to WhatsApp Queue (instead of sending directly)
+      // This ensures messages go through Security Agent and respect Debug Mode
       try {
-        await this.sendWhatsAppMessage(
-          chatSession.customer.phone || "",
-          finalMessage, // Use validated/translated message
-          workspaceId
-        )
-        logger.info(`[CHAT-SEND] ✅ WhatsApp message sent successfully`)
+        await this.whatsappQueueService.enqueue({
+          workspaceId,
+          customerId: chatSession.customerId,
+          phoneNumber: chatSession.customer.phone || "",
+          messageContent: finalMessage, // Use validated/translated message
+          conversationMessageId: savedMessage.id,
+        })
+        logger.info(`[CHAT-SEND] ✅ Message added to WhatsApp queue`)
         
-        // 🆕 ADD WhatsApp debug step
+        // 🆕 ADD WhatsApp queue debug step
         debugSteps.push({
           type: "function_call",
           agent: "📤 Add to WhatsApp Queue",
           model: "N/A",
           temperature: 0,
           timestamp: new Date().toISOString(),
-          functionName: "sendWhatsAppMessage",
+          functionName: "enqueueWhatsAppMessage",
           input: {
             phoneNumber: chatSession.customer.phone || "",
             message: finalMessage,
@@ -695,8 +710,8 @@ export class ChatController {
           output: {
             success: true,
             messageId: savedMessage.id,
-            queueStatus: "sent",
-            executionTimeMs: 20,
+            queueStatus: "pending",
+            executionTimeMs: 10,
           },
           tokenUsage: {
             promptTokens: 0,
@@ -704,14 +719,14 @@ export class ChatController {
             totalTokens: 0,
           },
         })
-      } catch (whatsappError) {
+      } catch (queueError) {
         logger.warn(
-          `[CHAT-SEND] ⚠️ WhatsApp sending failed (message still saved):`,
-          whatsappError.message
+          `[CHAT-SEND] ⚠️ Failed to add message to queue (message still saved):`,
+          queueError.message
         )
-        // Continue - message is saved even if WhatsApp fails
+        // Continue - message is saved even if queue fails
         
-        // 🆕 ADD WhatsApp error debug step
+        // 🆕 ADD WhatsApp queue error debug step
         debugSteps.push({
           type: "function_call",
           agent: "📤 Add to WhatsApp Queue",
@@ -729,7 +744,7 @@ export class ChatController {
             success: false,
             messageId: savedMessage.id,
             queueStatus: "failed",
-            error: whatsappError.message,
+            error: queueError instanceof Error ? queueError.message : "Unknown error",
             executionTimeMs: 20,
           },
           tokenUsage: {
@@ -851,67 +866,7 @@ export class ChatController {
     }
   }
 
-  /**
-   * Send a WhatsApp message (copied from WhatsAppController)
-   */
-  private async sendWhatsAppMessage(
-    phoneNumber: string,
-    message: string,
-    workspaceId: string
-  ): Promise<void> {
-    try {
-      logger.info(
-        `[WHATSAPP-SEND] 📱 Sending message to ${phoneNumber}: "${message}"`
-      )
-
-      // Get workspace WhatsApp settings
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: {
-          whatsappApiKey: true,
-          whatsappPhoneNumber: true,
-        },
-      })
-
-      if (!workspace || !workspace.whatsappApiKey) {
-        throw new Error(
-          `WhatsApp settings not found for workspace ${workspaceId}`
-        )
-      }
-
-      // Send message via WhatsApp Business API
-      const whatsappApiUrl = `https://graph.facebook.com/v18.0/${workspace.whatsappPhoneNumber}/messages`
-
-      const whatsappPayload = {
-        messaging_product: "whatsapp",
-        to: phoneNumber.replace("+", ""),
-        type: "text",
-        text: {
-          body: message,
-        },
-      }
-
-      const response = await fetch(whatsappApiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${workspace.whatsappApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(whatsappPayload),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.text()
-        throw new Error(
-          `WhatsApp API error: ${response.status} ${response.statusText} - ${errorData}`
-        )
-      }
-
-      const responseData = await response.json()
-      logger.info(`[WHATSAPP-SEND] ✅ Message sent successfully:`, responseData)
-    } catch (error) {
-      logger.error(`[WHATSAPP-SEND] ❌ Error sending WhatsApp message:`, error)
-      throw error
-    }
-  }
+  // 🗑️ REMOVED: sendWhatsAppMessage method (dead code)
+  // WhatsApp messages now go through whatsappQueueService.enqueue()
+  // This ensures: 1) Debug Mode is respected, 2) Security Agent validates, 3) Billing is tracked
 }

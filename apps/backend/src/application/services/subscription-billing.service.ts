@@ -18,6 +18,7 @@
  */
 
 import { PlanType, PrismaClient, TransactionType, SubscriptionStatus } from "@echatbot/database"
+import { PricingRepository } from "../../repositories/pricing.repository"
 import {
   BillingInfo,
   PlanLimits,
@@ -66,10 +67,12 @@ export interface BillingOverview {
 
 export class SubscriptionBillingService {
   private repository: SubscriptionBillingRepository
+  private pricingRepository: PricingRepository
   private readonly PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
 
   constructor(private prisma: PrismaClient) {
     this.repository = new SubscriptionBillingRepository(prisma)
+    this.pricingRepository = new PricingRepository(prisma)
   }
 
   // ============================================================================
@@ -462,6 +465,53 @@ export class SubscriptionBillingService {
 
     if (result.success) {
       await this.checkAndNotifyOwnerLowBalance(userId, result.newBalance, limits.lowBalanceThreshold)
+    }
+
+    return result
+  }
+
+  /**
+   * Deduct credit for a widget message from owner
+   * Uses pricing config key WIDGET_MESSAGE (not plan messageCost).
+   */
+  async deductOwnerWidgetMessageCredit(
+    userId: string,
+    workspaceId?: string,
+    messageId?: string
+  ): Promise<{ success: boolean; newBalance: number; error?: string }> {
+    const billing = await this.repository.getOwnerBilling(userId)
+    if (!billing) {
+      return { success: false, newBalance: 0, error: "User not found" }
+    }
+
+    const limits = await this.repository.getPlanConfiguration(billing.planType)
+    if (!limits) {
+      return {
+        success: false,
+        newBalance: 0,
+        error: "Plan configuration not found",
+      }
+    }
+
+    const widgetCost =
+      (await this.pricingRepository.getValue("WIDGET_MESSAGE")) ?? 0.05
+
+    const result = await this.repository.deductCredit(
+      userId,
+      widgetCost,
+      TransactionType.MESSAGE,
+      "Widget message",
+      workspaceId,
+      messageId,
+      "widget_message"
+    )
+
+    if (result.success) {
+      await this.checkAndNotifyOwnerLowBalance(
+        userId,
+        result.newBalance,
+        limits.lowBalanceThreshold
+      )
     }
 
     return result

@@ -1,6 +1,6 @@
 /**
  * Unit tests for initialFAQs
- * Verifies that the correct 4 FAQs are created for new workspaces
+ * Verifies that the correct FAQs are created for new workspaces
  */
 
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
@@ -9,9 +9,9 @@ describe("initialFAQs", () => {
   const testWorkspaceId = "test-workspace-123"
 
   describe("structure", () => {
-    it("should return exactly 12 FAQs", () => {
+    it("should return exactly 21 FAQs (12 initial + 9 campaign FAQs)", () => {
       const faqs = initialFAQs(testWorkspaceId)
-      expect(faqs).toHaveLength(12)
+      expect(faqs).toHaveLength(21)
     })
 
     it("should include workspaceId in all FAQs", () => {

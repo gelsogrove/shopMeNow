@@ -197,6 +197,7 @@ export class WhatsAppWebhookController {
       let messageText: string
       let whatsappMessageId: string
       let workspaceId: string | undefined
+      let isPlayground: boolean = false // 🧪 Playground mode flag
 
       // Check if it's WhatsApp API format
       const entry = data.entry?.[0]
@@ -222,12 +223,14 @@ export class WhatsAppWebhookController {
         messageText = message.text?.body || ""
         whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
+        isPlayground = value.isPlayground === true // 🧪 Extract playground flag
 
         logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {
           from: phoneNumber,
           messageLength: messageText.length,
           whatsappMessageId,
           workspaceId,
+          isPlayground, // 🧪 Log playground mode
         })
       } else if (data.message && data.phoneNumber) {
         // Frontend simulator format (standard)
@@ -235,6 +238,7 @@ export class WhatsAppWebhookController {
         messageText = data.message
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from standard format
+        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
 
         logger.info(
           "[WEBHOOK] 📨 Frontend simulator format (standard) detected",
@@ -242,6 +246,7 @@ export class WhatsAppWebhookController {
             from: phoneNumber,
             messageLength: messageText.length,
             workspaceId: data.workspaceId,
+            isPlayground, // 🧪 Log playground mode
           }
         )
       } else if (extractedMessage && data.phoneNumber) {
@@ -250,11 +255,13 @@ export class WhatsAppWebhookController {
         messageText = extractedMessage
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from weird format
+        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
 
         logger.info("[WEBHOOK] 📨 Frontend simulator format (weird) detected", {
           from: phoneNumber,
           messageLength: messageText.length,
           workspaceId: data.workspaceId,
+          isPlayground, // 🧪 Log playground mode
         })
       } else {
         // Not a message event (could be status update, etc.)
@@ -286,10 +293,27 @@ export class WhatsAppWebhookController {
               isDelete: false,
               isActive: true,
             },
-            select: { id: true, name: true }
+            select: { 
+              id: true, 
+              name: true,
+              ownerId: true,
+              owner: {
+                select: { status: true }
+              }
+            }
           })
           
           if (workspace) {
+            // 🚫 OWNER STATUS CHECK: Block if owner is INACTIVE
+            if (workspace.owner?.status === "INACTIVE") {
+              logger.warn("[WEBHOOK] ❌ Message blocked: Owner inactive", {
+                workspaceId: workspace.id,
+                ownerId: workspace.ownerId,
+              })
+              res.status(200).json({ success: true, message: "Message received" })
+              return
+            }
+            
             workspaceId = workspace.id
             logger.info(
               "[WEBHOOK] ✅ Found workspace from channel phone:",
@@ -470,12 +494,26 @@ export class WhatsAppWebhookController {
             id: true,
             name: true,
             welcomeMessage: true,
+            ownerId: true,
+            owner: {
+              select: { status: true }
+            }
           },
         })
 
         if (!workspace) {
           logger.error("[WEBHOOK] ⚠️ Workspace not found", { workspaceId })
           res.status(404).json({ error: "Workspace not found" })
+          return
+        }
+
+        // 🚫 OWNER STATUS CHECK: Block if owner is INACTIVE
+        if (workspace.owner?.status === "INACTIVE") {
+          logger.warn("[WEBHOOK] ❌ Message blocked: Owner inactive", {
+            workspaceId,
+            ownerId: workspace.ownerId,
+          })
+          res.status(200).json({ success: true, message: "Message received" })
           return
         }
 
@@ -1010,8 +1048,24 @@ export class WhatsAppWebhookController {
           
           const workspace = await prisma.workspace.findUnique({
             where: { id: customer.workspaceId },
-            select: { wipMessage: true },
+            select: { 
+              wipMessage: true,
+              ownerId: true,
+              owner: {
+                select: { status: true }
+              }
+            },
           })
+
+          // 🚫 OWNER STATUS CHECK: Block if owner is INACTIVE
+          if (workspace?.owner?.status === "INACTIVE") {
+            logger.warn("[WEBHOOK] ❌ WIP message blocked: Owner inactive", {
+              workspaceId: customer.workspaceId,
+              ownerId: workspace.ownerId,
+            })
+            res.status(200).json({ success: true, message: "Message received" })
+            return
+          }
 
           const wipMessages = (workspace?.wipMessage as any) || {}
           const customerLanguage = (customer.language || "en").toLowerCase()
@@ -1197,6 +1251,7 @@ export class WhatsAppWebhookController {
         customerLanguage: customer.language || "it",
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
+        isPlayground, // 🧪 Pass playground flag
       })
 
       logger.info("[WEBHOOK] ✅ ChatEngineService completed", {
@@ -1253,6 +1308,7 @@ export class WhatsAppWebhookController {
           phoneNumber: customer.phone,
           messageContent: routerResult.response,
           conversationMessageId: assistantMessage?.id,
+          isPlayground, // 🧪 Pass playground flag
         })
 
         logger.info("[WEBHOOK] ✅ Response queued for WhatsApp delivery", {

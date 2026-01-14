@@ -8,15 +8,24 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Send, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ChatSurface } from "@/components/chat/ChatSurface"
+import {
+  getOrCreateVisitorId,
+  loadWidgetMessages,
+  loadWidgetSessionId,
+  saveWidgetMessages,
+  saveWidgetSessionId,
+  sendWidgetMessage,
+  type WidgetStoredMessage,
+} from "@/components/chat/adapters/widgetAdapter"
 
 interface Message {
   role: "user" | "bot"
   content: string
-  timestamp?: Date
+  timestamp?: string
 }
 
 interface ChatWidgetProps {
@@ -26,13 +35,11 @@ interface ChatWidgetProps {
   logoUrl?: string
   title?: string
   placeholder?: string
+  primaryColor?: string
+  language?: string
+  apiUrl?: string
+  onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
-}
-
-const STORAGE_KEYS = {
-  VISITOR_ID: "echatbot-visitor-id",
-  SESSION_ID: "echatbot-session-id",
-  MESSAGES: "echatbot-messages",
 }
 
 // Determine API URL based on environment
@@ -49,6 +56,7 @@ const getApiUrl = () => {
 }
 
 const DEFAULT_API_URL = getApiUrl()
+const DEFAULT_PRIMARY_COLOR = "#22c55e"
 
 export function ChatWidget({
   workspaceId,
@@ -57,6 +65,10 @@ export function ChatWidget({
   logoUrl,
   title = "Chat with us 💬",
   placeholder = "Type a message...",
+  primaryColor = DEFAULT_PRIMARY_COLOR,
+  language,
+  apiUrl,
+  onOpenChange,
   onConvert,
 }: ChatWidgetProps) {
   console.log("🚀 ChatWidget MOUNTED! workspaceId prop:", workspaceId)
@@ -76,42 +88,48 @@ export function ChatWidget({
 
   // Initialize visitor ID
   useEffect(() => {
-    let id = localStorage.getItem(STORAGE_KEYS.VISITOR_ID)
-    if (!id) {
-      id = "webvisitor-" + Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
-      localStorage.setItem(STORAGE_KEYS.VISITOR_ID, id)
-      console.log("🆕 New visitor ID created:", id)
-    } else {
-      console.log("♻️ Existing visitor ID loaded:", id)
+    if (!resolvedWorkspaceId) {
+      return
     }
+
+    localStorage.setItem("echatbot-last-workspace-id", resolvedWorkspaceId)
+
+    const id = getOrCreateVisitorId(localStorage, resolvedWorkspaceId)
     setVisitorId(id)
 
     // Load stored messages
-    const stored = localStorage.getItem(STORAGE_KEYS.MESSAGES)
-    if (stored) {
-      try {
-        const messages = JSON.parse(stored)
-        setMessages(messages)
-        console.log("📨 Loaded", messages.length, "messages from localStorage")
-      } catch (e) {
-        console.error("Failed to load messages:", e)
-      }
+    const storedMessages = loadWidgetMessages(localStorage, resolvedWorkspaceId)
+    if (storedMessages.length > 0) {
+      setMessages(storedMessages)
+      console.log("📨 Loaded", storedMessages.length, "messages from localStorage")
     } else {
       console.log("📭 No messages in localStorage yet")
     }
 
     // Load session ID
-    const session = localStorage.getItem(STORAGE_KEYS.SESSION_ID)
+    const session = loadWidgetSessionId(localStorage, resolvedWorkspaceId)
     if (session) {
       setSessionId(session)
       console.log("📋 Loaded session ID:", session)
     }
-  }, [])
+  }, [resolvedWorkspaceId])
 
   // Auto-scroll to latest message
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (typeof messagesEndRef.current?.scrollIntoView === "function") {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
   }, [messages])
+
+  // Ensure widget opens at the latest message (even if no new messages were added)
+  useEffect(() => {
+    if (!isOpen) return
+    requestAnimationFrame(() => {
+      if (typeof messagesEndRef.current?.scrollIntoView === "function") {
+        messagesEndRef.current.scrollIntoView({ behavior: "auto" })
+      }
+    })
+  }, [isOpen])
 
   /**
    * Send message to API
@@ -124,50 +142,44 @@ export function ChatWidget({
     const userMessage: Message = {
       role: "user",
       content: message,
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     }
     const updatedMessages = [...messages, userMessage]
     setMessages(updatedMessages)
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(updatedMessages))
+    if (resolvedWorkspaceId) {
+      saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
+    }
     console.log("💾 Saved message to localStorage. Total messages:", updatedMessages.length)
 
     setInputValue("")
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${DEFAULT_API_URL}/widget/message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId: resolvedWorkspaceId,
-          visitorId,
-          message,
-          customerLanguage: navigator.language || "it",
-        }),
+      const data = await sendWidgetMessage({
+        apiUrl: apiUrl || DEFAULT_API_URL,
+        workspaceId: resolvedWorkspaceId,
+        visitorId,
+        message,
+        language: language || navigator.language || "it",
+        sessionId,
       })
 
-      if (!response.ok) throw new Error("API Error")
+      // Save session ID if provided
+      if (data.sessionId && resolvedWorkspaceId) {
+        setSessionId(data.sessionId)
+        saveWidgetSessionId(localStorage, resolvedWorkspaceId, data.sessionId)
+      }
 
-      const data = await response.json()
-
-      if (data.success && data.response) {
-        // Save session ID if provided
-        if (data.sessionId) {
-          setSessionId(data.sessionId)
-          localStorage.setItem(STORAGE_KEYS.SESSION_ID, data.sessionId)
-        }
-
-        // Add bot message
-        const botMessage: Message = {
-          role: "bot",
-          content: data.response,
-          timestamp: new Date(),
-        }
-        const finalMessages = [...updatedMessages, botMessage]
-        setMessages(finalMessages)
-        localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(finalMessages))
-      } else {
-        throw new Error("No response from bot")
+      // Add bot message
+      const botMessage: Message = {
+        role: "bot",
+        content: data.response,
+        timestamp: new Date().toISOString(),
+      }
+      const finalMessages = [...updatedMessages, botMessage]
+      setMessages(finalMessages)
+      if (resolvedWorkspaceId) {
+        saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
       }
     } catch (error) {
       console.error("Failed to send message:", error)
@@ -175,11 +187,13 @@ export function ChatWidget({
         role: "bot",
         content:
           "Sorry, I couldn't process your message. Please try again or refresh the page.",
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       }
       const errorMessages = [...updatedMessages, errorMessage]
       setMessages(errorMessages)
-      localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(errorMessages))
+      if (resolvedWorkspaceId) {
+        saveWidgetMessages(localStorage, resolvedWorkspaceId, errorMessages)
+      }
     } finally {
       setIsLoading(false)
     }
@@ -192,11 +206,11 @@ export function ChatWidget({
     if (!visitorId) return
 
     try {
-      const response = await fetch(`${DEFAULT_API_URL}/widget/convert-visitor`, {
+      const response = await fetch(`${apiUrl || DEFAULT_API_URL}/widget/convert-visitor`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          workspaceId,
+          workspaceId: resolvedWorkspaceId,
           visitorId,
           ...customerData,
         }),
@@ -206,7 +220,10 @@ export function ChatWidget({
 
       const data = await response.json()
       if (data.success) {
-        localStorage.removeItem(STORAGE_KEYS.VISITOR_ID)
+        if (resolvedWorkspaceId) {
+          const key = `echatbot-visitor-id:${resolvedWorkspaceId}`
+          localStorage.removeItem(key)
+        }
         onConvert?.(data.customerId)
         return data.customerId
       }
@@ -224,106 +241,180 @@ export function ChatWidget({
       getVisitorId: () => visitorId,
       clearHistory: () => {
         setMessages([])
-        localStorage.removeItem(STORAGE_KEYS.MESSAGES)
+        if (resolvedWorkspaceId) {
+          const key = `echatbot-messages:${resolvedWorkspaceId}`
+          localStorage.removeItem(key)
+        }
       },
     }
     ;(window as any).eChatbotWidgetReact = widget
   }, [visitorId, messages])
 
+  const isEmbedded = typeof window !== "undefined" && window.self !== window.top
+  const defaultLogoUrl =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='0' y='4' width='64' height='44' rx='14' fill='%2322c55e'/%3E%3Cpath d='M18 48L6 62V48Z' fill='%2322c55e'/%3E%3Ccircle cx='24' cy='26' r='4' fill='%23fff'/%3E%3Ccircle cx='40' cy='26' r='4' fill='%23fff'/%3E%3C/svg%3E"
+  const resolvedLogoUrl =
+    !logoUrl || logoUrl.endsWith("/logo.png") ? defaultLogoUrl : logoUrl
   const positionClasses = {
-    "bottom-right": "bottom-6 right-6",
-    "bottom-left": "bottom-6 left-6",
-    "top-right": "top-6 right-6",
-    "top-left": "top-6 left-6",
+    "bottom-right": isEmbedded ? "bottom-2 right-2" : "bottom-6 right-6",
+    "bottom-left": isEmbedded ? "bottom-2 left-2" : "bottom-6 left-6",
+    "top-right": isEmbedded ? "top-2 right-2" : "top-6 right-6",
+    "top-left": isEmbedded ? "top-2 left-2" : "top-6 left-6",
   }
+
+  const embeddedPopupSizeClasses = isEmbedded
+    ? "w-full h-full rounded-[24px] shadow-none border-2"
+    : "w-[420px] h-[680px] rounded-3xl shadow-none border-2"
+    
+  // Generate light version of primary color for border
+  const getBorderColor = (color: string) => {
+    // Convert hex to rgba with 30% opacity for a light tint
+    if (color.startsWith('#')) {
+      const r = parseInt(color.slice(1, 3), 16)
+      const g = parseInt(color.slice(3, 5), 16)
+      const b = parseInt(color.slice(5, 7), 16)
+      return `rgba(${r}, ${g}, ${b}, 0.3)`
+    }
+    return color
+  }
+  const borderColor = getBorderColor(primaryColor)
+  
+  const embeddedButtonSizeClasses = isEmbedded ? "w-[66px] h-[66px]" : "w-[100px] h-[100px]"
+  const embeddedButtonShapeClasses = "rounded-full"
+  const embeddedButtonRingClasses = isEmbedded
+    ? "border-2 bg-transparent"
+    : "border-none bg-transparent"
 
   return (
     <>
-      {/* Widget Button */}
+      {/* Widget Button - Glassmorphism Style */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          data-widget-button
+          onClick={() => {
+            setIsOpen(true)
+            onOpenChange?.(true)
+          }}
           className={cn(
-            "fixed z-[2147483647] w-24 h-24 rounded-full",
-            "bg-transparent active:scale-90 active:rotate-6",
-            "border-none shadow-none",
-            "flex items-center justify-center transition-transform duration-200 hover:scale-105",
+            isEmbedded ? "absolute" : "fixed",
+            "z-[2147483647] rounded-full",
+            embeddedButtonSizeClasses,
+            "active:scale-95",
+            // Transparent background
+            "bg-transparent",
+            "border-none",
+            "shadow-none",
+            "group flex items-center justify-center",
+            "transition-all duration-300 ease-out",
+            "hover:scale-110",
+            "hover:bg-transparent",
             "focus:outline-none",
             positionClasses[position]
           )}
           aria-label="Open chat"
         >
-          {logoUrl ? (
-            <img src={logoUrl} alt="Chat" className="w-full h-full object-contain" />
-          ) : (
-            <span className="text-white text-2xl">💬</span>
-          )}
+          <img
+            src={resolvedLogoUrl}
+            alt="Chat"
+            className="h-full w-full rounded-full object-cover"
+          />
         </button>
       )}
 
-      {/* Widget Popup */}
+      {/* Widget Popup - Enhanced Design */}
       {isOpen && (
         <div
           className={cn(
-            "fixed z-[2147483646] flex flex-col",
-            "w-96 h-[600px] bg-white rounded-lg shadow-2xl",
-            "border border-gray-200 overflow-hidden",
-            "animate-in slide-in-from-bottom-4",
+            isEmbedded ? "absolute" : "fixed",
+            "z-[2147483646] flex flex-col",
+            "bg-white",
+            "overflow-hidden overscroll-contain isolate",
+            embeddedPopupSizeClasses,
+            "animate-in slide-in-from-bottom-4 fade-in duration-300",
             positionClasses[position]
           )}
+          style={{ borderColor }}
+          onWheel={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="bg-green-600 text-white px-6 py-4 flex items-center justify-between">
+          <div
+            className="text-white px-6 py-4 flex items-center justify-between"
+            style={{ backgroundColor: primaryColor }}
+          >
             <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-base">{title}</h2>
+              <h2 className="font-semibold text-lg">{title}</h2>
             </div>
             <button
-              onClick={() => setIsOpen(false)}
-              className="hover:bg-green-700 p-1 rounded transition-colors"
+              onClick={() => {
+                setIsOpen(false)
+                onOpenChange?.(false)
+              }}
+              className="hover:brightness-95 p-2 rounded-lg transition-colors"
+              style={{ backgroundColor: "transparent" }}
               aria-label="Close chat"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
           {/* Messages Container */}
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-3 pr-4">
-              {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm text-center py-12">
+          <ScrollArea 
+            className="flex-1 bg-slate-50 px-5 py-4 widget-scroll-area overscroll-contain"
+          >
+            <style>{`
+              .widget-scroll-area {
+                overscroll-behavior: contain;
+              }
+              .widget-scroll-area > div > div:first-child {
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+                overscroll-behavior: contain !important;
+              }
+              .widget-scroll-area > div > div:first-child::-webkit-scrollbar {
+                display: none !important;
+              }
+              .widget-scroll-area [data-radix-scroll-area-scrollbar] {
+                display: flex !important;
+                width: 8px !important;
+                padding: 2px !important;
+                background: transparent !important;
+              }
+              .widget-scroll-area [data-radix-scroll-area-thumb] {
+                background-color: ${primaryColor} !important;
+                border-radius: 4px !important;
+              }
+            `}</style>
+            <ChatSurface
+              messages={messages}
+              endRef={messagesEndRef}
+              emptyState={
+                <div className="text-gray-400 text-sm text-center py-12">
                   <p>Start a conversation! 👋</p>
                 </div>
-              ) : (
-                messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className={cn(
-                      "flex mb-3",
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "max-w-[70%] px-4 py-2 rounded-lg text-sm break-words",
-                        msg.role === "user"
-                          ? "bg-green-600 text-white rounded-br-none"
-                          : "bg-gray-100 text-black rounded-bl-none"
-                      )}
-                    >
-                      {msg.content}
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
+              }
+              getAlignment={(msg) => (msg.role === "user" ? "right" : "left")}
+              getBubbleClassName={(msg) =>
+                cn(
+                  "rounded-2xl px-4 py-3 max-w-[85%] sm:max-w-[360px] mb-3 shadow-sm",
+                  "word-wrap break-words overflow-wrap-anywhere relative text-[15px] leading-relaxed",
+                  msg.role === "user"
+                    ? "text-white rounded-br-md"
+                    : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
+                )
+              }
+              getBubbleStyle={(msg) =>
+                msg.role === "user" ? { backgroundColor: primaryColor } : undefined
+              }
+              getContainerClassName={(msg) =>
+                msg.role === "user" ? "widget-user-message" : undefined
+              }
+            />
           </ScrollArea>
 
           {/* Footer with Input */}
-          <div className="border-t border-gray-200 p-4 space-y-2">
-            <div className="flex gap-2">
-            <input
-              type="text"
+          <div className="border-t border-gray-200 p-5 space-y-3">
+            <div className="flex gap-3">
+            <textarea
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
@@ -334,10 +425,11 @@ export function ChatWidget({
               }}
               placeholder={placeholder}
               disabled={isLoading}
+              rows={2}
               className={cn(
-                "flex-1 px-4 py-2 rounded-full border border-gray-300",
+                "flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-300",
                 "focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600",
-                "text-sm placeholder-gray-400",
+                "text-[15px] placeholder-gray-400 leading-relaxed",
                 "disabled:bg-gray-50 disabled:text-gray-400"
               )}
             />
@@ -345,11 +437,12 @@ export function ChatWidget({
               onClick={handleSendMessage}
               disabled={isLoading || !inputValue.trim()}
               className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center",
-                "bg-green-600 hover:bg-green-700 disabled:bg-gray-300",
+                "w-12 h-12 rounded-full flex items-center justify-center",
+                "disabled:bg-gray-300 hover:brightness-95",
                 "text-white transition-colors",
                 "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
               )}
+              style={{ backgroundColor: primaryColor }}
               aria-label="Send message"
             >
               {isLoading ? (
@@ -359,7 +452,7 @@ export function ChatWidget({
               )}
             </button>
             </div>
-            <div className="text-[10px] text-gray-400 text-center">
+            <div className="text-xs text-gray-400 text-center">
               Powered by{" "}
               <a
                 href="https://www.echatbot.ai"

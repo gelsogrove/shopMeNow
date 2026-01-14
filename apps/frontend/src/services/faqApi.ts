@@ -55,6 +55,96 @@ const mockFAQs: FAQ[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: "mock-faq-4",
+    question: "How much does it cost to send a push notification?",
+    answer:
+      "Push notifications cost $1.00 per message. This is a simple and transparent pricing model that allows you to reach your customers directly with targeted messages and promotions.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-5",
+    question: "Can I schedule push notifications?",
+    answer:
+      "Yes! You can schedule push notifications to be sent at specific times and dates. This allows you to plan your campaigns in advance and reach customers when they are most likely to engage. You can also set up recurring campaigns for regular reminders and promotions.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-6",
+    question: "Can I use AI to understand what message to send in a push?",
+    answer:
+      "With the Enterprise version, we can analyze your data together to determine the best campaign strategy. Our AI analyzes customer behavior, preferences, and engagement patterns to recommend optimal message content, timing, and target segments for maximum impact.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-7",
+    question: "Where can I get product availability information?",
+    answer:
+      "With the Enterprise version, we can connect to external services to retrieve real-time product availability information. This integration allows us to keep your campaigns accurate by showing up-to-date stock levels, delivery dates, and inventory status directly from your systems.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-8",
+    question: "How many people can collaborate on campaigns?",
+    answer:
+      "The workspace is shared with users who have received an invitation. All team members with workspace access can view and collaborate on campaigns together. You can invite as many team members as you need, and everyone will have visibility into campaign performance and customer engagement.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-9",
+    question: "Can I block a user from receiving campaigns?",
+    answer:
+      "Yes, you can block users if needed. If a customer sends spam or requests to stop receiving messages, you can block them. Blocked users will not receive any further campaigns or communications from your business.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-10",
+    question: "Can I intervene in the chat during a campaign?",
+    answer:
+      "Yes, absolutely! You can take over the chat at any moment and intervene directly. Simply turn off the chatbot and start conversing with the customer personally. This allows you to provide personal support, handle special requests, or resolve issues in real-time.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-11",
+    question: "Are there statistics for campaigns?",
+    answer:
+      "Yes! We provide detailed statistics for every channel. You can view:\n✅ Message delivery rates\n✅ Customer engagement metrics\n✅ Click-through rates\n✅ Conversion data\n✅ Performance by channel (WhatsApp, Widget, etc.)\n✅ Customer response analysis\n\nUse these insights to optimize your campaigns and improve results.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "mock-faq-12",
+    question: "Can I use the widget for web and WhatsApp at the same time?",
+    answer:
+      "Yes! That's exactly the purpose of eChatbot. You can deploy the widget on your website and also maintain your WhatsApp business number, using both channels simultaneously. Customers can choose their preferred way to communicate, and all conversations are unified in your workspace for a seamless experience.",
+    isActive: true,
+    workspaceId: "mock-workspace",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ]
 
 /**

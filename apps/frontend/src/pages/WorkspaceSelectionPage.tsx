@@ -39,6 +39,7 @@ import {
   updateWorkspace,
   workspaceApi,
 } from "@/services/workspaceApi"
+import { getUnreadCount } from "@/services/supportApi"
 
 // ============================================================================
 // WIZARD TYPES & CONFIGURATION
@@ -146,6 +147,9 @@ export function WorkspaceSelectionPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [hasLoadedWorkspaces, setHasLoadedWorkspaces] = useState(false)
   const [hasAutoOpenedWizard, setHasAutoOpenedWizard] = useState(false)
+  
+  // Support tickets unread count
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
   
   // Logo upload state
   const [logoDialogOpen, setLogoDialogOpen] = useState(false)
@@ -323,6 +327,34 @@ export function WorkspaceSelectionPage() {
           setUserEmail(userData.email)
         }
       }
+  }, [])
+  
+  // Load support unread count
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const result = await getUnreadCount()
+        if (result.success) {
+          setSupportUnreadCount(result.data.unreadCount)
+        }
+      } catch (error) {
+        // Silently fail
+      }
+    }
+    fetchUnread()
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchUnread, 30000)
+    
+    // Listen for ticket view events
+    const handleTicketViewed = () => {
+      fetchUnread()
+    }
+    window.addEventListener("support-ticket-viewed", handleTicketViewed)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
+    }
   }, [])
 
   // Get first workspace ID for role check (all workspaces share the same owner)
@@ -585,6 +617,26 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     }
   }
 
+  const handleToggleDebugMode = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      const workspace = workspaces.find((w) => w.id === id)
+      if (workspace) {
+        const updatedWorkspace = await updateWorkspace(id, {
+          debugMode: !workspace.debugMode,
+        })
+        const updatedWorkspaces = workspaces.map((w) =>
+          w.id === id ? updatedWorkspace : w
+        )
+        setWorkspaces(updatedWorkspaces)
+      }
+    } catch (error) {
+      logger.error('Error toggling debug mode:', error)
+    }
+  }
+
+
+
   const handleToggleStatus = async (id: string) => {
     try {
       setIsLoading(true)
@@ -682,8 +734,36 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               <span className="text-xl font-bold text-green-600">eChatbot</span>
             </div>
 
-            {/* Right side: Plan Badge + Profile */}
+            {/* Right side: Support + Plan Badge + Profile */}
             <div className="flex items-center gap-3">
+              {/* Support Tickets Button with Badge */}
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate("/support/tickets")}
+                      className="relative p-2 text-gray-600 hover:text-gray-900"
+                    >
+                      <Mail className="h-5 w-5" />
+                      {supportUnreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                          {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {supportUnreadCount > 0
+                        ? `${supportUnreadCount} unread message${supportUnreadCount > 1 ? "s" : ""}`
+                        : "Support Tickets"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Plan Badge - uses first workspace data or sharedBillingOverview */}
               {(() => {
                 // Get plan info from first workspace or from billing overview
@@ -925,7 +1005,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               {workspaces.map((workspace) => (
                 <div
                   key={workspace.id}
-                  className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all ${
+                  className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all flex flex-col min-h-[370px] ${
                     justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
                   } ${
                     workspace.isActive
@@ -949,10 +1029,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         <img
                           src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
                           alt={workspace.name}
-                          className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-xl"
+                          className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-xl"
                         />
                       ) : (
-                        <div className={`h-32 w-32 rounded-full flex items-center justify-center text-white font-bold text-5xl shadow-xl ${
+                        <div className={`h-24 w-24 rounded-full flex items-center justify-center text-white font-bold text-4xl shadow-xl ${
                           workspace.isActive ? "bg-green-500" : "bg-gray-400"
                         }`}>
                           {workspace.name.charAt(0).toUpperCase()}
@@ -992,8 +1072,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     )}
                   </div>
                   
-                  {/* Content Area */}
-                  <div className="p-4 space-y-3">
+                  {/* Content Area - Use flex column with flex-1 to push controls to bottom */}
+                  <div className="p-4 flex flex-col flex-1 min-h-0">
+                    {/* Top Content - grows to fill space */}
+                    <div className="space-y-3 flex-1">
                     {/* Channel Name */}
                     <h3 className="text-lg font-semibold text-gray-900 truncate text-center">
                       {workspace.name}
@@ -1019,7 +1101,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </div>
                     )}
                   
-                    {/* 📊 Badge Stats Row */}
+                    {/* 📊 Badge Stats Row - Fixed height to prevent layout shift */}
+                    <div className="min-h-[48px] flex items-center justify-center">
                     {badgeStats[workspace.id] && (
                       <div className="flex items-center justify-center gap-2 pt-3 border-t border-gray-100">
                         <TooltipProvider delayDuration={100}>
@@ -1085,6 +1168,60 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         </TooltipProvider>
                       </div>
                     )}
+                    </div>
+                    </div>
+
+                    {/* 🔧 Debug Mode Control - Pushed to bottom */}
+                    <div className="flex items-center justify-center pt-3 border-t border-gray-100">
+                      <TooltipProvider delayDuration={100}>
+                        {/* Debug Mode Toggle - OWNER ONLY - Controls EVERYTHING */}
+                        {isSuperAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) => handleToggleDebugMode(workspace.id, e)}
+                              disabled={isRoleLoading}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                workspace.debugMode
+                                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                              </svg>
+                              <span>Debug Mode</span>
+                              <div className={`w-7 h-4 rounded-full transition-colors ${
+                                workspace.debugMode ? "bg-yellow-500" : "bg-gray-300"
+                              } relative`}>
+                                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
+                                  workspace.debugMode ? "translate-x-3.5" : "translate-x-0.5"
+                                }`} />
+                              </div>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="max-w-xs space-y-1">
+                              <p className="font-semibold">{workspace.debugMode ? "🐛 Debug Mode ON" : "✅ Production Mode"}</p>
+                              {workspace.debugMode ? (
+                                <ul className="text-xs space-y-0.5">
+                                  <li>✅ Playground attivo</li>
+                                  <li>❌ Coda WhatsApp ferma</li>
+                                  <li>❌ Widget fermo</li>
+                                </ul>
+                              ) : (
+                                <ul className="text-xs space-y-0.5">
+                                  <li>✅ Coda WhatsApp attiva</li>
+                                  <li>✅ Widget funzionante</li>
+                                  <li>❌ Playground nascosto</li>
+                                </ul>
+                              )}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                        )}
+                      </TooltipProvider>
+                    </div>
                     
                     {justCreatedId === workspace.id && (
                       <div className="text-center">
@@ -1877,6 +2014,34 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
             workspaceId={firstWorkspaceId}
             isSuperAdmin={isSuperAdmin}
           />
+        )}
+
+        {/* Support Ticket Card (Owner only) */}
+        {isSuperAdmin && (
+          <Card className="mt-6 bg-gradient-to-br from-purple-50 to-white border-purple-100">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <Headphones className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Need Help?</CardTitle>
+                    <CardDescription className="text-purple-700">
+                      Contact our support team for assistance
+                    </CardDescription>
+                  </div>
+                </div>
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => navigate("/support/tickets")}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Support Tickets
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>
         )}
       </div>
       

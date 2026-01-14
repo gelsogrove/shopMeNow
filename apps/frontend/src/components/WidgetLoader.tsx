@@ -45,6 +45,16 @@ export function WidgetLoader() {
         console.log("🧹 Removing widget styles")
         widgetStyles.remove()
       }
+      const widgetLoaderScript = document.getElementById("echatbot-widget-loader")
+      const widgetConfigScript = document.getElementById("echatbot-widget-config")
+      if (widgetLoaderScript) {
+        console.log("🧹 Removing widget loader script")
+        widgetLoaderScript.remove()
+      }
+      if (widgetConfigScript) {
+        console.log("🧹 Removing widget config script")
+        widgetConfigScript.remove()
+      }
       
       // Destroy widget instance
       if ((window as any)._eChatbotWidget && typeof (window as any)._eChatbotWidget.destroy === 'function') {
@@ -85,6 +95,12 @@ export function WidgetLoader() {
 
     const loadWidgetFromDB = async () => {
       try {
+        const existingContainer = document.querySelector(".echatbot-widget-container")
+        if (existingContainer) {
+          console.log("♻️ Removing existing widget to refresh assets")
+          existingContainer.remove()
+        }
+
         // Fetch widget code from platform config (public endpoint, no auth needed)
         const response = await fetch("http://localhost:3001/api/v1/platform-config/widget-code")
         
@@ -101,11 +117,44 @@ export function WidgetLoader() {
           return
         }
 
+        if (data.data?.showWidgetChatbot === false) {
+          console.log("Widget disabled by platform config")
+          return
+        }
+
+        if (data.data?.isValid === false) {
+          console.warn("Widget code invalid:", data.data?.error || "Unknown error")
+          return
+        }
+
         // Execute the widget code (it contains workspaceId, logoUrl, etc from DB)
-        const widgetCode = data.data.code
+        let widgetCode = data.data.code
+        const uiLanguage = localStorage.getItem("language")
+        if (uiLanguage) {
+          widgetCode = widgetCode
+            .replace(/"language"\s*:\s*"[^"]*"/, `"language": "${uiLanguage}"`)
+            .replace(/language\s*:\s*"[^"]*"/, `language: "${uiLanguage}"`)
+        }
         const scriptElement = document.createElement("div")
         scriptElement.innerHTML = widgetCode
         
+        const existingLoader = document.getElementById("echatbot-widget-loader")
+        const existingConfig = document.getElementById("echatbot-widget-config")
+        const existingStyles = document.getElementById("echatbot-widget-styles")
+        const existingOverride = document.getElementById("echatbot-widget-override")
+        if (existingLoader) existingLoader.remove()
+        if (existingConfig) existingConfig.remove()
+        if (existingStyles) existingStyles.remove()
+        if (existingOverride) existingOverride.remove()
+
+        document.querySelectorAll("style").forEach((styleEl) => {
+          if (styleEl.textContent?.includes(".echatbot-widget-")) {
+            styleEl.remove()
+          }
+        })
+
+        // No override styles - let ChatWidget React component handle styling
+
         // Extract and execute all script tags
         const scripts = scriptElement.getElementsByTagName("script")
         for (let i = 0; i < scripts.length; i++) {
@@ -113,7 +162,9 @@ export function WidgetLoader() {
           const newScript = document.createElement("script")
           
           if (script.src) {
-            newScript.src = script.src
+            const hasQuery = script.src.includes("?")
+            const cacheBuster = `v=${Date.now()}`
+            newScript.src = `${script.src}${hasQuery ? "&" : "?"}${cacheBuster}`
             newScript.async = true
             newScript.id = "echatbot-widget-loader" // Add ID for tracking
           } else {

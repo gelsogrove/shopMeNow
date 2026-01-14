@@ -83,6 +83,13 @@ export const platformConfigData: PlatformConfigData[] = [
   },
   {
     type: "PRICE" as const,
+    key: "WIDGET_MESSAGE",
+    value: "0.05",
+    description: "Cost per web widget message (site chat)",
+    isActive: true,
+  },
+  {
+    type: "PRICE" as const,
     key: "PUSH_CAMPAIGN",
     value: "1.00",
     description: "Cost per push notification sent (all types)",
@@ -154,13 +161,13 @@ export const platformConfigData: PlatformConfigData[] = [
     value: `<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = {
-  "workspaceId": "bellitalia-vip-ecommerce",
-  "apiUrl": "http://localhost:3001/api/v1",
-  "title": "eChatbot HQ",
-  "logoUrl": "http://localhost:3001/uploads/public/users/ChatGPT_Image_Jan_9_2026_08_25_59_PM_1768170913722_10reva.png",
-  "language": "it",
-  "primaryColor": "#22c55e"
-};
+    "workspaceId": "echatbot-hq-support",
+    "apiUrl": "http://localhost:3001/api/v1",
+    "title": "eChatbot HQ",
+    "logoUrl": "",
+    "language": "it",
+    "primaryColor": "#22c55e"
+  };
 </script>
 <script src="http://localhost:3000/widget.js" async></script>`,
     description:
@@ -197,6 +204,70 @@ export const platformConfigData: PlatformConfigData[] = [
     key: "ENTERPRISE_CLIENTS",
     value: "999999",
     description: "Unlimited clients for Enterprise plan",
+    isActive: true,
+  },
+
+  // ============================================================================
+  // 📱 CHANNEL LIMITS (WhatsApp Channels per plan)
+  // ============================================================================
+  {
+    type: "LIMIT" as const,
+    key: "FREE_CHANNELS",
+    value: "1",
+    description: "Maximum WhatsApp channels for Free plan",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
+    key: "BASIC_CHANNELS",
+    value: "1",
+    description: "Maximum WhatsApp channels for Basic plan",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
+    key: "PREMIUM_CHANNELS",
+    value: "2",
+    description: "Maximum WhatsApp channels for Premium plan",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
+    key: "ENTERPRISE_CHANNELS",
+    value: "999999",
+    description: "Unlimited WhatsApp channels for Enterprise plan",
+    isActive: true,
+  },
+
+  // ============================================================================
+  // 👥 TEAM MEMBER LIMITS (Team members per plan)
+  // ============================================================================
+  {
+    type: "LIMIT" as const,
+    key: "FREE_TEAM_MEMBERS",
+    value: "0",
+    description: "Maximum team members for Free plan",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
+    key: "BASIC_TEAM_MEMBERS",
+    value: "0",
+    description: "Maximum team members for Basic plan",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
+    key: "PREMIUM_TEAM_MEMBERS",
+    value: "3",
+    description: "Maximum team members for Premium plan",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
+    key: "ENTERPRISE_TEAM_MEMBERS",
+    value: "999999",
+    description: "Unlimited team members for Enterprise plan",
     isActive: true,
   },
 ]

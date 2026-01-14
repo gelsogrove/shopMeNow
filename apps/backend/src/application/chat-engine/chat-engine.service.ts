@@ -163,6 +163,7 @@ export interface ChatEngineInput {
   customerName?: string
   customerLanguage?: string
   customerDiscount?: number
+  isPlayground?: boolean // 🧪 Skip billing and real actions in playground mode
 }
 
 export interface ChatEngineOutput {

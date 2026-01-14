@@ -335,8 +335,8 @@ Postcondizioni: Chatbot riprende a funzionare
 | RF-ID | Requisito | Dettaglio |
 |-------|-----------|-----------|
 | RF-030 | Credit System | Saldo credito per owner (non per workspace). Il credito è condiviso tra tutti i workspace dello stesso owner |
-| RF-031 | Usage Tracking | Tracciamento messaggi WhatsApp (€0.10/msg) e campagne push (€1.00/msg) per fatturazione. I costi vengono scalati dal credito dell'owner |
-| RF-032 | Plans | 4 piani: FREE_TRIAL (€5 credito iniziale), BASIC (€29/mese), PREMIUM (€79/mese), ENTERPRISE (custom) |
+| RF-031 | Usage Tracking | Tracciamento messaggi WhatsApp (€0.10/msg), messaggi widget (€0.05/msg) e campagne push (€1.00/msg) per fatturazione. I costi vengono scalati dal credito dell'owner |
+| RF-032 | Plans | 4 piani: FREE_TRIAL ($29 credito iniziale), BASIC (€29/mese), PREMIUM (€79/mese), ENTERPRISE (custom) |
 | RF-033 | Recharge | Ricarica credito via PayPal (min €20, max €500). Pacchetti preconfigurati: €20, €50, €100, €200 |
 | RF-034 | Invoices | Generazione fattura mensile con breakdown per workspace e tipo di utilizzo |
 | RF-035 | Pause/Resume | Pausa immediata servizio (stop chatbot) senza cancellazione dati |
@@ -532,7 +532,7 @@ AND il merchant riceve notifica
 
 ```gherkin
 GIVEN un owner con €20 di credito
-WHEN il chatbot invia un messaggio (costo €0.10)
+WHEN il chatbot invia un messaggio WhatsApp (costo €0.10)
 THEN il credito diventa €19.90
 AND viene creata una transazione di tipo MESSAGE
 ```

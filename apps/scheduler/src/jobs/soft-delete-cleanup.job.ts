@@ -25,11 +25,12 @@ import logger from '../utils/logger'
  * 6. Cart-related: CartItems, Carts
  * 7. Order-related: CreditNote, OrderItems, Orders
  * 8. Customer-related: CustomerFeedback, SearchConversations, Customers
- * 9. Workspace content: Categories, Products, Offers, Services, FAQ, Documents, etc.
- * 10. Workspace config: AgentConfig, WhatsappSettings, GdprContent, etc.
- * 11. UserWorkspace (relation table)
- * 12. Workspaces
- * 13. Users
+ * 9. Support-related: SupportAttachment, SupportMessage, SupportTicket
+ * 10. Workspace content: Categories, Products, Offers, Services, FAQ, Documents, etc.
+ * 11. Workspace config: AgentConfig, WhatsappSettings, GdprContent, etc.
+ * 12. UserWorkspace (relation table)
+ * 13. Workspaces
+ * 14. Users
  * 
  * ⚠️ NOT DELETED (for statistics):
  * - Billing (anonymized to unknownUser)
@@ -151,6 +152,27 @@ export async function softDeleteCleanupJob(): Promise<void> {
       deletedCounts.passwordReset = (await tx.passwordReset.deleteMany({
         where: { userId: { in: userIds } }
       })).count
+
+      // Support Tickets owned by deleted users
+      const userSupportTickets = await tx.supportTicket.findMany({
+        where: { userId: { in: userIds } },
+        select: { id: true }
+      })
+      const userTicketIds = userSupportTickets.map(t => t.id)
+
+      if (userTicketIds.length > 0) {
+        deletedCounts.supportAttachmentUser = (await tx.supportAttachment.deleteMany({
+          where: { message: { ticketId: { in: userTicketIds } } }
+        })).count
+
+        deletedCounts.supportMessageUser = (await tx.supportMessage.deleteMany({
+          where: { ticketId: { in: userTicketIds } }
+        })).count
+
+        deletedCounts.supportTicketUser = (await tx.supportTicket.deleteMany({
+          where: { id: { in: userTicketIds } }
+        })).count
+      }
     }
 
     // RegistrationToken is linked to Workspace, not User - delete with workspaces
@@ -246,6 +268,33 @@ export async function softDeleteCleanupJob(): Promise<void> {
       deletedCounts.customers = (await tx.customers.deleteMany({
         where: { workspaceId: { in: workspaceIds } }
       })).count
+
+      // --- Support Tickets (user-related and workspace-related) ---
+      // Delete in order: Attachments → Messages → Tickets
+      const supportTicketsToDelete = await tx.supportTicket.findMany({
+        where: {
+          OR: [
+            { userId: { in: userIds } },
+            { workspaceId: { in: workspaceIds } }
+          ]
+        },
+        select: { id: true }
+      })
+      const supportTicketIds = supportTicketsToDelete.map(t => t.id)
+
+      if (supportTicketIds.length > 0) {
+        deletedCounts.supportAttachment = (await tx.supportAttachment.deleteMany({
+          where: { message: { ticketId: { in: supportTicketIds } } }
+        })).count
+
+        deletedCounts.supportMessage = (await tx.supportMessage.deleteMany({
+          where: { ticketId: { in: supportTicketIds } }
+        })).count
+
+        deletedCounts.supportTicket = (await tx.supportTicket.deleteMany({
+          where: { id: { in: supportTicketIds } }
+        })).count
+      }
 
       // --- Workspace content tables ---
       deletedCounts.certifications = (await tx.certification.deleteMany({

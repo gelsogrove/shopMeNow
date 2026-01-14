@@ -7,10 +7,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { storage } from "@/lib/storage"
-import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo } from "lucide-react"
-import { useEffect, useState } from "react"
+import { getUnreadCount } from "@/services/supportApi"
+import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo, Mail } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { WidgetLoader } from "@/components/WidgetLoader"
 
@@ -36,6 +43,38 @@ export function MinimalLayout() {
   const [userInitials, setUserInitials] = useState<string>("U")
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
+  
+  // Support ticket unread count
+  const [supportUnreadCount, setSupportUnreadCount] = useState<number>(0)
+
+  // Load support unread count
+  const loadSupportUnreadCount = useCallback(async () => {
+    try {
+      const response = await getUnreadCount()
+      if (response.success) {
+        setSupportUnreadCount(response.data.unreadCount)
+      }
+    } catch (error) {
+      // Silently fail - user might not have support access
+    }
+  }, [])
+
+  // Poll for unread messages every 30 seconds
+  useEffect(() => {
+    loadSupportUnreadCount()
+    const interval = setInterval(loadSupportUnreadCount, 30000)
+    
+    // Listen for ticket view events to refresh immediately
+    const handleTicketViewed = () => {
+      loadSupportUnreadCount()
+    }
+    window.addEventListener("support-ticket-viewed", handleTicketViewed)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
+    }
+  }, [loadSupportUnreadCount])
 
   // Derived from workspace context (reactive)
   const planType = workspace?.planType || "FREE_TRIAL"
@@ -147,8 +186,36 @@ export function MinimalLayout() {
 
 
 
-            {/* Right: Plan Badge + User Menu */}
+            {/* Right: Support + Plan Badge + User Menu */}
             <div className="flex items-center gap-3">
+              {/* Support Inbox Icon with Badge */}
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate("/support/tickets")}
+                      className="relative p-2 text-gray-600 hover:text-gray-900"
+                    >
+                      <Mail className="h-5 w-5" />
+                      {supportUnreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                          {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                        </span>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {supportUnreadCount > 0
+                        ? `${supportUnreadCount} unread message${supportUnreadCount > 1 ? "s" : ""}`
+                        : "Support Tickets"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* Plan Badge */}
               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${getPlanBadgeColor(planType)}`}>
                 <Crown className="h-3.5 w-3.5" />
@@ -286,6 +353,18 @@ export function MinimalLayout() {
                   >
                     <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
                     <span>Billing</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="p-2 cursor-pointer relative"
+                    onClick={() => navigate("/support/tickets")}
+                  >
+                    <Mail className="mr-2 h-4 w-4 text-blue-500" />
+                    <span>Support</span>
+                    {supportUnreadCount > 0 && (
+                      <span className="ml-auto h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                        {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                      </span>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

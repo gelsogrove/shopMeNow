@@ -17,10 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Check, MessageCircle, X, Send } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ImageCropUpload } from "@/components/shared/ImageCropUpload";
+import { ChatWidget } from "@/components/ChatWidget";
 import { api } from "@/services/api";
 import { IMG_BASE_URL } from "@/config";
 
@@ -34,7 +35,6 @@ export default function WidgetSettingsPage() {
   const [copied, setCopied] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (workspace) {
@@ -45,6 +45,22 @@ export default function WidgetSettingsPage() {
       setPrimaryColor((workspace as any).widgetPrimaryColor || "#22c55e");
     }
   }, [workspace]);
+
+  const getWidgetConfig = () => {
+    const apiUrl =
+      typeof window !== "undefined" && window.location.hostname !== "localhost"
+        ? `${window.location.origin}/api/v1`
+        : "http://localhost:3001/api/v1";
+
+    return {
+      workspaceId: workspace?.id || "YOUR_WORKSPACE_ID",
+      apiUrl,
+      title,
+      logoUrl: logoUrl ? `${IMG_BASE_URL}${logoUrl}` : "",
+      language,
+      primaryColor,
+    };
+  };
 
   const translations: Record<string, { welcome: string; placeholder: string }> =
     {
@@ -162,18 +178,7 @@ export default function WidgetSettingsPage() {
       typeof window !== "undefined" && window.location.hostname !== "localhost"
         ? `${window.location.origin}/widget.js`
         : "http://localhost:3000/widget.js";
-    const apiUrl =
-      typeof window !== "undefined" && window.location.hostname !== "localhost"
-        ? `${window.location.origin}/api/v1`
-        : "http://localhost:3001/api/v1";
-    const config = {
-      workspaceId: workspace?.id || "YOUR_WORKSPACE_ID",
-      apiUrl,
-      title,
-      logoUrl: logoUrl ? `${IMG_BASE_URL}${logoUrl}` : "",
-      language,
-      primaryColor,
-    };
+    const config = getWidgetConfig();
     return `<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = ${JSON.stringify(config, null, 2)};
@@ -354,103 +359,16 @@ export default function WidgetSettingsPage() {
         </div>
       </div>
 
-      {/* Live Preview - Fixed Widget at bottom-right */}
-      {!previewOpen && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <button
-            onClick={() => setPreviewOpen(true)}
-            className="rounded-full w-16 h-16 shadow-lg flex items-center justify-center overflow-hidden transition-transform duration-150 active:scale-90 hover:scale-105"
-            style={{ backgroundColor: primaryColor }}
-          >
-            {logoUrl ? (
-              <img
-                src={`${IMG_BASE_URL}${logoUrl}`}
-                alt="Chat"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <MessageCircle className="h-7 w-7 text-white" />
-            )}
-          </button>
-        </div>
-      )}
-      {previewOpen && (
-        <div className="fixed bottom-6 right-6 z-50 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border animate-in fade-in slide-in-from-bottom-4 duration-200"
-          style={{ width: '420px', height: '650px' }}
-        >
-          <div
-            className="flex items-center justify-between p-5 rounded-t-xl text-white"
-            style={{ backgroundColor: primaryColor }}
-          >
-            <span className="font-semibold text-lg">{title}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPreviewOpen(false)}
-              className="text-white hover:bg-white/20 h-8 w-8 p-0"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-          <div className="p-5 flex-1 overflow-y-auto" style={{ height: 'calc(100% - 150px)' }}>
-            <div className="flex items-start gap-3 mb-4">
-              {logoUrl && (
-                <img
-                  src={`${IMG_BASE_URL}${logoUrl}`}
-                  alt="Bot"
-                  className="w-10 h-10 rounded-full object-cover flex-shrink-0 mt-1"
-                />
-              )}
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl p-4 text-base max-w-[70%]">
-                {translations[language]?.welcome || "Hello!"}
-              </div>
-            </div>
-          </div>
-          <div className="p-5 border-t absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-b-xl">
-            <div className="flex gap-3 items-end">
-              <textarea
-                placeholder={translations[language]?.placeholder || "Type..."}
-                className="flex-1 min-h-[44px] max-h-[120px] rounded-3xl px-5 py-3 text-base resize-none border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-0 dark:bg-gray-800 overflow-y-auto scrollbar-hide"
-                style={{ 
-                  focusRing: primaryColor,
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                }}
-                rows={1}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = 'auto';
-                  target.style.height = Math.min(Math.max(target.scrollHeight, 44), 120) + 'px';
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    // Would send message in real widget
-                  }
-                }}
-              />
-              <Button
-                size="sm"
-                className="h-12 w-12 p-0 rounded-full flex-shrink-0"
-                style={{ backgroundColor: primaryColor }}
-              >
-                <Send className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="text-center text-xs text-gray-400 mt-2">
-              Powered by{" "}
-              <a
-                href="https://www.echatbot.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-                style={{ color: primaryColor }}
-              >
-                echatbot.ai
-              </a>
-            </div>
-          </div>
-        </div>
+      {/* Live Preview - Real widget in-place */}
+      {workspace?.id && (
+        <ChatWidget
+          workspaceId={workspace.id}
+          title={title}
+          logoUrl={logoUrl ? `${IMG_BASE_URL}${logoUrl}` : undefined}
+          primaryColor={primaryColor}
+          language={language}
+          placeholder={translations[language]?.placeholder || "Type a message..."}
+        />
       )}
     </PageLayout>
   );

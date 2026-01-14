@@ -251,6 +251,13 @@ export class ConversationManager {
       // Enqueue after transaction if needed
       if (deliveryStatus === "pending" && customerPhone) {
         try {
+          logger.info("📤 [ConversationManager] ENQUEUING message to WhatsApp queue", {
+            workspaceId,
+            customerId,
+            phoneNumber: customerPhone,
+            messageLength: assistantContent.length,
+            conversationMessageId: result.assistantId,
+          })
           await this.whatsappQueueService.enqueue({
             workspaceId,
             customerId,
@@ -258,6 +265,7 @@ export class ConversationManager {
             messageContent: assistantContent,
             conversationMessageId: result.assistantId,
           })
+          logger.info("✅ [ConversationManager] Message SUCCESSFULLY added to queue")
         } catch (queueError) {
           logger.error("❌ Failed to add message to WhatsApp queue (atomic path):", queueError)
           await this.conversationRepo.updateDeliveryStatus(result.assistantId, "not_queued")

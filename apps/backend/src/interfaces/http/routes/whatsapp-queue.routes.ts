@@ -5,6 +5,7 @@ import { prisma } from "@echatbot/database"
 // Middleware
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import { ownerOnlyMiddleware } from "../middlewares/owner-only.middleware"
 
 // Controllers
 import { WhatsAppQueueController } from "../controllers/whatsapp-queue.controller"
@@ -22,14 +23,6 @@ const controller = new WhatsAppQueueController(prisma)
  */
 
 // ✅ SPECIFIC ROUTES FIRST (before generic :id)
-
-// Clear entire queue (delete all messages)
-router.delete(
-  "/workspaces/:workspaceId/whatsapp-queue",
-  authMiddleware,
-  workspaceValidationMiddleware,
-  controller.clearQueue.bind(controller)
-)
 
 // Delete single message by ID (must come before GET /:id)
 router.delete(
@@ -55,11 +48,12 @@ router.put(
   controller.updateQueueStatus.bind(controller)
 )
 
-// Update debug mode
+// Update debug mode (OWNER ONLY)
 router.put(
   "/workspaces/:workspaceId/whatsapp-queue/debug-mode",
   authMiddleware,
   workspaceValidationMiddleware,
+  ownerOnlyMiddleware,  // 🔒 Only workspace owner can toggle debug mode
   controller.updateDebugMode.bind(controller)
 )
 

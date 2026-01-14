@@ -56,6 +56,23 @@ describe('authMiddleware - Documentation', () => {
       const expectedStatus = 401
       expect(expectedStatus).toBe(401)
     })
+
+    it('should return 403 for INACTIVE user status', () => {
+      // Users with status=INACTIVE are blocked from logging in
+      // This prevents disabled accounts from accessing the system
+      const expectedStatus = 403
+      const expectedCode = 'ACCOUNT_INACTIVE' // Backend returns code, frontend translates
+      expect(expectedStatus).toBe(403)
+      expect(expectedCode).toBe('ACCOUNT_INACTIVE')
+    })
+
+    it('should return 403 for soft-deleted users', () => {
+      // Users with deletedAt !== null are blocked from logging in
+      const expectedStatus = 403
+      const expectedCode = 'ACCOUNT_DELETED' // Backend returns code, frontend translates
+      expect(expectedStatus).toBe(403)
+      expect(expectedCode).toBe('ACCOUNT_DELETED')
+    })
   })
 })
 

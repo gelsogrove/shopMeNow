@@ -514,13 +514,13 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
             creditUsage: 10,
             creditDebt: 15,
             creditNotesTotal: 5,
-            subtotalAmount: 45,
+            subtotalAmount: 20,
             taxRate: 0.22,
           }),
         })
       )
-      expect(updateArgs.data.taxAmount).toBeCloseTo(9.9, 5)
-      expect(updateArgs.data.totalAmount).toBeCloseTo(54.9, 5)
+      expect(updateArgs.data.taxAmount).toBeCloseTo(4.4, 5)
+      expect(updateArgs.data.totalAmount).toBeCloseTo(24.4, 5)
     })
   })
 

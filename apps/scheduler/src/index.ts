@@ -9,15 +9,14 @@ import {
   messagesArchiveJob,
   whatsappQueueCleanupJob,
   softDeleteCleanupJob,
+  supportAttachmentsCleanupJob,
 } from './jobs'
-import { widgetTimeoutCleanupJob } from './jobs/widget-timeout-cleanup.job'
 import logger from './utils/logger'
 
 // eChatbot Scheduler Microservice
 //
 // Cron Jobs (ordered by execution time):
 // 1. WhatsApp Channel Queue   - every 5 SECONDS (parallel send, with lock)
-// 1.5. Widget Timeout Cleanup  - every 30 SECONDS (mark timed-out widget messages)
 // 2. Short URLs Cleanup         - daily at 23:00
 // 3. Storage Cleanup            - daily at 23:05 (unused images + temp + invoices)
 // 4. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
@@ -42,14 +41,6 @@ async function main() {
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('*/5 * * * * *', async () => {
     await runJob('whatsapp-channel-queue', whatsappChannelQueueJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 1.5: Widget Timeout Cleanup - every 30 seconds
-  // Marks widget messages as timed out after 30 polling attempts (15 seconds)
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('*/30 * * * * *', async () => {
-    await runJob('widget-timeout-cleanup', widgetTimeoutCleanupJob)
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -94,7 +85,15 @@ async function main() {
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Job 7: Monthly Billing - 1st of each month at 23:30
+  // Job 7: Support Attachments Cleanup - daily at 23:25
+  // Deletes attachments from closed support tickets older than retention period
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('25 23 * * *', async () => {
+    await runJob('support-attachments-cleanup', supportAttachmentsCleanupJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 8: Monthly Billing - 1st of each month at 23:30
   // Generates billing records for the previous month
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('30 23 1 * *', async () => {
@@ -103,13 +102,14 @@ async function main() {
 
   logger.info('✅ Scheduler started successfully!')
   logger.info('📋 Scheduled jobs:')
-  logger.info('   1. WhatsApp Channel Queue   - every 5 SECONDS')
-  logger.info('   2. Short URLs Cleanup         - daily at 23:00')
-  logger.info('   3. Unused Images Cleanup      - daily at 23:05')
-  logger.info('   4. Messages Archive           - daily at 23:10')
-  logger.info('   5. WhatsApp Queue Cleanup     - daily at 23:15')
-  logger.info('   6. Soft Delete Cleanup        - daily at 23:20')
-  logger.info('   7. Monthly Billing            - 1st of month at 23:30')
+  logger.info('   1. WhatsApp Channel Queue       - every 5 SECONDS')
+  logger.info('   2. Short URLs Cleanup           - daily at 23:00')
+  logger.info('   3. Unused Images Cleanup        - daily at 23:05')
+  logger.info('   4. Messages Archive             - daily at 23:10')
+  logger.info('   5. WhatsApp Queue Cleanup       - daily at 23:15')
+  logger.info('   6. Soft Delete Cleanup          - daily at 23:20')
+  logger.info('   7. Support Attachments Cleanup  - daily at 23:25')
+  logger.info('   8. Monthly Billing              - 1st of month at 23:30')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {

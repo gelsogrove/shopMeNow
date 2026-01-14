@@ -19,6 +19,7 @@ export interface EnqueueMessageDto {
   phoneNumber: string
   messageContent: string
   conversationMessageId?: string // FK to ConversationMessage for timeline tracking
+  isPlayground?: boolean // 🧪 Skip billing and real sending in playground mode
 }
 
 export interface ValidateAndSendResult {
@@ -78,9 +79,10 @@ export class WhatsAppQueueService {
    * @returns Created queue message
    */
   async enqueue(data: EnqueueMessageDto): Promise<WhatsAppQueue> {
-    logger.debug(`[WhatsAppQueueService] Enqueue called`, {
+    logger.info(`[WhatsAppQueueService] Enqueue called`, {
       customerId: data.customerId,
       phoneNumber: data.phoneNumber,
+      workspaceId: data.workspaceId,
     })
 
     try {
@@ -128,7 +130,9 @@ export class WhatsAppQueueService {
         conversationMessageId: data.conversationMessageId,
       })
 
-      logger.debug(`[WhatsAppQueueService] Message queued with ID: ${result.id}`)
+      logger.info(`[WhatsAppQueueService] Message queued with ID: ${result.id}`, {
+        isPlayground: data.isPlayground || false, // 🧪 Log playground mode
+      })
 
       return result
     } catch (error) {
@@ -187,29 +191,29 @@ export class WhatsAppQueueService {
             message.id
           )
           if (deductResult.success) {
-            logger.info(
-              `[WhatsAppQueueService] 💰 Credit deducted for message ${message.id}`,
-              {
-                workspaceId: message.workspaceId,
-                newBalance: deductResult.newBalance,
-              }
-            )
-          } else {
-            logger.warn(
-              `[WhatsAppQueueService] ⚠️ Failed to deduct credit for message ${message.id}`,
-              {
-                workspaceId: message.workspaceId,
-                error: deductResult.error,
-              }
+              logger.info(
+                `[WhatsAppQueueService] 💰 Credit deducted for message ${message.id}`,
+                {
+                  workspaceId: message.workspaceId,
+                  newBalance: deductResult.newBalance,
+                }
+              )
+            } else {
+              logger.warn(
+                `[WhatsAppQueueService] ⚠️ Failed to deduct credit for message ${message.id}`,
+                {
+                  workspaceId: message.workspaceId,
+                  error: deductResult.error,
+                }
+              )
+            }
+          } catch (billingError) {
+            // Don't fail the message send if billing fails - just log it
+            logger.error(
+              `[WhatsAppQueueService] ⚠️ Billing error for message ${message.id}:`,
+              billingError
             )
           }
-        } catch (billingError) {
-          // Don't fail the message send if billing fails - just log it
-          logger.error(
-            `[WhatsAppQueueService] ⚠️ Billing error for message ${message.id}:`,
-            billingError
-          )
-        }
 
         // Mark as delivered in conversation history (if exists)
         await this.markDeliveredInHistory(
@@ -513,32 +517,6 @@ export class WhatsAppQueueService {
   }
 
   /**
-   * Clear all messages from queue for a workspace
-   * @param workspaceId Workspace ID
-   * @returns Number of deleted messages
-   */
-  async clearQueue(workspaceId: string): Promise<number> {
-    try {
-      logger.warn(
-        `[WhatsAppQueueService] Clearing entire queue for workspace: ${workspaceId}`
-      )
-
-      const result = await this.prisma.whatsAppQueue.deleteMany({
-        where: { workspaceId },
-      })
-
-      logger.info(
-        `[WhatsAppQueueService] Deleted ${result.count} messages from queue`
-      )
-
-      return result.count
-    } catch (error) {
-      logger.error(`[WhatsAppQueueService] Error in clearQueue:`, error)
-      throw new Error("Failed to clear queue")
-    }
-  }
-
-  /**
    * Delete a single message from queue
    * @param messageId Message ID to delete
    * @param workspaceId Workspace ID (for isolation)
@@ -648,7 +626,7 @@ export class WhatsAppQueueService {
   ): Promise<{ debugMode: boolean }> {
     try {
       logger.info(
-        `[WhatsAppQueueService] Updating debug mode for workspace ${workspaceId}: ${
+        `[WhatsAppQueueService] 🔧 Updating debug mode for workspace ${workspaceId}: ${
           debugMode ? "ENABLED" : "DISABLED"
         }`
       )
@@ -658,7 +636,11 @@ export class WhatsAppQueueService {
         data: { debugMode },
       })
 
-      logger.debug(`[WhatsAppQueueService] Updated workspace: ${updated.id}`)
+      logger.info(`[WhatsAppQueueService] ✅ Debug mode successfully updated in DB:`, {
+        workspaceId: updated.id,
+        newDebugMode: updated.debugMode,
+        confirmed: updated.debugMode === debugMode,
+      })
 
       return { debugMode }
     } catch (error) {

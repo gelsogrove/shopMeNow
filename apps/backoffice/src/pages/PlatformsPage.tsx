@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { api } from '@/services/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
@@ -32,6 +32,20 @@ export function PlatformsPage() {
   const [error, setError] = useState<string | null>(null)
   const [widgetCode, setWidgetCode] = useState('')
   const [isSavingWidget, setIsSavingWidget] = useState(false)
+  const [workspaceIndex, setWorkspaceIndex] = useState<Record<string, { name: string; numProducts: number }>>({})
+
+  const extractWorkspaceId = (code: string): string | null => {
+    if (!code) return null
+    const jsMatch = code.match(/workspaceId\s*:\s*["']([^"']+)["']/i)
+    if (jsMatch?.[1]) return jsMatch[1]
+    const jsonMatch = code.match(/"workspaceId"\s*:\s*["']([^"']+)["']/i)
+    return jsonMatch?.[1] ?? null
+  }
+
+  const widgetWorkspaceId = useMemo(() => extractWorkspaceId(widgetCode), [widgetCode])
+  const widgetWorkspaceInfo = widgetWorkspaceId ? workspaceIndex[widgetWorkspaceId] : undefined
+  const widgetWorkspaceError = widgetWorkspaceId && !widgetWorkspaceInfo
+  const widgetWorkspaceHasProducts = Boolean(widgetWorkspaceInfo && widgetWorkspaceInfo.numProducts > 0)
 
   const flagIcons: Record<string, { icon: React.ReactNode; title: string }> = {
     canLogin: { icon: <LogIn className="h-6 w-6" />, title: 'User Login' },
@@ -45,9 +59,10 @@ export function PlatformsPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const [configResponse, widgetResponse] = await Promise.all([
+      const [configResponse, widgetResponse, usersResponse] = await Promise.all([
         api.getAdminConfig(),
-        api.getWidgetCode()
+        api.getWidgetCode(),
+        api.users.getAll()
       ])
       
       if (configResponse.success && configResponse.data) {
@@ -63,6 +78,19 @@ export function PlatformsPage() {
       
       if (widgetResponse.success && widgetResponse.data) {
         setWidgetCode(widgetResponse.data.code || '')
+      }
+
+      if (usersResponse.success && usersResponse.data) {
+        const nextIndex: Record<string, { name: string; numProducts: number }> = {}
+        usersResponse.data.forEach((user) => {
+          user.ownedWorkspaces?.forEach((workspace) => {
+            nextIndex[workspace.id] = {
+              name: workspace.name,
+              numProducts: workspace.numProducts ?? 0,
+            }
+          })
+        })
+        setWorkspaceIndex(nextIndex)
       }
     } catch (err) {
       setError('Failed to connect to server')
@@ -100,6 +128,10 @@ export function PlatformsPage() {
   const handleSaveWidgetCode = async () => {
     setIsSavingWidget(true)
     try {
+      if (widgetWorkspaceHasProducts) {
+        setError('Widget must target an informational workspace (no products).')
+        return
+      }
       const response = await api.saveWidgetCode(widgetCode)
       if (!response.success) {
         setError(response.error || 'Failed to save widget code')
@@ -212,6 +244,31 @@ export function PlatformsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {(widgetWorkspaceHasProducts || widgetWorkspaceError) && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+                <AlertTriangle className="mt-0.5 h-4 w-4" />
+                <div>
+                  {widgetWorkspaceError && (
+                    <div>
+                      Workspace not found for widget code. Please double-check the
+                      workspaceId.
+                    </div>
+                  )}
+                  {widgetWorkspaceHasProducts && (
+                    <div>
+                      The selected workspace has products. Use an informational
+                      workspace for the widget.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {widgetWorkspaceInfo && (
+              <div className="text-xs text-gray-500">
+                Detected workspace: <strong>{widgetWorkspaceInfo.name}</strong>
+                {' · '}Products: {widgetWorkspaceInfo.numProducts}
+              </div>
+            )}
             <Textarea
               value={widgetCode}
               onChange={(e) => setWidgetCode(e.target.value)}
@@ -229,7 +286,7 @@ export function PlatformsPage() {
             />
             <Button 
               onClick={handleSaveWidgetCode} 
-              disabled={isSavingWidget}
+              disabled={isSavingWidget || widgetWorkspaceHasProducts || widgetWorkspaceError}
               className="w-full"
             >
               {isSavingWidget ? (

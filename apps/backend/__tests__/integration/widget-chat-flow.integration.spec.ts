@@ -47,7 +47,13 @@ describe("Widget Chat Flow Integration", () => {
   })
 
   describe("POST /api/v1/widget/chat/:workspaceId", () => {
-    it("should send widget message and return ready status immediately", async () => {
+    it("should send widget message and return ready status immediately (debugMode=OFF)", async () => {
+      // Ensure debug mode is OFF for this test
+      await prisma.workspace.update({
+        where: { id: testWorkspaceId },
+        data: { debugMode: false },
+      })
+
       const response = await request(app)
         .post(`/api/v1/widget/chat/${testWorkspaceId}`)
         .send({
@@ -59,7 +65,7 @@ describe("Widget Chat Flow Integration", () => {
       expect(response.body).toHaveProperty("success", true)
       expect(response.body).toHaveProperty("messageId")
       expect(response.body).toHaveProperty("status", "ready") // Response immediately available
-      expect(response.body).toHaveProperty("retryAfter", 0) // No need to poll
+      expect(response.body).toHaveProperty("response") // Response IS returned when debugMode=OFF
 
       // Verify message saved in database with LLM response
       const message = await prisma.whatsAppQueue.findUnique({
@@ -114,6 +120,141 @@ describe("Widget Chat Flow Integration", () => {
         .expect(403)
 
       expect(response.body).toHaveProperty("error", "VISITOR_ID_EXPIRED")
+    })
+
+    it("should block completely when debugMode is ON", async () => {
+      // Find workspace and enable debug mode
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: testWorkspaceId },
+      })
+      
+      // Enable debug mode
+      await prisma.workspace.update({
+        where: { id: testWorkspaceId },
+        data: { debugMode: true },
+      })
+
+      const debugVisitorId = VisitorIdService.generate()
+
+      try {
+        const response = await request(app)
+          .post(`/api/v1/widget/chat/${testWorkspaceId}`)
+          .send({
+            visitorId: debugVisitorId,
+            message: "Test message with debug mode",
+          })
+          .expect(503) // Service Unavailable
+
+        expect(response.body).toHaveProperty("error", "SERVICE_UNAVAILABLE")
+        
+        // Verify NO message saved in database
+        const messages = await prisma.whatsAppQueue.findMany({
+          where: { visitorId: debugVisitorId },
+        })
+        expect(messages.length).toBe(0) // Nothing saved!
+      } finally {
+        // Restore original debug mode setting
+        await prisma.workspace.update({
+          where: { id: testWorkspaceId },
+          data: { debugMode: workspace?.debugMode ?? false },
+        })
+      }
+    })
+
+    it("should return wipMessage when debugMode is false (WIP mode)", async () => {
+      // Find workspace and get original values
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: testWorkspaceId },
+      })
+      
+      // Set WIP mode (debugMode=true) with wipMessage
+      await prisma.workspace.update({
+        where: { id: testWorkspaceId },
+        data: { 
+          debugMode: true,
+          debugMode: false, // Ensure debug mode is off
+          wipMessage: {
+            it: "Stiamo aggiornando il servizio. Torna presto!",
+            en: "We are updating the service. Come back soon!",
+          },
+        },
+      })
+
+      const wipVisitorId = VisitorIdService.generate()
+
+      try {
+        const response = await request(app)
+          .post(`/api/v1/widget/chat/${testWorkspaceId}`)
+          .send({
+            visitorId: wipVisitorId,
+            message: "Test message during WIP mode",
+          })
+          .expect(200) // WIP mode returns 200 with wipMessage
+
+        expect(response.body).toHaveProperty("success", true)
+        expect(response.body).toHaveProperty("status", "wip")
+        expect(response.body).toHaveProperty("response")
+        expect(response.body.response).toContain("Stiamo aggiornando")
+        
+        // Verify NO message saved in database (no LLM processing in WIP mode)
+        const messages = await prisma.whatsAppQueue.findMany({
+          where: { visitorId: wipVisitorId },
+        })
+        expect(messages.length).toBe(0) // Nothing saved - WIP mode blocks before LLM
+      } finally {
+        // Restore original workspace settings
+        await prisma.workspace.update({
+          where: { id: testWorkspaceId },
+          data: { 
+            channelStatus: workspace?.debugMode ?? true,
+            wipMessage: workspace?.wipMessage ?? null,
+          },
+        })
+      }
+    })
+
+    it("should fallback to default WIP message if wipMessage is not set", async () => {
+      // Find workspace and get original values
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: testWorkspaceId },
+      })
+      
+      // Set WIP mode without wipMessage
+      await prisma.workspace.update({
+        where: { id: testWorkspaceId },
+        data: { 
+          debugMode: true,
+          debugMode: false,
+          wipMessage: null, // No custom message
+        },
+      })
+
+      const wipVisitorId = VisitorIdService.generate()
+
+      try {
+        const response = await request(app)
+          .post(`/api/v1/widget/chat/${testWorkspaceId}`)
+          .send({
+            visitorId: wipVisitorId,
+            message: "Test message during WIP mode",
+          })
+          .expect(200)
+
+        expect(response.body).toHaveProperty("success", true)
+        expect(response.body).toHaveProperty("status", "wip")
+        expect(response.body).toHaveProperty("response")
+        // Should have default fallback message
+        expect(response.body.response).toContain("temporaneamente non disponibile")
+      } finally {
+        // Restore original workspace settings
+        await prisma.workspace.update({
+          where: { id: testWorkspaceId },
+          data: { 
+            channelStatus: workspace?.debugMode ?? true,
+            wipMessage: workspace?.wipMessage ?? null,
+          },
+        })
+      }
     })
   })
 

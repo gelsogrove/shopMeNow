@@ -43,6 +43,7 @@ model Workspace {
   widgetTitle               String? // Custom title for chat widget (default: workspace name)
   widgetLanguage            String? @default("it") // Default language: it, en, es, pt
   widgetPrimaryColor        String? @default("#22c55e") // Primary color in hex format
+  widgetTextColor           String? @default("#0f172a") // Text color for widget accents (links, labels)
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   sellsProductsAndServices          Boolean @default(true) // Does this channel sell products/services? (enables E-commerce menu)
@@ -120,6 +121,7 @@ model Workspace {
   billingTransactions   BillingTransaction[]
   softDeleteAuditLogs   SoftDeleteAuditLog[]
   callingFunctions      WorkspaceCallingFunction[] // ✅ Inverse relation
+  supportTickets        SupportTicket[] // 🎫 Support tickets for this workspace
 
   @@index([ownerId])
   @@index([planType])
@@ -300,6 +302,9 @@ model WhatsAppQueue {
   responsePayload       Json?     // Response from LLM (cached for polling)
   pollingAttempts       Int       @default(0) // Track polling attempts
   lastPolledAt          DateTime? // Last time response was checked
+  
+  // 🧪 Playground Mode
+  isPlayground          Boolean   @default(false) // true for test messages (skip billing & real sending)
 
   workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer            Customers            @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -566,6 +571,7 @@ model User {
   paypalTransactions      PayPalTransaction[]
   paypalAdminTransactions PayPalTransaction[]     @relation("PayPalAdmin")
   invoiceAdjustments      InvoiceAdjustment[]
+  supportTickets          SupportTicket[] // 🎫 Support tickets created by this user
 
   @@index([deletedAt])
   @@index([planType])
@@ -1676,4 +1682,80 @@ model LegalDocument {
   updatedAt DateTime @updatedAt
 
   @@map("legal_documents")
+}
+
+// 🎫 SUPPORT TICKETS - Customer support system (User-based, workspace optional)
+model SupportTicket {
+  id          String              @id @default(cuid())
+  ticketCode  String              @unique // Auto-generated: TKT-XXXXXX
+  userId      String // Creator (User)
+  workspaceId String? // Optional workspace for context (can be null)
+  user        User                @relation(fields: [userId], references: [id])
+  workspace   Workspace?          @relation(fields: [workspaceId], references: [id])
+  issueType   SupportIssueType
+  subject     String
+  status      SupportTicketStatus @default(PENDING)
+  messages    SupportMessage[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  closedAt    DateTime?
+
+  @@index([userId])
+  @@index([workspaceId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id           String              @id @default(cuid())
+  ticketId     String
+  ticket       SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId     String // User ID (owner or admin)
+  senderType   SupportSenderType // CUSTOMER or ADMIN
+  content      String              @db.Text // Rich HTML content from WYSIWYG
+  attachments  SupportAttachment[]
+  isRead       Boolean             @default(false)
+  createdAt    DateTime            @default(now())
+
+  @@index([ticketId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("support_messages")
+}
+
+model SupportAttachment {
+  id        String         @id @default(cuid())
+  messageId String
+  message   SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  filename  String
+  url       String // S3 URL
+  storageKey String // S3 key for cleanup
+  mimeType  String
+  size      Int // File size in bytes
+  createdAt DateTime       @default(now())
+
+  @@index([messageId])
+  @@map("support_attachments")
+}
+
+// Support Ticket Enums
+enum SupportIssueType {
+  ACCOUNT_ISSUE
+  PLAN_AND_BILLING
+  WHATSAPP
+  WIDGET
+  SALES_AGENT
+  OTHER
+}
+
+enum SupportTicketStatus {
+  PENDING
+  IN_PROGRESS
+  CLOSED
+}
+
+enum SupportSenderType {
+  CUSTOMER
+  ADMIN
 }
