@@ -38,10 +38,21 @@ export class WidgetEmbedController {
         message: "Copy this code into your website's HTML",
       })
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error"
       logger.error("Failed to generate embed code:", error)
+
+      // Check if it's a channel type error
+      if (message.includes('informational')) {
+        res.status(403).json({
+          error: "Widget not available for this channel",
+          message: "Widget is only available for informational channels. Use WhatsApp for e-commerce.",
+        })
+        return
+      }
+
       res.status(500).json({
         error: "Failed to generate embed code",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message,
       })
     }
   }
@@ -51,9 +62,6 @@ export class WidgetEmbedController {
    * Returns HTML/JS code that customer can copy/paste
    */
   private async generateEmbedCodeSnippet(workspaceId: string): Promise<string> {
-    const widgetUrl = process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
-    const apiUrl = process.env.API_URL || "http://localhost:3001/api/v1"
-
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
@@ -62,13 +70,24 @@ export class WidgetEmbedController {
         widgetLogoUrl: true,
         widgetLanguage: true,
         widgetPrimaryColor: true,
+        sellsProductsAndServices: true,
       },
     })
+
+    // ❌ BLOCK: Widget not for e-commerce channels
+    if (workspace?.sellsProductsAndServices === true) {
+      throw new Error(
+        'Widget is only available for informational channels. Use WhatsApp for e-commerce.'
+      )
+    }
 
     const title = workspace?.widgetTitle?.trim() || workspace?.name || "Chat with us 💬"
     const logoUrl = workspace?.widgetLogoUrl?.trim() || ""
     const language = workspace?.widgetLanguage || "it"
     const primaryColor = workspace?.widgetPrimaryColor || "#22c55e"
+
+    const widgetUrl = process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
+    const apiUrl = process.env.API_URL || "http://localhost:3001/api/v1"
 
     return `<!-- eChatbot Widget - Embed this code on your website -->
 <script>
@@ -125,7 +144,7 @@ export class WidgetEmbedController {
         { userId: user.id }
       )
 
-      const embedCode = this.generateEmbedCodeSnippet(workspaceId)
+      const embedCode = await this.generateEmbedCodeSnippet(workspaceId)
 
       // Return as text/plain for easy copying
       res
@@ -136,10 +155,21 @@ export class WidgetEmbedController {
         )
         .send(embedCode)
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error"
       logger.error("Failed to generate plain text embed code:", error)
+
+      // Check if it's a channel type error
+      if (message.includes('informational')) {
+        res.status(403).json({
+          error: "Widget not available for this channel",
+          message: "Widget is only available for informational channels. Use WhatsApp for e-commerce.",
+        })
+        return
+      }
+
       res.status(500).json({
         error: "Failed to generate embed code",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message,
       })
     }
   }

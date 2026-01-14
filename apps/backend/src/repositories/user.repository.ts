@@ -72,13 +72,16 @@ export class UserRepository implements UserRepositoryInterface {
   }
 
   /**
-   * Find all users
+   * Find all users (excluding soft-deleted)
    */
   async findAll(): Promise<User[]> {
     logger.debug('Finding all users');
 
     try {
       const users = await this.prisma.user.findMany({
+        where: {
+          deletedAt: null, // Exclude soft-deleted users
+        },
         orderBy: { createdAt: 'asc' },
       });
 

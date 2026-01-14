@@ -682,6 +682,244 @@ User (Owner)
 
 ---
 
+## 16. Feature 196 - Soft Delete System
+
+### Overview
+
+Feature 196 implementa un sistema di **Soft Delete** (eliminazione morbida) per garantire recuperabilità dei dati e conformità GDPR. Quando un utente o workspace viene eliminato, i dati non vengono cancellati immediatamente ma spostati in uno stato "eliminato" per 90 giorni, durante i quali l'amministratore può ripristinare tutto.
+
+### Flusso Operativo
+
+#### 1. **Eliminazione (Admin → Delete User)**
+
+```
+STEP 1: Admin clicca "Delete User" in backoffice
+  ↓
+STEP 2: Modal di sicurezza chiede conferma (type "DELETE")
+  ↓
+STEP 3: handleDeleteUser() invia richiesta API
+  ↓
+STEP 4: Backend soft-delete:
+  - User.status = 'DISABLED'
+  - User.deletedAt = NOW
+  - Workspace.deletedAt = NOW (per tutti i workspace owned)
+  ↓
+STEP 5: Log console: ✅ [SOFT-DELETE] SUCCESS
+  ↓
+STEP 6: Utente scomparisce dalla lista clients
+  ↓
+STEP 7: Utente appare in Trash page (TrashPage.tsx)
+```
+
+**Timeline**:
+- Immediatamente: User DISABLED, non può più fare login
+- Fino a 90 giorni: Dati recuperabili dal Trash
+- Dopo 90 giorni: Cancellazione permanente (cascata)
+
+#### 2. **Visualizzazione nel Trash (Admin → Trash Page)**
+
+```
+Admin accede a: /trash
+  ↓
+Tabs: Users | Workspaces | Agents | Operators
+  ↓
+Vede lista di soft-deleted items con:
+  - Nome/Email
+  - Data di eliminazione
+  - Giorni rimasti prima hard-delete
+  - Bottone RESTORE
+```
+
+#### 3. **Ripristino (Admin → Restore from Trash)**
+
+```
+STEP 1: Admin clicca "Restore" su un item nel Trash
+  ↓
+STEP 2: Conferma via modal
+  ↓
+STEP 3: api.trash.restore() restituisce l'item:
+  - User.status = 'ACTIVE' (se era ACTIVE)
+  - User.deletedAt = NULL
+  - User torna nella lista clients
+  ↓
+STEP 4: Admin può ENABLE l'utente (toggle Enabled)
+```
+
+**Nota**: Dopo restore, l'utente è ACTIVE ma potrebbe essere DISABLED (per scelta). Admin deve attivare manualmente se vuole riabilitare.
+
+#### 4. **Hard Delete Automatico (Scheduler Job)**
+
+```
+Daily at 23:20 (softDeleteCleanupJob runs)
+  ↓
+Scansiona tutti gli User/Workspace con deletedAt < (NOW - 90 days)
+  ↓
+Hard-delete in cascata (FK order):
+  1. Utente tokens, reset password, 2FA records
+  2. Messages, ChatSessions, ConversationLogs
+  3. Customers, Orders, Carts
+  4. Products, Services, Categories, Offers
+  5. Campaigns, FAQ, Documents
+  6. Workspace config (AgentConfig, WhatsappSettings)
+  7. Workspace stessa
+  8. User record
+  ↓
+Billing/Transactions NON cancellati (anonymized to "unknownUser")
+  ↓
+Audit log creato per compliance
+  ↓
+Logging: ✅ [SOFT-DELETE-CLEANUP] COMPLETED
+```
+
+**Configuration**:
+- Retention window: `SOFT_DELETE_RETENTION_DAYS` (default: 90)
+- Schedule: `0 23 * * *` (every day at 23:20)
+- Job: `apps/scheduler/src/jobs/soft-delete-cleanup.job.ts`
+
+### UI Components
+
+#### Delete Modal (ClientsPage.tsx)
+
+```
+┌─────────────────────────────────────────┐
+│  🗑️ Delete User Account                 │
+│                                         │
+│  You are about to soft-delete the user: │
+│  ┌─────────────────────────────────────┐│
+│  │ John Doe (john@example.com)         ││
+│  └─────────────────────────────────────┘│
+│                                         │
+│  ⚠️ This will delete:                  │
+│   • User account and workspaces        │
+│   • All customers, orders, messages    │
+│   • Products, services, categories     │
+│                                         │
+│  🔄 Recovery: 90 days from Trash page  │
+│                                         │
+│  🔐 To confirm deletion, type:         │
+│  ┌─────────────────────────────────────┐│
+│  │ __________ (type "DELETE")          ││
+│  └─────────────────────────────────────┘│
+│                                         │
+│  [Cancel]  [Yes, Delete User]          │
+└─────────────────────────────────────────┘
+```
+
+**Behaviour**:
+- Input field richiede "DELETE" esatto per attivare bottone
+- Cancel chiude il modal
+- Delete invia request e chiude modal
+- Logging: `🗑️ [SOFT-DELETE] Initiating soft-delete for user: ...`
+
+#### Trash Page (TrashPage.tsx)
+
+```
+Trash Management (4 tabs)
+├── Users (soft-deleted users)
+│   └── [Card with email, deletedAt, daysUntilDelete]
+│       └── [RESTORE] [PERMANENTLY DELETE]
+├── Workspaces
+├── Agents
+└── Operators
+```
+
+### Database Schema Changes
+
+```typescript
+// User model (schema.prisma)
+model User {
+  id           String
+  email        String
+  status       String    // 'ACTIVE' | 'DISABLED'
+  deletedAt    DateTime? // When soft-deleted (null = active)
+  // ... other fields
+}
+
+// Workspace model
+model Workspace {
+  id           String
+  userId       String // owner
+  deletedAt    DateTime? // Cascade soft-delete with owner
+  // ... other fields
+}
+
+// Audit logging
+model SoftDeleteAuditLog {
+  id           String
+  workspaceId  String
+  entityType   String    // 'USER' | 'WORKSPACE' | 'SCHEDULER_HARD_DELETE'
+  deletedIds   String[]
+  deletedIdCount Int
+  reason       String
+  deletedByUserId String?
+  createdAt    DateTime
+}
+```
+
+### Logging Examples
+
+#### Frontend (ClientsPage delete action)
+```
+🗑️ [SOFT-DELETE] Initiating soft-delete for user: john@example.com (ID: user_123)
+✅ [SOFT-DELETE] SUCCESS: User john@example.com soft-deleted. Status: DISABLED, placed in TRASH
+   Recovery window: 90 days until permanent deletion by scheduler
+```
+
+#### Backend (Scheduler cleanup job)
+```
+🗑️ [SOFT-DELETE-CLEANUP] Starting scheduled job...
+⏳ [SOFT-DELETE-CLEANUP] Retention window: 90 days (deleted before: 2025-10-16)
+🗑️ [SOFT-DELETE-CLEANUP] Hard-deleting expired records:
+  - users: 3
+  - workspaces: 3
+  - messages: 125
+✅ [SOFT-DELETE-CLEANUP] COMPLETED - Hard-deleted 250 records in 2847ms
+  retention_days: 90
+  users: 3
+  workspaces: 3
+  messages: 125
+  orders: 45
+  total_deleted: 250
+  duration_ms: 2847
+```
+
+### Compliance & Safety
+
+✅ **GDPR Compliance**:
+- Soft delete allows 90-day recovery
+- Hard delete removes all PII except billing (anonymized)
+- Audit logs stored for 7 years
+- No automatic deletion without explicit admin action
+
+✅ **Data Integrity**:
+- Uses Prisma transactions for cascade deletes
+- Respects foreign key constraints
+- Prevents orphaned records
+- All operations are idempotent
+
+✅ **Security**:
+- Requires admin confirmation (type "DELETE")
+- Modal prevents accidental deletion
+- Logs all delete operations
+- Non-reversible after 90 days
+
+### Testing
+
+Run soft-delete cleanup tests:
+```bash
+cd apps/scheduler
+npm run test -- soft-delete-cleanup
+```
+
+Test cases cover:
+- Finding expired records
+- Cascade delete in correct order
+- Audit log creation
+- Preventing duplicate runs (same day)
+- Handling NULL values correctly
+
+---
+
 ## Appendice
 
 ### A. Glossario

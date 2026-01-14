@@ -58,6 +58,8 @@ function getRetentionDays(): number {
 export async function softDeleteCleanupJob(): Promise<void> {
   const startTime = Date.now()
   
+  logger.info('🗑️ [SOFT-DELETE-CLEANUP] Starting scheduled job...')
+  
   // 1. Prevent duplicate runs (check if already ran today)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -67,6 +69,7 @@ export async function softDeleteCleanupJob(): Promise<void> {
   })
   
   if (jobStatus?.lastRunAt && jobStatus.lastRunAt > today) {
+    logger.info('⏭️ [SOFT-DELETE-CLEANUP] Already ran today, skipping')
     return // Already ran today, skip
   }
 
@@ -74,6 +77,11 @@ export async function softDeleteCleanupJob(): Promise<void> {
   const retentionDays = getRetentionDays()
   const expiryDate = new Date()
   expiryDate.setDate(expiryDate.getDate() - retentionDays)
+
+  logger.info(`⏳ [SOFT-DELETE-CLEANUP] Retention window: ${retentionDays} days`, {
+    expiryDate: expiryDate.toISOString(),
+    deletedBefore: expiryDate.toISOString()
+  })
 
   // 3. Find expired Users and Workspaces (main entities with deletedAt)
   const [expiredUsers, expiredWorkspaces, expiredCancelledInvoices] = await Promise.all([
@@ -99,12 +107,17 @@ export async function softDeleteCleanupJob(): Promise<void> {
   const cancelledInvoiceIds = expiredCancelledInvoices.map((inv: { id: string }) => inv.id)
 
   if (userIds.length === 0 && workspaceIds.length === 0 && cancelledInvoiceIds.length === 0) {
-    logger.info(`No expired soft-deleted records to hard-delete`)
+    logger.info(`✅ [SOFT-DELETE-CLEANUP] No expired records found. Retention window is clean.`)
     return
   }
 
   logger.info(
-    `Starting hard-delete: ${userIds.length} users, ${workspaceIds.length} workspaces, ${cancelledInvoiceIds.length} cancelled invoices`
+    `🗑️ [SOFT-DELETE-CLEANUP] Hard-deleting expired records:`,
+    {
+      users: userIds.length,
+      workspaces: workspaceIds.length,
+      cancelledInvoices: cancelledInvoiceIds.length
+    }
   )
 
   // 4. Hard-delete in transaction (order matters for FK constraints)
@@ -451,9 +464,20 @@ export async function softDeleteCleanupJob(): Promise<void> {
   const duration = Date.now() - startTime
   const totalDeleted = Object.values(deletedCounts).reduce((sum, count) => sum + count, 0)
 
-  logger.info(`Hard-deleted ${totalDeleted} expired soft-deleted records (retention: ${retentionDays} days, took ${duration}ms)`, {
-    deletedByType: deletedCounts
-  })
+  logger.info(
+    `✅ [SOFT-DELETE-CLEANUP] COMPLETED - Hard-deleted ${totalDeleted} records in ${duration}ms`,
+    {
+      retention_days: retentionDays,
+      users: deletedCounts.user || 0,
+      workspaces: deletedCounts.workspace || 0,
+      messages: deletedCounts.message || 0,
+      orders: deletedCounts.orders || 0,
+      customers: deletedCounts.customers || 0,
+      invoices: deletedCounts.monthlyInvoice || 0,
+      total_deleted: totalDeleted,
+      duration_ms: duration
+    }
+  )
 
   // 5. Update job status to prevent re-runs
   await prisma.schedulerJobStatus.upsert({

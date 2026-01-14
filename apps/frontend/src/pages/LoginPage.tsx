@@ -2,6 +2,7 @@ import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
 import { WIPModal } from "@/components/shared/WIPModal"
+import { WidgetLoader } from "@/components/WidgetLoader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -2504,6 +2505,9 @@ export function LoginPage() {
         feature={wipFeature}
         onClose={() => setShowWIPModal(false)}
       />
+
+      {/* Chat Widget - available on all public pages */}
+      <WidgetLoader />
 
     </div>
   )

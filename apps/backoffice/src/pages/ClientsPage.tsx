@@ -136,6 +136,7 @@ export function ClientsPage() {
   
   // Delete User modal state (Feature 196 - Soft Delete)
   const [deleteUserModal, setDeleteUserModal] = useState<{ userId: string; email: string; userName: string } | null>(null)
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('')
   const [paypalModal, setPaypalModal] = useState<{ userId: string; email: string } | null>(null)
   const [paypalInfo, setPaypalInfo] = useState<{
     owner: {
@@ -506,8 +507,19 @@ export function ClientsPage() {
   const handleDeleteUser = async () => {
     if (!deleteUserModal) return
     
+    // Require confirmation text
+    if (deleteConfirmationText.toUpperCase() !== 'DELETE') {
+      setError('Please type "DELETE" to confirm permanent deletion')
+      return
+    }
+    
     setDeletingUser(true)
     setError(null)
+    
+    const userEmail = deleteUserModal.email
+    const userId = deleteUserModal.userId
+    
+    console.log(`🗑️ [SOFT-DELETE] Initiating soft-delete for user: ${userEmail} (ID: ${userId})`)
     
     try {
       const response = await api.trash.deleteUser(deleteUserModal.userId, {
@@ -515,6 +527,9 @@ export function ClientsPage() {
       })
       
       if (response.success) {
+        console.log(`✅ [SOFT-DELETE] SUCCESS: User ${userEmail} soft-deleted. Status: DISABLED, placed in TRASH`)
+        console.log(`   Recovery window: 90 days until permanent deletion by scheduler`)
+        
         setSuccessMessage(`User ${deleteUserModal.email} soft-deleted. Recoverable for 90 days from Trash.`)
         setTimeout(() => setSuccessMessage(null), 5000)
         
@@ -523,12 +538,15 @@ export function ClientsPage() {
         
         // Close modal
         setDeleteUserModal(null)
+        setDeleteConfirmationText('')
       } else {
+        console.error(`❌ [SOFT-DELETE] FAILED: ${response.error}`)
         setError(response.error || 'Failed to delete user')
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to delete user')
-      console.error('Error deleting user:', err)
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to delete user'
+      console.error(`❌ [SOFT-DELETE] ERROR: ${errorMsg}`, err)
+      setError(errorMsg)
     } finally {
       setDeletingUser(false)
     }
@@ -1235,19 +1253,43 @@ export function ClientsPage() {
               If they try, they can contact support.
             </p>
             
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-red-800 mb-3">
+                <strong>🔐 To confirm deletion, type:</strong>
+              </p>
+              <Input
+                type="text"
+                placeholder='Type "DELETE" to confirm'
+                value={deleteConfirmationText}
+                onChange={(e) => {
+                  setDeleteConfirmationText(e.target.value)
+                  setError(null) // Clear error on input change
+                }}
+                className="font-mono text-sm"
+                disabled={deletingUser}
+              />
+              <p className="text-xs text-red-700 mt-2">
+                This action cannot be undone immediately. User data is recoverable for 90 days.
+              </p>
+            </div>
+            
             <div className="flex gap-3">
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => setDeleteUserModal(null)}
+                onClick={() => {
+                  setDeleteUserModal(null)
+                  setDeleteConfirmationText('')
+                  setError(null)
+                }}
                 disabled={deletingUser}
               >
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white disabled:opacity-50"
                 onClick={handleDeleteUser}
-                disabled={deletingUser}
+                disabled={deletingUser || deleteConfirmationText.toUpperCase() !== 'DELETE'}
               >
                 {deletingUser ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

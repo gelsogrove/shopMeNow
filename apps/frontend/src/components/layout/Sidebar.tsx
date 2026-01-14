@@ -35,6 +35,8 @@ interface SidebarLink {
 export function Sidebar() {
   // Get workspace from context to check hasSalesAgents
   const { workspace } = useWorkspace()
+  console.log("🔍 Sidebar workspace:", workspace)
+  console.log("🔍 sellsProductsAndServices:", workspace?.sellsProductsAndServices)
   const totalUnreadMessages = 0
   const location = useLocation()
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
@@ -142,11 +144,12 @@ export function Sidebar() {
       label: "Campaigns",
       icon: Megaphone,
     },
-    {
+    // Chat Widget - only for informational channels (not e-commerce)
+    ...(workspace?.sellsProductsAndServices !== true ? [{
       href: "/widget-settings",
       label: "Chat Widget",
       icon: MessageSquare,
-    },
+    }] : []),
     {
       href: "/support/tickets",
       label: "Support",

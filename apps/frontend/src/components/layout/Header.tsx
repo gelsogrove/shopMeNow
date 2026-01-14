@@ -441,15 +441,19 @@ export function Header() {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem
-                className="p-2 cursor-pointer"
-                onClick={() => navigate("/widget-settings")}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                <span>Chat Widget</span>
-              </DropdownMenuItem>
+              {workspace?.sellsProductsAndServices !== true && (
+                <>
+                  <DropdownMenuItem
+                    className="p-2 cursor-pointer"
+                    onClick={() => navigate("/widget-settings")}
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    <span>Chat Widget</span>
+                  </DropdownMenuItem>
 
-              <DropdownMenuSeparator />
+                  <DropdownMenuSeparator />
+                </>
+              )}
 
               <DropdownMenuItem
                 className="p-2 cursor-pointer text-red-600 focus:text-red-600"

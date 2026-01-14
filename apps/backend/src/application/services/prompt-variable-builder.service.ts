@@ -69,6 +69,9 @@ interface WorkspaceInput {
   sellsProductsAndServices?: boolean | null
   address?: string | null
   customAiRules?: string | null
+  chatbotName?: string | null
+  businessType?: string | null
+  websiteUrl?: string | null
 }
 
 /**
@@ -170,6 +173,12 @@ export class PromptVariableBuilder {
       hasSalesAgents: workspace?.hasSalesAgents ?? VARIABLE_DEFAULTS.hasSalesAgents!,
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? VARIABLE_DEFAULTS.sellsProductsAndServices!,
       allowedExternalLinks: workspace?.allowedExternalLinks?.join('\n') || '',
+      chatbotName: workspace?.chatbotName || VARIABLE_DEFAULTS.chatbotName!,
+      businessType: workspace?.businessType || VARIABLE_DEFAULTS.businessType!,
+      operatorContactMethod: workspace?.operatorContactMethod || VARIABLE_DEFAULTS.operatorContactMethod!,
+      operatorWhatsappNumber: workspace?.operatorWhatsappNumber || VARIABLE_DEFAULTS.operatorWhatsappNumber!,
+      websiteUrl: workspace?.websiteUrl || workspace?.url || VARIABLE_DEFAULTS.websiteUrl!,
+      supportEmail: workspace?.notificationEmail || VARIABLE_DEFAULTS.supportEmail!,
       
       // Context variables
       lastOrderCode: context?.lastOrderCode,
@@ -304,6 +313,9 @@ export class PromptVariableBuilder {
         sellsProductsAndServices: true,
         address: true,
         customAiRules: true,
+        chatbotName: true,
+        businessType: true,
+        websiteUrl: true,
       },
     })
     

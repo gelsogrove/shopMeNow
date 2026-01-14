@@ -1,191 +1,119 @@
 import { useEffect, useState } from "react"
 import { useLocation } from "react-router-dom"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { ChatWidget } from "@/components/ChatWidget"
 
 /**
  * WidgetLoader - Loads the chat widget from platform configuration
- * Fetches widget code from DB (platformConfig table) and executes it
- * This allows widget to appear on login page without authentication
+ * Uses the ChatWidget React component directly instead of script injection
  * 
  * Widget visibility rules:
  * - ONLY show on "/" (home/login page)
  * - HIDE on all other routes (workspace-selection, dashboard, etc.)
- * - Automatically cleanup when route changes
+ * - ✅ ONLY for informational channels (sellsProductsAndServices = false)
+ * - ❌ NEVER for e-commerce channels (sellsProductsAndServices = true)
  */
+
+interface WidgetConfig {
+  workspaceId: string
+  logoUrl?: string
+  title?: string
+  primaryColor?: string
+  showWidgetChatbot?: boolean
+}
+
 export function WidgetLoader() {
-  const [loaded, setLoaded] = useState(false)
+  const [config, setConfig] = useState<WidgetConfig | null>(null)
+  const [loading, setLoading] = useState(true)
   const location = useLocation()
+  const { workspace } = useWorkspace()
 
+  // Check if widget should be visible
+  const isHomePage = location.pathname === "/"
+  const isEcommerce = workspace?.sellsProductsAndServices === true
+  const shouldShowWidget = isHomePage && !isEcommerce
+
+  // Fetch widget config from platform config
   useEffect(() => {
-    const pathname = location.pathname
-    
-    // ✅ Widget should ONLY appear on home page
-    const shouldShowWidget = pathname === "/"
-
-    // 🧹 CLEANUP: If we're NOT on home page, ensure widget is destroyed
     if (!shouldShowWidget) {
-      // Remove widget UI elements
-      const widgetContainer = document.querySelector(".echatbot-widget-container")
-      const widgetButton = document.getElementById("echatbot-button")
-      const widgetIframe = document.getElementById("echatbot-iframe")
-      const widgetStyles = document.getElementById("echatbot-widget-styles")
-      
-      if (widgetContainer) {
-        console.log("🧹 Removing widget container")
-        widgetContainer.remove()
-      }
-      if (widgetButton) {
-        console.log("🧹 Removing widget button")
-        widgetButton.remove()
-      }
-      if (widgetIframe) {
-        console.log("🧹 Removing widget iframe")
-        widgetIframe.remove()
-      }
-      if (widgetStyles) {
-        console.log("🧹 Removing widget styles")
-        widgetStyles.remove()
-      }
-      const widgetLoaderScript = document.getElementById("echatbot-widget-loader")
-      const widgetConfigScript = document.getElementById("echatbot-widget-config")
-      if (widgetLoaderScript) {
-        console.log("🧹 Removing widget loader script")
-        widgetLoaderScript.remove()
-      }
-      if (widgetConfigScript) {
-        console.log("🧹 Removing widget config script")
-        widgetConfigScript.remove()
-      }
-      
-      // Destroy widget instance
-      if ((window as any)._eChatbotWidget && typeof (window as any)._eChatbotWidget.destroy === 'function') {
-        console.log("🧹 Destroying widget instance")
-        try {
-          (window as any)._eChatbotWidget.destroy()
-        } catch (e) {
-          console.warn("Widget destroy failed:", e)
-        }
-      }
-      
-      // Remove global widget objects
-      if ((window as any).eChatbotWidget) {
-        delete (window as any).eChatbotWidget
-      }
-      if ((window as any)._eChatbotWidget) {
-        delete (window as any)._eChatbotWidget
-      }
-      if ((window as any).eChatbotConfig) {
-        delete (window as any).eChatbotConfig
-      }
-      
-      // Mark as not loaded
-      if (loaded) {
-        console.log("🧹 Widget cleanup completed for route:", pathname)
-        setLoaded(false)
-      }
+      setConfig(null)
+      setLoading(false)
       return
     }
 
-    // 🚫 Don't load if not on home page
-    if (!shouldShowWidget) {
-      return
-    }
-
-    // 🚫 Don't load twice
-    if (loaded) return
-
-    const loadWidgetFromDB = async () => {
+    const fetchWidgetConfig = async () => {
       try {
-        const existingContainer = document.querySelector(".echatbot-widget-container")
-        if (existingContainer) {
-          console.log("♻️ Removing existing widget to refresh assets")
-          existingContainer.remove()
-        }
-
-        // Fetch widget code from platform config (public endpoint, no auth needed)
         const response = await fetch("http://localhost:3001/api/v1/platform-config/widget-code")
         
         if (!response.ok) {
-          console.error("Failed to fetch widget code:", response.status)
+          console.error("Failed to fetch widget config:", response.status)
+          setLoading(false)
           return
         }
 
         const data = await response.json()
         
-        // Check if widget should be shown (response is {success: true, data: {code: "..."}})
+        // Check if widget should be shown
         if (!data.success || !data.data?.code) {
           console.log("No widget code configured")
+          setLoading(false)
           return
         }
 
         if (data.data?.showWidgetChatbot === false) {
           console.log("Widget disabled by platform config")
+          setLoading(false)
           return
         }
 
-        if (data.data?.isValid === false) {
-          console.warn("Widget code invalid:", data.data?.error || "Unknown error")
+        // Extract workspaceId from the widget code
+        const workspaceIdMatch = data.data.code.match(/"workspaceId"\s*:\s*["']([^"']+)["']|workspaceId\s*:\s*["']([^"']+)["']/)
+        const workspaceId = workspaceIdMatch ? (workspaceIdMatch[1] || workspaceIdMatch[2]) : null
+
+        if (!workspaceId) {
+          console.error("No workspaceId found in widget code")
+          setLoading(false)
           return
         }
 
-        // Execute the widget code (it contains workspaceId, logoUrl, etc from DB)
-        let widgetCode = data.data.code
-        const uiLanguage = localStorage.getItem("language")
-        if (uiLanguage) {
-          widgetCode = widgetCode
-            .replace(/"language"\s*:\s*"[^"]*"/, `"language": "${uiLanguage}"`)
-            .replace(/language\s*:\s*"[^"]*"/, `language: "${uiLanguage}"`)
-        }
-        const scriptElement = document.createElement("div")
-        scriptElement.innerHTML = widgetCode
-        
-        const existingLoader = document.getElementById("echatbot-widget-loader")
-        const existingConfig = document.getElementById("echatbot-widget-config")
-        const existingStyles = document.getElementById("echatbot-widget-styles")
-        const existingOverride = document.getElementById("echatbot-widget-override")
-        if (existingLoader) existingLoader.remove()
-        if (existingConfig) existingConfig.remove()
-        if (existingStyles) existingStyles.remove()
-        if (existingOverride) existingOverride.remove()
+        // Extract other config from the code
+        const logoUrlMatch = data.data.code.match(/"logoUrl"\s*:\s*["']([^"']+)["']|logoUrl\s*:\s*["']([^"']+)["']/)
+        const titleMatch = data.data.code.match(/"title"\s*:\s*["']([^"']+)["']|title\s*:\s*["']([^"']+)["']/)
+        const primaryColorMatch = data.data.code.match(/"primaryColor"\s*:\s*["']([^"']+)["']|primaryColor\s*:\s*["']([^"']+)["']/)
 
-        document.querySelectorAll("style").forEach((styleEl) => {
-          if (styleEl.textContent?.includes(".echatbot-widget-")) {
-            styleEl.remove()
-          }
+        setConfig({
+          workspaceId,
+          logoUrl: logoUrlMatch ? (logoUrlMatch[1] || logoUrlMatch[2]) : undefined,
+          title: titleMatch ? (titleMatch[1] || titleMatch[2]) : "Chat with us 💬",
+          primaryColor: primaryColorMatch ? (primaryColorMatch[1] || primaryColorMatch[2]) : "#22c55e",
+          showWidgetChatbot: data.data.showWidgetChatbot !== false,
         })
 
-        // No override styles - let ChatWidget React component handle styling
-
-        // Extract and execute all script tags
-        const scripts = scriptElement.getElementsByTagName("script")
-        for (let i = 0; i < scripts.length; i++) {
-          const script = scripts[i]
-          const newScript = document.createElement("script")
-          
-          if (script.src) {
-            const hasQuery = script.src.includes("?")
-            const cacheBuster = `v=${Date.now()}`
-            newScript.src = `${script.src}${hasQuery ? "&" : "?"}${cacheBuster}`
-            newScript.async = true
-            newScript.id = "echatbot-widget-loader" // Add ID for tracking
-          } else {
-            newScript.textContent = script.textContent
-            newScript.id = "echatbot-widget-config" // Add ID for tracking
-          }
-          
-          document.body.appendChild(newScript)
-        }
-
-        setLoaded(true)
-        console.log("✅ Widget loaded from platform config on route:", pathname)
+        console.log("✅ Widget config loaded, workspaceId:", workspaceId)
+        setLoading(false)
         
       } catch (error) {
-        console.error("Failed to load widget:", error)
+        console.error("Failed to load widget config:", error)
+        setLoading(false)
       }
     }
 
-    loadWidgetFromDB()
-  }, [location.pathname, loaded]) // 🔄 Re-run when route changes
+    fetchWidgetConfig()
+  }, [shouldShowWidget])
 
-  // This component doesn't render anything
-  return null
+  // Don't render anything if loading, no config, or shouldn't show
+  if (loading || !config || !shouldShowWidget) {
+    return null
+  }
+
+  // Render the ChatWidget component directly
+  return (
+    <ChatWidget
+      workspaceId={config.workspaceId}
+      logoUrl={config.logoUrl}
+      title={config.title}
+      primaryColor={config.primaryColor}
+      position="bottom-right"
+    />
+  )
 }

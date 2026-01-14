@@ -177,6 +177,42 @@ export interface PromptVariables {
    */
   allowedExternalLinks: string
   
+  /** Nome custom del chatbot
+   * Template: {{chatbotName}}
+   * Source: workspace.chatbotName || 'Assistant'
+   */
+  chatbotName: string
+  
+  /** Tipo di business (food, fashion, tech, etc.)
+   * Template: {{businessType}}
+   * Source: workspace.businessType || ''
+   */
+  businessType: string
+  
+  /** Metodo contatto operatore (email, whatsapp)
+   * Template: {{operatorContactMethod}}
+   * Source: workspace.operatorContactMethod || 'email'
+   */
+  operatorContactMethod: string
+  
+  /** Numero WhatsApp operatore support
+   * Template: {{operatorWhatsappNumber}}
+   * Source: workspace.operatorWhatsappNumber || ''
+   */
+  operatorWhatsappNumber: string
+  
+  /** URL website dell'azienda
+   * Template: {{websiteUrl}}
+   * Source: workspace.websiteUrl || workspace.url || ''
+   */
+  websiteUrl: string
+  
+  /** Email supporto
+   * Template: {{supportEmail}}
+   * Source: workspace.notificationEmail || ''
+   */
+  supportEmail: string
+  
   // ══════════════════════════════════════════════════════════════
   // DYNAMIC CONTENT (loaded separately, not from single DB query)
   // ══════════════════════════════════════════════════════════════
@@ -298,6 +334,8 @@ export const LARGE_VARIABLES: (keyof PromptVariables)[] = [
   'services',
   'offers',
   'faqs',
+  'allowedExternalLinks',
+  'customAiRules',
 ]
 
 /**
@@ -316,4 +354,10 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   hasSalesAgents: false,
   sellsProductsAndServices: true,
   channelName: 'Shop',
+  chatbotName: 'Assistant',
+  businessType: '',
+  operatorContactMethod: 'email',
+  operatorWhatsappNumber: '',
+  websiteUrl: '',
+  supportEmail: '',
 }

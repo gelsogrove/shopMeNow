@@ -332,13 +332,15 @@ export function MinimalLayout() {
                     <ListTodo className="mr-2 h-4 w-4 text-green-600" />
                     <span>WhatsApp Queue</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/widget-settings")}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4 text-cyan-500" />
-                    <span>Chat Widget</span>
-                  </DropdownMenuItem>
+                  {workspace?.sellsProductsAndServices !== true && (
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/widget-settings")}
+                    >
+                      <MessageSquare className="mr-2 h-4 w-4 text-cyan-500" />
+                      <span>Chat Widget</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="p-2 cursor-pointer"

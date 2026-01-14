@@ -149,6 +149,9 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const users = await prisma.user.findMany({
+        where: {
+          deletedAt: null, // Exclude soft-deleted users
+        },
         select: {
           id: true,
           email: true,

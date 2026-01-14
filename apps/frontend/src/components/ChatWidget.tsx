@@ -279,11 +279,32 @@ export function ChatWidget({
   }
   const borderColor = getBorderColor(primaryColor)
   
-  const embeddedButtonSizeClasses = isEmbedded ? "w-[66px] h-[66px]" : "w-[100px] h-[100px]"
+  const embeddedButtonSizeClasses = isEmbedded ? "w-[56px] h-[56px]" : "w-[60px] h-[60px]"
   const embeddedButtonShapeClasses = "rounded-full"
   const embeddedButtonRingClasses = isEmbedded
     ? "border-2 bg-transparent"
     : "border-none bg-transparent"
+
+  // Hide any external widget buttons when our popup is open
+  useEffect(() => {
+    if (isOpen) {
+      // Hide all widget buttons (ours and any external ones)
+      const widgetButtons = document.querySelectorAll('[data-widget-button], .echatbot-widget-button, #echatbot-button, [class*="echatbot-widget"]')
+      widgetButtons.forEach((btn) => {
+        if (btn instanceof HTMLElement) {
+          btn.style.display = 'none'
+        }
+      })
+    } else {
+      // Show them back when closed
+      const widgetButtons = document.querySelectorAll('[data-widget-button], .echatbot-widget-button, #echatbot-button, [class*="echatbot-widget"]')
+      widgetButtons.forEach((btn) => {
+        if (btn instanceof HTMLElement) {
+          btn.style.display = ''
+        }
+      })
+    }
+  }, [isOpen])
 
   return (
     <>
