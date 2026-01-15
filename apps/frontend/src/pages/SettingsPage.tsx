@@ -176,7 +176,12 @@ function TextareaModal({
   }
 
   const insertVariable = (varName: string) => {
-    setLocalValue(prev => prev + `{{${varName}}}`)
+    // Special case: [LINK_REGISTRATION] should be inserted without braces
+    if (varName.startsWith('[') && varName.endsWith(']')) {
+      setLocalValue(prev => prev + varName)
+    } else {
+      setLocalValue(prev => prev + `{{${varName}}}`)
+    }
   }
 
   return (
