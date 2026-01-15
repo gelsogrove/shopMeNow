@@ -48,6 +48,8 @@ export class WorkspaceController {
         description: workspace.description,
         whatsappPhoneNumber: workspace.whatsappPhoneNumber,
         whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
+        whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
+        whatsappVerifyToken: workspace.whatsappVerifyToken,
         webhookUrl: workspace.webhookUrl,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
@@ -58,8 +60,6 @@ export class WorkspaceController {
         welcomeMessage: workspace.welcomeMessage,
         wipMessage: workspace.wipMessage,
         channelStatus: workspace.channelStatus,
-        isActive: workspace.isActive,
-        isDelete: workspace.isDelete,
         url: workspace.url,
         debugMode: workspace.debugMode,
         createdAt: workspace.createdAt,
@@ -67,6 +67,8 @@ export class WorkspaceController {
         planType: workspace.planType,
         trialEndsAt: workspace.trialEndsAt,
         // 🆕 Channel Configuration (Feature 199)
+        enableWhatsapp: workspace.enableWhatsapp,
+        enableWidget: workspace.enableWidget,
         sellsProductsAndServices: workspace.sellsProductsAndServices,
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
@@ -79,6 +81,9 @@ export class WorkspaceController {
         address: workspace.address,
         customAiRules: workspace.customAiRules,
         logoUrl: workspace.logoUrl,
+        widgetTitle: workspace.widgetTitle ?? null,
+        widgetLanguage: workspace.widgetLanguage ?? "it",
+        widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
       }))
 
       return res.json(serializedWorkspaces)
@@ -119,6 +124,8 @@ export class WorkspaceController {
           description: workspace.description,
           whatsappPhoneNumber: workspace.whatsappPhoneNumber,
           whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
+          whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
+          whatsappVerifyToken: workspace.whatsappVerifyToken,
           webhookUrl: workspace.webhookUrl,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
@@ -129,14 +136,14 @@ export class WorkspaceController {
           welcomeMessage: workspace.welcomeMessage,
           wipMessage: workspace.wipMessage,
           channelStatus: workspace.channelStatus,
-          isActive: workspace.isActive,
-          isDelete: workspace.isDelete,
           url: workspace.url,
           debugMode: workspace.debugMode,
           createdAt: workspace.createdAt,
           updatedAt: workspace.updatedAt,
           allowedExternalLinks: workspace.allowedExternalLinks,
           // 🆕 Channel Configuration (Feature 199)
+          enableWhatsapp: workspace.enableWhatsapp,
+          enableWidget: workspace.enableWidget,
           sellsProductsAndServices: workspace.sellsProductsAndServices,
           hasSalesAgents: workspace.hasSalesAgents,
           hasHumanSupport: workspace.hasHumanSupport,
@@ -149,6 +156,9 @@ export class WorkspaceController {
           address: workspace.address,
           customAiRules: workspace.customAiRules,
           logoUrl: workspace.logoUrl,
+          // 🆕 Chatbot Personalization
+          chatbotName: workspace.chatbotName,
+          businessType: workspace.businessType,
           // 🆕 Widget Settings
           widgetLogoUrl: workspace.widgetLogoUrl ?? null,
           widgetLogoKey: workspace.widgetLogoKey ?? null,
@@ -315,6 +325,8 @@ export class WorkspaceController {
         description: workspace.description,
         whatsappPhoneNumber: workspace.whatsappPhoneNumber,
         whatsappApiKey: workspace.whatsappApiKey,
+        whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
+        whatsappVerifyToken: workspace.whatsappVerifyToken,
         webhookUrl: workspace.webhookUrl,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail,
@@ -325,14 +337,15 @@ export class WorkspaceController {
         welcomeMessage: workspace.welcomeMessage,
         wipMessage: workspace.wipMessage,
         channelStatus: workspace.channelStatus,
-        isActive: workspace.isActive,
-        isDelete: workspace.isDelete,
+
         url: workspace.url,
         debugMode: workspace.debugMode,
         createdAt: workspace.createdAt,
         updatedAt: workspace.updatedAt,
         allowedExternalLinks: workspace.allowedExternalLinks,
         // 🆕 Channel Configuration (Feature 199)
+        enableWhatsapp: workspace.enableWhatsapp,
+        enableWidget: workspace.enableWidget,
         sellsProductsAndServices: workspace.sellsProductsAndServices,
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
@@ -345,6 +358,9 @@ export class WorkspaceController {
         address: workspace.address,
         customAiRules: workspace.customAiRules,
         logoUrl: workspace.logoUrl,
+        // 🆕 Chatbot Personalization
+        chatbotName: workspace.chatbotName,
+        businessType: workspace.businessType,
         // 🆕 Widget Settings
         widgetLogoUrl: workspace.widgetLogoUrl ?? null,
         widgetLogoKey: workspace.widgetLogoKey ?? null,

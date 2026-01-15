@@ -19,6 +19,8 @@ export interface Workspace {
   updatedAt: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappPhoneNumberId?: string
+  whatsappVerifyToken?: string
   adminEmail?: string
   url?: string
   debugMode?: boolean
@@ -35,6 +37,8 @@ export interface Workspace {
   planType?: string | null
   trialEndsAt?: string | null
   // Channel Configuration (Feature 199)
+  enableWhatsapp?: boolean
+  enableWidget?: boolean
   sellsProducts?: boolean
   sellsServices?: boolean
   sellsProductsAndServices?: boolean // 🆕 Unified field
@@ -50,6 +54,10 @@ export interface Workspace {
   customAiRules?: string // 🆕 Custom AI rules that override default behavior
   allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
   logoUrl?: string // 🆕 Channel logo/icon
+  // 🆕 Widget Configuration
+  widgetTitle?: string
+  widgetLanguage?: string
+  widgetPrimaryColor?: string
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

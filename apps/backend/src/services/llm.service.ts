@@ -166,7 +166,6 @@ export class LLMService {
 
     if (agentType && agentType !== "ROUTER") {
       // Get specific agent prompt from database
-      const prisma = new (require("@prisma/client").PrismaClient)()
       const agentConfig = await prisma.agentConfig.findFirst({
         where: {
           workspaceId: workspace.id,
@@ -175,7 +174,6 @@ export class LLMService {
         },
       })
       prompt = agentConfig?.systemPrompt || null
-      await prisma.$disconnect()
 
       logger.info(`🤖 Loading prompt for specific agent: ${agentType}`, {
         found: !!prompt,

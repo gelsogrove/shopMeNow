@@ -204,7 +204,7 @@ export class SecurityCheckService {
     const workspace = await prisma.workspace.findUnique({
       where: { id: context.workspaceId },
       select: {
-        isActive: true,
+        deletedAt: true,
         debugMode: true,
       },
     })
@@ -217,12 +217,11 @@ export class SecurityCheckService {
       }
     }
 
-    if (!workspace.isActive) {
+    if (workspace.deletedAt !== null) {
       return {
         step: "BUSINESS_RULES",
         passed: false,
-        reason: "Workspace is inactive",
-        retryAfter: 3600 * 1000, // Retry in 1 hour
+        reason: "Workspace has been deleted",
       }
     }
 

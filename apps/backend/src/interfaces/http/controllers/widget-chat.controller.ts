@@ -14,12 +14,14 @@ import { VisitorIdService } from "../../../application/services/visitor-id.servi
 import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
+import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
 import {
   WIDGET_MESSAGE_SCHEMA,
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
 
 const llmRouterService = new LLMRouterService(prisma)
+const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
 
 export class WidgetChatController {
   private normalizeLanguage(raw?: string | null): string | null {
@@ -100,7 +102,7 @@ export class WidgetChatController {
         where: { id: workspaceId },
         select: {
           id: true,
-          isActive: true,
+          deletedAt: true,
           channelStatus: true,
           ownerId: true,
           language: true,
@@ -139,7 +141,7 @@ export class WidgetChatController {
         })
       }
 
-      if (!workspace.isActive) {
+      if (workspace.deletedAt !== null) {
         return res.status(503).json({
           error: "SERVICE_UNAVAILABLE",
           message: "Chat service is temporarily unavailable",
@@ -272,6 +274,69 @@ export class WidgetChatController {
         })
       }
       logger.info("✅ Chat session ready", { sessionId: chatSession?.id, customerId: customer.id })
+
+      // 👋 Welcome message (first user message only)
+      const welcomeResult = await welcomeMessageHandler.handleWelcomeMessage({
+        customerId: customer.id,
+        workspaceId,
+        customerLanguage: requestedLanguage || customer.language || workspace.language || "ENG",
+        customerMessage: message,
+        conversationId: chatSession.id,
+      })
+
+      if (welcomeResult.isWelcomeMessage) {
+        const queueMessage = await prisma.whatsAppQueue.create({
+          data: {
+            workspaceId,
+            customerId: customer.id,
+            phoneNumber: "",
+            messageContent: message,
+            status: "sent",
+            channel: "widget",
+            visitorId,
+            isAnonymous: true,
+            expiresAt: VisitorIdService.getExpiryDate(visitorId),
+            pollingAttempts: 0,
+            responsePayload: {
+              response: welcomeResult.welcomeText,
+              agentUsed: "WELCOME",
+              tokensUsed: 0,
+              isBlocked: false,
+              processedAt: new Date().toISOString(),
+            },
+            deliveredAt: new Date(),
+          },
+        })
+
+        if (workspace.ownerId) {
+          try {
+            const billingService = new SubscriptionBillingService(prisma)
+            const billingResult = await billingService.deductOwnerWidgetMessageCredit(
+              workspace.ownerId,
+              workspaceId,
+              queueMessage.id
+            )
+            if (!billingResult.success) {
+              logger.warn("⚠️ Widget billing failed for welcome message", {
+                workspaceId,
+                visitorId,
+                error: billingResult.error,
+              })
+            }
+          } catch (billingError) {
+            logger.error("⚠️ Widget billing error for welcome message", billingError)
+          }
+        }
+
+        return res.status(200).json({
+          success: true,
+          messageId: queueMessage.id,
+          sessionId: chatSession.id,
+          response: welcomeResult.welcomeText || "Welcome!",
+          status: "ready",
+        })
+      }
+
       // 🤖 Process message through LLM BEFORE saving to queue
       logger.info("🤖 Processing widget message through LLM", {
         workspaceId,

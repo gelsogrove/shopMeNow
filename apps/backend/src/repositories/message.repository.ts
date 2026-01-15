@@ -729,7 +729,7 @@ export class MessageRepository {
       // Validate that workspace exists and is active
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { id: true, isActive: true },
+        select: { id: true, deletedAt: true },
       })
 
       if (!workspace) {
@@ -737,9 +737,9 @@ export class MessageRepository {
         throw new Error(`Workspace ${workspaceId} does not exist`)
       }
 
-      if (!workspace.isActive) {
-        logger.warn(`saveMessage: Workspace ${workspaceId} is inactive`)
-        throw new Error(`Workspace ${workspaceId} is not active`)
+      if (workspace.deletedAt !== null) {
+        logger.warn(`saveMessage: Workspace ${workspaceId} has been deleted`)
+        throw new Error(`Workspace ${workspaceId} has been deleted`)
       }
 
       // Find or create customer
@@ -1709,7 +1709,7 @@ export class MessageRepository {
 
         // Try to find any active workspace
         const activeWorkspace = await this.prisma.workspace.findFirst({
-          where: { isActive: true },
+          where: { deletedAt: null },
         })
 
         if (activeWorkspace) {
@@ -1742,7 +1742,7 @@ export class MessageRepository {
       // If found, return it
       if (workspace) {
         logger.info(
-          `getWorkspaceSettings: Workspace ${workspaceId} found, isActive: ${workspace.isActive}`
+          `getWorkspaceSettings: Workspace ${workspaceId} found, deletedAt: ${workspace.deletedAt}`
         )
         return workspace
       }
@@ -1775,7 +1775,7 @@ export class MessageRepository {
       )
 
       const fallbackWorkspace = await this.prisma.workspace.findFirst({
-        where: { isActive: true },
+        where: { deletedAt: null },
       })
 
       if (fallbackWorkspace) {

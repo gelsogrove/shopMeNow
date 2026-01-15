@@ -165,6 +165,13 @@ export class VariableResolverService {
     variables.customAiRules = workspace.customAiRules || ""
     variables.adminEmail = workspace.notificationEmail || ""
     variables.address = workspace.address || ""
+
+    // 🔧 Aliases for template compatibility (templates use old variable names)
+    ;(variables as any).companyName = variables.workspaceName
+    ;(variables as any).websiteUrl = variables.workspaceUrl
+    ;(variables as any).supportEmail = variables.adminEmail
+    ;(variables as any).chatbotName = workspace.chatbotName || variables.botIdentityResponse || "Assistente"
+    ;(variables as any).businessType = workspace.sellsProductsAndServices ? "E-commerce" : "Information Service"
   }
 
   /**

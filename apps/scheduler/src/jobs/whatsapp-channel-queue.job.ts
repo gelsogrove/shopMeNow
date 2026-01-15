@@ -142,8 +142,8 @@ export async function whatsappChannelQueueJob(): Promise<void> {
     // Find workspaces with active channel (or WIP mode for WIP-only delivery)
     const workspaces = await prisma.workspace.findMany({
       where: {
-        isActive: true,
-        isDelete: false,
+        channelStatus: true,
+        deletedAt: null,
       },
       select: {
         id: true,

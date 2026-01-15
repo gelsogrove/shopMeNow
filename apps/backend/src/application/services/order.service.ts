@@ -179,9 +179,6 @@ export class OrderService {
           const emailService = new EmailService()
 
           // Get workspace for admin email (for CC)
-          const { PrismaClient } = require("@prisma/client")
-          // prisma imported
-
           const workspace = await prisma.workspace.findUnique({
             where: { id: createdOrder.workspaceId },
             select: {
@@ -191,8 +188,6 @@ export class OrderService {
               },
             },
           })
-
-          await prisma.$disconnect()
 
           // Format order items for email
           const itemsList = createdOrder.items

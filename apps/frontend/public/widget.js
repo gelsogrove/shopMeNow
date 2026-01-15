@@ -90,6 +90,24 @@
 
   // CSS with placeholder for dynamic colors
   const getCSS = (primaryColor) => `
+    .echatbot-widget-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 2147483646;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .echatbot-widget-overlay.visible {
+      display: block;
+      opacity: 1;
+    }
+
     .echatbot-widget-container {
       position: fixed;
       z-index: 2147483647;
@@ -166,7 +184,7 @@
       height: 600px;
       background-color: #ffffff;
       border-radius: 12px;
-      box-shadow: 0 8px 50px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.1);
       display: none;
       flex-direction: column;
       overflow: hidden;
@@ -731,6 +749,16 @@
       const lang = this.language || "en"
       const t = TRANSLATIONS[lang] || TRANSLATIONS.en
 
+      // Overlay (for darkening background when widget is open)
+      this.overlay = document.createElement("div")
+      this.overlay.className = "echatbot-widget-overlay"
+      this.overlay.addEventListener("click", () => {
+        if (this.isOpen) {
+          this.togglePopup()
+        }
+      })
+      document.body.appendChild(this.overlay)
+
       // Container
       this.container = document.createElement("div")
       this.container.className = `echatbot-widget-container ${this.config.position}`
@@ -869,6 +897,8 @@
     togglePopup() {
       this.isOpen = !this.isOpen
       this.popup.classList.toggle("open", this.isOpen)
+      // Toggle overlay
+      this.overlay.classList.toggle("visible", this.isOpen)
       // Hide button when popup is open
       this.button.style.display = this.isOpen ? "none" : "flex"
       if (this.isOpen) {

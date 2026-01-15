@@ -88,6 +88,10 @@ export class WidgetEmbedController {
 
     const widgetUrl = process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
     const apiUrl = process.env.API_URL || "http://localhost:3001/api/v1"
+    
+    // Add cache-busting version to widget.js
+    const widgetVersion = Date.now()
+    const widgetUrlWithVersion = `${widgetUrl}?v=${widgetVersion}`
 
     return `<!-- eChatbot Widget - Embed this code on your website -->
 <script>
@@ -106,7 +110,7 @@ export class WidgetEmbedController {
 
     // Load widget script
     const script = document.createElement("script");
-    script.src = "${widgetUrl}";
+    script.src = "${widgetUrlWithVersion}";
     script.async = true;
     script.onload = function() {
       if (window.eChatbotWidget) {

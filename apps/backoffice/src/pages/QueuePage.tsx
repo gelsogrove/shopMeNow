@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from "react"
 import { RefreshCw, HelpCircle } from "lucide-react"
 import { api } from "@/services/api"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +39,11 @@ export function QueuePage() {
   const [items, setItems] = useState<QueueMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [channelFilter, setChannelFilter] = useState("all")
+  const [workspaceFilter, setWorkspaceFilter] = useState("all")
+  const [timeRange, setTimeRange] = useState("24h")
+  const [searchTerm, setSearchTerm] = useState("")
 
   const loadQueue = async () => {
     setLoading(true)
@@ -49,16 +62,112 @@ export function QueuePage() {
     loadQueue()
   }, [])
 
-  // Filter messages from last 24 hours
+  const statusOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    items.forEach((item) => {
+      const value = (item.status || "").trim().toLowerCase()
+      if (!value) return
+      if (!map.has(value)) {
+        map.set(value, item.status)
+      }
+    })
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [items])
+
+  const channelOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    items.forEach((item) => {
+      const value = (item.channel || "").trim().toLowerCase()
+      if (!value) return
+      if (!map.has(value)) {
+        map.set(value, item.channel)
+      }
+    })
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [items])
+
+  const workspaceOptions = useMemo(() => {
+    const map = new Map<string, string>()
+    items.forEach((item) => {
+      if (!item.workspaceId) return
+      if (!map.has(item.workspaceId)) {
+        map.set(item.workspaceId, item.workspace?.name || item.workspaceId)
+      }
+    })
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [items])
+
+  const timeRangeLabel = useMemo(() => {
+    if (timeRange === "7d") return "last 7 days"
+    if (timeRange === "all") return "all time"
+    return "last 24 hours"
+  }, [timeRange])
+
+  // Filter messages based on selected filters
   const rows = useMemo(() => {
     const now = new Date()
-    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-    
-    return items.filter(item => {
-      const createdAt = new Date(item.createdAt)
-      return createdAt >= oneDayAgo
+    const rangeCutoff =
+      timeRange === "7d"
+        ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        : timeRange === "24h"
+          ? new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          : null
+
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+
+    return items.filter((item) => {
+      if (rangeCutoff) {
+        const createdAt = new Date(item.createdAt)
+        if (createdAt < rangeCutoff) return false
+      }
+
+      if (statusFilter !== "all") {
+        const statusValue = (item.status || "").trim().toLowerCase()
+        if (statusValue !== statusFilter) return false
+      }
+
+      if (channelFilter !== "all") {
+        const channelValue = (item.channel || "").trim().toLowerCase()
+        if (channelValue !== channelFilter) return false
+      }
+
+      if (workspaceFilter !== "all" && item.workspaceId !== workspaceFilter) {
+        return false
+      }
+
+      if (normalizedSearch) {
+        const haystack = [
+          item.messageContent,
+          item.phoneNumber,
+          item.customer?.name,
+          item.customer?.email,
+          item.workspace?.name,
+          item.workspaceId,
+          item.visitorId,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+
+        if (!haystack.includes(normalizedSearch)) return false
+      }
+
+      return true
     })
-  }, [items])
+  }, [
+    items,
+    channelFilter,
+    searchTerm,
+    statusFilter,
+    timeRange,
+    workspaceFilter,
+  ])
 
   return (
     <div className="space-y-6">
@@ -66,7 +175,7 @@ export function QueuePage() {
         <div>
           <h1 className="text-3xl font-semibold text-gray-900">Queue</h1>
           <p className="text-sm text-gray-500">
-            Messages from last 24 hours across workspaces (WhatsApp + Widget).
+            Messages from {timeRangeLabel} across workspaces (WhatsApp + Widget).
           </p>
         </div>
         <Button onClick={loadQueue} variant="outline" className="gap-2">
@@ -80,6 +189,112 @@ export function QueuePage() {
           {error}
         </div>
       )}
+
+      <div className="rounded-xl border bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-[160px]">
+            <div className="text-xs font-semibold uppercase text-gray-500">
+              Status
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="min-w-[160px]">
+            <div className="text-xs font-semibold uppercase text-gray-500">
+              Channel
+            </div>
+            <Select value={channelFilter} onValueChange={setChannelFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All channels" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All channels</SelectItem>
+                {channelOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="min-w-[180px]">
+            <div className="text-xs font-semibold uppercase text-gray-500">
+              Workspace
+            </div>
+            <Select value={workspaceFilter} onValueChange={setWorkspaceFilter}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="All workspaces" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All workspaces</SelectItem>
+                {workspaceOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="min-w-[150px]">
+            <div className="text-xs font-semibold uppercase text-gray-500">
+              Time range
+            </div>
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Last 24 hours" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="24h">Last 24 hours</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="min-w-[220px] flex-1">
+            <div className="text-xs font-semibold uppercase text-gray-500">
+              Search
+            </div>
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Message, customer, phone, workspace..."
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStatusFilter("all")
+                setChannelFilter("all")
+                setWorkspaceFilter("all")
+                setTimeRange("24h")
+                setSearchTerm("")
+              }}
+            >
+              Clear filters
+            </Button>
+            <div className="text-xs text-gray-500">
+              {rows.length} / {items.length}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
         <div className="overflow-x-auto">

@@ -143,7 +143,7 @@ For privacy inquiries, please contact our support team.`
             userId: userId
           }
         },
-        isDelete: false
+        deletedAt: null
       },
       orderBy: {
         createdAt: 'desc'
@@ -158,6 +158,8 @@ For privacy inquiries, please contact our support team.`
       description: w.description ?? undefined,
       whatsappPhoneNumber: w.whatsappPhoneNumber ?? undefined,
       whatsappApiKey: w.whatsappApiKey ?? undefined,
+      whatsappPhoneNumberId: (w as any).whatsappPhoneNumberId ?? undefined,
+      whatsappVerifyToken: (w as any).whatsappVerifyToken ?? undefined,
       webhookUrl: w.webhookUrl ?? undefined,
       notificationEmail: w.notificationEmail ?? undefined,
       language: w.language ?? 'it',
@@ -166,8 +168,7 @@ For privacy inquiries, please contact our support team.`
       welcomeMessage: w.welcomeMessage ?? undefined,
       wipMessage: w.wipMessage ?? undefined,
       channelStatus: w.channelStatus,
-      isActive: w.isActive,
-      isDelete: w.isDelete,
+      deletedAt: w.deletedAt ?? null,
       url: w.url ?? undefined,
       debugMode: w.debugMode ?? false,
       createdAt: w.createdAt,
@@ -175,6 +176,8 @@ For privacy inquiries, please contact our support team.`
       planType: w.planType ?? undefined,
       trialEndsAt: w.trialEndsAt ?? undefined,
       // 🆕 Channel Configuration (Feature 199) - CRITICAL: Must include these!
+      enableWhatsapp: (w as any).enableWhatsapp ?? true,
+      enableWidget: (w as any).enableWidget ?? false,
       sellsProductsAndServices: w.sellsProductsAndServices,
       hasSalesAgents: w.hasSalesAgents,
       hasHumanSupport: w.hasHumanSupport,
@@ -187,6 +190,10 @@ For privacy inquiries, please contact our support team.`
       customAiRules: w.customAiRules ?? undefined,
       // 🆕 Logo
       logoUrl: w.logoUrl ?? undefined,
+      // 🆕 Widget Configuration
+      widgetTitle: (w as any).widgetTitle ?? undefined,
+      widgetLanguage: (w as any).widgetLanguage ?? undefined,
+      widgetPrimaryColor: (w as any).widgetPrimaryColor ?? undefined,
     }))
   }
 
@@ -549,6 +556,11 @@ For privacy inquiries, please contact our support team.`
     data: Partial<WorkspaceProps>
   ): Promise<Workspace | null> {
     logger.info(`Updating workspace with ID: ${id}`)
+    
+    // 🔍 DEBUG: Log chatbotName specifically
+    if (data.chatbotName !== undefined) {
+      logger.info(`🤖 chatbotName in update data: "${data.chatbotName}"`)
+    }
 
     // 🆕 Feature 199: Auto-toggle e-commerce agents based on sellsProductsAndServices
     const ecommerceAgentTypes = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]

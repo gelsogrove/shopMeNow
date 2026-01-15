@@ -146,7 +146,7 @@ export class SupportTicketService {
     const ticketsWithUnread = result.tickets.map(ticket => ({
       ...ticket,
       hasUnreadMessages: ticket.messages.some(msg => 
-        msg.senderType === "ADMIN" && !msg.readByCustomer
+        msg.senderType === "ADMIN" && !msg.isRead
       )
     }))
     
@@ -176,7 +176,7 @@ export class SupportTicketService {
     const ticketsWithUnread = result.tickets.map(ticket => ({
       ...ticket,
       hasUnreadMessages: ticket.messages.some(msg => 
-        msg.senderType === "CUSTOMER" && !msg.readByAdmin
+        msg.senderType === "CUSTOMER" && !msg.isRead
       )
     }))
     

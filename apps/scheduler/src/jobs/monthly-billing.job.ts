@@ -123,22 +123,8 @@ export async function monthlyBillingJob(): Promise<void> {
       status: 'ACTIVE',
       ownedWorkspaces: {
         some: {
-          isActive: true,
-          isDelete: false,
+          channelStatus: true,
           deletedAt: null,
-        },
-      },
-    },
-    include: {
-      ownedWorkspaces: {
-        where: {
-          isActive: true,
-          isDelete: false,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
         },
       },
     },
@@ -171,7 +157,13 @@ export async function monthlyBillingJob(): Promise<void> {
 
   for (const owner of owners) {
     const ownerName = `${owner.firstName} ${owner.lastName}`.trim() || owner.email
-    const workspaceCount = owner.ownedWorkspaces.length
+    const workspaceCount = await prisma.workspace.count({
+      where: {
+        ownerId: owner.id,
+        channelStatus: true,
+        deletedAt: null,
+      },
+    })
 
     try {
       // ═══════════════════════════════════════════════════════════════════

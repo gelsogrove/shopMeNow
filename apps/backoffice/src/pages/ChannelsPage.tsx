@@ -157,8 +157,8 @@ export default function ChannelsPage() {
                   </p>
                   <p>
                     <span className="font-medium">User Status:</span>{' '}
-                    <span className={channel.isActive ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                      {channel.isActive ? 'ENABLED' : 'DISABLED'}
+                    <span className={channel.channelStatus ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                      {channel.channelStatus ? 'ENABLED' : 'DISABLED'}
                     </span>
                   </p>
                   {channel.whatsappPhoneNumber && (

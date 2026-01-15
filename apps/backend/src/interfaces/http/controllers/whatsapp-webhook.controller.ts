@@ -290,8 +290,8 @@ export class WhatsAppWebhookController {
           const workspace = await prisma.workspace.findFirst({
             where: {
               whatsappPhoneNumber: channelPhoneNumber.trim(),
-              isDelete: false,
-              isActive: true,
+              deletedAt: null,
+              channelStatus: true,
             },
             select: { 
               id: true, 

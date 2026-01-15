@@ -97,7 +97,7 @@ router.get(
       
       const workspaces = await prisma.workspace.findMany({
         where: {
-          isDelete: false, // Exclude deleted workspaces
+          deletedAt: null, // Exclude deleted workspaces
         },
         select: {
           id: true,
@@ -109,7 +109,7 @@ router.get(
           whatsappPhoneNumber: true,
           debugMode: true,
           channelStatus: true,
-          isActive: true,
+          deletedAt: true,
           planType: true,
           creditBalance: true,
           language: true,
@@ -188,7 +188,7 @@ router.get(
               subscriptionStatus: true, // Feature 197: Subscription status (legacy, deprecated)
               planStartedAt: true,
               language: true,
-              isActive: true,
+              deletedAt: true,
               whatsappPhoneNumber: true,
               channelStatus: true,
               // Count customers
@@ -252,7 +252,7 @@ router.get(
             subscriptionStatus: ws.subscriptionStatus, // Feature 197 (deprecated)
             planStartedAt: ws.planStartedAt,
             language: ws.language,
-            isActive: ws.isActive,
+            deletedAt: ws.deletedAt ?? null,
             whatsappPhoneNumber: ws.whatsappPhoneNumber,
             channelStatus: ws.channelStatus,
             numCustomers: ws.customers.length,
@@ -308,8 +308,6 @@ router.get(
           status: UserStatus.ACTIVE,
           ownedWorkspaces: {
             some: {
-              isActive: true,
-              isDelete: false,
               deletedAt: null,
             },
           },

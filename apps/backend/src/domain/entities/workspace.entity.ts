@@ -7,14 +7,15 @@ export interface WorkspaceProps {
   whatsappPhoneNumber?: string | null
   whatsappApiKey?: string | null
   whatsappApiToken?: string | null
+  whatsappPhoneNumberId?: string | null
+  whatsappVerifyToken?: string | null
   whatsappWebhookUrl?: string | null
   notificationEmail?: string | null
   webhookUrl?: string | null
-  isActive: boolean
   language: string
   createdAt: Date
   updatedAt: Date
-  isDelete: boolean
+  deletedAt?: Date | null
   currency: string
   channelStatus: boolean
   description?: string | null
@@ -31,6 +32,8 @@ export interface WorkspaceProps {
   trialEndsAt?: Date | null
   allowedExternalLinks?: string[]
   // 🆕 Channel Configuration (Feature 199)
+  enableWhatsapp?: boolean
+  enableWidget?: boolean
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
@@ -43,6 +46,9 @@ export interface WorkspaceProps {
   // 🆕 Prompt Builder fields (Dynamic Prompt System)
   address?: string | null
   customAiRules?: string | null
+  // 🆕 Chatbot Personalization
+  chatbotName?: string | null
+  businessType?: string | null
   // 🆕 Logo
   logoUrl?: string | null
   logoKey?: string | null // 💾 Storage key for cleanup
@@ -76,20 +82,16 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.description
   }
 
-  get isActive(): boolean {
-    return this.props.isActive
-  }
-
-  get isDelete(): boolean {
-    return this.props.isDelete
-  }
-
   get createdAt(): Date {
     return this.props.createdAt
   }
 
   get updatedAt(): Date {
     return this.props.updatedAt
+  }
+
+  get deletedAt(): Date | null | undefined {
+    return this.props.deletedAt
   }
 
   get id(): string {
@@ -110,6 +112,14 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get whatsappApiToken(): string | null | undefined {
     return this.props.whatsappApiToken
+  }
+
+  get whatsappPhoneNumberId(): string | null | undefined {
+    return this.props.whatsappPhoneNumberId
+  }
+
+  get whatsappVerifyToken(): string | null | undefined {
+    return this.props.whatsappVerifyToken
   }
 
   get whatsappWebhookUrl(): string | null | undefined {
@@ -181,6 +191,14 @@ export class Workspace extends Entity<WorkspaceProps> {
   }
 
   // 🆕 Channel Configuration getters (Feature 199)
+  get enableWhatsapp(): boolean {
+    return this.props.enableWhatsapp ?? true
+  }
+
+  get enableWidget(): boolean {
+    return this.props.enableWidget ?? false
+  }
+
   get sellsProductsAndServices(): boolean {
     return this.props.sellsProductsAndServices ?? true
   }
@@ -225,6 +243,14 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.customAiRules
   }
 
+  get chatbotName(): string | null | undefined {
+    return this.props.chatbotName
+  }
+
+  get businessType(): string | null | undefined {
+    return this.props.businessType
+  }
+
   get logoUrl(): string | null | undefined {
     return this.props.logoUrl
   }
@@ -267,19 +293,13 @@ export class Workspace extends Entity<WorkspaceProps> {
   }
 
   // Business methods
-  activate(): void {
-    this.props.isActive = true
-    this.props.updatedAt = new Date()
-  }
-
-  deactivate(): void {
-    this.props.isActive = false
-    this.props.updatedAt = new Date()
-  }
-
   softDelete(): void {
-    this.props.isDelete = true
-    this.props.isActive = false
+    this.props.deletedAt = new Date()
+    this.props.updatedAt = new Date()
+  }
+
+  restore(): void {
+    this.props.deletedAt = null
     this.props.updatedAt = new Date()
   }
 

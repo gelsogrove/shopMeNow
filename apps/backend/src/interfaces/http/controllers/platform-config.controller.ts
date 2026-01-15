@@ -237,15 +237,15 @@ export class PlatformConfigController {
           where: { id: workspaceId },
           select: {
             id: true,
-            isActive: true,
+            deletedAt: true,
             sellsProductsAndServices: true,
             debugMode: true,
           },
         })
 
-        if (!workspace || !workspace.isActive) {
+        if (!workspace || workspace.deletedAt !== null) {
           isValid = false
-          validationError = "Widget workspace not found or inactive"
+          validationError = "Widget workspace not found or deleted"
         } else if (workspace.debugMode) {
           isValid = false
           validationError = "Widget disabled for debug workspaces"
@@ -300,13 +300,13 @@ export class PlatformConfigController {
 
         const workspace = await prisma.workspace.findUnique({
           where: { id: workspaceId },
-          select: { id: true, isActive: true, sellsProductsAndServices: true },
+          select: { id: true, deletedAt: true, sellsProductsAndServices: true },
         })
 
-        if (!workspace || !workspace.isActive) {
+        if (!workspace || workspace.deletedAt !== null) {
           return res.status(400).json({
             success: false,
-            error: "Widget workspace not found or inactive",
+            error: "Widget workspace not found or deleted",
           })
         }
 

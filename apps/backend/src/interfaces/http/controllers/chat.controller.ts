@@ -104,7 +104,8 @@ export class ChatController {
             select: {
               id: true,
               name: true,
-              isActive: true,
+              channelStatus: true,
+              deletedAt: true,
             },
           },
         },

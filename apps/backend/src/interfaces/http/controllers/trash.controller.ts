@@ -387,7 +387,6 @@ export class TrashController {
           where: { id: workspace.id },
           data: { 
             deletedAt: null,
-            isDelete: false  // Sync both fields
           }
         })
         cascadeRestored.workspaces++

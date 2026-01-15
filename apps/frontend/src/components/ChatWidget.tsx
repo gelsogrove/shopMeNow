@@ -308,6 +308,18 @@ export function ChatWidget({
 
   return (
     <>
+      {/* Overlay - Darkens page when widget is open */}
+      {isOpen && !isEmbedded && (
+        <div
+          className="fixed inset-0 bg-black/50 z-[2147483645] animate-in fade-in duration-300"
+          onClick={() => {
+            setIsOpen(false)
+            onOpenChange?.(false)
+          }}
+          aria-label="Close chat overlay"
+        />
+      )}
+
       {/* Widget Button - Glassmorphism Style */}
       {!isOpen && (
         <button
@@ -347,7 +359,7 @@ export function ChatWidget({
         <div
           className={cn(
             isEmbedded ? "absolute" : "fixed",
-            "z-[2147483646] flex flex-col",
+            "z-[2147483647] flex flex-col",
             "bg-white",
             "overflow-hidden overscroll-contain isolate",
             embeddedPopupSizeClasses,

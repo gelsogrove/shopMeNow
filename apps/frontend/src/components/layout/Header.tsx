@@ -29,7 +29,6 @@ import {
   Crown,
   LogOut,
   Mail,
-  MessageSquare,
   Send,
   Settings,
   User,
@@ -285,7 +284,7 @@ export function Header() {
             </Button>
           </nav>
 
-          {/* Right side: Support Inbox + Plan Badge + Profile menu */}
+          {/* Right side: Support Inbox + Settings + Plan Badge + Profile menu */}
           <div className="flex items-center gap-4">
             {/* Support Inbox Icon with Badge */}
             <TooltipProvider delayDuration={100}>
@@ -311,6 +310,25 @@ export function Header() {
                       ? `${supportUnreadCount} unread message${supportUnreadCount > 1 ? "s" : ""}`
                       : "Support Tickets"}
                   </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {/* Settings Icon */}
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate("/settings")}
+                    className="p-2 text-gray-600 hover:text-gray-900"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Settings</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -440,20 +458,6 @@ export function Header() {
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
-
-              {workspace?.sellsProductsAndServices !== true && (
-                <>
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/widget-settings")}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    <span>Chat Widget</span>
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-                </>
-              )}
 
               <DropdownMenuItem
                 className="p-2 cursor-pointer text-red-600 focus:text-red-600"

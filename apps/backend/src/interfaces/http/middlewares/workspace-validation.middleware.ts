@@ -112,8 +112,7 @@ export const workspaceValidationMiddleware = async (
       select: { 
         id: true, 
         name: true, 
-        isActive: true, 
-        isDelete: true,
+        deletedAt: true,
         ownerId: true,
         owner: {
           select: {
@@ -141,9 +140,8 @@ export const workspaceValidationMiddleware = async (
       return
     }
 
-    // ✅ CRITICAL: Solo workspace.isDelete blocca l'accesso admin
-    // workspace.isActive blocca SOLO i messaggi WhatsApp (gestito in LLMService)
-    if (workspace.isDelete) {
+    // ✅ CRITICAL: Workspace soft-deleted blocks access
+    if (workspace.deletedAt) {
       logger.info("❌ Workspace is deleted - blocking access")
 
       const debugResponse = {
@@ -171,14 +169,6 @@ export const workspaceValidationMiddleware = async (
       // Return 200 with empty success response (silent block)
       res.status(200).json({ success: true, message: "Operation completed" })
       return
-    }
-
-    // ⚠️ Se workspace.isActive = false, permetti comunque accesso admin
-    // Il blocco dei messaggi WhatsApp è gestito in LLMService.handleMessage()
-    if (!workspace.isActive) {
-      logger.warn(
-        `⚠️ Workspace ${workspaceId} is DISABLED - Admin access allowed, WhatsApp blocked`
-      )
     }
 
     // Store workspace info in request

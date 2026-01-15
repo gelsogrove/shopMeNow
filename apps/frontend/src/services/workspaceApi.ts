@@ -12,12 +12,13 @@ export interface Workspace {
   id: string
   name: string
   description?: string
-  isActive: boolean
-  isDelete: boolean
+  deletedAt?: string | null
   currency?: string
   url?: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappPhoneNumberId?: string
+  whatsappVerifyToken?: string
   adminEmail?: string
   debugMode?: boolean
   welcomeMessage?: string
@@ -27,6 +28,8 @@ export interface Workspace {
   planType?: string | null
   trialEndsAt?: string | null
   // 🆕 Feature 199: Channel Configuration
+  enableWhatsapp?: boolean
+  enableWidget?: boolean
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
@@ -41,6 +44,7 @@ export interface Workspace {
   // 🆕 Prompt Builder fields
   address?: string
   customAiRules?: string
+  logoUrl?: string
   // 🆕 Channel branding
   logoUrl?: string
   // 🆕 Translation Settings
@@ -51,6 +55,11 @@ export interface Workspace {
   // 🆕 Chatbot Identity & Context
   chatbotName?: string // Custom name for the chatbot (e.g., "Sofia", "Marco")
   businessType?: string // Business sector (e.g., "food", "fashion", "electronics")
+  // 🆕 Widget Configuration
+  logoUrl?: string
+  widgetTitle?: string
+  widgetLanguage?: string
+  widgetPrimaryColor?: string
 }
 
 export interface CreateWorkspaceData {
@@ -70,6 +79,8 @@ export interface UpdateWorkspaceData {
   currency?: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappPhoneNumberId?: string
+  whatsappVerifyToken?: string
   adminEmail?: string
   url?: string
   debugMode?: boolean
@@ -77,6 +88,8 @@ export interface UpdateWorkspaceData {
   wipMessage?: string
   allowedExternalLinks?: string
   // 🆕 Feature 199: Channel Configuration
+  enableWhatsapp?: boolean
+  enableWidget?: boolean
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
@@ -98,6 +111,10 @@ export interface UpdateWorkspaceData {
   // 🆕 Chatbot Identity & Context
   chatbotName?: string
   businessType?: string
+  // 🆕 Widget Configuration
+  widgetTitle?: string
+  widgetLanguage?: string
+  widgetPrimaryColor?: string
 }
 
 const workspaceApi = {

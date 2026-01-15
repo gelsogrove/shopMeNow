@@ -30,6 +30,7 @@ export type BlockReason =
   | "CREDIT_EXHAUSTED"
   | "CHANNEL_DISABLED"
   | "WORKSPACE_INACTIVE"
+  | "WORKSPACE_DELETED"
   | "NO_OWNER"
   | "OWNER_NOT_FOUND"
   | "OWNER_DELETED"
@@ -76,7 +77,6 @@ export class WorkspaceAccessService {
         select: {
           id: true,
           name: true,
-          isActive: true,
           deletedAt: true,
           debugMode: true,
           channelStatus: true,
@@ -103,12 +103,12 @@ export class WorkspaceAccessService {
       }
 
       // 1. Check if workspace is active (not soft deleted)
-      if (!workspace.isActive || workspace.deletedAt) {
-        logger.info(`[ACCESS] 🚫 Workspace inactive: ${workspace.name}`)
+      if (workspace.deletedAt !== null) {
+        logger.info(`[ACCESS] 🚫 Workspace deleted: ${workspace.name}`)
         return {
           canProcess: false,
-          blockReason: "WORKSPACE_INACTIVE",
-          message: "Workspace is not active",
+          blockReason: "WORKSPACE_DELETED",
+          message: "Workspace has been deleted",
           details: {
             ownerId: workspace.ownerId || undefined,
           },

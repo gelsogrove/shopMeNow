@@ -17,11 +17,12 @@ import ReactCrop, {
 } from "react-image-crop"
 import "react-image-crop/dist/ReactCrop.css"
 import { IMG_BASE_URL } from "@/config"
-import { ImageIcon, Building2, Pencil } from "lucide-react"
+import { ImageIcon, Building2, Pencil, X } from "lucide-react"
 
 interface ImageCropUploadProps {
   onImageSelected: (file: File) => void
   currentImageUrl?: string
+  onImageRemove?: () => void
   label?: string
   required?: boolean
   placeholder?: "image" | "logo"  // Type of placeholder to show
@@ -49,6 +50,7 @@ const sizeClasses = {
 export function ImageCropUpload({
   onImageSelected,
   currentImageUrl,
+  onImageRemove,
   label = "Image",
   required = false,
   placeholder = "image",
@@ -232,12 +234,24 @@ export function ImageCropUpload({
     }
   }
 
+  const handleRemove = () => {
+    setPreviewImage(null)
+    setSelectedFileName("")
+    setError("")
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+    onImageRemove?.()
+  }
+
   return (
     <div className="space-y-4">
-      <Label htmlFor="image-upload">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </Label>
+      {label ? (
+        <Label htmlFor="image-upload">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </Label>
+      ) : null}
 
       {editIconStyle ? (
         /* Edit Icon Style - image with hover edit button */
@@ -271,6 +285,19 @@ export function ImageCropUpload({
           >
             <Pencil className="h-4 w-4 text-gray-600" />
           </button>
+
+          {previewImage && onImageRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleRemove()
+              }}
+              className="absolute top-1 right-1 p-1.5 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-100"
+            >
+              <X className="h-4 w-4 text-gray-600" />
+            </button>
+          )}
           
           <input
             ref={fileInputRef}
@@ -286,7 +313,7 @@ export function ImageCropUpload({
         /* Default Style - image with Choose file button */
         <div className="flex flex-col sm:flex-row gap-4 items-start">
           {/* Preview area */}
-          <div className={`flex-shrink-0 ${sizeClasses[size]} border-2 border-dashed border-gray-300 ${circularCrop ? "rounded-full" : "rounded-lg"} overflow-hidden bg-gray-50 flex items-center justify-center`}>
+          <div className={`relative flex-shrink-0 ${sizeClasses[size]} border-2 border-dashed border-gray-300 ${circularCrop ? "rounded-full" : "rounded-lg"} overflow-hidden bg-gray-50 flex items-center justify-center`}>
             {previewImage ? (
               <img
                 key={previewImage}
@@ -310,6 +337,18 @@ export function ImageCropUpload({
                 )}
                 <span className="text-xs">No image</span>
               </div>
+            )}
+            {previewImage && onImageRemove && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRemove()
+                }}
+                className="absolute top-1 right-1 rounded-full bg-white p-1 shadow-md hover:bg-gray-100"
+              >
+                <X className="h-4 w-4 text-gray-600" />
+              </button>
             )}
           </div>
           

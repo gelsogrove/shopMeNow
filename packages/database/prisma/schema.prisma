@@ -13,14 +13,14 @@ model Workspace {
   slug                      String    @unique
   whatsappPhoneNumber       String?
   whatsappApiKey            String?
+  whatsappPhoneNumberId     String?
+  whatsappVerifyToken       String?
   notificationEmail         String?
   webhookUrl                String?
-  isActive                  Boolean   @default(true)
   language                  String    @default("ENG")
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
   deletedAt                 DateTime?
-  isDelete                  Boolean   @default(false)
   currency                  String    @default("USD")
   channelStatus             Boolean   @default(false) // true = channel active (queue enabled), false = channel disabled
   description               String?
@@ -46,6 +46,8 @@ model Workspace {
   widgetTextColor           String? @default("#0f172a") // Text color for widget accents (links, labels)
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
+  enableWhatsapp                    Boolean @default(true)
+  enableWidget                      Boolean @default(false)
   sellsProductsAndServices          Boolean @default(true) // Does this channel sell products/services? (enables E-commerce menu)
   hasSalesAgents                    Boolean @default(false) // Has sales team for customer assignment?
   hasHumanSupport                   Boolean @default(true) // Can customers request human support?

@@ -225,7 +225,6 @@ export class TrashRestoreService {
           where: { id: workspaceId },
           data: { 
             deletedAt: null,
-            isDelete: false,  // Also reset legacy isDelete flag
           },
         })
 

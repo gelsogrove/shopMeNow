@@ -438,6 +438,39 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     loadWorkspaces()
   }, [])
 
+  // 🔄 Reload workspaces when user returns to page (refresh channelStatus changes)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && hasLoadedWorkspaces) {
+        logger.info("🔄 [WorkspaceSelectionPage] Page visible again - reloading workspaces")
+        loadWorkspaces()
+      }
+    }
+
+    const handleFocus = () => {
+      if (hasLoadedWorkspaces) {
+        logger.info("🔄 [WorkspaceSelectionPage] Window focused - reloading workspaces")
+        loadWorkspaces()
+      }
+    }
+
+    // 🔄 Listen for workspace updates from Settings page (live sync)
+    const handleWorkspaceUpdate = (event: CustomEvent) => {
+      logger.info("🔄 [WorkspaceSelectionPage] Workspace updated - reloading list", event.detail)
+      loadWorkspaces()
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleFocus)
+    window.addEventListener("workspace-updated", handleWorkspaceUpdate as EventListener)
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleFocus)
+      window.removeEventListener("workspace-updated", handleWorkspaceUpdate as EventListener)
+    }
+  }, [hasLoadedWorkspaces])
+
   useEffect(() => {
     if (hasLoadedWorkspaces && workspaces.length === 0 && !hasAutoOpenedWizard) {
       openWizardDialog()
@@ -644,7 +677,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       if (workspace) {
         const updatedWorkspace = await updateWorkspace(id, {
           id,
-          isActive: !workspace.isActive,
+          channelStatus: !workspace.channelStatus,
         })
         const updatedWorkspaces = workspaces.map((w) =>
           w.id === id ? updatedWorkspace : w
@@ -1008,7 +1041,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all flex flex-col min-h-[370px] ${
                     justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
                   } ${
-                    workspace.isActive
+                    workspace.channelStatus
                       ? "bg-white border-green-200 hover:shadow-lg hover:border-green-400"
                       : "bg-gray-50 border-gray-300 opacity-75"
                   }`}
@@ -1021,7 +1054,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   {/* Logo Header Area */}
                   <div 
                     className={`relative h-40 flex items-center justify-center ${
-                      workspace.isActive ? "bg-gradient-to-br from-green-50 to-green-100" : "bg-gray-100"
+                      workspace.channelStatus ? "bg-gradient-to-br from-green-50 to-green-100" : "bg-gray-100"
                     }`}
                   >
                     <div className="relative group">
@@ -1033,7 +1066,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         />
                       ) : (
                         <div className={`h-24 w-24 rounded-full flex items-center justify-center text-white font-bold text-4xl shadow-xl ${
-                          workspace.isActive ? "bg-green-500" : "bg-gray-400"
+                          workspace.channelStatus ? "bg-green-500" : "bg-gray-400"
                         }`}>
                           {workspace.name.charAt(0).toUpperCase()}
                         </div>
@@ -1085,7 +1118,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {workspace.whatsappPhoneNumber && (
                       <div
                         className={`flex items-center justify-center gap-2 text-sm ${
-                          workspace.isActive ? "text-green-600" : "text-gray-400"
+                          workspace.channelStatus ? "text-green-600" : "text-gray-400"
                         }`}
                       >
                         <svg

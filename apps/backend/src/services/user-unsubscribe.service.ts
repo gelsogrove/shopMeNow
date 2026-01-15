@@ -162,8 +162,6 @@ export class UserUnsubscribeService {
           where: { id: workspaceId },
           data: {
             deletedAt: deletedDate,
-            isDelete: true,
-            isActive: false,
             channelStatus: false,
           },
         })

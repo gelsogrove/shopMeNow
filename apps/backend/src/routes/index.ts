@@ -825,6 +825,11 @@ logger.info("Registered support ticket routes for customer support")
 router.use("/admin/support", adminSupportRouter)
 logger.info("Registered admin support ticket routes for backoffice")
 
+// TEMPORARY: Fix workspace deletedAt field
+import tempFixWorkspaceRouter from "./temp-fix-workspace"
+router.use("/temp", tempFixWorkspaceRouter)
+logger.info("⚠️ TEMPORARY: Mounted /temp/temp-fix-workspace/:workspaceId route")
+
 // Health check
 router.get("/health", (req, res) => {
   res.status(200).json({

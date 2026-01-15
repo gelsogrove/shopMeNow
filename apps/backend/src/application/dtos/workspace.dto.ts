@@ -115,11 +115,43 @@ export class WorkspaceDTO extends BaseDTO {
 
   @IsString()
   @IsOptional()
+  whatsappApiKey?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappPhoneNumberId?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappVerifyToken?: string;
+
+  @IsString()
+  @IsOptional()
   whatsappWebhookUrl?: string;
 
   @IsString()
   @IsOptional()
   url?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  enableWhatsapp?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  enableWidget?: boolean;
+
+  @IsString()
+  @IsOptional()
+  widgetTitle?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetLanguage?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetPrimaryColor?: string;
 
   @ValidateNested()
   @Type(() => WorkspaceContactDTO)
@@ -171,6 +203,18 @@ export class CreateWorkspaceDTO {
 
   @IsString()
   @IsOptional()
+  whatsappApiKey?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappPhoneNumberId?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappVerifyToken?: string;
+
+  @IsString()
+  @IsOptional()
   whatsappWebhookUrl?: string;
 
   @IsBoolean()
@@ -180,6 +224,26 @@ export class CreateWorkspaceDTO {
   @IsString()
   @IsOptional()
   url?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  enableWhatsapp?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  enableWidget?: boolean;
+
+  @IsString()
+  @IsOptional()
+  widgetTitle?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetLanguage?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetPrimaryColor?: string;
 }
 
 /**
@@ -212,11 +276,43 @@ export class UpdateWorkspaceDTO {
 
   @IsString()
   @IsOptional()
+  whatsappApiKey?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappPhoneNumberId?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappVerifyToken?: string;
+
+  @IsString()
+  @IsOptional()
   whatsappWebhookUrl?: string;
 
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  enableWhatsapp?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  enableWidget?: boolean;
+
+  @IsString()
+  @IsOptional()
+  widgetTitle?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetLanguage?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetPrimaryColor?: string;
 
   @IsString()
   @IsOptional()

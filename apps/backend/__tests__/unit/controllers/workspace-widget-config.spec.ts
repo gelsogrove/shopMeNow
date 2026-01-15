@@ -128,6 +128,50 @@ describe('WorkspaceController - Widget Configuration', () => {
       )
     })
 
+    it('should update channel + WhatsApp fields when provided', async () => {
+      const payload = {
+        enableWhatsapp: true,
+        enableWidget: true,
+        whatsappPhoneNumber: "+1234567890",
+        whatsappApiKey: "api-key-123",
+        whatsappPhoneNumberId: "123456789012345",
+        whatsappVerifyToken: "verify-token-abc",
+        widgetTitle: "Customer Support",
+        widgetLanguage: "en",
+        widgetPrimaryColor: "#10b981",
+      }
+
+      mockReq.body = payload
+
+      ;(prisma.workspaceMember.findFirst as jest.Mock).mockResolvedValue({
+        role: 'SUPER_ADMIN',
+        userId: testUserId,
+        workspaceId: testWorkspaceId,
+      })
+
+      ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: testWorkspaceId,
+        name: 'Test Workspace',
+      })
+
+      updateSpy.mockResolvedValue({
+        id: testWorkspaceId,
+        ...payload,
+        updatedAt: new Date(),
+      })
+
+      await controller.updateWorkspace(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(updateSpy).toHaveBeenCalledWith(
+        testWorkspaceId,
+        expect.objectContaining(payload)
+      )
+
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining(payload)
+      )
+    })
+
     it('should update only widgetTitle without affecting other fields', async () => {
       mockReq.body = { widgetTitle: 'New Chat Title' }
 

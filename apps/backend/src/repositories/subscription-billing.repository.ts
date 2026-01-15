@@ -381,7 +381,7 @@ export class SubscriptionBillingRepository {
 
     // Get owner's workspaces for workspace name lookup
     const ownerWorkspaces = await this.prisma.workspace.findMany({
-      where: { ownerId: userId, isActive: true, deletedAt: null },
+      where: { ownerId: userId, deletedAt: null },
       select: { id: true, name: true },
     })
     const workspaceNameMap = new Map(ownerWorkspaces.map(w => [w.id, w.name]))
@@ -537,7 +537,7 @@ export class SubscriptionBillingRepository {
   }> {
     // Get all workspaces owned by this user (exclude soft-deleted)
     const ownerWorkspaces = await this.prisma.workspace.findMany({
-      where: { ownerId: userId, isActive: true, deletedAt: null },
+      where: { ownerId: userId, deletedAt: null },
       select: { id: true },
     })
 

@@ -22,6 +22,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       whatsappPhoneNumber: data.whatsappPhoneNumber,
       whatsappApiKey: data.whatsappApiKey, // ✅ FIX: Use whatsappApiKey (new field name)
       whatsappApiToken: data.whatsappApiKey, // ✅ LEGACY: Keep for backward compatibility
+      whatsappPhoneNumberId: data.whatsappPhoneNumberId ?? null,
+      whatsappVerifyToken: data.whatsappVerifyToken ?? null,
       whatsappWebhookUrl: data.whatsappWebhookUrl,
       webhookUrl: data.webhookUrl,
       notificationEmail: data.notificationEmail,
@@ -32,8 +34,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       welcomeMessage: data.welcomeMessage,
       wipMessage: data.wipMessage,
       channelStatus: data.channelStatus,
-      isActive: data.isActive,
-      isDelete: data.isDelete,
+      deletedAt: data.deletedAt ?? null,
       url: data.url,
       adminEmail: data.whatsappSettings?.adminEmail || null,
       debugMode: data.debugMode ?? true,
@@ -44,6 +45,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       trialEndsAt: data.trialEndsAt || null,
       allowedExternalLinks: data.allowedExternalLinks || [],
       // 🆕 Channel Configuration (Feature 199)
+      enableWhatsapp: data.enableWhatsapp ?? true,
+      enableWidget: data.enableWidget ?? false,
       sellsProductsAndServices: data.sellsProductsAndServices ?? true,
       hasSalesAgents: data.hasSalesAgents ?? false,
       hasHumanSupport: data.hasHumanSupport ?? true,
@@ -55,6 +58,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       botIdentityResponse: data.botIdentityResponse || null,
       address: data.address || null,
       customAiRules: data.customAiRules || null,
+      chatbotName: data.chatbotName || null,
+      businessType: data.businessType || null,
       // 🆕 Logo
       logoUrl: data.logoUrl || null,
       // 🆕 Widget Settings
@@ -82,6 +87,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       description: workspace.description,
       whatsappPhoneNumber: workspace.whatsappPhoneNumber,
       whatsappApiKey: workspace.whatsappApiKey || workspace.whatsappApiToken, // ✅ FIX: Prefer whatsappApiKey, fallback to whatsappApiToken
+      whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
+      whatsappVerifyToken: workspace.whatsappVerifyToken,
       whatsappWebhookUrl: workspace.whatsappWebhookUrl,
       webhookUrl: workspace.webhookUrl,
       notificationEmail: workspace.notificationEmail,
@@ -92,12 +99,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       welcomeMessage: workspace.welcomeMessage,
       wipMessage: workspace.wipMessage,
       channelStatus: workspace.channelStatus,
-      isActive: workspace.isActive,
-      isDelete: workspace.isDelete,
+      createdAt: workspace.createdAt,
+      updatedAt: workspace.updatedAt,
+      deletedAt: workspace.deletedAt ?? null,
       url: workspace.url,
       debugMode: workspace.debugMode,
       allowedExternalLinks: workspace.allowedExternalLinks || [],
       // 🆕 Channel Configuration (Feature 199)
+      enableWhatsapp: workspace.enableWhatsapp,
+      enableWidget: workspace.enableWidget,
       sellsProductsAndServices: workspace.sellsProductsAndServices,
       hasSalesAgents: workspace.hasSalesAgents,
       hasHumanSupport: workspace.hasHumanSupport,
@@ -109,6 +119,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       botIdentityResponse: workspace.botIdentityResponse,
       address: workspace.address,
       customAiRules: workspace.customAiRules,
+      chatbotName: workspace.chatbotName,
+      businessType: workspace.businessType,
       // 🆕 Logo
       logoUrl: workspace.logoUrl,
       // 🆕 Widget Settings
@@ -134,7 +146,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
     try {
       const workspaces = await this.prisma.workspace.findMany({
         where: {
-          isDelete: false,
+          deletedAt: null,
         },
         include: {
           whatsappSettings: true,
@@ -194,7 +206,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       } catch (error) {
         // If mapping fails but it's a deleted workspace, return a simplified version
         // This preserves compatibility with the test that expects to find deleted workspaces
-        if (workspace.isDelete) {
+        if (workspace.deletedAt) {
           logger.debug(
             `Returning simplified version of deleted workspace ${id}`
           )
@@ -202,8 +214,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             id: workspace.id,
             name: workspace.name || "Deleted Workspace", // Ensure name is never empty
             slug: workspace.slug || "deleted-workspace",
-            isDelete: true,
-            isActive: false,
+            deletedAt: workspace.deletedAt ?? new Date(),
             language: "ENG",
             createdAt: workspace.createdAt || new Date(),
             updatedAt: workspace.updatedAt || new Date(),
@@ -282,8 +293,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       const workspace = await this.prisma.workspace.findFirst({
         where: {
           whatsappPhoneNumber: normalizedPhone,
-          isDelete: false,
-          isActive: true,
+          deletedAt: null,
+          channelStatus: true,
         },
         include: {
           whatsappSettings: true,
@@ -344,7 +355,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // Filter only non-deleted workspaces
       const workspaces = user.workspaces
         .map((uw) => uw.workspace)
-        .filter((workspace) => !workspace.isDelete)
+        .filter((workspace) => workspace.deletedAt === null)
 
       logger.debug(`Found ${workspaces.length} workspaces for user ${userId}`)
       
@@ -424,7 +435,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             whatsappPhoneNumber: existingWorkspace.whatsappPhoneNumber,
             whatsappApiKey: existingWorkspace.whatsappApiKey,
             adminEmail: existingWorkspace.whatsappSettings?.adminEmail,
-            isActive: existingWorkspace.isActive,
+            channelStatus: existingWorkspace.channelStatus,
             debugMode: existingWorkspace.debugMode,
           },
           null,
@@ -434,12 +445,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       // Ensure whatsappApiToken/whatsappApiKey is mapped correctly for Prisma
       const dbData: any = { ...data }
-
-      // 🔄 Map channelStatus → channelStatus (frontend uses different name than DB)
-      if (dbData.channelStatus !== undefined) {
-        dbData.channelStatus = dbData.channelStatus
-        delete dbData.channelStatus
-      }
 
       // Remove 'id' if present - shouldn't update primary key
       if (dbData.id !== undefined) {
@@ -520,8 +525,71 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       const updatedWorkspace = await this.prisma.workspace.update({
         where: { id },
         data: prismaUpdateData,
-        include: {
-          whatsappSettings: true,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          whatsappPhoneNumber: true,
+          whatsappApiKey: true,
+          whatsappPhoneNumberId: true,
+          whatsappVerifyToken: true,
+          webhookUrl: true,
+          notificationEmail: true,
+          language: true,
+          currency: true,
+          messageLimit: true,
+          welcomeMessage: true,
+          wipMessage: true,
+          afterRegistrationMessages: true,
+          channelStatus: true, // ✅ CRITICAL: Include channelStatus
+          deletedAt: true,
+          url: true,
+          debugMode: true,
+          apiKey: true,
+          metadata: true,
+          websiteUrl: true,
+          createdAt: true,
+          updatedAt: true,
+          planType: true,
+          trialEndsAt: true,
+          allowedExternalLinks: true,
+          logoUrl: true,
+          logoKey: true,
+          widgetLogoUrl: true,
+          widgetLogoKey: true,
+          widgetTitle: true,
+          widgetLanguage: true,
+          widgetPrimaryColor: true,
+          enableWhatsapp: true,
+          enableWidget: true,
+          sellsProductsAndServices: true,
+          hasSalesAgents: true,
+          hasHumanSupport: true,
+          humanSupportInstructions: true,
+          frustrationEscalationInstructions: true,
+          operatorContactMethod: true,
+          operatorWhatsappNumber: true,
+          toneOfVoice: true,
+          botIdentityResponse: true,
+          customAiRules: true,
+          address: true,
+          chatbotName: true,
+          businessType: true,
+          translateProductNames: true,
+          translateCategoryNames: true,
+          translateServiceNames: true,
+          catalogBaseLanguage: true,
+          ownerId: true,
+          creditBalance: true,
+          whatsappSettings: {
+            select: {
+              id: true,
+              phoneNumber: true,
+              apiKey: true,
+              adminEmail: true,
+            },
+          },
         },
       })
 
@@ -533,7 +601,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             whatsappPhoneNumber: updatedWorkspace.whatsappPhoneNumber,
             whatsappApiKey: updatedWorkspace.whatsappApiKey,
             adminEmail: updatedWorkspace.whatsappSettings?.adminEmail,
-            isActive: updatedWorkspace.isActive,
+            channelStatus: updatedWorkspace.channelStatus, // ✅ NOW LOGGED
             debugMode: updatedWorkspace.debugMode,
             sellsProductsAndServices: updatedWorkspace.sellsProductsAndServices,
             hasSalesAgents: updatedWorkspace.hasSalesAgents,
@@ -561,7 +629,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       } catch (error) {
         logger.error(`❌ Error mapping workspace to domain entity:`, error)
         // If mapping fails but it's a deleted workspace, return a simplified version
-        if (updatedWorkspace.isDelete) {
+        if (updatedWorkspace.deletedAt) {
           logger.debug(
             `Returning simplified version of deleted workspace ${id}`
           )
@@ -569,8 +637,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             id: updatedWorkspace.id,
             name: updatedWorkspace.name || "Deleted Workspace", // Ensure name is never empty
             slug: updatedWorkspace.slug || "deleted-workspace",
-            isDelete: true,
-            isActive: false,
+            deletedAt: updatedWorkspace.deletedAt ?? new Date(),
             language: "ENG",
             createdAt: updatedWorkspace.createdAt || new Date(),
             updatedAt: updatedWorkspace.updatedAt || new Date(),
@@ -648,12 +715,11 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         return false
       }
 
-      // Soft-delete: set deletedAt and isDelete flag
+      // Soft-delete: set deletedAt timestamp
       await this.prisma.workspace.update({
         where: { id },
         data: {
-          isDelete: true,  // Legacy flag for backward compatibility
-          deletedAt: new Date(),  // New soft-delete timestamp
+          deletedAt: new Date(),
         },
       })
 

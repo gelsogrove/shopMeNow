@@ -82,6 +82,7 @@ export function MinimalLayout() {
   const workspaceName = workspace?.name || ""
   const workspacePhone = workspace?.whatsappPhoneNumber || ""
   const hasSalesAgents = workspace?.hasSalesAgents ?? false
+  const enableWhatsapp = (workspace as any)?.enableWhatsapp ?? false
 
   // Load user profile from localStorage
   useEffect(() => {
@@ -186,7 +187,7 @@ export function MinimalLayout() {
 
 
 
-            {/* Right: Support + Plan Badge + User Menu */}
+            {/* Right: Support + Settings + Plan Badge + User Menu */}
             <div className="flex items-center gap-3">
               {/* Support Inbox Icon with Badge */}
               <TooltipProvider delayDuration={100}>
@@ -216,11 +217,34 @@ export function MinimalLayout() {
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Plan Badge */}
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${getPlanBadgeColor(planType)}`}>
-                <Crown className="h-3.5 w-3.5" />
-                <span>{getPlanName(planType)}</span>
-              </div>
+              {/* Settings Icon - Only shown when workspace is active */}
+              {workspace && (
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate("/settings")}
+                        className="p-2 text-gray-600 hover:text-gray-900"
+                      >
+                        <Settings className="h-5 w-5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Settings</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Plan Badge - Only shown when NOT in a workspace */}
+              {!workspace && (
+                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium border ${getPlanBadgeColor(planType)}`}>
+                  <Crown className="h-3.5 w-3.5" />
+                  <span>{getPlanName(planType)}</span>
+                </div>
+              )}
 
               {/* User Menu */}
               <DropdownMenu>
@@ -318,27 +342,13 @@ export function MinimalLayout() {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/settings")}
-                  >
-                    <Settings className="mr-2 h-4 w-4 text-gray-600" />
-                    <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/queue")}
-                  >
-                    <ListTodo className="mr-2 h-4 w-4 text-green-600" />
-                    <span>WhatsApp Queue</span>
-                  </DropdownMenuItem>
-                  {workspace?.sellsProductsAndServices !== true && (
+                  {enableWhatsapp && (
                     <DropdownMenuItem
                       className="p-2 cursor-pointer"
-                      onClick={() => navigate("/widget-settings")}
+                      onClick={() => navigate("/queue")}
                     >
-                      <MessageSquare className="mr-2 h-4 w-4 text-cyan-500" />
-                      <span>Chat Widget</span>
+                      <ListTodo className="mr-2 h-4 w-4 text-green-600" />
+                      <span>WhatsApp Queue</span>
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />

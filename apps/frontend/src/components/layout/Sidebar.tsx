@@ -10,7 +10,6 @@ import {
   LifeBuoy,
   LucideIcon,
   Megaphone,
-  MessageSquare,
   Package2,
   Percent,
   ShoppingCart,
@@ -144,12 +143,6 @@ export function Sidebar() {
       label: "Campaigns",
       icon: Megaphone,
     },
-    // Chat Widget - only for informational channels (not e-commerce)
-    ...(workspace?.sellsProductsAndServices !== true ? [{
-      href: "/widget-settings",
-      label: "Chat Widget",
-      icon: MessageSquare,
-    }] : []),
     {
       href: "/support/tickets",
       label: "Support",

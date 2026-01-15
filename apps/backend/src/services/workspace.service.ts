@@ -9,8 +9,8 @@ interface CreateWorkspaceData {
   description?: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
-  isDelete?: boolean
-  isActive?: boolean
+  whatsappPhoneNumberId?: string
+  whatsappVerifyToken?: string
   currency?: string
   language?: string
   messageLimit?: number
@@ -27,8 +27,8 @@ interface UpdateWorkspaceData {
   description?: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
-  isActive?: boolean
-  isDelete?: boolean
+  whatsappPhoneNumberId?: string
+  whatsappVerifyToken?: string
   currency?: string
   language?: string
   messageLimit?: number
@@ -43,6 +43,8 @@ interface UpdateWorkspaceData {
   debugMode?: boolean // 🐞 Debug mode toggle
   adminEmail?: string // Admin email for WhatsappSettings
   // 🆕 Channel Configuration (Feature 199)
+  enableWhatsapp?: boolean
+  enableWidget?: boolean
   sellsProductsAndServices?: boolean
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
@@ -51,13 +53,17 @@ interface UpdateWorkspaceData {
   operatorWhatsappNumber?: string
   toneOfVoice?: string
   botIdentityResponse?: string
+  // 🆕 Widget Configuration
+  widgetTitle?: string
+  widgetLanguage?: string
+  widgetPrimaryColor?: string
 }
 
 export const workspaceService = {
   async getAll() {
     return prisma.workspace.findMany({
       where: {
-        isDelete: false,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -66,10 +72,11 @@ export const workspaceService = {
         description: true,
         whatsappPhoneNumber: true,
         whatsappApiKey: true,
+        whatsappPhoneNumberId: true,
+        whatsappVerifyToken: true,
         createdAt: true,
         updatedAt: true,
-        isActive: true,
-        isDelete: true,
+        deletedAt: true,
         currency: true,
         language: true,
         messageLimit: true,
@@ -80,6 +87,8 @@ export const workspaceService = {
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199)
+        enableWhatsapp: true,
+        enableWidget: true,
         sellsProductsAndServices: true,
         hasSalesAgents: true,
         hasHumanSupport: true,
@@ -90,6 +99,10 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
+        // 🆕 Widget Configuration
+        widgetTitle: true,
+        widgetLanguage: true,
+        widgetPrimaryColor: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -110,10 +123,11 @@ export const workspaceService = {
         description: true,
         whatsappPhoneNumber: true,
         whatsappApiKey: true,
+        whatsappPhoneNumberId: true,
+        whatsappVerifyToken: true,
         createdAt: true,
         updatedAt: true,
-        isActive: true,
-        isDelete: true,
+        deletedAt: true,
         currency: true,
         language: true,
         messageLimit: true,
@@ -125,6 +139,8 @@ export const workspaceService = {
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199)
+        enableWhatsapp: true,
+        enableWidget: true,
         sellsProductsAndServices: true,
         hasSalesAgents: true,
         hasHumanSupport: true,
@@ -135,6 +151,10 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
+        // 🆕 Widget Configuration
+        widgetTitle: true,
+        widgetLanguage: true,
+        widgetPrimaryColor: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -144,6 +164,9 @@ export const workspaceService = {
     })
 
     if (!workspace) return null
+
+    // 🔍 LOG CHANNEL STATUS READ FROM DB
+    logger.info(`🔍 GETBYID - channelStatus from DB: ${workspace.channelStatus}, type: ${typeof workspace.channelStatus}`)
 
     // 2. Query SEPARATA per agentConfigs con FILTRO ESPLICITO per workspaceId
     const agentConfigs = await prisma.agentConfig.findMany({
@@ -187,7 +210,6 @@ export const workspaceService = {
       data: {
         ...data,
         slug: data.name.toLowerCase().replace(/\s+/g, "-"),
-        isDelete: false,
       },
       select: {
         id: true,
@@ -196,10 +218,11 @@ export const workspaceService = {
         description: true,
         whatsappPhoneNumber: true,
         whatsappApiKey: true,
+        whatsappPhoneNumberId: true,
+        whatsappVerifyToken: true,
         createdAt: true,
         updatedAt: true,
-        isActive: true,
-        isDelete: true,
+        deletedAt: true,
         currency: true,
         language: true,
         messageLimit: true,
@@ -209,6 +232,11 @@ export const workspaceService = {
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
+        enableWhatsapp: true,
+        enableWidget: true,
+        widgetTitle: true,
+        widgetLanguage: true,
+        widgetPrimaryColor: true,
       },
     })
   },
@@ -264,8 +292,7 @@ export const workspaceService = {
         whatsappApiKey: true,
         createdAt: true,
         updatedAt: true,
-        isActive: true,
-        isDelete: true,
+        deletedAt: true,
         currency: true,
         language: true,
         messageLimit: true,
@@ -301,6 +328,7 @@ export const workspaceService = {
       "Updated whatsappApiKey:",
       updatedWorkspace.whatsappApiKey ? "✅ SALVATA" : "❌ NULL"
     )
+    logger.info("channelStatus AFTER UPDATE:", updatedWorkspace.channelStatus, "type:", typeof updatedWorkspace.channelStatus)
     logger.info("Updated workspace:", JSON.stringify(updatedWorkspace, null, 2))
 
     // Update adminEmail in WhatsappSettings if provided
@@ -338,8 +366,7 @@ export const workspaceService = {
     return prisma.workspace.update({
       where: { id },
       data: { 
-        isDelete: true,  // Legacy flag (keep for backward compatibility)
-        deletedAt: new Date(),  // New soft-delete timestamp
+        deletedAt: new Date(),
       },
     })
   },

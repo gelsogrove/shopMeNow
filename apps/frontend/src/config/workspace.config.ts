@@ -131,8 +131,8 @@ export const clearWorkspaceCache = (): void => {
 export const cacheWorkspace = (workspace: Workspace): void => {
   cachedWorkspaces[workspace.id] = workspace
 
-  // If this is the first active workspace we're caching, set it as default
-  if (!cachedDefaultWorkspace && workspace.isActive) {
+  // If this is the first non-deleted workspace we're caching, set it as default
+  if (!cachedDefaultWorkspace && !workspace.deletedAt) {
     cachedDefaultWorkspace = workspace
   }
 }

@@ -44,7 +44,7 @@ export function startWhatsAppQueueProcessor() {
       // channelStatus replaces whatsappQueueEnabled - single flag for channel active state
       const workspaces = await prisma.workspace.findMany({
         where: { 
-          isActive: true,
+          deletedAt: null,
           channelStatus: true, // ✅ Only process if channel is ACTIVE
         },
         select: { id: true, name: true },
@@ -105,7 +105,7 @@ export function startWhatsAppQueueCleanup() {
 
       // 🔒 Get all active workspaces and cleanup each one
       const workspaces = await prisma.workspace.findMany({
-        where: { isActive: true },
+        where: { deletedAt: null },
         select: { id: true, name: true },
       })
 
