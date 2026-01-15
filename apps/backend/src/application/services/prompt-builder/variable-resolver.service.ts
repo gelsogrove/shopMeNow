@@ -183,6 +183,7 @@ export class VariableResolverService {
     ;(variables as any).supportEmail = variables.supportEmail
     ;(variables as any).chatbotName = variables.chatbotName
     ;(variables as any).businessType = variables.businessType
+    ;(variables as any).nameUser = variables.customerName || "Customer" // Transfer messages use {{nameUser}}
   }
 
   /**
@@ -207,6 +208,10 @@ export class VariableResolverService {
       variables.pushNotificationsConsent = false
       variables.languageUser = variables.language || "it"
       variables.customerIsActive = false // 🔒 Feature 174: Default to non-registered
+      // 🔧 Set agentName even if customer not found
+      variables.agentName = "Not assigned"
+      variables.agentPhone = ""
+      variables.agentEmail = ""
       return
     }
 
@@ -236,6 +241,9 @@ export class VariableResolverService {
       select: { orderCode: true },
     })
     variables.lastOrderCode = lastOrder?.orderCode || ""
+
+    // 🔧 Alias: nameUser = customerName (transfer messages use {{nameUser}})
+    ;(variables as any).nameUser = variables.customerName
   }
 
   /**

@@ -140,6 +140,7 @@ import twoFactorResetRoutes from "../interfaces/http/routes/two-factor-reset.rou
 import { createTrashRoutes } from "../interfaces/http/routes/trash.routes"
 import { supportRouter } from "../interfaces/http/routes/support.routes"
 import { adminSupportRouter } from "../interfaces/http/routes/admin-support.routes"
+import { paypalRoutes } from "../interfaces/http/routes/paypal.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -758,6 +759,10 @@ router.use("/subscription-billing", ownerBillingRoutes)
 logger.info(
   "Registered owner billing routes: /api/subscription-billing (Feature 198)"
 )
+
+// Mount PayPal connect routes (Owner-only)
+router.use("/paypal", paypalRoutes)
+logger.info("Registered PayPal connect routes: /api/paypal")
 
 // Mount billing routes (legacy usage tracking - has auth middleware that catches all)
 router.use("/billing", billingRouter)

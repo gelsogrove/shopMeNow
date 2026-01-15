@@ -160,7 +160,7 @@ describe("Router Template Variables Replacement", () => {
       const leftoverVariables = result.content.match(/\{\{[^}]+\}\}/g)
       
       if (leftoverVariables) {
-        console.error("❌ Leftover variables in ecommerce Router:", leftoverVariables)
+        console.error("❌ Leftover variables:", leftoverVariables)
       }
 
       expect(leftoverVariables).toBeNull()

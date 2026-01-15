@@ -55,14 +55,8 @@ describe("WorkspaceRepository", () => {
     const deletedWorkspace = buildWorkspace({ id: "ws-deleted", deletedAt: new Date() })
 
     const mockPrisma = {
-      user: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: "user-1",
-          workspaces: [
-            { workspace: activeWorkspace },
-            { workspace: deletedWorkspace },
-          ],
-        }),
+      workspace: {
+        findMany: jest.fn().mockResolvedValue([activeWorkspace]),
       },
     } as unknown as PrismaClient
 
@@ -71,5 +65,12 @@ describe("WorkspaceRepository", () => {
 
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe("ws-active")
+    expect(mockPrisma.workspace.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          deletedAt: null,
+        }),
+      })
+    )
   })
 })

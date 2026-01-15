@@ -1,11 +1,17 @@
 import request from "supertest"
-import app from "../../../src/app"
 import { prisma } from "@echatbot/database"
 
 // TODO: Fix CORS tests - currently failing with 401 in test environment
 // The CORS middleware works correctly in production/development
 // Issue is related to test environment setup and auth middleware interaction
 describe.skip("CORS middleware", () => {
+  let app: any
+  
+  beforeAll(async () => {
+    // Import app only when running tests (not when skipped)
+    app = (await import("../../../src/app")).default
+  })
+
   it("should allow origin from workspace websiteUrl", async () => {
     const slug = `cors-test-${Date.now()}`
     const origin = "https://cors-test.example"

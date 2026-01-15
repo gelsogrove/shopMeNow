@@ -1,7 +1,7 @@
-# PayPal (Mock) - Billing Backoffice
+# PayPal Connect - Billing Backoffice
 
 ## Scopo
-Definire il flusso PayPal in backoffice (mock) e i dati che vengono salvati a livello owner. Il mock serve solo per simulare un pagamento mensile finche' non viene integrato il provider reale.
+Definire il flusso PayPal Connect per owner (OAuth) e i dati che vengono salvati a livello owner.
 
 ## Dati salvati (owner-level)
 Campi su `User`:
@@ -11,6 +11,10 @@ Campi su `User`:
 - `paypalEmail`
 - `paypalEnvironment` (es: sandbox/live)
 - `paypalConnectedAt`
+- `paypalAccessTokenEncrypted`
+- `paypalRefreshTokenEncrypted`
+- `paypalTokenExpiresAt`
+- `paypalTokenScope`
 
 ## Transazioni PayPal
 Tabella `PayPalTransaction`:
@@ -29,12 +33,8 @@ Tabella `PayPalTransaction`:
   - Status, Environment, Email, Merchant ID, Client ID, Connected At.
   - Storico transazioni PayPal (success/fail, data, note).
 
-### Monthly Collections
-- Bottone **Process Payment**: esegue un mock e ritorna `success/failed`.
-- Bottone **Record Failure**: registra un tentativo fallito senza bloccare l'utente.
-- **Mark Paid/Failed**: aggiorna lo stato della fattura.
-- **Reset Payment**: azzera il contatore dei failure.
-- **Credit Notes**: aggiunge/modifica/elimina note di credito.
+### Workspace Selection (owner)
+- Card **PayPal Account** con stato connessione e bottoni Connect/Disconnect.
 
 ## API Admin
 - `GET /users/admin/:userId/paypal`  
@@ -54,8 +54,18 @@ Tabella `PayPalTransaction`:
 - Nessun segreto PayPal salvato o mostrato (solo client/merchant ID + email).
 - I dati PayPal sono visibili solo agli admin nel backoffice.
 
-## TODO per integrazione reale
-- Salvare tokens reali PayPal in vault sicuro (non in DB plain).
-- Webhook PayPal per conferma pagamenti reali.
-- Reconciliation mensile tra invoice e payout.
-- Retry policy e blocco automatico su troppi failure (solo se richiesto).
+## PayPal Connect (OAuth)
+- `POST /api/paypal/connect-url` (owner only) → ritorna URL OAuth (sandbox in dev, live in prod)
+- `GET /api/paypal/callback` → scambia `code` con token, salva dati su `User`
+- `GET /api/paypal/status` (owner only) → stato connessione
+- `POST /api/paypal/disconnect` (owner only) → disconnette e pulisce tokens
+
+## Sicurezza (Connect)
+- Token cifrati a riposo con `PAYPAL_TOKEN_ENCRYPTION_KEY`
+- Callback valida `state` via JWT (CSRF)
+- Solo owner (SUPER_ADMIN) può connettere/disconnettere
+
+## TODO per integrazione real payout
+- Webhook PayPal con signature verification
+- Payout mensile automatico su merchantId
+- Retry policy + audit log

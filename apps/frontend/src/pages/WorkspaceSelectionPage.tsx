@@ -30,6 +30,7 @@ import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
+import { getPayPalConnectUrl, getPayPalStatus, disconnectPayPal, getPayPalConfig, type PayPalStatusResponse, type PayPalConfigResponse } from "@/services/paypalApi"
 import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
@@ -191,8 +192,12 @@ export function WorkspaceSelectionPage() {
   // Support tickets unread count
   const [supportUnreadCount, setSupportUnreadCount] = useState(0)
   
-  // PayPal popup state
-  const [showPayPalPopup, setShowPayPalPopup] = useState(false)
+  // PayPal connection state
+  const [paypalStatus, setPaypalStatus] = useState<PayPalStatusResponse | null>(null)
+  const [paypalConfig, setPaypalConfig] = useState<PayPalConfigResponse | null>(null)
+  const [paypalLoading, setPaypalLoading] = useState(false)
+  const [paypalConnecting, setPaypalConnecting] = useState(false)
+  const [paypalDisconnecting, setPaypalDisconnecting] = useState(false)
   
   // Logo upload state
   const [logoDialogOpen, setLogoDialogOpen] = useState(false)
@@ -405,6 +410,92 @@ export function WorkspaceSelectionPage() {
 const firstWorkspace = workspaces.length > 0 ? workspaces[0] : null
 const firstWorkspaceId = firstWorkspace?.id ?? null
 const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstWorkspaceId)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const paypalParam = params.get("paypal")
+    if (!paypalParam) return
+
+    if (paypalParam === "connected") {
+      toast.success("PayPal connected successfully.")
+    } else if (paypalParam === "missing_config") {
+      toast.error("PayPal is not configured. Add sandbox/live credentials first.")
+    } else {
+      toast.error("PayPal connection failed. Please try again.")
+    }
+
+    params.delete("paypal")
+    const nextQuery = params.toString()
+    const nextUrl = nextQuery
+      ? `${window.location.pathname}?${nextQuery}`
+      : window.location.pathname
+    window.history.replaceState({}, "", nextUrl)
+  }, [])
+
+  const loadPayPalStatus = useCallback(async () => {
+    if (isRoleLoading || !isSuperAdmin) return
+
+    try {
+      setPaypalLoading(true)
+      const data = await getPayPalStatus()
+      setPaypalStatus(data)
+    } catch (error) {
+      logger.error("Failed to load PayPal status:", error)
+      setPaypalStatus(null)
+    } finally {
+      setPaypalLoading(false)
+    }
+  }, [isRoleLoading, isSuperAdmin])
+
+  const loadPayPalConfig = useCallback(async () => {
+    if (isRoleLoading || !isSuperAdmin) return
+
+    try {
+      const data = await getPayPalConfig()
+      setPaypalConfig(data)
+    } catch (error) {
+      logger.error("Failed to load PayPal config:", error)
+      setPaypalConfig(null)
+    }
+  }, [isRoleLoading, isSuperAdmin])
+
+  useEffect(() => {
+    loadPayPalStatus()
+    loadPayPalConfig()
+  }, [loadPayPalStatus, loadPayPalConfig])
+
+  const handlePayPalConnect = async () => {
+    if (paypalConfig && !paypalConfig.configured) {
+      toast.error("PayPal is not configured. Add sandbox/live credentials first.")
+      return
+    }
+
+    try {
+      setPaypalConnecting(true)
+      const url = await getPayPalConnectUrl()
+      window.location.href = url
+    } catch (error) {
+      logger.error("Failed to start PayPal connect:", error)
+      toast.error("Unable to start PayPal connection.")
+    } finally {
+      setPaypalConnecting(false)
+    }
+  }
+
+  const handlePayPalDisconnect = async () => {
+    try {
+      setPaypalDisconnecting(true)
+      await disconnectPayPal()
+      toast.success("PayPal disconnected.")
+      await loadPayPalStatus()
+      await loadPayPalConfig()
+    } catch (error) {
+      logger.error("Failed to disconnect PayPal:", error)
+      toast.error("Unable to disconnect PayPal.")
+    } finally {
+      setPaypalDisconnecting(false)
+    }
+  }
 
   // 🔍 DEBUG: Log role info
   useEffect(() => {
@@ -2021,39 +2112,84 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           />
         )}
 
-        {/* PayPal Integration Banner */}
-        <Card 
-          className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 cursor-pointer hover:shadow-lg transition-all"
-          onClick={() => setShowPayPalPopup(true)}
-        >
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                  <img src="/paypal.png" alt="PayPal" className="w-9 h-auto object-contain" />
+        {/* PayPal Integration (Owner only) */}
+        {isSuperAdmin && (
+          <Card className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
+            <CardHeader className="pb-2">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <img src="/paypal.png" alt="PayPal" className="w-9 h-auto object-contain" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">PayPal Account</CardTitle>
+                    <CardDescription className="text-blue-700">
+                      Connect your PayPal account to receive monthly payouts.
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg">
-                    Connect your PayPal Account
-                  </CardTitle>
-                  <CardDescription className="text-blue-700">
-                    Link your account to receive payments
-                  </CardDescription>
+                <div className="flex items-center gap-2">
+                  {paypalStatus?.paypalStatus === "CONNECTED" ? (
+                    <Button
+                      variant="outline"
+                      onClick={handlePayPalDisconnect}
+                      disabled={paypalDisconnecting}
+                    >
+                      {paypalDisconnecting ? "Disconnecting..." : "Disconnect"}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={handlePayPalConnect}
+                      disabled={paypalConnecting || paypalConfig?.configured === false}
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      {paypalConnecting ? "Connecting..." : "Connect"}
+                    </Button>
+                  )}
                 </div>
               </div>
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowPayPalPopup(true)
-                }}
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Setup
-              </Button>
-            </div>
-          </CardHeader>
-        </Card>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {paypalLoading ? (
+                <p className="text-sm text-gray-500">Loading PayPal status...</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
+                  <div className="rounded-lg bg-white/70 px-3 py-2">
+                    <span className="text-xs uppercase text-gray-500">Status</span>
+                    <div className="font-semibold">
+                      {paypalStatus?.paypalStatus || "DISCONNECTED"}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white/70 px-3 py-2">
+                    <span className="text-xs uppercase text-gray-500">Environment</span>
+                    <div className="font-semibold">
+                      {paypalStatus?.paypalEnvironment || paypalConfig?.environment || "sandbox"}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white/70 px-3 py-2">
+                    <span className="text-xs uppercase text-gray-500">PayPal Email</span>
+                    <div className="font-semibold truncate">
+                      {paypalStatus?.paypalEmail || "Not connected"}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-white/70 px-3 py-2">
+                    <span className="text-xs uppercase text-gray-500">Merchant ID</span>
+                    <div className="font-semibold truncate">
+                      {paypalStatus?.paypalMerchantId || "Not connected"}
+                    </div>
+                  </div>
+                  {paypalConfig?.configured === false && (
+                    <div className="rounded-lg bg-yellow-50 px-3 py-2 text-yellow-800 sm:col-span-2">
+                      PayPal is not configured. Add sandbox/live credentials to enable
+                      Connect.
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Support Ticket Card (Owner only) */}
         {isSuperAdmin && (
@@ -2136,47 +2272,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         </div>
       )}
 
-      {/* PayPal Work in Progress Popup */}
-      {showPayPalPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-w-[95vw] relative">
-            <div className="p-8">
-              <div className="flex flex-col items-center text-center space-y-4">
-                {/* Icon */}
-                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-                  <img src="/paypal.png" alt="PayPal" className="w-[59px] h-auto object-contain" />
-                </div>
-
-                {/* Title */}
-                <h2 className="text-2xl font-bold text-gray-900">
-                  PayPal Integration
-                </h2>
-
-                {/* Message */}
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold text-blue-600">
-                    🚧 Work in Progress
-                  </p>
-                  <p className="text-gray-600">
-                    We're working to make PayPal integration available as soon as possible.
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    You'll be able to connect your PayPal account to receive payments directly from customers.
-                  </p>
-                </div>
-
-                {/* Close Button */}
-                <Button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4"
-                  onClick={() => setShowPayPalPopup(false)}
-                >
-                  Got it
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Footer - Fixed at bottom */}
       <footer className="fixed bottom-0 left-0 right-0 py-4 bg-white/80 backdrop-blur-sm border-t border-gray-200 text-center text-sm text-gray-500">
