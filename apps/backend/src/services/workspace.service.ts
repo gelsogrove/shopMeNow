@@ -227,10 +227,24 @@ export const workspaceService = {
   },
 
   async create(data: CreateWorkspaceData) {
+    // Extract FAQs to handle separately (Prisma relation)
+    const { faqs, ...workspaceData } = data
+    
     return prisma.workspace.create({
       data: {
-        ...data,
+        ...workspaceData,
         slug: data.name.toLowerCase().replace(/\s+/g, "-"),
+        // Create FAQs as nested relation (if provided)
+        ...(faqs && faqs.length > 0 && {
+          faqs: {
+            createMany: {
+              data: faqs.map((faq) => ({
+                question: faq.question,
+                answer: faq.answer,
+              })),
+            },
+          },
+        }),
       },
       select: {
         id: true,
