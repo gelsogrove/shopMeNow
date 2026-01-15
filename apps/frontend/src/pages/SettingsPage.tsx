@@ -132,11 +132,11 @@ const GUIDES = {
   support: {
     title: "Human Support",
     content:
-      "• Enable Human Support: Turn this ON to let customers request a human operator when the AI can't help\n\n• Contact Method: Choose how customers reach your team:\n                  - Email: Customers get an email address to contact\n                  - WhatsApp: Bot provides a WhatsApp number for direct contact\n\n• Operator WhatsApp Number: If you chose WhatsApp method, enter the number here (format: +1234567890)\n\n• Special Instructions: Tell the AI when to offer human support - e.g., 'Offer human support for complaints or complex technical issues'\n\n💡 The bot will automatically suggest human contact when it detects it can't help!",
+      "• Enable Human Support: Turn this ON to let customers request a human operator when the AI can't help\n\n• Sales Agents (E-commerce): If enabled, escalations can be routed to assigned sales agents for orders and upsells\n\n• Contact Method: Choose how customers reach your team:\n                  - Email: Customers get an email address to contact\n                  - WhatsApp: Bot provides a WhatsApp number for direct contact\n\n• Operator WhatsApp Number: If you chose WhatsApp method, enter the number here (format: +1234567890)\n\n• Special Instructions: Tell the AI when to offer human support - e.g., 'Offer human support for complaints or complex technical issues'\n\n💡 The bot will automatically suggest human contact when it detects it can't help!",
   },
   security: {
     title: "Security & Access",
-    content: "• Allowed External Domains: List the websites your bot is allowed to share links from - this prevents malicious link injection\n\n• Format: Enter one domain per line OR separate them with commas\n\n• Examples:\n  - docs.google.com (for sharing documents)\n  - stripe.com (payment links)\n  - instagram.com (your social media)\n  - youtube.com (product videos)\n\n💡 Always add your payment processors and official social media here! The bot will reject any links from unlisted domains for security.\n\n🔒 echatbot.ai and paypal.com are pre-approved by default",
+    content: "• Allowed External Domains: List the websites your bot is allowed to share links from - this prevents malicious link injection\n\n💡 Always add your payment processors and official social media here! The bot will reject any links from unlisted domains for security.\n\n🔒 echatbot.ai and paypal.com are pre-approved by default",
   },
 }
 
@@ -341,6 +341,9 @@ export default function SettingsPage() {
   
   // Accordion state - which section is open (only one at a time)
   const [openSection, setOpenSection] = useState<string>("")
+  
+  // Video modal state
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
 
   const [formData, setFormData] = useState<WorkspaceData>({
     id: "",
@@ -381,6 +384,31 @@ export default function SettingsPage() {
     widgetLanguage: "en",
     widgetPrimaryColor: "#22c55e",
   })
+
+  const baseCustomAiVariables = [
+    { name: "customerName", description: "Customer's name" },
+    { name: "customerEmail", description: "Customer's email" },
+    { name: "customerPhone", description: "Customer's phone" },
+    { name: "businessName", description: "Your business name" },
+    { name: "businessAddress", description: "Business address" },
+    { name: "businessPhone", description: "Business phone" },
+    { name: "businessEmail", description: "Business email" },
+    { name: "[LINK_REGISTRATION]", description: "Registration/signup link" },
+  ]
+
+  const ecommerceCustomAiVariables = [
+    { name: "products", description: "Available products list" },
+    { name: "categories", description: "Product categories" },
+    { name: "offers", description: "Active offers/promotions" },
+    { name: "services", description: "Available services" },
+    { name: "orderNumber", description: "Order reference number" },
+    { name: "orderTotal", description: "Order total amount" },
+    { name: "orderStatus", description: "Current order status" },
+  ]
+
+  const customAiVariables = formData.sellsProductsAndServices
+    ? [...baseCustomAiVariables, ...ecommerceCustomAiVariables]
+    : baseCustomAiVariables
 
   const { workspace: currentWorkspace, setCurrentWorkspace, loading: workspaceLoading } = useWorkspace()
   const { role: workspaceRole, isSuperAdmin } = useWorkspaceRole(currentWorkspace?.id)
@@ -826,22 +854,7 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="wipMessage">Maintenance Message</Label>
-                  <TextareaModal
-                    title="Maintenance Message"
-                    value={formData.wipMessage}
-                    onChange={(value) => handleFieldChange("wipMessage", value)}
-                    placeholder="Work in progress. Please contact us later."
-                    disabled={!canEdit}
-                    hint="Message shown when system is under maintenance"
-                    variables={[
-                      { name: "businessName", description: "Your business name" },
-                      { name: "businessEmail", description: "Business email" },
-                      { name: "businessPhone", description: "Business phone" },
-                    ]}
-                  />
-                </div>
+
                   </div>
                   <div className="lg:col-span-4">
                     <GuideCard
@@ -1001,6 +1014,20 @@ export default function SettingsPage() {
                       disabled={!canEdit}
                     />
                   </div>
+                      
+                      {/* Video Tutorial Button */}
+                      <div className="pt-2">
+                        <Button
+                          onClick={() => setIsVideoModalOpen(true)}
+                          variant="outline"
+                          className="w-full bg-purple-50 hover:bg-purple-100 border-purple-300 text-purple-700 font-semibold"
+                          size="lg"
+                          type="button"
+                        >
+                          <span className="mr-2">📺</span>
+                          Watch: How to Connect WhatsApp API
+                        </Button>
+                      </div>
                     </div>
                     <div className="lg:col-span-4">
                       <GuideCard
@@ -1283,7 +1310,7 @@ export default function SettingsPage() {
                       { name: "chatbotName", description: "Chatbot name" },
                       { name: "businessType", description: "Type of business" },
                       { name: "supportEmail", description: "Support email address" },
-                      { name: "LINK_REGISTRATION", description: "Registration/signup link" },
+                      { name: "[LINK_REGISTRATION]", description: "Registration/signup link" },
                     ]}
                   />
                 </div>
@@ -1300,7 +1327,6 @@ export default function SettingsPage() {
                       { name: "customerName", description: "Customer's name" },
                       { name: "chatbotName", description: "Chatbot name" },
                       { name: "businessName", description: "Your business name" },
-                      { name: "businessHours", description: "Business hours" },
                     ]}
                   />
                 </div>
@@ -1313,22 +1339,22 @@ export default function SettingsPage() {
                     placeholder="Add custom rules for specific behaviors..."
                     disabled={!canEdit}
                     hint="💡 Custom rules override default AI behavior. Be specific and clear. Use variables to personalize responses."
+                    variables={customAiVariables}
+                  />
+                </div>
+                    <div className="space-y-2">
+                  <Label htmlFor="wipMessage">Maintenance Message</Label>
+                  <TextareaModal
+                    title="Maintenance Message"
+                    value={formData.wipMessage}
+                    onChange={(value) => handleFieldChange("wipMessage", value)}
+                    placeholder="Work in progress. Please contact us later."
+                    disabled={!canEdit}
+                    hint="Message shown when system is under maintenance (when Channel Status is OFF or Debug Mode is ON)"
                     variables={[
-                      { name: "customerName", description: "Customer's name" },
-                      { name: "customerEmail", description: "Customer's email" },
-                      { name: "customerPhone", description: "Customer's phone" },
-                      { name: "products", description: "Available products list" },
-                      { name: "categories", description: "Product categories" },
-                      { name: "offers", description: "Active offers/promotions" },
-                      { name: "services", description: "Available services" },
                       { name: "businessName", description: "Your business name" },
-                      { name: "businessAddress", description: "Business address" },
-                      { name: "businessPhone", description: "Business phone" },
                       { name: "businessEmail", description: "Business email" },
-                      { name: "orderNumber", description: "Order reference number" },
-                      { name: "orderTotal", description: "Order total amount" },
-                      { name: "orderStatus", description: "Current order status" },
-                      { name: "LINK_REGISTRATION", description: "Registration/signup link" },
+                      { name: "businessPhone", description: "Business phone" },
                     ]}
                   />
                 </div>
@@ -1462,11 +1488,8 @@ export default function SettingsPage() {
                         hint="Define when and how to escalate conversations to human operators"
                         variables={[
                           { name: "customerName", description: "Customer's name" },
-                          { name: "conversationHistory", description: "Chat history" },
-                          { name: "operatorName", description: "Operator name" },
                           { name: "operatorContact", description: "Operator contact method" },
-                          { name: "businessHours", description: "Business hours" },
-                          { name: "LINK_REGISTRATION", description: "Registration/signup link" },
+                          { name: "[LINK_REGISTRATION]", description: "Registration/signup link" },
                         ]}
                       />
                     </div>
@@ -1568,6 +1591,33 @@ export default function SettingsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+      {/* YouTube Video Modal */}
+      <Dialog open={isVideoModalOpen} onOpenChange={setIsVideoModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>How to Connect WhatsApp API</DialogTitle>
+            <DialogDescription>
+              Follow this video tutorial to set up your WhatsApp Business API
+            </DialogDescription>
+          </DialogHeader>
+          <div className="aspect-video w-full">
+            <iframe
+              width="100%"
+              height="100%"
+              src="https://www.youtube.com/embed/gdD_0ernIqM"
+              title="WhatsApp API Setup Tutorial"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="rounded-lg"
+            ></iframe>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsVideoModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
 
       {/* Widget Preview (hidden while edits are pending) */}

@@ -208,8 +208,9 @@ export function ImageCropUpload({
           type: blob.type,
         })
 
-        // Don't set preview here - let parent component handle it via currentImageUrl
-        // This prevents the preview from being stuck on a blob URL
+        // Create temporary preview URL for immediate display
+        const previewUrl = URL.createObjectURL(blob)
+        setPreviewImage(previewUrl)
 
         onImageSelected(croppedFile)
         setDialogOpen(false)
