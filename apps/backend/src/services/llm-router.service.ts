@@ -1016,6 +1016,8 @@ export class LLMRouterService {
               address: workspace?.address || undefined, // 🆕 Physical address
               customAiRules: workspace?.customAiRules || undefined, // 🆕 Custom AI rules
               websiteUrl: workspace?.websiteUrl || workspace?.url || undefined,
+              chatbotName: workspace?.chatbotName || undefined, // 🆕 MISSING: Bot name
+              businessType: workspace?.businessType || undefined, // 🆕 MISSING: Business type
             }
           )
         } catch (error: any) {

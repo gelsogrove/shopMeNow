@@ -257,6 +257,8 @@ export class PromptProcessorService {
       address?: string // 🆕 Physical address for "where are you?" questions
       customAiRules?: string // 🆕 Custom AI rules that override defaults
       websiteUrl?: string
+      chatbotName?: string // 🆕 Andrea fix: Bot name for {{chatbotName}}
+      businessType?: string // 🆕 Andrea fix: Business type for {{businessType}}
     }
   ): Promise<string> {
     // 🔒 STEP 1: Validate prompt BEFORE replacement (Constitution v1.5.0 Principle III)
@@ -338,6 +340,12 @@ export class PromptProcessorService {
     }
     if (workspaceConfig?.websiteUrl) {
       processedPrompt = processedPrompt.replace(/\{\{websiteUrl\}\}/g, workspaceConfig.websiteUrl)
+    }
+    if (workspaceConfig?.chatbotName) {
+      processedPrompt = processedPrompt.replace(/\{\{chatbotName\}\}/g, workspaceConfig.chatbotName)
+    }
+    if (workspaceConfig?.businessType) {
+      processedPrompt = processedPrompt.replace(/\{\{businessType\}\}/g, workspaceConfig.businessType)
     }
 
     // Sostituzione URL workspace (PRIMA di altre sostituzioni)
