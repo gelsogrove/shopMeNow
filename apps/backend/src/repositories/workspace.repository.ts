@@ -45,6 +45,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       trialEndsAt: data.trialEndsAt || null,
       allowedExternalLinks: data.allowedExternalLinks || [],
       // 🆕 Channel Configuration (Feature 199)
+      channelType: data.channelType ?? "WHATSAPP",
       enableWhatsapp: data.enableWhatsapp ?? true,
       enableWidget: data.enableWidget ?? false,
       sellsProductsAndServices: data.sellsProductsAndServices ?? true,
@@ -53,6 +54,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       humanSupportInstructions: data.humanSupportInstructions || null,
       frustrationEscalationInstructions: data.frustrationEscalationInstructions || null,
       operatorContactMethod: data.operatorContactMethod || 'email',
+      operatorEmail: data.operatorEmail || null,
       operatorWhatsappNumber: data.operatorWhatsappNumber || null,
       toneOfVoice: data.toneOfVoice || 'friendly',
       botIdentityResponse: data.botIdentityResponse || null,
@@ -106,6 +108,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       debugMode: workspace.debugMode,
       allowedExternalLinks: workspace.allowedExternalLinks || [],
       // 🆕 Channel Configuration (Feature 199)
+      channelType: workspace.channelType,
       enableWhatsapp: workspace.enableWhatsapp,
       enableWidget: workspace.enableWidget,
       sellsProductsAndServices: workspace.sellsProductsAndServices,
@@ -114,6 +117,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       humanSupportInstructions: workspace.humanSupportInstructions,
       frustrationEscalationInstructions: workspace.frustrationEscalationInstructions,
       operatorContactMethod: workspace.operatorContactMethod,
+      operatorEmail: workspace.operatorEmail,
       operatorWhatsappNumber: workspace.operatorWhatsappNumber,
       toneOfVoice: workspace.toneOfVoice,
       botIdentityResponse: workspace.botIdentityResponse,

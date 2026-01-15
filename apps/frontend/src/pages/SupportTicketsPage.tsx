@@ -195,67 +195,79 @@ function NewTicketSheet({
 }
 
 // Message Bubble Component
-function MessageBubble({ message }: { message: SupportMessage }) {
+function MessageBubble({
+  message,
+  customerLabel,
+  adminLabel,
+}: {
+  message: SupportMessage
+  customerLabel: string
+  adminLabel: string
+}) {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const isCustomer = message.senderType === "CUSTOMER"
+  const senderLabel = isCustomer ? customerLabel : adminLabel
 
   return (
     <div className={`flex ${isCustomer ? "justify-end" : "justify-start"} mb-4`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-5 py-4 shadow-sm ${
-          isCustomer
-            ? "bg-green-500 text-white rounded-br-sm"
-            : "bg-gray-100 border border-gray-200 text-gray-900 rounded-bl-sm"
-        }`}
-      >
+      <div className="max-w-[80%]">
         <div
-          className={`prose prose-sm max-w-none ${isCustomer ? "prose-invert [&_*]:text-white" : "[&_*]:text-gray-900"}`}
-          style={{ fontSize: '0.95rem', lineHeight: '1.6' }}
-          dangerouslySetInnerHTML={{ __html: message.content }}
-        />
-
-        {/* Attachments */}
-        {message.attachments.length > 0 && (
-          <div className={`mt-3 pt-3 border-t ${isCustomer ? "border-green-400" : "border-gray-300"} space-y-2`}>
-            {message.attachments.map((att) => (
-              att.mimeType.startsWith("image/") ? (
-                <div key={att.id} className="mt-2">
-                  <img
-                    src={att.url}
-                    alt={att.filename}
-                    className="max-w-full max-h-60 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => setImagePreview(att.url)}
-                  />
-                  <p className={`text-xs mt-1 ${isCustomer ? "text-green-200" : "text-gray-500"}`}>
-                    {att.filename}
-                  </p>
-                </div>
-              ) : (
-                <a
-                  key={att.id}
-                  href={att.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-2 text-sm font-medium ${
-                    isCustomer
-                      ? "text-green-100 hover:text-white"
-                      : "text-blue-600 hover:text-blue-800"
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  {att.filename}
-                </a>
-              )
-            ))}
-          </div>
-        )}
-
-        <div
-          className={`text-xs mt-2 ${
-            isCustomer ? "text-green-200" : "text-gray-500"
+          className={`mb-1 flex items-center gap-2 text-xs ${
+            isCustomer ? "justify-end text-green-200" : "justify-start text-gray-500"
           }`}
         >
-          {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
+          <span className="font-medium">{senderLabel}</span>
+          <span className="text-[10px] opacity-70">•</span>
+          <span>{format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}</span>
+        </div>
+        <div
+          className={`rounded-2xl px-5 py-4 shadow-sm ${
+            isCustomer
+              ? "bg-green-500 text-white rounded-br-sm"
+              : "bg-gray-100 border border-gray-200 text-gray-900 rounded-bl-sm"
+          }`}
+        >
+          <div
+            className={`prose prose-sm max-w-none ${isCustomer ? "prose-invert [&_*]:text-white" : "[&_*]:text-gray-900"}`}
+            style={{ fontSize: "0.95rem", lineHeight: "1.6" }}
+            dangerouslySetInnerHTML={{ __html: message.content }}
+          />
+
+          {/* Attachments */}
+          {message.attachments.length > 0 && (
+            <div className={`mt-3 pt-3 border-t ${isCustomer ? "border-green-400" : "border-gray-300"} space-y-2`}>
+              {message.attachments.map((att) => (
+                att.mimeType.startsWith("image/") ? (
+                  <div key={att.id} className="mt-2">
+                    <img
+                      src={att.url}
+                      alt={att.filename}
+                      className="max-w-full max-h-60 rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setImagePreview(att.url)}
+                    />
+                    <p className={`text-xs mt-1 ${isCustomer ? "text-green-200" : "text-gray-500"}`}>
+                      {att.filename}
+                    </p>
+                  </div>
+                ) : (
+                  <a
+                    key={att.id}
+                    href={att.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center gap-2 text-sm font-medium ${
+                      isCustomer
+                        ? "text-green-100 hover:text-white"
+                        : "text-blue-600 hover:text-blue-800"
+                    }`}
+                  >
+                    <FileText className="w-4 h-4" />
+                    {att.filename}
+                  </a>
+                )
+              ))}
+            </div>
+          )}
         </div>
       </div>
       
@@ -371,7 +383,16 @@ function TicketDetailView({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4">
         {ticket.messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            customerLabel={
+              [ticket.user?.firstName, ticket.user?.lastName].filter(Boolean).join(" ") ||
+              ticket.user?.email ||
+              "Customer"
+            }
+            adminLabel="Support"
+          />
         ))}
       </div>
 
@@ -554,10 +575,15 @@ export default function SupportTicketsPage() {
     try {
       const result = await getTicket(id)
       setSelectedTicket(result.data)
+      setTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === id
+            ? { ...ticket, hasUnreadMessages: false }
+            : ticket
+        )
+      )
       // Notify Header to refresh unread count (messages marked as read)
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent("support-ticket-viewed"))
-      }, 500) // Small delay for backend to process
+      window.dispatchEvent(new CustomEvent("support-ticket-viewed"))
     } catch (error) {
       console.error("Failed to load ticket:", error)
       toast.error("Failed to load ticket details")

@@ -337,6 +337,7 @@ export default function SettingsPage() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [widgetCodeCopied, setWidgetCodeCopied] = useState(false)
   const [isLogoUploading, setIsLogoUploading] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
   
   // Accordion state - which section is open (only one at a time)
   const [openSection, setOpenSection] = useState<string>("")
@@ -409,6 +410,7 @@ export default function SettingsPage() {
 
   const handleFieldChange = (field: keyof WorkspaceData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
+    setIsDirty(true)
     setErrors((prev) => ({ ...prev, [field]: "" }))
   }
 
@@ -420,6 +422,7 @@ export default function SettingsPage() {
     onSuccess: (updatedWorkspace) => {
       toast.success("Settings saved successfully")
       setCurrentWorkspace(updatedWorkspace)
+      setIsDirty(false)
       // Dispatch custom event for workspace-selection page to reload
       window.dispatchEvent(new CustomEvent("workspace-updated", { detail: updatedWorkspace }))
     },
@@ -513,6 +516,7 @@ export default function SettingsPage() {
   const handleLogoChange = async (file: File) => {
     if (!currentWorkspace?.id) return
     try {
+      setIsDirty(true)
       setIsLogoUploading(true)
       const formDataObj = new FormData()
       formDataObj.append("logo", file)
@@ -534,6 +538,7 @@ export default function SettingsPage() {
   const handleLogoRemove = async () => {
     if (!currentWorkspace?.id) return
     try {
+      setIsDirty(true)
       setFormData((prev) => ({ ...prev, logoUrl: null }))
       toast.success("Logo removed successfully")
     } catch (error) {
@@ -608,6 +613,7 @@ export default function SettingsPage() {
           widgetLanguage: data.widgetLanguage || "en",
           widgetPrimaryColor: data.widgetPrimaryColor || "#22c55e",
         })
+        setIsDirty(false)
       } catch (error) {
         logger.error("Failed to load workspace data:", error)
         toast.error("Failed to load settings")
@@ -1564,16 +1570,18 @@ export default function SettingsPage() {
         </Dialog>
       </div>
 
-      {/* Widget Preview (always visible) */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <ChatWidget
-          workspaceId={currentWorkspace?.id}
-          title={formData.widgetTitle}
-          logoUrl={formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined}
-          primaryColor={formData.widgetPrimaryColor}
-          language={formData.widgetLanguage}
-        />
-      </div>
+      {/* Widget Preview (hidden while edits are pending) */}
+      {!isDirty && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <ChatWidget
+            workspaceId={currentWorkspace?.id}
+            title={formData.widgetTitle}
+            logoUrl={formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined}
+            primaryColor={formData.widgetPrimaryColor}
+            language={formData.widgetLanguage}
+          />
+        </div>
+      )}
     </div>
   )
 }

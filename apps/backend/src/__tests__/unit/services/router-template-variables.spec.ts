@@ -24,45 +24,104 @@ describe("Router Template Variables Replacement", () => {
   let INFORMATIONAL_WORKSPACE: string
   let ECOMMERCE_WORKSPACE: string
   let TEST_CUSTOMER: string
+  let createdInfoWorkspace = false
+  let createdEcommerceWorkspace = false
+  let createdCustomer = false
+  const INFO_SLUG = "test-router-info-workspace"
+  const ECOMMERCE_SLUG = "test-router-ecommerce-workspace"
 
   beforeAll(async () => {
     variableResolver = new VariableResolverService(prisma)
     promptBuilder = new PromptBuilderService(prisma)
     templateLoader = TemplateLoaderService.getInstance(prisma)
 
-    // Get first workspace (should be BellItalia VIP - ecommerce)
-    const ecommerceWorkspace = await prisma.workspace.findFirst({
-      where: { sellsProductsAndServices: true },
+    const ecommerceWorkspace = await prisma.workspace.findUnique({
+      where: { slug: ECOMMERCE_SLUG },
       select: { id: true },
     })
 
-    // Get first informational workspace
-    const infoWorkspace = await prisma.workspace.findFirst({
-      where: { sellsProductsAndServices: false },
+    const infoWorkspace = await prisma.workspace.findUnique({
+      where: { slug: INFO_SLUG },
       select: { id: true },
     })
 
-    if (!ecommerceWorkspace || !infoWorkspace) {
-      throw new Error("Database must have both ecommerce and informational workspaces. Run: npm run seed")
+    if (!ecommerceWorkspace) {
+      const created = await prisma.workspace.create({
+        data: {
+          name: "Router Ecommerce Test Workspace",
+          slug: ECOMMERCE_SLUG,
+          sellsProductsAndServices: true,
+          enableWhatsapp: true,
+          enableWidget: false,
+          channelType: "WHATSAPP",
+          channelStatus: true,
+          language: "ENG",
+          currency: "USD",
+          debugMode: false,
+        },
+        select: { id: true },
+      })
+      ECOMMERCE_WORKSPACE = created.id
+      createdEcommerceWorkspace = true
+    } else {
+      ECOMMERCE_WORKSPACE = ecommerceWorkspace.id
     }
 
-    ECOMMERCE_WORKSPACE = ecommerceWorkspace.id
-    INFORMATIONAL_WORKSPACE = infoWorkspace.id
+    if (!infoWorkspace) {
+      const created = await prisma.workspace.create({
+        data: {
+          name: "Router Informational Test Workspace",
+          slug: INFO_SLUG,
+          sellsProductsAndServices: false,
+          enableWhatsapp: false,
+          enableWidget: true,
+          channelType: "WIDGET",
+          channelStatus: true,
+          language: "ENG",
+          currency: "USD",
+          debugMode: false,
+        },
+        select: { id: true },
+      })
+      INFORMATIONAL_WORKSPACE = created.id
+      createdInfoWorkspace = true
+    } else {
+      INFORMATIONAL_WORKSPACE = infoWorkspace.id
+    }
 
-    // Get first customer
     const customer = await prisma.customers.findFirst({
+      where: { workspaceId: INFORMATIONAL_WORKSPACE },
       select: { id: true },
     })
 
     if (!customer) {
-      throw new Error("Database must have at least 1 customer. Run: npm run seed")
+      const created = await prisma.customers.create({
+        data: {
+          name: "Router Test Customer",
+          email: "router-test-customer@example.com",
+          workspaceId: INFORMATIONAL_WORKSPACE,
+        },
+        select: { id: true },
+      })
+      TEST_CUSTOMER = created.id
+      createdCustomer = true
+    } else {
+      TEST_CUSTOMER = customer.id
     }
-
-    TEST_CUSTOMER = customer.id
   })
 
   afterAll(async () => {
-    // Prisma disconnected by jest.setup.js global teardown
+    if (createdCustomer) {
+      await prisma.customers.delete({ where: { id: TEST_CUSTOMER } })
+    }
+
+    if (createdInfoWorkspace) {
+      await prisma.workspace.delete({ where: { id: INFORMATIONAL_WORKSPACE } })
+    }
+
+    if (createdEcommerceWorkspace) {
+      await prisma.workspace.delete({ where: { id: ECOMMERCE_WORKSPACE } })
+    }
   })
 
   describe("Informational Router Template", () => {

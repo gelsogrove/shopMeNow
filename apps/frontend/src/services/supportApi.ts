@@ -57,6 +57,7 @@ export interface SupportTicket {
     name: string
   } | null // Optional workspace
   messages: SupportMessage[]
+  hasUnreadMessages?: boolean
   _count: {
     messages: number
   }

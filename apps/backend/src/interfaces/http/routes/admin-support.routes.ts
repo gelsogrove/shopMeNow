@@ -131,7 +131,7 @@ router.get("/tickets", (req, res) => {
  *         description: Platform admin only
  */
 router.get("/tickets/unread-count", (req, res) => {
-  supportTicketController.getUnreadCount(req, res)
+  supportTicketController.getAdminUnreadCount(req, res)
 })
 
 /**
@@ -159,7 +159,7 @@ router.get("/tickets/unread-count", (req, res) => {
  *         description: Ticket not found
  */
 router.get("/tickets/:ticketId", (req, res) => {
-  supportTicketController.getTicket(req, res)
+  supportTicketController.getAdminTicket(req, res)
 })
 
 /**
@@ -203,7 +203,7 @@ router.get("/tickets/:ticketId", (req, res) => {
  *         description: Platform admin only
  */
 router.post("/tickets/:ticketId/messages", upload.array("attachments", 5), (req, res) => {
-  supportTicketController.addMessage(req, res)
+  supportTicketController.addAdminMessage(req, res)
 })
 
 /**

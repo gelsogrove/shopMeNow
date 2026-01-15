@@ -32,6 +32,7 @@ export interface WorkspaceProps {
   trialEndsAt?: Date | null
   allowedExternalLinks?: string[]
   // 🆕 Channel Configuration (Feature 199)
+  channelType?: "WHATSAPP" | "WIDGET" | null
   enableWhatsapp?: boolean
   enableWidget?: boolean
   sellsProductsAndServices?: boolean
@@ -40,6 +41,7 @@ export interface WorkspaceProps {
   humanSupportInstructions?: string | null
   frustrationEscalationInstructions?: string | null // 🆕 Feature 203: Custom escalation triggers
   operatorContactMethod?: string | null
+  operatorEmail?: string | null
   operatorWhatsappNumber?: string | null
   toneOfVoice?: string | null
   botIdentityResponse?: string | null
@@ -191,6 +193,10 @@ export class Workspace extends Entity<WorkspaceProps> {
   }
 
   // 🆕 Channel Configuration getters (Feature 199)
+  get channelType(): "WHATSAPP" | "WIDGET" | null | undefined {
+    return this.props.channelType
+  }
+
   get enableWhatsapp(): boolean {
     return this.props.enableWhatsapp ?? true
   }
@@ -221,6 +227,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get operatorContactMethod(): string | null | undefined {
     return this.props.operatorContactMethod
+  }
+
+  get operatorEmail(): string | null | undefined {
+    return this.props.operatorEmail
   }
 
   get operatorWhatsappNumber(): string | null | undefined {

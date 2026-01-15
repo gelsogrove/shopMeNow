@@ -181,6 +181,7 @@ For privacy inquiries, please contact our support team.`
       planType: w.planType ?? undefined,
       trialEndsAt: w.trialEndsAt ?? undefined,
       // 🆕 Channel Configuration (Feature 199) - CRITICAL: Must include these!
+      channelType: (w as any).channelType ?? "WHATSAPP",
       enableWhatsapp: (w as any).enableWhatsapp ?? true,
       enableWidget: (w as any).enableWidget ?? false,
       sellsProductsAndServices: w.sellsProductsAndServices,
@@ -188,6 +189,7 @@ For privacy inquiries, please contact our support team.`
       hasHumanSupport: w.hasHumanSupport,
       humanSupportInstructions: w.humanSupportInstructions ?? undefined,
       operatorContactMethod: w.operatorContactMethod ?? undefined,
+      operatorEmail: (w as any).operatorEmail ?? undefined,
       operatorWhatsappNumber: w.operatorWhatsappNumber ?? undefined,
       toneOfVoice: w.toneOfVoice ?? undefined,
       botIdentityResponse: w.botIdentityResponse ?? undefined,
@@ -252,10 +254,10 @@ For privacy inquiries, please contact our support team.`
 
     // 🆕 DEFAULT WELCOME AND WIP MESSAGES
     const defaultWelcomeMessage = {
-      en: "Welcome! I'm SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?",
-      es: "¡Bienvenido! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?",
-      it: "Benvenuto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?",
-      pt: "Bem-vindo! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?",
+      en: "Welcome! I'm {{chatbotName}}, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?",
+      es: "¡Bienvenido! Soy {{chatbotName}}, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?",
+      it: "Benvenuto! Sono {{chatbotName}}, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?",
+      pt: "Bem-vindo! Sou {{chatbotName}}, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?",
     }
 
     const defaultWipMessage = {

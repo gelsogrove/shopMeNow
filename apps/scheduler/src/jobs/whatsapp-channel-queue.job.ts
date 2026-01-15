@@ -221,7 +221,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                   queueId: message.id,
                   workspaceId: workspace.id,
                 })
-                return
+                return { status: 'skipped', messageId: message.id }
               }
             }
 

@@ -44,6 +44,9 @@ Owner-only (requires auth + owner role):
 - `POST /api/paypal/connect-url` → start OAuth flow
 - `POST /api/paypal/disconnect` → disconnect and remove tokens
 
+Public (PayPal webhook):
+- `POST /api/paypal/webhook` → verifies signature and accepts PayPal events
+
 ## Security
 - Tokens are encrypted at rest with `PAYPAL_TOKEN_ENCRYPTION_KEY`.
 - OAuth callback validates the `state` token to prevent CSRF.
@@ -56,6 +59,14 @@ Owner-only (requires auth + owner role):
 3) Copy the Sandbox `Client ID` and `Secret` into `.env`
 4) Ensure `APP_URL` is `http://localhost:3001`
 5) Open the app and click **Connect**
+
+## Webhook Setup
+Create one webhook per environment and add the ID to env:
+- `PAYPAL_WEBHOOK_ID_SANDBOX`
+- `PAYPAL_WEBHOOK_ID_LIVE`
+
+The backend verifies every webhook event using PayPal's
+`/v1/notifications/verify-webhook-signature` endpoint.
 
 ## Production Setup
 1) Create a **Live** app in PayPal.

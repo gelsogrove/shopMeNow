@@ -619,14 +619,21 @@ export function LoginPage() {
         // JWT token is automatically saved as HTTP-only cookie by backend
         logger.info("Login successful - JWT token saved as HTTP-only cookie")
 
-        // 🔐 Platform Admin redirect to Backoffice
+        // 🔐 Platform Admin: Stay on homepage, show avatar menu with both options
+        // Andrea's requirement: Let admin choose between Workspace and Backoffice
         if (response.data.user.isPlatformAdmin) {
-          logger.info("🔐 Platform Admin detected - redirecting to Backoffice")
-          // Use separate backoffice URL (standalone Heroku app)
-          const backofficeUrl = import.meta.env.VITE_BACKOFFICE_URL || 'http://localhost:3002'
-          const redirectUrl = `${backofficeUrl}/auth/callback?token=${response.data.token}`
-          logger.info('🔐 Redirect URL:', redirectUrl)
-          window.location.replace(redirectUrl)
+          logger.info("🔐 Platform Admin detected - staying on homepage for manual selection")
+          toast.success("Login successful! Choose Workspace or Backoffice from the menu.")
+          
+          // 🔄 Force state update to show avatar menu immediately
+          setIsLoggedIn(true)
+          setLoggedInUser(response.data.user)
+          logger.info('🔄 [EMAIL LOGIN] State updated - user:', { 
+            email: response.data.user.email, 
+            isPlatformAdmin: response.data.user.isPlatformAdmin,
+            isDeveloperUser: response.data.user.isDeveloperUser 
+          })
+          setIsLoading(false)
           return
         }
 
@@ -779,14 +786,20 @@ export function LoginPage() {
         
         toast.success('Login successful!')
         
-        // 🔐 Platform Admin redirect to Backoffice
+        // 🔐 Platform Admin: Stay on homepage, show avatar menu with both options
         if (user.isPlatformAdmin) {
-          logger.info('🔐 [GOOGLE OAUTH] Platform Admin detected - redirecting to Backoffice')
-          // Use separate backoffice URL (standalone Heroku app)
-          const backofficeUrl = import.meta.env.VITE_BACKOFFICE_URL || 'http://localhost:3002'
-          const redirectUrl = `${backofficeUrl}/auth/callback?token=${token}`
-          logger.info('🔐 [GOOGLE OAUTH] Redirect URL:', redirectUrl)
-          window.location.replace(redirectUrl)
+          logger.info('🔐 [GOOGLE OAUTH] Platform Admin detected - staying on homepage for manual selection')
+          toast.success('Choose Workspace or Backoffice from the menu.')
+          
+          // 🔄 Force state update to show avatar menu immediately
+          setIsLoggedIn(true)
+          setLoggedInUser(user)
+          logger.info('🔄 [GOOGLE OAUTH] State updated - user:', { 
+            email: user.email, 
+            isPlatformAdmin: user.isPlatformAdmin,
+            isDeveloperUser: user.isDeveloperUser 
+          })
+          setIsLoading(false)
           return
         }
         
@@ -1117,7 +1130,7 @@ export function LoginPage() {
                         <p>
                           {supportUnreadCount > 0
                             ? `${supportUnreadCount} unread message${supportUnreadCount > 1 ? "s" : ""}`
-                            : "Support Tickets"}
+                            : "Support"}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -1146,6 +1159,7 @@ export function LoginPage() {
                       <Button
                         variant="ghost"
                         className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none hover:scale-105 transition-transform p-0"
+                        aria-label={`${loggedInUser?.firstName || loggedInUser?.email || "User"} menu`}
                       >
                         {loggedInUser?.profilePicture && !avatarImageError ? (
                           <img 
@@ -1175,9 +1189,15 @@ export function LoginPage() {
                           <p className="text-xs leading-none text-muted-foreground truncate">
                             {loggedInUser?.email || t("nav.welcome")}
                           </p>
+                          {loggedInUser?.isPlatformAdmin && (
+                            <p className="text-xs leading-none text-purple-600 font-semibold pt-1">
+                              🔐 Platform Admin
+                            </p>
+                          )}
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      
                       <DropdownMenuItem
                         className="p-2 cursor-pointer"
                         onClick={() => navigate("/workspace-selection")}
@@ -1434,29 +1454,44 @@ export function LoginPage() {
                             <p className="font-semibold text-slate-900">{formattedCredit}</p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (loggedInUser?.isPlatformAdmin) {
-                              const token = storage.getToken()
-                              const backofficeUrl =
-                                import.meta.env.VITE_BACKOFFICE_URL ||
-                                (window.location.hostname === "localhost"
-                                  ? "http://localhost:3002"
-                                  : "https://backoffice.echatbot.ai")
-                              if (token) {
-                                window.location.assign(`${backofficeUrl}/auth/callback?token=${token}`)
-                                return
-                              }
-                              window.location.assign(`${backofficeUrl}/access-denied`)
-                              return
-                            }
-                            navigate("/workspace-selection")
-                          }}
-                          className="w-full rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
-                        >
-                          {loggedInUser?.isPlatformAdmin ? "Go to backoffice" : "Go to workspace"}
-                        </button>
+                        {loggedInUser?.isPlatformAdmin ? (
+                          <div className="space-y-2">
+                            <button
+                              type="button"
+                              onClick={() => navigate("/workspace-selection")}
+                              className="w-full rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                              Go to workspace
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const token = storage.getToken()
+                                const backofficeUrl =
+                                  import.meta.env.VITE_BACKOFFICE_URL ||
+                                  (window.location.hostname === "localhost"
+                                    ? "http://localhost:3002"
+                                    : "https://backoffice.echatbot.ai")
+                                if (token) {
+                                  window.location.assign(`${backofficeUrl}/auth/callback?token=${token}`)
+                                  return
+                                }
+                                window.location.assign(`${backofficeUrl}/access-denied`)
+                              }}
+                              className="w-full rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                              Go to backoffice
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => navigate("/workspace-selection")}
+                            className="w-full rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+                          >
+                            Go to workspace
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className={isLoginViewDisabled ? "opacity-60 text-slate-500" : ""} data-form="signin">

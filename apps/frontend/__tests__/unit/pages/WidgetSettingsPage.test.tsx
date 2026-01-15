@@ -322,9 +322,17 @@ describe('WidgetSettingsPage - Configuration Tests', () => {
       expect(colorInput).toBeTruthy()
       fireEvent.change(colorInput, { target: { value: '#ff5722' } })
 
-      const previewButton = document.querySelector('div.fixed button') as HTMLButtonElement
+      const previewButton = document.querySelector('button[data-widget-button]') as HTMLButtonElement
       expect(previewButton).toBeTruthy()
-      expect(previewButton.style.backgroundColor).toBe('rgb(255, 87, 34)')
+
+      fireEvent.click(previewButton)
+
+      await waitFor(() => {
+        const heading = screen.getByRole('heading', { name: mockWorkspace.widgetTitle })
+        const header = heading.parentElement?.parentElement as HTMLElement | null
+        expect(header).toBeTruthy()
+        expect(header?.style.backgroundColor).toBe('rgb(255, 87, 34)')
+      })
     })
   })
 })

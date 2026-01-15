@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { storage } from "@/lib/storage"
+import { api } from "@/services/api"
 
 // Mock storage module
 vi.mock("@/lib/storage", () => ({
@@ -23,6 +24,7 @@ vi.mock("@/services/api", () => ({
 vi.mock("@/services/salesApi", () => ({
   salesApi: {
     getAll: vi.fn().mockResolvedValue([]),
+    getAllForWorkspace: vi.fn().mockResolvedValue([]),
   },
 }))
 
@@ -43,6 +45,7 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     language: "IT",
     discount: 10,
     notes: "Test notes",
+    company: "Test Company",
     shippingAddress: {
       street: "123 Test St",
       city: "Test City",
@@ -70,9 +73,14 @@ describe("ClientSheet - Shipping Address Visibility", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(storage.getWorkspace).mockReturnValue({
+      id: "workspace-1",
+      sellsProductsAndServices: true,
+    })
+    vi.mocked(api.get).mockResolvedValue({ data: mockClient })
   })
 
-  it("should show Shipping Address section for e-commerce channels (sellsProductsAndServices = true)", () => {
+  it("should show Shipping Address section for e-commerce channels (sellsProductsAndServices = true)", async () => {
     // Mock workspace as e-commerce channel
     vi.mocked(storage.getWorkspace).mockReturnValue({
       id: "workspace-1",
@@ -82,10 +90,10 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     render(<ClientSheet {...defaultProps} />)
 
     // Shipping Address should be visible
-    expect(screen.getByText("🚚 Shipping Address")).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: /shipping address/i })).toBeInTheDocument()
   })
 
-  it("should NOT show Shipping Address section for info channels (sellsProductsAndServices = false)", () => {
+  it("should NOT show Shipping Address section for info channels (sellsProductsAndServices = false)", async () => {
     // Mock workspace as info channel
     vi.mocked(storage.getWorkspace).mockReturnValue({
       id: "workspace-1",
@@ -95,10 +103,12 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     render(<ClientSheet {...defaultProps} />)
 
     // Shipping Address should NOT be visible
-    expect(screen.queryByText("🚚 Shipping Address")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: /shipping address/i })).not.toBeInTheDocument()
+    })
   })
 
-  it("should NOT show Shipping Address when workspace has no sellsProductsAndServices property", () => {
+  it("should NOT show Shipping Address when workspace has no sellsProductsAndServices property", async () => {
     // Mock workspace without sellsProductsAndServices (defaults to false)
     vi.mocked(storage.getWorkspace).mockReturnValue({
       id: "workspace-1",
@@ -107,10 +117,12 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     render(<ClientSheet {...defaultProps} />)
 
     // Shipping Address should NOT be visible (defaults to false)
-    expect(screen.queryByText("🚚 Shipping Address")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: /shipping address/i })).not.toBeInTheDocument()
+    })
   })
 
-  it("should always show Invoice Address regardless of channel type", () => {
+  it("should always show Invoice Address regardless of channel type", async () => {
     // Test with e-commerce channel
     vi.mocked(storage.getWorkspace).mockReturnValue({
       id: "workspace-1",
@@ -120,7 +132,7 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     const { rerender } = render(<ClientSheet {...defaultProps} />)
 
     // Invoice Address should be visible
-    expect(screen.getByText("📧 Invoice Address")).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: /invoice address/i })).toBeInTheDocument()
 
     // Test with info channel
     vi.mocked(storage.getWorkspace).mockReturnValue({
@@ -131,10 +143,10 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     rerender(<ClientSheet {...defaultProps} />)
 
     // Invoice Address should still be visible
-    expect(screen.getByText("📧 Invoice Address")).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: /invoice address/i })).toBeInTheDocument()
   })
 
-  it("should show shipping fields (Street, City, ZIP, Country) only for e-commerce channels", () => {
+  it("should show shipping fields (Street, City, ZIP, Country) only for e-commerce channels", async () => {
     // E-commerce channel
     vi.mocked(storage.getWorkspace).mockReturnValue({
       id: "workspace-1",
@@ -144,10 +156,10 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     const { rerender } = render(<ClientSheet {...defaultProps} />)
 
     // Shipping fields should be present
-    expect(screen.getByLabelText("Street Address")).toBeInTheDocument()
-    expect(screen.getByLabelText("City")).toBeInTheDocument()
+    expect(await screen.findByLabelText("Street Address")).toBeInTheDocument()
+    expect(screen.getByLabelText("City", { selector: "input#city" })).toBeInTheDocument()
     expect(screen.getByLabelText("ZIP Code")).toBeInTheDocument()
-    expect(screen.getByLabelText("Country")).toBeInTheDocument()
+    expect(screen.getByLabelText("Country", { selector: "input#country" })).toBeInTheDocument()
 
     // Info channel
     vi.mocked(storage.getWorkspace).mockReturnValue({
@@ -158,7 +170,11 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     rerender(<ClientSheet {...defaultProps} />)
 
     // Shipping fields should NOT be present
-    expect(screen.queryByLabelText("Street Address")).not.toBeInTheDocument()
-    expect(screen.queryByLabelText("ZIP Code")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Street Address")).not.toBeInTheDocument()
+      expect(screen.queryByLabelText("City", { selector: "input#city" })).not.toBeInTheDocument()
+      expect(screen.queryByLabelText("ZIP Code")).not.toBeInTheDocument()
+      expect(screen.queryByLabelText("Country", { selector: "input#country" })).not.toBeInTheDocument()
+    })
   })
 })

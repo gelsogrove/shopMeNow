@@ -198,6 +198,9 @@ export function WorkspaceSelectionPage() {
   const [paypalLoading, setPaypalLoading] = useState(false)
   const [paypalConnecting, setPaypalConnecting] = useState(false)
   const [paypalDisconnecting, setPaypalDisconnecting] = useState(false)
+  const [paypalConnectModalOpen, setPaypalConnectModalOpen] = useState(false)
+  const [paypalDisconnectModalOpen, setPaypalDisconnectModalOpen] = useState(false)
+  const [disconnectConfirmText, setDisconnectConfirmText] = useState("")
   
   // Logo upload state
   const [logoDialogOpen, setLogoDialogOpen] = useState(false)
@@ -469,24 +472,61 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       toast.error("PayPal is not configured. Add sandbox/live credentials first.")
       return
     }
+    // Apri modal invece di redirect diretto
+    setPaypalConnectModalOpen(true)
+  }
 
+  const confirmPayPalConnect = async () => {
     try {
       setPaypalConnecting(true)
+      setPaypalConnectModalOpen(false)
       const url = await getPayPalConnectUrl()
-      window.location.href = url
+      
+      // Apri PayPal in una nuova finestra popup
+      const popup = window.open(
+        url,
+        'PayPal Connection',
+        'width=600,height=800,left=100,top=100,resizable=yes,scrollbars=yes'
+      )
+      
+      // Monitora quando la popup si chiude
+      const checkPopupClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkPopupClosed)
+          // Quando la popup si chiude, refresh della pagina
+          logger.info("PayPal popup closed, refreshing page...")
+          window.location.reload()
+        }
+      }, 500)
+      
+      // Fallback: se la popup non si apre (popup blocker)
+      if (!popup || popup.closed) {
+        toast.error("Popup blocked! Please allow popups for this site.")
+        setPaypalConnecting(false)
+      }
     } catch (error) {
       logger.error("Failed to start PayPal connect:", error)
       toast.error("Unable to start PayPal connection.")
-    } finally {
       setPaypalConnecting(false)
     }
   }
 
   const handlePayPalDisconnect = async () => {
+    setPaypalDisconnectModalOpen(true)
+  }
+
+  const confirmPayPalDisconnect = async () => {
+    if (disconnectConfirmText !== "DISCONNECT") {
+      toast.error("Please type DISCONNECT to confirm")
+      return
+    }
+
     try {
       setPaypalDisconnecting(true)
       await disconnectPayPal()
       toast.success("PayPal disconnected.")
+      setPaypalDisconnectModalOpen(false)
+      setDisconnectConfirmText("")
       await loadPayPalStatus()
       await loadPayPalConfig()
     } catch (error) {
@@ -2114,11 +2154,11 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
         {/* PayPal Integration (Owner only) */}
         {isSuperAdmin && (
-          <Card className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
+          <Card className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 hover:shadow-lg transition-all">
             <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
                     <img src="/paypal.png" alt="PayPal" className="w-9 h-auto object-contain" />
                   </div>
                   <div>
@@ -2128,66 +2168,60 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </CardDescription>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {paypalStatus?.paypalStatus === "CONNECTED" ? (
-                    <Button
-                      variant="outline"
-                      onClick={handlePayPalDisconnect}
-                      disabled={paypalDisconnecting}
-                    >
-                      {paypalDisconnecting ? "Disconnecting..." : "Disconnect"}
-                    </Button>
-                  ) : (
-                    <Button
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={handlePayPalConnect}
-                      disabled={paypalConnecting || paypalConfig?.configured === false}
-                    >
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      {paypalConnecting ? "Connecting..." : "Connect"}
-                    </Button>
-                  )}
-                </div>
+                {paypalStatus?.paypalStatus === "CONNECTED" ? (
+                  <Button
+                    variant="outline"
+                    onClick={handlePayPalDisconnect}
+                    disabled={paypalDisconnecting}
+                  >
+                    {paypalDisconnecting ? "Disconnecting..." : "Disconnect"}
+                  </Button>
+                ) : (
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={handlePayPalConnect}
+                    disabled={paypalConnecting || paypalConfig?.configured === false}
+                  >
+                    <CreditCard className="w-4 h-4 mr-2" />
+                    {paypalConnecting ? "Connecting..." : "Connect"}
+                  </Button>
+                )}
               </div>
             </CardHeader>
-            <CardContent className="pt-2">
-              {paypalLoading ? (
-                <p className="text-sm text-gray-500">Loading PayPal status...</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
-                  <div className="rounded-lg bg-white/70 px-3 py-2">
-                    <span className="text-xs uppercase text-gray-500">Status</span>
-                    <div className="font-semibold">
-                      {paypalStatus?.paypalStatus || "DISCONNECTED"}
+            {(paypalLoading || paypalStatus?.paypalStatus === "CONNECTED" || paypalConfig?.configured === false) && (
+              <CardContent className="pt-2">
+                {paypalLoading ? (
+                  <p className="text-sm text-gray-500">Loading PayPal status...</p>
+                ) : paypalStatus?.paypalStatus === "CONNECTED" ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
+                    <div className="rounded-lg bg-white/70 px-3 py-2">
+                      <span className="text-xs uppercase text-gray-500">Status</span>
+                      <div className="font-semibold">
+                        {paypalStatus?.paypalStatus}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-white/70 px-3 py-2">
+                      <span className="text-xs uppercase text-gray-500">PayPal Email</span>
+                      <div className="font-semibold truncate">
+                        {paypalStatus?.paypalEmail || "Not connected"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-white/70 px-3 py-2 sm:col-span-2">
+                      <span className="text-xs uppercase text-gray-500">Merchant ID</span>
+                      <div className="font-semibold truncate">
+                        {paypalStatus?.paypalMerchantId || "Not connected"}
+                      </div>
                     </div>
                   </div>
-                  <div className="rounded-lg bg-white/70 px-3 py-2">
-                    <span className="text-xs uppercase text-gray-500">Environment</span>
-                    <div className="font-semibold">
-                      {paypalStatus?.paypalEnvironment || paypalConfig?.environment || "sandbox"}
+                ) : (
+                  paypalConfig?.configured === false && (
+                    <div className="rounded-lg bg-yellow-50 px-3 py-2 text-yellow-800">
+                      PayPal is not configured. Add sandbox/live credentials to enable Connect.
                     </div>
-                  </div>
-                  <div className="rounded-lg bg-white/70 px-3 py-2">
-                    <span className="text-xs uppercase text-gray-500">PayPal Email</span>
-                    <div className="font-semibold truncate">
-                      {paypalStatus?.paypalEmail || "Not connected"}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-white/70 px-3 py-2">
-                    <span className="text-xs uppercase text-gray-500">Merchant ID</span>
-                    <div className="font-semibold truncate">
-                      {paypalStatus?.paypalMerchantId || "Not connected"}
-                    </div>
-                  </div>
-                  {paypalConfig?.configured === false && (
-                    <div className="rounded-lg bg-yellow-50 px-3 py-2 text-yellow-800 sm:col-span-2">
-                      PayPal is not configured. Add sandbox/live credentials to enable
-                      Connect.
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
+                  )
+                )}
+              </CardContent>
+            )}
           </Card>
         )}
 
@@ -2212,7 +2246,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   onClick={() => navigate("/support/tickets")}
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
-                  Support Tickets
+                  Support 
                 </Button>
               </div>
             </CardHeader>
@@ -2265,6 +2299,128 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {uploadingLogo ? 'Uploading...' : 'Save Logo'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PayPal Connect Modal */}
+      {paypalConnectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-w-[95vw] relative">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Connect PayPal Account</h3>
+                <button
+                  onClick={() => setPaypalConnectModalOpen(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <CreditCard className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div className="text-sm text-blue-900">
+                      <p className="font-semibold mb-2">You will be redirected to PayPal</p>
+                      <p>Click OK to connect your PayPal account. You'll be redirected to PayPal's secure login page.</p>
+                      <p className="mt-2">After connecting, you'll be returned to this page automatically.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setPaypalConnectModalOpen(false)}
+                  disabled={paypalConnecting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmPayPalConnect}
+                  disabled={paypalConnecting}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {paypalConnecting ? 'Connecting...' : 'OK - Proceed to PayPal'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PayPal Disconnect Modal */}
+      {paypalDisconnectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-w-[95vw] relative">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Disconnect PayPal Account</h3>
+                <button
+                  onClick={() => {
+                    setPaypalDisconnectModalOpen(false)
+                    setDisconnectConfirmText("")
+                  }}
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-lg bg-red-50 p-4 border border-red-200">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-red-900">
+                      <p className="font-semibold mb-2">⚠️ Important Warning</p>
+                      <p className="mb-2">
+                        Disconnecting your PayPal account will <strong>permanently stop</strong> automatic monthly payments.
+                      </p>
+                      <p className="font-semibold text-red-700">
+                        The service will NOT reactivate automatically after a failed payment. 
+                        You will need to manually reconnect PayPal to resume billing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="disconnect-confirm" className="text-sm font-medium">
+                    Type <span className="font-mono font-bold text-red-600">DISCONNECT</span> to confirm
+                  </Label>
+                  <Input
+                    id="disconnect-confirm"
+                    value={disconnectConfirmText}
+                    onChange={(e) => setDisconnectConfirmText(e.target.value)}
+                    placeholder="Type DISCONNECT"
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPaypalDisconnectModalOpen(false)
+                    setDisconnectConfirmText("")
+                  }}
+                  disabled={paypalDisconnecting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmPayPalDisconnect}
+                  disabled={paypalDisconnecting || disconnectConfirmText !== "DISCONNECT"}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {paypalDisconnecting ? 'Disconnecting...' : 'Disconnect PayPal'}
                 </Button>
               </div>
             </div>

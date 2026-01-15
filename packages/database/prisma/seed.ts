@@ -161,11 +161,11 @@ async function main() {
     console.log("⏭️  Skipped data cleanup in production (database already reset via migrate reset --force)")
   }
 
-  // 2. Create Admin User
-  console.log("👤 Creating admin user...")
+  // 2. Create Admin User (Developer + Platform Admin)
+  console.log("👤 Creating admin user (Developer + Platform Admin)...")
 
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@echatbot.ai"
-  const adminPassword = process.env.ADMIN_PASSWORD || "venezia44"
+  const adminEmail = process.env.ADMIN_EMAIL || "gelsogrove@gmail.com"
+  const adminPassword = process.env.ADMIN_PASSWORD || "Venezia44"
   
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
@@ -173,12 +173,13 @@ async function main() {
     data: {
       email: adminEmail,
       passwordHash: hashedPassword,
-      firstName: "Alessandro",
-      lastName: "Romano",
+      firstName: "Andrea",
+      lastName: "Gelsomino",
       status: "ACTIVE",
       role: "ADMIN",
       planType: "ENTERPRISE", // ✅ Enterprise plan (full feature set)
       creditBalance: 185.00, // ✅ Reflects final balance from billing history
+      isPlatformAdmin: true, // ✅ Platform Admin - can access backoffice
       isDeveloperUser: true, // ✅ Developer User - skip 2FA for testing
       twoFactorEnabled: false, // ❌ 2FA disabled by default - enable via Settings UI
       twoFactorEnabledAt: null,
@@ -186,7 +187,7 @@ async function main() {
       paypalStatus: "CONNECTED",
       paypalClientId: "paypal-client-demo-1234",
       paypalMerchantId: "paypal-merchant-5678",
-      paypalEmail: "billing@echatbot.ai",
+      paypalEmail: "gelsogrove@gmail.com",
       paypalEnvironment: "sandbox",
       paypalConnectedAt: new Date(2025, 10, 1, 9, 30, 0),
       // 🧾 Billing Information (Andrea's requirement - sample data)
@@ -201,41 +202,8 @@ async function main() {
   console.log(`✅ Admin user created: ${adminEmail}`)
   console.log(`📧 Email: ${adminEmail}`)
   console.log(`🔑 Password: ${adminPassword}`)
+  console.log(`🔐 isPlatformAdmin: true (Backoffice access)`)
   console.log(`🔧 isDeveloperUser: true (Skip 2FA for testing)\n`)
-
-  // 2.5. Create Platform Admin User (for Backoffice access)
-  console.log("👤 Creating platform admin user...")
-
-  const platformAdminEmail = "gelsogrove@gmail.com"
-  const platformAdminPassword = process.env.PLATFORM_ADMIN_PASSWORD || "Venezia44"
-  const platformAdminHashedPassword = await bcrypt.hash(platformAdminPassword, 10)
-
-  const platformAdminUser = await prisma.user.create({
-    data: {
-      email: platformAdminEmail,
-      passwordHash: platformAdminHashedPassword,
-      firstName: "Andrea",
-      lastName: "Gelsomino",
-      status: "ACTIVE",
-      role: "ADMIN",
-      planType: "PREMIUM", // ✅ Premium plan (not free trial)
-      isPlatformAdmin: true, // ✅ Platform Admin - can access backoffice + skip 2FA
-      isDeveloperUser: false, // ❌ Not a developer (can't be both)
-      twoFactorEnabled: false,
-      twoFactorEnabledAt: null,
-      recoveryCodes: [],
-      companyName: "eChatbot Platform",
-      vatNumber: null,
-      website: "https://www.echatbot.it",
-      billingPhone: null,
-      billingAddress: null,
-    },
-  })
-
-  console.log(`✅ Platform admin user created: ${platformAdminEmail}`)
-  console.log(`📧 Email: ${platformAdminEmail}`)
-  console.log(`🔑 Password: ${platformAdminPassword}`)
-  console.log(`🔐 isPlatformAdmin: true (Backoffice access + Skip 2FA)\n`)
 
   // 2.7. Create E-commerce Workspace for Admin User (BellItalia VIP)
     console.log("🏢 Creating E-commerce workspace (BellItalia VIP) for admin user...")
@@ -304,15 +272,24 @@ Sono qui per aiutarti 😊`,
       businessType: "food",
       customAiRules: `# Communication Style
 
-- Keep responses UNDER 100 words - be concise and direct
-- Use emoticons to make tone friendly and professional
-- If you include a link, ALWAYS add a line break after it
-- End with an engaging question when appropriate (not always)
-- No walls of text - break into short paragraphs
+- Keep sentences SHORT - avoid long text blocks
+- Greet the user often using their name: {{customerName}}
+- Use emoticons to make tone friendly 😊
+- When appropriate, end with a question to keep conversation flowing
+- For lists, ALWAYS use bullet points
+- If there's a link, add a line break after it
+- For important concepts, use **bold**
+- For SUPER important concepts, use **BOLD AND UPPERCASE**
 
 # Example Communication
-"Sure! Here's your order 🎉
+"Hi {{customerName}}! 👋
+
+Here's your order:
 https://echatbot.ai/order/123
+
+**Total: €45.50**
+
+**PAYMENT DUE: 3 DAYS**
 
 Need anything else?"`,
     },
@@ -340,9 +317,9 @@ Need anything else?"`,
       smtpHost: "smtp.gmail.com",
       smtpPort: 465,
       smtpSecure: true,
-      smtpUser: process.env.SMTP_USER || "noreply@echatbot.ai",
+      smtpUser: process.env.SMTP_USER || adminEmail,
       smtpPass: process.env.SMTP_PASS || "",
-      smtpFrom: "eChatbot <noreply@echatbot.ai>",
+      smtpFrom: `eChatbot <${adminEmail}>`,
     },
   })
 
@@ -408,17 +385,28 @@ Need anything else?"`,
       businessType: "food",
       customAiRules: `# Communication Style
 
-- Keep responses UNDER 100 words - be concise and direct
-- Use emoticons to make tone friendly and professional
-- If you include a link, ALWAYS add a line break after it
-- End with an engaging question when appropriate (not always)
-- No walls of text - break into short paragraphs
+- Keep sentences SHORT - avoid long text blocks
+- Greet the user often using their name: {{customerName}}
+- Use emoticons to make tone friendly 😊
+- When appropriate, end with a question to keep conversation flowing
+- For lists, ALWAYS use bullet points
+- If there's a link, add a line break after it
+- For important concepts, use **bold**
+- For SUPER important concepts, use **BOLD AND UPPERCASE**
 
 # Example Communication
-"Sure! Here's the information you requested 📚
+"Hi {{customerName}}! 👋
+
+Here's the information you requested:
 https://echatbot.ai/info/products
 
-Would you like details about something specific?"`,
+**Key Features:**
+• Feature 1
+• Feature 2
+
+**IMPORTANT: Limited time offer**
+
+Would you like details about something specific?"`,  
     },
   })
 
@@ -444,9 +432,9 @@ Would you like details about something specific?"`,
       smtpHost: "smtp.gmail.com",
       smtpPort: 465,
       smtpSecure: true,
-      smtpUser: process.env.SMTP_USER || "noreply@echatbot.ai",
+      smtpUser: process.env.SMTP_USER || adminEmail,
       smtpPass: process.env.SMTP_PASS || "",
-      smtpFrom: "eChatbot <noreply@echatbot.ai>",
+      smtpFrom: `eChatbot <${adminEmail}>`,
     },
   })
 
@@ -868,11 +856,14 @@ Escalate IMMEDIATELY (call contactOperator) when customer:
       businessType: "technology",
       customAiRules: `# Communication Style
 
-- Keep responses UNDER 100 words - be concise and direct
-- Use emoticons to make tone friendly and professional
-- If you include a link, ALWAYS add a line break after it
-- End with an engaging question when appropriate (not always)
-- No walls of text - break into short paragraphs
+- Keep sentences SHORT - avoid long text blocks
+- Greet the user often using their name: {{customerName}}
+- Use emoticons to make tone friendly 😊
+- When appropriate, end with a question to keep conversation flowing
+- For lists, ALWAYS use bullet points
+- If there's a link, add a line break after it
+- For important concepts, use **bold**
+- For SUPER important concepts, use **BOLD AND UPPERCASE**
 
 # Custom Features & Enterprise Requests
 
@@ -885,20 +876,27 @@ When a customer asks about:
 "Le customizzazioni fanno parte del piano Enterprise 🏢
 
 Per fornirti un preventivo accurato, ti chiedo di inviare una email a support@echatbot.ai con:
-- Descrizione dettagliata della customizzazione richiesta
-- Specifiche tecniche (API, formati dati, autenticazione)
-- Piano mensile attuale o desiderato
-- Consumo mensile stimato (numero messaggi/utenti)
+• Descrizione dettagliata della customizzazione richiesta
+• Specifiche tecniche (API, formati dati, autenticazione)
+• Piano mensile attuale o desiderato
+• Consumo mensile stimato (numero messaggi/utenti)
 
 Calcoleremo: prezzo piano mensile + consumo mensile + preventivo customizzazioni.
 
-Tempi di risposta: entro 24-48 ore lavorative 📧"
+**RESPONSE TIME: 24-48 hours** 📧"
 
 # Example Communication
-"Sure! Here's our documentation 📚
+"Hi {{customerName}}! 💼
+
+Here's our documentation:
 https://echatbot.ai/docs
 
-Can I help with anything else?"`,
+**Quick Links:**
+• Getting started
+• API reference
+• Pricing plans
+
+Can I help with anything else?"`,  
     },
   })
 
@@ -925,9 +923,9 @@ Can I help with anything else?"`,
       smtpHost: "smtp.gmail.com",
       smtpPort: 465,
       smtpSecure: true,
-      smtpUser: process.env.SMTP_USER || "noreply@echatbot.ai",
+      smtpUser: process.env.SMTP_USER || adminEmail,
       smtpPass: process.env.SMTP_PASS || "",
-      smtpFrom: "eChatbot <noreply@echatbot.ai>",
+      smtpFrom: `eChatbot <${adminEmail}>`,
     },
   })
 
@@ -3415,8 +3413,8 @@ Can I help with anything else?"`,
         userId: adminUser.id,
         amount: -5.25,
         reason: "Manual discount",
-        createdById: platformAdminUser.id,
-        createdByEmail: platformAdminUser.email,
+        createdById: adminUser.id,
+        createdByEmail: adminUser.email,
         createdAt: new Date(previousYear, previousMonth, 2, 9, 30, 0),
       },
     })
@@ -3429,8 +3427,8 @@ Can I help with anything else?"`,
       userId: adminUser.id,
       amount: 5.00,
       reason: "Goodwill adjustment",
-      createdById: platformAdminUser.id,
-      createdByEmail: platformAdminUser.email,
+      createdById: adminUser.id,
+      createdByEmail: adminUser.email,
       createdAt: new Date(2025, 11, 10, 9, 30, 0),
     },
   })
@@ -3485,7 +3483,7 @@ Can I help with anything else?"`,
 
   const historyTransactions = historicalInvoices.map((invoice) => ({
     userId: adminUser.id,
-    adminUserId: platformAdminUser.id,
+    adminUserId: adminUser.id,
     invoiceId: invoice.id,
     amount: Number(invoice.totalAmount),
     currency: "USD",
@@ -3499,7 +3497,7 @@ Can I help with anything else?"`,
       ...historyTransactions,
       {
         userId: adminUser.id,
-        adminUserId: platformAdminUser.id,
+        adminUserId: adminUser.id,
         invoiceId: octoberInvoice.id,
         amount: 50.00,
         currency: "USD",
@@ -3509,7 +3507,7 @@ Can I help with anything else?"`,
       },
       {
         userId: adminUser.id,
-        adminUserId: platformAdminUser.id,
+        adminUserId: adminUser.id,
         invoiceId: novemberInvoice.id,
         amount: 48.50,
         currency: "USD",
@@ -3519,7 +3517,7 @@ Can I help with anything else?"`,
       },
       {
         userId: adminUser.id,
-        adminUserId: platformAdminUser.id,
+        adminUserId: adminUser.id,
         invoiceId: novemberInvoice.id,
         amount: 48.50,
         currency: "USD",
@@ -3529,7 +3527,7 @@ Can I help with anything else?"`,
       },
       {
         userId: adminUser.id,
-        adminUserId: platformAdminUser.id,
+        adminUserId: adminUser.id,
         invoiceId: decemberInvoice.id,
         amount: 47.60,
         currency: "USD",
@@ -3539,7 +3537,7 @@ Can I help with anything else?"`,
       },
       {
         userId: adminUser.id,
-        adminUserId: platformAdminUser.id,
+        adminUserId: adminUser.id,
         invoiceId: null,
         amount: 12.00,
         currency: "USD",

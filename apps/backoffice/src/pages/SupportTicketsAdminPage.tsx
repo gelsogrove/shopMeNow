@@ -66,56 +66,68 @@ import { useAdminWebSocket } from "@/hooks/useAdminWebSocket"
 import { api } from "@/services/api"
 
 // Message Bubble Component
-function MessageBubble({ message }: { message: SupportMessage }) {
+function MessageBubble({
+  message,
+  customerLabel,
+  adminLabel,
+}: {
+  message: SupportMessage
+  customerLabel: string
+  adminLabel: string
+}) {
   const isAdmin = message.senderType === "ADMIN"
+  const senderLabel = isAdmin ? adminLabel : customerLabel
 
   return (
     <div className={`flex ${isAdmin ? "justify-end" : "justify-start"} mb-4`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-5 py-4 shadow-sm ${
-          isAdmin
-            ? "bg-purple-600 text-white rounded-br-sm"
-            : "bg-gray-100 border border-gray-200 text-gray-900 rounded-bl-sm"
-        }`}
-      >
+      <div className="max-w-[80%]">
         <div
-          className={`prose prose-sm max-w-none ${isAdmin ? "prose-invert [&_*]:text-white" : "[&_*]:text-gray-900"}`}
-          style={{ fontSize: '0.95rem', lineHeight: '1.6' }}
-          dangerouslySetInnerHTML={{ __html: message.content }}
-        />
-
-        {/* Attachments */}
-        {message.attachments.length > 0 && (
-          <div className={`mt-3 pt-3 border-t ${isAdmin ? "border-purple-400" : "border-gray-300"} space-y-2`}>
-            {message.attachments.map((att) => (
-              <a
-                key={att.id}
-                href={att.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`flex items-center gap-2 text-sm font-medium ${
-                  isAdmin
-                    ? "text-purple-100 hover:text-white"
-                    : "text-blue-600 hover:text-blue-800"
-                }`}
-              >
-                {att.mimeType.startsWith("image/") ? (
-                  <ImageIcon className="w-4 h-4" />
-                ) : (
-                  <FileText className="w-4 h-4" />
-                )}
-                {att.filename}
-              </a>
-            ))}
-          </div>
-        )}
-
-        <div
-          className={`text-xs mt-2 ${
-            isAdmin ? "text-purple-200" : "text-gray-500"
+          className={`mb-1 flex items-center gap-2 text-xs ${
+            isAdmin ? "justify-end text-purple-200" : "justify-start text-gray-500"
           }`}
         >
-          {format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}
+          <span className="font-medium">{senderLabel}</span>
+          <span className="text-[10px] opacity-70">•</span>
+          <span>{format(new Date(message.createdAt), "MMM d, yyyy h:mm a")}</span>
+        </div>
+        <div
+          className={`rounded-2xl px-5 py-4 shadow-sm ${
+            isAdmin
+              ? "bg-purple-600 text-white rounded-br-sm"
+              : "bg-gray-100 border border-gray-200 text-gray-900 rounded-bl-sm"
+          }`}
+        >
+          <div
+            className={`prose prose-sm max-w-none ${isAdmin ? "prose-invert [&_*]:text-white" : "[&_*]:text-gray-900"}`}
+            style={{ fontSize: "0.95rem", lineHeight: "1.6" }}
+            dangerouslySetInnerHTML={{ __html: message.content }}
+          />
+
+          {/* Attachments */}
+          {message.attachments.length > 0 && (
+            <div className={`mt-3 pt-3 border-t ${isAdmin ? "border-purple-400" : "border-gray-300"} space-y-2`}>
+              {message.attachments.map((att) => (
+                <a
+                  key={att.id}
+                  href={att.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-2 text-sm font-medium ${
+                    isAdmin
+                      ? "text-purple-100 hover:text-white"
+                      : "text-blue-600 hover:text-blue-800"
+                  }`}
+                >
+                  {att.mimeType.startsWith("image/") ? (
+                    <ImageIcon className="w-4 h-4" />
+                  ) : (
+                    <FileText className="w-4 h-4" />
+                  )}
+                  {att.filename}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -289,7 +301,16 @@ function TicketDetailView({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4">
         {ticket.messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
+          <MessageBubble
+            key={msg.id}
+            message={msg}
+            customerLabel={
+              [ticket.user?.firstName, ticket.user?.lastName].filter(Boolean).join(" ") ||
+              ticket.user?.email ||
+              "Customer"
+            }
+            adminLabel="Support"
+          />
         ))}
       </div>
 
@@ -462,12 +483,24 @@ export default function SupportTicketsAdminPage() {
   const workspaceOptions = selectedUser?.ownedWorkspaces || []
 
   const loadUsers = useCallback(async () => {
-    if (usersLoading) return
     setUsersLoading(true)
     try {
-      const result = await api.admin.getUsers()
+      const result = await api.users.getAll()
+      console.log("📋 [Support] Users loaded:", result)
       if (result.success && result.data) {
-        setUsers(result.data)
+        // Transform to AdminUserOption format
+        const transformed: AdminUserOption[] = result.data.map((user) => ({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          ownedWorkspaces: user.ownedWorkspaces.map((ws) => ({
+            id: ws.id,
+            name: ws.name,
+          })),
+        }))
+        console.log("✅ [Support] Transformed users:", transformed)
+        setUsers(transformed)
       } else {
         toast.error(result.error || "Failed to load users")
       }
@@ -477,7 +510,7 @@ export default function SupportTicketsAdminPage() {
     } finally {
       setUsersLoading(false)
     }
-  }, [usersLoading])
+  }, []) // ✅ NO dependencies - stable reference
 
   useEffect(() => {
     if (createOpen) {
@@ -490,8 +523,11 @@ export default function SupportTicketsAdminPage() {
       setSelectedWorkspaceId("")
       return
     }
-    if (!selectedWorkspaceId || !selectedUser.ownedWorkspaces.some((ws) => ws.id === selectedWorkspaceId)) {
-      setSelectedWorkspaceId(selectedUser.ownedWorkspaces[0]?.id || "")
+    console.log("🏢 [Support] Selected user workspaces:", selectedUser.ownedWorkspaces)
+    // Only auto-select if current selection is invalid, don't force selection
+    if (selectedWorkspaceId && !selectedUser.ownedWorkspaces.some((ws) => ws.id === selectedWorkspaceId)) {
+      console.log("⚠️ [Support] Invalid workspace selection, resetting to 'none'")
+      setSelectedWorkspaceId("")
     }
   }, [selectedUser, selectedWorkspaceId])
 
@@ -501,8 +537,8 @@ export default function SupportTicketsAdminPage() {
       const result = await getAllTickets(
         page,
         20,
-        statusFilter === "ALL" || !statusFilter ? undefined : statusFilter,
-        issueTypeFilter === "ALL" || !issueTypeFilter ? undefined : issueTypeFilter
+        statusFilter === "ALL" ? undefined : statusFilter,
+        issueTypeFilter === "ALL" ? undefined : issueTypeFilter
       )
       setTickets(result.data.tickets)
       setTotalPages(result.data.totalPages)
@@ -653,7 +689,16 @@ export default function SupportTicketsAdminPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <Dialog open={createOpen} onOpenChange={(open) => {
+            setCreateOpen(open)
+            if (!open) {
+              // Reset form when closing modal
+              setSelectedUserId("")
+              setSelectedWorkspaceId("")
+              setNewSubject("")
+              setNewMessage("")
+            }
+          }}>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>New Support Message</DialogTitle>
@@ -664,7 +709,11 @@ export default function SupportTicketsAdminPage() {
                   <Label>Recipient</Label>
                   <Select
                     value={selectedUserId}
-                    onValueChange={(value) => setSelectedUserId(value)}
+                    onValueChange={(value) => {
+                      console.log("👤 [Support] User changed:", value)
+                      setSelectedUserId(value)
+                      setSelectedWorkspaceId("") // Reset workspace when user changes
+                    }}
                     disabled={usersLoading}
                   >
                     <SelectTrigger>
@@ -686,13 +735,20 @@ export default function SupportTicketsAdminPage() {
                   <Label>Workspace (optional)</Label>
                   <Select
                     value={selectedWorkspaceId || "none"}
-                    onValueChange={(value) =>
+                    onValueChange={(value) => {
+                      console.log("🔄 [Support] Workspace changed:", value)
                       setSelectedWorkspaceId(value === "none" ? "" : value)
-                    }
-                    disabled={!selectedUser}
+                    }}
+                    disabled={!selectedUser || workspaceOptions.length === 0}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a workspace" />
+                      <SelectValue placeholder={
+                        !selectedUser 
+                          ? "Select a user first" 
+                          : workspaceOptions.length === 0 
+                            ? "User has no workspaces" 
+                            : "Select a workspace"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No workspace</SelectItem>
@@ -703,6 +759,11 @@ export default function SupportTicketsAdminPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {selectedUser && (
+                    <p className="text-xs text-gray-500">
+                      {workspaceOptions.length} workspace{workspaceOptions.length !== 1 ? 's' : ''} available
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid gap-2">
@@ -750,9 +811,9 @@ export default function SupportTicketsAdminPage() {
           {/* Filters */}
           <div className="flex gap-4 mb-6">
             <Select
-              value={statusFilter}
+              value={statusFilter || "ALL"}
               onValueChange={(v: string) => {
-                setStatusFilter(v === "ALL" ? "" : v as SupportTicketStatus | "")
+                setStatusFilter(v as SupportTicketStatus | "ALL")
                 setPage(1)
               }}
             >
@@ -768,9 +829,9 @@ export default function SupportTicketsAdminPage() {
             </Select>
 
             <Select
-              value={issueTypeFilter}
+              value={issueTypeFilter || "ALL"}
               onValueChange={(v: string) => {
-                setIssueTypeFilter(v === "ALL" ? "" : v as SupportIssueType | "")
+                setIssueTypeFilter(v as SupportIssueType | "ALL")
                 setPage(1)
               }}
             >

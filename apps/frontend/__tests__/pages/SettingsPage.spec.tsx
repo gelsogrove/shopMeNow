@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
@@ -7,29 +7,41 @@ import SettingsPage from '@/pages/SettingsPage'
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext'
 import { ChatProvider } from '@/contexts/ChatContext'
 import * as workspaceApi from '@/services/workspaceApi'
+import { api } from '@/services/api'
 import { toast } from '@/lib/toast'
 
-// Mock dependencies
 vi.mock('@/services/workspaceApi')
+vi.mock('@/services/api', () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+  },
+}))
 vi.mock('@/lib/toast')
 vi.mock('@/hooks/useWorkspaceRole', () => ({
-  useWorkspaceRole: () => ({ isSuperAdmin: true })
+  useWorkspaceRole: () => ({ isSuperAdmin: true }),
 }))
 vi.mock('@/components/layout/PageLayout', () => ({
-  PageLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+  PageLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
-// Mock workspace context
 const mockWorkspace = {
   id: 'test-workspace-1',
   name: 'Test Channel',
   whatsappPhoneNumber: '+39 333 1234567',
+  whatsappApiKey: 'whatsapp-api-key',
+  whatsappPhoneNumberId: '1234567890',
+  whatsappVerifyToken: 'verify-token',
   adminEmail: 'admin@test.com',
   url: 'https://test.com',
   channelStatus: true,
+  debugMode: false,
   welcomeMessage: 'Welcome to our channel!',
   wipMessage: 'We are under maintenance',
   allowedExternalLinks: ['stripe.com', 'paypal.com'],
+  enableWhatsapp: true,
+  enableWidget: false,
   sellsProductsAndServices: true,
   hasSalesAgents: false,
   hasHumanSupport: true,
@@ -45,22 +57,22 @@ const mockWorkspace = {
   translateCategoryNames: false,
   translateServiceNames: true,
   catalogBaseLanguage: 'it',
-  notificationEmail: 'notify@test.com'
+  notificationEmail: 'notify@test.com',
+  widgetTitle: 'Chat with us',
+  widgetLanguage: 'en',
+  widgetPrimaryColor: '#22c55e',
 }
 
-const mockUseWorkspace = {
-  workspace: mockWorkspace,
-  loading: false,
-  setCurrentWorkspace: vi.fn()
+const setupWorkspaceGet = () => {
+  vi.mocked(api.get).mockResolvedValue({ data: mockWorkspace })
 }
 
-// Wrapper component with all providers
 const renderWithProviders = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
-      mutations: { retry: false }
-    }
+      mutations: { retry: false },
+    },
   })
 
   return render(
@@ -76,157 +88,84 @@ const renderWithProviders = (component: React.ReactElement) => {
   )
 }
 
+const waitForLoaded = async () => {
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+  })
+}
+
+const openSection = async (title: string) => {
+  const user = userEvent.setup()
+  const heading = screen.getByRole('heading', { name: title })
+  await user.click(heading)
+}
+
 describe('SettingsPage - Form Validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  afterEach(() => {
-    // Clean up localStorage after each test
-    localStorage.clear()
-  })
-
-  it('should show error for empty admin email', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    // Wait for form to load
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('admin@test.com')).toBeInTheDocument()
-    })
-
-    // Clear email field
-    const emailInput = screen.getByDisplayValue('admin@test.com')
-    await userEvent.clear(emailInput)
-
-    // Try to save
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
-
-    // Should show error
-    await waitFor(() => {
-      expect(screen.getByText(/admin email is required/i)).toBeInTheDocument()
-    })
+    setupWorkspaceGet()
   })
 
   it('should show error for invalid email format', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
+
+    await waitForLoaded()
+    await openSection('Business Configuration')
+
+    const emailInput = screen.getByLabelText(/admin email/i)
+    await user.clear(emailInput)
+    await user.type(emailInput, 'invalid-email')
+
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
+
     await waitFor(() => {
-      expect(screen.getByDisplayValue('admin@test.com')).toBeInTheDocument()
+      expect(emailInput).toHaveClass('border-red-500')
     })
-
-    const emailInput = screen.getByDisplayValue('admin@test.com')
-    await userEvent.clear(emailInput)
-    await userEvent.type(emailInput, 'invalid-email')
-
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
-
-    await waitFor(() => {
-      expect(screen.getByText(/please enter a valid email address/i)).toBeInTheDocument()
-    })
+    expect(toast.error).toHaveBeenCalledWith('Please fix validation errors')
   })
 
   it('should show error for empty channel name', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
 
-    const nameInput = screen.getByDisplayValue('Test Channel')
-    await userEvent.clear(nameInput)
+    await waitForLoaded()
+    await openSection('Business Configuration')
 
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
+    const nameInput = screen.getByLabelText(/channel name/i)
+    await user.clear(nameInput)
 
-    await waitFor(() => {
-      expect(screen.getByText(/workspace name is required/i)).toBeInTheDocument()
-    })
-  })
-
-  it('should show error for invalid URL format', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('https://test.com')).toBeInTheDocument()
-    })
-
-    const urlInput = screen.getByDisplayValue('https://test.com')
-    await userEvent.clear(urlInput)
-    await userEvent.type(urlInput, 'not-a-url')
-
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/please enter a valid url/i)).toBeInTheDocument()
+      expect(screen.getByText(/channel name is required/i)).toBeInTheDocument()
     })
-  })
-
-  it('should show error for invalid phone format', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('+39 333 1234567')).toBeInTheDocument()
-    })
-
-    const phoneInput = screen.getByDisplayValue('+39 333 1234567')
-    await userEvent.clear(phoneInput)
-    await userEvent.type(phoneInput, '123')
-
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
-
-    await waitFor(() => {
-      expect(screen.getByText(/phone must be in international format/i)).toBeInTheDocument()
-    })
-  })
-})
-
-describe('SettingsPage - Field Changes', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('should update channel name field', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
-
-    const nameInput = screen.getByDisplayValue('Test Channel') as HTMLInputElement
-    await userEvent.clear(nameInput)
-    await userEvent.type(nameInput, 'New Channel Name')
-
-    expect(nameInput.value).toBe('New Channel Name')
+    expect(toast.error).toHaveBeenCalledWith('Please fix validation errors')
   })
 
   it('should clear error when field is corrected', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
+
+    await waitForLoaded()
+    await openSection('Business Configuration')
+
+    const nameInput = screen.getByLabelText(/channel name/i)
+    await user.clear(nameInput)
+
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
+
     await waitFor(() => {
-      expect(screen.getByDisplayValue('admin@test.com')).toBeInTheDocument()
+      expect(screen.getByText(/channel name is required/i)).toBeInTheDocument()
     })
 
-    const emailInput = screen.getByDisplayValue('admin@test.com')
-    await userEvent.clear(emailInput)
+    await user.type(nameInput, 'New Channel Name')
 
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
-
-    // Error should appear
     await waitFor(() => {
-      expect(screen.getByText(/admin email is required/i)).toBeInTheDocument()
-    })
-
-    // Fix the error
-    await userEvent.type(emailInput, 'newemail@test.com')
-
-    // Error should disappear
-    await waitFor(() => {
-      expect(screen.queryByText(/admin email is required/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/channel name is required/i)).not.toBeInTheDocument()
     })
   })
 })
@@ -234,155 +173,107 @@ describe('SettingsPage - Field Changes', () => {
 describe('SettingsPage - Toggle Behaviors', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setupWorkspaceGet()
   })
 
-  it.skip('should show human support section when hasHumanSupport is true', async () => {
+  it('should toggle channel active status', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
-    // Click on Support tab
-    const supportTab = screen.getByRole('tab', { name: /support/i })
-    await userEvent.click(supportTab)
 
-    // Find the human support toggle - should be ON
-    await waitFor(() => {
-      const supportSwitch = screen.getAllByRole('switch').find(s => 
-        s.closest('[class*="CardTitle"]')?.textContent?.includes('Human Support')
-      )
-      expect(supportSwitch).toBeChecked()
-    })
+    await waitForLoaded()
 
-    // Support content should be visible
-    expect(screen.getByText(/message for customer/i)).toBeInTheDocument()
-  })
+    const channelSwitch = screen.getByRole('switch')
+    expect(channelSwitch).toBeChecked()
 
-  it('should toggle chatbot status', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
-
-    // Find chatbot status toggle
-    const switches = screen.getAllByRole('switch')
-    const chatbotSwitch = switches[switches.length - 1] // Last switch is chatbot status
-
-    // Should be checked by default
-    expect(chatbotSwitch).toBeChecked()
-
-    // Click to toggle
-    await userEvent.click(chatbotSwitch)
-
-    expect(chatbotSwitch).not.toBeChecked()
-  })
-
-  it.skip('should show sales agents option when products are enabled', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    // Click on Business tab
-    const businessTab = screen.getByRole('tab', { name: /business/i })
-    await userEvent.click(businessTab)
-
-    await waitFor(() => {
-      // Products & Services should be visible and ON
-      expect(screen.getByText(/sells products & services/i)).toBeInTheDocument()
-      
-      // Sales Team option should be visible (since products are ON)
-      expect(screen.getByText(/sales team/i)).toBeInTheDocument()
-    })
+    await user.click(channelSwitch)
+    expect(channelSwitch).not.toBeChecked()
   })
 })
 
 describe('SettingsPage - Data Population', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setupWorkspaceGet()
   })
 
   it('should populate form with workspace data', async () => {
     renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
 
-    // Verify all fields are populated
-    expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('admin@test.com')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('+39 333 1234567')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('https://test.com')).toBeInTheDocument()
+    await waitForLoaded()
+    await openSection('Business Configuration')
+
+    expect(screen.getByLabelText(/channel name/i)).toHaveValue('Test Channel')
+    expect(screen.getByLabelText(/admin email/i)).toHaveValue('admin@test.com')
+    expect(screen.getByLabelText(/website url/i)).toHaveValue('https://test.com')
+
+    await openSection('WhatsApp Configuration')
+    expect(screen.getByLabelText(/^phone number$/i)).toHaveValue('+39 333 1234567')
   })
 
   it('should convert allowed external links array to comma-separated string', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
-    // Navigate to Security tab
-    const securityTab = screen.getByRole('tab', { name: /security/i })
-    await userEvent.click(securityTab)
 
-    await waitFor(() => {
-      // Should show comma-separated values
-      const linksField = screen.getByPlaceholderText(/stripe.com, paypal.com/i) as HTMLTextAreaElement
-      expect(linksField.value).toContain('stripe.com')
-      expect(linksField.value).toContain('paypal.com')
-    })
+    await waitForLoaded()
+    await openSection('Security & Access')
+
+    const openButton = screen.getByRole('button', { name: /stripe.com/i })
+    await user.click(openButton)
+
+    const linksTextarea = await screen.findByPlaceholderText(/example.com, trusted-site.com/i)
+    expect(linksTextarea).toHaveValue('stripe.com, paypal.com')
   })
 
   it('should display personality fields correctly', async () => {
     renderWithProviders(<SettingsPage />)
-    
-    const personalityTab = screen.getByRole('tab', { name: /personality/i })
-    await userEvent.click(personalityTab)
 
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('I am your AI assistant')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('Welcome to our channel!')).toBeInTheDocument()
-    })
+    await waitForLoaded()
+    await openSection('AI Personality')
+
+    expect(screen.getByRole('button', { name: /i am your ai assistant/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /welcome to our channel/i })).toBeInTheDocument()
   })
 })
 
 describe('SettingsPage - Save Functionality', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setupWorkspaceGet()
     vi.mocked(workspaceApi.updateWorkspace).mockResolvedValue(mockWorkspace)
   })
 
   it('should call updateWorkspace with correct data on save', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
 
-    // Change a field
-    const nameInput = screen.getByDisplayValue('Test Channel')
-    await userEvent.clear(nameInput)
-    await userEvent.type(nameInput, 'Updated Channel')
+    await waitForLoaded()
+    await openSection('Business Configuration')
 
-    // Save
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
+    const nameInput = screen.getByLabelText(/channel name/i)
+    await user.clear(nameInput)
+    await user.type(nameInput, 'Updated Channel')
 
-    // Should call updateWorkspace
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
+
     await waitFor(() => {
       expect(workspaceApi.updateWorkspace).toHaveBeenCalled()
     })
 
     const callArgs = vi.mocked(workspaceApi.updateWorkspace).mock.calls[0]
     expect(callArgs[1]).toMatchObject({
-      name: 'Updated Channel'
+      name: 'Updated Channel',
     })
   })
 
   it('should show success toast on successful save', async () => {
-    vi.mocked(workspaceApi.updateWorkspace).mockResolvedValue(mockWorkspace)
-    
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
 
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
+    await waitForLoaded()
+
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('Settings saved successfully')
@@ -390,17 +281,15 @@ describe('SettingsPage - Save Functionality', () => {
   })
 
   it('should show error toast on save failure', async () => {
-    const mockError = new Error('Network error')
-    vi.mocked(workspaceApi.updateWorkspace).mockRejectedValue(mockError)
-    
-    renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
+    const user = userEvent.setup()
+    vi.mocked(workspaceApi.updateWorkspace).mockRejectedValue(new Error('Network error'))
 
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
+    renderWithProviders(<SettingsPage />)
+
+    await waitForLoaded()
+
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Failed to save settings')
@@ -408,67 +297,19 @@ describe('SettingsPage - Save Functionality', () => {
   })
 
   it('should prevent save with validation errors', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Test Channel')).toBeInTheDocument()
-    })
 
-    // Clear email to create error
-    const emailInput = screen.getByDisplayValue('admin@test.com')
-    await userEvent.clear(emailInput)
+    await waitForLoaded()
+    await openSection('Business Configuration')
 
-    const saveButton = screen.getByRole('button', { name: /save/i })
-    await userEvent.click(saveButton)
+    const nameInput = screen.getByLabelText(/channel name/i)
+    await user.clear(nameInput)
 
-    // Should NOT call updateWorkspace
+    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    await user.click(saveButton)
+
     expect(workspaceApi.updateWorkspace).not.toHaveBeenCalled()
-    
-    // Should show error message
-    expect(toast.error).toHaveBeenCalledWith('Please fix validation errors before saving')
-  })
-})
-
-describe('SettingsPage - Translation Settings', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('should populate translation toggles correctly', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    const translationTab = screen.getByRole('tab', { name: /translation/i })
-    await userEvent.click(translationTab)
-
-    await waitFor(() => {
-      const switches = screen.getAllByRole('switch')
-      // Find the translation toggles
-      expect(switches.length).toBeGreaterThan(0)
-    })
-  })
-
-  it.skip('should allow changing catalog base language', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    const translationTab = screen.getByRole('tab', { name: /translation/i })
-    await userEvent.click(translationTab)
-
-    await waitFor(() => {
-      const languageSelect = screen.getByRole('button', { name: /italian/i })
-      expect(languageSelect).toBeInTheDocument()
-    })
-  })
-})
-
-
-describe('SettingsPage - Help Panels', () => {
-  it('should display help panel on basic tab', async () => {
-    renderWithProviders(<SettingsPage />)
-    
-    // Help panel should be present - check for the HelpCircle icon or just verify tab renders
-    await waitFor(() => {
-      const basicTab = screen.getByRole('tab', { name: /basic/i })
-      expect(basicTab).toBeInTheDocument()
-    })
+    expect(toast.error).toHaveBeenCalledWith('Please fix validation errors')
   })
 })

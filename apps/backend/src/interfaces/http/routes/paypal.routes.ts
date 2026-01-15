@@ -2,9 +2,9 @@ import { Router, Request, Response } from "express"
 import jwt from "jsonwebtoken"
 import { prisma, PayPalStatus } from "@echatbot/database"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { config } from "../../config"
-import logger from "../../utils/logger"
-import { encryptSecret } from "../../utils/encryption"
+import { config } from "../../../config"
+import logger from "../../../utils/logger"
+import { encryptSecret } from "../../../utils/encryption"
 
 export const paypalRoutes = Router()
 
@@ -43,7 +43,7 @@ const loadPayPalConfig = () => {
 const ensureOwner = async (userId: string, res: Response): Promise<boolean> => {
   const ownerRole = await prisma.userWorkspace.findFirst({
     where: { userId, role: "SUPER_ADMIN" },
-    select: { id: true },
+    select: { role: true },
   })
 
   if (!ownerRole) {
@@ -72,6 +72,104 @@ const PAYPAL_SCOPES = [
   "https://uri.paypal.com/services/paypalattributes",
   "https://uri.paypal.com/services/payments/payouts",
 ]
+
+const getWebhookId = (environment: PayPalEnv) => {
+  return environment === "live"
+    ? process.env.PAYPAL_WEBHOOK_ID_LIVE
+    : process.env.PAYPAL_WEBHOOK_ID_SANDBOX
+}
+
+const getAppAccessToken = async (
+  paypalConfig: ReturnType<typeof loadPayPalConfig>
+) => {
+  const response = await fetch(
+    `${paypalConfig.apiBaseUrl}/v1/oauth2/token`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(
+          `${paypalConfig.clientId}:${paypalConfig.clientSecret}`
+        ).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
+    }
+  )
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(`PayPal token error: ${text}`)
+  }
+
+  const data = await response.json()
+  return data.access_token as string
+}
+
+paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
+  try {
+    const paypalConfig = loadPayPalConfig()
+    if (!paypalConfig.configured) {
+      return res.status(400).json({
+        success: false,
+        error: "PayPal credentials are not configured",
+      })
+    }
+
+    const webhookId = getWebhookId(paypalConfig.environment)
+    if (!webhookId) {
+      return res.status(400).json({
+        success: false,
+        error: "PayPal webhook ID is not configured",
+      })
+    }
+
+    const headers = req.headers
+    const verificationPayload = {
+      auth_algo: headers["paypal-auth-algo"],
+      cert_url: headers["paypal-cert-url"],
+      transmission_id: headers["paypal-transmission-id"],
+      transmission_sig: headers["paypal-transmission-sig"],
+      transmission_time: headers["paypal-transmission-time"],
+      webhook_id: webhookId,
+      webhook_event: req.body,
+    }
+
+    const accessToken = await getAppAccessToken(paypalConfig)
+    const verifyResponse = await fetch(
+      `${paypalConfig.apiBaseUrl}/v1/notifications/verify-webhook-signature`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(verificationPayload),
+      }
+    )
+
+    if (!verifyResponse.ok) {
+      const text = await verifyResponse.text()
+      logger.error("[PAYPAL] Webhook verification failed:", text)
+      return res.status(400).json({ success: false })
+    }
+
+    const verifyData = await verifyResponse.json()
+    if (verifyData.verification_status !== "SUCCESS") {
+      logger.warn("[PAYPAL] Webhook signature invalid", verifyData)
+      return res.status(400).json({ success: false })
+    }
+
+    logger.info("[PAYPAL] Webhook verified", {
+      eventType: req.body?.event_type,
+      resourceType: req.body?.resource_type,
+    })
+
+    res.status(200).json({ success: true })
+  } catch (error) {
+    logger.error("[PAYPAL] Webhook error:", error)
+    res.status(500).json({ success: false })
+  }
+})
 
 paypalRoutes.get("/status", authMiddleware, async (req: Request, res: Response) => {
   try {

@@ -82,6 +82,7 @@ interface WhatsAppChatModalProps {
   workspaceId?: string
   selectedChat?: Chat | null
   logoUrl?: string
+  enableWhatsapp?: boolean // Flag to determine logo source
 }
 
 export function WhatsAppChatModal({
@@ -93,6 +94,7 @@ export function WhatsAppChatModal({
   workspaceId = "",
   selectedChat,
   logoUrl,
+  enableWhatsapp = false, // Default to Widget mode
 }: WhatsAppChatModalProps) {
   const [chatStarted, setChatStarted] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -109,7 +111,7 @@ export function WhatsAppChatModal({
   const [isPlaygroundMode, setIsPlaygroundMode] = useState(true) // Default to safe playground mode
   const PLAYGROUND_PHONE = "+39 999 1234567" // Fake test number
   const defaultLogoUrl =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='8' width='52' height='38' rx='12' fill='%2322c55e'/%3E%3Cpath d='M22 46L12 56V46Z' fill='%2322c55e'/%3E%3Ccircle cx='26' cy='27' r='4' fill='%23fff'/%3E%3Ccircle cx='42' cy='27' r='4' fill='%23fff'/%3E%3C/svg%3E"
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2322c55e'/%3E%3Ccircle cx='35' cy='40' r='6' fill='%23fff'/%3E%3Ccircle cx='65' cy='40' r='6' fill='%23fff'/%3E%3Cpath d='M30 60 Q50 75 70 60' stroke='%23fff' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
 
   useEffect(() => {
     if (isOpen) {
@@ -840,11 +842,13 @@ export function WhatsAppChatModal({
               <div className="w-12 h-12 rounded-full bg-white/90 ring-1 ring-white/60 shadow flex items-center justify-center overflow-hidden">
                 <img
                   src={
-                    logoUrl
+                    enableWhatsapp
+                      ? defaultLogoUrl // WhatsApp: usa logo di default (in realtà verrà dal profilo WhatsApp)
+                      : logoUrl
                       ? logoUrl.startsWith("http")
                         ? logoUrl
                         : `${IMG_BASE_URL}${logoUrl}`
-                      : defaultLogoUrl
+                      : defaultLogoUrl // Widget: usa logo custom o default
                   }
                   alt={channelName}
                   className="w-10 h-10 object-contain"

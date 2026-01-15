@@ -147,7 +147,6 @@ export class SupportTicketController {
   async getTicket(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.id
-      const isPlatformAdmin = await checkIsPlatformAdmin(req)
       if (!userId) {
         res.status(401).json({ success: false, error: "Unauthorized" })
         return
@@ -165,8 +164,8 @@ export class SupportTicketController {
         return
       }
 
-      // Check ownership (unless admin)
-      if (!isPlatformAdmin && ticket.userId !== userId) {
+      // Customer endpoint: only ticket owner can access
+      if (ticket.userId !== userId) {
         res.status(403).json({
           success: false,
           error: "You do not have permission to view this ticket",
@@ -174,11 +173,8 @@ export class SupportTicketController {
         return
       }
 
-      // Mark messages as read
-      const senderType = isPlatformAdmin
-        ? SupportSenderType.ADMIN
-        : SupportSenderType.CUSTOMER
-      await supportTicketService.markAsRead(ticketId, senderType)
+      // Mark admin replies as read for the customer view
+      await supportTicketService.markAsRead(ticketId, SupportSenderType.CUSTOMER)
 
       res.json({
         success: true,
@@ -226,7 +222,7 @@ export class SupportTicketController {
 
       // ⚠️ SECURITY: Only SUPER_ADMIN (workspace owner) can delete tickets
       if (ticket.workspaceId) {
-        const userWorkspace = await this.prisma.userWorkspace.findFirst({
+        const userWorkspace = await prisma.userWorkspace.findFirst({
           where: {
             userId,
             workspaceId: ticket.workspaceId,
@@ -266,7 +262,6 @@ export class SupportTicketController {
   async addMessage(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.id
-      const isPlatformAdmin = await checkIsPlatformAdmin(req)
       if (!userId) {
         res.status(401).json({ success: false, error: "Unauthorized" })
         return
@@ -283,21 +278,16 @@ export class SupportTicketController {
         return
       }
 
-      // Check ownership (unless admin)
-      if (!isPlatformAdmin) {
-        const isOwner = await supportTicketService.verifyTicketOwnership(ticketId, userId)
-        if (!isOwner) {
-          res.status(403).json({
-            success: false,
-            error: "You do not have permission to add messages to this ticket",
-          })
-          return
-        }
+      const isOwner = await supportTicketService.verifyTicketOwnership(ticketId, userId)
+      if (!isOwner) {
+        res.status(403).json({
+          success: false,
+          error: "You do not have permission to add messages to this ticket",
+        })
+        return
       }
 
-      const senderType = isPlatformAdmin
-        ? SupportSenderType.ADMIN
-        : SupportSenderType.CUSTOMER
+      const senderType = SupportSenderType.CUSTOMER
 
       // Handle file attachments from multer
       const files = req.files as Express.Multer.File[] | undefined
@@ -431,18 +421,12 @@ export class SupportTicketController {
   async getUnreadCount(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.id
-      const isPlatformAdmin = req.user?.isPlatformAdmin
       if (!userId) {
         res.status(401).json({ success: false, error: "Unauthorized" })
         return
       }
 
-      let count: number
-      if (isPlatformAdmin) {
-        count = await supportTicketService.countUnreadMessagesForAdmin()
-      } else {
-        count = await supportTicketService.countUnreadMessages(userId)
-      }
+      const count = await supportTicketService.countUnreadMessages(userId)
 
       res.json({
         success: true,
@@ -450,6 +434,144 @@ export class SupportTicketController {
       })
     } catch (error) {
       logger.error("Error getting unread count:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to get unread count",
+      })
+    }
+  }
+
+  /**
+   * Get a specific ticket by ID (admin)
+   * GET /api/admin/support/tickets/:ticketId
+   */
+  async getAdminTicket(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const isPlatformAdmin = await checkIsPlatformAdmin(req)
+      if (!isPlatformAdmin) {
+        res.status(403).json({
+          success: false,
+          error: "Only platform admins can access this ticket",
+        })
+        return
+      }
+
+      const { ticketId } = req.params
+      const ticket = await supportTicketService.getTicket(ticketId)
+
+      if (!ticket) {
+        res.status(404).json({
+          success: false,
+          error: "Ticket not found",
+        })
+        return
+      }
+
+      // Mark customer messages as read for admin view
+      await supportTicketService.markAsRead(ticketId, SupportSenderType.ADMIN)
+
+      res.json({
+        success: true,
+        data: ticket,
+      })
+    } catch (error) {
+      logger.error("Error getting admin ticket:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to get ticket",
+      })
+    }
+  }
+
+  /**
+   * Add a message to a ticket (admin)
+   * POST /api/admin/support/tickets/:ticketId/messages
+   */
+  async addAdminMessage(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id
+      const isPlatformAdmin = await checkIsPlatformAdmin(req)
+      if (!userId) {
+        res.status(401).json({ success: false, error: "Unauthorized" })
+        return
+      }
+      if (!isPlatformAdmin) {
+        res.status(403).json({
+          success: false,
+          error: "Only platform admins can add messages",
+        })
+        return
+      }
+
+      const { ticketId } = req.params
+      const { message } = req.body
+
+      if (!message) {
+        res.status(400).json({
+          success: false,
+          error: "Message is required",
+        })
+        return
+      }
+
+      // Handle file attachments from multer
+      const files = req.files as Express.Multer.File[] | undefined
+      logger.info(`📎 Received ${files?.length || 0} files in addMessage request`)
+      if (files && files.length > 0) {
+        files.forEach((f, i) => logger.info(`  File ${i + 1}: ${f.originalname} (${f.size} bytes)`))
+      }
+      const attachments = files?.map((file) => ({
+        originalname: file.originalname,
+        buffer: file.buffer,
+        mimetype: file.mimetype,
+        size: file.size,
+      }))
+
+      const newMessage = await supportTicketService.addMessage(
+        {
+          ticketId,
+          senderId: userId,
+          senderType: SupportSenderType.ADMIN,
+          content: message,
+        },
+        attachments
+      )
+
+      res.status(201).json({
+        success: true,
+        data: newMessage,
+      })
+    } catch (error) {
+      logger.error("Error adding admin message:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to add message",
+      })
+    }
+  }
+
+  /**
+   * Get unread message count (admin)
+   * GET /api/admin/support/tickets/unread-count
+   */
+  async getAdminUnreadCount(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const isPlatformAdmin = await checkIsPlatformAdmin(req)
+      if (!isPlatformAdmin) {
+        res.status(403).json({
+          success: false,
+          error: "Only platform admins can access unread counts",
+        })
+        return
+      }
+
+      const count = await supportTicketService.countUnreadMessagesForAdmin()
+      res.json({
+        success: true,
+        data: { unreadCount: count },
+      })
+    } catch (error) {
+      logger.error("Error getting admin unread count:", error)
       res.status(500).json({
         success: false,
         error: "Failed to get unread count",

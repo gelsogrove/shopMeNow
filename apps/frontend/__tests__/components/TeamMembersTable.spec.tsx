@@ -73,6 +73,7 @@ describe("TeamMembersTable", () => {
       expiresAt: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
       createdAt: "2024-01-01T00:00:00Z",
       invitedBy: { id: "user-1", email: "owner@test.com" },
+      isAgent: false,
     },
   ]
 
@@ -83,6 +84,7 @@ describe("TeamMembersTable", () => {
     expiresAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
     createdAt: "2024-01-01T00:00:00Z",
     invitedBy: { id: "user-1", email: "owner@test.com" },
+    isAgent: false,
   }
 
   beforeEach(() => {

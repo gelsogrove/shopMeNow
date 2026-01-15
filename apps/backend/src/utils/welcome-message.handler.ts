@@ -64,7 +64,10 @@ export class WelcomeMessageHandler {
       // Load workspace configuration
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: input.workspaceId },
-        select: { welcomeMessage: true },
+        select: { 
+          welcomeMessage: true,
+          chatbotName: true, // 🤖 Load assistant name for replacement
+        },
       })
 
       if (!workspace || !workspace.welcomeMessage) {
@@ -77,6 +80,15 @@ export class WelcomeMessageHandler {
         workspace.welcomeMessage,
         input.customerLanguage || "it"
       )
+
+      // 🤖 CRITICAL: Replace {{chatbotName}} with actual assistant name
+      const chatbotName = workspace.chatbotName || "Assistente"
+      welcomeText = welcomeText.replace(/\{\{chatbotName\}\}/g, chatbotName)
+      
+      logger.info("🤖 [WelcomeMessageHandler] Replaced chatbot name", {
+        chatbotName,
+        hasPlaceholder: workspace.welcomeMessage.toString().includes("{{chatbotName}}"),
+      })
 
       // 🔧 FIX: Replace [LINK_REGISTRATION] token with actual registration link
       if (welcomeText.includes("[LINK_REGISTRATION]")) {
