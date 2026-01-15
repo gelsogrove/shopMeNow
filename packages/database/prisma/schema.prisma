@@ -46,6 +46,7 @@ model Workspace {
   widgetTextColor           String? @default("#0f172a") // Text color for widget accents (links, labels)
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
+  channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
   enableWhatsapp                    Boolean @default(true)
   enableWidget                      Boolean @default(false)
   sellsProductsAndServices          Boolean @default(true) // Does this channel sell products/services? (enables E-commerce menu)
@@ -54,6 +55,7 @@ model Workspace {
   humanSupportInstructions          String? @db.Text // Instructions for human support requests
   frustrationEscalationInstructions String? @db.Text // 🆕 Feature 203: Custom triggers for when chatbot should call operator (panic/frustration cases)
   operatorContactMethod             String? @default("email") // 'email' | 'whatsapp'
+  operatorEmail                     String? // Email for human support notifications
   operatorWhatsappNumber            String? // WhatsApp number for human support (if method='whatsapp')
   toneOfVoice                       String? @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
   botIdentityResponse               String? @db.Text // Response when customer asks "Who are you?"
@@ -1072,6 +1074,7 @@ enum MessageType {
 
 enum ChannelType {
   WHATSAPP
+  WIDGET
   TELEGRAM
   MESSENGER
   LINE

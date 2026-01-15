@@ -5,9 +5,10 @@ import logger from "../utils/logger"
 
 interface CreateWorkspaceData {
   name: string
-  slug: string
+  slug?: string
   description?: string
-  whatsappPhoneNumber?: string
+  channelType?: 'WHATSAPP' | 'WIDGET' // 🆕 Channel type (default: WHATSAPP)
+  whatsappPhoneNumber?: string // Required for WHATSAPP channels
   whatsappApiKey?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
@@ -19,12 +20,27 @@ interface CreateWorkspaceData {
   blocklist?: string
   url?: string
   welcomeMessage?: string // English only
+  // 🆕 Wizard fields (Andrea's simplified wizard)
+  sellsProductsAndServices?: boolean
+  hasSalesAgents?: boolean
+  hasHumanSupport?: boolean
+  humanSupportInstructions?: string
+  operatorContactMethod?: string // 'email' | 'whatsapp'
+  operatorEmail?: string // 🆕 Email for human support (from user profile)
+  operatorWhatsappNumber?: string
+  toneOfVoice?: string // 'formal' | 'friendly' | 'professional' | 'casual'
+  botIdentityResponse?: string
+  faqs?: Array<{ question: string; answer: string }> // FAQs from wizard
+  adminEmail?: string // Admin email from user profile
+  allowedExternalLinks?: string[] // Security: allowed domains
+  createdBy?: string // User ID who created the workspace
 }
 
 interface UpdateWorkspaceData {
   name?: string
   slug?: string
   description?: string
+  channelType?: 'WHATSAPP' | 'WIDGET' // 🆕 Channel type
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
   whatsappPhoneNumberId?: string
@@ -42,7 +58,7 @@ interface UpdateWorkspaceData {
   logoKey?: string // 💾 Storage key for cleanup
   debugMode?: boolean // 🐞 Debug mode toggle
   adminEmail?: string // Admin email for WhatsappSettings
-  // 🆕 Channel Configuration (Feature 199)
+  // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
   enableWhatsapp?: boolean
   enableWidget?: boolean
   sellsProductsAndServices?: boolean
@@ -50,6 +66,7 @@ interface UpdateWorkspaceData {
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
   operatorContactMethod?: string
+  operatorEmail?: string // 🆕 Email for human support
   operatorWhatsappNumber?: string
   toneOfVoice?: string
   botIdentityResponse?: string
@@ -94,6 +111,8 @@ export const workspaceService = {
         hasHumanSupport: true,
         humanSupportInstructions: true,
         operatorContactMethod: true,
+        channelType: true,
+        operatorEmail: true,
         operatorWhatsappNumber: true,
         toneOfVoice: true,
         botIdentityResponse: true,
@@ -146,6 +165,8 @@ export const workspaceService = {
         hasHumanSupport: true,
         humanSupportInstructions: true,
         operatorContactMethod: true,
+        channelType: true,
+        operatorEmail: true,
         operatorWhatsappNumber: true,
         toneOfVoice: true,
         botIdentityResponse: true,
@@ -303,12 +324,14 @@ export const workspaceService = {
         url: true,
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
-        // 🆕 Channel Configuration (Feature 199)
+        // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
+        channelType: true,
         sellsProductsAndServices: true,
         hasSalesAgents: true,
         hasHumanSupport: true,
         humanSupportInstructions: true,
         operatorContactMethod: true,
+        operatorEmail: true,
         operatorWhatsappNumber: true,
         toneOfVoice: true,
         botIdentityResponse: true,

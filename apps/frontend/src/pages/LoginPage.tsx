@@ -1297,7 +1297,7 @@ export function LoginPage() {
           <div className="hidden lg:flex justify-center lg:justify-start items-center w-full lg:flex-1">
             <div className="relative w-full max-w-3xl lg:mr-2">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
-            <div className="relative rounded-[32px] shadow-2xl bg-white overflow-visible">
+            <div className="relative rounded-[32px] shadow-2xl bg-transparent overflow-visible">
                 <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
                   <div 
                     className="relative w-full"
@@ -1328,11 +1328,13 @@ export function LoginPage() {
                                 transition: "transform 0.6s ease, opacity 0.6s ease",
                               }}
                             >
-                              <img
-                                src={slide.src}
-                                alt={slide.alt}
-                                className="mx-auto h-auto w-auto max-w-[calc(100%-7px)] object-contain"
-                              />
+                              <div className="w-full overflow-hidden rounded-[22px] aspect-[3/2]">
+                                <img
+                                  src={slide.src}
+                                  alt={slide.alt}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
                             </div>
                           )
                         })
@@ -1347,11 +1349,13 @@ export function LoginPage() {
                               zIndex: index === currentSlide ? 2 : 1,
                             }}
                           >
-                            <img
-                              src={slide.src}
-                              alt={slide.alt}
-                              className="mx-auto h-auto w-auto max-w-[calc(100%-7px)] object-contain"
-                            />
+                            <div className="w-full overflow-hidden rounded-[22px] aspect-[3/2]">
+                              <img
+                                src={slide.src}
+                                alt={slide.alt}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
                           </div>
                         ))}
                   </div>

@@ -47,36 +47,33 @@ import { getUnreadCount } from "@/services/supportApi"
 
 interface WizardFormData {
   // Step 1: Channel Details
-  whatsappNumber: string
   alias: string
-  email: string
-  website: string
-  // Step 2: Business Type (E-commerce)
+  channelType: 'WHATSAPP' | 'WIDGET'
+  whatsappNumber: string // Only required if channelType === 'WHATSAPP'
+  // Step 2: Business Type (E-commerce) - ONLY for WhatsApp
   sellsProductsAndServices: boolean
   // Step 3: Sales Agents (conditional)
   hasSalesAgents: boolean
   // Step 4: Human Support
   hasHumanSupport: boolean
   humanSupportInstructions: string
-  operatorContactMethod: 'email' | 'whatsapp'
-  operatorWhatsappNumber: string
-  // Step 5: Tone of Voice
+  // Step 5: AUTO - email/phone from user profile (not in form)
+  // Step 6: Tone of Voice
   toneOfVoice: 'formal' | 'friendly' | 'professional' | 'casual'
-  // Step 6: Bot Identity
+  // Step 7: Bot Identity
   botIdentityResponse: string
-  // Step 7: FAQs
+  // Step 8: FAQs
   faqs: Array<{ question: string; answer: string }>
 }
 
 const WIZARD_STEPS = [
-  { id: 1, title: "Channel Details", description: "Basic channel information", icon: Smartphone },
-  { id: 2, title: "E-commerce", description: "Sell products/services on WhatsApp?", icon: Store },
+  { id: 1, title: "Channel Type", description: "WhatsApp or Web Widget?", icon: Smartphone },
+  { id: 2, title: "E-commerce", description: "Sell products/services?", icon: Store },
   { id: 3, title: "Sales Team", description: "Do you have sales agents?", icon: Users },
   { id: 4, title: "Human Support", description: "Talk to an operator?", icon: Headphones },
-  { id: 5, title: "Contact Method", description: "How to reach operator?", icon: Mail },
-  { id: 6, title: "Tone of Voice", description: "How should the bot communicate?", icon: MessageSquare },
-  { id: 7, title: "Bot Identity", description: "How should the bot introduce itself?", icon: Bot },
-  { id: 8, title: "FAQs", description: "Common questions & answers", icon: HelpCircle },
+  { id: 5, title: "Tone of Voice", description: "How should the bot communicate?", icon: MessageSquare },
+  { id: 6, title: "Bot Identity", description: "How should the bot introduce itself?", icon: Bot },
+  { id: 7, title: "FAQs", description: "Common questions & answers", icon: HelpCircle },
 ] as const
 
 const PLAN_LABELS: Record<PlanType, string> = {
@@ -96,24 +93,69 @@ const normalizePlanType = (value?: string | null): PlanType => {
 }
 
 const initialWizardData: WizardFormData = {
-  whatsappNumber: "",
   alias: "",
-  email: "",
-  website: "",
+  channelType: 'WHATSAPP',
+  whatsappNumber: "",
   sellsProductsAndServices: true,
   hasSalesAgents: false,
   hasHumanSupport: true,
   humanSupportInstructions: "",
-  operatorContactMethod: 'email',
-  operatorWhatsappNumber: "",
   toneOfVoice: 'friendly',
   botIdentityResponse: "",
   faqs: [
-    { question: "How is my privacy protected?", answer: "" },
-    { question: "What are the delivery times?", answer: "" },
-    { question: "How can I repeat a previous order?", answer: "" },
+    { question: "How long does it take to receive the order?", answer: "" },
+    { question: "What is your refund policy?", answer: "" },
+    { question: "What are your business hours?", answer: "" },
     { question: "What payment methods do you accept?", answer: "" },
   ],
+}
+
+// FAQ templates based on channel type
+const getDefaultFAQs = (channelType: 'WHATSAPP' | 'WIDGET', sellsProducts: boolean): Array<{ question: string; answer: string }> => {
+  if (channelType === 'WIDGET' || !sellsProducts) {
+    // Support-only FAQs (Widget or non-commerce WhatsApp)
+    return [
+      { question: "What services do you offer?", answer: "" },
+      { question: "What are your business hours?", answer: "" },
+      { question: "How can I contact support?", answer: "" },
+      { question: "Do you offer consultations?", answer: "" },
+    ]
+  } else {
+    // E-commerce FAQs (WhatsApp with products)
+    return [
+      { question: "How long does it take to receive the order?", answer: "" },
+      { question: "What is your refund policy?", answer: "" },
+      { question: "What are your business hours?", answer: "" },
+      { question: "What payment methods do you accept?", answer: "" },
+    ]
+  }
+}
+
+// Additional FAQ suggestions for "Add FAQ" button
+const getAdditionalFAQSuggestions = (channelType: 'WHATSAPP' | 'WIDGET', sellsProducts: boolean): string[] => {
+  if (channelType === 'WIDGET' || !sellsProducts) {
+    // Support-only additional FAQs
+    return [
+      "What types of services do you provide?",
+      "Do you have pricing information?",
+      "How do I schedule an appointment?",
+      "What is your response time?",
+      "Do you offer remote assistance?",
+      "What languages do you support?",
+    ]
+  } else {
+    // E-commerce additional FAQs
+    return [
+      "What types of products do you sell?",
+      "Do you offer international shipping?",
+      "How can I track my order?",
+      "Do you have a minimum order amount?",
+      "Can I modify my order after placing it?",
+      "Do you offer gift wrapping?",
+      "What are your shipping costs?",
+      "Do you have a loyalty program?",
+    ]
+  }
 }
 
 // Badge stats type
@@ -169,12 +211,16 @@ export function WorkspaceSelectionPage() {
 
   const validateCurrentStep = (): boolean => {
     switch (wizardStep) {
-      case 1: // Channel Details
-        return !!(
-          wizardData.whatsappNumber.trim() && 
-          validateWhatsAppNumber(wizardData.whatsappNumber) &&
-          wizardData.alias.trim()
-        )
+      case 1: // Channel Type + Details
+        if (!wizardData.alias.trim()) return false
+        // WhatsApp requires phone number
+        if (wizardData.channelType === 'WHATSAPP') {
+          return !!(
+            wizardData.whatsappNumber.trim() && 
+            validateWhatsAppNumber(wizardData.whatsappNumber)
+          )
+        }
+        return true
       case 2: // E-commerce - always valid (boolean)
         return true
       case 3: // Sales Agents - always valid (boolean)
@@ -183,13 +229,9 @@ export function WorkspaceSelectionPage() {
         return true
       case 5: // Tone of Voice - always valid (has default)
         return true
-      case 6: // Availability - always valid (has default)
-        return true
-      case 7: // Bot Identity - require some text
+      case 6: // Bot Identity - require some text
         return wizardData.botIdentityResponse.trim().length > 0
-      case 8: // FAQs - optional
-        return true
-      case 9: // Web Widget - always valid (boolean)
+      case 7: // FAQs - optional
         return true
       default:
         return true
@@ -197,31 +239,31 @@ export function WorkspaceSelectionPage() {
   }
 
   const getVisibleSteps = () => {
+    // Step 2 (E-commerce) only visible if channelType === 'WHATSAPP' (Widget can't sell)
     // Step 3 (Sales Agents) only visible if sellsProductsAndServices is true
-    // Step 5 (Contact Method) only visible if hasHumanSupport is true
     return WIZARD_STEPS.filter(step => {
+      if (step.id === 2) return wizardData.channelType === 'WHATSAPP'
       if (step.id === 3) return wizardData.sellsProductsAndServices
-      if (step.id === 5) return wizardData.hasHumanSupport
       return true
     })
   }
 
   const getNextStep = () => {
+    if (wizardStep === 1 && wizardData.channelType === 'WIDGET') {
+      return 3 // Skip step 2 (E-commerce) for Widget
+    }
     if (wizardStep === 2 && !wizardData.sellsProductsAndServices) {
       return 4 // Skip step 3 (Sales Agents)
-    }
-    if (wizardStep === 4 && !wizardData.hasHumanSupport) {
-      return 6 // Skip step 5 (Contact Method)
     }
     return wizardStep + 1
   }
 
   const getPrevStep = () => {
+    if (wizardStep === 3 && wizardData.channelType === 'WIDGET') {
+      return 1 // Skip back over step 2 (E-commerce) for Widget
+    }
     if (wizardStep === 4 && !wizardData.sellsProductsAndServices) {
       return 2 // Skip back over step 3
-    }
-    if (wizardStep === 6 && !wizardData.hasHumanSupport) {
-      return 4 // Skip back over step 5
     }
     return wizardStep - 1
   }
@@ -229,7 +271,7 @@ export function WorkspaceSelectionPage() {
   const handleNextStep = () => {
     if (validateCurrentStep()) {
       const next = getNextStep()
-      if (next <= 8) {
+      if (next <= 7) {
         setWizardStep(next)
       }
     }
@@ -244,13 +286,14 @@ export function WorkspaceSelectionPage() {
 
   const resetWizard = useCallback(() => {
     setWizardStep(1)
+    const defaultFAQs = getDefaultFAQs('WHATSAPP', true)
     setWizardData({
       ...initialWizardData,
-      email: userEmail, // Pre-fill with logged user email
+      faqs: defaultFAQs
     })
     setErrorMessage("")
     setValidationErrors({})
-  }, [userEmail])
+  }, [])
 
   const closeWizardDialog = () => {
     setWizardOpen(false)
@@ -551,48 +594,44 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     if (e) e.preventDefault()
 
     // Use wizard data
-    const phoneNumber = wizardData.whatsappNumber
     const channelAlias = wizardData.alias
+    const phoneNumber = wizardData.channelType === 'WHATSAPP' ? wizardData.whatsappNumber : ''
 
-    if (!phoneNumber.trim()) {
-      setErrorMessage("Enter a phone number")
+    if (!channelAlias.trim()) {
+      setErrorMessage("Enter a channel name")
       return
     }
 
-    if (!channelAlias.trim()) {
-      setErrorMessage("Enter an alias")
+    // WhatsApp requires phone number
+    if (wizardData.channelType === 'WHATSAPP' && !phoneNumber.trim()) {
+      setErrorMessage("Enter a phone number for WhatsApp channel")
       return
     }
 
     try {
       setIsLoading(true)
       
-      // 🆕 Build workspace data with ALL wizard configuration (Feature 199)
-      // Website URL is automatically added to allowedExternalLinks with echatbot.ai and paypal.com
+      // 🆕 Widget channels CANNOT sell products (Andrea's rule)
+      const finalSellsProducts = wizardData.channelType === 'WIDGET' ? false : wizardData.sellsProductsAndServices
+      const finalHasSalesAgents = wizardData.channelType === 'WIDGET' ? false : wizardData.hasSalesAgents
+      
+      // 🆕 Auto-use email from logged user (from token)
       const allowedLinks = ["echatbot.ai", "paypal.com"]
-      if (wizardData.website) {
-        try {
-          const url = new URL(wizardData.website)
-          allowedLinks.unshift(url.hostname) // Add website domain at the beginning
-        } catch {
-          // Invalid URL, skip adding to allowedLinks
-        }
-      }
       
       const workspaceConfig = {
-        name: channelAlias || phoneNumber,
-        whatsappPhoneNumber: phoneNumber,
+        name: channelAlias,
+        channelType: wizardData.channelType, // 🆕 WHATSAPP or WIDGET
+        whatsappPhoneNumber: phoneNumber || undefined,
         language: "en",
-        adminEmail: wizardData.email || userEmail,
-        url: wizardData.website || undefined,
+        adminEmail: userEmail, // 🆕 AUTO from token (Andrea's requirement)
         allowedExternalLinks: allowedLinks,
-        // 🆕 Channel Configuration (Feature 199)
-        sellsProductsAndServices: wizardData.sellsProductsAndServices,
-        hasSalesAgents: wizardData.hasSalesAgents,
+        // 🆕 Channel Configuration (Simplified Wizard)
+        sellsProductsAndServices: finalSellsProducts,
+        hasSalesAgents: finalHasSalesAgents,
         hasHumanSupport: wizardData.hasHumanSupport,
         humanSupportInstructions: wizardData.humanSupportInstructions || undefined,
-        operatorContactMethod: wizardData.operatorContactMethod,
-        operatorWhatsappNumber: wizardData.operatorWhatsappNumber || undefined,
+        operatorContactMethod: 'email', // 🆕 ALWAYS email (use userEmail from profile)
+        operatorEmail: userEmail, // 🆕 AUTO from token (Andrea's requirement)
         toneOfVoice: wizardData.toneOfVoice,
         botIdentityResponse: wizardData.botIdentityResponse || undefined,
         // FAQs will be created by the backend from initialFAQs, 
@@ -604,8 +643,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
       logger.info("✅ Workspace created successfully:", newWorkspace.id)
       logger.info("📋 Wizard configuration:", {
-        sellsProductsAndServices: wizardData.sellsProductsAndServices,
-        hasSalesAgents: wizardData.hasSalesAgents,
+        channelType: wizardData.channelType,
+        sellsProductsAndServices: finalSellsProducts,
+        hasSalesAgents: finalHasSalesAgents,
         hasHumanSupport: wizardData.hasHumanSupport,
         toneOfVoice: wizardData.toneOfVoice,
       })
@@ -1399,15 +1439,97 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
               {/* Step Content */}
               <div className="flex-1 p-6 overflow-y-auto">
-                {/* STEP 1: Channel Details */}
+                {/* STEP 1: Channel Type */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Channel Details</h3>
-                      <p className="text-sm text-gray-500 mt-1">Basic information about your WhatsApp channel</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Channel Type</h3>
+                      <p className="text-sm text-gray-500 mt-1">Choose your channel type</p>
                     </div>
-                    
+
+                    {/* Channel Type Selection */}
                     <div className="space-y-4">
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.channelType === 'WHATSAPP' 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => {
+                          updateWizardData('channelType', 'WHATSAPP')
+                          // WhatsApp can sell products - update FAQs to e-commerce
+                          if (wizardData.channelType !== 'WHATSAPP') {
+                            updateWizardData('sellsProductsAndServices', true)
+                            updateWizardData('faqs', getDefaultFAQs('WHATSAPP', true))
+                          }
+                        }}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WHATSAPP' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Smartphone className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">WhatsApp Channel</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Connect your WhatsApp Business number to handle customer conversations
+                            </p>
+                          </div>
+                          {wizardData.channelType === 'WHATSAPP' && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+
+                      <div 
+                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.channelType === 'WIDGET' 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => {
+                          updateWizardData('channelType', 'WIDGET')
+                          // Widget can only do support (no e-commerce)
+                          updateWizardData('sellsProductsAndServices', false)
+                          updateWizardData('hasSalesAgents', false)
+                          // Update FAQs for support-only
+                          updateWizardData('faqs', getDefaultFAQs('WIDGET', false))
+                        }}
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WIDGET' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <MessageSquare className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">Web Widget</h4>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Embed a chat widget on your website (Support & info only - no e-commerce)
+                            </p>
+                          </div>
+                          {wizardData.channelType === 'WIDGET' && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Channel Name (always required) */}
+                    <div>
+                      <Label htmlFor="wizard-alias" className="text-sm font-medium">
+                        Channel Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="wizard-alias"
+                        type="text"
+                        placeholder="My Business Name"
+                        value={wizardData.alias}
+                        onChange={(e) => updateWizardData('alias', e.target.value)}
+                        className="mt-1.5"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">This name will identify your channel</p>
+                    </div>
+
+                    {/* WhatsApp Number (only if WhatsApp selected) */}
+                    {wizardData.channelType === 'WHATSAPP' && (
                       <div>
                         <Label htmlFor="wizard-whatsapp" className="text-sm font-medium">
                           WhatsApp Number <span className="text-red-500">*</span>
@@ -1431,54 +1553,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           <p className="text-xs text-red-500 mt-1">{validationErrors.whatsapp}</p>
                         )}
                       </div>
-
-                      <div>
-                        <Label htmlFor="wizard-alias" className="text-sm font-medium">
-                          Business Name / Alias <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="wizard-alias"
-                          type="text"
-                          placeholder="My Business Name"
-                          value={wizardData.alias}
-                          onChange={(e) => updateWizardData('alias', e.target.value)}
-                          className="mt-1.5"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">This name will identify your channel</p>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="wizard-email" className="text-sm font-medium">
-                          Admin Email <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="wizard-email"
-                          type="email"
-                          placeholder="admin@yourbusiness.com"
-                          value={wizardData.email || userEmail}
-                          onChange={(e) => updateWizardData('email', e.target.value)}
-                          className="mt-1.5"
-                        />
-                      </div>
-
-                      <div>
-                        <Label htmlFor="wizard-website" className="text-sm font-medium">
-                          Website URL <span className="text-gray-400">(optional)</span>
-                        </Label>
-                        <Input
-                          id="wizard-website"
-                          type="url"
-                          placeholder="https://yourbusiness.com"
-                          value={wizardData.website}
-                          onChange={(e) => updateWizardData('website', e.target.value)}
-                          className="mt-1.5"
-                        />
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
-
-                {/* additional steps... existing content */}
 
                 {/* STEP 2: E-commerce */}
                 {wizardStep === 2 && (
@@ -1626,7 +1703,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           <div className="flex-1">
                             <h4 className="font-semibold text-gray-900">Yes, enable human handoff</h4>
                             <p className="text-sm text-gray-500 mt-1">
-                              Customers can request to speak with a human operator when needed
+                              Customers can request to speak with a human operator via email notification
                             </p>
                           </div>
                           {wizardData.hasHumanSupport && (
@@ -1658,103 +1735,21 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           )}
                         </div>
                       </div>
-                    </div>
-                  </div>
-                )}
 
-                {/* STEP 5: Contact Method (only if Human Support enabled) */}
-                {wizardStep === 5 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Contact Method</h3>
-                      <p className="text-sm text-gray-500 mt-1">How should we contact the operator when a customer requests human support?</p>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          wizardData.operatorContactMethod === 'email'
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => updateWizardData('operatorContactMethod', 'email')}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.operatorContactMethod === 'email' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Mail className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">Email</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Send notification to admin email when customer requests human support
-                            </p>
-                          </div>
-                          {wizardData.operatorContactMethod === 'email' && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* WhatsApp option - always visible */}
-                      <div
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          wizardData.operatorContactMethod === 'whatsapp'
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => updateWizardData('operatorContactMethod', 'whatsapp')}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.operatorContactMethod === 'whatsapp' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Smartphone className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">WhatsApp</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              {wizardData.hasSalesAgents 
-                                ? "Forward conversation to the assigned sales agent's WhatsApp"
-                                : "Forward conversation to operator's WhatsApp number"
-                              }
-                            </p>
-                          </div>
-                          {wizardData.operatorContactMethod === 'whatsapp' && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Info note when sales agents are enabled */}
-                      {wizardData.hasSalesAgents && (
+                      {/* Info note about email notification */}
+                      {wizardData.hasHumanSupport && (
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <p className="text-sm text-blue-700">
-                            💡 Requests will be forwarded to the assigned sales agent's contact (email or WhatsApp).
+                            💡 <strong>Notification:</strong> We'll send you an email when a customer requests human support.
                           </p>
                         </div>
                       )}
-
-                      {/* WhatsApp number input - shown when whatsapp selected AND no sales agents */}
-                      {wizardData.operatorContactMethod === 'whatsapp' && !wizardData.hasSalesAgents && (
-                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                          <Label htmlFor="wizard-operator-whatsapp" className="text-sm font-medium text-gray-700">
-                            Operator WhatsApp Number <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
-                            id="wizard-operator-whatsapp"
-                            type="text"
-                            placeholder="+34612345678"
-                            value={wizardData.operatorWhatsappNumber}
-                            onChange={(e) => updateWizardData('operatorWhatsappNumber', e.target.value)}
-                            className="mt-1.5"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">The WhatsApp number where operator requests will be forwarded</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
 
-                {/* STEP 6: Tone of Voice */}
-                {wizardStep === 6 && (
+                {/* STEP 5: Tone of Voice */}
+                {wizardStep === 5 && (
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Tone of Voice</h3>
@@ -1804,8 +1799,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
 
-                {/* STEP 7: Bot Identity */}
-                {wizardStep === 7 && (
+                {/* STEP 6: Bot Identity */}
+                {wizardStep === 6 && (
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Bot Identity</h3>
@@ -1859,8 +1854,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
 
-                {/* STEP 8: FAQs */}
-                {wizardStep === 8 && (
+                {/* STEP 7: FAQs */}
+                {wizardStep === 7 && (
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Frequently Asked Questions</h3>
@@ -1924,12 +1919,24 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       ))}
                     </div>
 
-                    {/* Add FAQ button */}
+                    {/* Add FAQ button with smart suggestions */}
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        updateWizardData('faqs', [...wizardData.faqs, { question: '', answer: '' }])
+                        // Get smart suggestions based on channel type
+                        const suggestions = getAdditionalFAQSuggestions(
+                          wizardData.channelType, 
+                          wizardData.sellsProductsAndServices
+                        )
+                        // Pick next unused suggestion or empty
+                        const usedQuestions = wizardData.faqs.map(f => f.question)
+                        const nextSuggestion = suggestions.find(s => !usedQuestions.includes(s))
+                        
+                        updateWizardData('faqs', [
+                          ...wizardData.faqs, 
+                          { question: nextSuggestion || '', answer: '' }
+                        ])
                       }}
                       className="w-full gap-2 border-dashed"
                     >
@@ -1960,7 +1967,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </Button>
                   )}
                   
-                  {wizardStep < 9 ? (
+                  {wizardStep < 7 ? (
                     <Button
                       onClick={handleNextStep}
                       disabled={!validateCurrentStep()}

@@ -66,7 +66,8 @@ export class WorkspaceController {
         updatedAt: workspace.updatedAt,
         planType: workspace.planType,
         trialEndsAt: workspace.trialEndsAt,
-        // 🆕 Channel Configuration (Feature 199)
+        // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
+        channelType: workspace.channelType,
         enableWhatsapp: workspace.enableWhatsapp,
         enableWidget: workspace.enableWidget,
         sellsProductsAndServices: workspace.sellsProductsAndServices,
@@ -75,6 +76,7 @@ export class WorkspaceController {
         humanSupportInstructions: workspace.humanSupportInstructions,
         frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
         operatorContactMethod: workspace.operatorContactMethod,
+        operatorEmail: workspace.operatorEmail,
         operatorWhatsappNumber: workspace.operatorWhatsappNumber,
         toneOfVoice: workspace.toneOfVoice,
         botIdentityResponse: workspace.botIdentityResponse,
@@ -141,7 +143,8 @@ export class WorkspaceController {
           createdAt: workspace.createdAt,
           updatedAt: workspace.updatedAt,
           allowedExternalLinks: workspace.allowedExternalLinks,
-          // 🆕 Channel Configuration (Feature 199)
+          // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
+          channelType: workspace.channelType,
           enableWhatsapp: workspace.enableWhatsapp,
           enableWidget: workspace.enableWidget,
           sellsProductsAndServices: workspace.sellsProductsAndServices,
@@ -150,6 +153,7 @@ export class WorkspaceController {
           humanSupportInstructions: workspace.humanSupportInstructions,
           frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
           operatorContactMethod: workspace.operatorContactMethod,
+          operatorEmail: workspace.operatorEmail,
           operatorWhatsappNumber: workspace.operatorWhatsappNumber,
           toneOfVoice: workspace.toneOfVoice,
           botIdentityResponse: workspace.botIdentityResponse,
@@ -343,7 +347,8 @@ export class WorkspaceController {
         createdAt: workspace.createdAt,
         updatedAt: workspace.updatedAt,
         allowedExternalLinks: workspace.allowedExternalLinks,
-        // 🆕 Channel Configuration (Feature 199)
+        // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
+        channelType: workspace.channelType,
         enableWhatsapp: workspace.enableWhatsapp,
         enableWidget: workspace.enableWidget,
         sellsProductsAndServices: workspace.sellsProductsAndServices,
@@ -352,6 +357,7 @@ export class WorkspaceController {
         humanSupportInstructions: workspace.humanSupportInstructions,
         frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
         operatorContactMethod: workspace.operatorContactMethod,
+        operatorEmail: workspace.operatorEmail,
         operatorWhatsappNumber: workspace.operatorWhatsappNumber,
         toneOfVoice: workspace.toneOfVoice,
         botIdentityResponse: workspace.botIdentityResponse,
