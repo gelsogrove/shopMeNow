@@ -41,14 +41,14 @@ Both channels work via **WhatsApp** or **Widget (Web)**.
 
 ---
 
-## 🔄 Widget Flow (Debug Mode Aware)
+## 🔄 Widget Flow (Debug/WIP Aware)
 
 ### Priority Order of Checks
 
 ```
-1. Debug Mode = true  → 🚫 BLOCK EVERYTHING (503, no response)
-2. channelStatus = false (WIP) → 📢 Return wipMessage
-3. isActive = false → 503 Service Unavailable
+1. debugMode = true → 📢 Return wipMessage
+2. channelStatus = false → 📢 Return wipMessage
+3. Workspace deleted → 503 Service Unavailable
 4. Owner inactive → 503 Service Unavailable
 5. Security Check (5 steps) → Pass or Block
 6. LLM Processing → Response
@@ -155,39 +155,19 @@ WidgetChatController → prisma.whatsAppQueue.create()
 
 ---
 
-## 🚫 Debug Mode Behavior (Widget)
+## 🚧 Maintenance / WIP Mode
 
-When `workspace.debugMode = true`:
-
-| Behavior | Widget | WhatsApp |
-|----------|--------|----------|
-| LLM Processing | ❌ BLOCKED | ✅ Normal |
-| Queue Save | ❌ NOTHING | ✅ Saved (pending) |
-| Response | ❌ 503 Error | ✅ Via Scheduler |
-
-**Widget Response when Debug Mode ON**:
-```json
-{
-  "error": "SERVICE_UNAVAILABLE",
-  "message": "Chat service is temporarily unavailable"
-}
-```
-
-> 🔴 **Debug Mode BLOCKS Widget completely** - no LLM, no queue, no response.
-> This is intentional: Debug Mode is for testing WhatsApp flow without affecting live widget users.
-
----
-
-## 🚧 WIP Mode (Work In Progress)
-
-When `workspace.channelStatus = false`:
+WIP is shown when either:
+- `workspace.debugMode = true`
+- `workspace.channelStatus = false`
 
 | Behavior | Widget | WhatsApp |
 |----------|--------|----------|
 | LLM Processing | ❌ SKIPPED | ❌ SKIPPED |
+| Queue Save | ❌ NONE | ✅ WIP saved + queued |
 | Response | ✅ wipMessage | ✅ wipMessage |
 
-**Widget Response when WIP Mode ON**:
+**Widget Response when WIP is ON**:
 ```json
 {
   "success": true,
@@ -196,7 +176,28 @@ When `workspace.channelStatus = false`:
 }
 ```
 
-> 🟡 **WIP Mode sends wipMessage** - user gets friendly message, no LLM processing.
+> 🟡 **WIP returns the maintenance message** (no LLM, no normal responses).
+
+---
+
+## ✅ Widget Status Endpoint
+
+The widget checks availability before rendering:
+
+```
+GET /api/v1/widget/status/:workspaceId
+```
+
+**Example response**:
+```json
+{
+  "success": true,
+  "status": "wip",
+  "channelStatus": false,
+  "debugMode": false,
+  "wipMessage": "Work in progress. Please contact us later."
+}
+```
 
 ---
 
@@ -458,7 +459,7 @@ npm run test:integration --workspace=@echatbot/backend -- widget-chat-flow.integ
 
 | Setting | Widget | WhatsApp |
 |---------|--------|----------|
-| **debugMode=true** | 🚫 503 Block | ✅ Queue → Scheduler → Send |
+| **debugMode=true** | 📢 wipMessage (200) | 📢 wipMessage |
 | **channelStatus=false (WIP)** | 📢 wipMessage (200) | 📢 wipMessage |
 | **Normal** | ✅ LLM → Response | ✅ LLM → Queue → Send |
 
@@ -467,7 +468,7 @@ npm run test:integration --workspace=@echatbot/backend -- widget-chat-flow.integ
 ✅ **LLM Processing**: Immediate response via LLMRouterService  
 ✅ **Unified Queue**: Single table with channel discriminator  
 ✅ **Security**: 5-step validation pipeline  
-✅ **Debug Mode**: Blocks widget completely (503)  
+✅ **Debug Mode**: Returns wipMessage without LLM  
 ✅ **WIP Mode**: Returns wipMessage without LLM  
 ✅ **Testing**: Integration tests passing  
 ✅ **Performance**: 1-2 second response time  

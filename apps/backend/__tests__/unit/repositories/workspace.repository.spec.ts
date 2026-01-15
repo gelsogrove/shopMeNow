@@ -19,8 +19,7 @@ const buildWorkspace = (overrides: Partial<any> = {}) => ({
   welcomeMessage: null,
   wipMessage: null,
   channelStatus: true,
-  isActive: true,
-  isDelete: false,
+  deletedAt: null,
   url: null,
   debugMode: false,
   createdAt: new Date(),
@@ -52,8 +51,8 @@ const buildWorkspace = (overrides: Partial<any> = {}) => ({
 
 describe("WorkspaceRepository", () => {
   it("should filter out deleted workspaces for a user", async () => {
-    const activeWorkspace = buildWorkspace({ id: "ws-active", isDelete: false })
-    const deletedWorkspace = buildWorkspace({ id: "ws-deleted", isDelete: true })
+    const activeWorkspace = buildWorkspace({ id: "ws-active", deletedAt: null })
+    const deletedWorkspace = buildWorkspace({ id: "ws-deleted", deletedAt: new Date() })
 
     const mockPrisma = {
       user: {

@@ -722,15 +722,58 @@
     /**
      * Initialize widget
      */
-    init() {
+    async init() {
       this.language = resolveLanguage(this.config.language)
+      await this.loadStatus()
+      if (this.status === "disabled") {
+        console.warn("eChatbot Widget disabled for workspace", {
+          workspaceId: this.config.workspaceId,
+        })
+        return
+      }
       this.createDOM()
       this.attachEventListeners()
       this.loadStoredMessages()
+      if (this.status === "wip") {
+        this.showWipMessage()
+      }
       console.log("✅ eChatbot Widget initialized", {
         workspaceId: this.config.workspaceId,
         visitorId: this.visitorId,
       })
+    }
+
+    async loadStatus() {
+      this.status = "active"
+      this.wipMessage = null
+      try {
+        const params = new URLSearchParams()
+        if (this.language) {
+          params.set("language", this.language)
+        }
+        const endpoint = `${this.config.apiUrl}/widget/status/${this.config.workspaceId}?${params.toString()}`
+        const response = await fetch(endpoint, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        if (!response.ok) {
+          if (response.status === 404) {
+            this.status = "disabled"
+          }
+          return
+        }
+        const data = await response.json()
+        if (data && typeof data.status === "string") {
+          this.status = data.status
+          if (data.status === "wip" && data.wipMessage) {
+            this.wipMessage = data.wipMessage
+          }
+        }
+      } catch (error) {
+        console.warn("eChatbot Widget status check failed:", error)
+      }
     }
 
     /**
@@ -911,13 +954,28 @@
      */
     loadStoredMessages() {
       // If no messages, show welcome message
-      if (this.messages.length === 0) {
+      if (this.messages.length === 0 && this.status !== "wip") {
         const lang = this.language || "en"
         const t = TRANSLATIONS[lang] || TRANSLATIONS.en
         this.displayMessage({ role: "bot", content: t.welcome })
       } else {
         this.messages.forEach((msg) => this.displayMessage(msg))
       }
+    }
+
+    showWipMessage() {
+      const lang = this.language || "en"
+      const t = TRANSLATIONS[lang] || TRANSLATIONS.en
+      const message = this.wipMessage || t.welcome
+      const lastMessage = this.messages[this.messages.length - 1]
+      if (!lastMessage || lastMessage.content !== message || lastMessage.role !== "bot") {
+        this.displayMessage({ role: "bot", content: message })
+        this.messages.push({ role: "bot", content: message })
+        saveMessages(this.storageWorkspaceId, this.messages)
+      }
+      this.input.disabled = true
+      this.sendBtn.disabled = true
+      this.input.placeholder = "Service temporarily unavailable"
     }
 
     /**
@@ -927,6 +985,10 @@
       const message = this.input.value.trim()
 
       if (!message || this.isLoading) return
+      if (this.status === "wip") {
+        this.showWipMessage()
+        return
+      }
 
       // Add user message to UI
       this.displayMessage({ role: "user", content: message })

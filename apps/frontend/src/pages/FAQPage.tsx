@@ -48,9 +48,8 @@ export function FAQPage() {
   }, [workspace?.id, isLoadingWorkspace])
 
   const filteredFAQs = faqs.filter((faq) =>
-    Object.values(faq).some((value) =>
-      value.toString().toLowerCase().includes(searchValue.toLowerCase())
-    )
+    faq.question.toLowerCase().includes(searchValue.toLowerCase()) ||
+    faq.answer.toLowerCase().includes(searchValue.toLowerCase())
   )
 
   // Pagination

@@ -50,8 +50,7 @@ describe("workspaceValidationMiddleware - Owner Status Check", () => {
     ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
       id: "workspace-123",
       name: "Test Workspace",
-      isActive: true,
-      isDelete: false,
+      deletedAt: null,
       ownerId: "owner-1",
       owner: {
         status: UserStatus.INACTIVE, // ❌ Owner disabled
@@ -80,8 +79,7 @@ describe("workspaceValidationMiddleware - Owner Status Check", () => {
     ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
       id: "workspace-123",
       name: "Test Workspace",
-      isActive: true,
-      isDelete: false,
+      deletedAt: null,
       ownerId: "owner-1",
       owner: {
         status: UserStatus.ACTIVE, // ✅ Owner active
@@ -101,13 +99,12 @@ describe("workspaceValidationMiddleware - Owner Status Check", () => {
     expect(mockResponse.json).not.toHaveBeenCalled()
   })
 
-  it("should block when workspace is deleted (isDelete=true)", async () => {
+  it("should block when workspace is deleted (deletedAt set)", async () => {
     // Mock deleted workspace
     ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
       id: "workspace-123",
       name: "Test Workspace",
-      isActive: true,
-      isDelete: true, // ❌ Deleted
+      deletedAt: new Date(), // ❌ Deleted
       ownerId: "owner-1",
       owner: {
         status: UserStatus.ACTIVE,
@@ -130,14 +127,12 @@ describe("workspaceValidationMiddleware - Owner Status Check", () => {
     expect(nextFunction).not.toHaveBeenCalled()
   })
 
-  it("should allow operation when workspace is inactive but owner is active", async () => {
-    // Mock workspace with isActive=false but owner active
-    // This is allowed (admin can access, WhatsApp blocked elsewhere)
+  it("should allow operation when workspace is active and owner is active", async () => {
+    // Workspace is active (deletedAt null)
     ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
       id: "workspace-123",
       name: "Test Workspace",
-      isActive: false, // Workspace disabled
-      isDelete: false,
+      deletedAt: null,
       ownerId: "owner-1",
       owner: {
         status: UserStatus.ACTIVE, // ✅ Owner active

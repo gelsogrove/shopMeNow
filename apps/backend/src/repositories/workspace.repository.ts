@@ -476,6 +476,23 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       if (dbData.wipMessage && typeof dbData.wipMessage === "object") {
         dbData.wipMessage = dbData.wipMessage
       }
+      if (dbData.allowedExternalLinks !== undefined) {
+        if (Array.isArray(dbData.allowedExternalLinks)) {
+          dbData.allowedExternalLinks = dbData.allowedExternalLinks
+            .map((link: string) => String(link).trim())
+            .filter((link: string) => link.length > 0)
+        } else if (typeof dbData.allowedExternalLinks === "string") {
+          const trimmed = dbData.allowedExternalLinks.trim()
+          dbData.allowedExternalLinks = trimmed
+            ? trimmed
+                .split(/[\n,]+/)
+                .map((link: string) => link.trim())
+                .filter((link: string) => link.length > 0)
+            : []
+        } else {
+          dbData.allowedExternalLinks = []
+        }
+      }
 
       logger.debug(
         `📝 Data prepared for Prisma update (workspace ${id}): ${JSON.stringify(dbData, null, 2)}`

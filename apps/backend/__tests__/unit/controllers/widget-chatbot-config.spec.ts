@@ -110,7 +110,7 @@ describe("Widget Chatbot Config Controller", () => {
       mockReq.body = { code: mockCode }
       ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
         id: "echatbot-hq-support",
-        isActive: true,
+        deletedAt: null,
         sellsProductsAndServices: false,
       })
       ;(platformConfigService.saveWidgetChatbotCode as jest.Mock).mockResolvedValue(undefined)
@@ -184,7 +184,7 @@ describe("Widget Chatbot Config Controller", () => {
       expect(statusMock).toHaveBeenCalledWith(400)
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        error: "Widget workspace not found or inactive",
+        error: "Widget workspace not found or deleted",
       })
     })
 
@@ -193,7 +193,7 @@ describe("Widget Chatbot Config Controller", () => {
       mockReq.body = { code: mockCode }
       ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
         id: "bellitalia-vip-ecommerce",
-        isActive: true,
+        deletedAt: null,
         sellsProductsAndServices: true,
       })
 
@@ -213,7 +213,7 @@ describe("Widget Chatbot Config Controller", () => {
       mockReq.body = { code: `<script>window.eChatbotConfig = { workspaceId: "echatbot-hq-support" };</script>` }
       ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
         id: "echatbot-hq-support",
-        isActive: true,
+        deletedAt: null,
         sellsProductsAndServices: false,
       })
       ;(platformConfigService.saveWidgetChatbotCode as jest.Mock).mockRejectedValue(

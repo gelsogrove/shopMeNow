@@ -38,6 +38,108 @@ export class WidgetChatController {
     return map[code] || raw
   }
 
+  private resolveWipMessage(
+    rawMessage: Record<string, string> | string | null | undefined,
+    requestedLanguage: string | null
+  ): string {
+    const wipMessageObj =
+      typeof rawMessage === "object" && rawMessage !== null
+        ? (rawMessage as Record<string, string>)
+        : null
+    const lang = (requestedLanguage || "it").toLowerCase()
+    return (
+      wipMessageObj?.[lang] ||
+      wipMessageObj?.it ||
+      wipMessageObj?.en ||
+      (typeof rawMessage === "string" ? rawMessage : "") ||
+      "Work in progress. Please contact us later."
+    )
+  }
+
+  /**
+   * GET /api/v1/widget/status/:workspaceId
+   * Get widget availability status
+   */
+  async getStatus(req: Request, res: Response): Promise<Response> {
+    try {
+      const { workspaceId } = req.params
+      const requestedLanguage = (req.query.language as string | undefined) || null
+
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          id: true,
+          deletedAt: true,
+          channelStatus: true,
+          ownerId: true,
+          debugMode: true,
+          wipMessage: true,
+        },
+      })
+
+      if (!workspace) {
+        return res.status(404).json({
+          success: false,
+          status: "disabled",
+          message: "Workspace not found",
+        })
+      }
+
+      if (workspace.deletedAt !== null) {
+        return res.status(200).json({
+          success: true,
+          status: "disabled",
+          channelStatus: workspace.channelStatus ?? false,
+          debugMode: workspace.debugMode ?? false,
+        })
+      }
+
+      if (workspace.ownerId) {
+        const owner = await prisma.user.findUnique({
+          where: { id: workspace.ownerId },
+          select: { status: true },
+        })
+
+        if (owner?.status === "INACTIVE") {
+          return res.status(200).json({
+            success: true,
+            status: "disabled",
+            channelStatus: workspace.channelStatus ?? false,
+            debugMode: workspace.debugMode ?? false,
+          })
+        }
+      }
+
+      if (workspace.debugMode === true || workspace.channelStatus === false) {
+        const wipMessage = this.resolveWipMessage(
+          workspace.wipMessage as Record<string, string> | string | null,
+          requestedLanguage
+        )
+        return res.status(200).json({
+          success: true,
+          status: "wip",
+          channelStatus: workspace.channelStatus ?? false,
+          debugMode: workspace.debugMode ?? false,
+          wipMessage,
+        })
+      }
+
+      return res.status(200).json({
+        success: true,
+        status: "active",
+        channelStatus: workspace.channelStatus ?? true,
+        debugMode: workspace.debugMode ?? false,
+      })
+    } catch (error) {
+      logger.error("❌ Error getting widget status", error)
+      return res.status(500).json({
+        success: false,
+        status: "error",
+        message: "Failed to fetch widget status",
+      })
+    }
+  }
+
   /**
    * POST /api/v1/widget/chat/:workspaceId
    * Send a message from widget
@@ -119,28 +221,6 @@ export class WidgetChatController {
       }
 
 
-      // � Debug Mode (debugMode = true): Return WIP message (system in test mode)
-      if (workspace.debugMode === true) {
-        logger.info("🐛 Debug Mode - returning wipMessage (system in test)", {
-          workspaceId,
-          visitorId,
-        })
-        
-        // Extract WIP message in customer's language (or default)
-        const wipMessageObj = workspace.wipMessage as Record<string, string> | null
-        const requestedLanguage = (req.body.language as string)?.toLowerCase() || "it"
-        const wipResponse = wipMessageObj?.[requestedLanguage] 
-          || wipMessageObj?.it 
-          || wipMessageObj?.en 
-          || "Servizio temporaneamente non disponibile. Riprova più tardi."
-        
-        return res.status(200).json({
-          success: true,
-          status: "wip",
-          response: wipResponse,
-        })
-      }
-
       if (workspace.deletedAt !== null) {
         return res.status(503).json({
           error: "SERVICE_UNAVAILABLE",
@@ -167,6 +247,27 @@ export class WidgetChatController {
             retryAfter: 3600000, // 1 hour
           })
         }
+      }
+
+      if (workspace.channelStatus === false || workspace.debugMode === true) {
+        logger.info("🛠️ Widget WIP - channel disabled or debug mode", {
+          workspaceId,
+          visitorId,
+          debugMode: workspace.debugMode,
+          channelStatus: workspace.channelStatus,
+        })
+
+        const rawLanguage = (req.body.language as string)?.toLowerCase() || "it"
+        const wipResponse = this.resolveWipMessage(
+          workspace.wipMessage as Record<string, string> | string | null,
+          rawLanguage
+        )
+
+        return res.status(200).json({
+          success: true,
+          status: "wip",
+          response: wipResponse,
+        })
       }
 
       // Execute 5-step security validation

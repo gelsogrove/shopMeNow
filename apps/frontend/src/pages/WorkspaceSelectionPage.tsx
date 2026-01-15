@@ -14,6 +14,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -86,6 +94,8 @@ const PLAN_LABELS: Record<PlanType, string> = {
   ENTERPRISE: "Enterprise",
 }
 
+const defaultWipMessage = "Work in progress. Please contact us later."
+
 const PLAN_TYPE_VALUES: PlanType[] = ["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"]
 
 const normalizePlanType = (value?: string | null): PlanType => {
@@ -156,6 +166,10 @@ export function WorkspaceSelectionPage() {
   const [selectedWorkspaceForLogo, setSelectedWorkspaceForLogo] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [debugDialogOpen, setDebugDialogOpen] = useState(false)
+  const [debugDialogWorkspaceId, setDebugDialogWorkspaceId] = useState<string | null>(null)
+  const [debugDialogValue, setDebugDialogValue] = useState(false)
+  const [debugSaving, setDebugSaving] = useState(false)
 
   // ============================================================================
   // WIZARD HELPERS
@@ -650,21 +664,37 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     }
   }
 
-  const handleToggleDebugMode = async (id: string, e: React.MouseEvent) => {
+  const openDebugDialog = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
+    const workspace = workspaces.find((w) => w.id === id)
+    if (!workspace) return
+    setDebugDialogWorkspaceId(workspace.id)
+    setDebugDialogValue(Boolean(workspace.debugMode))
+    setDebugDialogOpen(true)
+  }
+
+  const closeDebugDialog = () => {
+    setDebugDialogOpen(false)
+    setDebugDialogWorkspaceId(null)
+  }
+
+  const handleSaveDebugMode = async () => {
+    if (!debugDialogWorkspaceId) return
+    setDebugSaving(true)
     try {
-      const workspace = workspaces.find((w) => w.id === id)
-      if (workspace) {
-        const updatedWorkspace = await updateWorkspace(id, {
-          debugMode: !workspace.debugMode,
-        })
-        const updatedWorkspaces = workspaces.map((w) =>
-          w.id === id ? updatedWorkspace : w
-        )
-        setWorkspaces(updatedWorkspaces)
-      }
+      const updatedWorkspace = await updateWorkspace(debugDialogWorkspaceId, {
+        debugMode: debugDialogValue,
+      })
+      const updatedWorkspaces = workspaces.map((w) =>
+        w.id === debugDialogWorkspaceId ? updatedWorkspace : w
+      )
+      setWorkspaces(updatedWorkspaces)
+      closeDebugDialog()
     } catch (error) {
-      logger.error('Error toggling debug mode:', error)
+      logger.error("Error updating debug mode:", error)
+      toast.error("Failed to update debug mode")
+    } finally {
+      setDebugSaving(false)
     }
   }
 
@@ -743,6 +773,18 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     setSelectedWorkspaceForLogo(workspaceId)
     setLogoDialogOpen(true)
   }
+
+  const selectedDebugWorkspace = debugDialogWorkspaceId
+    ? workspaces.find((w) => w.id === debugDialogWorkspaceId) ?? null
+    : null
+  const debugWipMessage =
+    typeof selectedDebugWorkspace?.wipMessage === "string" &&
+    selectedDebugWorkspace.wipMessage.trim()
+      ? selectedDebugWorkspace.wipMessage
+      : defaultWipMessage
+  const hasDebugChange = selectedDebugWorkspace
+    ? Boolean(selectedDebugWorkspace.debugMode) !== debugDialogValue
+    : false
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1212,7 +1254,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              onClick={(e) => handleToggleDebugMode(workspace.id, e)}
+                              onClick={(e) => openDebugDialog(workspace.id, e)}
                               disabled={isRoleLoading}
                               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                                 workspace.debugMode
@@ -1233,23 +1275,12 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                               </div>
                             </button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <div className="max-w-xs space-y-1">
-                              <p className="font-semibold">{workspace.debugMode ? "🐛 Debug Mode ON" : "✅ Production Mode"}</p>
-                              {workspace.debugMode ? (
-                                <ul className="text-xs space-y-0.5">
-                                  <li>✅ Playground attivo</li>
-                                  <li>❌ Coda WhatsApp ferma</li>
-                                  <li>❌ Widget fermo</li>
-                                </ul>
-                              ) : (
-                                <ul className="text-xs space-y-0.5">
-                                  <li>✅ Coda WhatsApp attiva</li>
-                                  <li>✅ Widget funzionante</li>
-                                  <li>❌ Playground nascosto</li>
-                                </ul>
-                              )}
-                            </div>
+                          <TooltipContent className="max-w-xs rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+                            <p className="text-xs text-slate-700">
+                              {workspace.debugMode
+                                ? "Debug mode is enabled. Click to review or disable."
+                                : "Production mode. Click to enable debug mode."}
+                            </p>
                           </TooltipContent>
                         </Tooltip>
                         )}
@@ -2077,6 +2108,99 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           </Card>
         )}
       </div>
+
+      <Dialog
+        open={debugDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeDebugDialog()
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Debug Mode</DialogTitle>
+            <DialogDescription>
+              Configure debug mode for{" "}
+              <span className="font-medium text-slate-900">
+                {selectedDebugWorkspace?.name || "this workspace"}
+              </span>
+              . Debug mode pauses live traffic and shows a WIP screen.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-900">Mode</Label>
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setDebugDialogValue(false)}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
+                    !debugDialogValue
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Production
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebugDialogValue(true)}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
+                    debugDialogValue
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Debug
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">
+                Changes apply immediately for this workspace.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <p className="text-sm font-semibold text-slate-900">Impact</p>
+              <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                <li>
+                  Playground {debugDialogValue ? "enabled" : "hidden"} for this
+                  workspace.
+                </li>
+                <li>WhatsApp queue {debugDialogValue ? "paused" : "active"}.</li>
+                <li>Widget {debugDialogValue ? "disabled" : "active"}.</li>
+                <li>Customers see the WIP message while debug mode is on.</li>
+              </ul>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-900">
+                WIP Message Preview
+              </p>
+              <p className="mt-2 text-xs text-slate-700 whitespace-pre-wrap">
+                {debugWipMessage}
+              </p>
+              <p className="mt-2 text-[11px] text-slate-500">
+                Edit this message in Settings &gt; Basic.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeDebugDialog}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveDebugMode}
+              disabled={debugSaving || !hasDebugChange}
+              className="bg-slate-900 hover:bg-slate-800"
+            >
+              {debugSaving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Logo Upload Dialog */}
       {logoDialogOpen && (

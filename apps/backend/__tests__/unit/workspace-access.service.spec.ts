@@ -27,9 +27,9 @@ const mockPrisma = {
 // Helper to create workspace mock with owner (Feature 198)
 const createWorkspaceMock = (overrides: {
   workspaceId?: string
-  isActive?: boolean
   deletedAt?: Date | null
   debugMode?: boolean
+  channelStatus?: boolean
   ownerSubscriptionStatus?: string
   ownerCreditBalance?: number
   ownerPaymentFailureCount?: number
@@ -37,9 +37,9 @@ const createWorkspaceMock = (overrides: {
 }) => ({
   id: overrides.workspaceId ?? "test-workspace-id",
   name: "Test Workspace",
-  isActive: overrides.isActive ?? true,
   deletedAt: overrides.deletedAt ?? null,
   debugMode: overrides.debugMode ?? false,
+  channelStatus: overrides.channelStatus ?? true,
   ownerId: overrides.ownerId ?? "test-owner-id",
   owner: {
     id: overrides.ownerId ?? "test-owner-id",
@@ -82,9 +82,9 @@ describe("WorkspaceAccessService", () => {
         mockPrisma.workspace.findUnique.mockResolvedValue({
           id: workspaceId,
           name: "Test Workspace",
-          isActive: true,
           deletedAt: null,
           debugMode: false,
+          channelStatus: true,
           ownerId: "test-owner-id",
           owner: null, // No owner!
         })
@@ -96,18 +96,7 @@ describe("WorkspaceAccessService", () => {
       })
     })
 
-    describe("workspace inactive (soft deleted)", () => {
-      it("should block when isActive is false", async () => {
-        mockPrisma.workspace.findUnique.mockResolvedValue(
-          createWorkspaceMock({ isActive: false })
-        )
-
-        const result = await service.canProcessMessages(workspaceId)
-
-        expect(result.canProcess).toBe(false)
-        expect(result.blockReason).toBe("WORKSPACE_INACTIVE")
-      })
-
+    describe("workspace deleted (soft deleted)", () => {
       it("should block when deletedAt is set", async () => {
         mockPrisma.workspace.findUnique.mockResolvedValue(
           createWorkspaceMock({ deletedAt: new Date() })
@@ -116,7 +105,7 @@ describe("WorkspaceAccessService", () => {
         const result = await service.canProcessMessages(workspaceId)
 
         expect(result.canProcess).toBe(false)
-        expect(result.blockReason).toBe("WORKSPACE_INACTIVE")
+        expect(result.blockReason).toBe("WORKSPACE_DELETED")
       })
     })
 
@@ -237,7 +226,6 @@ describe("WorkspaceAccessService", () => {
       it("should allow processing when all conditions are met", async () => {
         mockPrisma.workspace.findUnique.mockResolvedValue(
           createWorkspaceMock({
-            isActive: true,
             debugMode: false,
             ownerSubscriptionStatus: "ACTIVE",
             ownerCreditBalance: 50,
@@ -254,14 +242,16 @@ describe("WorkspaceAccessService", () => {
     describe("priority order of blocking conditions", () => {
       it("should check workspace active before owner subscription", async () => {
         mockPrisma.workspace.findUnique.mockResolvedValue({
-          ...createWorkspaceMock({ ownerSubscriptionStatus: "PAUSED" }),
-          isActive: false,
+          ...createWorkspaceMock({
+            ownerSubscriptionStatus: "PAUSED",
+            deletedAt: new Date(),
+          }),
         })
 
         const result = await service.canProcessMessages(workspaceId)
 
-        // Should return WORKSPACE_INACTIVE, not PAUSED
-        expect(result.blockReason).toBe("WORKSPACE_INACTIVE")
+        // Should return WORKSPACE_DELETED, not PAUSED
+        expect(result.blockReason).toBe("WORKSPACE_DELETED")
       })
 
       it("should check owner subscription before credit", async () => {
@@ -444,9 +434,9 @@ describe("WorkspaceAccessService", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
         name: "Test Workspace",
-        isActive: true,
         deletedAt: null,
         debugMode: false,
+        channelStatus: true,
         ownerId: "test-owner-id",
         owner: null,
       })

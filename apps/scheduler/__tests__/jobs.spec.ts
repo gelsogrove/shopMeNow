@@ -40,6 +40,10 @@ const mockPrisma: Record<string, any> = {
     update: jest.fn(),
     deleteMany: jest.fn(),
   },
+  conversationMessage: {
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
   shortUrls: {
     deleteMany: jest.fn(),
   },
@@ -142,8 +146,7 @@ describe('Scheduler Jobs', () => {
 
       expect(mockPrisma.workspace.findMany).toHaveBeenCalledWith({
         where: {
-          isActive: true,
-          isDelete: false,
+          deletedAt: null,
         },
         select: expect.any(Object),
       })
@@ -157,6 +160,8 @@ describe('Scheduler Jobs', () => {
         name: 'Test Workspace',
         whatsappApiKey: 'key-123',
         whatsappPhoneNumber: '+1234567890',
+        channelStatus: true,
+        debugMode: false,
       }
       
       const mockMessage = {
@@ -180,6 +185,42 @@ describe('Scheduler Jobs', () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('1 sent, 0 blocked')
       )
+    })
+
+    it('should deliver WIP messages when channelStatus is false', async () => {
+      const mockWorkspace = {
+        id: 'ws-1',
+        name: 'WIP Workspace',
+        whatsappApiKey: 'key-123',
+        whatsappPhoneNumber: '+1234567890',
+        channelStatus: false,
+        debugMode: false,
+      }
+
+      const mockMessage = {
+        id: 'msg-wip',
+        workspaceId: 'ws-1',
+        customerId: 'cust-1',
+        messageContent: 'Maintenance message',
+        status: 'pending',
+        conversationMessageId: 'conv-1',
+        channel: 'whatsapp',
+      }
+
+      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
+      mockPrisma.whatsAppQueue.findMany.mockResolvedValue([mockMessage])
+      mockPrisma.whatsAppQueue.update.mockResolvedValue({ ...mockMessage, status: 'sent' })
+      mockPrisma.conversationMessage.findUnique.mockResolvedValue({
+        debugInfo: JSON.stringify({ channelDisabled: true }),
+      })
+      mockPrisma.conversationMessage.update.mockResolvedValue({})
+
+      await whatsappChannelQueueJob()
+
+      expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledWith({
+        where: { id: 'msg-wip' },
+        data: expect.objectContaining({ status: 'sent' }),
+      })
     })
 
     it('should skip workspaces with no pending messages', async () => {

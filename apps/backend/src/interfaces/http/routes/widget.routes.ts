@@ -97,6 +97,16 @@ router.post(
 logger.info("🔧 Widget POST /chat/:workspaceId route registered")
 
 /**
+ * GET /api/v1/widget/status/:workspaceId
+ * Get widget availability status
+ */
+router.get(
+  "/status/:workspaceId",
+  widgetRateLimiter,
+  controller.getStatus.bind(controller)
+)
+
+/**
  * GET /api/v1/widget/poll/:messageId
  * Poll for message response
  * 
@@ -155,4 +165,3 @@ router.get(
 )
 
 export default router
-

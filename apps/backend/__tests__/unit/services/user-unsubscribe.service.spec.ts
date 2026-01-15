@@ -107,8 +107,6 @@ describe("UserUnsubscribeService", () => {
       where: { id: "ws-1" },
       data: expect.objectContaining({
         deletedAt: expect.any(Date),
-        isDelete: true,
-        isActive: false,
         channelStatus: false,
       }),
     })

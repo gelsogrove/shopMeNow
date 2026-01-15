@@ -5,9 +5,10 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "@jest/globals"
 import request from "supertest"
-import { app } from "../../src/app"
+import app from "../../src/app"
 import { prisma } from "../../src/lib/prisma"
-import { signToken } from "../../src/utils/jwt"
+import { sign } from "jsonwebtoken"
+import { config } from "../../src/config"
 
 describe("Security: Debug Mode - Owner Only", () => {
   let ownerToken: string
@@ -15,47 +16,44 @@ describe("Security: Debug Mode - Owner Only", () => {
   let workspaceId: string
   let ownerId: string
   let adminId: string
+  const testSuffix = Date.now().toString()
 
   beforeAll(async () => {
-    // Clean up before tests
-    await prisma.userWorkspace.deleteMany({})
-    await prisma.workspace.deleteMany({})
-    await prisma.user.deleteMany({
-      where: {
-        email: {
-          in: ["owner-debugtest@test.com", "admin-debugtest@test.com"],
-        },
-      },
-    })
-
     // Create owner user
     const owner = await prisma.user.create({
       data: {
-        email: "owner-debugtest@test.com",
-        password: "hashedpassword",
+        email: `owner-debugtest-${testSuffix}@test.com`,
+        passwordHash: "hashedpassword",
         firstName: "Owner",
         lastName: "User",
       },
     })
     ownerId = owner.id
-    ownerToken = signToken({ userId: owner.id, email: owner.email })
+    ownerToken = sign(
+      { userId: owner.id, email: owner.email, role: owner.role },
+      config.jwtSecret
+    )
 
     // Create admin user
     const admin = await prisma.user.create({
       data: {
-        email: "admin-debugtest@test.com",
-        password: "hashedpassword",
+        email: `admin-debugtest-${testSuffix}@test.com`,
+        passwordHash: "hashedpassword",
         firstName: "Admin",
         lastName: "User",
       },
     })
     adminId = admin.id
-    adminToken = signToken({ userId: admin.id, email: admin.email })
+    adminToken = sign(
+      { userId: admin.id, email: admin.email, role: admin.role },
+      config.jwtSecret
+    )
 
     // Create workspace owned by owner
     const workspace = await prisma.workspace.create({
       data: {
         name: "Test Workspace Debug",
+        slug: `test-workspace-debug-${testSuffix}`,
         ownerId: owner.id,
         debugMode: false, // Start with debug mode OFF
       },
@@ -83,12 +81,17 @@ describe("Security: Debug Mode - Owner Only", () => {
 
   afterAll(async () => {
     // Cleanup
-    await prisma.userWorkspace.deleteMany({
-      where: { workspaceId },
-    })
-    await prisma.workspace.delete({
-      where: { id: workspaceId },
-    })
+    if (workspaceId) {
+      await prisma.userWorkspace.deleteMany({
+        where: { workspaceId },
+      })
+      await prisma.languages.deleteMany({
+        where: { workspaceId },
+      })
+      await prisma.workspace.delete({
+        where: { id: workspaceId },
+      })
+    }
     await prisma.user.deleteMany({
       where: { id: { in: [ownerId, adminId] } },
     })

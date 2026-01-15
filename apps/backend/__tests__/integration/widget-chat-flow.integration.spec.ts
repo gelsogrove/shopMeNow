@@ -20,7 +20,7 @@ describe("Widget Chat Flow Integration", () => {
   beforeAll(async () => {
     // Find a test workspace
     const workspace = await prisma.workspace.findFirst({
-      where: { isActive: true },
+      where: { deletedAt: null },
       include: { owner: true },
     })
 
@@ -122,7 +122,7 @@ describe("Widget Chat Flow Integration", () => {
       expect(response.body).toHaveProperty("error", "VISITOR_ID_EXPIRED")
     })
 
-    it("should block completely when debugMode is ON", async () => {
+    it("should return wip message when debugMode is ON", async () => {
       // Find workspace and enable debug mode
       const workspace = await prisma.workspace.findUnique({
         where: { id: testWorkspaceId },
@@ -143,9 +143,11 @@ describe("Widget Chat Flow Integration", () => {
             visitorId: debugVisitorId,
             message: "Test message with debug mode",
           })
-          .expect(503) // Service Unavailable
+          .expect(200)
 
-        expect(response.body).toHaveProperty("error", "SERVICE_UNAVAILABLE")
+        expect(response.body).toHaveProperty("success", true)
+        expect(response.body).toHaveProperty("status", "wip")
+        expect(response.body).toHaveProperty("response")
         
         // Verify NO message saved in database
         const messages = await prisma.whatsAppQueue.findMany({
@@ -161,18 +163,18 @@ describe("Widget Chat Flow Integration", () => {
       }
     })
 
-    it("should return wipMessage when debugMode is false (WIP mode)", async () => {
+    it("should return wipMessage when channelStatus is false (WIP mode)", async () => {
       // Find workspace and get original values
       const workspace = await prisma.workspace.findUnique({
         where: { id: testWorkspaceId },
       })
       
-      // Set WIP mode (debugMode=true) with wipMessage
+      // Set WIP mode (channelStatus=false) with wipMessage
       await prisma.workspace.update({
         where: { id: testWorkspaceId },
         data: { 
-          debugMode: true,
-          debugMode: false, // Ensure debug mode is off
+          channelStatus: false,
+          debugMode: false,
           wipMessage: {
             it: "Stiamo aggiornando il servizio. Torna presto!",
             en: "We are updating the service. Come back soon!",
@@ -206,7 +208,8 @@ describe("Widget Chat Flow Integration", () => {
         await prisma.workspace.update({
           where: { id: testWorkspaceId },
           data: { 
-            channelStatus: workspace?.debugMode ?? true,
+            channelStatus: workspace?.channelStatus ?? true,
+            debugMode: workspace?.debugMode ?? false,
             wipMessage: workspace?.wipMessage ?? null,
           },
         })
@@ -223,7 +226,7 @@ describe("Widget Chat Flow Integration", () => {
       await prisma.workspace.update({
         where: { id: testWorkspaceId },
         data: { 
-          debugMode: true,
+          channelStatus: false,
           debugMode: false,
           wipMessage: null, // No custom message
         },
@@ -250,7 +253,44 @@ describe("Widget Chat Flow Integration", () => {
         await prisma.workspace.update({
           where: { id: testWorkspaceId },
           data: { 
-            channelStatus: workspace?.debugMode ?? true,
+            channelStatus: workspace?.channelStatus ?? true,
+            debugMode: workspace?.debugMode ?? false,
+            wipMessage: workspace?.wipMessage ?? null,
+          },
+        })
+      }
+    })
+  })
+
+  describe("GET /api/v1/widget/status/:workspaceId", () => {
+    it("should return wip status when channelStatus is false", async () => {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: testWorkspaceId },
+        select: { channelStatus: true, debugMode: true, wipMessage: true },
+      })
+
+      await prisma.workspace.update({
+        where: { id: testWorkspaceId },
+        data: {
+          channelStatus: false,
+          debugMode: false,
+          wipMessage: { en: "Maintenance window" },
+        },
+      })
+
+      try {
+        const response = await request(app)
+          .get(`/api/v1/widget/status/${testWorkspaceId}?language=en`)
+          .expect(200)
+
+        expect(response.body).toHaveProperty("status", "wip")
+        expect(response.body).toHaveProperty("wipMessage", "Maintenance window")
+      } finally {
+        await prisma.workspace.update({
+          where: { id: testWorkspaceId },
+          data: {
+            channelStatus: workspace?.channelStatus ?? true,
+            debugMode: workspace?.debugMode ?? false,
             wipMessage: workspace?.wipMessage ?? null,
           },
         })

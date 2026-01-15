@@ -91,6 +91,26 @@ async function appendTimelineStep(
   }
 }
 
+async function isWipConversationMessage(conversationMessageId: string | null | undefined): Promise<boolean> {
+  if (!conversationMessageId) {
+    return false
+  }
+
+  const conversationMessage = await prisma.conversationMessage.findUnique({
+    where: { id: conversationMessageId },
+    select: { debugInfo: true },
+  })
+
+  const debugInfo = conversationMessage?.debugInfo
+  if (!debugInfo) return false
+  try {
+    const parsed = JSON.parse(debugInfo)
+    return Boolean(parsed?.channelDisabled)
+  } catch {
+    return false
+  }
+}
+
 /**
  * In-memory lock to prevent concurrent executions
  * If the job is still running when the next cron tick happens, skip it
@@ -139,10 +159,9 @@ export async function whatsappChannelQueueJob(): Promise<void> {
   try {
     const securityAgent = new SecurityAgentService()
     
-    // Find workspaces with active channel (or WIP mode for WIP-only delivery)
+    // Find workspaces with active channel or WIP-only delivery modes
     const workspaces = await prisma.workspace.findMany({
       where: {
-        channelStatus: true,
         deletedAt: null,
       },
       select: {
@@ -150,7 +169,8 @@ export async function whatsappChannelQueueJob(): Promise<void> {
         name: true,
         whatsappApiKey: true,
         whatsappPhoneNumber: true,
-        debugMode: true, // Check if in debug mode (skip processing)
+        channelStatus: true,
+        debugMode: true,
       },
     })
 
@@ -164,14 +184,12 @@ export async function whatsappChannelQueueJob(): Promise<void> {
     let totalErrors = 0
 
     for (const workspace of workspaces) {
-      // Skip if debugMode is enabled (playground only mode)
-      if (workspace.debugMode === true) {
-        logger.info(`[WhatsApp Queue] 🐛 Debug Mode ON for "${workspace.name}" - Skipping real message processing`)
-        continue
-      }
+      const wipOnly = workspace.debugMode === true || workspace.channelStatus === false
       
       logger.info(`[WhatsApp Queue] 📬 Processing workspace "${workspace.name}" (${workspace.id})`, {
         debugMode: workspace.debugMode,
+        channelStatus: workspace.channelStatus,
+        wipOnly,
       })
 
       // Get pending messages from queue (excluding playground messages)
@@ -194,33 +212,12 @@ export async function whatsappChannelQueueJob(): Promise<void> {
       const results = await Promise.allSettled(
         pendingMessages.map(async (message: (typeof pendingMessages)[number]) => {
           try {
-            if (workspace.debugMode === true) {
-              if (!message.conversationMessageId) {
-                logger.info('[WhatsApp Queue] Debug mode active - skipping non-WIP message (no conversationMessageId)', {
-                  queueId: message.id,
-                  workspaceId: workspace.id,
-                })
-                return
-              }
-
-              const conversationMessage = await prisma.conversationMessage.findUnique({
-                where: { id: message.conversationMessageId },
-                select: { debugInfo: true },
-              })
-
-              const debugInfo = conversationMessage?.debugInfo
-              const isWipMessage = (() => {
-                if (!debugInfo) return false
-                try {
-                  const parsed = JSON.parse(debugInfo)
-                  return Boolean(parsed?.channelDisabled)
-                } catch {
-                  return false
-                }
-              })()
+            let isWipMessage = false
+            if (wipOnly) {
+              isWipMessage = await isWipConversationMessage(message.conversationMessageId)
 
               if (!isWipMessage) {
-                logger.info('[WhatsApp Queue] Channel disabled - skipping non-WIP message', {
+                logger.info('[WhatsApp Queue] WIP-only mode - skipping non-WIP message', {
                   queueId: message.id,
                   workspaceId: workspace.id,
                 })
@@ -344,21 +341,23 @@ export async function whatsappChannelQueueJob(): Promise<void> {
               })
             }
 
-            // 💰 BILLING: Deduct credit for sent message
-            try {
-              const billingService = new BillingService()
-              const deductResult = await billingService.deductMessageCredit(
-                workspace.id,
-                message.id
-              )
-              if (deductResult.success) {
-                logger.info(`[WhatsApp Queue] 💰 Credit deducted for message ${message.id}: €${deductResult.amountDeducted?.toFixed(2)} → Balance: €${deductResult.newBalance?.toFixed(2)}`)
-              } else {
-                logger.warn(`[WhatsApp Queue] ⚠️ Failed to deduct credit: ${deductResult.error}`)
+            if (!isWipMessage) {
+              // 💰 BILLING: Deduct credit for sent message
+              try {
+                const billingService = new BillingService()
+                const deductResult = await billingService.deductMessageCredit(
+                  workspace.id,
+                  message.id
+                )
+                if (deductResult.success) {
+                  logger.info(`[WhatsApp Queue] 💰 Credit deducted for message ${message.id}: €${deductResult.amountDeducted?.toFixed(2)} → Balance: €${deductResult.newBalance?.toFixed(2)}`)
+                } else {
+                  logger.warn(`[WhatsApp Queue] ⚠️ Failed to deduct credit: ${deductResult.error}`)
+                }
+              } catch (billingError) {
+                logger.error(`[WhatsApp Queue] ⚠️ Billing error for message ${message.id}:`, billingError)
+                // Don't fail the message - billing error is non-critical
               }
-            } catch (billingError) {
-              logger.error(`[WhatsApp Queue] ⚠️ Billing error for message ${message.id}:`, billingError)
-              // Don't fail the message - billing error is non-critical
             }
 
             return { status: 'sent', messageId: message.id }

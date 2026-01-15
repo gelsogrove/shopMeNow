@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { LoginPage } from '../src/pages/LoginPage'
 import { LanguageProvider } from '../src/contexts/LanguageContext'
+import { WorkspaceProvider } from '../src/contexts/WorkspaceContext'
 import { auth as authService } from '../src/services/api'
 import { useFeatureFlags } from '@/hooks/usePlatformConfig'
 
@@ -72,9 +73,11 @@ vi.mock('../src/services/workspace', () => ({
 const renderLoginPage = () => {
   return render(
     <BrowserRouter>
-      <LanguageProvider>
-        <LoginPage />
-      </LanguageProvider>
+      <WorkspaceProvider>
+        <LanguageProvider>
+          <LoginPage />
+        </LanguageProvider>
+      </WorkspaceProvider>
     </BrowserRouter>
   )
 }
