@@ -100,15 +100,18 @@ const defaultWipMessage = "Work in progress. Please contact us later."
 const GUIDES = {
   business: {
     title: "Business Configuration",
-    content: "📋 CHANNEL NAME\nUnique identifier for your workspace. Used in URLs, reports, and internal systems. Example: 'Italian Gourmet Store', 'Tech Support Hub'\n\n📋 BUSINESS TYPE\nHelps the AI assistant understand your industry context. Affects tone, product recommendations, and support behavior.\n• Retail: Physical stores, boutiques, specialty shops\n• E-commerce: Online-only sales platforms\n• Restaurant: Food/beverage delivery, online menus\n• Healthcare: Medical services, consultations\n• Education: Courses, training, tutorials\n• Services: Professional services (consulting, design, etc.)\n• Other: Custom industries\n\n📋 ADMIN EMAIL\nPrimary contact for important notifications:\n✓ Low balance alerts\n✓ System maintenance notifications\n✓ Security alerts\n✓ Payment failures\n✓ Subscription updates\n\n📋 WEBSITE URL\nYour business homepage URL (e.g., https://yourshop.com). Used by the AI to provide accurate links to customers.\n\n📋 E-COMMERCE FEATURES\n🔓 ENABLED: Unlocks the complete product catalog system\n  ✅ Add/manage Products with prices, descriptions, images\n  ✅ Add/manage Services (consultations, support tiers)\n  ✅ Create/manage Offers & Promotions\n  ✅ Organize items into Categories\n  ✅ Customers can browse catalog via chat\n  ✅ Shopping cart & order management\n  ✅ Inventory tracking\n🔒 DISABLED: Basic information-only mode (no catalog)\n\n📋 SALES AGENTS\nEnable team management features:\n✓ Assign customers to sales agents\n✓ Track individual agent performance\n✓ Commission calculations\n✓ Team reporting and analytics\n\n📋 CHANNEL STATUS\n🟢 ACTIVE: Channel accepts customer messages, processes orders, fully operational\n🔴 INACTIVE: Channel paused, customers cannot reach you (useful for maintenance)\n\n📋 DEBUG MODE\nEnable detailed logging for troubleshooting:\n✓ Full conversation logs\n✓ API request/response details\n✓ Error stack traces\n⚠️ Disable in production for performance",
+    content:
+      "• Channel name: Short workspace label for URLs and headers\n• Business type: Industry context for the AI\n• Admin email: Billing/security notifications\n• Website URL: Main link the bot can share\n• E-commerce: Enable catalog features\n• Sales agents: Enable team routing\n• Channel status: Pause or resume the channel\n• Debug mode: Troubleshooting only",
   },
   channels: {
     title: "Channel Setup",
-    content: "📱 WHATSAPP\nDirect messaging with customers (2+ billion users worldwide)\n✓ Personal conversations\n✓ Order notifications & updates\n✓ Quick response with automated chatbot\n✓ File sharing (images, documents)\n✓ Payment links\n✓ Phone number available 24/7\nBest for: Customer support, order updates, personal service\n\n🌐 WEBSITE WIDGET\nLive chat embedded on your website as a floating bubble\n✓ Appears bottom-right corner by default\n✓ Matches your brand colors/logo\n✓ Instant messaging without leaving site\n✓ Increases conversion rates\n✓ Reduces customer support cost\n✓ Mobile & desktop optimized\nBest for: Customer acquisition, FAQ automation, support escalation\n\n💡 BEST PRACTICE\n✓ Enable BOTH channels simultaneously for maximum reach\n✓ Customers prefer their communication method\n✓ WhatsApp for loyal customers, Widget for new visitors\n✓ Both channels share the same AI assistant & inventory",
+    content:
+      "• WhatsApp: Direct conversations and order updates\n• Website widget: On-site chat and FAQs\n• Best practice: Enable both for full coverage",
   },
   whatsapp: {
     title: "WhatsApp Configuration",
-    content: "🔐 API CREDENTIALS (from Meta Business Manager)\nGet these from: https://developers.facebook.com/docs/whatsapp/\n\n📱 PHONE NUMBER\nYour WhatsApp Business phone number\n✓ Must be verified in Meta Business Manager\n✓ Include country code: +1234567890 (not just 1234567890)\n✓ Must be unique per workspace\n✓ Test with yourself first\n\n🏢 PHONE NUMBER ID\nMeta parameter identifying your phone (15-digit number)\nExample: 120201234567890\n✓ Found in WhatsApp Business Account settings\n✓ Different from the actual phone number\n✓ Required for API calls\n\n🔑 API KEY (Access Token)\nAuthentication token for API requests\n✓ Start with 'EAAx...' prefix\n✓ Keep SECRET - never share publicly\n✓ Expires after 60 days (refresh in Meta dashboard)\n✓ If exposed, regenerate immediately\n\n✅ VERIFY TOKEN (Webhook Validation)\nToken YOU create (can be any string)\n✓ Must match webhook config in Meta\n✓ Example: 'my_secure_webhook_token_123'\n✓ Used to verify webhook requests from Meta\n✓ Change periodically for security\n\n🧪 TEST YOUR SETUP\n1. Save configuration\n2. Send yourself a test message\n3. Check webhook logs for delivery\n4. Verify currency & product catalog display",
+    content:
+      "• Phone number: Verified WhatsApp Business number\n• Phone number ID: Meta ID for the number\n• API key: Access token from Meta\n• Verify token: Webhook validation string",
   },
   widget: {
     title: "Website Widget",
@@ -120,7 +123,8 @@ const GUIDES = {
   },
   support: {
     title: "Human Support",
-    content: "• Enable Human Support: Toggle escalation feature\n• Contact Method: Email or WhatsApp\n• Operator WhatsApp: Number for live agent handoff\n• Support Instructions: When to escalate (e.g., refunds, complaints)\n• Example: 'Escalate if customer asks for manager'",
+    content:
+      "• Enable support\n• Contact method\n• Operator number\n• Escalation rule",
   },
   security: {
     title: "Security & Access",
@@ -314,7 +318,7 @@ export default function SettingsPage() {
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   
   // Accordion state - which section is open (only one at a time)
-  const [openSection, setOpenSection] = useState<string>("business")
+  const [openSection, setOpenSection] = useState<string>("")
 
   const [formData, setFormData] = useState<WorkspaceData>({
     id: "",
