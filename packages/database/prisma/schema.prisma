@@ -560,6 +560,10 @@ model User {
   paypalEmail       String?
   paypalEnvironment String? // "sandbox" | "live"
   paypalConnectedAt DateTime?
+  paypalAccessTokenEncrypted String?
+  paypalRefreshTokenEncrypted String?
+  paypalTokenExpiresAt DateTime?
+  paypalTokenScope String?
 
   workspaces              UserWorkspace[]
   ownedWorkspaces         Workspace[]             @relation("OwnedWorkspaces") // Workspaces where user is owner/SUPER_ADMIN
