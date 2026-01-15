@@ -23,6 +23,8 @@ interface CreateTicketInput {
   issueType: SupportIssueType
   subject: string
   initialMessage: string
+  createdById?: string
+  createdByType?: SupportSenderType
 }
 
 interface AddMessageInput {
@@ -48,6 +50,7 @@ export class SupportTicketService {
       userId: input.userId,
       workspaceId: input.workspaceId,
       issueType: input.issueType,
+      createdByType: input.createdByType || SupportSenderType.CUSTOMER,
     })
 
     const ticket = await supportTicketRepository.create({
@@ -56,6 +59,8 @@ export class SupportTicketService {
       issueType: input.issueType,
       subject: input.subject,
       initialMessage: input.initialMessage,
+      createdById: input.createdById,
+      createdByType: input.createdByType,
     })
 
     // Send email notification to support team and owner
@@ -66,6 +71,7 @@ export class SupportTicketService {
         WHATSAPP: "WhatsApp",
         WIDGET: "Widget",
         SALES_AGENT: "Sales Agent",
+        SUPPORT: "Support Message",
         OTHER: "Other",
       }
 
@@ -91,6 +97,7 @@ export class SupportTicketService {
         WHATSAPP: "WhatsApp",
         WIDGET: "Widget",
         SALES_AGENT: "Sales Agent",
+        SUPPORT: "Support Message",
         OTHER: "Other",
       }
 
@@ -404,6 +411,32 @@ export class SupportTicketService {
 
     logger.info(`Cleaned up ${deletedCount} old support ticket attachments`)
     return deletedCount
+  }
+
+  /**
+   * Delete ticket and attachments
+   */
+  async deleteTicket(ticketId: string): Promise<{ id: string; ticketCode: string } | null> {
+    const ticket = await supportTicketRepository.findById(ticketId)
+    if (!ticket) {
+      return null
+    }
+
+    const attachments = ticket.messages.flatMap((message) => message.attachments || [])
+    for (const attachment of attachments) {
+      try {
+        await storageService.delete(attachment.storageKey)
+      } catch (error) {
+        logger.warn("Failed to delete attachment from storage", {
+          attachmentId: attachment.id,
+          storageKey: attachment.storageKey,
+          error,
+        })
+      }
+    }
+
+    await supportTicketRepository.deleteTicket(ticketId)
+    return { id: ticket.id, ticketCode: ticket.ticketCode }
   }
 }
 

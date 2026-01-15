@@ -60,7 +60,7 @@ router.use(authMiddleware)
  *                 type: string
  *               issueType:
  *                 type: string
- *                 enum: [BUG, FEATURE_REQUEST, BILLING, TECHNICAL, OTHER]
+ *                 enum: [ACCOUNT_ISSUE, PLAN_AND_BILLING, WHATSAPP, WIDGET, SALES_AGENT, OTHER]
  *               subject:
  *                 type: string
  *               message:
@@ -100,12 +100,12 @@ router.post("/tickets", (req, res) => {
  *         name: status
  *         schema:
  *           type: string
- *           enum: [OPEN, IN_PROGRESS, WAITING_REPLY, RESOLVED, CLOSED]
+ *           enum: [PENDING, IN_PROGRESS, CLOSED]
  *       - in: query
  *         name: issueType
  *         schema:
  *           type: string
- *           enum: [BUG, FEATURE_REQUEST, BILLING, TECHNICAL, OTHER]
+ *           enum: [ACCOUNT_ISSUE, PLAN_AND_BILLING, WHATSAPP, WIDGET, SALES_AGENT, SUPPORT, OTHER]
  *     responses:
  *       200:
  *         description: List of tickets
@@ -172,6 +172,34 @@ router.get("/tickets/unread-count", (req, res) => {
  */
 router.get("/tickets/:ticketId", (req, res) => {
   supportTicketController.getTicket(req, res)
+})
+
+/**
+ * @swagger
+ * /api/support/tickets/{ticketId}:
+ *   delete:
+ *     summary: Delete a ticket (owner only)
+ *     tags: [Support]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: ticketId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Ticket deleted
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied
+ *       404:
+ *         description: Ticket not found
+ */
+router.delete("/tickets/:ticketId", (req, res) => {
+  supportTicketController.deleteMyTicket(req, res)
 })
 
 /**

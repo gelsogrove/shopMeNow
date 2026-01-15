@@ -331,31 +331,27 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
     logger.debug(`Finding workspaces for user ${userId}`)
 
     try {
-      const user = await this.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          workspaces: {
-            include: {
-              workspace: true,
-            },
-            orderBy: {
-              workspace: {
-                createdAt: 'asc',
+      const workspaces = await this.prisma.workspace.findMany({
+        where: {
+          deletedAt: null,
+          OR: [
+            { ownerId: userId },
+            {
+              users: {
+                some: {
+                  userId: userId,
+                },
               },
             },
-          },
+          ],
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        include: {
+          whatsappSettings: true,
         },
       })
-
-      if (!user || !user.workspaces) {
-        logger.debug(`No workspaces found for user ${userId}`)
-        return []
-      }
-
-      // Filter only non-deleted workspaces
-      const workspaces = user.workspaces
-        .map((uw) => uw.workspace)
-        .filter((workspace) => workspace.deletedAt === null)
 
       logger.debug(`Found ${workspaces.length} workspaces for user ${userId}`)
       

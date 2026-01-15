@@ -7,6 +7,7 @@ export type SupportIssueType =
   | "WHATSAPP"
   | "WIDGET"
   | "SALES_AGENT"
+  | "SUPPORT"
   | "OTHER"
 
 export type SupportTicketStatus = "PENDING" | "IN_PROGRESS" | "CLOSED"
@@ -117,6 +118,16 @@ export const getTicket = async (
 }
 
 /**
+ * Delete a ticket (owner only)
+ */
+export const deleteTicket = async (
+  ticketId: string
+): Promise<{ success: boolean; data: { id: string; ticketCode: string } }> => {
+  const response = await api.delete(`/support/tickets/${ticketId}`)
+  return response.data
+}
+
+/**
  * Add a message to a ticket
  */
 export const addMessage = async (
@@ -168,6 +179,7 @@ export const getIssueTypeLabel = (type: SupportIssueType): string => {
     WHATSAPP: "WhatsApp",
     WIDGET: "Widget",
     SALES_AGENT: "Sales Agent",
+    SUPPORT: "Support Message",
     OTHER: "Other",
   }
   return labels[type] || type

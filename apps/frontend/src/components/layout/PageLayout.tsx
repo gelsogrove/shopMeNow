@@ -42,6 +42,7 @@ export function PageLayout({ children, selectedChat }: PageLayoutProps) {
         phoneNumber={selectedChat?.customerPhone || ""}
         workspaceId={workspace?.id}
         selectedChat={selectedChat}
+        logoUrl={workspace?.logoUrl}
       />
     </div>
   )

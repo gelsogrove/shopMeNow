@@ -153,17 +153,6 @@ export class ProductSearchAgentLLM {
         context.workspaceId
       )
 
-      // STEP 1: Load template from file (NOT from Router query)
-      // Router query goes as USER MESSAGE, template is the SYSTEM PROMPT
-      const systemPrompt = await this.templateLoader.loadAndRenderTemplate(
-        "PRODUCT_SEARCH",
-        context.workspaceId
-      )
-
-      logger.info(`📋 Loaded ProductSearch template from file`, {
-        promptLength: systemPrompt.length,
-      })
-
       // 🔴 CRITICAL: Replace {{PRODUCTS}} with real data from database
       const { PromptProcessorService } = await import(
         "../../services/prompt-processor.service"
@@ -212,6 +201,19 @@ export class ProductSearchAgentLLM {
         customerIsActive = customer?.isActive ?? false // 🔒 Feature 174: Get registration status
         logger.warn(`⚠️ Fallback: Loaded customer from DB (consider passing customerData from Router)`)
       }
+
+      // STEP 1: Load template from file (NOT from Router query)
+      // Router query goes as USER MESSAGE, template is the SYSTEM PROMPT
+      const systemPrompt = await this.templateLoader.loadAndRenderTemplate(
+        "PRODUCT_SEARCH",
+        context.workspaceId,
+        { customerIsRegistered: customerIsActive }
+      )
+
+      logger.info(`📋 Loaded ProductSearch template from file`, {
+        promptLength: systemPrompt.length,
+        customerIsRegistered: customerIsActive,
+      })
 
       // Load dynamic content (products, categories, etc.) with customer discount applied
       const productsText = await messageRepo.getActiveProducts(

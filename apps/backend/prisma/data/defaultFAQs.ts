@@ -20,7 +20,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How can I place an order?",
     answer:
-      'To place an order:\n1. Search for products with "search [product name]"\n2. Add to cart with "add [quantity] [product]"\n3. View cart with "show cart"\n4. Confirm order with "proceed to checkout"\n\nYou will receive immediate confirmation via WhatsApp!',
+      'It\'s super easy! Here\'s how:\n\n1️⃣ Search: "search [product name]" (e.g., "search mozzarella")\n2️⃣ Add to cart: "add [quantity] [product]" (e.g., "add 2 wine")\n3️⃣ Check cart: "show cart"\n4️⃣ Checkout: "proceed to checkout"\n\n💬 You\'ll get instant confirmation right here on WhatsApp! Easy, right? 😊',
     category: "Orders",
     order: 1,
     isActive: true,
@@ -29,7 +29,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "I want to place an order",
     answer:
-      'Of course! To place an order, tell me which product or service you would like to purchase and I will add it directly to your cart. For example, you can say:\n- "I want cheese"\n- "Add wine to cart"\n- "I need gift wrapping service"\n\nWhat would you like to order?',
+      'Awesome! 🎉 Just tell me what you\'d like and I\'ll add it straight to your cart. You can say things like:\n\n• "I want cheese"\n• "Add wine to cart"\n• "I need gift wrapping service"\n\nGo ahead—what are you looking for today? 🛒',
     category: "Orders",
     order: 2,
     isActive: true,
@@ -38,7 +38,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "What is the minimum order amount?",
     answer:
-      "The minimum order is €50.00 for standard shipping. For orders below this amount, a €5.00 handling fee applies.",
+      "Our minimum order is €50.00 for free standard shipping. 📦\n\nOrdering less? No problem! Just add a small €5.00 handling fee and we\'re good to go. This helps us cover the costs of packing and delivery for smaller orders.",
     category: "Orders",
     order: 3,
     isActive: true,
@@ -47,7 +47,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I modify an order after placing it?",
     answer:
-      "You can modify an order within 30 minutes of placing it by contacting us immediately. After this time, the order enters processing and can no longer be modified.",
+      "Yes, but you need to be quick! ⚡ You have 30 minutes after placing your order to make changes—just message us right away.\n\nAfter that 30-minute window, your order goes into processing and we can\'t modify it anymore. So if you spot a mistake, let us know ASAP!",
     category: "Orders",
     order: 4,
     isActive: true,
@@ -56,7 +56,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How can I repeat a previous order?",
     answer:
-      'You can easily repeat a previous order! Write "repeat last order" or "repeat order #[code]". I will show you the details and you can confirm.',
+      'Love something and want it again? Easy! 🔄\n\nJust say:\n• "repeat last order" (for your most recent order)\n• "repeat order #ABC123" (for a specific order)\n\nI\'ll show you the details so you can double-check, then just confirm and you\'re done! Same great order, zero hassle.',
     category: "Orders",
     order: 5,
     isActive: true,
@@ -65,7 +65,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I cancel an order?",
     answer:
-      'You can cancel an order within 1 hour of placing it if it is still in "Pending confirmation" status. Once confirmed and in processing, cancellation is no longer possible. Contact us for assistance.',
+      'Yes, but timing matters! ⏰\n\nYou can cancel within 1 hour of placing your order IF it\'s still showing "Pending confirmation" status. Once it moves to processing, we can\'t cancel it anymore (it\'s already being packed!).\n\nNeed to cancel? Message us right away and we\'ll help you out! 💬',
     category: "Orders",
     order: 6,
     isActive: true,
@@ -74,7 +74,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Will I receive an order confirmation?",
     answer:
-      "Yes! You will receive immediate confirmation via WhatsApp with:\n- Order code\n- Product summary\n- Total and payment method\n- Estimated delivery times\n\nYou will also receive updates on preparation and shipping.",
+      "Absolutely! 📱 You\'ll get instant confirmation right here on WhatsApp with everything you need:\n\n✅ Order code\n✅ What you ordered\n✅ Total amount & payment method\n✅ Estimated delivery time\n\nPlus, we\'ll keep you updated as we prepare and ship your order. You\'ll always know what\'s happening! 📦",
     category: "Orders",
     order: 7,
     isActive: true,
@@ -87,7 +87,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "What are the delivery times?",
     answer:
-      "Standard delivery times are:\n- Metropolitan area: 24-48 hours\n- Region: 2-3 business days\n- Rest of country: 3-5 business days\n\nOrders confirmed before 2:00 PM ship the same day!",
+      "Here's how fast we deliver: 🚀\n\n📍 Metropolitan area: 24-48 hours\n📍 Your region: 2-3 business days\n📍 Rest of country: 3-5 business days\n\n💡 Pro tip: Order before 2:00 PM and we'll ship it THE SAME DAY! That's how we roll. 😎",
     category: "Shipping",
     order: 8,
     isActive: true,
@@ -96,7 +96,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How much does shipping cost?",
     answer:
-      "Shipping costs:\n- FREE for orders over €80\n- €7.50 for orders €50-€80\n- €12.50 for orders under €50\n\nRefrigerated shipping included for fresh products!",
+      "Great question! Here's the breakdown: 📦\n\n🎉 FREE for orders over €80 (yes, FREE!)\n💵 €7.50 for orders €50-€80\n💵 €12.50 for orders under €50\n\n❄️ Bonus: Refrigerated shipping is INCLUDED for all fresh products—no extra charge! We keep your food perfectly fresh.",
     category: "Shipping",
     order: 9,
     isActive: true,
@@ -105,7 +105,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How can I track my order?",
     answer:
-      'You can track your order in real-time! Write "where is my order" or "track order #[code]" and I will provide:\n- Current status\n- Courier tracking number\n- Link to follow shipment\n- Delivery estimate',
+      'Want to know where your order is? Easy! 📍\n\nJust message me:\n• "where is my order"\n• "track order #ABC123"\n\nI\'ll give you:\n✅ Current status\n✅ Courier tracking number\n✅ Direct link to follow your shipment\n✅ Delivery estimate\n\nReal-time updates, right at your fingertips! 📱',
     category: "Shipping",
     order: 10,
     isActive: true,
@@ -114,7 +114,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Do you deliver on Saturdays?",
     answer:
-      "Yes! We deliver Monday to Saturday, 8:00 AM - 6:00 PM. We are closed on Sundays. You can request a preferred time slot in the order notes.",
+      "Yes we do! 📦\n\nWe deliver Monday through Saturday, 8:00 AM - 6:00 PM. Sundays we take off to rest (even delivery drivers need a break! 😊).\n\n💡 Want a specific time? Just add a note to your order with your preferred delivery window and we'll do our best to accommodate!",
     category: "Shipping",
     order: 11,
     isActive: true,
@@ -127,7 +127,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "What payment methods do you accept?",
     answer:
-      "We accept:\n✅ Credit cards (Visa, Mastercard, Amex)\n✅ Bank transfer (for business orders)\n✅ PayPal\n✅ Cash on delivery (+€3.00)\n\nPayment is secure and protected with SSL encryption.",
+      "We make paying easy! Choose what works for you: 💳\n\n✅ Credit cards (Visa, Mastercard, Amex)\n✅ Bank transfer (perfect for business orders)\n✅ PayPal\n✅ Cash on delivery (+€3.00 fee)\n\n🔒 All payments are secure and protected with SSL encryption. Your info is safe with us!",
     category: "Payments",
     order: 12,
     isActive: true,
@@ -136,7 +136,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I get an invoice?",
     answer:
-      'Certainly! You can request an invoice:\n1. During checkout (provide VAT/Tax ID)\n2. After ordering by writing "invoice order #[code]"\n\nYou will receive the PDF via WhatsApp within 24 hours of the order.',
+      'Of course! 📝 You can request an invoice two ways:\n\n1️⃣ During checkout: Just provide your VAT/Tax ID when ordering\n2️⃣ After ordering: Message "invoice order #ABC123"\n\nWe\'ll send you the PDF invoice right here on WhatsApp within 24 hours. Easy peasy! 🚀',
     category: "Payments",
     order: 13,
     isActive: true,
@@ -145,7 +145,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "When is payment charged?",
     answer:
-      "With card/PayPal: immediate charge upon order confirmation.\nWith bank transfer: order confirmed upon payment receipt (send receipt via WhatsApp).\nCash on delivery: payment upon delivery.",
+      "Great question! It depends on your payment method: 💳\n\n🔹 Card/PayPal: Charged immediately when you confirm your order\n🔹 Bank transfer: We confirm your order once we receive payment (send us the receipt via WhatsApp!)\n🔹 Cash on delivery: You pay when the delivery arrives at your door\n\nSimple as that! 😊",
     category: "Payments",
     order: 14,
     isActive: true,
@@ -154,7 +154,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Is it safe to pay by card?",
     answer:
-      "Absolutely yes! Payments are processed through PCI-DSS certified gateways with SSL/TLS encryption. We never store your card data. All payments are tracked and protected.",
+      "100% safe! 🔒 Here's why:\n\n✅ We use PCI-DSS certified payment gateways (industry gold standard)\n✅ All data is encrypted with SSL/TLS\n✅ We NEVER store your card details\n✅ Every transaction is tracked and protected\n\nYour payment info is as secure as it gets. We take your security seriously! 🛡️",
     category: "Payments",
     order: 15,
     isActive: true,
@@ -167,7 +167,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Are the products fresh?",
     answer:
-      "All our products are very fresh! We work with local producers and goods are shipped within 24 hours of production. We use refrigerated packaging to maintain the cold chain.",
+      "Super fresh! 🌱 Here's our promise:\n\n✅ We work directly with local producers\n✅ Products ship within 24 hours of production\n✅ We use refrigerated packaging to keep the cold chain intact\n\nYou're getting farm-to-table freshness delivered right to your door!",
     category: "Products",
     order: 16,
     isActive: true,
@@ -176,7 +176,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Do you have products for food intolerances?",
     answer:
-      'Yes! We have a wide selection of products:\n✅ Gluten-free\n✅ Lactose-free\n✅ Vegetarian\n✅ Vegan\n✅ Halal\n✅ Organic\n\nSearch with filters: "gluten-free products", "vegan", etc.',
+      'Absolutely! 🌿 We have a great selection:\n\n✅ Gluten-free\n✅ Lactose-free\n✅ Vegetarian\n✅ Vegan\n✅ Halal\n✅ Organic\n\nJust search with filters like "gluten-free products" or "vegan options" and I\'ll show you what we have!',
     category: "Products",
     order: 17,
     isActive: true,
@@ -185,7 +185,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How are products packaged?",
     answer:
-      "We use:\n- Food-grade packaging\n- Refrigerated containers for fresh products\n- Eco-friendly protective materials\n- Individual wrapping for delicate products\n\nEverything arrives intact and at the right temperature!",
+      "We package everything with care! 📦\n\n✅ Food-grade materials (safe for contact with food)\n✅ Refrigerated containers for fresh products\n✅ Eco-friendly protective packaging (we love the planet! 🌍)\n✅ Individual wrapping for delicate items\n\nEverything arrives intact and at the perfect temperature!",
     category: "Products",
     order: 18,
     isActive: true,
@@ -194,7 +194,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I see product certifications?",
     answer:
-      'Yes! Each product has detailed information on:\n- DOP/IGP/STG certifications\n- Organic/Bio certifications\n- Halal certifications\n- Allergen lists\n\nWrite "product details [name]" to see complete information.',
+      'Yes! Each product comes with detailed info: 📜\n\n✅ DOP/IGP/STG certifications (protected origin)\n✅ Organic/Bio certifications\n✅ Halal certifications\n✅ Complete allergen lists\n\nJust message "product details [name]" and I\'ll show you everything!',
     category: "Products",
     order: 19,
     isActive: true,
@@ -207,7 +207,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How do I register?",
     answer:
-      "Registration is automatic! Just start a conversation on WhatsApp and I will guide you. You will need:\n- Name and surname\n- Delivery address\n- Phone number (already have it!)\n\nThat's it, you're registered!",
+      "Super easy! Just start chatting with us right here on WhatsApp and we'll walk you through it. 😊\n\nAll we need:\n✅ Your name\n✅ Delivery address\n✅ Phone number (we already have this!)\n\nThat's it—you're in! No complicated forms, no hassle.",
     category: "Account",
     order: 20,
     isActive: true,
@@ -216,7 +216,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How do I change my data?",
     answer:
-      'You can update your information anytime by writing:\n- "change address"\n- "update phone number"\n- "modify delivery address"\n\nI will send you a secure link to update your details.',
+      'Need to update something? No problem! Just message me:\n\n• "change address"\n• "update phone number"\n• "modify delivery address"\n\nI\'ll send you a secure link where you can update your details. Quick and easy! 🔗',
     category: "Account",
     order: 21,
     isActive: true,
@@ -225,7 +225,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How is my privacy protected?",
     answer:
-      'Your privacy is fundamental:\n✅ Data encrypted with SSL\n✅ GDPR compliant\n✅ No data sharing with third parties\n✅ Right to access, modify, delete data\n\nWrite "privacy policy" to read the complete document.',
+      'Your privacy is sacred to us! 🔒 Here\'s how we protect you:\n\n✅ All data encrypted with SSL\n✅ Fully GDPR compliant\n✅ We NEVER share your data with third parties\n✅ You have full rights to access, modify, or delete your data\n\nWant the full details? Just message "privacy policy" to read our complete document.',
     category: "Account",
     order: 22,
     isActive: true,
@@ -234,7 +234,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "What are the costs for using eChatbot messaging?",
     answer:
-      "eChatbot messaging costs:\n💬 Messages: $0.10 (10 cents USD) per message sent\n🔔 Push notifications: €1.00 per push notification sent\n\nYou only pay for messages and notifications actually sent. No hidden fees!",
+      "eChatbot pricing is simple and transparent! 💰\n\n💬 Messages: $0.10 (10 cents USD) per message sent\n🔔 Push notifications: €1.00 per notification sent\n\nYou only pay for what you actually use. No hidden fees, no surprises! Track everything in your dashboard in real-time. 📊",
     category: "Billing",
     order: 23,
     isActive: true,
@@ -243,7 +243,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How am I charged for eChatbot messages?",
     answer:
-      "Billing is simple and transparent:\n📊 Per-message charging: Each message costs $0.10 USD\n📊 Per-push charging: Each push notification costs €1.00\n💳 Billing on use: You only pay for what you actually send\n📈 Transparent dashboard: Track all your costs in real-time\n\nMonthly invoices show detailed breakdown of all messages and notifications.",
+      "Billing is crystal clear: 💳\n\n📊 Per-message: Each message costs $0.10 USD\n📊 Per-push: Each push notification costs €1.00\n💳 Pay for usage: You only pay for what you send\n📈 Real-time tracking: See all costs live in your dashboard\n\nMonthly invoices show a detailed breakdown of every message and notification. No surprises!",
     category: "Billing",
     order: 24,
     isActive: true,
@@ -252,7 +252,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I contact a sales agent directly?",
     answer:
-      "If your team has a dedicated sales agent assigned to you, you can contact them directly! 👤\n\nWrite:\n- \"contact sales agent\"\n- \"speak with my agent\"\n- \"my dedicated agent\"\n\nYour support message will be routed directly to your assigned sales agent who will respond personally.",
+      "If you have a dedicated sales agent assigned, absolutely! 👤\n\nJust say:\n• \"contact sales agent\"\n• \"speak with my agent\"\n• \"my dedicated agent\"\n\nYour message will go straight to your personal agent who'll respond personally. It's like having a direct line to your team!",
     category: "Support",
     order: 25,
     isActive: true,
@@ -261,7 +261,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How do I set up WhatsApp integration with eChatbot?",
     answer:
-      "To connect WhatsApp with eChatbot, you need:\n\n1️⃣ Facebook Business Account (create at https://business.facebook.com)\n2️⃣ Enable WhatsApp Channel in Facebook App Manager\n3️⃣ Get WhatsApp API Key from Meta\n4️⃣ Add API Key to eChatbot settings\n\n📺 Helpful video guide: https://www.youtube.com/watch?v=BsDsc1ZtSs4\n\nOnce configured, your customers can message you directly on WhatsApp!",
+      "Let's get you connected! Here's what you need: 📱\n\n1️⃣ Create a Facebook Business Account at https://business.facebook.com\n2️⃣ Enable WhatsApp in Facebook App Manager\n3️⃣ Get your WhatsApp API Key from Meta\n4️⃣ Add the API Key to eChatbot settings\n\n📺 Need help? Watch this guide: https://www.youtube.com/watch?v=BsDsc1ZtSs4\n\nOnce done, your customers can message you directly on WhatsApp! 🎉",
     category: "Setup",
     order: 26,
     isActive: true,
@@ -270,7 +270,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "What languages does eChatbot support?",
     answer:
-      "eChatbot is multilingual! 🌍 The AI automatically understands and responds in:\n\n🇮🇹 Italian (Italiano)\n🇬🇧 English\n🇪🇸 Spanish (Español)\n🇵🇹 Portuguese (Português)\n\nNo configuration needed! Your customers can write in any of these languages and the AI will respond in their language automatically. Perfect for international businesses!",
+      "We speak YOUR customer's language! 🌍 The AI automatically understands and responds in:\n\n🇮🇹 Italian (Italiano)\n🇬🇧 English\n🇪🇸 Spanish (Español)\n🇵🇹 Portuguese (Português)\n\nZero configuration needed! Customers can write in any of these languages and the AI responds back in their language automatically. Perfect for going international! 🚀",
     category: "Features",
     order: 27,
     isActive: true,
@@ -279,7 +279,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can eChatbot integrate with my CRM?",
     answer:
-      "Yes! eChatbot offers custom CRM integration 🔗\n\nConnect your:\n✅ Customer data & profiles\n✅ Order history\n✅ Real-time event triggers\n✅ Carrier APIs for shipping tracking\n\nEvery response is grounded in YOUR data. Sync customer profiles, pull order history, and trigger workflows automatically.\n\n📧 Contact support for a quote: Integration available upon request",
+      "Yes! We offer custom CRM integration 🔗\n\nConnect:\n✅ Customer data & profiles\n✅ Order history\n✅ Real-time event triggers\n✅ Carrier APIs for shipment tracking\n\nEvery response is grounded in YOUR data. Sync profiles, pull order history, trigger workflows automatically.\n\n📧 Want this? Contact our team for a quote—custom integration available on request!",
     category: "Integration",
     order: 28,
     isActive: true,
@@ -288,7 +288,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can eChatbot track shipments in real-time?",
     answer:
-      "Yes! With CRM integration, eChatbot can connect to your carrier's API 🚚\n\nFeatures:\n✅ Real-time shipment tracking\n✅ Automatic status updates\n✅ Delivery predictions\n✅ Customer notifications\n\nYour customers ask \"where is my order?\" and the chatbot pulls live tracking data from your carrier.\n\n📧 Contact us for setup: Custom carrier integration available",
+      "Absolutely! With CRM integration, we connect directly to your carrier's API 🚚\n\nFeatures:\n✅ Live shipment tracking\n✅ Automatic status updates\n✅ Delivery predictions\n✅ Customer notifications\n\nCustomers ask \"where is my order?\" and boom—instant live tracking from your carrier!\n\n📧 Want this setup? Contact us for custom carrier integration!",
     category: "Integration",
     order: 29,
     isActive: true,
@@ -297,7 +297,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "What is Privacy by Design in eChatbot?",
     answer:
-      "Your data privacy is built into everything we do 🔒\n\n✅ NO sensitive data sent to AI models\n✅ NO data sharing with third parties\n✅ Scoped tokens: Each interaction has minimum required access\n✅ Encrypted in transit: All data protected with industry-standard encryption\n✅ Your control: Customer data stays under YOUR control at all times\n\nWe believe privacy isn't an afterthought—it's the foundation. Every feature is designed to use the minimum data necessary, and you maintain complete control over your customer information.",
+      "Privacy isn't an afterthought—it's built into everything! 🔒\n\n✅ NO sensitive data sent to AI models\n✅ NO sharing with third parties\n✅ Scoped tokens: Each interaction has minimum required access\n✅ Encrypted in transit: Industry-standard encryption\n✅ Your control: Customer data stays under YOUR control\n\nWe believe privacy is the foundation. Every feature uses the minimum data necessary, and you maintain complete control.",
     category: "Features",
     order: 30,
     isActive: true,
@@ -310,7 +310,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How much does it cost to send a push notification?",
     answer:
-      "Push notifications cost $1.00 per message. This is a simple and transparent pricing model that allows you to reach your customers directly with targeted messages and promotions.",
+      "Push notifications cost $1.00 per message. 📲\n\nSimple, transparent pricing! This lets you reach your customers directly with targeted messages and promotions whenever you need to. No monthly fees—just pay for what you send!",
     category: "Campaigns",
     order: 31,
     isActive: true,
@@ -319,7 +319,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I schedule push notifications?",
     answer:
-      "Yes! You can schedule push notifications to be sent at specific times and dates. This allows you to plan your campaigns in advance and reach customers when they are most likely to engage. You can also set up recurring campaigns for regular reminders and promotions.",
+      "Absolutely! ⏰ Schedule your campaigns for specific times and dates.\n\nThis means you can:\n✅ Plan campaigns in advance\n✅ Reach customers at optimal times\n✅ Set up recurring campaigns for regular promotions\n\nSmart timing = better engagement! 📈",
     category: "Campaigns",
     order: 32,
     isActive: true,
@@ -328,7 +328,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I use AI to understand what message to send in a push?",
     answer:
-      "With the Enterprise version, we can analyze your data together to determine the best campaign strategy. Our AI analyzes customer behavior, preferences, and engagement patterns to recommend optimal message content, timing, and target segments for maximum impact.",
+      "With the Enterprise version, YES! 🤖\n\nWe'll work together to analyze your data and determine the best campaign strategy. Our AI looks at:\n✅ Customer behavior patterns\n✅ Preferences & engagement history\n✅ Optimal timing & content\n✅ Target segments\n\nIt's like having a marketing expert on your team! Want to learn more? Contact us!",
     category: "Campaigns",
     order: 33,
     isActive: true,
@@ -337,7 +337,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Where can I get product availability information?",
     answer:
-      "With the Enterprise version, we can connect to external services to retrieve real-time product availability information. This integration allows us to keep your campaigns accurate by showing up-to-date stock levels, delivery dates, and inventory status directly from your systems.",
+      "With Enterprise, we connect to your external services for real-time data! 📊\n\nThis integration gives you:\n✅ Up-to-date stock levels\n✅ Delivery dates\n✅ Inventory status\n✅ Live product availability\n\nKeep your campaigns accurate with data straight from your systems!",
     category: "Campaigns",
     order: 34,
     isActive: true,
@@ -346,7 +346,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "How many people can collaborate on campaigns?",
     answer:
-      "The workspace is shared with users who have received an invitation. All team members with workspace access can view and collaborate on campaigns together. You can invite as many team members as you need, and everyone will have visibility into campaign performance and customer engagement.",
+      "Your whole team! 👥\n\nThe workspace is shared with everyone you invite. All team members get:\n✅ Full campaign visibility\n✅ Performance metrics\n✅ Customer engagement data\n✅ Collaboration tools\n\nInvite as many teammates as you need—everyone works together seamlessly!",
     category: "Campaigns",
     order: 35,
     isActive: true,
@@ -355,7 +355,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I block a user from receiving campaigns?",
     answer:
-      "Yes, you can block users if needed. If a customer sends spam or requests to stop receiving messages, you can block them. Blocked users will not receive any further campaigns or communications from your business.",
+      "Yes, you have full control! 🚫\n\nIf a customer sends spam or asks to unsubscribe, you can block them. Blocked users won't receive:\n✅ Any further campaigns\n✅ Marketing messages\n✅ Push notifications\n\nRespecting preferences keeps your reputation strong!",
     category: "Campaigns",
     order: 36,
     isActive: true,
@@ -364,7 +364,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I intervene in the chat during a campaign?",
     answer:
-      "Yes, absolutely! You can take over the chat at any moment and intervene directly. Simply turn off the chatbot and start conversing with the customer personally. This allows you to provide personal support, handle special requests, or resolve issues in real-time.",
+      "Absolutely! You're always in control. 💬\n\nJust turn off the chatbot and jump in personally. Perfect for:\n✅ Providing personal support\n✅ Handling special requests\n✅ Resolving issues in real-time\n✅ Building customer relationships\n\nSwitch between AI and human support anytime!",
     category: "Campaigns",
     order: 37,
     isActive: true,
@@ -373,7 +373,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Are there statistics for campaigns?",
     answer:
-      "Yes! We provide detailed statistics for every channel. You can view:\n✅ Message delivery rates\n✅ Customer engagement metrics\n✅ Click-through rates\n✅ Conversion data\n✅ Performance by channel (WhatsApp, Widget, etc.)\n✅ Customer response analysis\n\nUse these insights to optimize your campaigns and improve results.",
+      "Oh yes! We love data. 📊\n\nYou get detailed stats for every channel:\n✅ Message delivery rates\n✅ Customer engagement metrics\n✅ Click-through rates\n✅ Conversion data\n✅ Performance by channel (WhatsApp, Widget, etc.)\n✅ Response analysis\n\nUse these insights to optimize and improve your results!",
     category: "Campaigns",
     order: 38,
     isActive: true,
@@ -382,7 +382,7 @@ export const defaultFAQs = (
     workspaceId,
     question: "Can I use the widget for web and WhatsApp at the same time?",
     answer:
-      "Yes! That's exactly the purpose of eChatbot. You can deploy the widget on your website and also maintain your WhatsApp business number, using both channels simultaneously. Customers can choose their preferred way to communicate, and all conversations are unified in your workspace for a seamless experience.",
+      "That's exactly the point! 🎯\n\nDeploy the widget on your website AND maintain your WhatsApp Business number—both at once!\n\nBenefits:\n✅ Customers choose their preferred channel\n✅ All conversations unified in one workspace\n✅ Seamless experience across platforms\n✅ Maximum reach\n\nMeet your customers wherever they are! 🌐",
     category: "Campaigns",
     order: 39,
     isActive: true,

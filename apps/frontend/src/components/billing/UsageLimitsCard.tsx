@@ -73,6 +73,16 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
     if (limit === null || limit >= 999) return "∞"
     return limit.toString()
   }
+  const getDisplayPercentage = (
+    count: number,
+    limit: number | null,
+    percentage: number
+  ): number => {
+    if (limit === null || limit >= 999) {
+      return Math.min(100, Math.max(4, Math.round(count)))
+    }
+    return percentage
+  }
 
   return (
     <Card className="h-full">
@@ -94,10 +104,19 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
               </span>
             </div>
             <div className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200">
+              {(() => {
+                const displayPercentage = getDisplayPercentage(
+                  item.count,
+                  item.max,
+                  item.percentage
+                )
+                return (
               <div 
-                className={`h-full transition-all ${getProgressColor(item.percentage)}`}
-                style={{ width: `${Math.min(item.percentage, 100)}%` }}
+                    className={`h-full transition-all ${getProgressColor(displayPercentage)}`}
+                    style={{ width: `${Math.min(displayPercentage, 100)}%` }}
               />
+                )
+              })()}
             </div>
           </div>
         ))}

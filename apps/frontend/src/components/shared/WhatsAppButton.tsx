@@ -44,6 +44,7 @@ export function WhatsAppButton({
         onClose={() => setIsModalOpen(false)}
         workspaceId={workspace?.id}
         selectedChat={selectedChat}
+        logoUrl={workspace?.logoUrl}
       />
     </>
   )

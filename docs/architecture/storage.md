@@ -64,7 +64,18 @@ Size: ~100KB per logo
 Cleanup: Quando canale eliminato
 ```
 
-### 6. **File Temporanei** ⏱️
+### 6. **Allegati Support Tickets** 🎫
+```typescript
+Tipo: Private
+Storage: Cloudinary (production) / Local (dev)
+Access: Private (download autenticato)
+Path: support-tickets/{ticketId}/{file}
+Retention: Fino a eliminazione ticket o cleanup pianificato
+Size: <= 10MB per file (max 5 per messaggio)
+Cleanup: Su delete ticket + scheduler per ticket chiusi
+```
+
+### 7. **File Temporanei** ⏱️
 ```typescript
 Tipo: Temporary
 Storage: Cloudinary (temp folder)
@@ -196,6 +207,15 @@ async function reportUnusedFiles() {
     body: JSON.stringify(report, null, 2)
   });
 }
+```
+
+### Job 4: Support Attachments Cleanup (Ogni giorno 23:25)
+
+```typescript
+/**
+ * Elimina allegati di ticket chiusi piu vecchi della retention.
+ * Retention configurabile con SUPPORT_ATTACHMENTS_RETENTION_DAYS (default 90).
+ */
 ```
 
 ---

@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { storage } from "@/lib/storage"
 import { getUnreadCount } from "@/services/supportApi"
 import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo, Mail } from "lucide-react"
@@ -36,6 +37,9 @@ export function MinimalLayout() {
   
   // Get workspace from context (reactive to changes)
   const { workspace } = useWorkspace()
+  
+  // Get user role - only owners can see billing
+  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
   
   // User profile state
   const [userName, setUserName] = useState<string>("")
@@ -332,7 +336,7 @@ export function MinimalLayout() {
                     <Megaphone className="mr-2 h-4 w-4 text-rose-500" />
                     <span>Campaigns</span>
                   </DropdownMenuItem>
-                  {workspace?.sellsProductsAndServices && (
+                  {workspace?.sellsProductsAndServices && isSuperAdmin && (
                     <DropdownMenuItem
                       className="p-2 cursor-pointer"
                       onClick={() => navigate("/analytics")}
@@ -359,13 +363,15 @@ export function MinimalLayout() {
                     <User className="mr-2 h-4 w-4 text-blue-500" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/billing")}
-                  >
-                    <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
-                    <span>Billing</span>
-                  </DropdownMenuItem>
+                  {isSuperAdmin && (
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer"
+                      onClick={() => navigate("/billing")}
+                    >
+                      <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
+                      <span>Billing</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     className="p-2 cursor-pointer relative"
                     onClick={() => navigate("/support/tickets")}

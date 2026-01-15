@@ -1807,6 +1807,7 @@ export function ChatPage() {
         phoneNumber={workspace?.whatsappPhoneNumber}
         workspaceId={workspace?.id}
         selectedChat={selectedChat as any}
+        logoUrl={workspace?.logoUrl}
       />
 
       {/* Message Flow Dialog */}

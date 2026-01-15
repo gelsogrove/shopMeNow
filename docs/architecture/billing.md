@@ -120,6 +120,8 @@ eChatbot uses a **prepaid credit system** combined with **subscription plans**. 
 | **PREMIUM** | €49/month | 2 | 100 | 100 | - |
 | **ENTERPRISE** | Custom | ∞ | ∞ | ∞ | - |
 
+**Customers/Leads count**: includes all customers and leads that are **not deleted** (`deletedAt = null`) and **not blacklisted** (`isBlacklisted = false`), regardless of registration status. Playground test customers are excluded.
+
 ### Operation Costs (from `BillingPrices` enum)
 
 | Operation | Cost | Enum Key | When Charged |

@@ -18,7 +18,7 @@ import { format } from "date-fns"
 import { toast } from "@/lib/toast"
 import { roundMoney } from "@/utils/money"
 
-const TAX_RATE = 0.22 // 22% IVA
+const TAX_RATE = 0.21 // 21% IVA
 const ITEMS_PER_PAGE = 10
 
 export function BillingPage() {

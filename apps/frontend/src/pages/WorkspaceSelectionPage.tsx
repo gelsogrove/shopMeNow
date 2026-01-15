@@ -14,21 +14,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
-import { BillingSection, PLAN_LIMITS } from "@/components/billing/BillingSection"
+import { BillingSection } from "@/components/billing/BillingSection"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
@@ -38,7 +30,7 @@ import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
-import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -94,8 +86,6 @@ const PLAN_LABELS: Record<PlanType, string> = {
   ENTERPRISE: "Enterprise",
 }
 
-const defaultWipMessage = "Work in progress. Please contact us later."
-
 const PLAN_TYPE_VALUES: PlanType[] = ["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"]
 
 const normalizePlanType = (value?: string | null): PlanType => {
@@ -149,8 +139,6 @@ export function WorkspaceSelectionPage() {
   const [userEmail, setUserEmail] = useState("") // Email from token (auto-filled)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
-  const [channelLimitError, setChannelLimitError] = useState(false)
-  const [channelLimitMessage, setChannelLimitMessage] = useState("")
   const [validationErrors, setValidationErrors] = useState<{
     whatsapp?: string
   }>({})
@@ -161,15 +149,15 @@ export function WorkspaceSelectionPage() {
   // Support tickets unread count
   const [supportUnreadCount, setSupportUnreadCount] = useState(0)
   
+  // PayPal popup state
+  const [showPayPalPopup, setShowPayPalPopup] = useState(false)
+  
   // Logo upload state
   const [logoDialogOpen, setLogoDialogOpen] = useState(false)
   const [selectedWorkspaceForLogo, setSelectedWorkspaceForLogo] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [debugDialogOpen, setDebugDialogOpen] = useState(false)
-  const [debugDialogWorkspaceId, setDebugDialogWorkspaceId] = useState<string | null>(null)
-  const [debugDialogValue, setDebugDialogValue] = useState(false)
-  const [debugSaving, setDebugSaving] = useState(false)
+  const [debugSavingId, setDebugSavingId] = useState<string | null>(null)
 
   // ============================================================================
   // WIZARD HELPERS
@@ -261,7 +249,6 @@ export function WorkspaceSelectionPage() {
       email: userEmail, // Pre-fill with logged user email
     })
     setErrorMessage("")
-    setChannelLimitError(false)
     setValidationErrors({})
   }, [userEmail])
 
@@ -390,47 +377,25 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   const currentPlanType = normalizePlanType(
     sharedBillingOverview?.billing?.planType || firstWorkspace?.planType
   )
-  const currentChannelLimit =
-    sharedBillingOverview?.limits?.maxChannels ?? PLAN_LIMITS[currentPlanType].maxChannels
+  // ⚠️ Limiti SEMPRE dal database (sharedBillingOverview) - NO fallback hardcoded
+  const currentChannelLimit = sharedBillingOverview?.limits?.maxChannels ?? 0
   const currentChannelUsage =
     sharedBillingOverview?.usage?.channelsCount ?? workspaces.length
-  const channelLimitReached = currentChannelUsage >= currentChannelLimit
-  const wizardBlocked = channelLimitError || channelLimitReached
-
-  useEffect(() => {
-    if (channelLimitReached) {
-      const defaultMessage = `Your ${PLAN_LABELS[currentPlanType]} plan allows ${currentChannelLimit} channel${currentChannelLimit > 1 ? "s" : ""}. You already have ${currentChannelUsage}.`
-      setChannelLimitError(true)
-      setChannelLimitMessage((prev) => prev || defaultMessage)
-    } else if (channelLimitError) {
-      setChannelLimitError(false)
-      setChannelLimitMessage("")
-    }
-  }, [
-    channelLimitReached,
-    channelLimitError,
-    currentChannelLimit,
-    currentChannelUsage,
-    currentPlanType,
-  ])
+  const channelLimitReached = currentChannelLimit > 0 && currentChannelUsage >= currentChannelLimit
 
   const openWizardDialog = useCallback(() => {
-    if (!wizardOpen) {
-      resetWizard()
-    }
-
+    // Se limite canali raggiunto: mostra toast e apri dialog Change Plan
     if (channelLimitReached) {
       const planLabel = PLAN_LABELS[currentPlanType]
-      const message = `Your ${planLabel} plan allows ${currentChannelLimit} channel${currentChannelLimit > 1 ? "s" : ""}. You already have ${currentChannelUsage}.`
-      setChannelLimitError(true)
-      setChannelLimitMessage(message)
+      const message = `Il tuo piano ${planLabel} permette ${currentChannelLimit} canal${currentChannelLimit > 1 ? "i" : "e"}. Ne hai già ${currentChannelUsage}. Aggiorna il piano per aggiungere più canali.`
       toast.error(message)
-    } else {
-      setChannelLimitError(false)
-      setChannelLimitMessage("")
+      setOpenChangePlanDialog(true)
+      return
     }
 
+    // Altrimenti apri wizard normalmente
     if (!wizardOpen) {
+      resetWizard()
       setWizardOpen(true)
     }
   }, [
@@ -575,6 +540,12 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     window.location.href = `/chat?workspaceId=${workspace.id}`
   }
 
+  const handleOpenSettings = (workspace: Workspace, e: React.MouseEvent) => {
+    e.stopPropagation()
+    storage.setWorkspace(workspace)
+    window.location.href = "/settings"
+  }
+
   // Gestisce la creazione di un nuovo workspace (from wizard)
   const handleCreateWorkspace = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -595,7 +566,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
     try {
       setIsLoading(true)
-      setChannelLimitError(false)
       
       // 🆕 Build workspace data with ALL wizard configuration (Feature 199)
       // Website URL is automatically added to allowedExternalLinks with echatbot.ai and paypal.com
@@ -649,12 +619,14 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     } catch (error: any) {
       // Check if it's a channel limit error
       if (error?.response?.data?.code === "CHANNEL_LIMIT_EXCEEDED") {
-        setChannelLimitError(true)
         const limitMsg =
           error.response.data.message ||
-          `You've reached your channel limit (${currentChannelUsage}/${currentChannelLimit}). Upgrade to add more channels.`
-        setChannelLimitMessage(limitMsg)
+          `Hai raggiunto il limite di canali (${currentChannelUsage}/${currentChannelLimit}). Aggiorna il piano per aggiungere più canali.`
         setErrorMessage(limitMsg)
+        toast.error(limitMsg)
+        // Apri dialog Change Plan
+        closeWizardDialog()
+        setOpenChangePlanDialog(true)
       } else {
         setErrorMessage("Failed to create channel")
       }
@@ -664,37 +636,26 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     }
   }
 
-  const openDebugDialog = (id: string, e: React.MouseEvent) => {
+  const handleToggleDebugMode = async (
+    id: string,
+    currentValue: boolean,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation()
-    const workspace = workspaces.find((w) => w.id === id)
-    if (!workspace) return
-    setDebugDialogWorkspaceId(workspace.id)
-    setDebugDialogValue(Boolean(workspace.debugMode))
-    setDebugDialogOpen(true)
-  }
-
-  const closeDebugDialog = () => {
-    setDebugDialogOpen(false)
-    setDebugDialogWorkspaceId(null)
-  }
-
-  const handleSaveDebugMode = async () => {
-    if (!debugDialogWorkspaceId) return
-    setDebugSaving(true)
+    setDebugSavingId(id)
     try {
-      const updatedWorkspace = await updateWorkspace(debugDialogWorkspaceId, {
-        debugMode: debugDialogValue,
+      const updatedWorkspace = await updateWorkspace(id, {
+        debugMode: !currentValue,
       })
       const updatedWorkspaces = workspaces.map((w) =>
-        w.id === debugDialogWorkspaceId ? updatedWorkspace : w
+        w.id === id ? updatedWorkspace : w
       )
       setWorkspaces(updatedWorkspaces)
-      closeDebugDialog()
     } catch (error) {
       logger.error("Error updating debug mode:", error)
       toast.error("Failed to update debug mode")
     } finally {
-      setDebugSaving(false)
+      setDebugSavingId(null)
     }
   }
 
@@ -773,18 +734,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     setSelectedWorkspaceForLogo(workspaceId)
     setLogoDialogOpen(true)
   }
-
-  const selectedDebugWorkspace = debugDialogWorkspaceId
-    ? workspaces.find((w) => w.id === debugDialogWorkspaceId) ?? null
-    : null
-  const debugWipMessage =
-    typeof selectedDebugWorkspace?.wipMessage === "string" &&
-    selectedDebugWorkspace.wipMessage.trim()
-      ? selectedDebugWorkspace.wipMessage
-      : defaultWipMessage
-  const hasDebugChange = selectedDebugWorkspace
-    ? Boolean(selectedDebugWorkspace.debugMode) !== debugDialogValue
-    : false
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -953,7 +902,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 pb-24">{/* pb-24 = 6rem per vedere bene il footer */}
 
         {/* ========== LOADING STATE ========== */}
         {isLoading && (
@@ -967,7 +916,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
         {/* ========== NO WORKSPACES: Show Welcome + Create Form ========== */}
         {!isLoading && workspaces.length === 0 && (
-          <Card className="max-w-xl mx-auto">
+          <Card className="max-w-6xl mx-auto">
             <CardHeader className="text-center pb-2">
               <div className="mx-auto p-4 bg-green-100 rounded-full w-fit mb-4">
                 <Smartphone className="h-10 w-10 text-green-600" />
@@ -986,41 +935,81 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 </div>
               )}
 
-              <div className="grid gap-4 text-left sm:grid-cols-2">
-                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Store className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-semibold text-gray-900">Catalog ready</p>
-                      <p className="text-sm text-gray-500">Import your Italian products and services.</p>
+              {/* Value Propositions Grid - 2x4 */}
+              <div className="grid gap-2.5 text-left sm:grid-cols-2 lg:grid-cols-4">
+                {/* Row 1 */}
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-green-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-green-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <Store className="h-5 w-5 text-green-600" />
                     </div>
+                    <p className="font-semibold text-gray-900 text-sm">Catalog ready</p>
+                    <p className="text-xs text-gray-500">Products & services</p>
                   </div>
                 </div>
-                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Headphones className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-semibold text-gray-900">Human handoff</p>
-                      <p className="text-sm text-gray-500">Let customers reach your operators with one tap.</p>
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-blue-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-blue-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <Headphones className="h-5 w-5 text-blue-600" />
                     </div>
+                    <p className="font-semibold text-gray-900 text-sm">Human handoff</p>
+                    <p className="text-xs text-gray-500">Operator support</p>
                   </div>
                 </div>
-                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-semibold text-gray-900">Sales routing</p>
-                      <p className="text-sm text-gray-500">Assign leads to your agents automatically.</p>
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-purple-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-purple-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <Users className="h-5 w-5 text-purple-600" />
                     </div>
+                    <p className="font-semibold text-gray-900 text-sm">Sales routing</p>
+                    <p className="text-xs text-gray-500">Auto-assign leads</p>
                   </div>
                 </div>
-                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
-                  <div className="flex items-center gap-3">
-                    <Bot className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-semibold text-gray-900">AI tone & FAQs</p>
-                      <p className="text-sm text-gray-500">Configure tone of voice, identity, and FAQs.</p>
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-indigo-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-indigo-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <Bot className="h-5 w-5 text-indigo-600" />
                     </div>
+                    <p className="font-semibold text-gray-900 text-sm">AI tone & FAQs</p>
+                    <p className="text-xs text-gray-500">Custom identity</p>
+                  </div>
+                </div>
+                
+                {/* Row 2 */}
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-amber-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-amber-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <DollarSign className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <p className="font-semibold text-gray-900 text-sm">Pay per use</p>
+                    <p className="text-xs text-gray-500">No fixed costs</p>
+                  </div>
+                </div>
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-teal-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-teal-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <Languages className="h-5 w-5 text-teal-600" />
+                    </div>
+                    <p className="font-semibold text-gray-900 text-sm">Multilingual</p>
+                    <p className="text-xs text-gray-500">IT, EN, ES, PT</p>
+                  </div>
+                </div>
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-rose-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-rose-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <BarChart3 className="h-5 w-5 text-rose-600" />
+                    </div>
+                    <p className="font-semibold text-gray-900 text-sm">Real-time analytics</p>
+                    <p className="text-xs text-gray-500">Track performance</p>
+                  </div>
+                </div>
+                <div className="group p-3 border border-gray-200 rounded-xl bg-gradient-to-br from-cyan-50 to-white hover:shadow-md transition-all">
+                  <div className="flex flex-col items-center text-center gap-1.5">
+                    <div className="p-2 bg-cyan-100 rounded-lg group-hover:scale-110 transition-transform">
+                      <Zap className="h-5 w-5 text-cyan-600" />
+                    </div>
+                    <p className="font-semibold text-gray-900 text-sm">24/7 automated</p>
+                    <p className="text-xs text-gray-500">Always online</p>
                   </div>
                 </div>
               </div>
@@ -1028,7 +1017,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               <div className="text-center space-y-3">
                 <Button
                   onClick={openWizardDialog}
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 px-8"
                   size="lg"
                 >
                   Launch Setup Wizard
@@ -1059,7 +1048,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
+                  className={`gap-1.5 ${channelLimitReached ? 'opacity-50 cursor-not-allowed' : 'text-green-600 border-green-600 hover:bg-green-50'}`}
                   onClick={openWizardDialog}
                 >
                   <PlusCircle className="h-4 w-4" />
@@ -1126,8 +1115,16 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         </button>
                       )}
                     </div>
-                    {/* Type Badge - Top Right */}
-                    <div className="absolute top-2 right-2">
+                    {/* Top Right Controls */}
+                    <div className="absolute top-2 right-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenSettings(workspace, e)}
+                        className="h-8 w-8 rounded-full bg-white/90 border border-gray-200 text-gray-600 shadow-sm flex items-center justify-center transition-colors hover:bg-white hover:text-gray-900"
+                        aria-label="Open settings"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </button>
                       <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${
                         workspace.sellsProductsAndServices 
                           ? "text-green-700 bg-white/90 border border-green-200" 
@@ -1254,8 +1251,14 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              onClick={(e) => openDebugDialog(workspace.id, e)}
-                              disabled={isRoleLoading}
+                              onClick={(e) =>
+                                handleToggleDebugMode(
+                                  workspace.id,
+                                  Boolean(workspace.debugMode),
+                                  e
+                                )
+                              }
+                              disabled={isRoleLoading || debugSavingId === workspace.id}
                               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                                 workspace.debugMode
                                   ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
@@ -1387,61 +1390,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 <X className="w-5 h-5" />
               </button>
 
-              {/* Error message for channel limit */}
-              {channelLimitError && (
-                <div className="m-6 mb-0 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
-                  <Crown className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-amber-800">Upgrade Required</p>
-                    <p className="text-sm text-amber-700 mt-1">
-                      {channelLimitMessage || "You've reached your channel limit. Upgrade your plan to add more channels."}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="mt-2 bg-amber-600 hover:bg-amber-700"
-                      onClick={() => {
-                        closeWizardDialog()
-                        setOpenChangePlanDialog(true)
-                        document.getElementById("billing-section")?.scrollIntoView({ behavior: 'smooth' })
-                      }}
-                    >
-                      Change Plan
-                    </Button>
-                  </div>
+              {/* Error message (se c'è) */}
+              {errorMessage && errorMessage !== "Enter an alias" && (
+                <div className="m-6 mb-0 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">{errorMessage}</p>
                 </div>
               )}
 
               {/* Step Content */}
               <div className="flex-1 p-6 overflow-y-auto">
-                {wizardBlocked ? (
-                  <div className="max-w-lg mx-auto text-center space-y-4 py-20">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
-                      <Crown className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-2xl font-semibold text-gray-900">Upgrade required</h3>
-                    <p className="text-gray-600 text-sm">
-                      {channelLimitMessage ||
-                        `Your ${PLAN_LABELS[currentPlanType]} plan allows ${currentChannelLimit} channel${
-                          currentChannelLimit > 1 ? "s" : ""
-                        }. You already have ${currentChannelUsage}. You can't add another channel until you upgrade.`}
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Button
-                        className="bg-amber-600 hover:bg-amber-700"
-                        onClick={() => {
-                          setOpenChangePlanDialog(true)
-                          document.getElementById("billing-section")?.scrollIntoView({ behavior: "smooth" })
-                        }}
-                      >
-                        Change Plan
-                      </Button>
-                      <Button variant="outline" onClick={closeWizardDialog}>
-                        Close
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
                 {/* STEP 1: Channel Details */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
@@ -1986,52 +1943,29 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
 
-                  </>
-                )}
               </div>
 
               {/* Footer with navigation */}
               <div className="p-6 border-t bg-gray-50 flex items-center justify-end">
-                {wizardBlocked ? (
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
+                  {wizardStep > 1 && (
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={closeWizardDialog}
+                      onClick={handlePrevStep}
+                      className="gap-2"
                     >
-                      Close
+                      <ChevronLeft className="w-4 h-4" />
+                      Back
                     </Button>
+                  )}
+                  
+                  {wizardStep < 9 ? (
                     <Button
-                      className="bg-amber-600 hover:bg-amber-700"
-                      onClick={() => {
-                        setOpenChangePlanDialog(true)
-                        document.getElementById("billing-section")?.scrollIntoView({ behavior: "smooth" })
-                        closeWizardDialog()
-                      }}
+                      onClick={handleNextStep}
+                      disabled={!validateCurrentStep()}
+                      className="bg-green-600 hover:bg-green-700 gap-2"
                     >
-                      Change Plan
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    {wizardStep > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handlePrevStep}
-                        className="gap-2"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Back
-                      </Button>
-                    )}
-                    
-                    {wizardStep < 9 ? (
-                      <Button
-                        onClick={handleNextStep}
-                        disabled={!validateCurrentStep()}
-                        className="bg-green-600 hover:bg-green-700 gap-2"
-                      >
                         Next
                         <ChevronRight className="w-4 h-4" />
                       </Button>
@@ -2046,7 +1980,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </Button>
                     )}
                   </div>
-                )}
+
               </div>
             </div>
           </div>
@@ -2080,12 +2014,46 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           />
         )}
 
+        {/* PayPal Integration Banner */}
+        <Card 
+          className="mt-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 cursor-pointer hover:shadow-lg transition-all"
+          onClick={() => setShowPayPalPopup(true)}
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                  <img src="/paypal.png" alt="PayPal" className="w-9 h-auto object-contain" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">
+                    Connect your PayPal Account
+                  </CardTitle>
+                  <CardDescription className="text-blue-700">
+                    Link your account to receive payments
+                  </CardDescription>
+                </div>
+              </div>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowPayPalPopup(true)
+                }}
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Setup
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
         {/* Support Ticket Card (Owner only) */}
         {isSuperAdmin && (
-          <Card className="mt-6 bg-gradient-to-br from-purple-50 to-white border-purple-100">
-            <CardHeader className="pb-3">
+          <Card className="mt-6 bg-gradient-to-br from-purple-50 to-white border-purple-100 cursor-pointer hover:shadow-lg transition-all">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
                     <Headphones className="w-5 h-5 text-purple-600" />
                   </div>
@@ -2109,99 +2077,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         )}
       </div>
 
-      <Dialog
-        open={debugDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeDebugDialog()
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Debug Mode</DialogTitle>
-            <DialogDescription>
-              Configure debug mode for{" "}
-              <span className="font-medium text-slate-900">
-                {selectedDebugWorkspace?.name || "this workspace"}
-              </span>
-              . Debug mode pauses live traffic and shows a WIP screen.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-slate-900">Mode</Label>
-              <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => setDebugDialogValue(false)}
-                  className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
-                    !debugDialogValue
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  Production
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDebugDialogValue(true)}
-                  className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
-                    debugDialogValue
-                      ? "bg-white text-slate-900 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  Debug
-                </button>
-              </div>
-              <p className="text-xs text-slate-500">
-                Changes apply immediately for this workspace.
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-sm font-semibold text-slate-900">Impact</p>
-              <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                <li>
-                  Playground {debugDialogValue ? "enabled" : "hidden"} for this
-                  workspace.
-                </li>
-                <li>WhatsApp queue {debugDialogValue ? "paused" : "active"}.</li>
-                <li>Widget {debugDialogValue ? "disabled" : "active"}.</li>
-                <li>Customers see the WIP message while debug mode is on.</li>
-              </ul>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-sm font-semibold text-slate-900">
-                WIP Message Preview
-              </p>
-              <p className="mt-2 text-xs text-slate-700 whitespace-pre-wrap">
-                {debugWipMessage}
-              </p>
-              <p className="mt-2 text-[11px] text-slate-500">
-                Edit this message in Settings &gt; Basic.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeDebugDialog}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveDebugMode}
-              disabled={debugSaving || !hasDebugChange}
-              className="bg-slate-900 hover:bg-slate-800"
-            >
-              {debugSaving ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
       {/* Logo Upload Dialog */}
       {logoDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -2254,8 +2129,50 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="mt-16 pb-8 text-center text-sm text-gray-500">
+      {/* PayPal Work in Progress Popup */}
+      {showPayPalPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[500px] max-w-[95vw] relative">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center space-y-4">
+                {/* Icon */}
+                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+                  <img src="/paypal.png" alt="PayPal" className="w-[59px] h-auto object-contain" />
+                </div>
+
+                {/* Title */}
+                <h2 className="text-2xl font-bold text-gray-900">
+                  PayPal Integration
+                </h2>
+
+                {/* Message */}
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-blue-600">
+                    🚧 Work in Progress
+                  </p>
+                  <p className="text-gray-600">
+                    We're working to make PayPal integration available as soon as possible.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    You'll be able to connect your PayPal account to receive payments directly from customers.
+                  </p>
+                </div>
+
+                {/* Close Button */}
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4"
+                  onClick={() => setShowPayPalPopup(false)}
+                >
+                  Got it
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer - Fixed at bottom */}
+      <footer className="fixed bottom-0 left-0 right-0 py-4 bg-white/80 backdrop-blur-sm border-t border-gray-200 text-center text-sm text-gray-500">
         <p>© 2025 eChatbot. All rights reserved.</p>
       </footer>
     </div>

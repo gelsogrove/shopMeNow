@@ -109,10 +109,10 @@ export const checkPlanLimits = (
 
       if (!limitCheck.withinLimits) {
         const limitMessages: Record<string, string> = {
-          customers: "clienti",
-          channels: "canali",
-          teamMembers: "membri team",
-          products: "prodotti",
+          customers: "customers",
+          channels: "channels",
+          teamMembers: "team members",
+          products: "products",
         }
 
         logger.warn(
@@ -120,14 +120,14 @@ export const checkPlanLimits = (
         )
 
         res.status(403).json({
-          error: "Limite piano raggiunto",
+          error: "Plan limit reached",
           code: "PLAN_LIMIT_REACHED",
           details: {
             limitType,
             current: limitCheck.current,
             max: limitCheck.max,
           },
-          message: `Hai raggiunto il limite massimo di ${limitMessages[limitType]} per il tuo piano (${limitCheck.current}/${limitCheck.max}). Passa a un piano superiore per aumentare i limiti.`,
+          message: `You have reached the maximum limit of ${limitMessages[limitType]} for your plan (${limitCheck.current}/${limitCheck.max}). Upgrade to a higher plan to increase limits.`,
         })
         return
       }

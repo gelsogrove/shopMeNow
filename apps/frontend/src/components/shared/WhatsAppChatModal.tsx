@@ -5,23 +5,15 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { getWorkspaceId } from "@/config/workspace.config"
+import { IMG_BASE_URL } from "@/config"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
-import { getAllForWorkspace, Client } from "@/services/clientsApi"
-import { Headphones, MessageCircle, Send, X, UserPlus, Users } from "lucide-react"
+import { MessageCircle, Send, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { ChatSurface } from "@/components/chat/ChatSurface"
 
@@ -89,6 +81,7 @@ interface WhatsAppChatModalProps {
   phoneNumber?: string
   workspaceId?: string
   selectedChat?: Chat | null
+  logoUrl?: string
 }
 
 export function WhatsAppChatModal({
@@ -99,8 +92,8 @@ export function WhatsAppChatModal({
   phoneNumber = "",
   workspaceId = "",
   selectedChat,
+  logoUrl,
 }: WhatsAppChatModalProps) {
-  const [userPhoneNumber, setUserPhoneNumber] = useState("")
   const [chatStarted, setChatStarted] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [currentMessage, setCurrentMessage] = useState("")
@@ -112,82 +105,18 @@ export function WhatsAppChatModal({
   const [showFunctionCalls, setShowFunctionCalls] = useState(false)
   const [showProcessedPrompt, setShowProcessedPrompt] = useState(false)
 
-  // Customer selection states
-  const [customers, setCustomers] = useState<Client[]>([])
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("")
-  const [isNewCustomer, setIsNewCustomer] = useState(false)
-  const [loadingCustomers, setLoadingCustomers] = useState(false)
-
   // 🧪 Playground safety states
   const [isPlaygroundMode, setIsPlaygroundMode] = useState(true) // Default to safe playground mode
-  const [showRealCustomerWarning, setShowRealCustomerWarning] = useState(false)
   const PLAYGROUND_PHONE = "+39 999 1234567" // Fake test number
+  const defaultLogoUrl =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='6' y='8' width='52' height='38' rx='12' fill='%2322c55e'/%3E%3Cpath d='M22 46L12 56V46Z' fill='%2322c55e'/%3E%3Ccircle cx='26' cy='27' r='4' fill='%23fff'/%3E%3Ccircle cx='42' cy='27' r='4' fill='%23fff'/%3E%3C/svg%3E"
 
-  // Load customers when modal opens
   useEffect(() => {
-    const loadCustomers = async () => {
-      const wsId = getWorkspaceId(workspaceId)
-      if (!isOpen || !wsId) return
-
-      setLoadingCustomers(true)
-      try {
-        const customerList = await getAllForWorkspace(wsId)
-        // Filter only active customers with phone numbers
-        const activeCustomers = customerList.filter(c => c.isActive && c.phone)
-        setCustomers(activeCustomers)
-        logger.info(`[WhatsApp Modal] Loaded ${activeCustomers.length} customers`)
-        
-        // 🧪 Default to playground test customer
-        const playgroundCustomer = activeCustomers.find(c => c.phone === PLAYGROUND_PHONE)
-        if (playgroundCustomer) {
-          setSelectedCustomerId(playgroundCustomer.id)
-          setUserPhoneNumber(PLAYGROUND_PHONE)
-          setIsPlaygroundMode(true)
-          logger.info(`[WhatsApp Modal] Defaulted to playground customer: ${PLAYGROUND_PHONE}`)
-        }
-      } catch (error) {
-        logger.error("[WhatsApp Modal] Failed to load customers:", error)
-        setCustomers([])
-      } finally {
-        setLoadingCustomers(false)
-      }
+    if (isOpen) {
+      setIsPlaygroundMode(true)
+      logger.info(`[WhatsApp Modal] Playground locked to ${PLAYGROUND_PHONE}`)
     }
-
-    loadCustomers()
-  }, [isOpen, workspaceId])
-
-  // Handle customer selection from dropdown
-  const handleCustomerSelect = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId)
-    
-    // 🧪 Check if switching to real customer from playground
-    if (isPlaygroundMode && customer?.phone !== PLAYGROUND_PHONE) {
-      setShowRealCustomerWarning(true)
-      return
-    }
-    
-    setSelectedCustomerId(customerId)
-    setIsNewCustomer(false)
-    setIsPlaygroundMode(customer?.phone === PLAYGROUND_PHONE)
-    
-    if (customer?.phone) {
-      setUserPhoneNumber(customer.phone)
-    }
-  }
-
-  // Handle new customer mode
-  const handleNewCustomerClick = () => {
-    setIsNewCustomer(true)
-    setSelectedCustomerId("")
-    setUserPhoneNumber("")
-  }
-
-  // Handle back to customer selection
-  const handleBackToSelection = () => {
-    setIsNewCustomer(false)
-    setSelectedCustomerId("")
-    setUserPhoneNumber("")
-  }
+  }, [isOpen])
 
   // 🔄 Handle modal close with chat list refresh
   const handleClose = () => {
@@ -229,26 +158,15 @@ export function WhatsAppChatModal({
   // Load chat from props or storage when the modal opens
   useEffect(() => {
     if (isOpen) {
-      // Priority 1: Use the chat passed from props if available
-      if (selectedChat) {
-        logger.info("Using selectedChat from props:", selectedChat)
-        setLocalSelectedChat(selectedChat)
+      setIsPlaygroundMode(true)
+      setLocalSelectedChat((prev) =>
+        prev && prev.customerPhone === PLAYGROUND_PHONE ? prev : null
+      )
 
-        // If the selectedChat has a sessionId, use it
-        if (selectedChat.sessionId) {
-          setSessionId(selectedChat.sessionId)
-          globalSessionId = selectedChat.sessionId
-        }
-
-        // Store in storage as backup
-        storage.setSelectedChat(selectedChat)
-        return
-      }
-
-      // Priority 2: Try to retrieve the chat from storage
+      // Priority 1: Use stored playground chat if available
       try {
         const savedChat = storage.getSelectedChat<Chat>()
-        if (savedChat) {
+        if (savedChat && savedChat.customerPhone === PLAYGROUND_PHONE) {
           logger.info("Using selectedChat from storage:", savedChat)
           setLocalSelectedChat(savedChat)
 
@@ -259,6 +177,10 @@ export function WhatsAppChatModal({
           }
 
           return
+        }
+
+        if (savedChat) {
+          storage.clearSelectedChat()
         }
       } catch (error) {
         logger.error("Error reading selectedChat from storage:", error)
@@ -276,7 +198,6 @@ export function WhatsAppChatModal({
   useEffect(() => {
     if (isOpen && localSelectedChat) {
       logger.info("Initializing chat with chat:", localSelectedChat)
-      setUserPhoneNumber(localSelectedChat.customerPhone)
       setChatStarted(true)
       fetchMessagesForSelectedChat(localSelectedChat)
     }
@@ -299,7 +220,6 @@ export function WhatsAppChatModal({
     } else if (isOpen && !localSelectedChat && !selectedChat) {
       // Handle case where modal opens without a selected chat
       logger.info("Modal opened without any chat")
-      setUserPhoneNumber(phoneNumber || "")
       // Focus input field when chat opens without selected chat
       setTimeout(() => {
         if (inputRef.current) {
@@ -388,35 +308,13 @@ export function WhatsAppChatModal({
     }
   }, [messages, isLoading])
 
-  // Get initials from channel name
-  const getInitials = (name: string) => {
-    if (!name) return ""
-    const words = name.split(" ")
-    if (words.length === 1) return name.substring(0, 2).toUpperCase()
-    return (words[0][0] + words[1][0]).toUpperCase()
-  }
-
   // Validate phone number - at least 10 digits
   const isValidPhoneNumber = (number: string) => {
     return /^\+?[\d\s]{10,}$/.test(number.trim())
   }
 
-  // Format WhatsApp message for display - handles asterisks as bold
-  const formatWhatsAppMessage = (text: string) => {
-    // Replace single asterisks with <strong> tags for bold text
-    let formattedText = text.replace(/\*(.*?)\*/g, "<strong>$1</strong>")
-
-    // Replace underscores with <em> tags for italic text
-    formattedText = formattedText.replace(/_(.*?)_/g, "<em>$1</em>")
-
-    // Convert line breaks to <br> tags
-    formattedText = formattedText.replace(/\n/g, "<br />")
-
-    return formattedText
-  }
-
   const startChat = async () => {
-    if (!isValidPhoneNumber(userPhoneNumber)) return
+    if (!isValidPhoneNumber(PLAYGROUND_PHONE)) return
     if (!initialMessage.trim()) return
 
     // Check if we have a valid workspace
@@ -453,7 +351,7 @@ export function WhatsAppChatModal({
       // Include isNewConversation flag for new chats
       const response = await api.post("/whatsapp/webhook", {
         message: userMessage.content,
-        phoneNumber: userPhoneNumber,
+        phoneNumber: PLAYGROUND_PHONE,
         workspaceId: currentWorkspaceId,
         channelPhoneNumber: phoneNumber, // 🔧 NEW: Send channel phone number for workspace lookup
         isNewConversation: true, // Add flag to indicate new conversation
@@ -493,7 +391,7 @@ export function WhatsAppChatModal({
             sessionId: response.data.data.sessionId,
             customerId: response.data.data.customerId || "unknown",
             customerName: "Customer",
-            customerPhone: userPhoneNumber,
+            customerPhone: PLAYGROUND_PHONE,
             lastMessage: initialMessage,
             lastMessageTime: new Date().toISOString(),
             unreadCount: 0,
@@ -657,7 +555,7 @@ export function WhatsAppChatModal({
                 value: {
                   messages: [
                     {
-                      from: userPhoneNumber,
+                      from: PLAYGROUND_PHONE,
                       text: {
                         body: userMessage.content,
                       },
@@ -854,22 +752,7 @@ export function WhatsAppChatModal({
     setMessages([])
     setCurrentMessage("")
     setInitialMessage("")
-    setUserPhoneNumber("")
     // We're intentionally NOT clearing the sessionId here
-  }
-
-  // 🧪 Handle confirmation to use real customer
-  const handleConfirmRealCustomer = () => {
-    const pendingCustomerId = customers.find(c => c.phone !== PLAYGROUND_PHONE)?.id
-    if (pendingCustomerId) {
-      const customer = customers.find(c => c.id === pendingCustomerId)
-      setSelectedCustomerId(pendingCustomerId)
-      setIsPlaygroundMode(false)
-      if (customer?.phone) {
-        setUserPhoneNumber(customer.phone)
-      }
-    }
-    setShowRealCustomerWarning(false)
   }
 
   const getMessageFlags = (message: Message) => {
@@ -916,49 +799,6 @@ export function WhatsAppChatModal({
 
   return (
     <>
-      {/* ⚠️ Real Customer Warning Dialog */}
-      <Dialog open={showRealCustomerWarning} onOpenChange={setShowRealCustomerWarning}>
-        <DialogContent className="sm:max-w-md">
-          <DialogTitle className="text-lg font-bold text-amber-600 flex items-center gap-2">
-            ⚠️ Warning: Real Customer Selected
-          </DialogTitle>
-          <DialogDescription className="space-y-3 text-sm">
-            <p className="font-medium text-gray-900">
-              You're about to switch from safe Playground mode to a REAL customer.
-            </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-md p-3 space-y-2">
-              <p className="font-medium text-amber-900">This will:</p>
-              <ul className="list-disc list-inside space-y-1 text-amber-800">
-                <li>Deduct real credits from your balance</li>
-                <li>Send actual WhatsApp messages to the customer's phone</li>
-                <li>Create real orders linked to this customer</li>
-                <li>Affect production data</li>
-              </ul>
-            </div>
-            <p className="text-gray-600">
-              <strong>Playground mode (recommended)</strong> uses fake customer "+39 999 1234567" 
-              and skips billing for safe testing.
-            </p>
-          </DialogDescription>
-          <div className="flex gap-3 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowRealCustomerWarning(false)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmRealCustomer}
-              className="flex-1"
-            >
-              Use Real Customer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog
         open={isOpen}
         onOpenChange={(open) => {
@@ -996,16 +836,27 @@ export function WhatsAppChatModal({
         <div className="flex-1 flex flex-col bg-transparent border-r border-gray-200 flex-shrink-0 transition-all">
           {/* WhatsApp header with WhatsApp icon and X */}
           <div className="bg-gradient-to-r from-green-500 to-green-400 shadow-md p-4 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-white text-green-600 rounded-full flex items-center justify-center text-xl font-bold shadow mr-4">
-                {selectedChat?.customerName
-                  ? getInitials(selectedChat.customerName)
-                  : "WC"}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-white/90 ring-1 ring-white/60 shadow flex items-center justify-center overflow-hidden">
+                <img
+                  src={
+                    logoUrl
+                      ? logoUrl.startsWith("http")
+                        ? logoUrl
+                        : `${IMG_BASE_URL}${logoUrl}`
+                      : defaultLogoUrl
+                  }
+                  alt={channelName}
+                  className="w-10 h-10 object-contain"
+                />
               </div>
-              <span className="text-white text-lg font-bold flex items-center">
-                <MessageCircle className="h-6 w-6 mr-2 text-white opacity-80" />
-                {userPhoneNumber || channelName}
-              </span>
+              <div className="text-white">
+                <div className="text-lg font-bold flex items-center">
+                  <MessageCircle className="h-5 w-5 mr-2 text-white/90" />
+                  {channelName}
+                </div>
+                <div className="text-xs text-white/80">{PLAYGROUND_PHONE}</div>
+              </div>
             </div>
             {/* PLAYGROUND Badge */}
             <div className="flex items-center gap-2">
@@ -1033,132 +884,37 @@ export function WhatsAppChatModal({
                 )}
 
                 <div className="space-y-6">
-                  {/* Customer Selection */}
-                  {!isNewCustomer ? (
-                    <>
-                      <div>
-                        <Label htmlFor="customer-select" className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          Select Existing Customer
-                        </Label>
-                        <Select
-                          value={selectedCustomerId}
-                          onValueChange={handleCustomerSelect}
-                          disabled={loadingCustomers}
-                        >
-                          <SelectTrigger className="mt-2">
-                            <SelectValue placeholder={loadingCustomers ? "Loading customers..." : "Choose a customer..."} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                <div className="flex flex-col">
-                                  <span className="font-medium">{customer.name}</span>
-                                  <span className="text-xs text-gray-500">{customer.phone}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                            {customers.length === 0 && !loadingCustomers && (
-                              <SelectItem value="none" disabled>
-                                No customers found
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {customers.length} customers available
-                        </p>
-                      </div>
-
-                      <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                          <span className="w-full border-t" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                          <span className="bg-white px-2 text-gray-500">Or</span>
-                        </div>
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        className="w-full gap-2"
-                        onClick={handleNewCustomerClick}
-                      >
-                        <UserPlus className="h-4 w-4" />
-                        New Customer (Enter Phone Number)
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleBackToSelection}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          ← Back to customer list
-                        </Button>
-                      </div>
-                      <div>
-                        <Label htmlFor="phone-number" className="flex items-center gap-2">
-                          <UserPlus className="h-4 w-4" />
-                          New Customer Phone Number
-                        </Label>
-                        <Input
-                          id="phone-number"
-                          type="tel"
-                          placeholder="+34 612 345 678"
-                          value={userPhoneNumber}
-                          onChange={(e) => setUserPhoneNumber(e.target.value)}
-                          autoFocus
-                          autoComplete="off"
-                          className="mt-2"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Enter phone number with country code (e.g. +34 for Spain)
-                        </p>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Show phone number if customer selected */}
-                  {selectedCustomerId && !isNewCustomer && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                      <p className="text-sm text-green-800 font-medium">
-                        📱 Selected: {customers.find(c => c.id === selectedCustomerId)?.name}
-                      </p>
-                      <p className="text-xs text-green-600 mt-1">
-                        Phone: {userPhoneNumber}
-                      </p>
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                    <div className="text-sm font-medium text-green-900">
+                      Playground uses a fixed fake number
                     </div>
-                  )}
-
-                  {/* First message - always shown when customer/phone is ready */}
-                  {(selectedCustomerId || (isNewCustomer && userPhoneNumber)) && (
-                    <div>
-                      <Label htmlFor="initial-message">First Message *</Label>
-                      <Textarea
-                        id="initial-message"
-                        placeholder="Hello, I'd like to know about your products..."
-                        value={initialMessage}
-                        onChange={(e) => setInitialMessage(e.target.value)}
-                        className="mt-2"
-                        rows={3}
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Enter the first message to start the conversation
-                      </p>
+                    <div className="text-xs text-green-700 mt-1">
+                      {PLAYGROUND_PHONE} • Safe testing only (no real customer)
                     </div>
-                  )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="initial-message">First Message *</Label>
+                    <Textarea
+                      id="initial-message"
+                      placeholder="Hello, I'd like to know about your products..."
+                      value={initialMessage}
+                      onChange={(e) => setInitialMessage(e.target.value)}
+                      className="mt-2"
+                      rows={3}
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter the first message to start the conversation
+                    </p>
+                  </div>
 
                   <Button
                     className="w-full bg-green-500 hover:bg-green-600"
                     onClick={startChat}
                     disabled={
                       !hasValidWorkspace ||
-                      !isValidPhoneNumber(userPhoneNumber) ||
+                      !isValidPhoneNumber(PLAYGROUND_PHONE) ||
                       !initialMessage.trim() ||
                       isLoading
                     }

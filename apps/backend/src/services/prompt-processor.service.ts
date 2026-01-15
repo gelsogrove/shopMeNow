@@ -252,9 +252,11 @@ export class PromptProcessorService {
       operatorWhatsappNumber?: string
       hasSalesAgents?: boolean
       adminEmail?: string
+      supportEmail?: string
       allowedExternalLinks?: string[] // 🆕 Feature 199: Allowed domains for external links
       address?: string // 🆕 Physical address for "where are you?" questions
       customAiRules?: string // 🆕 Custom AI rules that override defaults
+      websiteUrl?: string
     }
   ): Promise<string> {
     // 🔒 STEP 1: Validate prompt BEFORE replacement (Constitution v1.5.0 Principle III)
@@ -287,6 +289,10 @@ export class PromptProcessorService {
         humanSupportInstructions: workspaceConfig?.humanSupportInstructions || "",
         frustrationEscalationInstructions: workspaceConfig?.frustrationEscalationInstructions || "", // ✅ FIX: Add for custom escalation
         allowedExternalLinks: workspaceConfig?.allowedExternalLinks?.join("\n") || "",
+        operatorContactMethod: workspaceConfig?.operatorContactMethod || "",
+        operatorWhatsappNumber: workspaceConfig?.operatorWhatsappNumber || "",
+        supportEmail: workspaceConfig?.supportEmail || workspaceConfig?.adminEmail || "",
+        websiteUrl: workspaceConfig?.websiteUrl || "",
         // Customer booleans (for conditionals)
         hasAgentAssigned: !!(customerData?.agentName),
       }
@@ -317,6 +323,21 @@ export class PromptProcessorService {
     }
     if (workspaceConfig?.adminEmail) {
       processedPrompt = processedPrompt.replace(/\{\{adminEmail\}\}/g, workspaceConfig.adminEmail)
+    }
+    if (workspaceConfig?.supportEmail || workspaceConfig?.adminEmail) {
+      processedPrompt = processedPrompt.replace(
+        /\{\{supportEmail\}\}/g,
+        workspaceConfig.supportEmail || workspaceConfig.adminEmail || ""
+      )
+    }
+    if (workspaceConfig?.operatorContactMethod) {
+      processedPrompt = processedPrompt.replace(/\{\{operatorContactMethod\}\}/g, workspaceConfig.operatorContactMethod)
+    }
+    if (workspaceConfig?.operatorWhatsappNumber) {
+      processedPrompt = processedPrompt.replace(/\{\{operatorWhatsappNumber\}\}/g, workspaceConfig.operatorWhatsappNumber)
+    }
+    if (workspaceConfig?.websiteUrl) {
+      processedPrompt = processedPrompt.replace(/\{\{websiteUrl\}\}/g, workspaceConfig.websiteUrl)
     }
 
     // Sostituzione URL workspace (PRIMA di altre sostituzioni)
@@ -656,6 +677,10 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
       .replace(
         /\{\{companyName\}\}/g,
         customerData.companyName || "L'Altra Italia"
+      )
+      .replace(
+        /\{\{workspaceName\}\}/g,
+        customerData.companyName || customerData.channelName || "Shop"
       )
       .replace(/\{\{languageUser\}\}/g, customerData.languageUser || "ITALIANO")
       .replace(/\{\{lastordercode\}\}/g, customerData.lastordercode || "N/A")

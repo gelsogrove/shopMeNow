@@ -566,7 +566,6 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     billing.creditBalance >= creditMinThreshold &&
     billing.creditBalance < lowBalanceThreshold
   const isCustomerLimitReached = usage.customersCount >= limits.maxCustomers
-  const isChannelLimitReached = usage.channelsCount >= limits.maxChannels
 
   const getPlanBadgeVariant = (planType: PlanType) => {
     switch (planType) {
@@ -591,10 +590,10 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   // Calculate estimated messages remaining
   const estimatedMessagesRemaining = Math.floor(billing.creditBalance / limits.messageCost)
-  const limitReached = isCustomerLimitReached || isChannelLimitReached
+  // ⚠️ NOTE: Channels limit is NOT included here (handled separately in WorkspaceSelectionPage)
+  const limitReached = isCustomerLimitReached
   const limitMessages = [
     isCustomerLimitReached && `Customers limit reached (${usage.customersCount}/${limits.maxCustomers}).`,
-    isChannelLimitReached && `Channels limit reached (${usage.channelsCount}/${limits.maxChannels}).`,
   ].filter(Boolean) as string[]
 
   return (
@@ -809,9 +808,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Taxes:</span>
+                  <span className="text-muted-foreground">Taxes (22%):</span>
                   <span className="font-medium text-emerald-600">
-                    22%
+                    {formatUsd((planConfig.monthlyFee + (billing.totalRecharges || 0)) * 0.22)}
                   </span>
                 </div>
                 {billing.planType !== "FREE_TRIAL" && (() => {
@@ -1596,7 +1595,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                               </TableRow>
                             )}
                         <TableRow>
-                          <TableCell className="font-medium">Taxes (22%)</TableCell>
+                          <TableCell className="font-medium">Taxes (21%)</TableCell>
                           <TableCell className="text-right font-medium text-emerald-600">
                             {invoice.taxAmount > 0 ? `+${formatUsd(invoice.taxAmount)}` : '—'}
                           </TableCell>

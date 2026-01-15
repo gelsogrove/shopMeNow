@@ -22,6 +22,7 @@
 | [link-tokens.md](architecture/link-tokens.md) | Secure link tokens reference |
 | [multi-agent-flow.md](architecture/multi-agent-flow.md) | LLM multi-agent architecture |
 | [storage.md](architecture/storage.md) | File storage (Local/Cloudinary) |
+| [support-tickets.md](architecture/support-tickets.md) | Support ticket system |
 | [template-system.md](architecture/template-system.md) | Prompt template system |
 | [ui-standards.md](architecture/ui-standards.md) | Frontend UI standards |
 

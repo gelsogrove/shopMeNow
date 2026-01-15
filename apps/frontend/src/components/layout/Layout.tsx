@@ -125,6 +125,7 @@ export function Layout() {
           channelName="WhatsApp Chat"
           workspaceId={workspace?.id}
           selectedChat={savedChat}
+          logoUrl={workspace?.logoUrl}
         />
       </div>
     </TooltipProvider>

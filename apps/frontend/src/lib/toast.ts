@@ -26,7 +26,7 @@ export const toast = {
 
   error: (message: string, options?: ToastOptions) => {
     sonnerToast.error(message, {
-      duration: options?.duration || 1000,
+      duration: options?.duration || 5000, // 5 secondi per messaggi di errore
       style: {
         background: "#dc2626",
         color: "#ffffff",

@@ -96,7 +96,9 @@ export class PromptBuilderService {
 
       // 🔴 ZERO SECTION: Custom AI Rules (ABSOLUTE PRIORITY - prepended to prompt)
       const customAiRules = variables.customAiRules || ""
-      const finalContent = customAiRules
+      const customRulesAlreadyIncluded =
+        !!customAiRules.trim() && content.includes(customAiRules.trim())
+      const finalContent = customAiRules && !customRulesAlreadyIncluded
         ? `🔴 CUSTOM AI RULES (ABSOLUTE PRIORITY - Override all default instructions):
 ${customAiRules}
 

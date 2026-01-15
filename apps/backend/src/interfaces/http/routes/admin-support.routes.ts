@@ -39,6 +39,39 @@ router.use(authMiddleware)
 /**
  * @swagger
  * /api/admin/support/tickets:
+ *   post:
+ *     summary: Create a support ticket (admin initiated)
+ *     tags: [Admin - Support]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - subject
+ *               - message
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               workspaceId:
+ *                 type: string
+ *               subject:
+ *                 type: string
+ *               message:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Ticket created
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Platform admin only
  *   get:
  *     summary: Get all support tickets (admin only)
  *     tags: [Admin - Support]
@@ -59,12 +92,12 @@ router.use(authMiddleware)
  *         name: status
  *         schema:
  *           type: string
- *           enum: [OPEN, IN_PROGRESS, WAITING_REPLY, RESOLVED, CLOSED]
+ *           enum: [PENDING, IN_PROGRESS, CLOSED]
  *       - in: query
  *         name: issueType
  *         schema:
  *           type: string
- *           enum: [BUG, FEATURE_REQUEST, BILLING, TECHNICAL, OTHER]
+ *           enum: [ACCOUNT_ISSUE, PLAN_AND_BILLING, WHATSAPP, WIDGET, SALES_AGENT, SUPPORT, OTHER]
  *     responses:
  *       200:
  *         description: List of all tickets
@@ -73,6 +106,10 @@ router.use(authMiddleware)
  *       403:
  *         description: Platform admin only
  */
+router.post("/tickets", (req, res) => {
+  supportTicketController.createTicketAsAdmin(req, res)
+})
+
 router.get("/tickets", (req, res) => {
   supportTicketController.getAllTickets(req, res)
 })
@@ -209,6 +246,34 @@ router.post("/tickets/:ticketId/messages", upload.array("attachments", 5), (req,
  */
 router.put("/tickets/:ticketId/status", (req, res) => {
   supportTicketController.updateStatus(req, res)
+})
+
+/**
+ * @swagger
+ * /api/admin/support/tickets/{ticketId}:
+ *   delete:
+ *     summary: Delete a support ticket (admin only)
+ *     tags: [Admin - Support]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: ticketId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Ticket deleted
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Platform admin only
+ *       404:
+ *         description: Ticket not found
+ */
+router.delete("/tickets/:ticketId", (req, res) => {
+  supportTicketController.deleteTicket(req, res)
 })
 
 export { router as adminSupportRouter }

@@ -11,6 +11,7 @@ export type SupportIssueType =
   | "WHATSAPP"
   | "WIDGET"
   | "SALES_AGENT"
+  | "SUPPORT"
   | "OTHER"
 
 export type SupportTicketStatus = "PENDING" | "IN_PROGRESS" | "CLOSED"
@@ -72,6 +73,13 @@ export interface PaginatedTickets {
   totalPages: number
 }
 
+export interface CreateAdminTicketInput {
+  userId: string
+  workspaceId?: string
+  subject: string
+  message: string
+}
+
 // Helper to get token from localStorage
 const getToken = (): string | null => {
   return localStorage.getItem("backoffice_token")
@@ -106,6 +114,28 @@ export const getAllTickets = async (
 
   if (!response.ok) {
     throw new Error("Failed to fetch tickets")
+  }
+
+  return response.json()
+}
+
+/**
+ * Create a support ticket as admin
+ */
+export const createAdminTicket = async (
+  input: CreateAdminTicketInput
+): Promise<{ success: boolean; data: SupportTicket }> => {
+  const response = await fetch(`${API_BASE}/admin/support/tickets`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to create ticket")
   }
 
   return response.json()
@@ -193,6 +223,27 @@ export const updateTicketStatus = async (
 }
 
 /**
+ * Delete a ticket (admin)
+ */
+export const deleteTicket = async (
+  ticketId: string
+): Promise<{ success: boolean; data: { id: string; ticketCode: string } }> => {
+  const response = await fetch(`${API_BASE}/admin/support/tickets/${ticketId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${getToken()}`,
+      "Content-Type": "application/json",
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to delete ticket")
+  }
+
+  return response.json()
+}
+
+/**
  * Get unread count for admin
  */
 export const getUnreadCount = async (): Promise<{
@@ -225,6 +276,7 @@ export const getIssueTypeLabel = (type: SupportIssueType): string => {
     WHATSAPP: "WhatsApp",
     WIDGET: "Widget",
     SALES_AGENT: "Sales Agent",
+    SUPPORT: "Support Message",
     OTHER: "Other",
   }
   return labels[type] || type

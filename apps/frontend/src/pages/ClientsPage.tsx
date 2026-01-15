@@ -803,6 +803,7 @@ export default function ClientsPage(): JSX.Element {
         phoneNumber={""}
         workspaceId={workspace?.id}
         selectedChat={null}
+        logoUrl={workspace?.logoUrl}
       />
 
       <ClientSheet

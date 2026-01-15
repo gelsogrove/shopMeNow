@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
@@ -50,6 +51,7 @@ export default function ProfilePage() {
     isLoading: userLoading,
     isError: userError,
   } = useCurrentUser()
+  const { isSuperAdmin } = useWorkspaceRole()
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showSetPasswordDialog, setShowSetPasswordDialog] = useState(false)
@@ -323,7 +325,7 @@ export default function ProfilePage() {
           <Button
             variant="outline"
             onClick={() => setShowDeleteAccountDialog(true)}
-            className="gap-2"
+            className="gap-2 text-red-600 border-red-200 hover:text-red-700 hover:border-red-300 hover:bg-red-50"
           >
             <Trash2 className="h-4 w-4" />
             Delete Account
@@ -449,14 +451,18 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Billing Information */}
+        {/* Billing Information - Read-only for non-owners */}
         <Card>
             <CardHeader className="flex flex-row items-start justify-between">
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <Building2 className="h-5 w-5" />
                 Billing Information
+                {!isSuperAdmin && (
+                  <span className="text-xs text-gray-500 font-normal ml-2">(Owner only)</span>
+                )}
               </CardTitle>
-              {/* Company Logo - Top Right */}
+              {/* Company Logo - Top Right - Only for owners */}
+              {isSuperAdmin && (
               <ImageCropUpload
                 onImageSelected={(file) => setLogoFile(file)}
                 currentImageUrl={user.logo}
@@ -465,6 +471,7 @@ export default function ProfilePage() {
                 editIconStyle={true}
                 size="lg"
               />
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -474,6 +481,8 @@ export default function ProfilePage() {
                   value={user.companyName || ""}
                   onChange={(e) => handleFieldChange("companyName", e.target.value)}
                   placeholder="Your company name"
+                  disabled={!isSuperAdmin}
+                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -484,6 +493,8 @@ export default function ProfilePage() {
                   value={user.vatNumber || ""}
                   onChange={(e) => handleFieldChange("vatNumber", e.target.value)}
                   placeholder="IT12345678901"
+                  disabled={!isSuperAdmin}
+                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -495,6 +506,8 @@ export default function ProfilePage() {
                   value={user.website || ""}
                   onChange={(e) => handleFieldChange("website", e.target.value)}
                   placeholder="https://www.example.com"
+                  disabled={!isSuperAdmin}
+                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -506,6 +519,8 @@ export default function ProfilePage() {
                   value={user.billingPhone || ""}
                   onChange={(e) => handleFieldChange("billingPhone", e.target.value)}
                   placeholder="+39 123 456 7890"
+                  disabled={!isSuperAdmin}
+                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -516,6 +531,8 @@ export default function ProfilePage() {
                   value={user.billingAddress || ""}
                   onChange={(e) => handleFieldChange("billingAddress", e.target.value)}
                   placeholder="Via Roma 1, 00100 Rome, Italy"
+                  disabled={!isSuperAdmin}
+                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
             </CardContent>
@@ -525,11 +542,14 @@ export default function ProfilePage() {
 
 
       {/* Delete Account Dialog */}
-      <Dialog open={showDeleteAccountDialog} onOpenChange={(open) => {
-        setShowDeleteAccountDialog(open)
-        if (!open) setDeleteConfirmation("")
-      }}>
-        <DialogContent>
+      <Dialog
+        open={showDeleteAccountDialog}
+        onOpenChange={(open) => {
+          setShowDeleteAccountDialog(open)
+          if (!open) setDeleteConfirmation("")
+        }}
+      >
+        <DialogContent className="border border-red-100">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />

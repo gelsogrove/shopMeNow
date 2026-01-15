@@ -14,6 +14,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/lib/toast"
 import { RichTextEditor, isRichTextEmpty } from "@/components/shared/RichTextEditor"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -34,6 +43,8 @@ import {
   User,
   Building2,
   CheckCircle,
+  Trash2,
+  Plus,
 } from "lucide-react"
 import { format, formatDistanceToNow } from "date-fns"
 import {
@@ -42,14 +53,17 @@ import {
   SupportTicketStatus,
   SupportIssueType,
   getAllTickets,
+  createAdminTicket,
   getTicket,
   addMessage,
   updateTicketStatus,
+  deleteTicket,
   getIssueTypeLabel,
   getStatusColor,
   getStatusLabel,
 } from "@/services/supportApi"
 import { useAdminWebSocket } from "@/hooks/useAdminWebSocket"
+import { api } from "@/services/api"
 
 // Message Bubble Component
 function MessageBubble({ message }: { message: SupportMessage }) {
@@ -114,11 +128,15 @@ function TicketDetailView({
   onBack,
   onStatusChange,
   onMessageSent,
+  onDelete,
+  deleting,
 }: {
   ticket: SupportTicket
   onBack: () => void
   onStatusChange: (status: SupportTicketStatus) => void
   onMessageSent: (message: SupportMessage) => void
+  onDelete: () => void
+  deleting: boolean
 }) {
   const [newMessage, setNewMessage] = useState("")
   const [attachments, setAttachments] = useState<File[]>([])
@@ -204,6 +222,16 @@ function TicketDetailView({
 
         {/* Status Selector */}
         <div className="flex items-center gap-2">
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onDelete}
+            disabled={deleting}
+            className="gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            {deleting ? "Deleting..." : "Delete"}
+          </Button>
           <Select
             value={ticket.status}
             onValueChange={(v: string) => handleStatusChange(v as SupportTicketStatus)}
@@ -394,6 +422,14 @@ function TicketListItem({
   )
 }
 
+interface AdminUserOption {
+  id: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  ownedWorkspaces: Array<{ id: string; name: string }>
+}
+
 // Main Page Component
 export default function SupportTicketsAdminPage() {
   const [loading, setLoading] = useState(true)
@@ -403,6 +439,15 @@ export default function SupportTicketsAdminPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [statusFilter, setStatusFilter] = useState<SupportTicketStatus | "" | "ALL">("ALL")
   const [issueTypeFilter, setIssueTypeFilter] = useState<SupportIssueType | "" | "ALL">("ALL")
+  const [deletingTicket, setDeletingTicket] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [users, setUsers] = useState<AdminUserOption[]>([])
+  const [selectedUserId, setSelectedUserId] = useState("")
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("")
+  const [newSubject, setNewSubject] = useState("")
+  const [newMessage, setNewMessage] = useState("")
+  const [creating, setCreating] = useState(false)
 
   // WebSocket for real-time updates
   useAdminWebSocket({
@@ -412,6 +457,43 @@ export default function SupportTicketsAdminPage() {
       loadTickets()
     },
   })
+
+  const selectedUser = users.find((user) => user.id === selectedUserId) || null
+  const workspaceOptions = selectedUser?.ownedWorkspaces || []
+
+  const loadUsers = useCallback(async () => {
+    if (usersLoading) return
+    setUsersLoading(true)
+    try {
+      const result = await api.admin.getUsers()
+      if (result.success && result.data) {
+        setUsers(result.data)
+      } else {
+        toast.error(result.error || "Failed to load users")
+      }
+    } catch (error) {
+      console.error("Failed to load users:", error)
+      toast.error("Failed to load users")
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [usersLoading])
+
+  useEffect(() => {
+    if (createOpen) {
+      loadUsers()
+    }
+  }, [createOpen, loadUsers])
+
+  useEffect(() => {
+    if (!selectedUser) {
+      setSelectedWorkspaceId("")
+      return
+    }
+    if (!selectedWorkspaceId || !selectedUser.ownedWorkspaces.some((ws) => ws.id === selectedWorkspaceId)) {
+      setSelectedWorkspaceId(selectedUser.ownedWorkspaces[0]?.id || "")
+    }
+  }, [selectedUser, selectedWorkspaceId])
 
   const loadTickets = useCallback(async () => {
     setLoading(true)
@@ -471,6 +553,64 @@ export default function SupportTicketsAdminPage() {
     }
   }
 
+  const handleDeleteTicket = useCallback(async () => {
+    if (!selectedTicket || deletingTicket) return
+    const confirmed = window.confirm(
+      `Delete ticket ${selectedTicket.ticketCode}? This will remove all messages and attachments.`
+    )
+    if (!confirmed) return
+
+    setDeletingTicket(true)
+    try {
+      await deleteTicket(selectedTicket.id)
+      toast.success("Ticket deleted")
+      setSelectedTicket(null)
+      await loadTickets()
+    } catch (error) {
+      console.error("Failed to delete ticket:", error)
+      toast.error("Failed to delete ticket")
+    } finally {
+      setDeletingTicket(false)
+    }
+  }, [selectedTicket, deletingTicket, loadTickets])
+
+  const handleCreateTicket = async () => {
+    if (!selectedUserId) {
+      toast.error("Select a user")
+      return
+    }
+    if (!newSubject.trim()) {
+      toast.error("Subject is required")
+      return
+    }
+    if (isRichTextEmpty(newMessage)) {
+      toast.error("Message is required")
+      return
+    }
+
+    setCreating(true)
+    try {
+      const result = await createAdminTicket({
+        userId: selectedUserId,
+        workspaceId: selectedWorkspaceId || undefined,
+        subject: newSubject.trim(),
+        message: newMessage,
+      })
+      toast.success("Support message sent")
+      setCreateOpen(false)
+      setSelectedUserId("")
+      setSelectedWorkspaceId("")
+      setNewSubject("")
+      setNewMessage("")
+      setSelectedTicket(result.data)
+    } catch (error) {
+      console.error("Failed to create ticket:", error)
+      toast.error("Failed to send support message")
+    } finally {
+      setCreating(false)
+    }
+  }
+
   // Detail View
   if (selectedTicket) {
     return (
@@ -482,6 +622,8 @@ export default function SupportTicketsAdminPage() {
               onBack={handleBack}
               onStatusChange={handleStatusChange}
               onMessageSent={handleMessageSent}
+              onDelete={handleDeleteTicket}
+              deleting={deletingTicket}
             />
           </CardContent>
         </Card>
@@ -504,9 +646,107 @@ export default function SupportTicketsAdminPage() {
                 Manage and respond to customer support requests
               </CardDescription>
             </div>
+            <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => setCreateOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Support Message
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>New Support Message</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label>Recipient</Label>
+                  <Select
+                    value={selectedUserId}
+                    onValueChange={(value) => setSelectedUserId(value)}
+                    disabled={usersLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={usersLoading ? "Loading users..." : "Select a user"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.firstName || user.lastName
+                            ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                            : user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Workspace (optional)</Label>
+                  <Select
+                    value={selectedWorkspaceId || "none"}
+                    onValueChange={(value) =>
+                      setSelectedWorkspaceId(value === "none" ? "" : value)
+                    }
+                    disabled={!selectedUser}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a workspace" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No workspace</SelectItem>
+                      {workspaceOptions.map((ws) => (
+                        <SelectItem key={ws.id} value={ws.id}>
+                          {ws.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="support-subject">Subject</Label>
+                  <Input
+                    id="support-subject"
+                    value={newSubject}
+                    onChange={(e) => setNewSubject(e.target.value)}
+                    placeholder="Support message subject"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Message</Label>
+                  <RichTextEditor value={newMessage} onChange={setNewMessage} />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setCreateOpen(false)}
+                  disabled={creating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700"
+                  onClick={handleCreateTicket}
+                  disabled={creating}
+                >
+                  {creating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    "Send Message"
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* Filters */}
           <div className="flex gap-4 mb-6">
             <Select
@@ -544,6 +784,7 @@ export default function SupportTicketsAdminPage() {
                 <SelectItem value="WHATSAPP">WhatsApp</SelectItem>
                 <SelectItem value="WIDGET">Widget</SelectItem>
                 <SelectItem value="SALES_AGENT">Sales Agent</SelectItem>
+                <SelectItem value="SUPPORT">Support Message</SelectItem>
                 <SelectItem value="OTHER">Other</SelectItem>
               </SelectContent>
             </Select>

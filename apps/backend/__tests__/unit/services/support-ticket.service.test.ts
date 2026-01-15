@@ -57,6 +57,8 @@ describe('SupportTicketService', () => {
         issueType: SupportIssueType.TECHNICAL,
         subject: 'Test Issue',
         initialMessage: 'This is a test message',
+        createdById: undefined,
+        createdByType: undefined,
       })
     })
 
@@ -88,6 +90,48 @@ describe('SupportTicketService', () => {
 
       expect(result.workspaceId).toBeNull()
       expect(result.workspace).toBeNull()
+    })
+  })
+
+  describe('createTicket (admin initiated)', () => {
+    it('should create a support ticket with admin as sender', async () => {
+      const mockTicket = {
+        id: 'ticket-2',
+        ticketCode: 'TKT-ADMIN1',
+        userId: 'user-2',
+        workspaceId: null,
+        issueType: SupportIssueType.OTHER,
+        subject: 'Support Message',
+        status: SupportTicketStatus.PENDING,
+        user: { id: 'user-2', email: 'owner@test.com', firstName: 'Owner', lastName: 'User' },
+        workspace: null,
+        messages: [],
+        _count: { messages: 1 },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(supportTicketRepository.create as jest.Mock).mockResolvedValue(mockTicket)
+
+      const result = await service.createTicket({
+        userId: 'user-2',
+        issueType: SupportIssueType.OTHER,
+        subject: 'Support Message',
+        initialMessage: 'Hello from support',
+        createdById: 'admin-1',
+        createdByType: SupportSenderType.ADMIN,
+      })
+
+      expect(result).toEqual(mockTicket)
+      expect(supportTicketRepository.create).toHaveBeenCalledWith({
+        userId: 'user-2',
+        workspaceId: undefined,
+        issueType: SupportIssueType.OTHER,
+        subject: 'Support Message',
+        initialMessage: 'Hello from support',
+        createdById: 'admin-1',
+        createdByType: SupportSenderType.ADMIN,
+      })
     })
   })
 
@@ -318,6 +362,48 @@ describe('SupportTicketService', () => {
       const count = await service.countUnreadMessagesForAdmin()
 
       expect(count).toBe(5)
+    })
+  })
+
+  describe('deleteTicket', () => {
+    it('should delete ticket and attachments from storage', async () => {
+      const mockTicket = {
+        id: 'ticket-1',
+        ticketCode: 'TKT-ABC123',
+        messages: [
+          {
+            id: 'msg-1',
+            attachments: [
+              { id: 'att-1', storageKey: 'support-tickets/ticket-1/one.png' },
+              { id: 'att-2', storageKey: 'support-tickets/ticket-1/two.pdf' },
+            ],
+          },
+          { id: 'msg-2', attachments: [] },
+        ],
+      }
+
+      ;(supportTicketRepository.findById as jest.Mock).mockResolvedValue(mockTicket)
+      ;(supportTicketRepository.deleteTicket as jest.Mock).mockResolvedValue({
+        id: 'ticket-1',
+        ticketCode: 'TKT-ABC123',
+      })
+      ;(storageService.delete as jest.Mock).mockResolvedValue(undefined)
+
+      const result = await service.deleteTicket('ticket-1')
+
+      expect(storageService.delete).toHaveBeenCalledTimes(2)
+      expect(supportTicketRepository.deleteTicket).toHaveBeenCalledWith('ticket-1')
+      expect(result).toEqual({ id: 'ticket-1', ticketCode: 'TKT-ABC123' })
+    })
+
+    it('should return null when ticket does not exist', async () => {
+      ;(supportTicketRepository.findById as jest.Mock).mockResolvedValue(null)
+
+      const result = await service.deleteTicket('missing-ticket')
+
+      expect(result).toBeNull()
+      expect(storageService.delete).not.toHaveBeenCalled()
+      expect(supportTicketRepository.deleteTicket).not.toHaveBeenCalled()
     })
   })
 })

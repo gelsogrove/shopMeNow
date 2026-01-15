@@ -999,7 +999,7 @@ export class LLMRouterService {
               // ❌ NO products - Router delegates to ProductSearchAgent
               // ❌ NO categories - Router delegates to ProductSearchAgent
             },
-            workspace?.url,
+            workspace?.websiteUrl || workspace?.url,
             // 🆕 Feature 199: Pass workspace config for dynamic prompt variables
             {
               sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true, // 🆕 E-commerce toggle
@@ -1011,9 +1011,11 @@ export class LLMRouterService {
               operatorWhatsappNumber: workspace?.operatorWhatsappNumber || undefined,
               hasSalesAgents: workspace?.hasSalesAgents ?? false,
               adminEmail: workspace?.notificationEmail || undefined,
+              supportEmail: workspace?.notificationEmail || undefined,
               allowedExternalLinks: workspace?.allowedExternalLinks || [], // 🆕 Security: allowed domains
               address: workspace?.address || undefined, // 🆕 Physical address
               customAiRules: workspace?.customAiRules || undefined, // 🆕 Custom AI rules
+              websiteUrl: workspace?.websiteUrl || workspace?.url || undefined,
             }
           )
         } catch (error: any) {

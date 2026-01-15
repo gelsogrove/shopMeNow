@@ -138,16 +138,21 @@ For privacy inquiries, please contact our support team.`
     
     const workspaces = await this.prisma.workspace.findMany({
       where: {
-        users: {
-          some: {
-            userId: userId
-          }
-        },
-        deletedAt: null
+        deletedAt: null,
+        OR: [
+          { ownerId: userId },
+          {
+            users: {
+              some: {
+                userId: userId,
+              },
+            },
+          },
+        ],
       },
       orderBy: {
-        createdAt: 'desc'
-      }
+        createdAt: "desc",
+      },
     })
 
     // Convert to Workspace entities

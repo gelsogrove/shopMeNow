@@ -53,6 +53,9 @@ export interface TransactionRecord {
 }
 
 export class SubscriptionBillingRepository {
+  private static readonly PLAYGROUND_PHONE = "+39 999 1234567"
+  private static readonly PLAYGROUND_EMAIL = "playground@test.echatbot.local"
+
   constructor(private prisma: PrismaClient) {}
 
   // ============================================================================
@@ -553,7 +556,15 @@ export class SubscriptionBillingRepository {
         where: { workspaceId: { in: ownerWorkspaceIds }, isActive: true },
       }),
       this.prisma.customers.count({
-        where: { workspaceId: { in: ownerWorkspaceIds }, isActive: true },
+        where: {
+          workspaceId: { in: ownerWorkspaceIds },
+          deletedAt: null,
+          isBlacklisted: false,
+          NOT: [
+            { phone: SubscriptionBillingRepository.PLAYGROUND_PHONE },
+            { email: SubscriptionBillingRepository.PLAYGROUND_EMAIL },
+          ],
+        },
       }),
       // Count UNIQUE users across all owner's workspaces
       this.prisma.userWorkspace.findMany({
@@ -596,7 +607,15 @@ export class SubscriptionBillingRepository {
           where: { workspaceId, isActive: true },
         }),
         this.prisma.customers.count({
-          where: { workspaceId, isActive: true },
+          where: {
+            workspaceId,
+            deletedAt: null,
+            isBlacklisted: false,
+            NOT: [
+              { phone: SubscriptionBillingRepository.PLAYGROUND_PHONE },
+              { email: SubscriptionBillingRepository.PLAYGROUND_EMAIL },
+            ],
+          },
         }),
         this.prisma.userWorkspace.findMany({
           where: { 

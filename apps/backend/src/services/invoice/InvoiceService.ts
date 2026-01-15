@@ -257,7 +257,7 @@ export class InvoiceService {
            .text(`€${data.subtotal.toFixed(2)}`, totalsX + 80, yPos, { align: 'right' });
         yPos += 20;
 
-        doc.text('IVA (22%):', totalsX, yPos)
+        doc.text('IVA (21%):', totalsX, yPos)
            .text(`€${data.tax.toFixed(2)}`, totalsX + 80, yPos, { align: 'right' });
         yPos += 25;
 

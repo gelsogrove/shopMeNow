@@ -201,6 +201,8 @@ export class UserController {
 
   /**
    * Update current user's profile
+   * ⚠️ SECURITY: Billing fields (companyName, vatNumber, website, billingPhone, billingAddress, logo)
+   * can only be updated by SUPER_ADMIN (Owner)
    */
   updateProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -213,6 +215,29 @@ export class UserController {
       
       logger.info(`Updating profile for user ID: ${userId}`)
       logger.info(`🔍 Request body received:`, JSON.stringify(userData, null, 2))
+      
+      // ⚠️ SECURITY CHECK: Verify if user is trying to update billing fields
+      const billingFields = ['companyName', 'vatNumber', 'website', 'billingPhone', 'billingAddress', 'logo', 'removeLogo']
+      const isTryingToUpdateBilling = billingFields.some(field => userData[field] !== undefined || req.file)
+      
+      if (isTryingToUpdateBilling) {
+        // Check if user is SUPER_ADMIN in ANY workspace
+        const { prisma } = await import('@echatbot/database')
+        const userWorkspaces = await prisma.userWorkspace.findMany({
+          where: { userId },
+          select: { role: true }
+        })
+        
+        const isSuperAdmin = userWorkspaces.some(uw => uw.role === 'SUPER_ADMIN')
+        
+        if (!isSuperAdmin) {
+          logger.warn(`⚠️ Non-owner user ${userId} attempted to modify billing information`)
+          return res.status(403).json({ 
+            message: "Only workspace owners can modify billing information",
+            code: "BILLING_UPDATE_FORBIDDEN"
+          })
+        }
+      }
       
       // Handle logo upload if present
       if (req.file) {

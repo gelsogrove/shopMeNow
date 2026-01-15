@@ -167,12 +167,26 @@ export class PromptRenderService {
   /**
    * Build conditional values from workspace settings
    */
-  private buildConditionalValues(workspace: any): Record<string, boolean> {
+  private buildConditionalValues(workspace: any): Record<string, any> {
+    const allowedLinks = Array.isArray(workspace.allowedExternalLinks)
+      ? workspace.allowedExternalLinks.join("\n")
+      : ""
+    const address = workspace.address || ""
     return {
       sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
-      // Add any additional conditional flags here
+      address,
+      hasAddress: !!address,
+      customAiRules: workspace.customAiRules || "",
+      botIdentityResponse: workspace.botIdentityResponse || "",
+      humanSupportInstructions: workspace.humanSupportInstructions || "",
+      frustrationEscalationInstructions: workspace.frustrationEscalationInstructions || "",
+      allowedExternalLinks: allowedLinks,
+      operatorContactMethod: workspace.operatorContactMethod || "",
+      operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",
+      supportEmail: workspace.notificationEmail || workspace.adminEmail || "",
+      websiteUrl: workspace.websiteUrl || workspace.url || "",
     }
   }
 
@@ -213,9 +227,11 @@ export class PromptRenderService {
       operatorWhatsappNumber: workspace.operatorWhatsappNumber,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
       adminEmail: workspace.adminEmail,
+      supportEmail: workspace.notificationEmail || workspace.adminEmail,
       allowedExternalLinks: workspace.allowedExternalLinks,
       address: workspace.address,
       customAiRules: workspace.customAiRules,
+      websiteUrl: workspace.websiteUrl || workspace.url,
     }
 
     // Use PromptProcessorService for full variable replacement

@@ -1748,6 +1748,7 @@ enum SupportIssueType {
   WHATSAPP
   WIDGET
   SALES_AGENT
+  SUPPORT
   OTHER
 }
 

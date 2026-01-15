@@ -16,6 +16,8 @@ export interface CreateTicketData {
   issueType: SupportIssueType
   subject: string
   initialMessage: string
+  createdById?: string
+  createdByType?: SupportSenderType
 }
 
 export interface CreateMessageData {
@@ -96,6 +98,8 @@ export class SupportTicketRepository {
    */
   async create(data: CreateTicketData): Promise<SupportTicketWithDetails> {
     const ticketCode = await this.generateTicketCode()
+    const senderId = data.createdById || data.userId
+    const senderType = data.createdByType || SupportSenderType.CUSTOMER
 
     // Build data object conditionally - Prisma doesn't accept undefined for optional relations
     const createData: any = {
@@ -105,8 +109,8 @@ export class SupportTicketRepository {
       subject: data.subject,
       messages: {
         create: {
-          senderId: data.userId,
-          senderType: SupportSenderType.CUSTOMER,
+          senderId,
+          senderType,
           content: data.initialMessage,
         },
       },
@@ -407,6 +411,15 @@ export class SupportTicketRepository {
    */
   async deleteAttachment(id: string): Promise<void> {
     await this.prisma.supportAttachment.delete({
+      where: { id },
+    })
+  }
+
+  /**
+   * Delete ticket (hard delete)
+   */
+  async deleteTicket(id: string): Promise<SupportTicket> {
+    return this.prisma.supportTicket.delete({
       where: { id },
     })
   }

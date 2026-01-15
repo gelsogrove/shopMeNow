@@ -8,6 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ImageCropUpload } from "@/components/shared/ImageCropUpload"
@@ -101,38 +109,38 @@ const GUIDES = {
   business: {
     title: "Business Configuration",
     content:
-      "• Channel name: Short workspace label for URLs and headers\n• Business type: Industry context for the AI\n• Admin email: Billing/security notifications\n• Website URL: Main link the bot can share\n• E-commerce: Enable catalog features\n• Sales agents: Enable team routing\n• Channel status: Pause or resume the channel\n• Debug mode: Troubleshooting only",
+      "• Channel Name: Use this to identify your channel - it appears in URLs and headers. Pick something short and memorable!\n\n• Business Type: Tell the AI what industry you're in so it understands your context better (e.g., Restaurant, E-commerce, Services)\n\n• Admin Email: Where we'll send important notifications about billing and security alerts\n\n• Website URL: The main link your bot can share with customers when they ask about your website\n\n• Channel Status: Turn this OFF when you need to pause the channel - customers will see the maintenance message instead\n\n• Debug Mode: Turn this ON only for troubleshooting - customers will receive the maintenance message while you fix issues",
   },
   channels: {
-    title: "Channel Setup",
+    title: "Channel Selection",
     content:
-      "• WhatsApp: Direct conversations and order updates\n• Website widget: On-site chat and FAQs\n• Best practice: Enable both for full coverage",
+      "• WhatsApp: Enable this to have direct conversations with customers and send order updates\n\n• Website Widget: Turn this ON to add a live chat bubble on your website for instant support and FAQs\n\n💡 Best practice: We recommend enabling both channels! This gives customers flexibility to reach you wherever they prefer",
   },
   whatsapp: {
     title: "WhatsApp Configuration",
     content:
-      "• Phone number: Verified WhatsApp Business number\n• Phone number ID: Meta ID for the number\n• API key: Access token from Meta\n• Verify token: Webhook validation string",
+      "• Phone Number: Your verified WhatsApp Business phone number (format: +1234567890)\n\n• Phone Number ID: This is the unique ID Meta assigns to your WhatsApp Business number - find it in your Meta Business Manager\n\n• API Key: Your access token from Meta - this lets us send/receive messages on your behalf\n\n• Verify Token: A secret string you create to validate webhook connections - choose something secure and remember it!",
   },
   widget: {
     title: "Website Widget",
-    content: "• Widget Title: Chat window header text\n• Language: Choose from 50+ supported languages\n• Primary Color: Match your brand colors\n• Logo: Upload brand image (square format)\n• Embed Code: Paste before </body> tag in HTML\n• Widget appears as bubble in bottom-right corner",
+    content: "• Widget Title: This appears at the top of the chat window - keep it friendly like 'Chat with us!' or 'Need help?'\n\n• Language: Pick from 50+ languages - the widget UI will display in this language\n\n• Primary Color: Choose a color that matches your brand - this affects buttons and the chat bubble\n\n• Logo: Upload your brand logo (square format works best) - shows in the chat header\n\n• Embed Code: Copy this code and paste it just before the closing </body> tag in your website's HTML\n\n💡 The widget appears as a bubble in the bottom-right corner of your site. Customers click it to start chatting!",
   },
   personality: {
     title: "AI Personality",
-    content: "• Assistant Name: E.g., 'Sofia', 'Alex', 'Support Bot'\n• Tone of Voice: Formal, Friendly, Professional, Casual\n• Welcome Message: First message to customers\n• Bot Identity: How AI introduces itself\n• Custom AI Rules: Override default behavior\n• Maintenance Message: Shown during system downtime\n• Variables: Use {{customerName}}, {{businessName}}, etc",
+    content: "• Assistant Name: Give your bot a name! Examples: 'Sofia', 'Alex', 'Support Bot'. This makes conversations feel more human\n\n• Tone of Voice: How should your bot talk?\n                  - Formal: Professional and respectful\n                  - Friendly: Warm and approachable\n                  - Professional: Business-like but pleasant\n                  - Casual: Relaxed and conversational\n\n• Welcome Message: The first thing customers see when they start a chat - make it welcoming!\n\n• Bot Identity: What does your bot say when asked 'Who are you?' - explain what you can help with\n\n• Custom AI Rules: Add special instructions to override default behavior (e.g., 'Always ask for order number before checking status')\n\n• Maintenance Message: What customers see when the channel is paused or in debug mode\n\n💡 Variables you can use: {{customerName}}, {{businessName}}, {{businessEmail}} - they'll be replaced with real data",
   },
   support: {
     title: "Human Support",
     content:
-      "• Enable support\n• Contact method\n• Operator number\n• Escalation rule",
+      "• Enable Human Support: Turn this ON to let customers request a human operator when the AI can't help\n\n• Contact Method: Choose how customers reach your team:\n                  - Email: Customers get an email address to contact\n                  - WhatsApp: Bot provides a WhatsApp number for direct contact\n\n• Operator WhatsApp Number: If you chose WhatsApp method, enter the number here (format: +1234567890)\n\n• Special Instructions: Tell the AI when to offer human support - e.g., 'Offer human support for complaints or complex technical issues'\n\n💡 The bot will automatically suggest human contact when it detects it can't help!",
   },
   security: {
     title: "Security & Access",
-    content: "• Allowed External Domains: Trusted sites bot can link to\n• Format: One domain per line or comma-separated\n• Examples: docs.google.com, stripe.com, instagram.com\n• Add payment processors and official social media\n• Prevents malicious link injection",
+    content: "• Allowed External Domains: List the websites your bot is allowed to share links from - this prevents malicious link injection\n\n• Format: Enter one domain per line OR separate them with commas\n\n• Examples:\n  - docs.google.com (for sharing documents)\n  - stripe.com (payment links)\n  - instagram.com (your social media)\n  - youtube.com (product videos)\n\n💡 Always add your payment processors and official social media here! The bot will reject any links from unlisted domains for security.\n\n🔒 echatbot.ai and paypal.com are pre-approved by default",
   },
 }
 
-// Textarea Modal Component
+// Textarea Sheet Component
 function TextareaModal({ 
   title, 
   value, 
@@ -182,71 +190,76 @@ function TextareaModal({
       >
         <Edit3 className="mr-2 h-4 w-4" />
         {value ? (
-          <span className="truncate">{value.substring(0, 60)}{value.length > 60 ? '...' : ''}</span>
+          <span className="truncate">{value.substring(0, 120)}{value.length > 120 ? '...' : ''}</span>
         ) : (
           <span className="text-muted-foreground">{placeholder || 'Click to edit'}</span>
         )}
       </Button>
       
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            {hint && (
-              <DialogDescription className="text-sm text-slate-600">{hint}</DialogDescription>
-            )}
-          </DialogHeader>
-          
-          <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden py-4">
-            {/* Textarea - 2/3 width */}
-            <div className="col-span-2 flex flex-col">
-              <Textarea
-                value={localValue}
-                onChange={(e) => setLocalValue(e.target.value)}
-                placeholder={placeholder}
-                className="flex-1 resize-none font-mono text-sm"
-              />
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetContent
+          side="right"
+          className="w-[90%] sm:w-[540px] md:w-[720px] p-0 overflow-y-auto"
+        >
+          <div className="flex flex-col h-full">
+            <SheetHeader className="px-6 pt-6 pb-2">
+              <SheetTitle>{title}</SheetTitle>
+              {hint && (
+                <SheetDescription className="text-sm text-slate-600">{hint}</SheetDescription>
+              )}
+            </SheetHeader>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="space-y-6">
+                <Textarea
+                  value={localValue}
+                  onChange={(e) => setLocalValue(e.target.value)}
+                  placeholder={placeholder}
+                  className="min-h-[240px] resize-none font-mono text-sm"
+                />
+
+                {variables && variables.length > 0 && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <h4 className="font-semibold text-sm mb-3 text-slate-700">Available Variables</h4>
+                    <div className="space-y-2">
+                      {variables.map((v) => (
+                        <div key={v.name} className="group">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => insertVariable(v.name)}
+                            className="w-full justify-start text-left h-auto py-2 px-2 hover:bg-slate-100"
+                          >
+                            <div className="flex flex-col items-start w-full">
+                              <code className="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded group-hover:bg-slate-200">
+                                {`{{${v.name}}}`}
+                              </code>
+                              <span className="text-xs text-slate-500 mt-1">{v.description}</span>
+                            </div>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Variables Sidebar - 1/3 width */}
-            {variables && variables.length > 0 && (
-              <div className="col-span-1 border-l border-slate-200 pl-4 overflow-y-auto">
-                <h4 className="font-semibold text-sm mb-3 text-slate-700">Available Variables</h4>
-                <div className="space-y-2">
-                  {variables.map((v) => (
-                    <div key={v.name} className="group">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => insertVariable(v.name)}
-                        className="w-full justify-start text-left h-auto py-2 px-2 hover:bg-slate-100"
-                      >
-                        <div className="flex flex-col items-start w-full">
-                          <code className="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded group-hover:bg-slate-200">
-                            {`{{${v.name}}}`}
-                          </code>
-                          <span className="text-xs text-slate-500 mt-1">{v.description}</span>
-                        </div>
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+            <SheetFooter className="px-6 py-4 border-t">
+              <div className="flex justify-end w-full gap-3">
+                <Button variant="outline" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </Button>
               </div>
-            )}
+            </SheetFooter>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
@@ -255,12 +268,9 @@ function TextareaModal({
 function GuideCard({ guide, isOpen }: { guide: { title: string; content: string }, isOpen: boolean }) {
   return (
     <Card className="rounded-2xl border-blue-200 bg-blue-50 shadow-sm h-full flex flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
+      <CardHeader className="pb-3 flex justify-end">
+        <div className="flex items-center justify-end">
           <HelpCircle className="h-5 w-5 text-blue-600" />
-          <CardTitle className="text-sm font-semibold text-blue-900">
-            {guide.title}
-          </CardTitle>
         </div>
       </CardHeader>
       {isOpen && (
@@ -285,6 +295,17 @@ function GuideCard({ guide, isOpen }: { guide: { title: string; content: string 
                         <span>{withoutBullet}</span>
                       )}
                     </div>
+                  </div>
+                )
+              }
+              // Preserve indentation for sub-items (lines starting with spaces and -)
+              if (trimmedLine.startsWith('-')) {
+                const leadingSpaces = line.search(/\S/)
+                const indentLevel = Math.floor(leadingSpaces / 4) // 4 spaces per indent level
+                return (
+                  <div key={index} className="flex gap-2" style={{ marginLeft: `${indentLevel * 0.5}rem` }}>
+                    <span className="text-blue-600">-</span>
+                    <span>{trimmedLine.substring(1).trim()}</span>
                   </div>
                 )
               }
@@ -362,7 +383,9 @@ export default function SettingsPage() {
 
   const { workspace: currentWorkspace, setCurrentWorkspace, loading: workspaceLoading } = useWorkspace()
   const { role: workspaceRole, isSuperAdmin } = useWorkspaceRole(currentWorkspace?.id)
-  const isAdmin = workspaceRole === "ADMIN" || workspaceRole === "OWNER" || workspaceRole === "SUPER_ADMIN" || isSuperAdmin
+  // ⚠️ SECURITY: Only SUPER_ADMIN (workspace owner) can modify settings
+  // ADMIN and AGENT roles can view but not edit
+  const canEdit = isSuperAdmin
   const [isLoadingData, setIsLoadingData] = useState(true)
 
   // 🔍 Debug logging for role
@@ -370,9 +393,9 @@ export default function SettingsPage() {
     logger.info("🔍 [SettingsPage] Role check:", {
       workspaceRole,
       isSuperAdmin,
-      isAdmin,
+      canEdit,
     })
-  }, [workspaceRole, isAdmin, isSuperAdmin])
+  }, [workspaceRole, canEdit, isSuperAdmin])
 
   // 🔍 Debug logging
   useEffect(() => {
@@ -526,7 +549,12 @@ export default function SettingsPage() {
       workspaceLoading,
     })
 
-    // If no workspace, redirect to selection (workspace loads synchronously from localStorage)
+    if (workspaceLoading) {
+      logger.info("⏳ [SettingsPage] Workspace loading - waiting before redirect")
+      return
+    }
+
+    // If no workspace, redirect to selection
     if (!currentWorkspace?.id) {
       logger.info("❌ [SettingsPage] No workspace found - redirecting to workspace-selection")
       navigate("/workspace-selection")
@@ -591,7 +619,7 @@ export default function SettingsPage() {
     loadWorkspaceData()
   }, [currentWorkspace?.id, navigate])
 
-  if (isLoadingData) {
+  if (workspaceLoading || isLoadingData) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
@@ -605,6 +633,20 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Read-only mode banner for non-owners */}
+        {!canEdit && (
+          <div className="mb-6 rounded-lg bg-yellow-50 border border-yellow-200 p-4">
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm font-medium text-yellow-800">
+                View-only mode: Only the workspace owner can modify settings
+              </p>
+            </div>
+          </div>
+        )}
+        
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -615,19 +657,30 @@ export default function SettingsPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2">
+                <Monitor className="h-4 w-4 text-slate-600" />
+                <span className="text-sm font-medium text-slate-700">Channel Active</span>
+                <Switch
+                  checked={formData.channelStatus}
+                  onCheckedChange={(checked) =>
+                    handleFieldChange("channelStatus", checked)
+                  }
+                  disabled={!canEdit}
+                />
+              </div>
               <Button
                 onClick={() => setShowDeleteDialog(true)}
                 variant="outline"
                 size="sm"
                 className="text-red-600 border-red-200 hover:bg-red-50"
-                disabled={deleteWorkspaceMutation.isPending || !isAdmin}
+                disabled={deleteWorkspaceMutation.isPending || !canEdit}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Channel
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={saveSettingsMutation.isPending || !isAdmin}
+                disabled={saveSettingsMutation.isPending || !canEdit}
                 size="sm"
                 className="bg-green-600 text-white hover:bg-green-700"
               >
@@ -648,13 +701,12 @@ export default function SettingsPage() {
         </div>
 
         {/* Card + Guide Layout */}
-        <div className="space-y-6">
+        <div className="mt-6 space-y-6">
           {/* 1️⃣ Business Configuration */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch">
-            <div className="lg:col-span-9 h-full">
-            <Card className="rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
+          <div>
+            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
               <CardHeader 
-                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
                 onClick={() => setOpenSection(openSection === "business" ? "" : "business")}
               >
                 <div className="flex items-center justify-between">
@@ -673,8 +725,10 @@ export default function SettingsPage() {
                 </div>
               </CardHeader>
               {openSection === "business" && (
-              <CardContent className="space-y-6 px-6 pb-6">
-                <div className="grid gap-4 sm:grid-cols-2">
+              <CardContent className="px-6 pb-6 pt-6">
+                <div className="grid gap-6 lg:grid-cols-12">
+                  <div className="lg:col-span-8 space-y-6">
+                    <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">
                       Channel Name <span className="text-red-500">*</span>
@@ -683,8 +737,8 @@ export default function SettingsPage() {
                       id="name"
                       value={formData.name}
                       onChange={(e) => handleFieldChange("name", e.target.value)}
-                      placeholder="My Business"
-                      disabled={!isAdmin}
+                      placeholder="e.g., My Restaurant, Tech Support"
+                      disabled={!canEdit}
                       className={errors.name ? "border-red-500" : ""}
                     />
                     {errors.name && (
@@ -696,10 +750,10 @@ export default function SettingsPage() {
                     <Select
                       value={formData.businessType}
                       onValueChange={(value) => handleFieldChange("businessType", value)}
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     >
                       <SelectTrigger id="businessType">
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder="Select your industry" />
                       </SelectTrigger>
                       <SelectContent>
                         {BUSINESS_TYPES.map((type) => (
@@ -721,7 +775,7 @@ export default function SettingsPage() {
                       value={formData.adminEmail}
                       onChange={(e) => handleFieldChange("adminEmail", e.target.value)}
                       placeholder="admin@example.com"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                       className={errors.adminEmail ? "border-red-500" : ""}
                     />
                   </div>
@@ -733,86 +787,36 @@ export default function SettingsPage() {
                       value={formData.url}
                       onChange={(e) => handleFieldChange("url", e.target.value)}
                       placeholder="https://mybusiness.com"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-3">
-                    <Monitor className="h-5 w-5 text-slate-600" />
-                    <div>
-                      <p className="font-medium text-sm">Channel Active</p>
-                      <p className="text-xs text-slate-500">
-                        Disable to show the maintenance message on WhatsApp and widget
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={formData.channelStatus}
-                    onCheckedChange={(checked) =>
-                      handleFieldChange("channelStatus", checked)
-                    }
-                    disabled={!isAdmin}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-3">
                     <ShoppingCart className="h-5 w-5 text-slate-600" />
-                    <div>
-                      <p className="font-medium text-sm">E-commerce Features</p>
-                      <p className="text-xs text-slate-500">
-                        Enable product catalog, orders, and payments
-                      </p>
-                    </div>
+                    <p className="font-medium text-sm">E-commerce Features</p>
                   </div>
                   <Switch
                     checked={formData.sellsProductsAndServices}
                     onCheckedChange={(checked) =>
                       handleFieldChange("sellsProductsAndServices", checked)
                     }
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                   />
                 </div>
-
-                {formData.sellsProductsAndServices && (
-                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center gap-3">
-                      <Users className="h-5 w-5 text-slate-600" />
-                      <div>
-                        <p className="font-medium text-sm">Sales Agents</p>
-                        <p className="text-xs text-slate-500">
-                          Enable agent-specific orders and commissions
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={formData.hasSalesAgents}
-                      onCheckedChange={(checked) =>
-                        handleFieldChange("hasSalesAgents", checked)
-                      }
-                      disabled={!isAdmin}
-                    />
-                  </div>
-                )}
 
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-3">
                     <AlertCircle className="h-5 w-5 text-slate-600" />
-                    <div>
-                      <p className="font-medium text-sm">Debug Mode</p>
-                      <p className="text-xs text-slate-500">
-                        Enable detailed logging (development only)
-                      </p>
-                    </div>
+                    <p className="font-medium text-sm">Debug Mode</p>
                   </div>
                   <Switch
                     checked={formData.debugMode}
                     onCheckedChange={(checked) =>
                       handleFieldChange("debugMode", checked)
                     }
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                   />
                 </div>
 
@@ -823,7 +827,7 @@ export default function SettingsPage() {
                     value={formData.wipMessage}
                     onChange={(value) => handleFieldChange("wipMessage", value)}
                     placeholder="Work in progress. Please contact us later."
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                     hint="Message shown when system is under maintenance"
                     variables={[
                       { name: "businessName", description: "Your business name" },
@@ -832,24 +836,24 @@ export default function SettingsPage() {
                     ]}
                   />
                 </div>
+                  </div>
+                  <div className="lg:col-span-4">
+                    <GuideCard
+                      guide={GUIDES.business}
+                      isOpen={openSection === "business"}
+                    />
+                  </div>
+                </div>
               </CardContent>
               )}
             </Card>
-            </div>
-            <div className="lg:col-span-3 h-full">
-              <GuideCard
-                guide={GUIDES.business}
-                isOpen={openSection === "business"}
-              />
-            </div>
           </div>
 
           {/* 2️⃣ Channel Selection */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch">
-            <div className="lg:col-span-9 h-full">
-            <Card className="rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
+          <div>
+            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
               <CardHeader 
-                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
                 onClick={() => setOpenSection(openSection === "channels" ? "" : "channels")}
               >
                 <div className="flex items-center justify-between">
@@ -868,14 +872,16 @@ export default function SettingsPage() {
                 </div>
               </CardHeader>
               {openSection === "channels" && (
-              <CardContent className="space-y-4 px-6 pb-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-center justify-between rounded-xl border-2 border-green-200 bg-green-50 p-4">
+              <CardContent className="px-6 pb-6 pt-6">
+                <div className="grid gap-6 lg:grid-cols-12">
+                  <div className="lg:col-span-8 space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center gap-3">
-                      <Smartphone className="h-6 w-6 text-green-600" />
+                      <Smartphone className="h-6 w-6 text-slate-600" />
                       <div>
                         <p className="font-semibold text-sm">WhatsApp</p>
-                        <p className="text-xs text-green-700">
+                        <p className="text-xs text-slate-500">
                           Message customers directly
                         </p>
                       </div>
@@ -885,16 +891,16 @@ export default function SettingsPage() {
                       onCheckedChange={(checked) =>
                         handleFieldChange("enableWhatsapp", checked)
                       }
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     />
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center gap-3">
-                      <Monitor className="h-6 w-6 text-blue-600" />
+                      <Monitor className="h-6 w-6 text-slate-600" />
                       <div>
                         <p className="font-semibold text-sm">Website Widget</p>
-                        <p className="text-xs text-blue-700">
+                        <p className="text-xs text-slate-500">
                           Embed chat on your site
                         </p>
                       </div>
@@ -904,29 +910,29 @@ export default function SettingsPage() {
                       onCheckedChange={(checked) =>
                         handleFieldChange("enableWidget", checked)
                       }
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
+                    />
+                  </div>
+                    </div>
+                  </div>
+                  <div className="lg:col-span-4">
+                    <GuideCard
+                      guide={GUIDES.channels}
+                      isOpen={openSection === "channels"}
                     />
                   </div>
                 </div>
               </CardContent>
               )}
             </Card>
-            </div>
-            <div className="lg:col-span-3 h-full">
-              <GuideCard
-                guide={GUIDES.channels}
-                isOpen={openSection === "channels"}
-              />
-            </div>
           </div>
 
           {/* 3️⃣ WhatsApp Settings (Conditional) */}
           {formData.enableWhatsapp && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch">
-              <div className="lg:col-span-9 h-full">
-              <Card className="rounded-2xl border-green-200 shadow-sm h-full flex flex-col overflow-hidden">
+            <div>
+              <Card className="group rounded-2xl border-green-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
                 <CardHeader 
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
                   onClick={() => setOpenSection(openSection === "whatsapp" ? "" : "whatsapp")}
                 >
                   <div className="flex items-center justify-between">
@@ -945,18 +951,20 @@ export default function SettingsPage() {
                   </div>
                 </CardHeader>
                 {openSection === "whatsapp" && (
-                <CardContent className="space-y-4 px-6 pb-6">
-                  <div className="space-y-2">
+                <CardContent className="px-6 pb-6 pt-6">
+                  <div className="grid gap-6 lg:grid-cols-12">
+                    <div className="lg:col-span-8 space-y-4">
+                      <div className="space-y-2">
                     <Label htmlFor="whatsappPhoneNumber">Phone Number</Label>
                     <Input
                       id="whatsappPhoneNumber"
                       value={formData.whatsappPhoneNumber}
                       onChange={(e) => handleFieldChange("whatsappPhoneNumber", e.target.value)}
                       placeholder="+1234567890"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     />
                   </div>
-                  <div className="space-y-2">
+                      <div className="space-y-2">
                     <Label htmlFor="whatsappApiKey">API Key</Label>
                     <Input
                       id="whatsappApiKey"
@@ -964,49 +972,49 @@ export default function SettingsPage() {
                       value={formData.whatsappApiKey}
                       onChange={(e) => handleFieldChange("whatsappApiKey", e.target.value)}
                       placeholder="Enter API key"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     />
                   </div>
-                  <div className="space-y-2">
+                      <div className="space-y-2">
                     <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
                     <Input
                       id="whatsappPhoneNumberId"
                       value={formData.whatsappPhoneNumberId}
                       onChange={(e) => handleFieldChange("whatsappPhoneNumberId", e.target.value)}
                       placeholder="123456789012345"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     />
                   </div>
-                  <div className="space-y-2">
+                      <div className="space-y-2">
                     <Label htmlFor="whatsappVerifyToken">Verify Token</Label>
                     <Input
                       id="whatsappVerifyToken"
                       value={formData.whatsappVerifyToken}
                       onChange={(e) => handleFieldChange("whatsappVerifyToken", e.target.value)}
                       placeholder="mySecureToken123"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     />
+                  </div>
+                    </div>
+                    <div className="lg:col-span-4">
+                      <GuideCard
+                        guide={GUIDES.whatsapp}
+                        isOpen={openSection === "whatsapp"}
+                      />
+                    </div>
                   </div>
                 </CardContent>
                 )}
               </Card>
-              </div>
-              <div className="lg:col-span-3 h-full">
-                <GuideCard
-                  guide={GUIDES.whatsapp}
-                  isOpen={openSection === "whatsapp"}
-                />
-              </div>
             </div>
             )}
 
           {/* 4️⃣ Widget Settings (Conditional) */}
           {formData.enableWidget && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch">
-              <div className="lg:col-span-9 h-full">
-              <Card className="rounded-2xl border-blue-200 shadow-sm h-full flex flex-col overflow-hidden">
+            <div>
+              <Card className="group rounded-2xl border-blue-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
                 <CardHeader 
-                  className="cursor-pointer hover:bg-slate-50 transition-colors"
+                  className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
                   onClick={() => setOpenSection(openSection === "widget" ? "" : "widget")}
                 >
                   <div className="flex items-center justify-between">
@@ -1025,29 +1033,31 @@ export default function SettingsPage() {
                   </div>
                 </CardHeader>
                 {openSection === "widget" && (
-                <CardContent className="space-y-4 px-6 pb-6">
-                  <div className="space-y-2">
+                <CardContent className="px-6 pb-6 pt-6">
+                  <div className="grid gap-6 lg:grid-cols-12">
+                    <div className="lg:col-span-8 space-y-4">
+                      <div className="space-y-2">
                     <Label htmlFor="widgetTitle">Widget Title</Label>
                     <Input
                       id="widgetTitle"
                       value={formData.widgetTitle}
                       onChange={(e) => handleFieldChange("widgetTitle", e.target.value)}
                       placeholder="Chat with us"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                     />
                   </div>
-                  <div className="space-y-2">
+                      <div className="space-y-2">
                     <Label htmlFor="widgetPrimaryColor">Primary Color</Label>
                     <Input
                       id="widgetPrimaryColor"
                       type="color"
                       value={formData.widgetPrimaryColor}
                       onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                       className="w-32 h-10"
                     />
                   </div>
-                  <div className="space-y-2">
+                      <div className="space-y-2">
                     <Label>Embed Code</Label>
                     <div className="relative">
                       <pre className="bg-slate-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto">
@@ -1086,27 +1096,26 @@ export default function SettingsPage() {
                         Copy
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-500">Paste this code before the closing &lt;/body&gt; tag in your HTML</p>
+                  </div>
+                    </div>
+                    <div className="lg:col-span-4">
+                      <GuideCard
+                        guide={GUIDES.widget}
+                        isOpen={openSection === "widget"}
+                      />
+                    </div>
                   </div>
                 </CardContent>
                 )}
               </Card>
-              </div>
-              <div className="lg:col-span-3 h-full">
-                <GuideCard
-                  guide={GUIDES.widget}
-                  isOpen={openSection === "widget"}
-                />
-              </div>
             </div>
             )}
 
           {/* 5️⃣ AI Personality */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch">
-            <div className="lg:col-span-9 h-full">
-            <Card className="rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
+          <div>
+            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
               <CardHeader 
-                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
                 onClick={() => setOpenSection(openSection === "personality" ? "" : "personality")}
               >
                 <div className="flex items-center justify-between">
@@ -1125,8 +1134,10 @@ export default function SettingsPage() {
                 </div>
               </CardHeader>
               {openSection === "personality" && (
-              <CardContent className="space-y-4 px-6 pb-6">
-                <div className="flex gap-6 items-start">
+              <CardContent className="px-6 pb-6 pt-6">
+                <div className="grid gap-6 lg:grid-cols-12">
+                  <div className="lg:col-span-8 space-y-4">
+                    <div className="flex gap-6 items-start">
                   {/* Left column - Assistant Name */}
                   <div className="space-y-2">
                     <Label htmlFor="chatbotName">Assistant Name</Label>
@@ -1135,29 +1146,39 @@ export default function SettingsPage() {
                       value={formData.chatbotName}
                       onChange={(e) => handleFieldChange("chatbotName", e.target.value)}
                       placeholder="SofiA"
-                      disabled={!isAdmin}
+                      disabled={!canEdit}
                       className="w-48"
                     />
                   </div>
                   
                   {/* Right column - Logo */}
-                  <div className="ml-auto">
-                    <ImageCropUpload
-                      currentImageUrl={
-                        formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined
-                      }
-                      onImageSelected={handleLogoChange}
-                      onImageRemove={handleLogoRemove}
-                      placeholder="logo"
-                      disabled={!isAdmin || isLogoUploading}
-                      editIconStyle={true}
-                      size="md"
-                      label=""
-                      circularCrop={true}
-                    />
-                  </div>
+                  {canEdit && (
+                    <div className="ml-auto">
+                      <ImageCropUpload
+                        currentImageUrl={
+                          formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined
+                        }
+                        onImageSelected={handleLogoChange}
+                        onImageRemove={handleLogoRemove}
+                        placeholder="logo"
+                        editIconStyle={true}
+                        size="md"
+                        label=""
+                        circularCrop={true}
+                      />
+                    </div>
+                  )}
+                  {!canEdit && formData.logoUrl && (
+                    <div className="ml-auto">
+                      <img
+                        src={`${IMG_BASE_URL}${formData.logoUrl}`}
+                        alt="Logo"
+                        className="h-16 w-16 rounded-full object-cover border-2 border-gray-200"
+                      />
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
+                    <div className="space-y-2">
                   <Label>Tone of Voice</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <div
@@ -1165,15 +1186,14 @@ export default function SettingsPage() {
                         formData.toneOfVoice === "formal" 
                           ? "border-green-200 bg-green-50 ring-2 ring-green-200" 
                           : "border-slate-200 bg-white hover:bg-slate-50"
-                      } ${!isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
-                      onClick={() => !isAdmin ? null : handleFieldChange("toneOfVoice", "formal")}
+                      } ${!canEdit ? "opacity-50 cursor-not-allowed" : ""}`}
+                      onClick={() => !canEdit ? null : handleFieldChange("toneOfVoice", "formal")}
                     >
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <Briefcase className="h-4 w-4 text-slate-600" />
                           <span className="text-sm font-medium">Formal</span>
                         </div>
-                        <p className="text-xs text-slate-500 ml-6">"Good morning, how may I assist you?"</p>
                       </div>
                       <div className={`w-4 h-4 rounded-full border-2 ${
                         formData.toneOfVoice === "formal" 
@@ -1186,15 +1206,14 @@ export default function SettingsPage() {
                         formData.toneOfVoice === "friendly" 
                           ? "border-green-200 bg-green-50 ring-2 ring-green-200" 
                           : "border-slate-200 bg-white hover:bg-slate-50"
-                      } ${!isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
-                      onClick={() => !isAdmin ? null : handleFieldChange("toneOfVoice", "friendly")}
+                      } ${!canEdit ? "opacity-50 cursor-not-allowed" : ""}`}
+                      onClick={() => !canEdit ? null : handleFieldChange("toneOfVoice", "friendly")}
                     >
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <Smile className="h-4 w-4 text-slate-600" />
                           <span className="text-sm font-medium">Friendly</span>
                         </div>
-                        <p className="text-xs text-slate-500 ml-6">"Hi there! How can I help you today?"</p>
                       </div>
                       <div className={`w-4 h-4 rounded-full border-2 ${
                         formData.toneOfVoice === "friendly" 
@@ -1207,15 +1226,14 @@ export default function SettingsPage() {
                         formData.toneOfVoice === "professional" 
                           ? "border-green-200 bg-green-50 ring-2 ring-green-200" 
                           : "border-slate-200 bg-white hover:bg-slate-50"
-                      } ${!isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
-                      onClick={() => !isAdmin ? null : handleFieldChange("toneOfVoice", "professional")}
+                      } ${!canEdit ? "opacity-50 cursor-not-allowed" : ""}`}
+                      onClick={() => !canEdit ? null : handleFieldChange("toneOfVoice", "professional")}
                     >
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <Award className="h-4 w-4 text-slate-600" />
                           <span className="text-sm font-medium">Professional</span>
                         </div>
-                        <p className="text-xs text-slate-500 ml-6">"Hello, I'm here to support you."</p>
                       </div>
                       <div className={`w-4 h-4 rounded-full border-2 ${
                         formData.toneOfVoice === "professional" 
@@ -1228,15 +1246,14 @@ export default function SettingsPage() {
                         formData.toneOfVoice === "casual" 
                           ? "border-green-200 bg-green-50 ring-2 ring-green-200" 
                           : "border-slate-200 bg-white hover:bg-slate-50"
-                      } ${!isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
-                      onClick={() => !isAdmin ? null : handleFieldChange("toneOfVoice", "casual")}
+                      } ${!canEdit ? "opacity-50 cursor-not-allowed" : ""}`}
+                      onClick={() => !canEdit ? null : handleFieldChange("toneOfVoice", "casual")}
                     >
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <Coffee className="h-4 w-4 text-slate-600" />
                           <span className="text-sm font-medium">Casual</span>
                         </div>
-                        <p className="text-xs text-slate-500 ml-6">"Hey! What's up? Tell me everything!"</p>
                       </div>
                       <div className={`w-4 h-4 rounded-full border-2 ${
                         formData.toneOfVoice === "casual" 
@@ -1246,14 +1263,14 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="space-y-2">
+                    <div className="space-y-2">
                   <Label htmlFor="botIdentityResponse">Bot Identity</Label>
                   <TextareaModal
                     title="Bot Identity Response"
                     value={formData.botIdentityResponse}
                     onChange={(value) => handleFieldChange("botIdentityResponse", value)}
                     placeholder="I'm an AI assistant created to help you..."
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                     hint="Define how your bot responds when asked about its identity"
                     variables={[
                       { name: "businessName", description: "Your business name" },
@@ -1264,14 +1281,14 @@ export default function SettingsPage() {
                     ]}
                   />
                 </div>
-                <div className="space-y-2">
+                    <div className="space-y-2">
                   <Label htmlFor="welcomeMessage">Welcome Message</Label>
                   <TextareaModal
                     title="Welcome Message"
                     value={formData.welcomeMessage}
                     onChange={(value) => handleFieldChange("welcomeMessage", value)}
                     placeholder="Welcome! I'm your digital assistant. How can I help you today?"
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                     hint="First message sent when customer starts a conversation"
                     variables={[
                       { name: "customerName", description: "Customer's name" },
@@ -1281,14 +1298,14 @@ export default function SettingsPage() {
                     ]}
                   />
                 </div>
-                <div className="space-y-2">
+                    <div className="space-y-2">
                   <Label htmlFor="customAiRules">Custom AI Rules</Label>
                   <TextareaModal
                     title="Custom AI Rules"
                     value={formData.customAiRules}
                     onChange={(value) => handleFieldChange("customAiRules", value)}
                     placeholder="Add custom rules for specific behaviors..."
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                     hint="💡 Custom rules override default AI behavior. Be specific and clear. Use variables to personalize responses."
                     variables={[
                       { name: "customerName", description: "Customer's name" },
@@ -1309,24 +1326,24 @@ export default function SettingsPage() {
                     ]}
                   />
                 </div>
+                  </div>
+                  <div className="lg:col-span-4">
+                    <GuideCard
+                      guide={GUIDES.personality}
+                      isOpen={openSection === "personality"}
+                    />
+                  </div>
+                </div>
               </CardContent>
               )}
             </Card>
-            </div>
-            <div className="lg:col-span-3 h-full">
-              <GuideCard
-                guide={GUIDES.personality}
-                isOpen={openSection === "personality"}
-              />
-            </div>
           </div>
 
           {/* 6️⃣ Support Configuration */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch">
-            <div className="lg:col-span-9 h-full">
-            <Card className="rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
+          <div>
+            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
               <CardHeader 
-                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
                 onClick={() => setOpenSection(openSection === "support" ? "" : "support")}
               >
                 <div className="flex items-center justify-between">
@@ -1345,72 +1362,69 @@ export default function SettingsPage() {
                 </div>
               </CardHeader>
               {openSection === "support" && (
-              <CardContent className="space-y-4 px-6 pb-6">
-                <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <CardContent className="px-6 pt-6 pb-6">
+                <div className="grid gap-8 lg:grid-cols-12">
+                  <div className="lg:col-span-8 space-y-6">
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-3">
                     <Headphones className="h-5 w-5 text-slate-600" />
-                    <div>
-                      <p className="font-medium text-sm">Enable Human Support</p>
-                      <p className="text-xs text-slate-500">
-                        Allow customers to reach human operators
-                      </p>
-                    </div>
+                    <p className="font-medium text-sm">Enable Human Support</p>
                   </div>
                   <Switch
                     checked={formData.hasHumanSupport}
                     onCheckedChange={(checked) =>
                       handleFieldChange("hasHumanSupport", checked)
                     }
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                   />
                 </div>
+
+                {formData.sellsProductsAndServices && (
+                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center gap-3">
+                      <Users className="h-5 w-5 text-slate-600" />
+                      <p className="font-medium text-sm">Sales Agents</p>
+                    </div>
+                    <Switch
+                      checked={formData.hasSalesAgents}
+                      onCheckedChange={(checked) =>
+                        handleFieldChange("hasSalesAgents", checked)
+                      }
+                      disabled={!canEdit}
+                    />
+                  </div>
+                )}
 
                 {formData.hasHumanSupport && (
                   <>
                     <div className="space-y-3">
                       <Label>Contact Method</Label>
                       <div className="space-y-2">
-                        <div 
-                          className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-colors ${
-                            formData.operatorContactMethod === "email" 
-                              ? "border-green-200 bg-green-50" 
-                              : "border-slate-200 bg-slate-50"
-                          } ${!isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
-                          onClick={() => !isAdmin ? null : handleFieldChange("operatorContactMethod", "email")}
-                        >
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                           <div className="flex items-center gap-3">
                             <MessageSquare className="h-5 w-5 text-slate-600" />
-                            <div>
-                              <p className="font-medium text-sm">Email</p>
-                              <p className="text-xs text-slate-500">Contact via email</p>
-                            </div>
+                            <p className="font-medium text-sm">Email</p>
                           </div>
                           <Switch
                             checked={formData.operatorContactMethod === "email"}
-                            onCheckedChange={() => handleFieldChange("operatorContactMethod", "email")}
-                            disabled={!isAdmin}
+                            onCheckedChange={(checked) => 
+                              handleFieldChange("operatorContactMethod", checked ? "email" : "whatsapp")
+                            }
+                            disabled={!canEdit}
                           />
                         </div>
                         
-                        <div 
-                          className={`flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-colors ${
-                            formData.operatorContactMethod === "whatsapp" 
-                              ? "border-green-200 bg-green-50" 
-                              : "border-slate-200 bg-slate-50"
-                          } ${!isAdmin ? "opacity-50 cursor-not-allowed" : ""}`}
-                          onClick={() => !isAdmin ? null : handleFieldChange("operatorContactMethod", "whatsapp")}
-                        >
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
                           <div className="flex items-center gap-3">
                             <Smartphone className="h-5 w-5 text-slate-600" />
-                            <div>
-                              <p className="font-medium text-sm">WhatsApp</p>
-                              <p className="text-xs text-slate-500">Contact via WhatsApp</p>
-                            </div>
+                            <p className="font-medium text-sm">WhatsApp</p>
                           </div>
                           <Switch
                             checked={formData.operatorContactMethod === "whatsapp"}
-                            onCheckedChange={() => handleFieldChange("operatorContactMethod", "whatsapp")}
-                            disabled={!isAdmin}
+                            onCheckedChange={(checked) =>
+                              handleFieldChange("operatorContactMethod", checked ? "whatsapp" : "email")
+                            }
+                            disabled={!canEdit}
                           />
                         </div>
                       </div>
@@ -1426,7 +1440,7 @@ export default function SettingsPage() {
                             handleFieldChange("operatorWhatsappNumber", e.target.value)
                           }
                           placeholder="+1234567890"
-                          disabled={!isAdmin}
+                          disabled={!canEdit}
                         />
                       </div>
                     )}
@@ -1438,7 +1452,7 @@ export default function SettingsPage() {
                         value={formData.humanSupportInstructions}
                         onChange={(value) => handleFieldChange("humanSupportInstructions", value)}
                         placeholder="Instructions for when to escalate..."
-                        disabled={!isAdmin}
+                        disabled={!canEdit}
                         hint="Define when and how to escalate conversations to human operators"
                         variables={[
                           { name: "customerName", description: "Customer's name" },
@@ -1452,24 +1466,24 @@ export default function SettingsPage() {
                     </div>
                   </>
                 )}
+                  </div>
+                  <div className="lg:col-span-4">
+                    <GuideCard
+                      guide={GUIDES.support}
+                      isOpen={openSection === "support"}
+                    />
+                  </div>
+                </div>
               </CardContent>
               )}
             </Card>
-            </div>
-            <div className="lg:col-span-3 h-full">
-              <GuideCard
-                guide={GUIDES.support}
-                isOpen={openSection === "support"}
-              />
-            </div>
           </div>
 
           {/* 7️⃣ Security Settings */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:items-stretch">
-            <div className="lg:col-span-9 h-full">
-            <Card className="rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
+          <div>
+            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
               <CardHeader 
-                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
                 onClick={() => setOpenSection(openSection === "security" ? "" : "security")}
               >
                 <div className="flex items-center justify-between">
@@ -1488,28 +1502,31 @@ export default function SettingsPage() {
                 </div>
               </CardHeader>
               {openSection === "security" && (
-              <CardContent className="space-y-4 px-6 pb-6">
-                <div className="space-y-2">
+              <CardContent className="px-6 pt-6 pb-6">
+                <div className="grid gap-6 lg:grid-cols-12">
+                  <div className="lg:col-span-8 space-y-4">
+                    <div className="space-y-2">
                   <Label htmlFor="allowedExternalLinks">Allowed External Domains</Label>
                   <TextareaModal
                     title="Allowed External Domains"
                     value={formData.allowedExternalLinks}
                     onChange={(value) => handleFieldChange("allowedExternalLinks", value)}
                     placeholder="example.com, trusted-site.com, docs.google.com, stripe.com"
-                    disabled={!isAdmin}
+                    disabled={!canEdit}
                     hint="💡 Comma-separated list of trusted external domains that the bot can link to. Examples: docs.google.com, stripe.com, instagram.com"
                   />
+                    </div>
+                  </div>
+                  <div className="lg:col-span-4">
+                    <GuideCard
+                      guide={GUIDES.security}
+                      isOpen={openSection === "security"}
+                    />
+                  </div>
                 </div>
               </CardContent>
               )}
             </Card>
-            </div>
-            <div className="lg:col-span-3 h-full">
-              <GuideCard
-                guide={GUIDES.security}
-                isOpen={openSection === "security"}
-              />
-            </div>
           </div>
         </div>
 

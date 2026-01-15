@@ -114,6 +114,11 @@ export class CustomerSupportAgentLLM {
           allowedExternalLinks: true,
           sellsProductsAndServices: true,
           hasHumanSupport: true, // ✅ FIX: Include hasHumanSupport flag
+          hasSalesAgents: true,
+          operatorContactMethod: true,
+          operatorWhatsappNumber: true,
+          websiteUrl: true,
+          url: true,
         },
       })
 
@@ -133,7 +138,7 @@ export class CustomerSupportAgentLLM {
       let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
         "CUSTOMER_SUPPORT",
         context.workspaceId,
-        { faq: faqsFormatted }
+        { faq: faqsFormatted, faqs: faqsFormatted }
       )
       
       // Inject address if available
@@ -212,11 +217,11 @@ export class CustomerSupportAgentLLM {
           services: "",
           offers: "",
         },
-        undefined, // workspaceUrl
+        workspace?.websiteUrl || workspace?.url, // workspaceUrl
         {
           sellsProductsAndServices: workspace?.sellsProductsAndServices ?? false, // 🔧 Informational workspace
           hasHumanSupport: workspace?.hasHumanSupport ?? false, // ✅ FIX: Use actual hasHumanSupport flag
-          hasSalesAgents: false, // 🔧 Informational workspaces don't have sales agents
+          hasSalesAgents: workspace?.hasSalesAgents ?? false,
           address: workspace?.address || "",
           customAiRules: workspace?.customAiRules || "",
           botIdentityResponse: context.customerData?.botIdentityResponse || workspace?.botIdentityResponse || "",
@@ -224,6 +229,10 @@ export class CustomerSupportAgentLLM {
           frustrationEscalationInstructions: workspace?.frustrationEscalationInstructions || "", // 🔧 Custom frustration triggers
           adminEmail: context.customerData?.adminEmail || workspace?.notificationEmail || "", // 🆕 For support/escalation
           allowedExternalLinks: workspace?.allowedExternalLinks || [], // 🔧 Allowed domains for links
+          operatorContactMethod: workspace?.operatorContactMethod || "",
+          operatorWhatsappNumber: workspace?.operatorWhatsappNumber || "",
+          supportEmail: workspace?.notificationEmail || "",
+          websiteUrl: workspace?.websiteUrl || workspace?.url || "",
         }
       )
 

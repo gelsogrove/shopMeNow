@@ -69,7 +69,7 @@ interface InvoiceData {
 }
 
 export class InvoiceService {
-  private readonly TAX_RATE = 0.22
+  private readonly TAX_RATE = 0.21
 
   private formatInvoiceNumber(issuedAt: Date, sequence: number): string {
     const datePart = issuedAt.toISOString().slice(0, 10).replace(/-/g, '')

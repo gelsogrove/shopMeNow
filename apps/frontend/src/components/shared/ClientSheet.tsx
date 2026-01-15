@@ -72,8 +72,14 @@ interface ClientSheetProps {
 
 // Helper to get workspaceId from localStorage
 function getWorkspaceId() {
-  const workspace = storage.getWorkspace<{ id?: string }>()
+  const workspace = storage.getWorkspace<{ id?: string; sellsProductsAndServices?: boolean }>()
   return workspace?.id || null
+}
+
+// Helper to check if workspace is e-commerce
+function isEcommerceChannel() {
+  const workspace = storage.getWorkspace<{ id?: string; sellsProductsAndServices?: boolean }>()
+  return workspace?.sellsProductsAndServices ?? false
 }
 
 // Helper function to convert language code to name
@@ -624,64 +630,71 @@ export function ClientSheet({
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {/* SHIPPING ADDRESS - styled like invoice, but green */}
-                  <div className="space-y-4 border-2 border-green-200 bg-green-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-green-800">
-                      🚚 Shipping Address
-                    </h3>
+                {/* ⚠️ SHIPPING ADDRESS - Only show for e-commerce channels */}
+                {isEcommerceChannel() ? (
+                  <div className="space-y-4">
+                    {/* SHIPPING ADDRESS - styled like invoice, but green */}
+                    <div className="space-y-4 border-2 border-green-200 bg-green-50 p-4 rounded-lg">
+                      <h3 className="text-lg font-medium text-green-800">
+                        🚚 Shipping Address
+                      </h3>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="street" className="text-sm font-medium">
-                        Street Address
-                      </Label>
-                      <Input
-                        id="street"
-                        name="street"
-                        value={street}
-                        onChange={(e) => setStreet(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="city" className="text-sm font-medium">
-                          City
+                        <Label htmlFor="street" className="text-sm font-medium">
+                          Street Address
                         </Label>
                         <Input
-                          id="city"
-                          name="city"
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
+                          id="street"
+                          name="street"
+                          value={street}
+                          onChange={(e) => setStreet(e.target.value)}
                         />
                       </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="city" className="text-sm font-medium">
+                            City
+                          </Label>
+                          <Input
+                            id="city"
+                            name="city"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="zip" className="text-sm font-medium">
+                            ZIP Code
+                          </Label>
+                          <Input
+                            id="zip"
+                            name="zip"
+                            value={zip}
+                            onChange={(e) => setZip(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
-                        <Label htmlFor="zip" className="text-sm font-medium">
-                          ZIP Code
+                        <Label
+                          htmlFor="country"
+                          className="text-sm font-medium"
+                        >
+                          Country
                         </Label>
                         <Input
-                          id="zip"
-                          name="zip"
-                          value={zip}
-                          onChange={(e) => setZip(e.target.value)}
+                          id="country"
+                          name="country"
+                          value={country}
+                          onChange={(e) => setCountry(e.target.value)}
                         />
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="country" className="text-sm font-medium">
-                        Country
-                      </Label>
-                      <Input
-                        id="country"
-                        name="country"
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                      />
                     </div>
                   </div>
-                </div>
+                ) : null}
+                {/* End Shipping Address conditional */}
 
                 <div className="space-y-4 border-2 border-blue-200 bg-blue-50 p-4 rounded-lg">
                   <h3 className="text-lg font-medium text-blue-800">
@@ -962,6 +975,8 @@ export function ClientSheet({
                   </dl>
                 </div>
 
+                {/* ⚠️ Shipping Address - Only show for e-commerce channels */}
+                {isEcommerceChannel() && (
                 <div className="bg-white rounded-lg border p-4">
                   <h3 className="text-lg font-medium mb-3">Shipping Address</h3>
                   <address className="not-italic">
@@ -973,6 +988,7 @@ export function ClientSheet({
                     {fetchedClient?.shippingAddress?.country || ""}
                   </address>
                 </div>
+                )}
 
                 {fetchedClient?.notes && (
                   <div className="bg-white rounded-lg border p-4">

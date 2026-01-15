@@ -50,6 +50,16 @@ interface WorkspaceSettings {
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   address: string // 🆕 Physical address for {{#if address}} conditional
+  hasAddress: boolean
+  botIdentityResponse: string
+  customAiRules: string
+  allowedExternalLinks: string
+  humanSupportInstructions: string
+  frustrationEscalationInstructions: string
+  operatorContactMethod: string
+  operatorWhatsappNumber: string
+  supportEmail: string
+  websiteUrl: string
 }
 
 export class TemplateLoaderService {
@@ -199,6 +209,16 @@ export class TemplateLoaderService {
         hasHumanSupport: true,
         hasSalesAgents: true,
         address: true, // 🆕 For {{#if address}} conditional in templates
+        botIdentityResponse: true,
+        customAiRules: true,
+        allowedExternalLinks: true,
+        humanSupportInstructions: true,
+        frustrationEscalationInstructions: true,
+        operatorContactMethod: true,
+        operatorWhatsappNumber: true,
+        notificationEmail: true,
+        websiteUrl: true,
+        url: true,
       },
     })
 
@@ -206,11 +226,25 @@ export class TemplateLoaderService {
       throw new Error(`Workspace not found: ${workspaceId}`)
     }
 
+    const allowedLinks = Array.isArray(workspace.allowedExternalLinks)
+      ? workspace.allowedExternalLinks.join("\n")
+      : ""
+    const address = workspace.address || ""
     const settings: WorkspaceSettings = {
       sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
-      address: workspace.address || "", // 🆕 Physical address for location questions
+      address,
+      hasAddress: !!address,
+      botIdentityResponse: workspace.botIdentityResponse || "",
+      customAiRules: workspace.customAiRules || "",
+      allowedExternalLinks: allowedLinks,
+      humanSupportInstructions: workspace.humanSupportInstructions || "",
+      frustrationEscalationInstructions: workspace.frustrationEscalationInstructions || "",
+      operatorContactMethod: workspace.operatorContactMethod || "email",
+      operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",
+      supportEmail: workspace.notificationEmail || "",
+      websiteUrl: workspace.websiteUrl || workspace.url || "",
     }
 
     workspaceCache.set(workspaceId, { settings, timestamp: now })

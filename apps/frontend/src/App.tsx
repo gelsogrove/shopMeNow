@@ -56,6 +56,8 @@ import { LanguagesPage } from "./pages/settings/LanguagesPage"
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
 import { Suspense, lazy } from "react"
+import { useWorkspaceRole } from "./hooks/useWorkspaceRole"
+import { useWorkspace } from "./hooks/use-workspace"
 import { BillingProvider } from "./contexts/BillingContext"
 import { ChatListProvider } from "./contexts/ChatListContext"
 import { CustomerEditProvider } from "./contexts/CustomerEditContext"
@@ -74,6 +76,52 @@ const RegisterPage = lazy(() => import("./pages/register"))
 function AuthLoginRedirect() {
   const location = useLocation()
   return <Navigate to={`/${location.search}`} replace />
+}
+
+// Protected billing route - only owners can access
+function ProtectedBillingRoute() {
+  const { workspace } = useWorkspace()
+  const { isSuperAdmin, isLoading } = useWorkspaceRole(workspace?.id)
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent"></div>
+          <p className="mt-2 text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  if (!isSuperAdmin) {
+    return <Navigate to="/workspace-selection" replace />
+  }
+  
+  return <BillingPage />
+}
+
+// Protected analytics route - only owners can access
+function ProtectedAnalyticsRoute() {
+  const { workspace } = useWorkspace()
+  const { isSuperAdmin, isLoading } = useWorkspaceRole(workspace?.id)
+  
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent"></div>
+          <p className="mt-2 text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  if (!isSuperAdmin) {
+    return <Navigate to="/workspace-selection" replace />
+  }
+  
+  return <AnalyticsPage />
 }
 
 export function App() {
@@ -157,7 +205,7 @@ export function App() {
                     <Route index element={<QueuePage />} />
                   </Route>
                   <Route path="/analytics" element={<MinimalLayout />}>
-                    <Route index element={<AnalyticsPage />} />
+                    <Route index element={<ProtectedAnalyticsRoute />} />
                   </Route>
                   <Route path="/agents" element={<MinimalLayout />}>
                     <Route index element={<AgentConfigurationPage />} />
@@ -197,7 +245,7 @@ export function App() {
                   </Route>
 
                   <Route path="/billing" element={<MinimalLayout />}>
-                    <Route index element={<BillingPage />} />
+                    <Route index element={<ProtectedBillingRoute />} />
                   </Route>
 
                   <Route path="/support/tickets" element={<MinimalLayout />}>

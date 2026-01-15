@@ -1,11 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -20,12 +14,18 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import {
   Loader2,
   Plus,
@@ -36,10 +36,12 @@ import {
   X,
   FileText,
   Image as ImageIcon,
+  Trash2,
 } from "lucide-react"
 import { format, formatDistanceToNow } from "date-fns"
 import { toast } from "@/lib/toast"
 import { useWorkspace } from "@/hooks/use-workspace"
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useNavigate, useParams } from "react-router-dom"
 import { RichTextEditor, isRichTextEmpty } from "@/components/shared/RichTextEditor"
 import {
@@ -52,6 +54,7 @@ import {
   getTicket,
   createTicket,
   addMessage,
+  deleteTicket,
   getIssueTypeLabel,
   getStatusColor,
   getStatusLabel,
@@ -68,7 +71,7 @@ const ISSUE_TYPE_OPTIONS: { value: SupportIssueType; label: string }[] = [
 ]
 
 // New Ticket Form Component
-function NewTicketDialog({
+function NewTicketSheet({
   workspaceId,
   onCreated,
 }: {
@@ -111,81 +114,83 @@ function NewTicketDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
         <Button className="bg-green-600 hover:bg-green-700">
           <Plus className="w-4 h-4 mr-2" />
           New Ticket
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Create Support Ticket</DialogTitle>
-          <DialogDescription>
-            Describe your issue and we&apos;ll get back to you as soon as possible.
-          </DialogDescription>
-        </DialogHeader>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full sm:max-w-xl">
+        <div className="flex h-full flex-col">
+          <SheetHeader className="border-b border-slate-200 pb-4">
+            <SheetTitle>Create Support Ticket</SheetTitle>
+            <SheetDescription>
+              Describe your issue and we&apos;ll get back to you as soon as possible.
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="issueType">Issue Type</Label>
-            <Select
-              value={issueType}
-              onValueChange={(v) => setIssueType(v as SupportIssueType)}
+          <div className="flex-1 space-y-4 overflow-y-auto py-4 pr-1">
+            <div className="space-y-2">
+              <Label htmlFor="issueType">Issue Type</Label>
+              <Select
+                value={issueType}
+                onValueChange={(v) => setIssueType(v as SupportIssueType)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select issue type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ISSUE_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                placeholder="Brief description of your issue"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message</Label>
+              <RichTextEditor
+                value={message}
+                onChange={setMessage}
+                placeholder="Describe your issue in detail..."
+                minHeight="150px"
+              />
+            </div>
+          </div>
+
+          <SheetFooter className="border-t border-slate-200 pt-4">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || !subject.trim() || isRichTextEmpty(message)}
+              className="bg-green-600 hover:bg-green-700"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select issue type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ISSUE_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="subject">Subject</Label>
-            <Input
-              id="subject"
-              placeholder="Brief description of your issue"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="message">Message</Label>
-            <RichTextEditor
-              value={message}
-              onChange={setMessage}
-              placeholder="Describe your issue in detail..."
-              minHeight="150px"
-            />
-          </div>
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Submit Ticket
+            </Button>
+          </SheetFooter>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || !subject.trim() || isRichTextEmpty(message)}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 mr-2" />
-            )}
-            Submit Ticket
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -278,10 +283,16 @@ function TicketDetailView({
   ticket,
   onBack,
   onMessageSent,
+  onDelete,
+  deleting,
+  isSuperAdmin = false,
 }: {
   ticket: SupportTicket
   onBack: () => void
   onMessageSent: (message: SupportMessage) => void
+  onDelete: () => void
+  deleting: boolean
+  isSuperAdmin?: boolean
 }) {
   const [newMessage, setNewMessage] = useState("")
   const [attachments, setAttachments] = useState<File[]>([])
@@ -338,8 +349,23 @@ function TicketDetailView({
           <p className="text-sm text-gray-500">
             {ticket.ticketCode} • {getIssueTypeLabel(ticket.issueType)} •
             Created {formatDistanceToNow(new Date(ticket.createdAt))} ago
+            {ticket.user && (ticket.user.firstName || ticket.user.lastName) && (
+              <> • Created by {[ticket.user.firstName, ticket.user.lastName].filter(Boolean).join(" ")}</>
+            )}
           </p>
         </div>
+        {isSuperAdmin && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={onDelete}
+            disabled={deleting}
+            className="gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            {deleting ? "Deleting..." : "Delete"}
+          </Button>
+        )}
       </div>
 
       {/* Messages */}
@@ -489,6 +515,7 @@ export default function SupportTicketsPage() {
   const navigate = useNavigate()
   const { ticketId } = useParams<{ ticketId?: string }>()
   const { workspace } = useWorkspace()
+  const { isSuperAdmin } = useWorkspaceRole()
 
   const [loading, setLoading] = useState(true)
   const [tickets, setTickets] = useState<SupportTicket[]>([])
@@ -496,6 +523,11 @@ export default function SupportTicketsPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [statusFilter, setStatusFilter] = useState<SupportTicketStatus | "ALL">("ALL")
+  const [deletingTicket, setDeletingTicket] = useState(false)
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" })
+  }, [ticketId])
 
   // Get workspace ID from current workspace
   const workspaceId = workspace?.id
@@ -562,47 +594,85 @@ export default function SupportTicketsPage() {
     }
   }
 
+  const handleDeleteTicket = useCallback(async () => {
+    if (!selectedTicket || deletingTicket) return
+    const confirmed = window.confirm(
+      `Delete ticket ${selectedTicket.ticketCode}? This will remove all messages and attachments.`
+    )
+    if (!confirmed) return
+
+    setDeletingTicket(true)
+    try {
+      await deleteTicket(selectedTicket.id)
+      toast.success("Ticket deleted")
+      setSelectedTicket(null)
+      navigate("/support/tickets")
+    } catch (error) {
+      console.error("Failed to delete ticket:", error)
+      toast.error("Failed to delete ticket")
+    } finally {
+      setDeletingTicket(false)
+    }
+  }, [selectedTicket, deletingTicket, navigate])
+
   // Detail View
   if (selectedTicket) {
     return (
-      <div className="container mx-auto py-8 max-w-6xl px-4">
-        <Card className="shadow-lg">
-          <CardContent className="p-8">
-            <TicketDetailView
-              ticket={selectedTicket}
-              onBack={handleBack}
-              onMessageSent={handleMessageSent}
-            />
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  Track replies and stay updated on your requests
+                </p>
+              </div>
+              <NewTicketSheet
+                workspaceId={workspaceId}
+                onCreated={handleTicketCreated}
+              />
+            </div>
+          </div>
+          <Card className="rounded-2xl border-slate-200 shadow-sm">
+            <CardContent className="p-8">
+              <TicketDetailView
+                ticket={selectedTicket}
+                onBack={handleBack}
+                onMessageSent={handleMessageSent}
+                onDelete={handleDeleteTicket}
+                deleting={deletingTicket}
+                isSuperAdmin={isSuperAdmin}
+              />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
 
   // List View
   return (
-    <div className="container mx-auto py-8 max-w-6xl px-4">
-      <Card className="shadow-lg">
-        <CardHeader>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5" />
-                Support Tickets
-              </CardTitle>
-              <CardDescription>
+              <h1 className="text-3xl font-bold text-gray-900">Support Tickets</h1>
+              <p className="mt-1 text-sm text-gray-500">
                 Get help with your account, billing, or technical issues
-              </CardDescription>
+              </p>
             </div>
-            <NewTicketDialog
+            <NewTicketSheet
               workspaceId={workspaceId}
               onCreated={handleTicketCreated}
             />
           </div>
-        </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="flex gap-4 mb-6">
+        </div>
+        <Card className="rounded-2xl border-slate-200 shadow-sm">
+          <CardContent className="p-6">
+            {/* Filters */}
+            <div className="flex items-center gap-4 mb-6">
             <Select
               value={statusFilter}
               onValueChange={(v) => {
@@ -622,57 +692,58 @@ export default function SupportTicketsPage() {
             </Select>
           </div>
 
-          {/* Loading State */}
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-            </div>
-          ) : tickets.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium mb-2">No support tickets yet</p>
-              <p className="text-sm">
-                Create a new ticket to get help with any issues
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {tickets.map((ticket) => (
-                <TicketListItem
-                  key={ticket.id}
-                  ticket={ticket}
-                  onClick={() => handleTicketClick(ticket)}
-                />
-              ))}
-            </div>
-          )}
+            {/* Loading State */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+              </div>
+            ) : tickets.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium mb-2">No support tickets yet</p>
+                <p className="text-sm">
+                  Create a new ticket to get help with any issues
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {tickets.map((ticket) => (
+                  <TicketListItem
+                    key={ticket.id}
+                    ticket={ticket}
+                    onClick={() => handleTicketClick(ticket)}
+                  />
+                ))}
+              </div>
+            )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-gray-500">
-                Page {page} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page === totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-500">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

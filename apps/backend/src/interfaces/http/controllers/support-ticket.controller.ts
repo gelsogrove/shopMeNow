@@ -70,6 +70,14 @@ export class SupportTicketController {
         return
       }
 
+      if (issueType === SupportIssueType.SUPPORT) {
+        res.status(403).json({
+          success: false,
+          error: "Support message type is reserved for admins",
+        })
+        return
+      }
+
       const ticket = await supportTicketService.createTicket({
         userId,
         workspaceId: workspaceId || undefined, // Optional
@@ -181,6 +189,71 @@ export class SupportTicketController {
       res.status(500).json({
         success: false,
         error: "Failed to get ticket",
+      })
+    }
+  }
+
+  /**
+   * Delete a ticket (owner only)
+   * DELETE /api/support/tickets/:ticketId
+   */
+  async deleteMyTicket(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id
+      if (!userId) {
+        res.status(401).json({ success: false, error: "Unauthorized" })
+        return
+      }
+
+      const { ticketId } = req.params
+      const ticket = await supportTicketService.getTicket(ticketId)
+
+      if (!ticket) {
+        res.status(404).json({
+          success: false,
+          error: "Ticket not found",
+        })
+        return
+      }
+
+      if (ticket.userId !== userId) {
+        res.status(403).json({
+          success: false,
+          error: "You do not have permission to delete this ticket",
+        })
+        return
+      }
+
+      // ⚠️ SECURITY: Only SUPER_ADMIN (workspace owner) can delete tickets
+      if (ticket.workspaceId) {
+        const userWorkspace = await this.prisma.userWorkspace.findFirst({
+          where: {
+            userId,
+            workspaceId: ticket.workspaceId,
+            role: "SUPER_ADMIN",
+          },
+        })
+
+        if (!userWorkspace) {
+          res.status(403).json({
+            success: false,
+            error: "Only workspace owners can delete tickets",
+            code: "TICKET_DELETE_FORBIDDEN",
+          })
+          return
+        }
+      }
+
+      const deleted = await supportTicketService.deleteTicket(ticketId)
+      res.json({
+        success: true,
+        data: deleted,
+      })
+    } catch (error) {
+      logger.error("Error deleting ticket:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete ticket",
       })
     }
   }
@@ -313,6 +386,45 @@ export class SupportTicketController {
   }
 
   /**
+   * Delete a ticket (admin only)
+   * DELETE /api/admin/support/tickets/:ticketId
+   */
+  async deleteTicket(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const isPlatformAdmin = await checkIsPlatformAdmin(req)
+      if (!isPlatformAdmin) {
+        res.status(403).json({
+          success: false,
+          error: "Only platform admins can delete tickets",
+        })
+        return
+      }
+
+      const { ticketId } = req.params
+      const deleted = await supportTicketService.deleteTicket(ticketId)
+
+      if (!deleted) {
+        res.status(404).json({
+          success: false,
+          error: "Ticket not found",
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        data: deleted,
+      })
+    } catch (error) {
+      logger.error("Error deleting ticket:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to delete ticket",
+      })
+    }
+  }
+
+  /**
    * Get unread message count
    * GET /api/support/tickets/unread-count
    */
@@ -346,6 +458,66 @@ export class SupportTicketController {
   }
 
   // ==================== ADMIN ENDPOINTS ====================
+
+  /**
+   * Create a new support ticket as admin (admin only)
+   * POST /api/admin/support/tickets
+   * Body: { userId, workspaceId (optional), subject, message }
+   */
+  async createTicketAsAdmin(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const adminId = req.user?.id
+      const isPlatformAdmin = await checkIsPlatformAdmin(req)
+      if (!adminId || !isPlatformAdmin) {
+        res.status(403).json({ success: false, error: "Only platform admins can create tickets" })
+        return
+      }
+
+      const { userId, workspaceId, subject, message } = req.body
+      if (!userId || !subject || !message) {
+        res.status(400).json({
+          success: false,
+          error: "Missing required fields: userId, subject, message",
+        })
+        return
+      }
+
+      if (workspaceId) {
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { ownerId: true },
+        })
+        if (!workspace || workspace.ownerId !== userId) {
+          res.status(400).json({
+            success: false,
+            error: "Workspace does not belong to the selected user",
+          })
+          return
+        }
+      }
+
+      const ticket = await supportTicketService.createTicket({
+        userId,
+        workspaceId: workspaceId || undefined,
+        issueType: SupportIssueType.SUPPORT,
+        subject,
+        initialMessage: message,
+        createdById: adminId,
+        createdByType: SupportSenderType.ADMIN,
+      })
+
+      res.status(201).json({
+        success: true,
+        data: ticket,
+      })
+    } catch (error) {
+      logger.error("Error creating admin support ticket:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to create support ticket",
+      })
+    }
+  }
 
   /**
    * Get all tickets (admin only)

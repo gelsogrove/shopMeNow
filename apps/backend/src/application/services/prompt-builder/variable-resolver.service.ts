@@ -32,6 +32,10 @@ export interface PromptVariables {
   customAiRules: string
   adminEmail: string
   address: string
+  chatbotName: string
+  businessType: string
+  websiteUrl: string
+  supportEmail: string
 
   // Customer Context (7 variables)
   customerName: string
@@ -116,6 +120,7 @@ export class VariableResolverService {
       select: {
         name: true,
         url: true,
+        websiteUrl: true,
         language: true,
         currency: true,
         toneOfVoice: true,
@@ -133,6 +138,8 @@ export class VariableResolverService {
         customAiRules: true,
         notificationEmail: true,
         address: true,
+        chatbotName: true,
+        businessType: true,
       },
     })
 
@@ -141,7 +148,7 @@ export class VariableResolverService {
     }
 
     variables.workspaceName = workspace.name || ""
-    variables.workspaceUrl = workspace.url || ""
+    variables.workspaceUrl = workspace.websiteUrl || workspace.url || ""
     variables.language = workspace.language || "ITA"
     variables.currency = workspace.currency || "USD"
     variables.toneOfVoice = workspace.toneOfVoice || "friendly"
@@ -165,13 +172,17 @@ export class VariableResolverService {
     variables.customAiRules = workspace.customAiRules || ""
     variables.adminEmail = workspace.notificationEmail || ""
     variables.address = workspace.address || ""
+    variables.chatbotName = workspace.chatbotName || "Assistente"
+    variables.businessType = workspace.businessType || "other"
+    variables.websiteUrl = workspace.websiteUrl || workspace.url || ""
+    variables.supportEmail = workspace.notificationEmail || ""
 
     // 🔧 Aliases for template compatibility (templates use old variable names)
     ;(variables as any).companyName = variables.workspaceName
-    ;(variables as any).websiteUrl = variables.workspaceUrl
-    ;(variables as any).supportEmail = variables.adminEmail
-    ;(variables as any).chatbotName = workspace.chatbotName || variables.botIdentityResponse || "Assistente"
-    ;(variables as any).businessType = workspace.sellsProductsAndServices ? "E-commerce" : "Information Service"
+    ;(variables as any).websiteUrl = variables.websiteUrl
+    ;(variables as any).supportEmail = variables.supportEmail
+    ;(variables as any).chatbotName = variables.chatbotName
+    ;(variables as any).businessType = variables.businessType
   }
 
   /**

@@ -1314,11 +1314,11 @@ export function LoginPage() {
                           const slide = heroSlides[slideIndex]
                           const isCenter = offset === 0
                           return (
-                            <img
+                            <div
                               key={`${slide.src}-${offset}`}
-                              src={slide.src}
-                              alt={slide.alt}
-                              className="w-full h-auto"
+                              className={`flex items-center justify-center ${
+                                offset === 0 ? "relative" : "absolute inset-0"
+                              }`}
                               style={{
                                 transform: `translateX(${offset * 85}%) scale(${
                                   isCenter ? 1 : 0.9
@@ -1326,29 +1326,33 @@ export function LoginPage() {
                                 opacity: isCenter ? 1 : 0.55,
                                 zIndex: isCenter ? 2 : 1,
                                 transition: "transform 0.6s ease, opacity 0.6s ease",
-                                position: offset === 0 ? 'relative' : 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
                               }}
-                            />
+                            >
+                              <img
+                                src={slide.src}
+                                alt={slide.alt}
+                                className="mx-auto h-auto w-auto max-w-[calc(100%-7px)] object-contain"
+                              />
+                            </div>
                           )
                         })
                       : heroSlides.map((slide, index) => (
-                          <img
+                          <div
                             key={slide.src}
-                            src={slide.src}
-                            alt={slide.alt}
-                            className="w-full h-auto transition-opacity duration-700 ease-in-out"
+                            className={`flex items-center justify-center transition-opacity duration-700 ease-in-out ${
+                              index === currentSlide ? "relative" : "absolute inset-0"
+                            }`}
                             style={{
                               opacity: index === currentSlide ? 1 : 0,
                               zIndex: index === currentSlide ? 2 : 1,
-                              position: index === currentSlide ? 'relative' : 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
                             }}
-                          />
+                          >
+                            <img
+                              src={slide.src}
+                              alt={slide.alt}
+                              className="mx-auto h-auto w-auto max-w-[calc(100%-7px)] object-contain"
+                            />
+                          </div>
                         ))}
                   </div>
                 </div>

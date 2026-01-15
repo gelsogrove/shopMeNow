@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ExternalLink, TestTube, Bug, CheckCircle2, MessageCircle, X } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { workspaceApi } from "@/services/workspaceApi"
@@ -14,6 +15,7 @@ interface Channel {
   whatsappPhoneNumber?: string
   debugMode?: boolean
   logoUrl?: string
+  language?: string
   ownerId?: string
   planType?: string
   isActive?: boolean
@@ -33,6 +35,16 @@ export default function ChannelsPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null)
   const [widgetOpen, setWidgetOpen] = useState(false)
   const [selectedWorkspace, setSelectedWorkspace] = useState<Channel | null>(null)
+  const [widgetLanguages, setWidgetLanguages] = useState<Record<string, string>>({})
+
+  const normalizeLanguage = (value?: string) => {
+    const normalized = (value || "").toLowerCase()
+    if (normalized.startsWith("it")) return "it"
+    if (normalized.startsWith("en")) return "en"
+    if (normalized.startsWith("es")) return "es"
+    if (normalized.startsWith("pt")) return "pt"
+    return "it"
+  }
 
   useEffect(() => {
     const fetchChannels = async () => {
@@ -41,6 +53,15 @@ export default function ChannelsPage() {
         console.log("🔍 CHANNELS RICEVUTI:", allChannels)
         console.log("🔍 LOGOS:", allChannels.map((c: any) => ({ name: c.name, logoUrl: c.logoUrl })))
         setChannels(allChannels)
+        setWidgetLanguages((prev) => {
+          const next = { ...prev }
+          allChannels.forEach((channel: Channel) => {
+            if (!next[channel.id]) {
+              next[channel.id] = normalizeLanguage(channel.language)
+            }
+          })
+          return next
+        })
       } catch (error) {
         console.error("Failed to fetch channels:", error)
         toast.error("Failed to load channels")
@@ -62,6 +83,13 @@ export default function ChannelsPage() {
   const handleLogoClick = (channel: Channel) => {
     setSelectedWorkspace(channel)
     setSelectedWorkspaceId(channel.id)
+  }
+
+  const handleLanguageChange = (workspaceId: string, value: string) => {
+    setWidgetLanguages((prev) => ({
+      ...prev,
+      [workspaceId]: value,
+    }))
   }
 
   if (loading) {
@@ -129,6 +157,26 @@ export default function ChannelsPage() {
                   )}
                 </div>
 
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Widget Language
+                  </span>
+                  <Select
+                    value={widgetLanguages[channel.id] || "it"}
+                    onValueChange={(value) => handleLanguageChange(channel.id, value)}
+                  >
+                    <SelectTrigger className="h-8 w-[140px] text-xs">
+                      <SelectValue placeholder="Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="it">Italian (IT)</SelectItem>
+                      <SelectItem value="en">English (EN)</SelectItem>
+                      <SelectItem value="es">Spanish (ES)</SelectItem>
+                      <SelectItem value="pt">Portuguese (PT)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="text-sm text-gray-600 space-y-1">
                   <p>
                     <span className="font-medium">Owner ID:</span> {channel.ownerId || 'N/A'}
@@ -189,6 +237,7 @@ export default function ChannelsPage() {
           }
           title={selectedWorkspace.name}
           position="bottom-right"
+          language={widgetLanguages[selectedWorkspaceId] || "it"}
           onOpenChange={(isOpen) => {
             setWidgetOpen(isOpen)
             if (!isOpen) {
