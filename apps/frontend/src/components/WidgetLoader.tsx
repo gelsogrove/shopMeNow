@@ -43,7 +43,8 @@ export function WidgetLoader() {
 
     const fetchWidgetConfig = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/v1/platform-config/widget-code")
+        const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
+        const response = await fetch(`${apiBaseUrl}/platform-config/widget-code`)
         
         if (!response.ok) {
           console.error("Failed to fetch widget config:", response.status)

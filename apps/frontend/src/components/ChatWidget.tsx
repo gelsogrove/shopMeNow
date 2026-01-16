@@ -48,11 +48,11 @@ const getApiUrl = () => {
   
   // If running on localhost, use local backend
   if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-    return "http://localhost:3001/api/v1"
+    return import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
   }
   
   // Otherwise use production URL
-  return "https://api.echatbot.ai/api/v1"
+  return import.meta.env.VITE_API_URL || "https://api.echatbot.ai/api/v1"
 }
 
 const DEFAULT_API_URL = getApiUrl()

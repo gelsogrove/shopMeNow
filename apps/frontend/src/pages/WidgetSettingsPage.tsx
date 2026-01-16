@@ -47,10 +47,10 @@ export default function WidgetSettingsPage() {
   }, [workspace]);
 
   const getWidgetConfig = () => {
-    const apiUrl =
-      typeof window !== "undefined" && window.location.hostname !== "localhost"
+    const apiUrl = import.meta.env.VITE_API_URL ||
+      (typeof window !== "undefined" && window.location.hostname !== "localhost"
         ? `${window.location.origin}/api/v1`
-        : "http://localhost:3001/api/v1";
+        : "http://localhost:3001/api/v1");
 
     return {
       workspaceId: workspace?.id || "YOUR_WORKSPACE_ID",

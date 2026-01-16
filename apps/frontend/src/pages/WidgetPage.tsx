@@ -27,8 +27,9 @@ export default function WidgetPage() {
           return
         }
 
+        const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
         const response = await fetch(
-          `http://localhost:3001/api/v1/workspaces/${workspace.id}/widget/embed-code`,
+          `${apiUrl}/workspaces/${workspace.id}/widget/embed-code`,
           {
             method: "GET",
             headers: {
