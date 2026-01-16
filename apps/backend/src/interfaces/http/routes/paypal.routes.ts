@@ -375,32 +375,8 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
       resource?.supplementary_data?.related_ids?.subscription_id ||
       resource?.supplementary_data?.related_ids?.billing_agreement_id
 
-    if (subscriptionId) {
-      const user = await prisma.user.findFirst({
-        where: {
-          metadata: {
-            path: ["paypalSubscriptionId"],
-            equals: subscriptionId,
-          } as unknown as Prisma.JsonFilter,
-        },
-      })
-
-      if (user) {
-        const statusFromEvent =
-          resource.status || resource.subscription_status || resource?.state
-
-        const metadata = {
-          ...(user.metadata as Record<string, any> | null | undefined),
-          paypalSubscriptionId: subscriptionId,
-          paypalSubscriptionStatus: statusFromEvent || eventType || "UNKNOWN",
-        }
-
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { metadata },
-        })
-      }
-    }
+    // Note: Subscription tracking removed (metadata field no longer exists)
+    // TODO: Implement subscription tracking with dedicated fields if needed
 
     logger.info("[PAYPAL] Webhook verified", {
       eventType,
@@ -566,11 +542,6 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
       return res.redirect(redirectUrl)
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { metadata: true },
-    })
-
     const tokenResponse = await fetch(
       `${paypalConfig.apiBaseUrl}/v1/oauth2/token`,
       {
@@ -628,18 +599,10 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
       userId,
     })
 
-    const metadata = {
-      ...(existingUser?.metadata as Record<string, any> | null | undefined),
-      paypalSubscriptionId: subscription.id,
-      paypalSubscriptionStatus: subscription.status,
-      paypalPlanId: subscription.planId,
-    }
-
     await prisma.user.update({
       where: { id: userId },
       data: {
         paypalStatus: PayPalStatus.CONNECTED,
-        isPaymentConnected: true,
         paypalClientId: paypalConfig.clientId,
         paypalMerchantId,
         paypalEmail,
@@ -653,7 +616,6 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
           ? new Date(Date.now() + expiresIn * 1000)
           : null,
         paypalTokenScope: scope || null,
-        metadata,
       },
     })
 
@@ -679,15 +641,6 @@ paypalRoutes.post(
       if (!(await ensureOwner(userId, res))) {
         return
       }
-
-      const existing = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { metadata: true },
-      })
-      const metadata = { ...(existing?.metadata as Record<string, any> | null | undefined) }
-      delete metadata?.paypalSubscriptionId
-      delete metadata?.paypalSubscriptionStatus
-      delete metadata?.paypalPlanId
 
       await prisma.user.update({
         where: { id: userId },

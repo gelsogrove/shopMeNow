@@ -2273,14 +2273,12 @@ router.post(
           user: {
             select: {
               id: true,
-              isPaymentConnected: true,
               paypalStatus: true,
               paypalEnvironment: true,
               isPlatformAdmin: true,
               isDeveloperUser: true,
               paypalAccessTokenEncrypted: true,
               paypalRefreshTokenEncrypted: true,
-              metadata: true,
             },
           },
         },
@@ -2297,27 +2295,8 @@ router.post(
           ? "sandbox"
           : "live"
 
-      const subscriptionId = (invoice.user.metadata as any)?.paypalSubscriptionId as string | undefined
-      const subscriptionStatus = (invoice.user.metadata as any)?.paypalSubscriptionStatus as string | undefined
-      if (!subscriptionId) {
-        res.status(400).json({
-          success: false,
-          error: "PayPal subscription missing. Reconnect PayPal.",
-          code: "PAYPAL_SUBSCRIPTION_MISSING",
-        })
-        return
-      }
-      if (subscriptionStatus && subscriptionStatus !== "ACTIVE") {
-        res.status(400).json({
-          success: false,
-          error: `PayPal subscription not active (${subscriptionStatus}). Reconnect or reactivate.`,
-          code: "PAYPAL_SUBSCRIPTION_INACTIVE",
-        })
-        return
-      }
-
       // Basic gating: require PayPal connection
-      if (!invoice.user.isPaymentConnected || invoice.user.paypalStatus !== PayPalStatus.CONNECTED) {
+      if (invoice.user.paypalStatus !== PayPalStatus.CONNECTED) {
         res.status(400).json({
           success: false,
           error: "PayPal connection required to process payment",
@@ -2347,7 +2326,6 @@ router.post(
             ? `${notes} | env:${env}`
             : `env:${env}`,
           adminUserId: adminUser?.id ?? null,
-          paypalTransactionId: capture.transactionId || null,
         },
       })
 
@@ -2358,7 +2336,6 @@ router.post(
         data: {
           status: success ? "PAID" : "FAILED",
           paidAt,
-          paypalTransactionId: transaction.id,
           adminNotes: notes ?? invoice.adminNotes ?? null,
           adminMarkedById: adminUser?.id ?? null,
           adminMarkedAt: new Date(),
@@ -2409,9 +2386,11 @@ router.post(
   authMiddleware,
   platformAdminMiddleware,
   async (req: Request, res: Response) => {
-    // Delegate to same handler logic
-    req.url = req.url.replace("/capture", "/mock-payment")
-    return router.handle(req, res, () => undefined)
+    // Note: This route is deprecated. Use /mock-payment instead
+    return res.status(410).json({
+      success: false,
+      error: "This endpoint is deprecated. Use /admin/invoices/:invoiceId/paypal/mock-payment instead"
+    })
   }
 )
 
