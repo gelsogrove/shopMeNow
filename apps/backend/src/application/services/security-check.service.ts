@@ -283,15 +283,15 @@ export class SecurityCheckService {
   ): Promise<SecurityCheckResult> {
     const { workspaceId, visitorId, message } = context
 
-    // Check for exact duplicate in last 5 minutes
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+    // Check for exact duplicate in last 30 seconds (reduced from 5 minutes)
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000)
 
     const duplicateMessage = await prisma.whatsAppQueue.findFirst({
       where: {
         workspaceId,
         visitorId,
         messageContent: message,
-        createdAt: { gte: fiveMinutesAgo },
+        createdAt: { gte: thirtySecondsAgo },
       },
     })
 
@@ -299,8 +299,8 @@ export class SecurityCheckService {
       return {
         step: "ANTI_SPAM",
         passed: false,
-        reason: "Duplicate message detected (same message sent within 5 minutes)",
-        retryAfter: 5 * 60 * 1000, // Wait 5 minutes
+        reason: "Duplicate message detected (same message sent within 30 seconds)",
+        retryAfter: 30 * 1000, // Wait 30 seconds
       }
     }
 
