@@ -195,11 +195,11 @@ export function LoginPage() {
   const getHeroSlides = (lang: string) => {
     const validLang = ["it", "en", "es", "pt"].includes(lang) ? lang : "en"
     return [
-      { src: `/src/assets/hero/${validLang}/home_1.png`, alt: "WhatsApp AI agent dashboard view 1" },
-      { src: `/src/assets/hero/${validLang}/home_2.png`, alt: "WhatsApp AI agent dashboard view 2" },
-      { src: `/src/assets/hero/${validLang}/home_3.png`, alt: "WhatsApp AI agent dashboard view 3" },
-      { src: `/src/assets/hero/${validLang}/home_4.png`, alt: "WhatsApp AI agent dashboard view 4" },
-      { src: `/src/assets/hero/${validLang}/home_5.png`, alt: "WhatsApp AI agent dashboard view 5" },
+      { src: new URL(`../assets/hero/${validLang}/home_1.png`, import.meta.url).href, alt: "WhatsApp AI agent dashboard view 1" },
+      { src: new URL(`../assets/hero/${validLang}/home_2.png`, import.meta.url).href, alt: "WhatsApp AI agent dashboard view 2" },
+      { src: new URL(`../assets/hero/${validLang}/home_3.png`, import.meta.url).href, alt: "WhatsApp AI agent dashboard view 3" },
+      { src: new URL(`../assets/hero/${validLang}/home_4.png`, import.meta.url).href, alt: "WhatsApp AI agent dashboard view 4" },
+      { src: new URL(`../assets/hero/${validLang}/home_5.png`, import.meta.url).href, alt: "WhatsApp AI agent dashboard view 5" },
     ]
   }
 
