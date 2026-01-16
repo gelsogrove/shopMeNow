@@ -7,7 +7,7 @@
     "dev": "dotenv -e ../../.env -- tsx --watch --tsconfig ./tsconfig.json -r tsconfig-paths/register src/index.ts",
     "build": "tsc -p ./tsconfig.json && npm run build:fix-paths && npm run build:copy-templates",
     "build:fix-paths": "mv dist/src/apps/backend/src/* dist/src/ 2>/dev/null || true && mv dist/src/apps/backend/prisma dist/prisma 2>/dev/null || true && mv dist/src/prisma dist/prisma 2>/dev/null || true && rm -rf dist/src/apps 2>/dev/null || true",
-    "build:copy-templates": "mkdir -p dist/src/templates && cp -r src/templates/* dist/src/templates/",
+    "build:copy-templates": "mkdir -p dist/src/templates && cp -r src/templates/. dist/src/templates/",
     "start": "node dist/src/index.js",
     "start:pm2": "pm2 start ecosystem.config.js",
     "stop": "pm2 stop echatbot-backend",
