@@ -34,6 +34,7 @@ const mockPrisma: Record<string, any> = {
   workspace: {
     findMany: jest.fn(),
     update: jest.fn(),
+    count: jest.fn(),
   },
   whatsAppQueue: {
     findMany: jest.fn(),

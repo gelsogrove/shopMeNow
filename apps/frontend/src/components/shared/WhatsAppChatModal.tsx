@@ -106,6 +106,8 @@ export function WhatsAppChatModal({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showFunctionCalls, setShowFunctionCalls] = useState(false)
   const [showProcessedPrompt, setShowProcessedPrompt] = useState(false)
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const focusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 🧪 Playground safety states
   const [isPlaygroundMode, setIsPlaygroundMode] = useState(true) // Default to safe playground mode
@@ -209,7 +211,10 @@ export function WhatsAppChatModal({
   useEffect(() => {
     if (!isOpen) {
       logger.info("Modal closed, resetting component state")
-      setTimeout(() => {
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current)
+      }
+      resetTimeoutRef.current = setTimeout(() => {
         // Reset solo gli stati necessari, mantenendo la conversazione
         setIsLoading(false)
         setCurrentMessage("")
@@ -223,11 +228,24 @@ export function WhatsAppChatModal({
       // Handle case where modal opens without a selected chat
       logger.info("Modal opened without any chat")
       // Focus input field when chat opens without selected chat
-      setTimeout(() => {
+      if (focusTimeoutRef.current) {
+        clearTimeout(focusTimeoutRef.current)
+      }
+      focusTimeoutRef.current = setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus()
         }
       }, 100)
+    }
+    return () => {
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current)
+        resetTimeoutRef.current = null
+      }
+      if (focusTimeoutRef.current) {
+        clearTimeout(focusTimeoutRef.current)
+        focusTimeoutRef.current = null
+      }
     }
   }, [isOpen, phoneNumber, localSelectedChat, selectedChat])
 

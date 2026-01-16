@@ -53,6 +53,7 @@ describe("BillingSection", () => {
       isTrialExpired: false,
       daysUntilTrialExpires: 10,
       nextBillingDate: null,
+      isPaymentConnected: true,
     },
     limits: {
       maxCustomers: 50,

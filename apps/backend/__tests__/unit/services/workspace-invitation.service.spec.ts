@@ -82,7 +82,11 @@ describe("WorkspaceInvitationService", () => {
           user: {
             findUnique: jest
               .fn()
-              .mockResolvedValueOnce({ planType: "PREMIUM" }) // owner
+              .mockResolvedValueOnce({
+                planType: "PREMIUM",
+                isPaymentConnected: true,
+                paypalStatus: "CONNECTED",
+              }) // owner
               .mockResolvedValueOnce(null) // invitee not found
               .mockResolvedValueOnce({
                 firstName: "John",
@@ -143,7 +147,11 @@ describe("WorkspaceInvitationService", () => {
           user: {
             findUnique: jest
               .fn()
-              .mockResolvedValueOnce({ planType: "PREMIUM" }) // owner
+              .mockResolvedValueOnce({
+                planType: "PREMIUM",
+                isPaymentConnected: true,
+                paypalStatus: "CONNECTED",
+              }) // owner
               .mockResolvedValueOnce({ id: "existing-user" }), // invitee
           },
           planConfiguration: {
@@ -208,7 +216,11 @@ describe("WorkspaceInvitationService", () => {
           user: {
             findUnique: jest
               .fn()
-              .mockResolvedValueOnce({ planType: "PREMIUM" }) // owner
+              .mockResolvedValueOnce({
+                planType: "PREMIUM",
+                isPaymentConnected: true,
+                paypalStatus: "CONNECTED",
+              }) // owner
               .mockResolvedValueOnce(null)
               .mockResolvedValueOnce({
                 firstName: "John",
@@ -231,6 +243,46 @@ describe("WorkspaceInvitationService", () => {
 
       expect(result.success).toBe(true)
       expect(result.invitation?.email).toBe("invitee@test.com")
+    })
+
+    it("should reject when PayPal is not connected", async () => {
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        const tx = {
+          workspaceInvitation: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            count: jest.fn().mockResolvedValue(0),
+          },
+          workspace: {
+            findUnique: jest.fn().mockResolvedValue({
+              ownerId: "owner-123",
+              name: "Test Workspace",
+            }),
+          },
+          user: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValueOnce({
+                planType: "PREMIUM",
+                isPaymentConnected: false,
+                paypalStatus: "DISCONNECTED",
+              }) // owner
+              .mockResolvedValueOnce(null),
+          },
+          planConfiguration: {
+            findUnique: jest.fn().mockResolvedValue({ maxTeamMembers: 9999 }),
+          },
+          userWorkspace: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            count: jest.fn().mockResolvedValue(0),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await service.createInvitation(validInput)
+
+      expect(result.success).toBe(false)
+      expect(result.code).toBe("PAYPAL_NOT_CONNECTED")
     })
   })
 

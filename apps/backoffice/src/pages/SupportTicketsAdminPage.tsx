@@ -865,15 +865,53 @@ export default function SupportTicketsAdminPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {tickets.map((ticket) => (
-                <TicketListItem
-                  key={ticket.id}
-                  ticket={ticket}
-                  onClick={() => handleTicketClick(ticket)}
-                />
-              ))}
-            </div>
+            <>
+              {/* Open Tickets Section */}
+              {(() => {
+                const openTickets = tickets.filter(
+                  (t) => t.status === "PENDING" || t.status === "IN_PROGRESS"
+                )
+                return openTickets.length > 0 ? (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      Open Tickets ({openTickets.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {openTickets.map((ticket) => (
+                        <TicketListItem
+                          key={ticket.id}
+                          ticket={ticket}
+                          onClick={() => handleTicketClick(ticket)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null
+              })()}
+
+              {/* Closed Tickets Section */}
+              {(() => {
+                const closedTickets = tickets.filter((t) => t.status === "CLOSED")
+                return closedTickets.length > 0 ? (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-600">
+                      <CheckCircle className="w-5 h-5 text-gray-400" />
+                      Closed Tickets ({closedTickets.length})
+                    </h3>
+                    <div className="space-y-3 opacity-75">
+                      {closedTickets.map((ticket) => (
+                        <TicketListItem
+                          key={ticket.id}
+                          ticket={ticket}
+                          onClick={() => handleTicketClick(ticket)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : null
+              })()}
+            </>
           )}
 
           {/* Pagination */}

@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
@@ -26,7 +29,7 @@ CREATE TYPE "MessageDirection" AS ENUM ('INBOUND', 'OUTBOUND');
 CREATE TYPE "MessageType" AS ENUM ('TEXT', 'IMAGE', 'DOCUMENT', 'LOCATION', 'CONTACT');
 
 -- CreateEnum
-CREATE TYPE "ChannelType" AS ENUM ('WHATSAPP', 'TELEGRAM', 'MESSENGER', 'LINE');
+CREATE TYPE "ChannelType" AS ENUM ('WHATSAPP', 'WIDGET', 'TELEGRAM', 'MESSENGER', 'LINE');
 
 -- CreateEnum
 CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'OWNER', 'MEMBER');
@@ -76,6 +79,15 @@ CREATE TYPE "AgentType" AS ENUM ('ROUTER', 'OPERATOR', 'PRODUCT_SEARCH', 'CART_M
 -- CreateEnum
 CREATE TYPE "SearchConversationState" AS ENUM ('ACTIVE', 'COMPLETED', 'ABANDONED', 'EXPIRED');
 
+-- CreateEnum
+CREATE TYPE "SupportIssueType" AS ENUM ('ACCOUNT_ISSUE', 'PLAN_AND_BILLING', 'WHATSAPP', 'WIDGET', 'SALES_AGENT', 'SUPPORT', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "SupportTicketStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'CLOSED');
+
+-- CreateEnum
+CREATE TYPE "SupportSenderType" AS ENUM ('CUSTOMER', 'ADMIN');
+
 -- CreateTable
 CREATE TABLE "Workspace" (
     "id" TEXT NOT NULL,
@@ -83,20 +95,20 @@ CREATE TABLE "Workspace" (
     "slug" TEXT NOT NULL,
     "whatsappPhoneNumber" TEXT,
     "whatsappApiKey" TEXT,
+    "whatsappPhoneNumberId" TEXT,
+    "whatsappVerifyToken" TEXT,
     "notificationEmail" TEXT,
     "webhookUrl" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
     "language" TEXT NOT NULL DEFAULT 'ENG',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
-    "isDelete" BOOLEAN NOT NULL DEFAULT false,
     "currency" TEXT NOT NULL DEFAULT 'USD',
-    "channelStatus" BOOLEAN NOT NULL DEFAULT false,
+    "channelStatus" BOOLEAN NOT NULL DEFAULT true,
     "description" TEXT,
     "messageLimit" INTEGER NOT NULL DEFAULT 50,
     "url" TEXT,
-    "welcomeMessage" JSONB DEFAULT '{"en": "Welcome! I''m SofiA, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?", "es": "¡Bienvenido! Soy SofiA, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?", "it": "Benvenuto! Sono SofiA, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?", "pt": "Bem-vindo! Sou a SofiA, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?"}',
+    "welcomeMessage" JSONB DEFAULT '{"en": "Welcome! I''m {{chatbotName}}, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?", "es": "¡Bienvenido! Soy {{chatbotName}}, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?", "it": "Benvenuto! Sono {{chatbotName}}, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?", "pt": "Bem-vindo! Sou {{chatbotName}}, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?"}',
     "wipMessage" JSONB DEFAULT '{"en": "Work in progress. Please contact us later.", "es": "Trabajos en curso. Por favor, contáctenos más tarde.", "it": "Lavori in corso. Contattaci più tardi.", "pt": "Em manutenção. Por favor, contacte-nos mais tarde."}',
     "afterRegistrationMessages" JSONB DEFAULT '{"de": "Danke für Ihre Registrierung, [nome]! Wie kann ich Ihnen heute helfen? Möchten Sie Ihre Bestellungen sehen? Die Angebote? Oder benötigen Sie andere Informationen?", "en": "Thank you for registering, [nome]! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?", "es": "¡Gracias por registrarte, [nome]! ¿Cómo puedo ayudarte hoy? ¿Quieres ver tus pedidos? ¿Las ofertas? ¿O necesitas otra información?", "fr": "Merci de vous être inscrit, [nome] ! Comment puis-je vous aider aujourd''hui ? Voulez-vous voir vos commandes ? Les offres ? Ou avez-vous besoin d''autres informations ?", "it": "Grazie per esserti registrato, [nome]! Come ti posso aiutare oggi? Vuoi vedere i tuoi ordini? Le offerte? O hai bisogno di altre informazioni?", "pt": "Obrigado por se registrar, [nome]! Como posso ajudá-lo hoje? Quer ver seus pedidos? As ofertas? Ou precisa de outras informações?"}',
     "debugMode" BOOLEAN NOT NULL DEFAULT true,
@@ -111,12 +123,17 @@ CREATE TABLE "Workspace" (
     "widgetTitle" TEXT,
     "widgetLanguage" TEXT DEFAULT 'it',
     "widgetPrimaryColor" TEXT DEFAULT '#22c55e',
+    "widgetTextColor" TEXT DEFAULT '#0f172a',
+    "channelType" "ChannelType" NOT NULL DEFAULT 'WHATSAPP',
+    "enableWhatsapp" BOOLEAN NOT NULL DEFAULT true,
+    "enableWidget" BOOLEAN NOT NULL DEFAULT false,
     "sellsProductsAndServices" BOOLEAN NOT NULL DEFAULT true,
     "hasSalesAgents" BOOLEAN NOT NULL DEFAULT false,
     "hasHumanSupport" BOOLEAN NOT NULL DEFAULT true,
     "humanSupportInstructions" TEXT,
     "frustrationEscalationInstructions" TEXT,
     "operatorContactMethod" TEXT DEFAULT 'email',
+    "operatorEmail" TEXT,
     "operatorWhatsappNumber" TEXT,
     "toneOfVoice" TEXT DEFAULT 'friendly',
     "botIdentityResponse" TEXT,
@@ -284,6 +301,7 @@ CREATE TABLE "whatsapp_queue" (
     "responsePayload" JSONB,
     "pollingAttempts" INTEGER NOT NULL DEFAULT 0,
     "lastPolledAt" TIMESTAMP(3),
+    "isPlayground" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "whatsapp_queue_pkey" PRIMARY KEY ("id")
 );
@@ -468,11 +486,16 @@ CREATE TABLE "users" (
     "lastPaymentFailedAt" TIMESTAMP(3),
     "paymentFailureCount" INTEGER NOT NULL DEFAULT 0,
     "paypalStatus" "PayPalStatus" NOT NULL DEFAULT 'DISCONNECTED',
+    "isPaymentConnected" BOOLEAN NOT NULL DEFAULT false,
     "paypalClientId" TEXT,
     "paypalMerchantId" TEXT,
     "paypalEmail" TEXT,
     "paypalEnvironment" TEXT,
     "paypalConnectedAt" TIMESTAMP(3),
+    "paypalAccessTokenEncrypted" TEXT,
+    "paypalRefreshTokenEncrypted" TEXT,
+    "paypalTokenExpiresAt" TIMESTAMP(3),
+    "paypalTokenScope" TEXT,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -1182,6 +1205,49 @@ CREATE TABLE "legal_documents" (
 );
 
 -- CreateTable
+CREATE TABLE "support_tickets" (
+    "id" TEXT NOT NULL,
+    "ticketCode" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "workspaceId" TEXT,
+    "issueType" "SupportIssueType" NOT NULL,
+    "subject" TEXT NOT NULL,
+    "status" "SupportTicketStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "closedAt" TIMESTAMP(3),
+
+    CONSTRAINT "support_tickets_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "support_messages" (
+    "id" TEXT NOT NULL,
+    "ticketId" TEXT NOT NULL,
+    "senderId" TEXT NOT NULL,
+    "senderType" "SupportSenderType" NOT NULL,
+    "content" TEXT NOT NULL,
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "support_messages_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "support_attachments" (
+    "id" TEXT NOT NULL,
+    "messageId" TEXT NOT NULL,
+    "filename" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "storageKey" TEXT NOT NULL,
+    "mimeType" TEXT NOT NULL,
+    "size" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "support_attachments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "_OfferCategories" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL,
@@ -1748,6 +1814,33 @@ CREATE UNIQUE INDEX "workspace_calling_functions_workspaceId_functionName_key" O
 CREATE UNIQUE INDEX "legal_documents_type_key" ON "legal_documents"("type");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "support_tickets_ticketCode_key" ON "support_tickets"("ticketCode");
+
+-- CreateIndex
+CREATE INDEX "support_tickets_userId_idx" ON "support_tickets"("userId");
+
+-- CreateIndex
+CREATE INDEX "support_tickets_workspaceId_idx" ON "support_tickets"("workspaceId");
+
+-- CreateIndex
+CREATE INDEX "support_tickets_status_idx" ON "support_tickets"("status");
+
+-- CreateIndex
+CREATE INDEX "support_tickets_createdAt_idx" ON "support_tickets"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "support_messages_ticketId_idx" ON "support_messages"("ticketId");
+
+-- CreateIndex
+CREATE INDEX "support_messages_senderId_idx" ON "support_messages"("senderId");
+
+-- CreateIndex
+CREATE INDEX "support_messages_createdAt_idx" ON "support_messages"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "support_attachments_messageId_idx" ON "support_attachments"("messageId");
+
+-- CreateIndex
 CREATE INDEX "_OfferCategories_B_index" ON "_OfferCategories"("B");
 
 -- AddForeignKey
@@ -1997,7 +2090,20 @@ ALTER TABLE "soft_delete_audit_logs" ADD CONSTRAINT "soft_delete_audit_logs_work
 ALTER TABLE "workspace_calling_functions" ADD CONSTRAINT "workspace_calling_functions_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "support_tickets" ADD CONSTRAINT "support_tickets_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "support_messages" ADD CONSTRAINT "support_messages_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "support_tickets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "support_attachments" ADD CONSTRAINT "support_attachments_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "support_messages"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "_OfferCategories" ADD CONSTRAINT "_OfferCategories_A_fkey" FOREIGN KEY ("A") REFERENCES "categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_OfferCategories" ADD CONSTRAINT "_OfferCategories_B_fkey" FOREIGN KEY ("B") REFERENCES "offers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

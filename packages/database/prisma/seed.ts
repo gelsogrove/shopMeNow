@@ -99,6 +99,9 @@ async function main() {
     await prisma.cartItems.deleteMany()
     await prisma.message.deleteMany()
     await prisma.chatSession.deleteMany()
+    await prisma.supportAttachment.deleteMany()
+    await prisma.supportMessage.deleteMany()
+    await prisma.supportTicket.deleteMany()
     await prisma.passwordReset.deleteMany()
     // await prisma.otpToken.deleteMany() // ❌ REMOVED - table dropped
     await prisma.registrationToken.deleteMany()
@@ -185,6 +188,7 @@ async function main() {
       twoFactorEnabledAt: null,
       recoveryCodes: [], // Recovery codes generated when 2FA is enabled
       paypalStatus: "CONNECTED",
+      isPaymentConnected: true,
       paypalClientId: "paypal-client-demo-1234",
       paypalMerchantId: "paypal-merchant-5678",
       paypalEmail: "gelsogrove@gmail.com",

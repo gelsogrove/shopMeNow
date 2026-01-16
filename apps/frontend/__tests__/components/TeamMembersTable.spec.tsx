@@ -93,8 +93,10 @@ describe("TeamMembersTable", () => {
     vi.mocked(invitationApi.getPending).mockResolvedValue(mockInvitations)
     vi.mocked(useBilling).mockReturnValue({
       billingOverview: {
+        billing: { isPaymentConnected: true },
         limits: { maxTeamMembers: 10 },
       },
+      isLoadingOverview: false,
     } as any)
   })
 
@@ -513,6 +515,7 @@ describe("TeamMembersTable", () => {
     it("should be ENABLED (green) when SUPER_ADMIN with unlimited team members (ENTERPRISE)", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
+          billing: { isPaymentConnected: true },
           limits: { maxTeamMembers: null }, // ENTERPRISE = unlimited
         },
         isLoadingOverview: false,
@@ -533,6 +536,7 @@ describe("TeamMembersTable", () => {
       vi.mocked(invitationApi.getPending).mockResolvedValue([]) // No pending invites
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
+          billing: { isPaymentConnected: true },
           limits: { maxTeamMembers: 3 }, // PREMIUM = 3 limit
         },
         isLoadingOverview: false,
@@ -550,6 +554,7 @@ describe("TeamMembersTable", () => {
     it("should be DISABLED when not SUPER_ADMIN (only ADMIN)", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
+          billing: { isPaymentConnected: true },
           limits: { maxTeamMembers: 10 },
         },
         isLoadingOverview: false,
@@ -566,6 +571,7 @@ describe("TeamMembersTable", () => {
     it("should be DISABLED when maxTeamMembers is 0 (FREE_TRIAL/BASIC plan)", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
+          billing: { isPaymentConnected: true },
           limits: { maxTeamMembers: 0 }, // Feature disabled
         },
         isLoadingOverview: false,
@@ -588,6 +594,7 @@ describe("TeamMembersTable", () => {
       vi.mocked(invitationApi.getPending).mockResolvedValue([]) // No pending
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
+          billing: { isPaymentConnected: true },
           limits: { maxTeamMembers: 3 }, // PREMIUM = 3 limit
         },
         isLoadingOverview: false,
@@ -604,6 +611,7 @@ describe("TeamMembersTable", () => {
     it("should show correct tooltip when disabled (not SUPER_ADMIN)", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
+          billing: { isPaymentConnected: true },
           limits: { maxTeamMembers: 10 },
         },
         isLoadingOverview: false,
@@ -626,6 +634,7 @@ describe("TeamMembersTable", () => {
     it("should show correct tooltip when disabled (feature not available on plan)", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
+          billing: { isPaymentConnected: true },
           limits: { maxTeamMembers: 0 }, // FREE_TRIAL/BASIC
         },
         isLoadingOverview: false,
@@ -667,8 +676,8 @@ describe("TeamMembersTable", () => {
 
       await waitFor(() => {
         const button = screen.getByRole("button", { name: /invite member/i })
-        // Should be enabled when data not loaded (optimistic UX)
-        expect(button).not.toBeDisabled()
+        // Should be disabled until billing status is known
+        expect(button).toBeDisabled()
       })
     })
   })

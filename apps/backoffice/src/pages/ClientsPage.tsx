@@ -48,6 +48,8 @@ interface OwnedWorkspace {
   isActive: boolean
   whatsappPhoneNumber: string | null
   channelStatus: boolean
+  debugMode: boolean
+  updatedAt: string
   numCustomers: number
   numProducts: number
 }
@@ -69,6 +71,13 @@ interface User {
   profilePicture: string | null
   authProvider: string
   isOwner: boolean
+  // Owner info (for members only)
+  ownerInfo: {
+    id: string
+    email: string
+    name: string
+    companyName: string | null
+  } | null
   // Feature 198: Owner-level billing (primary source of truth)
   planType: string
   subscriptionStatus: string
@@ -80,6 +89,15 @@ interface User {
   pauseRequestedAt: string | null
   // Legacy: workspaces still returned for other data
   ownedWorkspaces: OwnedWorkspace[]
+  memberWorkspaces: Array<{
+    id: string
+    name: string
+    slug: string
+    role: string
+    language: string
+    whatsappPhoneNumber: string | null
+    channelStatus: boolean
+  }>
   totalCredit: number
   totalCustomers: number
   totalProducts: number
@@ -143,6 +161,7 @@ export function ClientsPage() {
       id: string
       email: string
       paypalStatus: string
+      isPaymentConnected: boolean
       paypalClientId: string | null
       paypalMerchantId: string | null
       paypalEmail: string | null
@@ -160,6 +179,16 @@ export function ClientsPage() {
     }>
   } | null>(null)
   const [paypalLoading, setPaypalLoading] = useState(false)
+  const [paypalSaving, setPaypalSaving] = useState(false)
+  const [paypalForm, setPaypalForm] = useState<{
+    paypalStatus: string
+    isPaymentConnected: boolean
+    paypalClientId: string
+    paypalMerchantId: string
+    paypalEmail: string
+    paypalEnvironment: string
+    paypalConnectedAt: string
+  } | null>(null)
   const [deletingUser, setDeletingUser] = useState(false)
 
   useEffect(() => {
@@ -563,16 +592,79 @@ export function ClientsPage() {
       if (!response.success || !response.data) {
         setError(response.error || 'Failed to load PayPal info')
         setPaypalInfo(null)
+        setPaypalForm(null)
         return
       }
 
       setPaypalInfo(response.data)
+      setPaypalForm({
+        paypalStatus: response.data.owner.paypalStatus || 'DISCONNECTED',
+        isPaymentConnected: response.data.owner.isPaymentConnected ?? false,
+        paypalClientId: response.data.owner.paypalClientId || '',
+        paypalMerchantId: response.data.owner.paypalMerchantId || '',
+        paypalEmail: response.data.owner.paypalEmail || '',
+        paypalEnvironment: response.data.owner.paypalEnvironment || '',
+        paypalConnectedAt: response.data.owner.paypalConnectedAt
+          ? new Date(response.data.owner.paypalConnectedAt).toISOString().slice(0, 16)
+          : '',
+      })
     } catch (err) {
       setError('Failed to load PayPal info')
       setPaypalInfo(null)
+      setPaypalForm(null)
       console.error('Error loading PayPal info:', err)
     } finally {
       setPaypalLoading(false)
+    }
+  }
+
+  const handlePayPalSave = async () => {
+    if (!paypalModal || !paypalForm) return
+    setPaypalSaving(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    const normalizeValue = (value: string) => (value.trim() === '' ? null : value.trim())
+
+    try {
+      const response = await api.users.updatePayPalInfo(paypalModal.userId, {
+        paypalStatus: paypalForm.paypalStatus || null,
+        isPaymentConnected: paypalForm.isPaymentConnected,
+        paypalClientId: normalizeValue(paypalForm.paypalClientId),
+        paypalMerchantId: normalizeValue(paypalForm.paypalMerchantId),
+        paypalEmail: normalizeValue(paypalForm.paypalEmail),
+        paypalEnvironment: normalizeValue(paypalForm.paypalEnvironment),
+        paypalConnectedAt: normalizeValue(paypalForm.paypalConnectedAt),
+      })
+
+      if (!response.success || !response.data) {
+        setError(response.error || 'Failed to update PayPal info')
+        return
+      }
+
+      setPaypalInfo((prev) =>
+        prev ? { ...prev, owner: response.data } : prev
+      )
+
+      setPaypalForm({
+        paypalStatus: response.data.paypalStatus || 'DISCONNECTED',
+        isPaymentConnected: response.data.isPaymentConnected ?? false,
+        paypalClientId: response.data.paypalClientId || '',
+        paypalMerchantId: response.data.paypalMerchantId || '',
+        paypalEmail: response.data.paypalEmail || '',
+        paypalEnvironment: response.data.paypalEnvironment || '',
+        paypalConnectedAt: response.data.paypalConnectedAt
+          ? new Date(response.data.paypalConnectedAt).toISOString().slice(0, 16)
+          : '',
+      })
+
+      setSuccessMessage('PayPal details updated.')
+      setTimeout(() => setSuccessMessage(null), 4000)
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to update PayPal info'
+      setError(errorMsg)
+    } finally {
+      setPaypalSaving(false)
     }
   }
 
@@ -688,13 +780,23 @@ export function ClientsPage() {
                   {(user.firstName?.[0] || user.email[0]).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 truncate">
-                    {user.firstName && user.lastName 
-                      ? `${user.firstName} ${user.lastName}`
-                      : user.email.split('@')[0]
-                    }
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900 truncate">
+                      {user.firstName && user.lastName 
+                        ? `${user.firstName} ${user.lastName}`
+                        : user.email.split('@')[0]
+                      }
+                    </h3>
+                    {user.isOwner && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">OWNER</span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                  {!user.isOwner && user.ownerInfo && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Owner: {user.ownerInfo.name} ({user.ownerInfo.email})
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -773,21 +875,33 @@ export function ClientsPage() {
                   {user.ownedWorkspaces.some(ws => ws.whatsappPhoneNumber) && (
                     <div className="pt-2 border-t border-gray-200">
                       <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Channels</span>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         {user.ownedWorkspaces.filter(ws => ws.whatsappPhoneNumber).map(ws => (
-                          <div key={ws.id} className="flex items-center gap-2 text-sm">
-                            <MessageSquare className="h-3.5 w-3.5 text-gray-500" />
-                            <span className="text-gray-700">
-                              {ws.whatsappPhoneNumber}
-                            </span>
+                          <div key={ws.id} className="flex items-start gap-2 text-sm">
+                            <MessageSquare className="h-3.5 w-3.5 text-gray-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <span className="text-gray-900 font-medium truncate">{ws.name}</span>
+                              <span className="text-gray-600 text-xs">{ws.whatsappPhoneNumber}</span>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${ws.channelStatus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                  {ws.channelStatus ? '🟢 Active' : '⚪ Inactive'}
+                                </span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ${ws.debugMode ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                                  Debug: {ws.debugMode ? 'true' : 'false'}
+                                </span>
+                                <span className="text-xs text-gray-400">
+                                  Last: {formatDate(ws.updatedAt)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
                   
-                  {/* Bonus Button - Hidden for admin users */}
-                  {!user.isPlatformAdmin && user.ownedWorkspaces[0] && (
+                  {/* Bonus Button */}
+                  {user.ownedWorkspaces[0] && (
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -800,7 +914,7 @@ export function ClientsPage() {
                   )}
                   
                   {/* Extend Trial Button - Feature 198: Now from User level planType */}
-                  {!user.isPlatformAdmin && user.planType === 'FREE_TRIAL' && user.ownedWorkspaces[0] && (
+                  {user.planType === 'FREE_TRIAL' && user.ownedWorkspaces[0] && (
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -819,22 +933,20 @@ export function ClientsPage() {
                   {/* Subscription Status Button */}
 
                   {/* PayPal Details Button */}
-                  {!user.isPlatformAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2 gap-2 text-sky-600 hover:text-sky-700 hover:bg-sky-50 border-sky-200"
-                      onClick={() => openPaypalModal(user.id, user.email)}
-                      disabled={paypalLoading && paypalModal?.userId === user.id}
-                    >
-                      {paypalLoading && paypalModal?.userId === user.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <CreditCard className="h-4 w-4" />
-                      )}
-                      PayPal Details
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-2 gap-2 text-sky-600 hover:text-sky-700 hover:bg-sky-50 border-sky-200"
+                    onClick={() => openPaypalModal(user.id, user.email)}
+                    disabled={paypalLoading && paypalModal?.userId === user.id}
+                  >
+                    {paypalLoading && paypalModal?.userId === user.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    PayPal Details
+                  </Button>
                 </div>
               )}
               
@@ -864,23 +976,21 @@ export function ClientsPage() {
                 </Button>
               )}
               
-              {/* Login as User Button (Feature 190) - Only for non-admin users */}
-              {!user.isPlatformAdmin && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full mt-2 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
-                  onClick={() => handleImpersonate(user.id, user.email)}
-                  disabled={impersonating === user.id}
-                >
-                  {impersonating === user.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <LogIn className="h-4 w-4" />
-                  )}
-                  Login as User
-                </Button>
-              )}
+              {/* Login as User Button (Feature 190) */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full mt-2 gap-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                onClick={() => handleImpersonate(user.id, user.email)}
+                disabled={impersonating === user.id}
+              >
+                {impersonating === user.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LogIn className="h-4 w-4" />
+                )}
+                Login as User
+              </Button>
               
               {/* Delete User Button (Feature 196) - Soft delete with 90-day recovery */}
               {!user.isPlatformAdmin && !user.isDeveloperUser && (
@@ -1320,44 +1430,129 @@ export function ClientsPage() {
               </div>
             ) : paypalInfo ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded border border-gray-200 p-3">
-                    <div className="text-xs text-gray-500">Status</div>
-                    <div className="font-medium text-gray-900">{paypalInfo.owner.paypalStatus}</div>
-                  </div>
-                  <div className="rounded border border-gray-200 p-3">
-                    <div className="text-xs text-gray-500">Environment</div>
-                    <div className="font-medium text-gray-900">
-                      {paypalInfo.owner.paypalEnvironment || '—'}
+                {paypalForm && (
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="rounded border border-gray-200 p-3">
+                      <div className="text-xs text-gray-500">Payment Connected</div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="font-medium text-gray-900">
+                          {paypalForm.isPaymentConnected ? 'Connected' : 'Disconnected'}
+                        </span>
+                        <Switch
+                          checked={paypalForm.isPaymentConnected}
+                          onCheckedChange={(checked) =>
+                            setPaypalForm((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    isPaymentConnected: checked,
+                                    paypalStatus: checked ? 'CONNECTED' : 'DISCONNECTED',
+                                    paypalConnectedAt: checked
+                                      ? prev.paypalConnectedAt || new Date().toISOString().slice(0, 16)
+                                      : '',
+                                  }
+                                : prev
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="rounded border border-gray-200 p-3">
+                      <div className="text-xs text-gray-500">Status</div>
+                      <select
+                        className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
+                        value={paypalForm.paypalStatus}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          setPaypalForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  paypalStatus: value,
+                                  isPaymentConnected: value === 'CONNECTED',
+                                  paypalConnectedAt:
+                                    value === 'CONNECTED'
+                                      ? prev.paypalConnectedAt || new Date().toISOString().slice(0, 16)
+                                      : '',
+                                }
+                              : prev
+                          )
+                        }}
+                      >
+                        <option value="CONNECTED">CONNECTED</option>
+                        <option value="DISCONNECTED">DISCONNECTED</option>
+                      </select>
+                    </div>
+                    <div className="rounded border border-gray-200 p-3">
+                      <div className="text-xs text-gray-500">Environment</div>
+                      <select
+                        className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
+                        value={paypalForm.paypalEnvironment}
+                        onChange={(event) =>
+                          setPaypalForm((prev) =>
+                            prev ? { ...prev, paypalEnvironment: event.target.value } : prev
+                          )
+                        }
+                      >
+                        <option value="">—</option>
+                        <option value="sandbox">sandbox</option>
+                        <option value="live">live</option>
+                      </select>
+                    </div>
+                    <div className="rounded border border-gray-200 p-3">
+                      <div className="text-xs text-gray-500">PayPal Email</div>
+                      <Input
+                        className="mt-2"
+                        value={paypalForm.paypalEmail}
+                        onChange={(event) =>
+                          setPaypalForm((prev) =>
+                            prev ? { ...prev, paypalEmail: event.target.value } : prev
+                          )
+                        }
+                        placeholder="billing@example.com"
+                      />
+                    </div>
+                    <div className="rounded border border-gray-200 p-3">
+                      <div className="text-xs text-gray-500">Merchant ID</div>
+                      <Input
+                        className="mt-2"
+                        value={paypalForm.paypalMerchantId}
+                        onChange={(event) =>
+                          setPaypalForm((prev) =>
+                            prev ? { ...prev, paypalMerchantId: event.target.value } : prev
+                          )
+                        }
+                        placeholder="paypal-merchant-id"
+                      />
+                    </div>
+                    <div className="rounded border border-gray-200 p-3">
+                      <div className="text-xs text-gray-500">Client ID</div>
+                      <Input
+                        className="mt-2"
+                        value={paypalForm.paypalClientId}
+                        onChange={(event) =>
+                          setPaypalForm((prev) =>
+                            prev ? { ...prev, paypalClientId: event.target.value } : prev
+                          )
+                        }
+                        placeholder="paypal-client-id"
+                      />
+                    </div>
+                    <div className="rounded border border-gray-200 p-3">
+                      <div className="text-xs text-gray-500">Connected At</div>
+                      <Input
+                        className="mt-2"
+                        type="datetime-local"
+                        value={paypalForm.paypalConnectedAt}
+                        onChange={(event) =>
+                          setPaypalForm((prev) =>
+                            prev ? { ...prev, paypalConnectedAt: event.target.value } : prev
+                          )
+                        }
+                      />
                     </div>
                   </div>
-                  <div className="rounded border border-gray-200 p-3">
-                    <div className="text-xs text-gray-500">PayPal Email</div>
-                    <div className="font-medium text-gray-900">
-                      {paypalInfo.owner.paypalEmail || '—'}
-                    </div>
-                  </div>
-                  <div className="rounded border border-gray-200 p-3">
-                    <div className="text-xs text-gray-500">Merchant ID</div>
-                    <div className="font-medium text-gray-900 break-all">
-                      {paypalInfo.owner.paypalMerchantId || '—'}
-                    </div>
-                  </div>
-                  <div className="rounded border border-gray-200 p-3">
-                    <div className="text-xs text-gray-500">Client ID</div>
-                    <div className="font-medium text-gray-900 break-all">
-                      {paypalInfo.owner.paypalClientId || '—'}
-                    </div>
-                  </div>
-                  <div className="rounded border border-gray-200 p-3">
-                    <div className="text-xs text-gray-500">Connected At</div>
-                    <div className="font-medium text-gray-900">
-                      {paypalInfo.owner.paypalConnectedAt
-                        ? new Date(paypalInfo.owner.paypalConnectedAt).toLocaleString('it-IT')
-                        : '—'}
-                    </div>
-                  </div>
-                </div>
+                )}
 
                 <div className="rounded border border-gray-200">
                   <div className="border-b border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
@@ -1406,11 +1601,22 @@ export function ClientsPage() {
 
             <div className="mt-6 flex justify-end gap-3">
               <Button
+                className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                onClick={handlePayPalSave}
+                disabled={paypalSaving || !paypalForm}
+              >
+                {paypalSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Save Changes
+              </Button>
+              <Button
                 variant="outline"
                 onClick={() => {
                   setPaypalModal(null)
                   setPaypalInfo(null)
                   setPaypalLoading(false)
+                  setPaypalForm(null)
                 }}
               >
                 Close

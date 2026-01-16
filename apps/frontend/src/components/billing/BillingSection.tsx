@@ -451,6 +451,11 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const handleRecharge = async () => {
     if (!effectiveWorkspaceId) return
 
+    if (!canManageBilling) {
+      toast.error("Connect PayPal to recharge credit.")
+      return
+    }
+
     setIsRecharging(true)
     try {
       const result = await rechargeCredit(effectiveWorkspaceId, rechargeAmount)
@@ -473,6 +478,11 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   const handlePlanChange = async (newPlan: PlanType) => {
     if (!effectiveWorkspaceId) return
+
+    if (!canManageBilling) {
+      toast.error("Connect PayPal to change your plan.")
+      return
+    }
 
     setIsUpgrading(true)
     try {
@@ -500,6 +510,11 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   // Open confirmation dialog before plan change
   const initiatePlanChange = (newPlan: PlanType) => {
+    if (!canManageBilling) {
+      toast.error("Connect PayPal to change your plan.")
+      return
+    }
+
     setPendingPlanChange(newPlan)
     setShowPlanConfirmDialog(true)
   }
@@ -559,6 +574,8 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   const { billing, limits, usage, planConfig } = billingOverview
   const isTrialPlan = billing.planType === "FREE_TRIAL"
+  const isPaymentConnected = billing.isPaymentConnected ?? false
+  const canManageBilling = isSuperAdmin && isPaymentConnected
   const creditMinThreshold = billingOverview.thresholds.creditMinThreshold
   const lowBalanceThreshold = billingOverview.thresholds.lowBalanceThreshold
   const isCreditCritical = billing.creditBalance < creditMinThreshold
@@ -689,7 +706,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
             <Button
               onClick={() => setShowUpgradeDialog(true)}
               variant="outline"
-              className="flex-shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100"
+              className="flex-shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canManageBilling}
+              title={
+                !canManageBilling
+                  ? "Connect PayPal to change your plan."
+                  : undefined
+              }
             >
               Upgrade Plan
             </Button>
@@ -725,7 +748,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   variant="outline"
                   size="sm"
                   onClick={() => setShowUpgradeDialog(true)}
-                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
+                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!canManageBilling}
+                  title={
+                    !canManageBilling
+                      ? "Connect PayPal to change your plan."
+                      : undefined
+                  }
                 >
                   <TrendingUp className="h-4 w-4" />
                   Change Plan
@@ -751,6 +780,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <Button
                   onClick={() => setShowUpgradeDialog(true)}
                   variant="destructive"
+                  disabled={!canManageBilling}
+                  className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    !canManageBilling
+                      ? "Connect PayPal to change your plan."
+                      : undefined
+                  }
                 >
                   Choose a Plan
                 </Button>
@@ -782,6 +818,12 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     onClick={() => setShowRechargeDialog(true)}
                     className="gap-2"
                     size="sm"
+                    disabled={!canManageBilling}
+                    title={
+                      !canManageBilling
+                        ? "Connect PayPal to recharge credit."
+                        : undefined
+                    }
                   >
                     <Plus className="h-4 w-4" />
                     Recharge Credit

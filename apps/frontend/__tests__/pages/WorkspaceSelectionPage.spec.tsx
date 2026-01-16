@@ -4,6 +4,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest"
 import { BrowserRouter } from "react-router-dom"
 import { WorkspaceSelectionPage } from "@/pages/WorkspaceSelectionPage"
 import * as workspaceApi from "@/services/workspaceApi"
+import * as paypalApi from "@/services/paypalApi"
 
 // Mock services
 vi.mock("@/services/workspaceApi", () => ({
@@ -13,6 +14,13 @@ vi.mock("@/services/workspaceApi", () => ({
   workspaceApi: {
     getBadgeStats: vi.fn().mockResolvedValue({}),
   },
+}))
+
+vi.mock("@/services/paypalApi", () => ({
+  getPayPalStatus: vi.fn(),
+  getPayPalConfig: vi.fn(),
+  getPayPalConnectUrl: vi.fn(),
+  disconnectPayPal: vi.fn(),
 }))
 
 // Mock useWorkspace hook
@@ -80,6 +88,18 @@ vi.mock("@/lib/logger", () => ({
 beforeEach(() => {
   localStorage.setItem("token", "mock-jwt-token.eyJzdWIiOiIxMjM0NTY3ODkwIn0.mock")
   vi.clearAllMocks()
+  vi.mocked(paypalApi.getPayPalStatus).mockResolvedValue({
+    paypalStatus: "CONNECTED",
+    isPaymentConnected: true,
+    paypalEmail: "test@paypal.com",
+    paypalMerchantId: "merchant-123",
+    paypalEnvironment: "sandbox",
+    paypalConnectedAt: "2024-01-01T00:00:00Z",
+  })
+  vi.mocked(paypalApi.getPayPalConfig).mockResolvedValue({
+    configured: true,
+    environment: "sandbox",
+  })
 })
 
 const renderWithRouter = (component: React.ReactNode) => {
@@ -112,6 +132,11 @@ describe("WorkspaceSelectionPage", () => {
 
       await waitFor(() => {
         expect(workspaceApi.getWorkspaces).toHaveBeenCalled()
+      })
+
+      await waitFor(() => {
+        expect(paypalApi.getPayPalStatus).toHaveBeenCalled()
+        expect(paypalApi.getPayPalConfig).toHaveBeenCalled()
       })
 
       await waitFor(() => {

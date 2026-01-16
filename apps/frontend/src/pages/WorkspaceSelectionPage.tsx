@@ -436,7 +436,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   }, [])
 
   const loadPayPalStatus = useCallback(async () => {
-    if (isRoleLoading || !isSuperAdmin) return
+    const shouldLoadPayPal = hasLoadedWorkspaces && (isSuperAdmin || workspaces.length === 0)
+    if (isRoleLoading || !shouldLoadPayPal) return
 
     try {
       setPaypalLoading(true)
@@ -448,10 +449,11 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     } finally {
       setPaypalLoading(false)
     }
-  }, [isRoleLoading, isSuperAdmin])
+  }, [hasLoadedWorkspaces, isRoleLoading, isSuperAdmin, workspaces.length])
 
   const loadPayPalConfig = useCallback(async () => {
-    if (isRoleLoading || !isSuperAdmin) return
+    const shouldLoadPayPal = hasLoadedWorkspaces && (isSuperAdmin || workspaces.length === 0)
+    if (isRoleLoading || !shouldLoadPayPal) return
 
     try {
       const data = await getPayPalConfig()
@@ -460,7 +462,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       logger.error("Failed to load PayPal config:", error)
       setPaypalConfig(null)
     }
-  }, [isRoleLoading, isSuperAdmin])
+  }, [hasLoadedWorkspaces, isRoleLoading, isSuperAdmin, workspaces.length])
 
   useEffect(() => {
     loadPayPalStatus()
@@ -551,6 +553,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   const currentPlanType = normalizePlanType(
     sharedBillingOverview?.billing?.planType || firstWorkspace?.planType
   )
+  const isPaymentConnected =
+    paypalStatus?.isPaymentConnected ??
+    (paypalStatus?.paypalStatus === "CONNECTED")
+  const isPayPalStatusReady = !paypalLoading && paypalStatus !== null
   // ⚠️ Limiti SEMPRE dal database (sharedBillingOverview) - NO fallback hardcoded
   const currentChannelLimit = sharedBillingOverview?.limits?.maxChannels ?? 0
   const currentChannelUsage =
@@ -558,6 +564,21 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   const channelLimitReached = currentChannelLimit > 0 && currentChannelUsage >= currentChannelLimit
 
   const openWizardDialog = useCallback(() => {
+    if (!isPayPalStatusReady) {
+      toast.error("PayPal status is still loading. Please try again.")
+      return
+    }
+
+    if (!isPaymentConnected) {
+      if (paypalConfig?.configured === false) {
+        toast.error("PayPal is not configured. Add sandbox/live credentials first.")
+      } else {
+        toast.error("Connect PayPal to create a channel.")
+        setPaypalConnectModalOpen(true)
+      }
+      return
+    }
+
     // Se limite canali raggiunto: mostra toast e apri dialog Change Plan
     if (channelLimitReached) {
       const planLabel = PLAN_LABELS[currentPlanType]
@@ -579,6 +600,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     currentPlanType,
     resetWizard,
     wizardOpen,
+    isPayPalStatusReady,
+    isPaymentConnected,
+    paypalConfig?.configured,
   ])
 
   // 🧹 Clear workspace on mount
@@ -798,6 +822,14 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         // Apri dialog Change Plan
         closeWizardDialog()
         setOpenChangePlanDialog(true)
+      } else if (error?.response?.data?.code === "PAYPAL_NOT_CONNECTED") {
+        const msg =
+          error.response.data.message ||
+          "Connect PayPal to create a new channel."
+        setErrorMessage(msg)
+        toast.error(msg)
+        closeWizardDialog()
+        setPaypalConnectModalOpen(true)
       } else {
         setErrorMessage("Failed to create channel")
       }
@@ -1190,6 +1222,14 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   onClick={openWizardDialog}
                   className="bg-green-600 hover:bg-green-700 px-8"
                   size="lg"
+                  disabled={!isPayPalStatusReady || !isPaymentConnected}
+                  title={
+                    !isPayPalStatusReady
+                      ? "Loading PayPal status..."
+                      : !isPaymentConnected
+                      ? "Connect PayPal to create a channel."
+                      : undefined
+                  }
                 >
                   Launch Setup Wizard
                 </Button>
@@ -1219,8 +1259,22 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 <Button
                   variant="outline"
                   size="sm"
-                  className={`gap-1.5 ${channelLimitReached ? 'opacity-50 cursor-not-allowed' : 'text-green-600 border-green-600 hover:bg-green-50'}`}
+                  className={`gap-1.5 ${
+                    channelLimitReached || !isPayPalStatusReady || !isPaymentConnected
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'text-green-600 border-green-600 hover:bg-green-50'
+                  }`}
                   onClick={openWizardDialog}
+                  disabled={channelLimitReached || !isPayPalStatusReady || !isPaymentConnected}
+                  title={
+                    !isPayPalStatusReady
+                      ? "Loading PayPal status..."
+                      : !isPaymentConnected
+                      ? "Connect PayPal to create a channel."
+                      : channelLimitReached
+                      ? "Channel limit reached"
+                      : undefined
+                  }
                 >
                   <PlusCircle className="h-4 w-4" />
                   Add Channel

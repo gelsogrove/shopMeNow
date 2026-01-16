@@ -75,6 +75,12 @@ export function TeamMembersTable({
     maxTeamMembers !== undefined && 
     maxTeamMembers > 0 &&
     currentTeamUsage >= maxTeamMembers
+  const isPaymentConnected = billingOverview?.billing?.isPaymentConnected ?? false
+  const canInvite =
+    isSuperAdmin &&
+    isInviteFeatureEnabled !== false &&
+    !isInviteLimitReached &&
+    isPaymentConnected
 
   // DEBUG LOGGING
   useEffect(() => {
@@ -257,16 +263,10 @@ export function TeamMembersTable({
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={
-                        !isSuperAdmin ||
-                        (isInviteFeatureEnabled === false) ||
-                        isInviteLimitReached
-                      }
+                      disabled={!canInvite}
                       onClick={() => setInviteModalOpen(true)}
                       className={`gap-1.5 ${
-                        isSuperAdmin &&
-                        isInviteFeatureEnabled !== false &&
-                        !isInviteLimitReached
+                        canInvite
                           ? "text-green-600 border-green-600 hover:bg-green-50"
                           : ""
                       }`}
@@ -280,13 +280,15 @@ export function TeamMembersTable({
                     </Button>
                   </span>
                 </TooltipTrigger>
-                {(!isSuperAdmin ||
-                  isInviteFeatureEnabled === false ||
-                  isInviteLimitReached) && (
+                {!canInvite && (
                   <TooltipContent>
                     <p>
                       {!isSuperAdmin
                         ? "Only the workspace owner can invite new members"
+                        : isLoadingOverview
+                        ? "Loading billing status..."
+                        : !isPaymentConnected
+                        ? "Connect PayPal to invite team members"
                         : isInviteFeatureEnabled === false
                         ? "Upgrade to Premium or Enterprise to invite team members"
                         : "Team member limit reached. Upgrade to add more members."}

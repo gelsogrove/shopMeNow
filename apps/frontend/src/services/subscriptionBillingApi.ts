@@ -40,6 +40,7 @@ export interface BillingInfo {
   isTrialExpired: boolean
   daysUntilTrialExpires: number | null
   totalRecharges: number
+  isPaymentConnected?: boolean
 }
 
 export interface PlanLimits {

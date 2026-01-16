@@ -66,9 +66,12 @@ export class InvitationController {
       })
 
       if (!result.success) {
-        const statusCode = result.code === "TEAM_MEMBER_LIMIT_REACHED" ? 403 : 400
+        const isForbidden =
+          result.code === "TEAM_MEMBER_LIMIT_REACHED" ||
+          result.code === "PAYPAL_NOT_CONNECTED"
+        const statusCode = isForbidden ? 403 : 400
         res.status(statusCode).json({
-          error: "Bad Request",
+          error: isForbidden ? "Forbidden" : "Bad Request",
           message: result.error,
           code: result.code,
         })

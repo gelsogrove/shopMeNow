@@ -741,6 +741,7 @@ class BackofficeApi {
         id: string
         email: string
         paypalStatus: string
+        isPaymentConnected: boolean
         paypalClientId: string | null
         paypalMerchantId: string | null
         paypalEmail: string | null
@@ -758,6 +759,37 @@ class BackofficeApi {
       }>
     }>> => {
       return this.fetch(`/users/admin/${userId}/paypal`)
+    },
+
+    /**
+     * Update PayPal config for owner (admin)
+     */
+    updatePayPalInfo: async (
+      userId: string,
+      payload: {
+        paypalStatus?: string | null
+        isPaymentConnected?: boolean
+        paypalClientId?: string | null
+        paypalMerchantId?: string | null
+        paypalEmail?: string | null
+        paypalEnvironment?: string | null
+        paypalConnectedAt?: string | null
+      }
+    ): Promise<ApiResponse<{
+      id: string
+      email: string
+      paypalStatus: string
+      isPaymentConnected: boolean
+      paypalClientId: string | null
+      paypalMerchantId: string | null
+      paypalEmail: string | null
+      paypalEnvironment: string | null
+      paypalConnectedAt: string | null
+    }>> => {
+      return this.fetch(`/users/admin/${userId}/paypal`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      })
     },
 
     /**

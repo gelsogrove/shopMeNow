@@ -63,6 +63,9 @@ jest.mock('../src/config/database', () => ({
     customerFeedback: { deleteMany: jest.fn() },
     searchConversations: { deleteMany: jest.fn() },
     customers: { findMany: jest.fn(), deleteMany: jest.fn() },
+    supportTicket: { findMany: jest.fn().mockResolvedValue([]), deleteMany: jest.fn() },
+    supportMessage: { deleteMany: jest.fn() },
+    supportAttachment: { deleteMany: jest.fn() },
     certification: { deleteMany: jest.fn() },
     transportType: { deleteMany: jest.fn() },
     products: { deleteMany: jest.fn() },
@@ -123,6 +126,9 @@ jest.mock('../src/config/database', () => ({
         customerFeedback: { deleteMany: createDeleteManyMock() },
         searchConversations: { deleteMany: createDeleteManyMock() },
         customers: { deleteMany: createDeleteManyMock() },
+        supportTicket: { findMany: jest.fn().mockResolvedValue([]), deleteMany: createDeleteManyMock() },
+        supportMessage: { deleteMany: createDeleteManyMock() },
+        supportAttachment: { deleteMany: createDeleteManyMock() },
         certification: { deleteMany: createDeleteManyMock() },
         transportType: { deleteMany: createDeleteManyMock() },
         products: { deleteMany: createDeleteManyMock() },
@@ -355,7 +361,7 @@ describe('Soft Delete Cleanup Job', () => {
 
       // Should log "no records to delete"
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('No expired soft-deleted records')
+        expect.stringContaining('No expired records found. Retention window is clean.')
       )
     })
   })
@@ -526,7 +532,7 @@ describe('Soft Delete Cleanup Job', () => {
       await softDeleteCleanupJob()
 
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('No expired soft-deleted records')
+        expect.stringContaining('No expired records found. Retention window is clean.')
       )
     })
 
@@ -540,8 +546,11 @@ describe('Soft Delete Cleanup Job', () => {
       await softDeleteCleanupJob()
 
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Hard-deleted'),
-        expect.objectContaining({ deletedByType: expect.any(Object) })
+        expect.stringContaining('COMPLETED - Hard-deleted'),
+        expect.objectContaining({
+          retention_days: expect.any(Number),
+          total_deleted: expect.any(Number),
+        })
       )
     })
   })

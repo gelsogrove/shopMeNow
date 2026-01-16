@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { roundMoney } from '@/utils/money'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -200,6 +201,8 @@ export function CollectionsPage() {
   const [adjustmentModal, setAdjustmentModal] = useState<{ invoiceId: string } | null>(null)
   const [adjustmentAmount, setAdjustmentAmount] = useState('')
   const [adjustmentReason, setAdjustmentReason] = useState('')
+  const [notesModal, setNotesModal] = useState<{ invoiceId: string; currentNotes: string } | null>(null)
+  const [tempNotes, setTempNotes] = useState('')
   const [adjustments, setAdjustments] = useState<
     Array<{ id: string; amount: number; reason: string | null; createdAt: string }>
   >([])
@@ -621,10 +624,19 @@ export function CollectionsPage() {
   }
 
   const handleMockPayment = async (invoiceId: string) => {
-    setUpdating(invoiceId)
     const targetRow =
       previousRows.find((row) => row.invoice.id === invoiceId) ||
       failedRows.find((row) => row.invoice.id === invoiceId)
+    const amount = targetRow ? resolveDisplayTotal(targetRow.invoice) : undefined
+    const ownerEmail = targetRow?.owner.email || "owner"
+
+    // Simple confirmation popup with amount and email
+    const confirmed = window.confirm(
+      `Charge ${ownerEmail} for ${amount ? formatUsd(amount) : "this invoice"}?`
+    )
+    if (!confirmed) return
+
+    setUpdating(invoiceId)
     const response = await api.users.mockPayPalPayment(
       invoiceId,
       notesByInvoice[invoiceId] || undefined
@@ -1009,12 +1021,15 @@ export function CollectionsPage() {
                         <Input
                           placeholder="Admin notes..."
                           value={notesByInvoice[invoice.id] || ''}
-                          onChange={(e) =>
-                            setNotesByInvoice((prev) => ({
-                              ...prev,
-                              [invoice.id]: e.target.value,
-                            }))
-                          }
+                          onClick={() => {
+                            setNotesModal({
+                              invoiceId: invoice.id,
+                              currentNotes: notesByInvoice[invoice.id] || ''
+                            })
+                            setTempNotes(notesByInvoice[invoice.id] || '')
+                          }}
+                          readOnly
+                          className="cursor-pointer"
                         />
                         <Button
                           variant="outline"
@@ -1569,6 +1584,44 @@ export function CollectionsPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Notes Modal */}
+      <Dialog open={!!notesModal} onOpenChange={(open) => !open && setNotesModal(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Admin Notes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={tempNotes}
+              onChange={(e) => setTempNotes(e.target.value)}
+              placeholder="Enter admin notes..."
+              className="min-h-[200px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNotesModal(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (notesModal) {
+                  setNotesByInvoice((prev) => ({
+                    ...prev,
+                    [notesModal.invoiceId]: tempNotes,
+                  }))
+                  setNotesModal(null)
+                }
+              }}
+            >
+              Save Notes
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -10,7 +10,14 @@
  */
 
 import { Router, Request, Response } from "express"
-import { prisma, UserStatus, InvoiceStatus, TransactionType, PayPalTransactionStatus } from "@echatbot/database"
+import {
+  prisma,
+  UserStatus,
+  InvoiceStatus,
+  TransactionType,
+  PayPalTransactionStatus,
+  PayPalStatus,
+} from "@echatbot/database"
 import jwt, { SignOptions } from "jsonwebtoken"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { platformAdminMiddleware } from "../middlewares/platform-admin.middleware"
@@ -21,6 +28,75 @@ import { SubscriptionBillingService } from "../../../application/services/subscr
 import { invoiceService } from "../../../application/services/invoice.service"
 import { roundMoney } from "../../../utils/money"
 import { TwoFactorResetService } from "../../../application/services/two-factor-reset.service"
+import { loadPayPalConfigForEnv } from "../../../utils/paypal-config"
+
+const captureSubscriptionPayment = async ({
+  env,
+  subscriptionId,
+  amount,
+  note,
+}: {
+  env: "sandbox" | "live"
+  subscriptionId: string
+  amount: number
+  note?: string
+}): Promise<{ success: boolean; transactionId?: string; status?: string }> => {
+  const paypalConfig = loadPayPalConfigForEnv(env)
+  if (!paypalConfig.configured) {
+    logger.warn(`[PAYPAL] Missing credentials for env ${env}`)
+    return { success: false }
+  }
+  const tokenResponse = await fetch(`${paypalConfig.apiBaseUrl}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(
+        `${paypalConfig.clientId}:${paypalConfig.clientSecret}`
+      ).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
+  })
+
+  if (!tokenResponse.ok) {
+    const err = await tokenResponse.text()
+    logger.warn("[PAYPAL] Failed to get app token:", err)
+    return { success: false }
+  }
+
+  const tokenData = await tokenResponse.json()
+  const appToken = tokenData.access_token as string
+
+  const captureResponse = await fetch(
+    `${paypalConfig.apiBaseUrl}/v1/billing/subscriptions/${subscriptionId}/capture`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${appToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        note: note || "Monthly invoice charge",
+        capture_type: "OUTSTANDING_BALANCE",
+        amount: {
+          currency_code: "USD",
+          value: amount.toFixed(2),
+        },
+      }),
+    }
+  )
+
+  if (!captureResponse.ok) {
+    const err = await captureResponse.text()
+    logger.warn("[PAYPAL] Capture failed:", err)
+    return { success: false }
+  }
+
+  const capture = await captureResponse.json()
+  const status = capture.status || capture.capture_status || "UNKNOWN"
+  const transactionId = capture.id || capture.capture_id
+  const success = status === "COMPLETED" || status === "COMPLETED_WITH_PAYMENT"
+  return { success, transactionId, status }
+}
 
 export const buildSubscriptionStatusUpdateData = (
   subscriptionStatus: "ACTIVE" | "PAUSED" | "PAYMENT_FAILED",
@@ -191,6 +267,8 @@ router.get(
               deletedAt: true,
               whatsappPhoneNumber: true,
               channelStatus: true,
+              debugMode: true,
+              updatedAt: true,
               // Count customers
               customers: {
                 select: { id: true }
@@ -198,6 +276,32 @@ router.get(
               // Count products
               products: {
                 select: { id: true }
+              }
+            }
+          },
+          // Get member workspaces (where user is NOT owner)
+          workspaces: {
+            select: {
+              role: true,
+              workspace: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  language: true,
+                  whatsappPhoneNumber: true,
+                  channelStatus: true,
+                  ownerId: true,
+                  owner: {
+                    select: {
+                      id: true,
+                      email: true,
+                      firstName: true,
+                      lastName: true,
+                      companyName: true
+                    }
+                  }
+                }
               }
             }
           }
@@ -212,6 +316,23 @@ router.get(
         // Business rule: Admin and Developer users don't need 2FA
         // All other users MUST have 2FA enabled
         const shouldHave2FA = !user.isPlatformAdmin && !user.isDeveloperUser
+        const isOwner = user.ownedWorkspaces.length > 0
+        
+        // For non-owners, get owner info from member workspaces
+        let ownerInfo = null
+        if (!isOwner && user.workspaces.length > 0) {
+          const firstWorkspace = user.workspaces[0].workspace
+          if (firstWorkspace.owner) {
+            ownerInfo = {
+              id: firstWorkspace.owner.id,
+              email: firstWorkspace.owner.email,
+              name: [firstWorkspace.owner.firstName, firstWorkspace.owner.lastName]
+                .filter(Boolean)
+                .join(' ') || firstWorkspace.owner.email.split('@')[0],
+              companyName: firstWorkspace.owner.companyName
+            }
+          }
+        }
         
         return {
           id: user.id,
@@ -242,7 +363,8 @@ router.get(
           pausedAt: user.pausedAt,
           pauseRequestedAt: user.pauseRequestedAt,
           // Aggregate owned workspaces stats
-          isOwner: user.ownedWorkspaces.length > 0,
+          isOwner,
+          ownerInfo, // NULL for owners, populated for members
           ownedWorkspaces: user.ownedWorkspaces.map(ws => ({
             id: ws.id,
             name: ws.name,
@@ -255,8 +377,20 @@ router.get(
             deletedAt: ws.deletedAt ?? null,
             whatsappPhoneNumber: ws.whatsappPhoneNumber,
             channelStatus: ws.channelStatus,
+            debugMode: ws.debugMode,
+            updatedAt: ws.updatedAt,
             numCustomers: ws.customers.length,
             numProducts: ws.products.length,
+          })),
+          // Member workspaces (for non-owners)
+          memberWorkspaces: user.workspaces.map(uw => ({
+            id: uw.workspace.id,
+            name: uw.workspace.name,
+            slug: uw.workspace.slug,
+            role: uw.role,
+            language: uw.workspace.language,
+            whatsappPhoneNumber: uw.workspace.whatsappPhoneNumber,
+            channelStatus: uw.workspace.channelStatus,
           })),
           // Totals across all owned workspaces (Feature 198: use owner's creditBalance)
           totalCredit: Number(user.creditBalance),
@@ -1966,6 +2100,7 @@ router.get(
           id: true,
           email: true,
           paypalStatus: true,
+          isPaymentConnected: true,
           paypalClientId: true,
           paypalMerchantId: true,
           paypalEmail: true,
@@ -2012,13 +2147,116 @@ router.get(
 
 /**
  * @swagger
- * /api/users/admin/invoices/{invoiceId}/paypal/mock-payment:
- *   post:
- *     summary: Mock PayPal monthly payment (admin)
+ * /api/users/admin/{userId}/paypal:
+ *   put:
+ *     summary: Update PayPal settings for owner (admin)
  *     tags: [Users Admin]
  *     security:
  *       - bearerAuth: []
  */
+router.put(
+  "/admin/:userId/paypal",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params
+      const {
+        paypalStatus,
+        paypalClientId,
+        paypalMerchantId,
+        paypalEmail,
+        paypalEnvironment,
+        paypalConnectedAt,
+        isPaymentConnected,
+      } = req.body
+
+      const validStatuses = ["CONNECTED", "DISCONNECTED"]
+      const validEnvironments = ["sandbox", "live"]
+
+      if (paypalStatus && !validStatuses.includes(paypalStatus)) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid PayPal status",
+        })
+      }
+
+      if (
+        paypalEnvironment &&
+        !validEnvironments.includes(paypalEnvironment)
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid PayPal environment",
+        })
+      }
+
+      const updateData: Record<string, any> = {}
+
+      if (paypalStatus !== undefined) updateData.paypalStatus = paypalStatus
+      if (paypalClientId !== undefined) updateData.paypalClientId = paypalClientId
+      if (paypalMerchantId !== undefined) updateData.paypalMerchantId = paypalMerchantId
+      if (paypalEmail !== undefined) updateData.paypalEmail = paypalEmail
+      if (paypalEnvironment !== undefined) updateData.paypalEnvironment = paypalEnvironment
+      if (paypalConnectedAt !== undefined) {
+        updateData.paypalConnectedAt = paypalConnectedAt
+          ? new Date(paypalConnectedAt)
+          : null
+      }
+
+      if (typeof isPaymentConnected === "boolean") {
+        updateData.isPaymentConnected = isPaymentConnected
+        updateData.paypalStatus = isPaymentConnected
+          ? "CONNECTED"
+          : "DISCONNECTED"
+        if (isPaymentConnected && updateData.paypalConnectedAt === undefined) {
+          updateData.paypalConnectedAt = new Date()
+        }
+        if (!isPaymentConnected && updateData.paypalConnectedAt === undefined) {
+          updateData.paypalConnectedAt = null
+        }
+      }
+
+      const updatedOwner = await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+        select: {
+          id: true,
+          email: true,
+          paypalStatus: true,
+          isPaymentConnected: true,
+          paypalClientId: true,
+          paypalMerchantId: true,
+          paypalEmail: true,
+          paypalEnvironment: true,
+          paypalConnectedAt: true,
+        },
+      })
+
+      res.json({
+        success: true,
+        data: updatedOwner,
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error updating PayPal info:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to update PayPal info",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/paypal/mock-payment:
+ *   post:
+ *     summary: Process PayPal monthly payment (admin, Subscriptions v2)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+// Backward-compat path kept for UI, and treated as real capture
 router.post(
   "/admin/invoices/:invoiceId/paypal/mock-payment",
   authMiddleware,
@@ -2031,7 +2269,21 @@ router.post(
 
       const invoice = await prisma.monthlyInvoice.findUnique({
         where: { id: invoiceId },
-        include: { user: { select: { id: true } } },
+        include: {
+          user: {
+            select: {
+              id: true,
+              isPaymentConnected: true,
+              paypalStatus: true,
+              paypalEnvironment: true,
+              isPlatformAdmin: true,
+              isDeveloperUser: true,
+              paypalAccessTokenEncrypted: true,
+              paypalRefreshTokenEncrypted: true,
+              metadata: true,
+            },
+          },
+        },
       })
 
       if (!invoice) {
@@ -2039,7 +2291,49 @@ router.post(
         return
       }
 
-      const success = Math.random() >= 0.5
+      // Determine environment based on user role
+      const env: "sandbox" | "live" =
+        invoice.user.isPlatformAdmin || invoice.user.isDeveloperUser
+          ? "sandbox"
+          : "live"
+
+      const subscriptionId = (invoice.user.metadata as any)?.paypalSubscriptionId as string | undefined
+      const subscriptionStatus = (invoice.user.metadata as any)?.paypalSubscriptionStatus as string | undefined
+      if (!subscriptionId) {
+        res.status(400).json({
+          success: false,
+          error: "PayPal subscription missing. Reconnect PayPal.",
+          code: "PAYPAL_SUBSCRIPTION_MISSING",
+        })
+        return
+      }
+      if (subscriptionStatus && subscriptionStatus !== "ACTIVE") {
+        res.status(400).json({
+          success: false,
+          error: `PayPal subscription not active (${subscriptionStatus}). Reconnect or reactivate.`,
+          code: "PAYPAL_SUBSCRIPTION_INACTIVE",
+        })
+        return
+      }
+
+      // Basic gating: require PayPal connection
+      if (!invoice.user.isPaymentConnected || invoice.user.paypalStatus !== PayPalStatus.CONNECTED) {
+        res.status(400).json({
+          success: false,
+          error: "PayPal connection required to process payment",
+          code: "PAYPAL_NOT_CONNECTED",
+        })
+        return
+      }
+
+      const capture = await captureSubscriptionPayment({
+        env,
+        subscriptionId,
+        amount: Number(invoice.totalAmount),
+        note: notes || `Invoice ${invoice.periodMonth}/${invoice.periodYear}`,
+      })
+
+      const success = capture.success
       const status: PayPalTransactionStatus = success ? "SUCCESS" : "FAILED"
 
       const transaction = await prisma.payPalTransaction.create({
@@ -2047,10 +2341,13 @@ router.post(
           userId: invoice.userId,
           invoiceId: invoice.id,
           amount: invoice.totalAmount,
-          currency: "EUR",
+          currency: "USD",
           status,
-          notes: notes ?? null,
+          notes: notes
+            ? `${notes} | env:${env}`
+            : `env:${env}`,
           adminUserId: adminUser?.id ?? null,
+          paypalTransactionId: capture.transactionId || null,
         },
       })
 
@@ -2100,9 +2397,21 @@ router.post(
       logger.error("[ADMIN] Error processing mock PayPal payment:", error)
       res.status(500).json({
         success: false,
-        error: "Failed to process mock payment",
+        error: "Failed to process payment",
       })
     }
+  }
+)
+
+// Preferred explicit path
+router.post(
+  "/admin/invoices/:invoiceId/paypal/capture",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    // Delegate to same handler logic
+    req.url = req.url.replace("/capture", "/mock-payment")
+    return router.handle(req, res, () => undefined)
   }
 )
 

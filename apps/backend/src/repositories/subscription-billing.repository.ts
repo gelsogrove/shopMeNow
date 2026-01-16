@@ -26,6 +26,7 @@ export interface BillingInfo {
   daysUntilTrialExpires: number | null
   totalRecharges: number
   subscriptionStatus: SubscriptionStatus
+  isPaymentConnected: boolean
 }
 
 export interface PlanLimits {
@@ -76,6 +77,7 @@ export class SubscriptionBillingRepository {
         planStartedAt: true,
         nextBillingDate: true,
         subscriptionStatus: true,
+        isPaymentConnected: true,
       },
     })
 
@@ -128,6 +130,7 @@ export class SubscriptionBillingRepository {
       daysUntilTrialExpires,
       totalRecharges,
       subscriptionStatus: user.subscriptionStatus,
+      isPaymentConnected: user.isPaymentConnected ?? false,
     }
   }
 

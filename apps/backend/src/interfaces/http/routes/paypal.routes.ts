@@ -5,38 +5,29 @@ import { authMiddleware } from "../middlewares/auth.middleware"
 import { config } from "../../../config"
 import logger from "../../../utils/logger"
 import { encryptSecret } from "../../../utils/encryption"
+import {
+  loadPayPalConfigForEnv,
+  resolvePayPalEnvironment,
+  PayPalEnvironment,
+} from "../../../utils/paypal-config"
+import { Prisma } from "@echatbot/database"
 
 export const paypalRoutes = Router()
 
-type PayPalEnv = "sandbox" | "live"
+const getUserPayPalConfig = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isPlatformAdmin: true, isDeveloperUser: true },
+  })
 
-const loadPayPalConfig = () => {
-  const isProduction = process.env.NODE_ENV === "production"
-  const environment: PayPalEnv = isProduction ? "live" : "sandbox"
-  const clientId = isProduction
-    ? process.env.PAYPAL_CLIENT_ID_LIVE
-    : process.env.PAYPAL_CLIENT_ID_SANDBOX
-  const clientSecret = isProduction
-    ? process.env.PAYPAL_CLIENT_SECRET_LIVE
-    : process.env.PAYPAL_CLIENT_SECRET_SANDBOX
-  const connectBaseUrl = isProduction
-    ? "https://www.paypal.com"
-    : "https://www.sandbox.paypal.com"
-  const apiBaseUrl = isProduction
-    ? "https://api-m.paypal.com"
-    : "https://api-m.sandbox.paypal.com"
-  const redirectUri =
-    process.env.PAYPAL_REDIRECT_URI ||
-    `${config.appUrl}/api/v1/paypal/callback`
+  if (!user) {
+    return null
+  }
 
+  const environment = resolvePayPalEnvironment(user)
   return {
-    configured: Boolean(clientId && clientSecret),
-    environment,
-    clientId,
-    clientSecret,
-    connectBaseUrl,
-    apiBaseUrl,
-    redirectUri,
+    user,
+    paypalConfig: loadPayPalConfigForEnv(environment),
   }
 }
 
@@ -73,15 +64,15 @@ const PAYPAL_SCOPES = [
   "https://uri.paypal.com/services/payments/payouts",
 ]
 
-const getWebhookId = (environment: PayPalEnv) => {
+const getWebhookId = (environment: PayPalEnvironment) => {
   return environment === "live"
     ? process.env.PAYPAL_WEBHOOK_ID_LIVE
     : process.env.PAYPAL_WEBHOOK_ID_SANDBOX
 }
 
 const getAppAccessToken = async (
-  paypalConfig: ReturnType<typeof loadPayPalConfig>
-) => {
+  paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>
+): Promise<string> => {
   const response = await fetch(
     `${paypalConfig.apiBaseUrl}/v1/oauth2/token`,
     {
@@ -105,35 +96,214 @@ const getAppAccessToken = async (
   return data.access_token as string
 }
 
-paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
+const inMemoryPlanCache = new Map<PayPalEnvironment, string>()
+
+const ensurePlanId = async (
+  paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>
+): Promise<string> => {
+  if (paypalConfig.planId) return paypalConfig.planId
+  const cached = inMemoryPlanCache.get(paypalConfig.environment)
+  if (cached) return cached
+
+  const appToken = await getAppAccessToken(paypalConfig)
+
+  // Create a minimal product
+  const productResponse = await fetch(
+    `${paypalConfig.apiBaseUrl}/v1/catalogs/products`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${appToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: "eChatbot Subscription",
+        description:
+          "Monthly platform subscription (anchor $1, variable charges via outstanding balance).",
+        type: "SERVICE",
+        category: "SOFTWARE",
+      }),
+    }
+  )
+
+  if (!productResponse.ok) {
+    const err = await productResponse.text()
+    throw new Error(`PayPal product create failed: ${err}`)
+  }
+
+  const product = await productResponse.json()
+  const productId = product.id
+
+  // Create a minimal monthly plan with $1 anchor price
+  const planResponse = await fetch(`${paypalConfig.apiBaseUrl}/v1/billing/plans`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${appToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      product_id: productId,
+      name: "eChatbot Monthly Anchor Plan",
+      billing_cycles: [
+        {
+          frequency: { interval_unit: "MONTH", interval_count: 1 },
+          tenure_type: "REGULAR",
+          sequence: 1,
+          total_cycles: 0,
+          pricing_scheme: {
+            fixed_price: { value: "1.00", currency_code: "USD" },
+          },
+        },
+      ],
+      payment_preferences: {
+        auto_bill_outstanding: true,
+        setup_fee: { value: "0", currency_code: "USD" },
+        setup_fee_failure_action: "CONTINUE",
+        payment_failure_threshold: 1,
+      },
+      taxes: { percentage: "0", inclusive: false },
+    }),
+  })
+
+  if (!planResponse.ok) {
+    const err = await planResponse.text()
+    throw new Error(`PayPal plan create failed: ${err}`)
+  }
+
+  const plan = await planResponse.json()
+  const planId = plan.id as string
+  inMemoryPlanCache.set(paypalConfig.environment, planId)
+  logger.info(`[PAYPAL] Auto-created plan ${planId} (${paypalConfig.environment})`)
+  return planId
+}
+
+const createSubscription = async ({
+  paypalConfig,
+  payerId,
+  email,
+  userId,
+}: {
+  paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>
+  payerId: string | null
+  email: string | null
+  userId: string
+}): Promise<{ id: string; status: string; planId: string }> => {
+  const appToken = await getAppAccessToken(paypalConfig)
+  const planId = await ensurePlanId(paypalConfig)
+
+  const body: any = {
+    plan_id: planId,
+    application_context: {
+      brand_name: "eChatbot",
+      shipping_preference: "NO_SHIPPING",
+      user_action: "SUBSCRIBE_NOW",
+    },
+    quantity: "1",
+    custom_id: userId,
+  }
+
+  if (payerId || email) {
+    body.subscriber = {
+      email_address: email || undefined,
+      payer_id: payerId || undefined,
+    }
+  }
+
+  const subResponse = await fetch(
+    `${paypalConfig.apiBaseUrl}/v1/billing/subscriptions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${appToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }
+  )
+
+  if (!subResponse.ok) {
+    const err = await subResponse.text()
+    throw new Error(`PayPal subscription create failed: ${err}`)
+  }
+
+  const sub = await subResponse.json()
+  return {
+    id: sub.id as string,
+    status: (sub.status as string) || "UNKNOWN",
+    planId,
+  }
+}
+
+const captureOutstandingBalance = async ({
+  paypalConfig,
+  subscriptionId,
+  amount,
+  note,
+}: {
+  paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>
+  subscriptionId: string
+  amount: number
+  note?: string
+}): Promise<{ success: boolean; transactionId?: string; status?: string }> => {
+  const appToken = await getAppAccessToken(paypalConfig)
+  const captureResponse = await fetch(
+    `${paypalConfig.apiBaseUrl}/v1/billing/subscriptions/${subscriptionId}/capture`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${appToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        note: note || "Monthly invoice charge",
+        capture_type: "OUTSTANDING_BALANCE",
+        amount: {
+          currency_code: "USD",
+          value: amount.toFixed(2),
+        },
+      }),
+    }
+  )
+
+  if (!captureResponse.ok) {
+    const err = await captureResponse.text()
+    logger.warn("[PAYPAL] Capture failed:", err)
+    return { success: false }
+  }
+
+  const capture = await captureResponse.json()
+  const status = capture.status || capture.capture_status || "UNKNOWN"
+  const transactionId = capture.id || capture.capture_id
+  const success = status === "COMPLETED" || status === "COMPLETED_WITH_PAYMENT"
+  return { success, transactionId, status }
+}
+
+
+const verifyWebhookSignature = async (
+  paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>,
+  headers: Request["headers"],
+  webhookEvent: unknown
+): Promise<boolean> => {
+  if (!paypalConfig.configured) {
+    return false
+  }
+
+  const webhookId = getWebhookId(paypalConfig.environment)
+  if (!webhookId) {
+    return false
+  }
+
+  const verificationPayload = {
+    auth_algo: headers["paypal-auth-algo"],
+    cert_url: headers["paypal-cert-url"],
+    transmission_id: headers["paypal-transmission-id"],
+    transmission_sig: headers["paypal-transmission-sig"],
+    transmission_time: headers["paypal-transmission-time"],
+    webhook_id: webhookId,
+    webhook_event: webhookEvent,
+  }
+
   try {
-    const paypalConfig = loadPayPalConfig()
-    if (!paypalConfig.configured) {
-      return res.status(400).json({
-        success: false,
-        error: "PayPal credentials are not configured",
-      })
-    }
-
-    const webhookId = getWebhookId(paypalConfig.environment)
-    if (!webhookId) {
-      return res.status(400).json({
-        success: false,
-        error: "PayPal webhook ID is not configured",
-      })
-    }
-
-    const headers = req.headers
-    const verificationPayload = {
-      auth_algo: headers["paypal-auth-algo"],
-      cert_url: headers["paypal-cert-url"],
-      transmission_id: headers["paypal-transmission-id"],
-      transmission_sig: headers["paypal-transmission-sig"],
-      transmission_time: headers["paypal-transmission-time"],
-      webhook_id: webhookId,
-      webhook_event: req.body,
-    }
-
     const accessToken = await getAppAccessToken(paypalConfig)
     const verifyResponse = await fetch(
       `${paypalConfig.apiBaseUrl}/v1/notifications/verify-webhook-signature`,
@@ -149,19 +319,94 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
 
     if (!verifyResponse.ok) {
       const text = await verifyResponse.text()
-      logger.error("[PAYPAL] Webhook verification failed:", text)
-      return res.status(400).json({ success: false })
+      logger.warn("[PAYPAL] Webhook verification failed:", text)
+      return false
     }
 
     const verifyData = await verifyResponse.json()
-    if (verifyData.verification_status !== "SUCCESS") {
-      logger.warn("[PAYPAL] Webhook signature invalid", verifyData)
+    return verifyData.verification_status === "SUCCESS"
+  } catch (error) {
+    logger.warn("[PAYPAL] Webhook verification error:", error)
+    return false
+  }
+}
+
+paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
+  try {
+    const configs = [
+      loadPayPalConfigForEnv("live"),
+      loadPayPalConfigForEnv("sandbox"),
+    ].filter((config) => config.configured)
+
+    if (configs.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "PayPal credentials are not configured",
+      })
+    }
+
+    const headers = req.headers
+    let verified = false
+    let verifiedEnvironment: PayPalEnvironment | null = null
+
+    for (const paypalConfig of configs) {
+      const success = await verifyWebhookSignature(
+        paypalConfig,
+        headers,
+        req.body
+      )
+      if (success) {
+        verified = true
+        verifiedEnvironment = paypalConfig.environment
+        break
+      }
+    }
+
+    if (!verified) {
       return res.status(400).json({ success: false })
     }
 
+    const eventType = req.body?.event_type as string | undefined
+    const resource = req.body?.resource || {}
+    const subscriptionId =
+      resource.id ||
+      resource.subscription_id ||
+      resource.billing_agreement_id ||
+      resource?.supplementary_data?.related_ids?.subscription_id ||
+      resource?.supplementary_data?.related_ids?.billing_agreement_id
+
+    if (subscriptionId) {
+      const user = await prisma.user.findFirst({
+        where: {
+          metadata: {
+            path: ["paypalSubscriptionId"],
+            equals: subscriptionId,
+          } as unknown as Prisma.JsonFilter,
+        },
+      })
+
+      if (user) {
+        const statusFromEvent =
+          resource.status || resource.subscription_status || resource?.state
+
+        const metadata = {
+          ...(user.metadata as Record<string, any> | null | undefined),
+          paypalSubscriptionId: subscriptionId,
+          paypalSubscriptionStatus: statusFromEvent || eventType || "UNKNOWN",
+        }
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { metadata },
+        })
+      }
+    }
+
     logger.info("[PAYPAL] Webhook verified", {
-      eventType: req.body?.event_type,
+      eventType,
       resourceType: req.body?.resource_type,
+      environment: verifiedEnvironment,
+      subscriptionId,
     })
 
     res.status(200).json({ success: true })
@@ -186,6 +431,7 @@ paypalRoutes.get("/status", authMiddleware, async (req: Request, res: Response) 
       where: { id: userId },
       select: {
         paypalStatus: true,
+        isPaymentConnected: true,
         paypalEmail: true,
         paypalMerchantId: true,
         paypalEnvironment: true,
@@ -215,7 +461,12 @@ paypalRoutes.get("/config", authMiddleware, async (req: Request, res: Response) 
       return
     }
 
-    const paypalConfig = loadPayPalConfig()
+    const userConfig = await getUserPayPalConfig(userId)
+    if (!userConfig) {
+      return res.status(404).json({ success: false, error: "User not found" })
+    }
+
+    const paypalConfig = userConfig.paypalConfig
     res.json({
       success: true,
       data: {
@@ -236,15 +487,22 @@ paypalRoutes.post(
   async (req: Request, res: Response) => {
     try {
       const userId = req.user?.id
-      if (!userId) {
-        return res.status(401).json({ success: false, error: "Unauthorized" })
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" })
+    }
+
+    if (!(await ensureOwner(userId, res))) {
+      return
+    }
+
+      const userConfig = await getUserPayPalConfig(userId)
+      if (!userConfig) {
+        return res
+          .status(404)
+          .json({ success: false, error: "User not found" })
       }
 
-      if (!(await ensureOwner(userId, res))) {
-        return
-      }
-
-      const paypalConfig = loadPayPalConfig()
+      const paypalConfig = userConfig.paypalConfig
       if (!paypalConfig.configured) {
         return res.status(400).json({
           success: false,
@@ -295,12 +553,23 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
     }
 
     const { userId } = parseStateToken(state)
-    const paypalConfig = loadPayPalConfig()
+    const userConfig = await getUserPayPalConfig(userId)
+    if (!userConfig) {
+      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
+      return res.redirect(redirectUrl)
+    }
+
+    const paypalConfig = userConfig.paypalConfig
     if (!paypalConfig.configured) {
       logger.error("[PAYPAL] Callback received but config missing")
       const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=missing_config`
       return res.redirect(redirectUrl)
     }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { metadata: true },
+    })
 
     const tokenResponse = await fetch(
       `${paypalConfig.apiBaseUrl}/v1/oauth2/token`,
@@ -352,10 +621,25 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
       paypalMerchantId = userInfo.payer_id || userInfo.user_id || null
     }
 
+    const subscription = await createSubscription({
+      paypalConfig,
+      payerId: paypalMerchantId,
+      email: paypalEmail,
+      userId,
+    })
+
+    const metadata = {
+      ...(existingUser?.metadata as Record<string, any> | null | undefined),
+      paypalSubscriptionId: subscription.id,
+      paypalSubscriptionStatus: subscription.status,
+      paypalPlanId: subscription.planId,
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: {
         paypalStatus: PayPalStatus.CONNECTED,
+        isPaymentConnected: true,
         paypalClientId: paypalConfig.clientId,
         paypalMerchantId,
         paypalEmail,
@@ -369,6 +653,7 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
           ? new Date(Date.now() + expiresIn * 1000)
           : null,
         paypalTokenScope: scope || null,
+        metadata,
       },
     })
 
@@ -395,10 +680,20 @@ paypalRoutes.post(
         return
       }
 
+      const existing = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { metadata: true },
+      })
+      const metadata = { ...(existing?.metadata as Record<string, any> | null | undefined) }
+      delete metadata?.paypalSubscriptionId
+      delete metadata?.paypalSubscriptionStatus
+      delete metadata?.paypalPlanId
+
       await prisma.user.update({
         where: { id: userId },
         data: {
           paypalStatus: PayPalStatus.DISCONNECTED,
+          isPaymentConnected: false,
           paypalMerchantId: null,
           paypalEmail: null,
           paypalEnvironment: null,
@@ -407,6 +702,7 @@ paypalRoutes.post(
           paypalRefreshTokenEncrypted: null,
           paypalTokenExpiresAt: null,
           paypalTokenScope: null,
+          metadata,
         },
       })
 

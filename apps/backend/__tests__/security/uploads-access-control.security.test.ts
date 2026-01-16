@@ -104,13 +104,12 @@ describe('TASK06 - Upload Access Control', () => {
     })
 
     it('❌ should NOT serve private files without authentication', async () => {
-      // Note: Test expects 404 because auth middleware returns 404 when no token
-      // In production, would return 401 Unauthorized
       await request(app)
-        .get('/api/v1/files/private/documents/test-invoice.pdf')
-        .expect(404) // Auth middleware not mounted in test, returns 404
+        .get('/api/v1/files/private/private/documents/test-invoice.pdf')
+        .set("x-test-skip-auth", "true")
+        .expect(401)
 
-      console.log('🔒 SECURITY: /api/v1/files/private/* requires JWT token (returns 401 in production)')
+      console.log('🔒 SECURITY: /api/v1/files/private/* requires JWT token (401 without auth)')
     })
 
     it('✅ should serve private files WITH authentication (mocked)', async () => {
@@ -121,7 +120,7 @@ describe('TASK06 - Upload Access Control', () => {
       console.log('  1. JWT token (authMiddleware)')
       console.log('  2. x-workspace-id header (validateWorkspaceOperation)')
       console.log('  3. Path format: /api/v1/files/private/:category/:folder/:filename')
-      console.log('  4. Example: GET /api/v1/files/private/documents/invoices/INV-001.pdf')
+      console.log('  4. Example: GET /api/v1/files/private/private/documents/INV-001.pdf')
       console.log('     Headers:')
       console.log('       Authorization: Bearer <jwt_token>')
       console.log('       x-workspace-id: <workspace_id>')

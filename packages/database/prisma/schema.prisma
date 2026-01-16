@@ -555,6 +555,7 @@ model User {
 
   // PayPal configuration (owner-level)
   paypalStatus      PayPalStatus @default(DISCONNECTED)
+  isPaymentConnected Boolean      @default(false)
   paypalClientId    String?
   paypalMerchantId  String?
   paypalEmail       String?

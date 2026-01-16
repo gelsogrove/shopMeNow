@@ -134,9 +134,26 @@ describe("InvitationController", () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(403)
       expect(mockRes.json).toHaveBeenCalledWith({
-        error: "Bad Request",
+        error: "Forbidden",
         message: "Team member limit reached for your plan. Upgrade to add more team members.",
         code: "TEAM_MEMBER_LIMIT_REACHED",
+      })
+    })
+
+    it("should return 403 when PayPal is not connected", async () => {
+      mockService.createInvitation.mockResolvedValue({
+        success: false,
+        error: "PayPal connection required to add team members.",
+        code: "PAYPAL_NOT_CONNECTED",
+      })
+
+      await controller.createInvitation(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockRes.status).toHaveBeenCalledWith(403)
+      expect(mockRes.json).toHaveBeenCalledWith({
+        error: "Forbidden",
+        message: "PayPal connection required to add team members.",
+        code: "PAYPAL_NOT_CONNECTED",
       })
     })
 

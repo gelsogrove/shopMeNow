@@ -226,6 +226,13 @@ Verify: `heroku config --app echatbot-app | grep OPENROUTER`
 
 ---
 
+## 🔑 PayPal (Prod & Dev)
+- Set PAYPAL_CLIENT_ID/SECRET for sandbox and live
+- Set PAYPAL_WEBHOOK_ID_SANDBOX / PAYPAL_WEBHOOK_ID_LIVE
+- Optional: PAYPAL_REDIRECT_URI_SANDBOX / PAYPAL_REDIRECT_URI_LIVE (fallback PAYPAL_REDIRECT_URI)
+- Optional: PAYPAL_PLAN_ID_SANDBOX / PAYPAL_PLAN_ID_LIVE (auto-created if empty; anchor $1, USD)
+- Tokens are encrypted with PAYPAL_TOKEN_ENCRYPTION_KEY
+
 ## ✨ Deployment Success Signals
 
 After `git push heroku-app main`, watch logs:

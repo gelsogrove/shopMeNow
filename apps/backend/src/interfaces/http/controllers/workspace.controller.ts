@@ -1,4 +1,4 @@
-import { prisma } from "@echatbot/database"
+import { PayPalStatus, prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { WorkspaceService } from "../../../application/services/workspace.service"
@@ -222,6 +222,27 @@ export class WorkspaceController {
         return res.status(403).json({ 
           error: "Not authorized to create channels",
           message: reason 
+        })
+      }
+
+      const owner = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isPaymentConnected: true, paypalStatus: true },
+      })
+
+      if (!owner) {
+        return res.status(404).json({ error: "Owner not found" })
+      }
+
+      const isPaymentConnected =
+        owner.isPaymentConnected === true ||
+        owner.paypalStatus === PayPalStatus.CONNECTED
+
+      if (!isPaymentConnected) {
+        return res.status(403).json({
+          error: "PayPal connection required",
+          message: "Connect your PayPal account to create a new channel.",
+          code: "PAYPAL_NOT_CONNECTED",
         })
       }
 

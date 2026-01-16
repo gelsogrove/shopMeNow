@@ -4,6 +4,7 @@ export type PayPalStatus = "CONNECTED" | "DISCONNECTED"
 
 export interface PayPalStatusResponse {
   paypalStatus: PayPalStatus
+  isPaymentConnected?: boolean
   paypalEmail?: string | null
   paypalMerchantId?: string | null
   paypalEnvironment?: string | null

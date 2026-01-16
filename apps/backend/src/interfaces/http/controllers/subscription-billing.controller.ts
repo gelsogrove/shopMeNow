@@ -16,7 +16,7 @@
  */
 
 import { Request, Response } from "express"
-import { PrismaClient, TransactionType } from "@echatbot/database"
+import { PayPalStatus, PrismaClient, TransactionType } from "@echatbot/database"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import logger from "../../../utils/logger"
 
@@ -25,6 +25,53 @@ export class SubscriptionBillingController {
 
   constructor(private prisma: PrismaClient) {
     this.billingService = new SubscriptionBillingService(prisma)
+  }
+
+  private async requirePaymentConnectedByUserId(
+    userId: string,
+    res: Response
+  ): Promise<boolean> {
+    const owner = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isPaymentConnected: true, paypalStatus: true },
+    })
+
+    if (!owner) {
+      res.status(404).json({ error: "Owner not found" })
+      return false
+    }
+
+    const isConnected =
+      owner.isPaymentConnected === true ||
+      owner.paypalStatus === PayPalStatus.CONNECTED
+
+    if (!isConnected) {
+      res.status(403).json({
+        error: "PayPal connection required",
+        message: "Connect your PayPal account to enable billing actions.",
+        code: "PAYPAL_NOT_CONNECTED",
+      })
+      return false
+    }
+
+    return true
+  }
+
+  private async requirePaymentConnectedByWorkspaceId(
+    workspaceId: string,
+    res: Response
+  ): Promise<boolean> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    if (!workspace?.ownerId) {
+      res.status(404).json({ error: "Workspace not found" })
+      return false
+    }
+
+    return this.requirePaymentConnectedByUserId(workspace.ownerId, res)
   }
 
   /**
@@ -281,6 +328,10 @@ export class SubscriptionBillingController {
         return
       }
 
+      if (!(await this.requirePaymentConnectedByWorkspaceId(workspaceId, res))) {
+        return
+      }
+
       // Validate amount
       if (!amount || typeof amount !== "number") {
         res.status(400).json({
@@ -388,6 +439,10 @@ export class SubscriptionBillingController {
         return
       }
 
+      if (!(await this.requirePaymentConnectedByWorkspaceId(workspaceId, res))) {
+        return
+      }
+
       // Validate plan type
       const validPlans = ["BASIC", "PREMIUM", "ENTERPRISE"]
       if (!planType || !validPlans.includes(planType)) {
@@ -482,6 +537,10 @@ export class SubscriptionBillingController {
 
       if (!workspaceId) {
         res.status(400).json({ error: "Workspace ID required" })
+        return
+      }
+
+      if (!(await this.requirePaymentConnectedByWorkspaceId(workspaceId, res))) {
         return
       }
 
@@ -1329,6 +1388,10 @@ export class SubscriptionBillingController {
         return
       }
 
+      if (!(await this.requirePaymentConnectedByUserId(userId, res))) {
+        return
+      }
+
       if (!amount || typeof amount !== "number" || amount < 10 || amount > 1000) {
         res.status(400).json({
           error: "Importo non valido (min $10, max $1000)",
@@ -1499,6 +1562,10 @@ export class SubscriptionBillingController {
         return
       }
 
+      if (!(await this.requirePaymentConnectedByUserId(userId, res))) {
+        return
+      }
+
       const validPlans = ["BASIC", "PREMIUM", "ENTERPRISE"]
       if (!planType || !validPlans.includes(planType)) {
         res.status(400).json({
@@ -1537,6 +1604,10 @@ export class SubscriptionBillingController {
 
       if (!userId) {
         res.status(401).json({ error: "User not authenticated" })
+        return
+      }
+
+      if (!(await this.requirePaymentConnectedByUserId(userId, res))) {
         return
       }
 
