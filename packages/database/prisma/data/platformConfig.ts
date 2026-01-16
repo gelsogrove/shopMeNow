@@ -95,6 +95,18 @@ export const platformConfigData: PlatformConfigData[] = [
     description: "Cost per push notification sent (all types)",
     isActive: true,
   },
+
+  // ============================================================================
+  // 🚩 FEATURE FLAGS
+  // ============================================================================
+  {
+    type: "FLAG" as const,
+    key: "canLogin",
+    value: "true",
+    description:
+      "Allow user login. When false: show maintenance mode",
+    isActive: true,
+  },
   {
     type: "FLAG" as const,
     key: "canRegister",
@@ -150,14 +162,13 @@ export const platformConfigData: PlatformConfigData[] = [
 <script>
   window.eChatbotConfig = {
     "workspaceId": "echatbot-hq-support",
-    "apiUrl": "http://localhost:3001/api/v1",
-    "title": "eChatbot HQ",
-    "logoUrl": "",
+    "apiUrl": "https://echatbot-app-1cba28556df2.herokuapp.com/api/v1",
+    "title": "Chat with us",
     "language": "it",
     "primaryColor": "#22c55e"
   };
 </script>
-<script src="http://localhost:3000/widget.js" async></script>`,
+<script src="https://www.echatbot.ai/widget.js" async></script>`,
     description:
       "Widget chatbot embed code for login page (HTML/JS snippet)",
     isActive: true,
