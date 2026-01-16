@@ -68,7 +68,6 @@ async function seed() {
           slug: "bell-italia-vip",
           whatsappPhoneNumber: "+393334567890",
           notificationEmail: "support@bellitalia.it",
-          isActive: true,
           language: "IT",
           ownerId: owner.id,
           channelStatus: true,
@@ -233,7 +232,6 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
           stock: 50,
           region: "Parma, Italia",
           certifications: ["DOP"],
-          isActive: true,
         },
         update: {
           name: "Parmigiano Reggiano DOP",
@@ -253,7 +251,6 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
           stock: 100,
           region: "Campania, Italia",
           certifications: ["DOP"],
-          isActive: true,
         },
         update: {
           name: "Mozzarella di Bufala",
@@ -273,7 +270,6 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
           stock: 40,
           region: "Lombardia, Italia",
           certifications: ["DOP"],
-          isActive: true,
         },
         update: {
           name: "Gorgonzola Piccante",
@@ -292,7 +288,6 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
           price: 5.5,
           stock: 75,
           region: "Sicilia, Italia",
-          isActive: true,
         },
         update: {
           name: "Ricotta di Pecora",
@@ -312,7 +307,6 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
           stock: 35,
           region: "Lombardia, Italia",
           certifications: ["DOP"],
-          isActive: true,
         },
         update: {
           name: "Taleggio DOP",
@@ -331,7 +325,6 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
           price: 7.5,
           stock: 60,
           region: "Puglia, Italia",
-          isActive: true,
         },
         update: {
           name: "Burrata",
@@ -390,10 +383,8 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
         icon: "Router",
         systemPrompt: "You are the Router Agent. Analyze customer intent and delegate to appropriate agents.",
         order: 0,
-        isActive: true,
       },
       update: {
-        isActive: true,
       },
     });
 
@@ -407,10 +398,8 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
         icon: "Search",
         systemPrompt: "You are the Product Search Agent. Search for products and intelligently group results when there are more than 5 items.",
         order: 2,
-        isActive: true,
       },
       update: {
-        isActive: true,
       },
     });
 
@@ -424,10 +413,8 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
         icon: "ShoppingCart",
         systemPrompt: "You are the Cart Management Agent. Help customers manage their shopping cart.",
         order: 3,
-        isActive: true,
       },
       update: {
-        isActive: true,
       },
     });
 
@@ -441,10 +428,8 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
         icon: "Package",
         systemPrompt: "You are the Order Tracking Agent. Help customers track their orders.",
         order: 4,
-        isActive: true,
       },
       update: {
-        isActive: true,
       },
     });
 
@@ -458,10 +443,8 @@ Sei SofiA: Amichevole, entusiasta dei prodotti italiani, sempre pronta ad aiutar
         icon: "MessageCircle",
         systemPrompt: "You are the Customer Support Agent. Help customers with their inquiries.",
         order: 5,
-        isActive: true,
       },
       update: {
-        isActive: true,
       },
     });
 
@@ -504,10 +487,8 @@ Solo il messaggio finale, senza prefissi.`,
         temperature: 0.7,
         maxTokens: 500,
         order: 8,
-        isActive: true,
       },
       update: {
-        isActive: true,
         temperature: 0.7,
       },
     });
@@ -526,10 +507,8 @@ Solo il messaggio finale, senza prefissi.`,
         temperature: 0.1,
         maxTokens: 1024,
         order: 7,
-        isActive: true,
       },
       update: {
-        isActive: true,
       },
     });
 
