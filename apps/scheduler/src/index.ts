@@ -10,6 +10,7 @@ import {
   whatsappQueueCleanupJob,
   softDeleteCleanupJob,
   supportAttachmentsCleanupJob,
+  pushCampaignsJob,
 } from './jobs'
 import logger from './utils/logger'
 
@@ -41,6 +42,11 @@ async function main() {
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('*/5 * * * * *', async () => {
     await runJob('whatsapp-channel-queue', whatsappChannelQueueJob)
+  })
+
+  // Push Campaigns runner - every minute
+  cron.schedule('0 * * * * *', async () => {
+    await runJob('push-campaigns', pushCampaignsJob)
   })
 
   // ═══════════════════════════════════════════════════════════════════════════

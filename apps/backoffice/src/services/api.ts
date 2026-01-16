@@ -33,6 +33,53 @@ class BackofficeApi {
     this.token = token
   }
 
+  // Push Campaigns (WhatsApp only)
+  pushCampaigns = {
+    list: async (workspaceId: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns`),
+    get: async (workspaceId: string, id: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns/${id}`),
+    recipients: async (
+      workspaceId: string,
+      id: string,
+      params: { skip?: number; take?: number; status?: string } = {}
+    ): Promise<ApiResponse<any>> => {
+      const query = new URLSearchParams()
+      if (params.skip !== undefined) query.set('skip', String(params.skip))
+      if (params.take !== undefined) query.set('take', String(params.take))
+      if (params.status) query.set('status', params.status)
+      return this.fetch(
+        `/workspaces/${workspaceId}/push-campaigns/${id}/recipients?${query.toString()}`
+      )
+    },
+    create: async (workspaceId: string, payload: any): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    schedule: async (workspaceId: string, id: string, sendAt?: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns/${id}/schedule`, {
+        method: 'POST',
+        body: JSON.stringify({ sendAt }),
+      }),
+    runNow: async (workspaceId: string, id: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns/${id}/run-now`, {
+        method: 'POST',
+      }),
+    pause: async (workspaceId: string, id: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns/${id}/pause`, {
+        method: 'POST',
+      }),
+    resume: async (workspaceId: string, id: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns/${id}/resume`, {
+        method: 'POST',
+      }),
+    cancel: async (workspaceId: string, id: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/push-campaigns/${id}/cancel`, {
+        method: 'POST',
+      }),
+  }
+
   clearToken() {
     this.token = null
   }

@@ -126,6 +126,9 @@ model Workspace {
   softDeleteAuditLogs   SoftDeleteAuditLog[]
   callingFunctions      WorkspaceCallingFunction[] // ✅ Inverse relation
   supportTickets        SupportTicket[] // 🎫 Support tickets for this workspace
+  pushCampaigns         PushCampaign[]
+  pushCampaignRecipients PushCampaignRecipient[]
+  customerFeedbacks     CustomerFeedback[] // 👍👎 Customer feedback
 
   @@index([ownerId])
   @@index([planType])
@@ -363,6 +366,7 @@ model Customers {
   feedbacks                     CustomerFeedback[]
   productSearches               ProductSearch[]
   whatsappQueue                 WhatsAppQueue[]
+  pushCampaignRecipients        PushCampaignRecipient[] // Campaign recipients for this customer
 
   @@index([phone])
   @@index([deletedAt])
@@ -581,6 +585,7 @@ model User {
   paypalAdminTransactions PayPalTransaction[]     @relation("PayPalAdmin")
   invoiceAdjustments      InvoiceAdjustment[]
   supportTickets          SupportTicket[] // 🎫 Support tickets created by this user
+  pushCampaignsCreated    PushCampaign[] // Campaigns created by this user
 
   @@index([deletedAt])
   @@index([planType])
@@ -1462,6 +1467,35 @@ enum CampaignTargetType {
   SELECTED // Solo customer IDs specificati
 }
 
+// 🔔 Push Campaigns (v2)
+enum PushCampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PushCampaignBillingStatus {
+  PENDING
+  PARTIAL
+  BILLED
+  FAILED
+}
+
+enum PushCampaignChannel {
+  WHATSAPP
+}
+
+enum PushCampaignRecipientStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
 model Campaign {
   id             String            @id @default(cuid())
   workspaceId    String
@@ -1524,11 +1558,76 @@ model CustomerFeedback {
   // Relations
   customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
   campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
   @@index([workspaceId])
   @@index([campaignId])
   @@index([createdAt])
+}
+
+// 🚀 Push Campaigns v2 (promotional/scheduled sends)
+model PushCampaign {
+  id                 String                    @id @default(cuid())
+  workspaceId        String
+  createdByUserId    String?
+  name               String
+  status             PushCampaignStatus        @default(DRAFT)
+  channel            PushCampaignChannel       @default(WHATSAPP)
+  sendAt             DateTime?
+  templateId         String?
+  templateLocale     String?
+  bodyPreview        String?                   @db.Text
+  mediaUrl           String?
+  expectedRecipients Int                       @default(0)
+  actualSent         Int                       @default(0)
+  actualFailed       Int                       @default(0)
+  actualSkipped      Int                       @default(0)
+  costPerMessage     Decimal                   @default(1.00) @db.Decimal(10, 2)
+  billingStatus      PushCampaignBillingStatus @default(PENDING)
+  throttlePerSecond  Int                       @default(10)
+  batchSize          Int                       @default(50)
+  lastError          String?                   @db.Text
+  metadata           Json?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation(fields: [createdByUserId], references: [id])
+  recipients PushCampaignRecipient[]
+
+  @@index([workspaceId])
+  @@index([status])
+  @@index([sendAt])
+}
+
+model PushCampaignRecipient {
+  id             String                      @id @default(cuid())
+  campaignId     String
+  workspaceId    String
+  customerId     String?
+  phone          String
+  status         PushCampaignRecipientStatus @default(PENDING)
+  errorCode      String?
+  errorMessage   String?                     @db.Text
+  sentAt         DateTime?
+  messageId      String?
+  priceCharged   Decimal                     @default(0) @db.Decimal(10, 2)
+  isBlacklisted  Boolean                     @default(false)
+  isBlocked      Boolean                     @default(false)
+  isFake         Boolean                     @default(false)
+  optOutAt       DateTime?
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+
+  campaign  PushCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer  Customers?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([workspaceId])
+  @@index([status])
+  @@unique([campaignId, phone])
 }
 
 model AdminSession {

@@ -336,4 +336,52 @@ export const defaultFAQs = (
     order: 28,
     isActive: true,
   },
+  // ====================================================================
+  // CATEGORY: Campaigns (Push messaging)
+  // ====================================================================
+  {
+    workspaceId,
+    question: "Can I send promotional WhatsApp campaigns?",
+    answer:
+      "Yes. You can create a promotional campaign, select your audience (all customers, filtered by tags, or a CSV list), and send a templated WhatsApp message. Only contacts with marketing opt-in are allowed.",
+    category: "Campaigns",
+    order: 401,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "How much do campaigns cost?",
+    answer:
+      "Each attempted send costs $1.00. The estimated total is shown before you confirm. Credit is deducted per message sent; skipped opt-out/blocked contacts are not charged.",
+    category: "Campaigns",
+    order: 402,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "Can I schedule a campaign?",
+    answer:
+      "Yes. You can send immediately or schedule a date and time. The system throttles sends to respect WhatsApp limits and avoid rate-limit errors.",
+    category: "Campaigns",
+    order: 403,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "Do recipients need to opt in?",
+    answer:
+      "Yes. Only customers with marketing consent are eligible. Blacklisted, blocked, fake, or opt-out contacts are automatically skipped and not charged.",
+    category: "Campaigns",
+    order: 404,
+    isActive: true,
+  },
+  {
+    workspaceId,
+    question: "What happens if I don’t have enough credit?",
+    answer:
+      "If credit is insufficient at scheduling, the campaign is blocked. If credit runs out during sending, the campaign pauses and no further messages are sent. You can top up credit and resume.",
+    category: "Campaigns",
+    order: 405,
+    isActive: true,
+  },
 ]

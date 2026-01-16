@@ -95,18 +95,6 @@ export const platformConfigData: PlatformConfigData[] = [
     description: "Cost per push notification sent (all types)",
     isActive: true,
   },
-
-  // ============================================================================
-  // 🚩 FEATURE FLAGS (Platform access control)
-  // ============================================================================
-  {
-    type: "FLAG" as const,
-    key: "canLogin",
-    value: "true",
-    description:
-      "Allow users to login. When false: show WIP popup, disable login button",
-    isActive: true,
-  },
   {
     type: "FLAG" as const,
     key: "canRegister",
@@ -268,6 +256,23 @@ export const platformConfigData: PlatformConfigData[] = [
     key: "ENTERPRISE_TEAM_MEMBERS",
     value: "999999",
     description: "Unlimited team members for Enterprise plan",
+    isActive: true,
+  },
+  // ============================================================
+  // PUSH CAMPAIGNS (WhatsApp) - pricing and limits
+  // ============================================================
+  {
+    type: "LIMIT" as const,
+    key: "PUSH_THROTTLE_PER_SEC",
+    value: "10",
+    description: "Default throttle for push campaigns (messages per second)",
+    isActive: true,
+  },
+  {
+    type: "LIMIT" as const,
+    key: "PUSH_BATCH_SIZE",
+    value: "50",
+    description: "Default batch size for push campaigns",
     isActive: true,
   },
 ]

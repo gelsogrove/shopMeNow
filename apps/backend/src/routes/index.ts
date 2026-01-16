@@ -141,6 +141,7 @@ import { createTrashRoutes } from "../interfaces/http/routes/trash.routes"
 import { supportRouter } from "../interfaces/http/routes/support.routes"
 import { adminSupportRouter } from "../interfaces/http/routes/admin-support.routes"
 import { paypalRoutes } from "../interfaces/http/routes/paypal.routes"
+import { pushCampaignRoutes } from "../interfaces/http/routes/push-campaign.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -652,6 +653,15 @@ logger.info(
 router.use("/workspaces", campaignRoutes(campaignController))
 logger.info(
   "✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns"
+)
+
+// Push Campaigns v2 (WhatsApp only)
+router.use(
+  "/workspaces/:workspaceId/push-campaigns",
+  pushCampaignRoutes()
+)
+logger.info(
+  "✅ Registered push campaign routes: /api/workspaces/:workspaceId/push-campaigns"
 )
 
 // Mount feedback routes (public + admin)
