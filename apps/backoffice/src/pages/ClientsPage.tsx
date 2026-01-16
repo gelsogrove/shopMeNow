@@ -1488,11 +1488,7 @@ export function ClientsPage() {
                       <select
                         className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
                         value={paypalForm.paypalEnvironment}
-                        onChange={(event) =>
-                          setPaypalForm((prev) =>
-                            prev ? { ...prev, paypalEnvironment: event.target.value } : prev
-                          )
-                        }
+                        disabled
                       >
                         <option value="">—</option>
                         <option value="sandbox">sandbox</option>
@@ -1544,11 +1540,7 @@ export function ClientsPage() {
                         className="mt-2"
                         type="datetime-local"
                         value={paypalForm.paypalConnectedAt}
-                        onChange={(event) =>
-                          setPaypalForm((prev) =>
-                            prev ? { ...prev, paypalConnectedAt: event.target.value } : prev
-                          )
-                        }
+                        disabled
                       />
                     </div>
                   </div>
