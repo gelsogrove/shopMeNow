@@ -283,26 +283,8 @@ export class SecurityCheckService {
   ): Promise<SecurityCheckResult> {
     const { workspaceId, visitorId, message } = context
 
-    // Check for exact duplicate in last 30 seconds (reduced from 5 minutes)
-    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000)
-
-    const duplicateMessage = await prisma.whatsAppQueue.findFirst({
-      where: {
-        workspaceId,
-        visitorId,
-        messageContent: message,
-        createdAt: { gte: thirtySecondsAgo },
-      },
-    })
-
-    if (duplicateMessage) {
-      return {
-        step: "ANTI_SPAM",
-        passed: false,
-        reason: "Duplicate message detected (same message sent within 30 seconds)",
-        retryAfter: 30 * 1000, // Wait 30 seconds
-      }
-    }
+    // NOTE: Duplicate message check DISABLED - users may legitimately repeat messages
+    // Only flood control remains active
 
     // Check for flood (5+ messages in 10 seconds)
     const tenSecondsAgo = new Date(Date.now() - 10 * 1000)
