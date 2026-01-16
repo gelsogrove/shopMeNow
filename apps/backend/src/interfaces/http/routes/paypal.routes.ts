@@ -646,7 +646,6 @@ paypalRoutes.post(
         where: { id: userId },
         data: {
           paypalStatus: PayPalStatus.DISCONNECTED,
-          isPaymentConnected: false,
           paypalMerchantId: null,
           paypalEmail: null,
           paypalEnvironment: null,
@@ -655,7 +654,6 @@ paypalRoutes.post(
           paypalRefreshTokenEncrypted: null,
           paypalTokenExpiresAt: null,
           paypalTokenScope: null,
-          metadata,
         },
       })
 

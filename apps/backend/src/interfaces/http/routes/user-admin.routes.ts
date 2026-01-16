@@ -2305,12 +2305,9 @@ router.post(
         return
       }
 
-      const capture = await captureSubscriptionPayment({
-        env,
-        subscriptionId,
-        amount: Number(invoice.totalAmount),
-        note: notes || `Invoice ${invoice.periodMonth}/${invoice.periodYear}`,
-      })
+      // TODO: Implement subscription payment capture
+      // Note: Subscription tracking logic removed (metadata field no longer exists)
+      const capture = { success: false, transactionId: null }
 
       const success = capture.success
       const status: PayPalTransactionStatus = success ? "SUCCESS" : "FAILED"
