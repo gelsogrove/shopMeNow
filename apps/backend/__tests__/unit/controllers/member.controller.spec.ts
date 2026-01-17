@@ -23,6 +23,7 @@ describe("MemberController", () => {
       removeMember: jest.fn(),
       getUserRole: jest.fn(),
       isSuperAdmin: jest.fn(),
+      isOwner: jest.fn(),
     } as any
 
     controller = new MemberController(mockService)
@@ -183,6 +184,7 @@ describe("MemberController", () => {
     it("should return role for SUPER_ADMIN", async () => {
       mockService.getUserRole.mockResolvedValue("SUPER_ADMIN")
       mockService.isSuperAdmin.mockResolvedValue(true)
+      mockService.isOwner.mockResolvedValue(false)
 
       await controller.getMyRole(mockReq as Request, mockRes as Response, mockNext)
 
@@ -192,12 +194,14 @@ describe("MemberController", () => {
         success: true,
         role: "SUPER_ADMIN",
         isSuperAdmin: true,
+        isOwner: false,
       })
     })
 
     it("should return role for ADMIN", async () => {
       mockService.getUserRole.mockResolvedValue("ADMIN")
       mockService.isSuperAdmin.mockResolvedValue(false)
+      mockService.isOwner.mockResolvedValue(false)
 
       await controller.getMyRole(mockReq as Request, mockRes as Response, mockNext)
 
@@ -205,6 +209,7 @@ describe("MemberController", () => {
         success: true,
         role: "ADMIN",
         isSuperAdmin: false,
+        isOwner: false,
       })
     })
 
@@ -223,6 +228,7 @@ describe("MemberController", () => {
     it("should return null role if user is not a member", async () => {
       mockService.getUserRole.mockResolvedValue(null)
       mockService.isSuperAdmin.mockResolvedValue(false)
+      mockService.isOwner.mockResolvedValue(false)
 
       await controller.getMyRole(mockReq as Request, mockRes as Response, mockNext)
 
@@ -230,6 +236,7 @@ describe("MemberController", () => {
         success: true,
         role: null,
         isSuperAdmin: false,
+        isOwner: false,
       })
     })
 

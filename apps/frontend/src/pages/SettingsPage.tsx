@@ -41,8 +41,8 @@ import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { useMutation } from "@tanstack/react-query"
 import { Check, Copy, HelpCircle, Loader2, Monitor, Save, Smartphone, Trash2, Store, Users, Headphones, Bot, MessageSquare, Globe, Shield, ChevronDown, ChevronUp, ChevronRight, AlertCircle, ShoppingCart, Edit3, Briefcase, Smile, Award, Coffee } from "lucide-react"
-import { useCallback, useContext, useEffect, useState } from "react"
-import { UNSAFE_NavigationContext, useNavigate } from "react-router-dom"
+import { useCallback, useEffect, useState } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
 
 interface WorkspaceData {
   id: string
@@ -104,21 +104,106 @@ const defaultWelcomeMessage =
 
 const defaultWipMessage = "Work in progress. Please contact us later."
 
-// Simple navigation blocker for unsaved changes (React Router v6)
-function useUnsavedChangesGuard(when: boolean, message: string) {
-  const { navigator } = useContext(UNSAFE_NavigationContext)
+// Custom navigation blocker
+function useUnsavedChangesGuard(when: boolean, onSave: () => Promise<boolean>) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [showDialog, setShowDialog] = useState(false)
+  const [nextPath, setNextPath] = useState<string | null>(null)
+  const [shouldNavigate, setShouldNavigate] = useState(false)
 
+  // Block browser back/forward/close
   useEffect(() => {
     if (!when) return
-    const unblock = (navigator as any).block((tx: any) => {
-      const ok = window.confirm(message)
-      if (ok) {
-        unblock()
-        tx.retry()
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [when])
+
+  // Navigate after confirmation
+  useEffect(() => {
+    if (shouldNavigate && nextPath) {
+      navigate(nextPath)
+      setShouldNavigate(false)
+      setNextPath(null)
+    }
+  }, [shouldNavigate, nextPath, navigate])
+
+  // Intercept all clicks
+  useEffect(() => {
+    if (!when) return
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      
+      // Check for links or buttons that might trigger navigation
+      const link = target.closest('a, button, [role="menuitem"]')
+      if (!link) return
+
+      const href = (link as HTMLAnchorElement).href
+      if (href) {
+        try {
+          const url = new URL(href)
+          const targetPath = url.pathname
+          
+          if (targetPath !== location.pathname && !targetPath.startsWith('http')) {
+            e.preventDefault()
+            e.stopPropagation()
+            setNextPath(targetPath)
+            setShowDialog(true)
+            return false
+          }
+        } catch {}
       }
-    })
-    return unblock
-  }, [navigator, when, message])
+
+      // Check for onClick that might call navigate()
+      const onclick = (link as any).onclick?.toString() || ''
+      if (onclick.includes('navigate') || onclick.includes('href')) {
+        e.preventDefault()
+        e.stopPropagation()
+        // Try to extract path from onClick
+        const pathMatch = onclick.match(/navigate\(['"]([^'"]+)['"]\)/)
+        if (pathMatch) {
+          setNextPath(pathMatch[1])
+          setShowDialog(true)
+          return false
+        }
+      }
+    }
+
+    document.addEventListener('click', handleClick, true)
+    return () => document.removeEventListener('click', handleClick, true)
+  }, [when, location.pathname])
+
+  const handleDiscard = () => {
+    setShowDialog(false)
+    setShouldNavigate(true)
+  }
+
+  const handleCancel = () => {
+    setShowDialog(false)
+    setNextPath(null)
+  }
+
+  const handleSaveAndContinue = async () => {
+    const success = await onSave()
+    if (success) {
+      setShowDialog(false)
+      setShouldNavigate(true)
+    }
+  }
+
+  return { 
+    showDialog, 
+    handleDiscard, 
+    handleCancel,
+    handleSaveAndContinue
+  }
 }
 
 // Guide Content for each section
@@ -469,12 +554,6 @@ export default function SettingsPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isDirty])
 
-  // Block in-app navigation when form is dirty
-  useUnsavedChangesGuard(
-    isDirty,
-    "You have unsaved changes. Leave this page and lose them?"
-  )
-
   const handleFieldChange = (field: keyof WorkspaceData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     setIsDirty(true)
@@ -514,7 +593,7 @@ export default function SettingsPage() {
     },
   })
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const newErrors: { [key: string]: string } = {}
 
     if (!formData.name.trim()) {
@@ -528,48 +607,59 @@ export default function SettingsPage() {
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       toast.error("Please fix validation errors")
-      return
+      return false
     }
 
-    const updateData: Partial<WorkspaceData> = {
-      name: formData.name,
-      adminEmail: formData.adminEmail,
-      url: formData.url,
-      currency: formData.currency,
-      channelStatus: formData.channelStatus,
-      debugMode: formData.debugMode,
-      welcomeMessage: formData.welcomeMessage,
-      wipMessage: formData.wipMessage,
-      allowedExternalLinks: formData.allowedExternalLinks,
-      enableWhatsapp: formData.enableWhatsapp,
-      enableWidget: formData.enableWidget,
-      sellsProductsAndServices: formData.sellsProductsAndServices,
-      hasSalesAgents: formData.hasSalesAgents,
-      hasHumanSupport: formData.hasHumanSupport,
-      humanSupportInstructions: formData.humanSupportInstructions,
-      frustrationEscalationInstructions: formData.frustrationEscalationInstructions,
-      operatorContactMethod: formData.operatorContactMethod,
-      operatorWhatsappNumber: formData.operatorWhatsappNumber,
-      toneOfVoice: formData.toneOfVoice,
-      botIdentityResponse: formData.botIdentityResponse,
-      address: formData.address,
-      customAiRules: formData.customAiRules,
-      translateProductNames: formData.translateProductNames,
-      translateCategoryNames: formData.translateCategoryNames,
-      translateServiceNames: formData.translateServiceNames,
-      catalogBaseLanguage: formData.catalogBaseLanguage,
-      chatbotName: formData.chatbotName,
-      businessType: formData.businessType,
-      widgetTitle: formData.widgetTitle,
-      widgetLanguage: formData.widgetLanguage,
-      widgetPrimaryColor: formData.widgetPrimaryColor,
-      whatsappApiKey: formData.whatsappApiKey,
-      whatsappPhoneNumberId: formData.whatsappPhoneNumberId,
-      whatsappVerifyToken: formData.whatsappVerifyToken,
-    }
+    try {
+      const updateData: Partial<WorkspaceData> = {
+        name: formData.name,
+        adminEmail: formData.adminEmail,
+        url: formData.url,
+        currency: formData.currency,
+        channelStatus: formData.channelStatus,
+        debugMode: formData.debugMode,
+        welcomeMessage: formData.welcomeMessage,
+        wipMessage: formData.wipMessage,
+        allowedExternalLinks: formData.allowedExternalLinks,
+        enableWhatsapp: formData.enableWhatsapp,
+        enableWidget: formData.enableWidget,
+        sellsProductsAndServices: formData.sellsProductsAndServices,
+        hasSalesAgents: formData.hasSalesAgents,
+        hasHumanSupport: formData.hasHumanSupport,
+        humanSupportInstructions: formData.humanSupportInstructions,
+        frustrationEscalationInstructions: formData.frustrationEscalationInstructions,
+        operatorContactMethod: formData.operatorContactMethod,
+        operatorWhatsappNumber: formData.operatorWhatsappNumber,
+        toneOfVoice: formData.toneOfVoice,
+        botIdentityResponse: formData.botIdentityResponse,
+        address: formData.address,
+        customAiRules: formData.customAiRules,
+        translateProductNames: formData.translateProductNames,
+        translateCategoryNames: formData.translateCategoryNames,
+        translateServiceNames: formData.translateServiceNames,
+        catalogBaseLanguage: formData.catalogBaseLanguage,
+        chatbotName: formData.chatbotName,
+        businessType: formData.businessType,
+        widgetTitle: formData.widgetTitle,
+        widgetLanguage: formData.widgetLanguage,
+        widgetPrimaryColor: formData.widgetPrimaryColor,
+        whatsappApiKey: formData.whatsappApiKey,
+        whatsappPhoneNumberId: formData.whatsappPhoneNumberId,
+        whatsappVerifyToken: formData.whatsappVerifyToken,
+      }
 
-    saveSettingsMutation.mutate(updateData)
-  }
+      saveSettingsMutation.mutate(updateData)
+      return true
+    } catch (error) {
+      return false
+    }
+  }, [formData, saveSettingsMutation])
+
+  // Block in-app navigation when form is dirty
+  const { showDialog, handleDiscard, handleCancel, handleSaveAndContinue } = useUnsavedChangesGuard(
+    isDirty,
+    handleSave
+  )
 
   const handleDelete = async () => {
     if (deleteConfirmation !== formData.name) {
@@ -705,6 +795,38 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      {/* 🚨 Unsaved Changes Dialog */}
+      <Dialog open={showDialog} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifiche non salvate</DialogTitle>
+            <DialogDescription>
+              Hai modifiche non salvate. Vuoi salvare prima di uscire?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleDiscard}
+            >
+              Scarta modifiche
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={handleSaveAndContinue}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Salva e continua
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Read-only mode banner for non-owners */}
         {!canEdit && (

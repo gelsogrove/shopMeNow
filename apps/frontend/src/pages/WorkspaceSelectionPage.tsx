@@ -2203,6 +2203,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           <TeamMembersTable
             workspaceId={firstWorkspaceId}
             isSuperAdmin={isSuperAdmin}
+            paypalConnected={
+              paypalStatus?.isPaymentConnected ??
+              (paypalStatus?.paypalStatus === "CONNECTED")
+            }
           />
         )}
 

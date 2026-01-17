@@ -42,6 +42,7 @@ import { useBilling } from "@/contexts/BillingContext"
 interface TeamMembersTableProps {
   workspaceId: string
   isSuperAdmin: boolean
+  paypalConnected?: boolean
 }
 
 type TabType = "members" | "invitations"
@@ -53,6 +54,7 @@ type TabType = "members" | "invitations"
 export function TeamMembersTable({
   workspaceId,
   isSuperAdmin,
+  paypalConnected,
 }: TeamMembersTableProps) {
   const { billingOverview, isLoadingOverview } = useBilling()
   const [activeTab, setActiveTab] = useState<TabType>("members")
@@ -75,12 +77,29 @@ export function TeamMembersTable({
     maxTeamMembers !== undefined && 
     maxTeamMembers > 0 &&
     currentTeamUsage >= maxTeamMembers
-  const isPaymentConnected = billingOverview?.billing?.isPaymentConnected ?? false
-  const canInvite =
-    isSuperAdmin &&
-    isInviteFeatureEnabled !== false &&
-    !isInviteLimitReached &&
-    isPaymentConnected
+  const billingPaymentConnected = billingOverview?.billing?.isPaymentConnected
+  const isBillingReady = !!billingOverview && !isLoadingOverview
+  const paymentSourceProvided = typeof paypalConnected === "boolean"
+  const isPaymentConnected = paymentSourceProvided
+    ? paypalConnected!
+    : isBillingReady
+      ? billingPaymentConnected ?? true // If billing is loaded but field missing, assume connected
+      : false
+
+  const inviteBlockReason = (() => {
+    if (!isSuperAdmin) return "Only the workspace owner can invite new members"
+    if (!isPaymentConnected) return "Connect PayPal to invite team members"
+    if (!isBillingReady) {
+      // If PayPal status is explicitly provided (connected) but billing not ready yet, allow
+      if (paymentSourceProvided && paypalConnected) return null
+      return "Loading billing status..."
+    }
+    if (isInviteFeatureEnabled === false) return "Upgrade to Premium or Enterprise to invite team members"
+    if (isInviteLimitReached) return "Team member limit reached. Upgrade to add more members."
+    return null
+  })()
+
+  const canInvite = inviteBlockReason === null
 
   // DEBUG LOGGING
   useEffect(() => {
@@ -282,17 +301,7 @@ export function TeamMembersTable({
                 </TooltipTrigger>
                 {!canInvite && (
                   <TooltipContent>
-                    <p>
-                      {!isSuperAdmin
-                        ? "Only the workspace owner can invite new members"
-                        : isLoadingOverview
-                        ? "Loading billing status..."
-                        : !isPaymentConnected
-                        ? "Connect PayPal to invite team members"
-                        : isInviteFeatureEnabled === false
-                        ? "Upgrade to Premium or Enterprise to invite team members"
-                        : "Team member limit reached. Upgrade to add more members."}
-                    </p>
+                    <p>{inviteBlockReason}</p>
                   </TooltipContent>
                 )}
               </Tooltip>

@@ -139,6 +139,8 @@ describe('LoginPage - Platform Admin Navigation', () => {
       replace: vi.fn(),
       assign: vi.fn(),
     }
+    // Mock window.open for backoffice redirect
+    ;(window as any).open = vi.fn()
     localStorage.setItem('language', 'en')
   })
 
@@ -281,8 +283,10 @@ describe('LoginPage - Platform Admin Navigation', () => {
       await userEvent.click(backofficeButton)
 
       await waitFor(() => {
-        expect(window.location.assign).toHaveBeenCalledWith(
-          expect.stringContaining('http://localhost:3002/auth/callback?token=fake-admin-token')
+        expect(window.open).toHaveBeenCalledWith(
+          'http://localhost:3002/auth/callback?token=fake-admin-token',
+          '_blank',
+          'noopener,noreferrer'
         )
       })
     })
