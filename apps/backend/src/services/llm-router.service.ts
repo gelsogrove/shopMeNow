@@ -1293,6 +1293,8 @@ export class LLMRouterService {
         adminEmail: customerVarsData.adminEmail,
         botIdentityResponse: customerVarsData.botIdentityResponse ? customerVarsData.botIdentityResponse.substring(0, 50) + "..." : "(empty)",
         companyName: customerVarsData.companyName,
+        languageUser: customerVarsData.languageUser, // 🌍 DEBUG: Check language value
+        customerLanguageRaw: customer.language, // 🌍 DEBUG: Check raw language code
       })
 
       responseWithLinks = this.promptProcessor.replaceCustomerVariables(

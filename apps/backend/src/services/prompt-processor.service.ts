@@ -672,6 +672,11 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
   ): string {
     if (!text) return text
 
+    // 🌍 DEBUG: Log language value before replacement
+    if (text.includes("{{languageUser}}")) {
+      console.log("🌍 [PromptProcessor] Replacing {{languageUser}} with:", customerData.languageUser || "ITALIANO (default)")
+    }
+
     return text
       .replace(/\{\{nameUser\}\}/g, customerData.nome || "Cliente")
       .replace(/\{\{customerName\}\}/g, customerData.nome || "Cliente") // 🔧 Alias for templates using {{customerName}}
