@@ -71,11 +71,11 @@ export class TranslationAgent {
     const startTime = Date.now()
 
     // 🔍 DEBUG: Log exactly what language we received
-    logger.info(`🌍 TranslationAgent.process() called`, {
+    logger.info(`🌍 [TranslationAgent] RECEIVED targetLanguage parameter`, {
       targetLanguage: options.targetLanguage,
       workspaceId: options.workspaceId,
       customerName: options.customerName,
-      messageLength: options.message?.length,
+      messagePreview: options.message?.substring(0, 100),
     })
 
     try {
@@ -85,7 +85,11 @@ export class TranslationAgent {
       // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
       // The Translation Agent will translate EVERYTHING to the target language
       // NOTE: Never skip translation - content from DB may be in any language
-      logger.info(`🌍 TranslationAgent - Translating to ${normalizedLanguage.toUpperCase()} (original input: ${options.targetLanguage})`)
+      logger.info(`🌍 [TranslationAgent] Normalized language`, {
+        input: options.targetLanguage,
+        normalized: normalizedLanguage,
+        willTranslateTo: normalizedLanguage.toUpperCase()
+      })
 
       // 2. Load TRANSLATION agent config from database
       const translationAgent = await this.agentConfigRepo.findByType(

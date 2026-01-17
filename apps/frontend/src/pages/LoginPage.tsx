@@ -1472,11 +1472,10 @@ export function LoginPage() {
                                   (window.location.hostname === "localhost"
                                     ? "http://localhost:3002"
                                     : "https://backoffice.echatbot.ai")
-                                if (token) {
-                                  window.location.assign(`${backofficeUrl}/auth/callback?token=${token}`)
-                                  return
-                                }
-                                window.location.assign(`${backofficeUrl}/access-denied`)
+                                const destination = token
+                                  ? `${backofficeUrl}/auth/callback?token=${token}`
+                                  : `${backofficeUrl}/access-denied`
+                                window.open(destination, "_blank", "noopener,noreferrer")
                               }}
                               className="w-full rounded-lg bg-green-600 px-4 py-2 text-white text-sm font-medium hover:bg-green-700 transition-colors"
                             >

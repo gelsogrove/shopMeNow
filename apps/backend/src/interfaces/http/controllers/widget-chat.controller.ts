@@ -360,13 +360,26 @@ export class WidgetChatController {
         logger.info("👤 Created anonymous customer", {
           customerId: customer.id,
           visitorId,
+          language: customer.language,
         })
       } else if (requestedLanguage && customer.language !== requestedLanguage) {
+        const oldLanguage = customer.language
         await prisma.customers.update({
           where: { id: customer.id },
           data: { language: requestedLanguage },
         })
         customer = { ...customer, language: requestedLanguage }
+        logger.info("🌍 Updated customer language", {
+          customerId: customer.id,
+          oldLanguage,
+          newLanguage: requestedLanguage,
+        })
+      } else {
+        logger.info("👤 Using existing customer", {
+          customerId: customer.id,
+          visitorId,
+          language: customer.language,
+        })
       }
 
       logger.info("✅ Customer ready", { customerId: customer.id, visitorId })

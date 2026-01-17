@@ -70,22 +70,38 @@
       headerTitle: "Chat con noi 💬",
       placeholder: "Scrivi un messaggio...",
       welcome: "Ciao! 👋 Come posso aiutarti?",
+      flag: "🇮🇹",
     },
     en: {
       headerTitle: "Chat with us 💬",
       placeholder: "Type a message...",
       welcome: "Hello! 👋 How can I help you?",
+      flag: "🇬🇧",
     },
     es: {
       headerTitle: "Chatea con nosotros 💬",
       placeholder: "Escribe un mensaje...",
       welcome: "¡Hola! 👋 ¿Cómo puedo ayudarte?",
+      flag: "🇪🇸",
     },
     pt: {
       headerTitle: "Fale conosco 💬",
       placeholder: "Digite uma mensagem...",
       welcome: "Olá! 👋 Como posso ajudar?",
+      flag: "🇵🇹",
     },
+  }
+
+  // Auto-detect browser language
+  const getBrowserLanguage = () => {
+    const browserLang = navigator.language || navigator.userLanguage
+    if (!browserLang) {
+      console.warn('🌍 Browser language not detected, using EN* (default fallback)')
+      return 'en*' // Asterisco indica fallback
+    }
+    const lang = browserLang.split('-')[0].toLowerCase()
+    console.log('🌍 Browser language detected:', browserLang, '→', lang)
+    return lang
   }
 
   // CSS with placeholder for dynamic colors
@@ -698,6 +714,11 @@
       this.resetStorageIfWorkspaceChanged()
       this.messages = loadMessages(this.storageWorkspaceId)
       this.visitorId = getOrCreateVisitorId(this.storageWorkspaceId)
+      
+      // 🌍 Auto-detect language if not specified
+      this.detectedLanguage = config.language || getBrowserLanguage()
+      this.isLanguageFallback = this.detectedLanguage.includes('*')
+      console.log('🌍 eChatbot Widget Language:', this.detectedLanguage, '(browser:', navigator.language, ', fallback:', this.isLanguageFallback, ')')
       this.sessionId =
         localStorage.getItem(
           getStorageKey(STORAGE_KEYS.SESSION_ID, this.storageWorkspaceId)
@@ -793,8 +814,8 @@
      * Create DOM elements
      */
     createDOM() {
-      // Get translations for current language
-      const lang = this.language || "en"
+      // Get translations for current language - use detected language
+      const lang = this.detectedLanguage || this.language || "en"
       const t = TRANSLATIONS[lang] || TRANSLATIONS.en
 
       // Overlay (for darkening background when widget is open)
@@ -840,6 +861,18 @@
       this.popup.className = "echatbot-widget-popup"
       this.container.appendChild(this.popup)
 
+      // 🌍 Language flag indicator
+      const langFlag = document.createElement("span")
+      langFlag.className = "echatbot-widget-lang-flag"
+      const flagText = t.flag || "🌐"
+      const asterisk = this.isLanguageFallback ? "*" : ""
+      langFlag.textContent = flagText + asterisk
+      const langCode = this.detectedLanguage.replace('*', '').toUpperCase()
+      const fallbackNote = this.isLanguageFallback ? " (default fallback)" : ""
+      langFlag.title = `Language: ${langCode}${fallbackNote}`
+      langFlag.style.cssText = "margin-right: 8px; font-size: 18px; cursor: help;"
+      header.appendChild(langFlag)
+      
       // Header - use custom title if provided, otherwise translated default
       const header = document.createElement("div")
       header.className = "echatbot-widget-header"
@@ -1010,9 +1043,9 @@
       this.showTypingIndicator()
 
       try {
-        // 🌍 Use workspace configured language (already set from status endpoint)
-        // Do NOT override this.language with browser language here
-        const widgetLanguage = this.language || "it"
+        // 🌍 Use detected language (browser language or workspace default)
+        const widgetLanguage = (this.detectedLanguage || this.language || "it").replace('*', '')
+        console.log('🌍 Sending message with language:', widgetLanguage, '(original:', this.detectedLanguage, ')')
 
         // Call widget API (correct endpoint)
         const payload = {

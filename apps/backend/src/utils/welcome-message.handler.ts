@@ -16,6 +16,7 @@
 
 import { PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../utils/logger"
+import { TranslationAgent } from "../application/agents/TranslationAgent"
 
 export interface WelcomeMessageInput {
   customerId: string
@@ -32,7 +33,11 @@ export interface WelcomeMessageResult {
 }
 
 export class WelcomeMessageHandler {
-  constructor(private prisma: PrismaClient) {}
+  private translationAgent: TranslationAgent
+
+  constructor(private prisma: PrismaClient) {
+    this.translationAgent = new TranslationAgent(prisma)
+  }
 
   /**
    * Check if this is the first message and return welcome message if configured
@@ -124,6 +129,32 @@ export class WelcomeMessageHandler {
         welcomeMessageLength: welcomeText.length,
         customerLanguage: input.customerLanguage || "it",
         hasRegistrationLink: welcomeText.includes("http"),
+      })
+
+      // 🌍 CRITICAL: Translate welcome message to customer's language
+      const customerLanguage = input.customerLanguage || "it"
+      
+      logger.info("🌍 [WelcomeMessageHandler] BEFORE Translation", {
+        customerLanguage,
+        originalText: welcomeText.substring(0, 100),
+        textLength: welcomeText.length,
+      })
+
+      const translationResult = await this.translationAgent.process({
+        workspaceId: input.workspaceId,
+        message: welcomeText,
+        targetLanguage: customerLanguage,
+        customerName: input.customerId, // We don't have name yet for anonymous users
+      })
+
+      welcomeText = translationResult.message
+
+      logger.info("🌍 [WelcomeMessageHandler] AFTER Translation", {
+        originalLength: welcomeText.length,
+        translatedLength: translationResult.message.length,
+        targetLanguage: customerLanguage,
+        wasTranslated: translationResult.translated,
+        translatedText: translationResult.message.substring(0, 100),
       })
 
       // Save welcome exchange to conversation history
