@@ -80,24 +80,8 @@ function AuthLoginRedirect() {
 
 // Protected billing route - only owners can access
 function ProtectedBillingRoute() {
-  const { workspace } = useWorkspace()
-  const { isSuperAdmin, isLoading } = useWorkspaceRole(workspace?.id)
-  
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent"></div>
-          <p className="mt-2 text-sm text-gray-500">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-  
-  if (!isSuperAdmin) {
-    return <Navigate to="/workspace-selection" replace />
-  }
-  
+  // ✅ Billing è a livello OWNER, non workspace
+  // Le fatture sono per TUTTI i workspace dell'owner, non serve workspace selezionato
   return <BillingPage />
 }
 

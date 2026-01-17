@@ -39,7 +39,7 @@ export function MinimalLayout() {
   const { workspace } = useWorkspace()
   
   // Get user role - only owners can see billing
-  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
+  const { isOwner } = useWorkspaceRole(workspace?.id)
   
   // User profile state
   const [userName, setUserName] = useState<string>("")
@@ -363,15 +363,13 @@ export function MinimalLayout() {
                     <User className="mr-2 h-4 w-4 text-blue-500" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  {isSuperAdmin && (
-                    <DropdownMenuItem
-                      className="p-2 cursor-pointer"
-                      onClick={() => navigate("/billing")}
-                    >
-                      <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
-                      <span>Billing</span>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem
+                    className="p-2 cursor-pointer"
+                    onClick={() => navigate("/billing")}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
+                    <span>Billing</span>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className="p-2 cursor-pointer relative"
                     onClick={() => navigate("/support/tickets")}

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useRef } from "react"
 interface UseWorkspaceRoleResult {
   role: 'SUPER_ADMIN' | 'ADMIN' | null
   isSuperAdmin: boolean
+  isOwner: boolean
   isLoading: boolean
   error: Error | null
   refetch: () => Promise<void>
@@ -34,6 +35,12 @@ export function useWorkspaceRole(workspaceId: string | null | undefined): UseWor
     try {
       const data = await teamMemberApi.getRole(workspaceId)
       if (mountedRef.current) {
+        console.log('🔍 [useWorkspaceRole] API response:', {
+          workspaceId,
+          role: data.role,
+          isSuperAdmin: data.isSuperAdmin,
+          isOwner: data.isOwner,
+        })
         setRoleData(data)
       }
     } catch (err) {
@@ -63,6 +70,7 @@ export function useWorkspaceRole(workspaceId: string | null | undefined): UseWor
   return {
     role: roleData?.role ?? null,
     isSuperAdmin: roleData?.isSuperAdmin ?? false,
+    isOwner: roleData?.isOwner ?? false,
     isLoading,
     error,
     refetch,

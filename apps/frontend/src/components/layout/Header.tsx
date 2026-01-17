@@ -41,7 +41,7 @@ export function Header() {
 
   // ✅ FIX: Use WorkspaceContext (single source of truth)
   const { workspace } = useWorkspace()
-  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
+  const { isOwner } = useWorkspaceRole(workspace?.id)
 
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")

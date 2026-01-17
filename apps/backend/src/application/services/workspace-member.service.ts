@@ -258,6 +258,21 @@ export class WorkspaceMemberService {
   }
 
   /**
+   * Check if user is the owner of the workspace
+   */
+  async isOwner(
+    workspaceId: string,
+    userId: string
+  ): Promise<boolean> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { ownerId: true },
+    })
+
+    return workspace?.ownerId === userId
+  }
+
+  /**
    * Add all existing ADMINs to a new workspace
    * Called when SUPER_ADMIN creates a new channel
    */

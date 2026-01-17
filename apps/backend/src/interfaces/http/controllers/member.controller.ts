@@ -112,11 +112,13 @@ export class MemberController {
         workspaceId,
         userId
       )
+      const isOwner = await this.memberService.isOwner(workspaceId, userId)
 
       res.json({
         success: true,
         role,
         isSuperAdmin,
+        isOwner,
       })
     } catch (error) {
       logger.error("Error fetching role:", error)

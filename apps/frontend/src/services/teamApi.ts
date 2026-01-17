@@ -30,6 +30,7 @@ export interface PendingInvitation {
 export interface WorkspaceRole {
   role: 'SUPER_ADMIN' | 'ADMIN'
   isSuperAdmin: boolean
+  isOwner: boolean
 }
 
 export interface CreateInvitationData {
