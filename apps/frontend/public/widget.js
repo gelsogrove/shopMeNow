@@ -1010,15 +1010,15 @@
       this.showTypingIndicator()
 
       try {
-        // Resolve current language (sync UI + LLM)
-        const browserLang = resolveLanguage(this.config.language)
-        this.language = browserLang
+        // 🌍 Use workspace configured language (already set from status endpoint)
+        // Do NOT override this.language with browser language here
+        const widgetLanguage = this.language || "it"
 
         // Call widget API (correct endpoint)
         const payload = {
           visitorId: this.visitorId,
           message,
-          language: browserLang,
+          language: widgetLanguage,
         }
         if (typeof this.sessionId === "string" && this.sessionId.length > 0) {
           payload.sessionId = this.sessionId
