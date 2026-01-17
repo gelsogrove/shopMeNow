@@ -354,7 +354,7 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   hasSalesAgents: false,
   sellsProductsAndServices: true,
   channelName: 'Shop',
-  chatbotName: 'Assistant',
+  chatbotName: 'Assistente',
   businessType: '',
   operatorContactMethod: 'email',
   operatorWhatsappNumber: '',

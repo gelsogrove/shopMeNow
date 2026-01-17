@@ -111,6 +111,7 @@ export class PromptProcessorService {
       
       // Workspace/Company variables
       .replace(/\{\{companyName\}\}/g, vars.companyName || 'Shop')
+      .replace(/\{\{chatbotName\}\}/g, vars.chatbotName || 'Assistente')
       .replace(/\{\{botIdentityResponse\}\}/g, vars.botIdentityResponse || '')
       .replace(/\{\{customAiRules\}\}/g, vars.customAiRules || '')
       .replace(/\{\{address\}\}/g, vars.address || '')

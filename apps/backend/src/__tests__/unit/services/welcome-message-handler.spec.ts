@@ -30,10 +30,24 @@ describe("WelcomeMessageHandler", () => {
   it("returns welcome message on first user message and saves history", async () => {
     prisma.conversationMessage.count.mockResolvedValue(0)
     prisma.workspace.findUnique.mockResolvedValue({
+      id: workspaceId,
+      name: "Test Workspace",
       welcomeMessage: {
         it: "Benvenuto! Come posso aiutarti?",
         en: "Welcome! How can I help you?",
       },
+    })
+    prisma.customers.findFirst.mockResolvedValue({
+      id: customerId,
+      name: "Test Customer",
+      email: "test@test.com",
+      phone: "+1234567890",
+      discount: 0,
+      isActive: true,
+      language: "it",
+      company: "Test Company",
+      push_notifications_consent: false,
+      sales: null,
     })
     prisma.conversationMessage.create
       .mockResolvedValueOnce({ id: "user-msg-id" })
