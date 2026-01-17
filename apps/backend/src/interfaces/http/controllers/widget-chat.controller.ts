@@ -75,6 +75,7 @@ export class WidgetChatController {
           ownerId: true,
           debugMode: true,
           wipMessage: true,
+          widgetLanguage: true, // 🌍 Widget language configuration
         },
       })
 
@@ -130,6 +131,7 @@ export class WidgetChatController {
         status: "active",
         channelStatus: workspace.channelStatus ?? true,
         debugMode: workspace.debugMode ?? false,
+        language: workspace.widgetLanguage || "it", // 🌍 Widget configured language
       })
     } catch (error) {
       logger.error("❌ Error getting widget status", error)

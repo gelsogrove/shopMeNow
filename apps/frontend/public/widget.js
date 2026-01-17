@@ -770,6 +770,11 @@
           if (data.status === "wip" && data.wipMessage) {
             this.wipMessage = data.wipMessage
           }
+          // 🌍 Use workspace configured language (overrides browser language)
+          if (data.language) {
+            this.language = data.language
+            console.log("✅ Widget language set from workspace:", this.language)
+          }
         }
       } catch (error) {
         console.warn("eChatbot Widget status check failed:", error)
