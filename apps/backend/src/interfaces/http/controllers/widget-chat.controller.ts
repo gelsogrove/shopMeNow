@@ -15,6 +15,7 @@ import { SecurityCheckService } from "../../../application/services/security-che
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
+import { detectLanguageFromHeader } from "../../../utils/email-templates"
 import {
   WIDGET_MESSAGE_SCHEMA,
   type WidgetMessageInput,
@@ -169,12 +170,33 @@ export class WidgetChatController {
       }
 
       const { visitorId, message, sessionId, language } = validation.data
-      const requestedLanguage = this.normalizeLanguage(language)
+      
+      // 🌍 Language detection priority:
+      // 1. Explicit language from widget body (if provided)
+      // 2. Accept-Language HTTP header (browser preference)
+      // 3. Customer's saved language (if exists)
+      // 4. Workspace default language
+      // 5. Italian (system default)
+      const acceptLanguageHeader = req.headers['accept-language']
+      const browserLanguage = acceptLanguageHeader 
+        ? detectLanguageFromHeader(acceptLanguageHeader)
+        : null
+      
+      // Convert browser language (it/en/es/pt) to system format (ITA/ENG/ESP/PRT)
+      const normalizedBrowserLang = browserLanguage 
+        ? this.normalizeLanguage(browserLanguage)
+        : null
+      
+      const requestedLanguage = this.normalizeLanguage(language) || normalizedBrowserLang
 
       logger.info("📨 Widget message received", {
         workspaceId,
         visitorId,
         messageLength: message.length,
+        bodyLanguage: language || '(none)',
+        acceptLanguageHeader: acceptLanguageHeader || '(none)',
+        detectedFromHeader: browserLanguage || '(none)',
+        finalLanguage: requestedLanguage || '(fallback to workspace/customer)'
       })
 
       // Validate visitorId format
