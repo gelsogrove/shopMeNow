@@ -176,8 +176,8 @@ export default function WidgetSettingsPage() {
   const generateEmbedCode = (): string => {
     const widgetScriptUrl =
       typeof window !== "undefined" && window.location.hostname !== "localhost"
-        ? `${window.location.origin}/widget.js`
-        : "http://localhost:3000/widget.js";
+        ? `${window.location.origin}/widget.js?v=186`
+        : "http://localhost:3000/widget.js?v=186";
     const config = getWidgetConfig();
     return `<!-- eChatbot Widget -->
 <script>

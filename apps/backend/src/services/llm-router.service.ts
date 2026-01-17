@@ -3662,9 +3662,13 @@ export class LLMRouterService {
       es: "ESPAÑOL",
       pt: "PORTUGUÊS",
       IT: "ITALIANO",
+      ITA: "ITALIANO", // ✅ FIX: Add ITA mapping from normalizeLanguage()
       ENG: "ENGLISH",
       ESP: "ESPAÑOL",
       PRT: "PORTUGUÊS",
+      POR: "PORTUGUÊS", // ✅ FIX: Add POR mapping
+      DEU: "DEUTSCH", // ✅ FIX: Add DEU mapping
+      FRA: "FRANÇAIS", // ✅ FIX: Add FRA mapping
     }
     return languageMap[languageCode] || "ITALIANO"
   }

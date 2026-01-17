@@ -1108,7 +1108,7 @@ export default function SettingsPage() {
     language: "${formData.widgetLanguage || 'it'}"
   };
 </script>
-<script src="${window.location.origin}/widget.js" async></script>`}
+<script src="${window.location.origin}/widget.js?v=186" async></script>`}
                       </pre>
                       <Button
                         type="button"
@@ -1125,7 +1125,7 @@ export default function SettingsPage() {
     language: "${formData.widgetLanguage || 'it'}"
   };
 </script>
-<script src="${window.location.origin}/widget.js" async></script>`;
+<script src="${window.location.origin}/widget.js?v=186" async></script>`;
                           navigator.clipboard.writeText(embedCode);
                           toast.success("Code copied to clipboard!");
                         }}
