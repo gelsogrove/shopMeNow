@@ -52,6 +52,9 @@ interface WorkspaceSettings {
   address: string // 🆕 Physical address for {{#if address}} conditional
   hasAddress: boolean
   botIdentityResponse: string
+  chatbotName: string // 🆕 Bot name for {{#if chatbotName}} in IDENTITY
+  companyName: string // 🆕 Company name for {{companyName}}
+  toneOfVoice: string // 🆕 Tone of voice for {{toneOfVoice}}
   customAiRules: string
   allowedExternalLinks: string
   humanSupportInstructions: string
@@ -210,6 +213,7 @@ export class TemplateLoaderService {
         hasSalesAgents: true,
         address: true, // 🆕 For {{#if address}} conditional in templates
         botIdentityResponse: true,
+        chatbotName: true, // 🆕 For {{#if chatbotName}} in IDENTITY section
         customAiRules: true,
         allowedExternalLinks: true,
         humanSupportInstructions: true,
@@ -219,6 +223,8 @@ export class TemplateLoaderService {
         notificationEmail: true,
         websiteUrl: true,
         url: true,
+        name: true, // 🆕 For {{companyName}}
+        toneOfVoice: true, // 🆕 For {{toneOfVoice}}
       },
     })
 
@@ -237,6 +243,9 @@ export class TemplateLoaderService {
       address,
       hasAddress: !!address,
       botIdentityResponse: workspace.botIdentityResponse || "",
+      chatbotName: workspace.chatbotName || "", // 🆕 Bot name for IDENTITY
+      companyName: workspace.name || "", // 🆕 Company name
+      toneOfVoice: workspace.toneOfVoice || "friendly", // 🆕 Tone of voice
       customAiRules: workspace.customAiRules || "",
       allowedExternalLinks: allowedLinks,
       humanSupportInstructions: workspace.humanSupportInstructions || "",

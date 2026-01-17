@@ -17,6 +17,8 @@
 import { PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../utils/logger"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
+import { PromptProcessorService } from "../services/prompt-processor.service"
+import { PromptVariableBuilder } from "../application/services/prompt-variable-builder.service"
 
 export interface WelcomeMessageInput {
   customerId: string
@@ -34,9 +36,10 @@ export interface WelcomeMessageResult {
 
 export class WelcomeMessageHandler {
   private translationAgent: TranslationAgent
-
+  private promptProcessor: PromptProcessorService
   constructor(private prisma: PrismaClient) {
     this.translationAgent = new TranslationAgent(prisma)
+    this.promptProcessor = new PromptProcessorService()
   }
 
   /**
@@ -71,12 +74,30 @@ export class WelcomeMessageHandler {
         where: { id: input.workspaceId },
         select: { 
           welcomeMessage: true,
-          chatbotName: true, // 🤖 Load assistant name for replacement
+          chatbotName: true,
+          botIdentityResponse: true,
+          customAiRules: true,
+          address: true,
+          name: true,
+          toneOfVoice: true,
         },
       })
 
       if (!workspace || !workspace.welcomeMessage) {
         logger.info("👋 [WelcomeMessageHandler] No welcome message configured")
+        return { isWelcomeMessage: false }
+      }
+
+      // Load customer for variable replacement
+      const customer = await this.prisma.customers.findFirst({
+        where: {
+          id: input.customerId,
+          workspaceId: input.workspaceId,
+        },
+      })
+
+      if (!customer) {
+        logger.error("❌ [WelcomeMessageHandler] Customer not found")
         return { isWelcomeMessage: false }
       }
 
@@ -86,14 +107,65 @@ export class WelcomeMessageHandler {
         input.customerLanguage || "it"
       )
 
-      // 🤖 CRITICAL: Replace {{chatbotName}} with actual assistant name
-      const chatbotName = workspace.chatbotName || "Assistente"
-      welcomeText = welcomeText.replace(/\{\{chatbotName\}\}/g, chatbotName)
+      // 🎯 CRITICAL: Build PromptVariables and replace ALL variables
+      logger.info("🔧 [WelcomeMessageHandler] Building prompt variables for welcome message")
       
-      logger.info("🤖 [WelcomeMessageHandler] Replaced chatbot name", {
-        chatbotName,
-        hasPlaceholder: workspace.welcomeMessage.toString().includes("{{chatbotName}}"),
+      // Load customer and workspace for PromptVariableBuilder
+      const fullCustomer = await this.prisma.customers.findFirst({
+        where: { id: customer.id, workspaceId: input.workspaceId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          discount: true,
+          isActive: true,
+          language: true,
+          company: true,
+          push_notifications_consent: true,
+          sales: { select: { firstName: true, lastName: true, phone: true, email: true } },
+        },
       })
+
+      if (!fullCustomer) {
+        throw new Error(`Customer ${customer.id} not found`)
+      }
+
+      const fullWorkspace = await this.prisma.workspace.findUnique({
+        where: { id: input.workspaceId },
+      })
+
+      if (!fullWorkspace) {
+        throw new Error(`Workspace ${input.workspaceId} not found`)
+      }
+
+      const variables = PromptVariableBuilder.build(
+        fullCustomer,
+        fullWorkspace,
+        {
+          products: "",
+          categories: "",
+          services: "",
+          offers: "",
+          faqs: "",
+        }
+      )
+
+      // Replace all variables in welcome message
+      welcomeText = this.promptProcessor.processWithVariables(welcomeText, variables)
+      
+      logger.info("✅ [WelcomeMessageHandler] Variables replaced in welcome message", {
+        customerName: variables.customerName,
+        chatbotNameFromVars: variables.chatbotName,
+        companyName: variables.companyName,
+        hasBotIdentity: !!variables.botIdentityResponse,
+        hasCustomAiRules: !!variables.customAiRules,
+      })
+
+      // 🔍 DEBUG: Log ENTIRE welcome message after variable replacement
+      logger.info("*******PROMPT WELCOME MESSAGE AFTER VARIABLE REPLACEMENT*******")
+      logger.info(welcomeText)
+      logger.info("*******END PROMPT*******")
 
       // 🔧 FIX: Replace [LINK_REGISTRATION] token with actual registration link
       if (welcomeText.includes("[LINK_REGISTRATION]")) {

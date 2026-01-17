@@ -173,6 +173,14 @@ export class VariableResolverService {
     variables.adminEmail = workspace.notificationEmail || ""
     variables.address = workspace.address || ""
     variables.chatbotName = workspace.chatbotName || "Assistente"
+    
+    // 🔍 DEBUG: Log chatbotName value
+    logger.info("🤖 DEBUG - chatbotName from workspace:", {
+      workspaceId,
+      chatbotName: workspace.chatbotName,
+      resolved: variables.chatbotName,
+    })
+    
     variables.businessType = workspace.businessType || "other"
     variables.websiteUrl = workspace.websiteUrl || workspace.url || ""
     variables.supportEmail = workspace.notificationEmail || ""
