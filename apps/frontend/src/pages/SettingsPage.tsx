@@ -41,8 +41,8 @@ import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { useMutation } from "@tanstack/react-query"
 import { Check, Copy, HelpCircle, Loader2, Monitor, Save, Smartphone, Trash2, Store, Users, Headphones, Bot, MessageSquare, Globe, Shield, ChevronDown, ChevronUp, ChevronRight, AlertCircle, ShoppingCart, Edit3, Briefcase, Smile, Award, Coffee } from "lucide-react"
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useCallback, useContext, useEffect, useState } from "react"
+import { UNSAFE_NavigationContext, useNavigate } from "react-router-dom"
 
 interface WorkspaceData {
   id: string
@@ -103,6 +103,23 @@ const defaultWelcomeMessage =
   "Welcome! I'm your digital assistant. How can I help you today?"
 
 const defaultWipMessage = "Work in progress. Please contact us later."
+
+// Simple navigation blocker for unsaved changes (React Router v6)
+function useUnsavedChangesGuard(when: boolean, message: string) {
+  const { navigator } = useContext(UNSAFE_NavigationContext)
+
+  useEffect(() => {
+    if (!when) return
+    const unblock = (navigator as any).block((tx: any) => {
+      const ok = window.confirm(message)
+      if (ok) {
+        unblock()
+        tx.retry()
+      }
+    })
+    return unblock
+  }, [navigator, when, message])
+}
 
 // Guide Content for each section
 const GUIDES = {
@@ -440,6 +457,23 @@ export default function SettingsPage() {
       currentWorkspaceId: currentWorkspace?.id,
     })
   }, [workspaceLoading, isLoadingData, currentWorkspace])
+
+  // Warn on browser/tab close
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return
+      e.preventDefault()
+      e.returnValue = ""
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isDirty])
+
+  // Block in-app navigation when form is dirty
+  useUnsavedChangesGuard(
+    isDirty,
+    "You have unsaved changes. Leave this page and lose them?"
+  )
 
   const handleFieldChange = (field: keyof WorkspaceData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
