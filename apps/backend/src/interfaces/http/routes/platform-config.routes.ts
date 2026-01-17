@@ -158,6 +158,54 @@ router.get(
 
 /**
  * @swagger
+ * /api/platform-config/widget-config:
+ *   get:
+ *     summary: Get widget configuration
+ *     description: Get widget configuration directly from workspace database (public)
+ *     tags: [Platform Config]
+ *     responses:
+ *       200:
+ *         description: Widget configuration
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     config:
+ *                       type: object
+ *                       nullable: true
+ *                       properties:
+ *                         workspaceId:
+ *                           type: string
+ *                         workspaceName:
+ *                           type: string
+ *                         logoUrl:
+ *                           type: string
+ *                           nullable: true
+ *                         title:
+ *                           type: string
+ *                         language:
+ *                           type: string
+ *                         primaryColor:
+ *                           type: string
+ *                     showWidgetChatbot:
+ *                       type: boolean
+ *                     error:
+ *                       type: string
+ *                       nullable: true
+ */
+router.get(
+  "/widget-config",
+  platformConfigController.getWidgetConfig.bind(platformConfigController)
+)
+
+/**
+ * @swagger
  * /api/platform-config/widget-code:
  *   put:
  *     summary: Save widget chatbot code

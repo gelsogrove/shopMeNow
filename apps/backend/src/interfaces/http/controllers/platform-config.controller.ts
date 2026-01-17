@@ -275,6 +275,126 @@ export class PlatformConfigController {
   }
 
   /**
+   * GET /api/platform-config/widget-config
+   * Get widget configuration directly from workspace (public - for login page)
+   * Returns workspace config without needing to parse embed code
+   */
+  async getWidgetConfig(_req: Request, res: Response): Promise<Response> {
+    try {
+      const [code, showWidgetChatbot] = await Promise.all([
+        platformConfigService.getWidgetChatbotCode(),
+        platformConfigService.getFlag("showWidgetChatbot"),
+      ])
+
+      if (!code) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            config: null,
+            showWidgetChatbot,
+            error: "No widget configured",
+          },
+        })
+      }
+
+      const workspaceId = extractWidgetWorkspaceId(code)
+      
+      if (!workspaceId) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            config: null,
+            showWidgetChatbot,
+            error: "Widget code invalid - no workspaceId",
+          },
+        })
+      }
+
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          widgetTitle: true,
+          widgetLanguage: true,
+          widgetPrimaryColor: true,
+          deletedAt: true,
+          sellsProductsAndServices: true,
+          debugMode: true,
+          channelStatus: true,
+        },
+      })
+
+      if (!workspace || workspace.deletedAt !== null) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            config: null,
+            showWidgetChatbot,
+            error: "Widget workspace not found or deleted",
+          },
+        })
+      }
+
+      if (!workspace.channelStatus) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            config: null,
+            showWidgetChatbot,
+            error: "Widget channel is disabled",
+          },
+        })
+      }
+
+      if (workspace.debugMode) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            config: null,
+            showWidgetChatbot,
+            error: "Widget disabled for debug workspaces",
+          },
+        })
+      }
+
+      if (workspace.sellsProductsAndServices) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            config: null,
+            showWidgetChatbot,
+            error: "Widget must target an informational workspace",
+          },
+        })
+      }
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          config: {
+            workspaceId: workspace.id,
+            workspaceName: workspace.name,
+            logoUrl: workspace.logoUrl,
+            title: workspace.widgetTitle || "Chat with us 💬",
+            language: workspace.widgetLanguage || "it",
+            primaryColor: workspace.widgetPrimaryColor || "#22c55e",
+          },
+          showWidgetChatbot,
+          error: null,
+        },
+      })
+    } catch (error) {
+      logger.error("[PlatformConfigController] Error getting widget config:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to fetch widget config",
+      })
+    }
+  }
+
+  /**
    * PUT /api/platform-config/widget-code
    * Save widget chatbot embed code (admin only)
    */

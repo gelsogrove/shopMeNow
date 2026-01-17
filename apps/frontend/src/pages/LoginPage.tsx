@@ -3,6 +3,7 @@ import { PricingPlans } from "@/components/landing/PricingPlans"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
 import { WIPModal } from "@/components/shared/WIPModal"
 import { WidgetLoader } from "@/components/WidgetLoader"
+import { ChatWidget } from "@/components/ChatWidget"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -2548,8 +2549,11 @@ export function LoginPage() {
         onClose={() => setShowWIPModal(false)}
       />
 
-      {/* Chat Widget - available on all public pages */}
+      {/* Widget Configuration Loader - injects window.eChatbotConfig with language from header */}
       <WidgetLoader />
+
+      {/* Chat Widget - reads config from window.eChatbotConfig */}
+      <ChatWidget position="bottom-right" />
 
     </div>
   )

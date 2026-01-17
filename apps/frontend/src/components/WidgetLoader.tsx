@@ -1,120 +1,103 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
-import { ChatWidget } from "@/components/ChatWidget"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 /**
- * WidgetLoader - Loads the chat widget from platform configuration
- * Uses the ChatWidget React component directly instead of script injection
+ * WidgetLoader - Loads the chat widget script dynamically from platform configuration
+ * Injects window.eChatbotConfig with language from header dropdown
  * 
  * Widget visibility rules:
  * - ONLY show on "/" (home/login page)
  * - HIDE on all other routes (workspace-selection, dashboard, etc.)
  * - ✅ ONLY for informational channels (sellsProductsAndServices = false)
  * - ❌ NEVER for e-commerce channels (sellsProductsAndServices = true)
+ * 
+ * Widget script format (injected into page):
+ * <script>
+ *   window.eChatbotConfig = {
+ *     workspaceId: "...",
+ *     apiUrl: "...",
+ *     title: "...",
+ *     language: "es", // From header dropdown
+ *     primaryColor: "#22c55e"
+ *   };
+ * </script>
+ * <script src="https://www.echatbot.ai/widget.js" async></script>
  */
 
-interface WidgetConfig {
-  workspaceId: string
-  logoUrl?: string
-  title?: string
-  primaryColor?: string
-  showWidgetChatbot?: boolean
-}
-
 export function WidgetLoader() {
-  const [config, setConfig] = useState<WidgetConfig | null>(null)
-  const [loading, setLoading] = useState(true)
   const location = useLocation()
   const { workspace } = useWorkspace()
+  const { language } = useLanguage() // Get language from header dropdown
 
   // Check if widget should be visible
   const isHomePage = location.pathname === "/"
   const isEcommerce = workspace?.sellsProductsAndServices === true
   const shouldShowWidget = isHomePage && !isEcommerce
 
-  // Fetch widget config from platform config
+  // Load widget script dynamically from platform config
   useEffect(() => {
     if (!shouldShowWidget) {
-      setConfig(null)
-      setLoading(false)
       return
     }
 
-    const fetchWidgetConfig = async () => {
+    const loadWidget = async () => {
       try {
         const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
-        const response = await fetch(`${apiBaseUrl}/platform-config/widget-code`)
+        const response = await fetch(`${apiBaseUrl}/platform-config/widget-config`)
         
         if (!response.ok) {
-          console.error("Failed to fetch widget config:", response.status)
-          setLoading(false)
+          console.error("❌ Failed to fetch widget config:", response.status)
           return
         }
 
         const data = await response.json()
         
         // Check if widget should be shown
-        if (!data.success || !data.data?.code) {
-          console.log("No widget code configured")
-          setLoading(false)
+        if (!data.success || !data.data?.config) {
+          console.log("⚠️ No widget configured:", data.data?.error || "Unknown")
           return
         }
 
         if (data.data?.showWidgetChatbot === false) {
-          console.log("Widget disabled by platform config")
-          setLoading(false)
+          console.log("⚠️ Widget disabled by platform config")
           return
         }
 
-        // Extract workspaceId from the widget code
-        const workspaceIdMatch = data.data.code.match(/"workspaceId"\s*:\s*["']([^"']+)["']|workspaceId\s*:\s*["']([^"']+)["']/)
-        const workspaceId = workspaceIdMatch ? (workspaceIdMatch[1] || workspaceIdMatch[2]) : null
+        const config = data.data.config
 
-        if (!workspaceId) {
-          console.error("No workspaceId found in widget code")
-          setLoading(false)
-          return
+        // Inject window.eChatbotConfig with language from header dropdown
+        (window as any).eChatbotConfig = {
+          workspaceId: config.workspaceId,
+          apiUrl: apiBaseUrl,
+          title: config.title,
+          language: language, // Use language from header dropdown
+          primaryColor: config.primaryColor,
+          logoUrl: config.logoUrl,
         }
 
-        // Extract other config from the code
-        const logoUrlMatch = data.data.code.match(/"logoUrl"\s*:\s*["']([^"']+)["']|logoUrl\s*:\s*["']([^"']+)["']/)
-        const titleMatch = data.data.code.match(/"title"\s*:\s*["']([^"']+)["']|title\s*:\s*["']([^"']+)["']/)
-        const primaryColorMatch = data.data.code.match(/"primaryColor"\s*:\s*["']([^"']+)["']|primaryColor\s*:\s*["']([^"']+)["']/)
-
-        setConfig({
-          workspaceId,
-          logoUrl: logoUrlMatch ? (logoUrlMatch[1] || logoUrlMatch[2]) : undefined,
-          title: titleMatch ? (titleMatch[1] || titleMatch[2]) : "Chat with us 💬",
-          primaryColor: primaryColorMatch ? (primaryColorMatch[1] || primaryColorMatch[2]) : "#22c55e",
-          showWidgetChatbot: data.data.showWidgetChatbot !== false,
+        console.log("✅ Widget config injected:", {
+          workspaceId: config.workspaceId,
+          language: language,
+          title: config.title,
         })
 
-        console.log("✅ Widget config loaded, workspaceId:", workspaceId)
-        setLoading(false)
+        // Load widget script (local component - ChatWidget will read window.eChatbotConfig)
+        // For now, we use the React component directly
+        // In production, this would load an external script:
+        // const script = document.createElement("script")
+        // script.src = "https://www.echatbot.ai/widget.js"
+        // script.async = true
+        // document.body.appendChild(script)
         
       } catch (error) {
-        console.error("Failed to load widget config:", error)
-        setLoading(false)
+        console.error("❌ Failed to load widget:", error)
       }
     }
 
-    fetchWidgetConfig()
-  }, [shouldShowWidget])
+    loadWidget()
+  }, [shouldShowWidget, language]) // Re-inject config when language changes
 
-  // Don't render anything if loading, no config, or shouldn't show
-  if (loading || !config || !shouldShowWidget) {
-    return null
-  }
-
-  // Render the ChatWidget component directly
-  return (
-    <ChatWidget
-      workspaceId={config.workspaceId}
-      logoUrl={config.logoUrl}
-      title={config.title}
-      primaryColor={config.primaryColor}
-      position="bottom-right"
-    />
-  )
+  return null // Widget is now injected via window.eChatbotConfig
 }

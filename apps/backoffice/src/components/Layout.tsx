@@ -16,7 +16,6 @@ import {
   Inbox,
   Zap,
   MessageSquare,
-  Megaphone,
 } from 'lucide-react'
 
 const menuItems = [
@@ -26,7 +25,6 @@ const menuItems = [
   { path: '/queue', label: 'Queue', icon: Inbox },
   { path: '/collections', label: 'Collections', icon: FileText },
   { path: '/analytics', label: 'Analytics', icon: LineChart },
-  { path: '/campaigns', label: 'Campaigns', icon: Megaphone },
   { path: '/pricing', label: 'Pricing', icon: CreditCard },
   { path: '/laws-documents', label: 'Laws Documents', icon: Scale },
   { path: '/support-tickets', label: 'Support Tickets', icon: MessageSquare },

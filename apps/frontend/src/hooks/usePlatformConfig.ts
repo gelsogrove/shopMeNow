@@ -243,11 +243,8 @@ export function useFeatureFlags() {
   useEffect(() => {
     const fetchFlags = async () => {
       try {
-        // Fetch flags and widget code in parallel
-        const [flagsResponse, widgetResponse] = await Promise.all([
-          api.get("/platform-config/flags/check"),
-          api.get("/platform-config/widget-code")
-        ])
+        // Fetch only flags (widget config loaded separately in WidgetLoader)
+        const flagsResponse = await api.get("/platform-config/flags/check")
 
         if (flagsResponse.data.success) {
           const data = flagsResponse.data.data || {}
@@ -258,13 +255,9 @@ export function useFeatureFlags() {
             )
           }
           
-          const widgetCode = widgetResponse.data?.success 
-            ? widgetResponse.data.data?.code 
-            : null
-          
           setFlags({
             ...data,
-            widgetCode,
+            widgetCode: null, // Widget config handled by WidgetLoader component
             isLoading: false,
             error: null,
           })

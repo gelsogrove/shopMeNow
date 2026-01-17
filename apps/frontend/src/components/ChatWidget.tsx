@@ -6,12 +6,13 @@
  * <ChatWidget workspaceId="your-workspace-id" position="bottom-right" />
  */
 
-import React, { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Send, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ChatSurface } from "@/components/chat/ChatSurface"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   getOrCreateVisitorId,
   loadWidgetMessages,
@@ -73,10 +74,32 @@ export function ChatWidget({
 }: ChatWidgetProps) {
   console.log("🚀 ChatWidget MOUNTED! workspaceId prop:", workspaceId)
   
-  // ⚠️ FALLBACK: If no workspaceId provided, check window for embed config or localStorage for testing
-  const resolvedWorkspaceId = workspaceId || (typeof window !== "undefined" && (window as any).EchatbotWidgetConfig?.workspaceId) || (typeof localStorage !== "undefined" && localStorage.getItem("echatbot-workspace-id"))
+  // 🌍 Get language from LanguageContext (header dropdown)
+  const { language: headerLanguage } = useLanguage()
   
-  console.log("✅ Resolved workspaceId:", resolvedWorkspaceId)
+  // ⚠️ PRIORITY: Read from window.eChatbotConfig first (set by WidgetLoader)
+  const widgetConfig = typeof window !== "undefined" ? (window as any).eChatbotConfig : null
+  
+  // Resolve workspaceId: window config > prop > fallback
+  const resolvedWorkspaceId = widgetConfig?.workspaceId || workspaceId || (typeof localStorage !== "undefined" && localStorage.getItem("echatbot-workspace-id"))
+  
+  // Resolve language: LanguageContext > window config > prop > "en"
+  const resolvedLanguage = headerLanguage || widgetConfig?.language || language || "en"
+  
+  // Resolve other props from window config
+  const resolvedTitle = widgetConfig?.title || title
+  const resolvedPrimaryColor = widgetConfig?.primaryColor || primaryColor
+  const resolvedLogoUrl = widgetConfig?.logoUrl || logoUrl
+  const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
+  
+  console.log("✅ Resolved widget config:", {
+    workspaceId: resolvedWorkspaceId,
+    language: resolvedLanguage,
+    headerLanguage: headerLanguage,
+    widgetConfigLanguage: widgetConfig?.language,
+    title: resolvedTitle,
+    apiUrl: resolvedApiUrl,
+  })
   
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -156,11 +179,11 @@ export function ChatWidget({
 
     try {
       const data = await sendWidgetMessage({
-        apiUrl: apiUrl || DEFAULT_API_URL,
+        apiUrl: resolvedApiUrl,
         workspaceId: resolvedWorkspaceId,
         visitorId,
         message,
-        language: language || navigator.language || "it",
+        language: resolvedLanguage, // Use language from window.eChatbotConfig (set by LanguageSelector)
         sessionId,
       })
 
@@ -206,7 +229,7 @@ export function ChatWidget({
     if (!visitorId) return
 
     try {
-      const response = await fetch(`${apiUrl || DEFAULT_API_URL}/widget/convert-visitor`, {
+      const response = await fetch(`${resolvedApiUrl}/widget/convert-visitor`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -253,8 +276,8 @@ export function ChatWidget({
   const isEmbedded = typeof window !== "undefined" && window.self !== window.top
   const defaultLogoUrl =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2322c55e'/%3E%3Ccircle cx='35' cy='40' r='6' fill='%23fff'/%3E%3Ccircle cx='65' cy='40' r='6' fill='%23fff'/%3E%3Cpath d='M30 60 Q50 75 70 60' stroke='%23fff' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
-  const resolvedLogoUrl =
-    !logoUrl || logoUrl.endsWith("/logo.png") ? defaultLogoUrl : logoUrl
+  const displayLogoUrl =
+    !resolvedLogoUrl || resolvedLogoUrl.endsWith("/logo.png") ? defaultLogoUrl : resolvedLogoUrl
   const positionClasses = {
     "bottom-right": isEmbedded ? "bottom-2 right-2" : "bottom-6 right-6",
     "bottom-left": isEmbedded ? "bottom-2 left-2" : "bottom-6 left-6",
@@ -277,7 +300,7 @@ export function ChatWidget({
     }
     return color
   }
-  const borderColor = getBorderColor(primaryColor)
+  const borderColor = getBorderColor(resolvedPrimaryColor)
   
   const embeddedButtonSizeClasses = isEmbedded ? "w-[56px] h-[56px]" : "w-[60px] h-[60px]"
   const embeddedButtonShapeClasses = "rounded-full"
@@ -347,7 +370,7 @@ export function ChatWidget({
           aria-label="Open chat"
         >
           <img
-            src={resolvedLogoUrl}
+            src={displayLogoUrl}
             alt="Chat"
             className="h-full w-full rounded-full object-cover"
           />
@@ -372,10 +395,10 @@ export function ChatWidget({
           {/* Header */}
           <div
             className="text-white px-6 py-4 flex items-center justify-between"
-            style={{ backgroundColor: primaryColor }}
+            style={{ backgroundColor: resolvedPrimaryColor }}
           >
             <div className="flex items-center gap-2">
-              <h2 className="font-semibold text-lg">{title}</h2>
+              <h2 className="font-semibold text-lg">{resolvedTitle}</h2>
             </div>
             <button
               onClick={() => {
@@ -413,7 +436,7 @@ export function ChatWidget({
                 background: transparent !important;
               }
               .widget-scroll-area [data-radix-scroll-area-thumb] {
-                background-color: ${primaryColor} !important;
+                background-color: ${resolvedPrimaryColor} !important;
                 border-radius: 4px !important;
               }
             `}</style>
@@ -436,7 +459,7 @@ export function ChatWidget({
                 )
               }
               getBubbleStyle={(msg) =>
-                msg.role === "user" ? { backgroundColor: primaryColor } : undefined
+                msg.role === "user" ? { backgroundColor: resolvedPrimaryColor } : undefined
               }
               getContainerClassName={(msg) =>
                 msg.role === "user" ? "widget-user-message" : undefined
@@ -475,7 +498,7 @@ export function ChatWidget({
                 "text-white transition-colors",
                 "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
               )}
-              style={{ backgroundColor: primaryColor }}
+              style={{ backgroundColor: resolvedPrimaryColor }}
               aria-label="Send message"
             >
               {isLoading ? (
