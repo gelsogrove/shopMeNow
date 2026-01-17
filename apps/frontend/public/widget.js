@@ -723,7 +723,7 @@
      * Initialize widget
      */
     async init() {
-      this.language = resolveLanguage(this.config.language)
+      // 🌍 Language will be set by loadStatus() from workspace configuration
       await this.loadStatus()
       if (this.status === "disabled") {
         console.warn("eChatbot Widget disabled for workspace", {
