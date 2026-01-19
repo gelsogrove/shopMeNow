@@ -74,7 +74,7 @@ const statusConfig: Record<string, { color: string; icon: React.ReactNode; label
 // Job name to friendly name mapping with schedule and detailed description
 const jobNames: Record<string, { name: string; description: string; schedule: string; details: string; sortOrder: number }> = {
   'whatsapp-channel-queue': {
-    name: 'WhatsApp Queue',
+    name: 'WhatsApp Channel Queue',
     schedule: 'Every 5 seconds',
     description: 'Processes and sends pending WhatsApp messages for delivery',
     details: '📤 Processes the queue of pending WhatsApp messages across all active channels. Validates message content, applies security and compliance controls, manages rate limiting to prevent blocks, tracks delivery status in real-time, and implements automatic retry mechanisms for temporary failures.',
