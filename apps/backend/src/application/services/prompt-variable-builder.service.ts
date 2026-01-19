@@ -144,7 +144,11 @@ export class PromptVariableBuilder {
     // Start with defaults
     const variables: PromptVariables = {
       // Customer variables
-      customerName: customer?.name || VARIABLE_DEFAULTS.customerName!,
+      // 🚫 WIDGET FIX: Don't use "Visitor XXXXX" names in welcome messages
+      // If customer name starts with "Visitor", use empty string (removes {{customerName}} variable)
+      customerName: (customer?.name && !customer.name.startsWith('Visitor ')) 
+        ? customer.name 
+        : (customer?.name?.startsWith('Visitor ') ? '' : VARIABLE_DEFAULTS.customerName!),
       customerPhone: customer?.phone || '',
       customerEmail: customer?.email || '',
       customerDiscount: customer?.discount || 0,

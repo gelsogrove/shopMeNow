@@ -274,8 +274,24 @@ export function ChatWidget({
   }, [visitorId, messages])
 
   const isEmbedded = typeof window !== "undefined" && window.self !== window.top
-  const defaultLogoUrl =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2322c55e'/%3E%3Ccircle cx='35' cy='40' r='6' fill='%23fff'/%3E%3Ccircle cx='65' cy='40' r='6' fill='%23fff'/%3E%3Cpath d='M30 60 Q50 75 70 60' stroke='%23fff' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
+  const defaultLogoUrl = (() => {
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Open chat">
+        <defs>
+          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#22c55e"/>
+            <stop offset="100%" stop-color="#16a34a"/>
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="url(#g)"/>
+        <path d="M26 32h48c4.4 0 8 3.6 8 8v18c0 4.4-3.6 8-8 8H52l-9 8v-8H26c-4.4 0-8-3.6-8-8V40c0-4.4 3.6-8 8-8Z" fill="#ffffff"/>
+        <rect x="34" y="43" width="32" height="3.5" rx="1.75" fill="#22c55e"/>
+        <rect x="34" y="50" width="14" height="4" rx="2" fill="#22c55e"/>
+        <rect x="50" y="50" width="16" height="4" rx="2" fill="#22c55e"/>
+      </svg>
+    `
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`
+  })()
   const displayLogoUrl =
     !resolvedLogoUrl || resolvedLogoUrl.endsWith("/logo.png") ? defaultLogoUrl : resolvedLogoUrl
   const positionClasses = {
@@ -287,7 +303,7 @@ export function ChatWidget({
 
   const embeddedPopupSizeClasses = isEmbedded
     ? "w-full h-full rounded-[24px] shadow-none border-2"
-    : "w-[420px] h-[680px] rounded-3xl shadow-none border-2"
+    : "w-[430px] h-[690px] rounded-3xl shadow-none border-2"
     
   // Generate light version of primary color for border
   const getBorderColor = (color: string) => {
@@ -302,7 +318,7 @@ export function ChatWidget({
   }
   const borderColor = getBorderColor(resolvedPrimaryColor)
   
-  const embeddedButtonSizeClasses = isEmbedded ? "w-[56px] h-[56px]" : "w-[60px] h-[60px]"
+  const embeddedButtonSizeClasses = isEmbedded ? "w-[66px] h-[66px]" : "w-[70px] h-[70px]"
   const embeddedButtonShapeClasses = "rounded-full"
   const embeddedButtonRingClasses = isEmbedded
     ? "border-2 bg-transparent"

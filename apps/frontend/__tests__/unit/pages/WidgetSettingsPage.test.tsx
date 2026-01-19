@@ -9,6 +9,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import WidgetSettingsPage from '../../../src/pages/WidgetSettingsPage'
 import { WorkspaceProvider } from '../../../src/contexts/WorkspaceContext'
+import { LanguageProvider } from '../../../src/contexts/LanguageContext'
 import * as workspaceApi from '../../../src/services/workspaceApi'
 import { api } from '../../../src/services/api'
 import { toast } from '../../../src/lib/toast'
@@ -63,9 +64,11 @@ const renderWithProviders = (
 ) => {
   return render(
     <BrowserRouter>
-      <WorkspaceProvider initialWorkspace={workspace as any}>
-        {component}
-      </WorkspaceProvider>
+      <LanguageProvider>
+        <WorkspaceProvider initialWorkspace={workspace as any}>
+          {component}
+        </WorkspaceProvider>
+      </LanguageProvider>
     </BrowserRouter>
   )
 }

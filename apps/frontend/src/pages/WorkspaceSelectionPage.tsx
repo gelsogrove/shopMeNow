@@ -562,14 +562,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   const currentChannelUsage =
     sharedBillingOverview?.usage?.channelsCount ?? workspaces.length
   const channelLimitReached = currentChannelLimit > 0 && currentChannelUsage >= currentChannelLimit
+  const requiresPaymentForChannels = currentPlanType !== "FREE_TRIAL"
 
   const openWizardDialog = useCallback(() => {
-    if (!isPayPalStatusReady) {
+    if (requiresPaymentForChannels && !isPayPalStatusReady) {
       toast.error("PayPal status is still loading. Please try again.")
       return
     }
 
-    if (!isPaymentConnected) {
+    if (requiresPaymentForChannels && !isPaymentConnected) {
       if (paypalConfig?.configured === false) {
         toast.error("PayPal is not configured. Add sandbox/live credentials first.")
       } else {
@@ -594,6 +595,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       setWizardOpen(true)
     }
   }, [
+    requiresPaymentForChannels,
     channelLimitReached,
     currentChannelLimit,
     currentChannelUsage,

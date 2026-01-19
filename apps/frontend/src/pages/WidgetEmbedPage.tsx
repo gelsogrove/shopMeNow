@@ -1,6 +1,25 @@
 import { useEffect, useMemo } from "react"
 import { ChatWidget } from "@/components/ChatWidget"
 
+const getDefaultLogoDataUri = () => {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Open chat">
+      <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#22c55e"/>
+          <stop offset="100%" stop-color="#16a34a"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="48" fill="url(#g)"/>
+      <path d="M26 32h48c4.4 0 8 3.6 8 8v18c0 4.4-3.6 8-8 8H52l-9 8v-8H26c-4.4 0-8-3.6-8-8V40c0-4.4 3.6-8 8-8Z" fill="#ffffff"/>
+      <rect x="34" y="43" width="32" height="3.5" rx="1.75" fill="#22c55e"/>
+      <rect x="34" y="50" width="14" height="4" rx="2" fill="#22c55e"/>
+      <rect x="50" y="50" width="16" height="4" rx="2" fill="#22c55e"/>
+    </svg>
+  `
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
+}
+
 const decodeParam = (value?: string | null) => {
   if (!value) return undefined
   try {
@@ -43,7 +62,7 @@ export function WidgetEmbedPage() {
       logoUrl:
         decodeParam(params.get("logoUrl")) ||
         (window as any)?.eChatbotConfig?.logoUrl ||
-        "/logo.png",
+        getDefaultLogoDataUri(),
       primaryColor:
         decodeParam(params.get("primaryColor")) ||
         (window as any)?.eChatbotConfig?.primaryColor,

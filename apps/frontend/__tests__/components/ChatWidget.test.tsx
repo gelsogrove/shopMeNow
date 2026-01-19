@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ChatWidget } from '@/components/ChatWidget'
+import { LanguageProvider } from '@/contexts/LanguageContext'
 
 // Mock fetch globally
 global.fetch = vi.fn()
@@ -19,6 +20,9 @@ const localStorageMock = {
   clear: vi.fn(),
 }
 global.localStorage = localStorageMock as any
+
+const renderWithLanguage = (ui: React.ReactElement) =>
+  render(<LanguageProvider>{ui}</LanguageProvider>)
 
 describe('ChatWidget', () => {
   beforeEach(() => {
@@ -36,9 +40,7 @@ describe('ChatWidget', () => {
   // ========================================
 
   it('should render widget button', () => {
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
     
     const button = screen.getByRole('button', { name: /open chat/i })
     expect(button).toBeInTheDocument()
@@ -48,9 +50,7 @@ describe('ChatWidget', () => {
     const mockVisitorId = 'visitor_1700000000000_test123'
     localStorageMock.getItem.mockReturnValue(mockVisitorId)
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     expect(localStorageMock.getItem).toHaveBeenCalledWith('echatbot-visitor-id:test-workspace')
   })
@@ -58,9 +58,7 @@ describe('ChatWidget', () => {
   it('should create new visitor ID if not in localStorage', () => {
     localStorageMock.getItem.mockReturnValue(null)
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       'echatbot-visitor-id:test-workspace',
@@ -74,9 +72,7 @@ describe('ChatWidget', () => {
 
   it('should open popup when button is clicked', async () => {
     const user = userEvent.setup()
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     const button = screen.getByRole('button', { name: /open chat/i })
     await user.click(button)
@@ -87,9 +83,7 @@ describe('ChatWidget', () => {
 
   it('should close popup when close button is clicked', async () => {
     const user = userEvent.setup()
-    const { container } = render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    const { container } = renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Open popup
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -104,9 +98,7 @@ describe('ChatWidget', () => {
 
   it('should toggle popup on button click', async () => {
     const user = userEvent.setup()
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     const button = screen.getByRole('button', { name: /open chat/i })
 
@@ -135,9 +127,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    const { container } = render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    const { container } = renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Open popup
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -176,9 +166,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Open popup
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -209,9 +197,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Open and send message
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -241,9 +227,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Open popup and send via Enter key
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -274,9 +258,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Send message
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -313,9 +295,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Try to send message
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -340,9 +320,7 @@ describe('ChatWidget', () => {
   it('should expose convertVisitor method', async () => {
     localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Widget should expose method to parent
     expect((window as any).eChatbotWidgetReact).toBeDefined()
@@ -360,9 +338,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     const widget = (window as any).eChatbotWidgetReact
     await widget.convertVisitor({
@@ -393,9 +369,7 @@ describe('ChatWidget', () => {
       }),
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Send message
     const button = screen.getByRole('button', { name: /open chat/i })
@@ -434,9 +408,7 @@ describe('ChatWidget', () => {
       return null
     })
 
-    render(
-      <ChatWidget workspaceId="test-workspace" />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
     // Messages should be displayed
     fireEvent.click(screen.getByRole('button', { name: /open chat/i }))
@@ -449,9 +421,7 @@ describe('ChatWidget', () => {
   // ========================================
 
   it('should render with correct position classes', () => {
-    const { container } = render(
-      <ChatWidget workspaceId="test-workspace" position="bottom-left" />
-    )
+    const { container } = renderWithLanguage(<ChatWidget workspaceId="test-workspace" position="bottom-left" />)
 
     // Check for position class (implementation specific)
     expect(container.querySelector('[class*="bottom"]')).toBeInTheDocument()
@@ -459,12 +429,7 @@ describe('ChatWidget', () => {
 
   it('should display custom title', async () => {
     const customTitle = 'My Custom Title'
-    render(
-      <ChatWidget 
-        workspaceId="test-workspace" 
-        title={customTitle}
-      />
-    )
+    renderWithLanguage(<ChatWidget workspaceId="test-workspace" title={customTitle} />)
 
     const button = screen.getByRole('button', { name: /open chat/i })
     await userEvent.click(button)

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
+import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
@@ -51,7 +52,8 @@ export default function ProfilePage() {
     isLoading: userLoading,
     isError: userError,
   } = useCurrentUser()
-  const { isSuperAdmin } = useWorkspaceRole()
+  const { workspace } = useWorkspace()
+  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showSetPasswordDialog, setShowSetPasswordDialog] = useState(false)
@@ -94,6 +96,7 @@ export default function ProfilePage() {
     password: "",
     confirmPassword: "",
   })
+  const canEditBilling = isSuperAdmin || !workspace?.id
 
   useEffect(() => {
     if (userData) {
@@ -457,12 +460,12 @@ export default function ProfilePage() {
               <CardTitle className="flex items-center gap-2 text-green-600">
                 <Building2 className="h-5 w-5" />
                 Billing Information
-                {!isSuperAdmin && (
+                {!canEditBilling && workspace?.id && (
                   <span className="text-xs text-gray-500 font-normal ml-2">(Owner only)</span>
                 )}
               </CardTitle>
               {/* Company Logo - Top Right - Only for owners */}
-              {isSuperAdmin && (
+              {canEditBilling && (
               <ImageCropUpload
                 onImageSelected={(file) => setLogoFile(file)}
                 currentImageUrl={user.logo}
@@ -481,8 +484,8 @@ export default function ProfilePage() {
                   value={user.companyName || ""}
                   onChange={(e) => handleFieldChange("companyName", e.target.value)}
                   placeholder="Your company name"
-                  disabled={!isSuperAdmin}
-                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
+                  disabled={!canEditBilling}
+                  className={!canEditBilling ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -493,8 +496,8 @@ export default function ProfilePage() {
                   value={user.vatNumber || ""}
                   onChange={(e) => handleFieldChange("vatNumber", e.target.value)}
                   placeholder="IT12345678901"
-                  disabled={!isSuperAdmin}
-                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
+                  disabled={!canEditBilling}
+                  className={!canEditBilling ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -506,8 +509,8 @@ export default function ProfilePage() {
                   value={user.website || ""}
                   onChange={(e) => handleFieldChange("website", e.target.value)}
                   placeholder="https://www.example.com"
-                  disabled={!isSuperAdmin}
-                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
+                  disabled={!canEditBilling}
+                  className={!canEditBilling ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -519,8 +522,8 @@ export default function ProfilePage() {
                   value={user.billingPhone || ""}
                   onChange={(e) => handleFieldChange("billingPhone", e.target.value)}
                   placeholder="+39 123 456 7890"
-                  disabled={!isSuperAdmin}
-                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
+                  disabled={!canEditBilling}
+                  className={!canEditBilling ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
 
@@ -531,8 +534,8 @@ export default function ProfilePage() {
                   value={user.billingAddress || ""}
                   onChange={(e) => handleFieldChange("billingAddress", e.target.value)}
                   placeholder="Via Roma 1, 00100 Rome, Italy"
-                  disabled={!isSuperAdmin}
-                  className={!isSuperAdmin ? "bg-gray-50 cursor-not-allowed" : ""}
+                  disabled={!canEditBilling}
+                  className={!canEditBilling ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
               </div>
             </CardContent>

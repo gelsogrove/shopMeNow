@@ -76,6 +76,7 @@ export class WidgetChatController {
           debugMode: true,
           wipMessage: true,
           widgetLanguage: true, // 🌍 Widget language configuration
+          enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
         },
       })
 
@@ -110,6 +111,18 @@ export class WidgetChatController {
             debugMode: workspace.debugMode ?? false,
           })
         }
+      }
+
+      // 🚫 CRITICAL: Check if widget is enabled (from backoffice toggle)
+      // Only explicitly TRUE enables the widget (false/null/undefined = disabled)
+      if (workspace.enableWidget !== true) {
+        return res.status(200).json({
+          success: true,
+          status: "disabled",
+          channelStatus: false,
+          debugMode: workspace.debugMode ?? false,
+          message: "Widget is disabled",
+        })
       }
 
       if (workspace.debugMode === true || workspace.channelStatus === false) {
@@ -234,6 +247,7 @@ export class WidgetChatController {
           language: true,
           debugMode: true,
           wipMessage: true, // 🚧 For WIP mode response
+          enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
         },
       })
 
@@ -250,6 +264,19 @@ export class WidgetChatController {
           error: "SERVICE_UNAVAILABLE",
           message: "Chat service is temporarily unavailable",
           retryAfter: 3600000, // 1 hour
+        })
+      }
+
+      // 🚫 CRITICAL: Check if widget is enabled (from backoffice toggle)
+      // Only explicitly TRUE enables the widget (false/null/undefined = disabled)
+      if (workspace.enableWidget !== true) {
+        logger.warn("❌ Widget message blocked: Widget disabled in settings", {
+          workspaceId,
+          visitorId,
+        })
+        return res.status(403).json({
+          error: "WIDGET_DISABLED",
+          message: "Widget chat is disabled for this workspace",
         })
       }
 

@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router-dom'
 import SettingsPage from '@/pages/SettingsPage'
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext'
 import { ChatProvider } from '@/contexts/ChatContext'
+import { LanguageProvider } from '@/contexts/LanguageContext'
 import * as workspaceApi from '@/services/workspaceApi'
 import { api } from '@/services/api'
 import { toast } from '@/lib/toast'
@@ -78,11 +79,13 @@ const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ChatProvider>
-          <WorkspaceProvider initialWorkspace={mockWorkspace}>
-            {component}
-          </WorkspaceProvider>
-        </ChatProvider>
+        <LanguageProvider>
+          <ChatProvider>
+            <WorkspaceProvider initialWorkspace={mockWorkspace}>
+              {component}
+            </WorkspaceProvider>
+          </ChatProvider>
+        </LanguageProvider>
       </BrowserRouter>
     </QueryClientProvider>
   )

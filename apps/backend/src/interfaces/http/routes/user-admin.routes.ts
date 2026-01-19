@@ -3331,7 +3331,7 @@ router.post(
  *                   type: string
  *                   description: URL to open in new window
  *       400:
- *         description: Cannot impersonate Platform Admins
+ *         description: Cannot impersonate inactive users
  *       403:
  *         description: Platform admin access required
  *       404:
@@ -3366,12 +3366,11 @@ router.post(
         })
       }
 
-      // Cannot impersonate other Platform Admins
+      // Track when one platform admin impersonates another for audit visibility
       if (targetUser.isPlatformAdmin) {
-        return res.status(400).json({
-          success: false,
-          error: "Cannot impersonate Platform Admins",
-        })
+        logger.warn(
+          `⚠️ Platform admin ${adminUser.email} is impersonating another platform admin ${targetUser.email}`
+        )
       }
 
       // Check user is active

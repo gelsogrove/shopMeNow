@@ -85,6 +85,7 @@ export function MinimalLayout() {
   const trialEndsAt = workspace?.trialEndsAt || null
   const workspaceName = workspace?.name || ""
   const workspacePhone = workspace?.whatsappPhoneNumber || ""
+  const hasWorkspace = !!workspace?.id
   const hasSalesAgents = workspace?.hasSalesAgents ?? false
   const enableWhatsapp = (workspace as any)?.enableWhatsapp ?? false
 
@@ -283,79 +284,83 @@ export function MinimalLayout() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <>
-                  <DropdownMenuItem
-                    className="p-2 cursor-pointer"
-                    onClick={() => navigate("/workspace-selection")}
-                  >
-                    <MessageSquare className="mr-2 h-4 w-4 text-green-500" fill="currentColor" />
-                    <span>Your Channels</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/chat")}>
-                    <History className="mr-2 h-4 w-4 text-green-500" />
-                    <span>Chat History</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/clients")}>
-                    <Users className="mr-2 h-4 w-4 text-indigo-500" />
-                    <span>Clients</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/faq")}>
-                    <HelpCircle className="mr-2 h-4 w-4 text-amber-500" />
-                    <span>FAQ</span>
-                  </DropdownMenuItem>
-                  {workspace?.sellsProductsAndServices && (
+                <DropdownMenuItem
+                  className="p-2 cursor-pointer"
+                  onClick={() => navigate("/workspace-selection")}
+                >
+                  <MessageSquare className="mr-2 h-4 w-4 text-green-500" fill="currentColor" />
+                  <span>Your Channels</span>
+                </DropdownMenuItem>
+                  {hasWorkspace && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuLabel>E-commerce</DropdownMenuLabel>
-                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/products")}>
-                        <Package className="mr-2 h-4 w-4 text-orange-500" />
-                        <span>Products</span>
+                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/chat")}>
+                        <History className="mr-2 h-4 w-4 text-green-500" />
+                        <span>Chat History</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
-                        <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
-                        <span>Services</span>
+                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/clients")}>
+                        <Users className="mr-2 h-4 w-4 text-indigo-500" />
+                        <span>Clients</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/offers")}>
-                        <Tag className="mr-2 h-4 w-4 text-pink-500" />
-                        <span>Offers</span>
+                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/faq")}>
+                        <HelpCircle className="mr-2 h-4 w-4 text-amber-500" />
+                        <span>FAQ</span>
                       </DropdownMenuItem>
-                      {hasSalesAgents && (
-                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/sales")}>
-                          <UserCog className="mr-2 h-4 w-4 text-violet-500" />
-                          <span>Sales</span>
+                      {workspace?.sellsProductsAndServices && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>E-commerce</DropdownMenuLabel>
+                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/products")}>
+                            <Package className="mr-2 h-4 w-4 text-orange-500" />
+                            <span>Products</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
+                            <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
+                            <span>Services</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/offers")}>
+                            <Tag className="mr-2 h-4 w-4 text-pink-500" />
+                            <span>Offers</span>
+                          </DropdownMenuItem>
+                          {hasSalesAgents && (
+                            <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/sales")}>
+                              <UserCog className="mr-2 h-4 w-4 text-violet-500" />
+                              <span>Sales</span>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/admin/orders")}>
+                            <ShoppingCart className="mr-2 h-4 w-4 text-emerald-500" />
+                            <span>Orders</span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/campaigns")}>
+                        <Megaphone className="mr-2 h-4 w-4 text-rose-500" />
+                        <span>Campaigns</span>
+                      </DropdownMenuItem>
+                      {workspace?.sellsProductsAndServices && isSuperAdmin && (
+                        <DropdownMenuItem
+                          className="p-2 cursor-pointer"
+                          onClick={() => navigate("/analytics")}
+                        >
+                          <BarChart3 className="mr-2 h-4 w-4 text-purple-500" />
+                          <span>Analytics</span>
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/admin/orders")}>
-                        <ShoppingCart className="mr-2 h-4 w-4 text-emerald-500" />
-                        <span>Orders</span>
-                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {enableWhatsapp && (
+                        <DropdownMenuItem
+                          className="p-2 cursor-pointer"
+                          onClick={() => navigate("/queue")}
+                        >
+                          <ListTodo className="mr-2 h-4 w-4 text-green-600" />
+                          <span>WhatsApp Queue</span>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/campaigns")}>
-                    <Megaphone className="mr-2 h-4 w-4 text-rose-500" />
-                    <span>Campaigns</span>
-                  </DropdownMenuItem>
-                  {workspace?.sellsProductsAndServices && isSuperAdmin && (
-                    <DropdownMenuItem
-                      className="p-2 cursor-pointer"
-                      onClick={() => navigate("/analytics")}
-                    >
-                      <BarChart3 className="mr-2 h-4 w-4 text-purple-500" />
-                      <span>Analytics</span>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  {enableWhatsapp && (
-                    <DropdownMenuItem
-                      className="p-2 cursor-pointer"
-                      onClick={() => navigate("/queue")}
-                    >
-                      <ListTodo className="mr-2 h-4 w-4 text-green-600" />
-                      <span>WhatsApp Queue</span>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="p-2 cursor-pointer"
                     onClick={() => navigate("/profile")}

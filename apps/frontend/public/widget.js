@@ -136,8 +136,8 @@
     }
 
     .echatbot-widget-button {
-      width: 100px;
-      height: 100px;
+      width: 110px;
+      height: 110px;
       border-radius: 50%;
       background-color: ${primaryColor};
       background: ${primaryColor};
@@ -168,8 +168,8 @@
     }
 
     .echatbot-widget-button img {
-      width: 100px;
-      height: 100px;
+      width: 110px;
+      height: 110px;
       object-fit: contain;
       display: block;
       border-radius: 0;
@@ -190,14 +190,14 @@
     }
     
     .echatbot-widget-button img[src*="data:image"] {
-      width: 100px;
-      height: 100px;
+      width: 110px;
+      height: 110px;
     }
 
     .echatbot-widget-popup {
       position: absolute;
-      width: 380px;
-      height: 600px;
+      width: 390px;
+      height: 610px;
       background-color: #ffffff;
       border-radius: 12px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.1);
@@ -517,8 +517,8 @@
       }
 
       .echatbot-widget-button {
-        width: 56px;
-        height: 56px;
+        width: 66px;
+        height: 66px;
       }
     }
   `
@@ -701,7 +701,7 @@
       const resolvedLogoUrl =
         baseConfig.logoUrl && baseConfig.logoUrl.trim()
           ? baseConfig.logoUrl
-          : DEFAULT_LOGO_URL
+          : this.getDefaultLogo()
 
       this.config = {
         ...baseConfig,
@@ -806,8 +806,22 @@
      * Get default logo (data URI)
      */
     getDefaultLogo() {
-      // Beautiful circular chat icon with smile
-      return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2322c55e'/%3E%3Ccircle cx='35' cy='40' r='6' fill='%23fff'/%3E%3Ccircle cx='65' cy='40' r='6' fill='%23fff'/%3E%3Cpath d='M30 60 Q50 75 70 60' stroke='%23fff' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E`
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Open chat">
+          <defs>
+            <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#22c55e"/>
+              <stop offset="100%" stop-color="#16a34a"/>
+            </linearGradient>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill="url(#g)"/>
+          <path d="M26 32h48c4.4 0 8 3.6 8 8v18c0 4.4-3.6 8-8 8H52l-9 8v-8H26c-4.4 0-8-3.6-8-8V40c0-4.4 3.6-8 8-8Z" fill="#ffffff"/>
+          <rect x="34" y="43" width="32" height="3.5" rx="1.75" fill="#22c55e"/>
+          <rect x="34" y="50" width="14" height="4" rx="2" fill="#22c55e"/>
+          <rect x="50" y="50" width="16" height="4" rx="2" fill="#22c55e"/>
+        </svg>
+      `
+      return `data:image/svg+xml,${encodeURIComponent(svg)}`
     }
 
     /**
@@ -1253,8 +1267,8 @@
       this.iframe.style.border = "none"
       this.iframe.style.background = "transparent"
       this.iframe.style.overflow = "hidden"
-      this.iframe.style.width = "90px"
-      this.iframe.style.height = "90px"
+      this.iframe.style.width = "100px"
+      this.iframe.style.height = "100px"
       this.iframe.style.borderRadius = "0"
       this.iframe.style.boxShadow = "none"
       this.iframe.style.transition = "width 0.2s ease, height 0.2s ease"
@@ -1281,13 +1295,13 @@
       if (!this.iframe) return
 
       if (this.isOpen) {
-        this.iframe.style.width = "420px"
-        this.iframe.style.height = "680px"
+        this.iframe.style.width = "430px"
+        this.iframe.style.height = "690px"
         this.iframe.style.borderRadius = "24px"
         this.iframe.style.boxShadow = "none"
       } else {
-        this.iframe.style.width = "90px"
-        this.iframe.style.height = "90px"
+        this.iframe.style.width = "100px"
+        this.iframe.style.height = "100px"
         this.iframe.style.borderRadius = "0"
         this.iframe.style.boxShadow = "none"
       }

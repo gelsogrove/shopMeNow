@@ -536,7 +536,7 @@ export default function SupportTicketsPage() {
   const navigate = useNavigate()
   const { ticketId } = useParams<{ ticketId?: string }>()
   const { workspace } = useWorkspace()
-  const { isSuperAdmin } = useWorkspaceRole()
+  const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
 
   const [loading, setLoading] = useState(true)
   const [tickets, setTickets] = useState<SupportTicket[]>([])
