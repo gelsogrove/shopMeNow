@@ -777,14 +777,14 @@ export function ClientsPage() {
                   />
                 ) : null}
                 <div className={`w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg ${user.profilePicture ? 'hidden' : ''}`}>
-                  {(user.firstName?.[0] || user.email[0]).toUpperCase()}
+                  {(user.firstName?.[0] || user.email?.[0] || "U").toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-gray-900 truncate">
                       {user.firstName && user.lastName 
                         ? `${user.firstName} ${user.lastName}`
-                        : user.email.split('@')[0]
+                        : (user.email ? user.email.split('@')[0] : "User")
                       }
                     </h3>
                     {user.isOwner && (

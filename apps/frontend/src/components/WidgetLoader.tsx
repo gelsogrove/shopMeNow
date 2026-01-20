@@ -38,7 +38,14 @@ export function WidgetLoader() {
 
   // Load widget script dynamically from platform config
   useEffect(() => {
+    const clearWidgetConfig = () => {
+      if ((window as any).eChatbotConfig) {
+        delete (window as any).eChatbotConfig
+      }
+    }
+
     if (!shouldShowWidget) {
+      clearWidgetConfig()
       return
     }
 
@@ -57,11 +64,13 @@ export function WidgetLoader() {
         // Check if widget should be shown
         if (!data.success || !data.data?.config) {
           console.log("⚠️ No widget configured:", data.data?.error || "Unknown")
+          clearWidgetConfig()
           return
         }
 
         if (data.data?.showWidgetChatbot === false) {
           console.log("⚠️ Widget disabled by platform config")
+          clearWidgetConfig()
           return
         }
 
@@ -93,10 +102,16 @@ export function WidgetLoader() {
         
       } catch (error) {
         console.error("❌ Failed to load widget:", error)
+        clearWidgetConfig()
       }
     }
 
     loadWidget()
+
+    // Cleanup on unmount or when rules change
+    return () => {
+      clearWidgetConfig()
+    }
   }, [shouldShowWidget, language]) // Re-inject config when language changes
 
   return null // Widget is now injected via window.eChatbotConfig

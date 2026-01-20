@@ -563,6 +563,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     sharedBillingOverview?.usage?.channelsCount ?? workspaces.length
   const channelLimitReached = currentChannelLimit > 0 && currentChannelUsage >= currentChannelLimit
   const requiresPaymentForChannels = currentPlanType !== "FREE_TRIAL"
+  const showPayPalWarning = requiresPaymentForChannels && (!isPayPalStatusReady || !isPaymentConnected)
 
   const openWizardDialog = useCallback(() => {
     if (requiresPaymentForChannels && !isPayPalStatusReady) {
@@ -1273,6 +1274,12 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 <CardDescription>
                   Select a channel to manage its conversations
                 </CardDescription>
+                {showPayPalWarning && (
+                  <div className="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Connect PayPal to add channels or invite team members (required for paid plans).</span>
+                  </div>
+                )}
               </div>
               {!isRoleLoading && isSuperAdmin && (
                 <Button
@@ -2227,14 +2234,22 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
         {/* Team Members Section */}
         {firstWorkspaceId && !isRoleLoading && (
-          <TeamMembersTable
-            workspaceId={firstWorkspaceId}
-            isSuperAdmin={isSuperAdmin}
-            paypalConnected={
-              paypalStatus?.isPaymentConnected ??
-              (paypalStatus?.paypalStatus === "CONNECTED")
-            }
-          />
+          <div className="space-y-3">
+            {showPayPalWarning && (
+              <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                <span>PayPal connection required to invite team members on paid plans.</span>
+              </div>
+            )}
+            <TeamMembersTable
+              workspaceId={firstWorkspaceId}
+              isSuperAdmin={isSuperAdmin}
+              paypalConnected={
+                paypalStatus?.isPaymentConnected ??
+                (paypalStatus?.paypalStatus === "CONNECTED")
+              }
+            />
+          </div>
         )}
 
         {/* PayPal Integration (Owner only) */}
