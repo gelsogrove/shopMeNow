@@ -698,25 +698,27 @@ export default function SupportTicketsPage() {
         <Card className="rounded-2xl border-slate-200 shadow-sm">
           <CardContent className="p-6">
             {/* Filters */}
-            <div className="flex items-center gap-4 mb-6">
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => {
-                setStatusFilter(v as SupportTicketStatus | "ALL")
-                setPage(1)
-              }}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                <SelectItem value="CLOSED">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {tickets.length > 0 && (
+              <div className="flex items-center gap-4 mb-6">
+                <Select
+                  value={statusFilter}
+                  onValueChange={(v) => {
+                    setStatusFilter(v as SupportTicketStatus | "ALL")
+                    setPage(1)
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All statuses</SelectItem>
+                    <SelectItem value="PENDING">Pending</SelectItem>
+                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                    <SelectItem value="CLOSED">Closed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Loading State */}
             {loading ? (

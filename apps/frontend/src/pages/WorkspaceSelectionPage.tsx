@@ -1091,6 +1091,18 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     <CreditCard className="mr-2 h-4 w-4 text-green-600" />
                     <span>Billing</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="p-2 cursor-pointer relative"
+                    onClick={() => navigate("/support/tickets")}
+                  >
+                    <Mail className="mr-2 h-4 w-4 text-blue-500" />
+                    <span>Support</span>
+                    {supportUnreadCount > 0 && (
+                      <span className="ml-auto h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                        {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                      </span>
+                    )}
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="p-2 cursor-pointer text-red-600 focus:text-red-600"
