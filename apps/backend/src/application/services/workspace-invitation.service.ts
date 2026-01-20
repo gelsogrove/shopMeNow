@@ -148,11 +148,14 @@ export class WorkspaceInvitationService {
         }
       }
 
+      const ownerPlan = owner.planType || "FREE_TRIAL"
+      const isFreePlan = ownerPlan === "FREE_TRIAL"
       const isPaymentConnected =
         owner.isPaymentConnected === true ||
         owner.paypalStatus === PayPalStatus.CONNECTED
 
-      if (!isPaymentConnected) {
+      // Require PayPal only on paid plans; allow FREE_TRIAL even if not connected
+      if (!isFreePlan && !isPaymentConnected) {
         return {
           success: false,
           error: "PayPal connection required to add team members.",

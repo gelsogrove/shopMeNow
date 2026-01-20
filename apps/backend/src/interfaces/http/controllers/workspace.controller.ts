@@ -227,18 +227,21 @@ export class WorkspaceController {
 
       const owner = await prisma.user.findUnique({
         where: { id: userId },
-        select: { isPaymentConnected: true, paypalStatus: true },
+        select: { isPaymentConnected: true, paypalStatus: true, planType: true },
       })
 
       if (!owner) {
         return res.status(404).json({ error: "Owner not found" })
       }
 
+      const ownerPlan = owner.planType || "FREE_TRIAL"
+      const isFreePlan = ownerPlan === "FREE_TRIAL"
       const isPaymentConnected =
         owner.isPaymentConnected === true ||
         owner.paypalStatus === PayPalStatus.CONNECTED
 
-      if (!isPaymentConnected) {
+      // PayPal required only for paid plans (BASIC/+) - allow FREE_TRIAL to create first channel
+      if (!isFreePlan && !isPaymentConnected) {
         return res.status(403).json({
           error: "PayPal connection required",
           message: "Connect your PayPal account to create a new channel.",

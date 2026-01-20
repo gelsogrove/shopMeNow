@@ -39,7 +39,7 @@ export function MinimalLayout() {
   const { workspace } = useWorkspace()
   
   // Get user role - only owners can see billing
-  const { isOwner } = useWorkspaceRole(workspace?.id)
+  const { isOwner, isSuperAdmin } = useWorkspaceRole(workspace?.id)
   
   // User profile state
   const [userName, setUserName] = useState<string>("")

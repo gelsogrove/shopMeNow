@@ -5,11 +5,26 @@ import { logger } from "@/lib/logger"
 let socket: Socket | null = null
 let activeWorkspaceId: string | null = null
 
-const resolveSocketUrl = () =>
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === "localhost"
+const resolveSocketUrl = () => {
+  // Prefer explicit socket endpoint if provided
+  const explicitSocket = import.meta.env.VITE_SOCKET_URL
+  if (explicitSocket) return explicitSocket
+
+  // If VITE_API_URL is set (often includes /api/v1), strip path to get origin
+  const apiUrl = import.meta.env.VITE_API_URL
+  if (apiUrl) {
+    try {
+      const parsed = new URL(apiUrl, window.location.origin)
+      return parsed.origin
+    } catch (err) {
+      logger.warn("[WebSocket] Failed to parse VITE_API_URL for socket, falling back", { apiUrl, err })
+    }
+  }
+
+  return window.location.hostname === "localhost"
     ? "http://localhost:3001"
-    : window.location.origin)
+    : window.location.origin
+}
 
 export const getSocket = (workspaceId: string | null): Socket | null => {
   if (!workspaceId) {

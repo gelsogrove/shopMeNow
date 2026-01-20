@@ -72,6 +72,8 @@ export function TeamMembersTable({
     () => members.length + invitations.length,
     [members.length, invitations.length]
   )
+  const planType = billingOverview?.billing?.planType || "FREE_TRIAL"
+  const isFreePlan = planType === "FREE_TRIAL"
   const isInviteLimitReached =
     maxTeamMembers !== null && 
     maxTeamMembers !== undefined && 
@@ -88,7 +90,7 @@ export function TeamMembersTable({
 
   const inviteBlockReason = (() => {
     if (!isSuperAdmin) return "Only the workspace owner can invite new members"
-    if (!isPaymentConnected) return "Connect PayPal to invite team members"
+    if (!isFreePlan && !isPaymentConnected) return "Connect PayPal to invite team members"
     if (!isBillingReady) {
       // If PayPal status is explicitly provided (connected) but billing not ready yet, allow
       if (paymentSourceProvided && paypalConnected) return null

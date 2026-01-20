@@ -284,6 +284,55 @@ describe("WorkspaceInvitationService", () => {
       expect(result.success).toBe(false)
       expect(result.code).toBe("PAYPAL_NOT_CONNECTED")
     })
+
+    it("should allow invitations on FREE_TRIAL even if PayPal is not connected", async () => {
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        const tx = {
+          workspaceInvitation: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            create: jest.fn().mockImplementation((data) => ({
+              id: "inv-free",
+              email: data.data.email,
+            })),
+            count: jest.fn().mockResolvedValue(0),
+          },
+          workspace: {
+            findUnique: jest.fn().mockResolvedValue({
+              ownerId: "owner-123",
+              name: "Test Workspace",
+            }),
+          },
+          user: {
+            findUnique: jest
+              .fn()
+              .mockResolvedValueOnce({
+                planType: "FREE_TRIAL",
+                isPaymentConnected: false,
+                paypalStatus: "DISCONNECTED",
+              }) // owner
+              .mockResolvedValueOnce(null)
+              .mockResolvedValueOnce({
+                firstName: "John",
+                lastName: "Doe",
+                email: "inviter@test.com",
+              }),
+          },
+          planConfiguration: {
+            findUnique: jest.fn().mockResolvedValue({ maxTeamMembers: 5 }),
+          },
+          userWorkspace: {
+            findFirst: jest.fn().mockResolvedValue(null),
+            count: jest.fn().mockResolvedValue(0),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await service.createInvitation(validInput)
+
+      expect(result.success).toBe(true)
+      expect(result.invitation?.email).toBe(validInput.email.toLowerCase())
+    })
   })
 
   describe("validateToken", () => {

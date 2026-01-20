@@ -860,6 +860,14 @@ export class SubscriptionBillingController {
         return
       }
 
+      if (newPlan === "FREE_TRIAL") {
+        res.status(400).json({
+          error: "Non puoi tornare al piano Free Trial",
+          code: "DOWNGRADE_NOT_ALLOWED",
+        })
+        return
+      }
+
       const owner = await this.prisma.user.findUnique({
         where: { id: userId },
         select: {
