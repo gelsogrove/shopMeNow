@@ -550,9 +550,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     })
   }, [firstWorkspaceId, isSuperAdmin, isRoleLoading, role, workspaces.length])
 
-  const currentPlanType = normalizePlanType(
-    sharedBillingOverview?.billing?.planType || firstWorkspace?.planType
-  )
+  const planTypeRaw = sharedBillingOverview?.billing?.planType || firstWorkspace?.planType
+  const hasPlanInfo = Boolean(planTypeRaw)
+  const currentPlanType = normalizePlanType(planTypeRaw)
   const isPaymentConnected =
     paypalStatus?.isPaymentConnected ??
     (paypalStatus?.paypalStatus === "CONNECTED")
@@ -562,7 +562,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   const currentChannelUsage =
     sharedBillingOverview?.usage?.channelsCount ?? workspaces.length
   const channelLimitReached = currentChannelLimit > 0 && currentChannelUsage >= currentChannelLimit
-  const requiresPaymentForChannels = currentPlanType !== "FREE_TRIAL"
+  // If plan info is missing, fail-safe: require payment to avoid free bypass
+  const requiresPaymentForChannels = currentPlanType !== "FREE_TRIAL" || !hasPlanInfo
   const showPayPalWarning = requiresPaymentForChannels && (!isPayPalStatusReady || !isPaymentConnected)
 
   const openWizardDialog = useCallback(() => {
