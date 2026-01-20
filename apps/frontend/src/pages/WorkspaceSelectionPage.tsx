@@ -1224,12 +1224,17 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   onClick={openWizardDialog}
                   className="bg-green-600 hover:bg-green-700 px-8"
                   size="lg"
-                  disabled={!isPayPalStatusReady || !isPaymentConnected}
+                  disabled={
+                    requiresPaymentForChannels &&
+                    (!isPayPalStatusReady || !isPaymentConnected)
+                  }
                   title={
-                    !isPayPalStatusReady
-                      ? "Loading PayPal status..."
-                      : !isPaymentConnected
-                      ? "Connect PayPal to create a channel."
+                    requiresPaymentForChannels
+                      ? !isPayPalStatusReady
+                        ? "Loading PayPal status..."
+                        : !isPaymentConnected
+                        ? "Connect PayPal to create a channel."
+                        : undefined
                       : undefined
                   }
                 >
@@ -1262,17 +1267,25 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   variant="outline"
                   size="sm"
                   className={`gap-1.5 ${
-                    channelLimitReached || !isPayPalStatusReady || !isPaymentConnected
+                    channelLimitReached ||
+                    (requiresPaymentForChannels && (!isPayPalStatusReady || !isPaymentConnected))
                       ? 'opacity-50 cursor-not-allowed'
                       : 'text-green-600 border-green-600 hover:bg-green-50'
                   }`}
                   onClick={openWizardDialog}
-                  disabled={channelLimitReached || !isPayPalStatusReady || !isPaymentConnected}
+                  disabled={
+                    channelLimitReached ||
+                    (requiresPaymentForChannels && (!isPayPalStatusReady || !isPaymentConnected))
+                  }
                   title={
-                    !isPayPalStatusReady
-                      ? "Loading PayPal status..."
-                      : !isPaymentConnected
-                      ? "Connect PayPal to create a channel."
+                    requiresPaymentForChannels
+                      ? !isPayPalStatusReady
+                        ? "Loading PayPal status..."
+                        : !isPaymentConnected
+                        ? "Connect PayPal to create a channel."
+                        : channelLimitReached
+                        ? "Channel limit reached"
+                        : undefined
                       : channelLimitReached
                       ? "Channel limit reached"
                       : undefined

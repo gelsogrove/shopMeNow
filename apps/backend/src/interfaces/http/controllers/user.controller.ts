@@ -221,7 +221,7 @@ export class UserController {
       const isTryingToUpdateBilling = billingFields.some(field => userData[field] !== undefined || req.file)
       
       if (isTryingToUpdateBilling) {
-        // Check if user is SUPER_ADMIN in ANY workspace
+        // Check if user is SUPER_ADMIN in ANY workspace OR has no workspaces yet (free trial setup) OR is platform admin
         const { prisma } = await import('@echatbot/database')
         const userWorkspaces = await prisma.userWorkspace.findMany({
           where: { userId },
@@ -229,8 +229,10 @@ export class UserController {
         })
         
         const isSuperAdmin = userWorkspaces.some(uw => uw.role === 'SUPER_ADMIN')
+        const hasNoWorkspaces = userWorkspaces.length === 0
+        const isPlatformAdmin = (req.user as any)?.isPlatformAdmin === true
         
-        if (!isSuperAdmin) {
+        if (!isSuperAdmin && !hasNoWorkspaces && !isPlatformAdmin) {
           logger.warn(`⚠️ Non-owner user ${userId} attempted to modify billing information`)
           return res.status(403).json({ 
             message: "Only workspace owners can modify billing information",
