@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { ImageCropUpload } from "@/components/shared/ImageCropUpload"
@@ -436,8 +437,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   }, [])
 
   const loadPayPalStatus = useCallback(async () => {
-    const shouldLoadPayPal = hasLoadedWorkspaces && (isSuperAdmin || workspaces.length === 0)
-    if (isRoleLoading || !shouldLoadPayPal) return
+    if (isRoleLoading || !hasLoadedWorkspaces) {
+      return
+    }
 
     try {
       setPaypalLoading(true)
@@ -445,15 +447,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       setPaypalStatus(data)
     } catch (error) {
       logger.error("Failed to load PayPal status:", error)
-      setPaypalStatus(null)
+      // Fail-safe: treat as disconnected so UI can warn
+      setPaypalStatus({ paypalStatus: "DISCONNECTED", isPaymentConnected: false })
     } finally {
       setPaypalLoading(false)
     }
-  }, [hasLoadedWorkspaces, isRoleLoading, isSuperAdmin, workspaces.length])
+  }, [hasLoadedWorkspaces, isRoleLoading])
 
   const loadPayPalConfig = useCallback(async () => {
-    const shouldLoadPayPal = hasLoadedWorkspaces && (isSuperAdmin || workspaces.length === 0)
-    if (isRoleLoading || !shouldLoadPayPal) return
+    if (isRoleLoading || !hasLoadedWorkspaces) return
 
     try {
       const data = await getPayPalConfig()
@@ -462,7 +464,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       logger.error("Failed to load PayPal config:", error)
       setPaypalConfig(null)
     }
-  }, [hasLoadedWorkspaces, isRoleLoading, isSuperAdmin, workspaces.length])
+  }, [hasLoadedWorkspaces, isRoleLoading])
 
   useEffect(() => {
     loadPayPalStatus()
@@ -538,17 +540,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       setPaypalDisconnecting(false)
     }
   }
-
-  // 🔍 DEBUG: Log role info
-  useEffect(() => {
-    logger.info('🔍 [WorkspaceSelectionPage] Role check:', {
-      firstWorkspaceId,
-      isSuperAdmin,
-      isRoleLoading,
-      role,
-      workspacesCount: workspaces.length
-    })
-  }, [firstWorkspaceId, isSuperAdmin, isRoleLoading, role, workspaces.length])
 
   const planTypeRaw = sharedBillingOverview?.billing?.planType || firstWorkspace?.planType
   const hasPlanInfo = Boolean(planTypeRaw)
@@ -692,7 +683,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       }
 
       setIsLoading(true)
-      logger.info("🔍 [WorkspaceSelectionPage] Calling getWorkspaces()")
       
       // Load workspaces and badge stats in parallel
       const [workspacesData, statsData] = await Promise.all([
@@ -1123,6 +1113,21 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 pb-24">{/* pb-24 = 6rem per vedere bene il footer */}
 
+        {/* ========== PAYPAL WARNING (System Alert) ========== */}
+        {showPayPalWarning && (
+          <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-950 rounded-lg border-2 border-red-500">
+            <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-bold text-red-800 dark:text-red-200 text-lg">
+                ⚠️ PayPal Connection Required
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300">
+                You must connect PayPal to add new channels or invite team members.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ========== LOADING STATE ========== */}
         {isLoading && (
           <Card className="max-w-xl mx-auto">
@@ -1275,12 +1280,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 <CardDescription>
                   Select a channel to manage its conversations
                 </CardDescription>
-                {showPayPalWarning && (
-                  <div className="mt-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span>Connect PayPal to add channels or invite team members (required for paid plans).</span>
-                  </div>
-                )}
               </div>
               {!isRoleLoading && isSuperAdmin && (
                 <Button
@@ -2236,12 +2235,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         {/* Team Members Section */}
         {firstWorkspaceId && !isRoleLoading && (
           <div className="space-y-3">
-            {showPayPalWarning && (
-              <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                <span>PayPal connection required to invite team members on paid plans.</span>
-              </div>
-            )}
             <TeamMembersTable
               workspaceId={firstWorkspaceId}
               isSuperAdmin={isSuperAdmin}

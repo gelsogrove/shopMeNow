@@ -419,7 +419,18 @@ paypalRoutes.get("/status", authMiddleware, async (req: Request, res: Response) 
       return res.status(404).json({ success: false, error: "User not found" })
     }
 
-    res.json({ success: true, data: owner })
+    // Safety: consider connected ONLY if status is CONNECTED AND flag is true
+    const isConnected =
+      owner.paypalStatus === PayPalStatus.CONNECTED &&
+      owner.isPaymentConnected === true
+
+    // 🔧 FIX: Always compute isPaymentConnected from paypalStatus to avoid DB inconsistencies
+    const responseData = {
+      ...owner,
+      isPaymentConnected: owner.paypalStatus === PayPalStatus.CONNECTED
+    }
+
+    res.json({ success: true, data: responseData })
   } catch (error) {
     logger.error("[PAYPAL] Error fetching status:", error)
     res.status(500).json({ success: false, error: "Failed to fetch status" })
@@ -645,6 +656,7 @@ paypalRoutes.post(
       await prisma.user.update({
         where: { id: userId },
         data: {
+          isPaymentConnected: false,
           paypalStatus: PayPalStatus.DISCONNECTED,
           paypalMerchantId: null,
           paypalEmail: null,
