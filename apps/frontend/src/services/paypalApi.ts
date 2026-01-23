@@ -28,8 +28,9 @@ export const getPayPalConfig = async (): Promise<PayPalConfigResponse> => {
 }
 
 export const getPayPalConnectUrl = async (): Promise<string> => {
-  const response = await api.post("/paypal/connect-url")
-  return response.data.data.url
+  // NEW: Use Subscriptions flow instead of OAuth Connect
+  const response = await api.post("/paypal/subscriptions")
+  return response.data.data.approveLink
 }
 
 export const disconnectPayPal = async (): Promise<void> => {

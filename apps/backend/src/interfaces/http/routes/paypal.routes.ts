@@ -554,6 +554,86 @@ paypalRoutes.get("/config", authMiddleware, async (req: Request, res: Response) 
   }
 })
 
+// 🆕 Create PayPal Subscription (NEW FLOW - replaces OAuth Connect)
+paypalRoutes.post(
+  "/subscriptions",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.id
+      if (!userId) {
+        return res.status(401).json({ success: false, error: "Unauthorized" })
+      }
+
+      if (!(await ensureOwner(userId, res))) {
+        return
+      }
+
+      const userConfig = await getUserPayPalConfig(userId)
+      if (!userConfig) {
+        return res.status(404).json({ success: false, error: "User not found" })
+      }
+
+      const paypalConfig = userConfig.paypalConfig
+      if (!paypalConfig.configured) {
+        return res.status(400).json({
+          success: false,
+          error: "PayPal credentials are not configured",
+          code: "PAYPAL_NOT_CONFIGURED",
+          environment: paypalConfig.environment,
+        })
+      }
+
+      // Create subscription
+      const subscription = await createSubscription({
+        paypalConfig,
+        payerId: null,
+        email: null,
+        userId,
+      })
+
+      if (!subscription.approveLink) {
+        return res.status(500).json({
+          success: false,
+          error: "Failed to get approval link from PayPal",
+        })
+      }
+
+      // Save subscription ID to user
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          paypalSubscriptionId: subscription.id,
+          paypalPlanId: subscription.planId,
+          paypalSubscriptionStatus: subscription.status,
+        },
+      })
+
+      logger.info("[PAYPAL] Subscription created:", {
+        userId,
+        subscriptionId: subscription.id,
+        status: subscription.status,
+      })
+
+      res.json({
+        success: true,
+        data: {
+          approveLink: subscription.approveLink,
+          subscriptionId: subscription.id,
+          environment: paypalConfig.environment,
+        },
+      })
+    } catch (error) {
+      logger.error("[PAYPAL] Error creating subscription:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to create PayPal subscription",
+      })
+    }
+  }
+)
+
+// DEPRECATED: Old OAuth Connect flow - kept for backwards compatibility
 paypalRoutes.post(
   "/connect-url",
   authMiddleware,
