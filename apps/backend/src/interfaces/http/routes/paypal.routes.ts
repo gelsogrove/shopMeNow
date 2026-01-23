@@ -187,7 +187,12 @@ const createSubscription = async ({
   payerId: string | null
   email: string | null
   userId: string
-}): Promise<{ id: string; status: string; planId: string }> => {
+}): Promise<{ 
+  id: string
+  status: string
+  planId: string
+  approveLink: string | null
+}> => {
   const appToken = await getAppAccessToken(paypalConfig)
   const planId = await ensurePlanId(paypalConfig)
 
@@ -197,6 +202,8 @@ const createSubscription = async ({
       brand_name: "eChatbot",
       shipping_preference: "NO_SHIPPING",
       user_action: "SUBSCRIBE_NOW",
+      return_url: `${config.backendUrl}/api/v1/paypal/subscription/callback`,
+      cancel_url: `${config.frontendUrl}/workspace-selection?paypal=cancelled`,
     },
     quantity: "1",
     custom_id: userId,
@@ -227,10 +234,13 @@ const createSubscription = async ({
   }
 
   const sub = await subResponse.json()
+  const approveLink = sub.links?.find((l: any) => l.rel === 'approve')?.href || null
+  
   return {
     id: sub.id as string,
     status: (sub.status as string) || "UNKNOWN",
     planId,
+    approveLink,
   }
 }
 
@@ -375,15 +385,91 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
       resource?.supplementary_data?.related_ids?.subscription_id ||
       resource?.supplementary_data?.related_ids?.billing_agreement_id
 
-    // Note: Subscription tracking removed (metadata field no longer exists)
-    // TODO: Implement subscription tracking with dedicated fields if needed
-
-    logger.info("[PAYPAL] Webhook verified", {
+    logger.info("[PAYPAL] Webhook received", {
       eventType,
       resourceType: req.body?.resource_type,
       environment: verifiedEnvironment,
       subscriptionId,
     })
+
+    // Handle subscription events
+    if (subscriptionId && eventType?.startsWith("BILLING.SUBSCRIPTION.")) {
+      const user = await prisma.user.findFirst({
+        where: { paypalSubscriptionId: subscriptionId },
+      })
+
+      if (user) {
+        const updateData: any = {}
+
+        switch (eventType) {
+          case "BILLING.SUBSCRIPTION.ACTIVATED":
+            updateData.paypalSubscriptionStatus = "ACTIVE"
+            updateData.paypalSubscriptionApprovedAt = new Date()
+            logger.info("[PAYPAL] Subscription activated:", subscriptionId)
+            break
+
+          case "BILLING.SUBSCRIPTION.CANCELLED":
+            updateData.paypalSubscriptionStatus = "CANCELLED"
+            logger.info("[PAYPAL] Subscription cancelled:", subscriptionId)
+            break
+
+          case "BILLING.SUBSCRIPTION.SUSPENDED":
+            updateData.paypalSubscriptionStatus = "SUSPENDED"
+            logger.warn("[PAYPAL] Subscription suspended:", subscriptionId)
+            break
+
+          case "BILLING.SUBSCRIPTION.PAYMENT.FAILED":
+            updateData.paypalFailedPaymentsCount = (user.paypalFailedPaymentsCount || 0) + 1
+            updateData.lastPaymentFailedAt = new Date()
+            logger.warn("[PAYPAL] Payment failed:", {
+              subscriptionId,
+              failureCount: updateData.paypalFailedPaymentsCount,
+            })
+            break
+
+          case "BILLING.SUBSCRIPTION.PAYMENT.SUCCESS":
+            updateData.paypalFailedPaymentsCount = 0
+            updateData.paypalLastPaymentTime = new Date()
+            updateData.paypalCyclesCompleted = (user.paypalCyclesCompleted || 0) + 1
+            
+            // Update next billing time from resource if available
+            if (resource.billing_info?.next_billing_time) {
+              updateData.paypalNextBillingTime = new Date(resource.billing_info.next_billing_time)
+            }
+            
+            // Update outstanding balance
+            if (resource.billing_info?.outstanding_balance?.value) {
+              updateData.paypalOutstandingBalance = parseFloat(resource.billing_info.outstanding_balance.value)
+            }
+            
+            logger.info("[PAYPAL] Payment successful:", {
+              subscriptionId,
+              cyclesCompleted: updateData.paypalCyclesCompleted,
+            })
+            break
+
+          case "BILLING.SUBSCRIPTION.UPDATED":
+            // Handle subscription updates (plan change, etc.)
+            if (resource.billing_info?.next_billing_time) {
+              updateData.paypalNextBillingTime = new Date(resource.billing_info.next_billing_time)
+            }
+            if (resource.status) {
+              updateData.paypalSubscriptionStatus = resource.status
+            }
+            logger.info("[PAYPAL] Subscription updated:", subscriptionId)
+            break
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: updateData,
+          })
+        }
+      } else {
+        logger.warn("[PAYPAL] Webhook received for unknown subscription:", subscriptionId)
+      }
+    }
 
     res.status(200).json({ success: true })
   } catch (error) {
@@ -627,6 +713,10 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
           ? new Date(Date.now() + expiresIn * 1000)
           : null,
         paypalTokenScope: scope || null,
+        // Subscription details
+        paypalSubscriptionId: subscription.id,
+        paypalPlanId: subscription.planId,
+        paypalSubscriptionStatus: subscription.status,
       },
     })
 
@@ -634,6 +724,98 @@ paypalRoutes.get("/callback", async (req: Request, res: Response) => {
     return res.redirect(redirectUrl)
   } catch (error) {
     logger.error("[PAYPAL] OAuth callback error:", error)
+    const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
+    return res.redirect(redirectUrl)
+  }
+})
+
+// 🆕 Subscription Approval Callback
+// Called by PayPal after user approves subscription
+// URL: /api/v1/paypal/subscription/callback?subscription_id=I-XXX&ba_token=BA-YYY
+paypalRoutes.get("/subscription/callback", async (req: Request, res: Response) => {
+  try {
+    const { subscription_id, ba_token } = req.query as {
+      subscription_id?: string
+      ba_token?: string
+    }
+
+    if (!subscription_id) {
+      logger.error("[PAYPAL] Subscription callback missing subscription_id")
+      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
+      return res.redirect(redirectUrl)
+    }
+
+    // Find user by subscriptionId
+    const user = await prisma.user.findFirst({
+      where: { paypalSubscriptionId: subscription_id },
+      select: { 
+        id: true, 
+        isPlatformAdmin: true, 
+        isDeveloperUser: true,
+        paypalEnvironment: true,
+      },
+    })
+
+    if (!user || !user.paypalEnvironment) {
+      logger.error("[PAYPAL] User not found for subscription:", subscription_id)
+      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
+      return res.redirect(redirectUrl)
+    }
+
+    const paypalConfig = loadPayPalConfigForEnv(user.paypalEnvironment as PayPalEnvironment)
+    const appToken = await getAppAccessToken(paypalConfig)
+
+    // Fetch subscription details from PayPal
+    const subResponse = await fetch(
+      `${paypalConfig.apiBaseUrl}/v1/billing/subscriptions/${subscription_id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${appToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    if (!subResponse.ok) {
+      const err = await subResponse.text()
+      logger.error("[PAYPAL] Failed to fetch subscription:", err)
+      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
+      return res.redirect(redirectUrl)
+    }
+
+    const subscription = await subResponse.json()
+
+    // Update user with subscription details
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        paypalSubscriptionStatus: subscription.status,
+        paypalSubscriptionApprovedAt: new Date(),
+        paypalNextBillingTime: subscription.billing_info?.next_billing_time
+          ? new Date(subscription.billing_info.next_billing_time)
+          : null,
+        paypalLastPaymentTime: subscription.billing_info?.last_payment?.time
+          ? new Date(subscription.billing_info.last_payment.time)
+          : null,
+        paypalFailedPaymentsCount: subscription.billing_info?.failed_payments_count || 0,
+        paypalCyclesCompleted: 
+          subscription.billing_info?.cycle_executions?.find((c: any) => c.tenure_type === 'REGULAR')?.cycles_completed || 0,
+        paypalOutstandingBalance: parseFloat(
+          subscription.billing_info?.outstanding_balance?.value || '0'
+        ),
+      },
+    })
+
+    logger.info("[PAYPAL] Subscription approved:", {
+      userId: user.id,
+      subscriptionId: subscription_id,
+      status: subscription.status,
+    })
+
+    const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=subscription_approved`
+    return res.redirect(redirectUrl)
+  } catch (error) {
+    logger.error("[PAYPAL] Subscription callback error:", error)
     const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
     return res.redirect(redirectUrl)
   }

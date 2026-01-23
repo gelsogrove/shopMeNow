@@ -167,6 +167,16 @@ export function ClientsPage() {
       paypalEmail: string | null
       paypalEnvironment: string | null
       paypalConnectedAt: string | null
+      // Subscription fields
+      paypalSubscriptionId: string | null
+      paypalPlanId: string | null
+      paypalSubscriptionStatus: string | null
+      paypalNextBillingTime: string | null
+      paypalLastPaymentTime: string | null
+      paypalFailedPaymentsCount: number
+      paypalCyclesCompleted: number
+      paypalOutstandingBalance: number
+      paypalSubscriptionApprovedAt: string | null
     }
     transactions: Array<{
       id: string
@@ -1542,6 +1552,127 @@ export function ClientsPage() {
                         value={paypalForm.paypalConnectedAt}
                         disabled
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Subscription Details */}
+                {paypalInfo.paypalSubscriptionId && (
+                  <div className="rounded border border-gray-200">
+                    <div className="border-b border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
+                      Subscription Details
+                    </div>
+                    <div className="p-4 space-y-3 text-sm">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Subscription ID</div>
+                          <div className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                            {paypalInfo.paypalSubscriptionId}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Plan ID</div>
+                          <div className="font-mono text-xs bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                            {paypalInfo.paypalPlanId || '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Status</div>
+                          <span
+                            className={`inline-flex items-center text-xs font-medium px-2.5 py-1 rounded-full ${
+                              paypalInfo.paypalSubscriptionStatus === 'ACTIVE'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : paypalInfo.paypalSubscriptionStatus === 'SUSPENDED'
+                                ? 'bg-rose-100 text-rose-700'
+                                : paypalInfo.paypalSubscriptionStatus === 'CANCELLED'
+                                ? 'bg-gray-100 text-gray-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            {paypalInfo.paypalSubscriptionStatus || 'UNKNOWN'}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Cycles Completed</div>
+                          <div className="font-semibold text-gray-900">
+                            {paypalInfo.paypalCyclesCompleted || 0} months
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Next Billing Time</div>
+                          <div className="font-medium text-gray-900">
+                            {paypalInfo.paypalNextBillingTime
+                              ? new Date(paypalInfo.paypalNextBillingTime).toLocaleString('it-IT', {
+                                  dateStyle: 'medium',
+                                  timeStyle: 'short',
+                                })
+                              : '—'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Last Payment Time</div>
+                          <div className="font-medium text-gray-900">
+                            {paypalInfo.paypalLastPaymentTime
+                              ? new Date(paypalInfo.paypalLastPaymentTime).toLocaleString('it-IT', {
+                                  dateStyle: 'medium',
+                                  timeStyle: 'short',
+                                })
+                              : '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Failed Payments</div>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-semibold ${
+                                (paypalInfo.paypalFailedPaymentsCount || 0) > 0
+                                  ? 'text-rose-600'
+                                  : 'text-gray-900'
+                              }`}
+                            >
+                              {paypalInfo.paypalFailedPaymentsCount || 0}
+                            </span>
+                            {(paypalInfo.paypalFailedPaymentsCount || 0) > 0 && (
+                              <span className="text-xs text-rose-600">⚠ Attention required</span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Outstanding Balance</div>
+                          <div
+                            className={`font-semibold ${
+                              paypalInfo.paypalOutstandingBalance && parseFloat(paypalInfo.paypalOutstandingBalance) > 0
+                                ? 'text-rose-600'
+                                : 'text-gray-900'
+                            }`}
+                          >
+                            {paypalInfo.paypalOutstandingBalance
+                              ? `€${parseFloat(paypalInfo.paypalOutstandingBalance).toFixed(2)}`
+                              : '€0.00'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {paypalInfo.paypalSubscriptionApprovedAt && (
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Subscription Approved At</div>
+                          <div className="font-medium text-gray-900">
+                            {new Date(paypalInfo.paypalSubscriptionApprovedAt).toLocaleString('it-IT', {
+                              dateStyle: 'long',
+                              timeStyle: 'short',
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

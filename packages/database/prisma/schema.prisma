@@ -570,6 +570,17 @@ model User {
   paypalTokenExpiresAt DateTime?
   paypalTokenScope String?
 
+  // 💳 PayPal Subscriptions (Feature: Monthly Billing)
+  paypalSubscriptionId      String?   // I-XXXXX - Subscription ID from PayPal
+  paypalPlanId              String?   // P-XXXXX - Plan ID used for subscription
+  paypalSubscriptionStatus  String?   // APPROVAL_PENDING | ACTIVE | SUSPENDED | CANCELLED
+  paypalNextBillingTime     DateTime? // Next automatic billing date
+  paypalLastPaymentTime     DateTime? // Last successful payment timestamp
+  paypalFailedPaymentsCount Int       @default(0) // Consecutive failed payments counter
+  paypalCyclesCompleted     Int       @default(0) // Number of billing cycles completed
+  paypalOutstandingBalance  Decimal   @default(0) @db.Decimal(10, 2) // Outstanding balance to be charged
+  paypalSubscriptionApprovedAt DateTime? // When user approved the subscription
+
   workspaces              UserWorkspace[]
   ownedWorkspaces         Workspace[]             @relation("OwnedWorkspaces") // Workspaces where user is owner/SUPER_ADMIN
   invitationsSent         WorkspaceInvitation[]   @relation("InvitedBy") // Invitations sent by this user
