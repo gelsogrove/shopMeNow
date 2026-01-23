@@ -202,7 +202,7 @@ const createSubscription = async ({
       brand_name: "eChatbot",
       shipping_preference: "NO_SHIPPING",
       user_action: "SUBSCRIBE_NOW",
-      return_url: `${config.backendUrl}/api/v1/paypal/subscription/callback`,
+      return_url: `${config.appUrl}/api/v1/paypal/subscription/callback`,
       cancel_url: `${config.frontendUrl}/workspace-selection?paypal=cancelled`,
     },
     quantity: "1",
