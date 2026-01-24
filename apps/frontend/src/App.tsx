@@ -1,5 +1,5 @@
 import GdprPage from "@/pages/GdprPage"
-import SettingsPage from "@/pages/SettingsPage"
+import { SettingsPage } from "@/pages/SettingsPage"
 import WidgetPage from "@/pages/WidgetPage"
 import WidgetSettingsPage from "@/pages/WidgetSettingsPage"
 import WidgetEmbedPage from "@/pages/WidgetEmbedPage"

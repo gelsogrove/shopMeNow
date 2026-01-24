@@ -21,7 +21,7 @@ eChatbot/
 │   ├── backend/         # Express API server (port 3001)
 │   ├── frontend/        # React + Vite app (port 3000)
 │   ├── scheduler/       # Cron jobs microservice
-│   └── backoffice/      # Admin panel (future)
+│   └── backoffice/      # Admin panel (port 3002)
 ├── packages/
 │   └── database/        # Prisma schema & migrations
 ├── docs/                # Documentation
@@ -86,21 +86,25 @@ eChatbot/
 6. **Start development servers**
 
    ```bash
-   # Start both backend + frontend
-   npm run dev
+   # Start all services (backend + frontend + scheduler + backoffice)
+   npm run dev:all
    
    # Or individually:
-   npm run dev:backend   # Backend on port 3001
-   npm run dev:frontend  # Frontend on port 3000
-   npm run dev:scheduler # Scheduler cron jobs
+   npm run dev:backend     # Backend API on port 3001
+   npm run dev:frontend    # Frontend on port 3000
+   npm run dev:scheduler   # Scheduler cron jobs
+   npm run dev:backoffice  # Admin panel on port 3002
    ```
 
 ### Available Scripts
 
 ```bash
 # Development
-npm run dev              # Start backend + frontend
-npm run dev:all          # Start backend + frontend + scheduler
+npm run dev:all          # Start backend + frontend + scheduler + backoffice
+npm run dev:backend      # Backend API on port 3001
+npm run dev:frontend     # Frontend on port 3000
+npm run dev:scheduler    # Scheduler cron jobs
+npm run dev:backoffice   # Admin panel on port 3002
 
 # Build
 npm run build            # Build all workspaces
@@ -133,21 +137,18 @@ npm run prod:scheduler   # Start scheduler with PM2
 
 ### Access Points
 
-- **Frontend**: http://localhost:3000
-  - **Email**: `andrea_gelsomino@hotmail.com`
-  - **Password**: `Venezia44`
-  - **2FA Recovery Code**: Check terminal output after `npm run seed`
-    - The recovery code is displayed in the terminal when you run the seed
-    - Save this code - it's consumed after first use
-    - Example output:
-      ```
-      ================================================================================
-      🔑 ADMIN 2FA RECOVERY CODE (save this for development):
-      ================================================================================
-         ABCD-EFGH-1234-5678
-      ================================================================================
-      📝 Use this recovery code when logging in with 2FA
-      ⚠️  This code will be consumed after first use
+- **Frontend (Customer)**: http://localhost:3000
+- **Backoffice (Admin)**: http://localhost:3002
+  - **Email**: `admin@echatbot.ai`
+  - **Password**: `venezia44`
+- **API**: http://localhost:3001
+- **API Docs**: http://localhost:3001/api-docs (Swagger)
+
+### PayPal Environment
+
+- **Admin/Developer Users**: Automatically use PayPal **SANDBOX** environment
+- **Regular Users**: Use PayPal LIVE environment
+- **Test Payments**: Login as admin to test with sandbox credentials
       ```
 - **Backend API**: http://localhost:3001
 - **Database**: localhost:5434

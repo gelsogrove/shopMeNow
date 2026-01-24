@@ -3316,7 +3316,7 @@ Can I help with anything else?"`,
   })
   await ensureInvoiceNumber(novemberInvoice)
 
-  // December 2025 Invoice (DRAFT - current month)
+  // December 2025 Invoice (PENDING - ready for payment)
   const decemberInvoice = await prisma.monthlyInvoice.create({
     data: {
       user: { connect: { id: adminUser.id } },
@@ -3328,7 +3328,7 @@ Can I help with anything else?"`,
       creditUsage: 2.60,
       creditDebt: 0,
       totalAmount: 47.60,
-      status: "DRAFT",
+      status: "PENDING",
       planType: "PREMIUM",
       adminNotes: "Check credit note before payment",
       itemsBreakdown: {

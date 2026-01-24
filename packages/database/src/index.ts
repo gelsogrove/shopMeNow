@@ -26,35 +26,22 @@ if (!DATABASE_URL) {
 
 import { PrismaClient, Prisma } from './generated/prisma/index.js'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { Pool } from 'pg'
 
-// Initialize the PostgreSQL adapter with SSL support for Heroku
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false,
+// ============================================================================
+// Prisma 7 with PrismaPg adapter using connectionString (no Pool)
+// ============================================================================
+// This approach uses connectionString directly instead of Pool.
+// PrismaPg handles connection management internally.
+// Connection errors are thrown at query time, allowing retry logic in the app.
+
+const adapter = new PrismaPg({ connectionString: DATABASE_URL })
+
+export const prisma = new PrismaClient({
+  adapter,
+  log: process.env.NODE_ENV === 'development' 
+    ? ['error', 'warn'] 
+    : ['error'],
 })
-
-const adapter = new PrismaPg(pool)
-
-// Singleton Prisma client instance
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter,
-    log: process.env.NODE_ENV === 'development' 
-      ? ['error', 'warn'] 
-      : ['error'],
-  })
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma
-}
 
 // Re-export Prisma types and client
 export { PrismaClient, Prisma } from './generated/prisma/index.js'
@@ -164,9 +151,7 @@ export type {
 // Export prisma as default
 export default prisma
 
-export const databasePool = pool
-
 export async function disconnectDatabase(): Promise<void> {
   await prisma.$disconnect()
-  await pool.end()
 }
+

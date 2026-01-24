@@ -44,6 +44,7 @@ model Workspace {
   widgetLanguage            String? @default("it") // Default language: it, en, es, pt
   widgetPrimaryColor        String? @default("#22c55e") // Primary color in hex format
   widgetTextColor           String? @default("#0f172a") // Text color for widget accents (links, labels)
+  widgetIcon                String? @default("chat") // Icon for widget trigger button
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget

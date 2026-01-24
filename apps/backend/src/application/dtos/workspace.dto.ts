@@ -153,6 +153,14 @@ export class WorkspaceDTO extends BaseDTO {
   @IsOptional()
   widgetPrimaryColor?: string;
 
+  @IsString()
+  @IsOptional()
+  widgetIcon?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetIcon?: string;
+
   @ValidateNested()
   @Type(() => WorkspaceContactDTO)
   @IsOptional()
@@ -244,6 +252,10 @@ export class CreateWorkspaceDTO {
   @IsString()
   @IsOptional()
   widgetPrimaryColor?: string;
+
+  @IsString()
+  @IsOptional()
+  widgetIcon?: string;
 }
 
 /**

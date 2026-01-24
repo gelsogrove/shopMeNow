@@ -119,10 +119,7 @@ import { servicesRouter } from "../interfaces/http/routes/services.routes"
 import { cartTokenLimiter } from "../config/rate-limiters"
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import { billingRouter } from "../interfaces/http/routes/billing.routes"
-import {
-  billingRoutes as subscriptionBillingRoutes,
-  publicBillingRoutes,
-} from "../interfaces/http/routes/subscription-billing.routes"
+import { publicBillingRoutes } from "../interfaces/http/routes/subscription-billing.routes"
 import { ownerBillingRoutes } from "../interfaces/http/routes/owner-billing.routes"
 import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
@@ -756,13 +753,6 @@ import widgetRoutes from "../interfaces/http/routes/widget.routes"
 router.use("/widget", widgetRoutes)
 logger.info("🔌 Registered PUBLIC widget routes v2: /api/v1/widget (unified queue, rate limited, CORS *)")
 
-// Mount subscription billing routes (Feature 185) - WORKSPACE-SCOPED (DEPRECATED)
-// Note: Public /subscription/plans route is registered earlier in the file
-router.use("/workspaces/:workspaceId/subscription-billing", subscriptionBillingRoutes)
-logger.info(
-  "Registered workspace subscription billing routes: /api/workspaces/:workspaceId/subscription-billing (DEPRECATED)"
-)
-
 // Mount owner-based billing routes (Feature 198) - NO WORKSPACEID
 // This is the NEW primary billing API - uses userId from JWT token
 router.use("/subscription-billing", ownerBillingRoutes)
@@ -839,11 +829,6 @@ logger.info("Registered support ticket routes for customer support")
 // Mount admin support ticket routes
 router.use("/admin/support", adminSupportRouter)
 logger.info("Registered admin support ticket routes for backoffice")
-
-// TEMPORARY: Fix workspace deletedAt field
-import tempFixWorkspaceRouter from "./temp-fix-workspace"
-router.use("/temp", tempFixWorkspaceRouter)
-logger.info("⚠️ TEMPORARY: Mounted /temp/temp-fix-workspace/:workspaceId route")
 
 // Health check
 router.get("/health", (req, res) => {
