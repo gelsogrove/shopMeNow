@@ -636,6 +636,38 @@
     return `${base}/${src}`
   }
 
+  function getIconSvg(iconName, color = "#ffffff") {
+    const stroke = color
+    switch ((iconName || "chat").toLowerCase()) {
+      case "sparkles":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M32 8l4 10 10 4-10 4-4 10-4-10-10-4 10-4 4-10Z" fill="${stroke}" />
+  <path d="M16 38l2.5 6.5L25 47l-6.5 2-2.5 6.5L13.5 49 7 47l6.5-2L16 38Z" fill="${stroke}" />
+</svg>`
+      case "support":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="32" cy="32" r="18" stroke="${stroke}" stroke-width="3.2" />
+  <circle cx="32" cy="32" r="8" stroke="${stroke}" stroke-width="3.2" />
+  <path d="M32 14v6M32 44v6M18 32h-6M52 32h-6M21 21l-4.5-4.5M47.5 47.5 43 43M21 43l-4.5 4.5M47.5 16.5 43 21" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
+</svg>`
+      case "bot":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="14" y="18" width="36" height="28" rx="8" stroke="${stroke}" stroke-width="3.2" />
+  <circle cx="26" cy="32" r="3.2" fill="${stroke}" />
+  <circle cx="38" cy="32" r="3.2" fill="${stroke}" />
+  <path d="M32 10v6" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
+  <path d="M22 44c3 3 17 3 20 0" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
+</svg>`
+      default:
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M14 16c0-4.4 3.6-8 8-8h20c4.4 0 8 3.6 8 8v15c0 4.4-3.6 8-8 8H29l-8 7v-7h-7c-4.4 0-8-3.6-8-8V16Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" />
+  <circle cx="24" cy="24" r="2.8" fill="${stroke}" />
+  <circle cx="32" cy="24" r="2.8" fill="${stroke}" />
+  <circle cx="40" cy="24" r="2.8" fill="${stroke}" />
+</svg>`
+    }
+  }
+
   function extractImages(raw) {
     const images = []
     let text = raw
@@ -700,12 +732,17 @@
 
       const resolvedLogoUrl =
         baseConfig.logoUrl && baseConfig.logoUrl.trim()
-          ? baseConfig.logoUrl
-          : this.getDefaultLogo()
+          ? baseConfig.logoUrl.trim()
+          : ""
+      const resolvedIcon =
+        baseConfig.icon && String(baseConfig.icon).trim()
+          ? String(baseConfig.icon).trim()
+          : "chat"
 
       this.config = {
         ...baseConfig,
         logoUrl: resolvedLogoUrl,
+        icon: resolvedIcon,
       }
 
       this.isOpen = false
@@ -852,20 +889,58 @@
       this.button.className = "echatbot-widget-button"
       this.button.title = t.headerTitle
 
-      // Floating button is a simple ring (no icon)
+      const buildButtonGlyph = () => {
+        if (this.config.logoUrl) {
+          const img = document.createElement("img")
+          img.src = resolveImageUrl(this.config.logoUrl, this.config.apiUrl)
+          img.alt = "Open chat"
+          img.style.width = "100%"
+          img.style.height = "100%"
+          img.style.objectFit = "cover"
+          img.style.borderRadius = "50%"
+          img.loading = "lazy"
+          return img
+        }
+
+        const iconWrapper = document.createElement("div")
+        iconWrapper.className = "echatbot-widget-button-icon"
+        iconWrapper.style.width = "100%"
+        iconWrapper.style.height = "100%"
+        iconWrapper.style.display = "flex"
+        iconWrapper.style.alignItems = "center"
+        iconWrapper.style.justifyContent = "center"
+        iconWrapper.style.borderRadius = "50%"
+        iconWrapper.style.pointerEvents = "none"
+        iconWrapper.innerHTML = getIconSvg(this.config.icon, "#ffffff")
+        return iconWrapper
+      }
+
+      let isScrubbing = false
       const scrubButton = () => {
+        isScrubbing = true
         while (this.button.firstChild) {
           this.button.removeChild(this.button.firstChild)
         }
-        this.button.style.background = this.config.primaryColor || "#22c55e"
-        this.button.style.backgroundColor = this.config.primaryColor || "#22c55e"
+        const primary = this.config.primaryColor || "#22c55e"
+        this.button.style.background = primary
+        this.button.style.backgroundColor = primary
         this.button.style.backgroundImage = "none"
-        this.button.style.boxShadow = "none"
-        this.button.style.borderColor = this.config.primaryColor || "#22c55e"
+        this.button.style.boxShadow = "0 12px 38px rgba(0,0,0,0.18)"
+        this.button.style.borderColor = primary
+
+        const glyph = buildButtonGlyph()
+        if (glyph) {
+          this.button.appendChild(glyph)
+        }
+        isScrubbing = false
       }
       scrubButton()
 
-      const observer = new MutationObserver(() => scrubButton())
+      const observer = new MutationObserver(() => {
+        if (!isScrubbing) {
+          scrubButton()
+        }
+      })
       observer.observe(this.button, { childList: true, subtree: true })
 
       this.container.appendChild(this.button)
@@ -1250,6 +1325,7 @@
       if (this.config.logoUrl) params.set("logoUrl", this.config.logoUrl)
       if (this.config.language) params.set("language", this.config.language)
       if (this.config.primaryColor) params.set("primaryColor", this.config.primaryColor)
+      if (this.config.icon) params.set("icon", this.config.icon)
       if (this.config.apiUrl) params.set("apiUrl", this.config.apiUrl)
       return `${this.config.embedUrl}?${params.toString()}`
     }

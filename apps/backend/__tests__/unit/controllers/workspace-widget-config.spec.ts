@@ -93,6 +93,7 @@ describe('WorkspaceController - Widget Configuration', () => {
         widgetTitle: 'Customer Support Chat',
         widgetLanguage: 'en',
         widgetPrimaryColor: '#ff5722',
+        widgetIcon: 'sparkles',
       }
 
       mockReq.body = widgetConfig
@@ -256,6 +257,7 @@ describe('WorkspaceController - Widget Configuration', () => {
         widgetTitle: 'Customer Chat',
         widgetLanguage: 'it',
         widgetPrimaryColor: '#22c55e',
+        widgetIcon: 'bot',
       }
 
       mockPrisma.workspaceMember.findFirst.mockResolvedValue({
@@ -274,6 +276,7 @@ describe('WorkspaceController - Widget Configuration', () => {
           widgetTitle: 'Customer Chat',
           widgetLanguage: 'it',
           widgetPrimaryColor: '#22c55e',
+          widgetIcon: 'bot',
         })
       )
     })
@@ -297,6 +300,7 @@ describe('WorkspaceController - Widget Configuration', () => {
       const response = (mockRes.json as jest.Mock).mock.calls[0][0]
       expect(response.widgetLogoUrl).toBeNull()
       expect(response.widgetTitle).toBeNull()
+      expect(response.widgetIcon).toBe("chat")
     })
   })
 

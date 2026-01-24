@@ -56,6 +56,7 @@ const mockWorkspace = {
   widgetTitle: 'Customer Support',
   widgetLanguage: 'it',
   widgetPrimaryColor: '#22c55e',
+  widgetIcon: 'chat',
 }
 
 const renderWithProviders = (
@@ -149,6 +150,7 @@ describe('WidgetSettingsPage - Configuration Tests', () => {
             widgetTitle: 'New Support Chat',
             widgetLanguage: 'it',
             widgetPrimaryColor: expect.any(String),
+            widgetIcon: 'chat',
           })
         )
       })

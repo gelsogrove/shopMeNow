@@ -70,6 +70,7 @@ export class WidgetEmbedController {
         widgetLogoUrl: true,
         widgetLanguage: true,
         widgetPrimaryColor: true,
+        widgetIcon: true,
         sellsProductsAndServices: true,
       },
     })
@@ -85,6 +86,7 @@ export class WidgetEmbedController {
     const logoUrl = workspace?.widgetLogoUrl?.trim() || ""
     const language = workspace?.widgetLanguage || "it"
     const primaryColor = workspace?.widgetPrimaryColor || "#22c55e"
+    const icon = (workspace?.widgetIcon || "chat").trim()
 
     const widgetUrl = process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
     const apiUrl = process.env.API_URL || "http://localhost:3001/api/v1"
@@ -104,6 +106,7 @@ export class WidgetEmbedController {
       logoUrl: "${logoUrl.replace(/"/g, '\\"')}",
       language: "${language}",
       primaryColor: "${primaryColor}",
+      icon: "${icon.replace(/"/g, '\\"')}",
       position: "bottom-right",
       theme: "light"
     };

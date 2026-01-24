@@ -54,10 +54,13 @@ export interface Workspace {
   customAiRules?: string // 🆕 Custom AI rules that override default behavior
   allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
   logoUrl?: string // 🆕 Channel logo/icon
+  widgetLogoUrl?: string // 🆕 Widget bubble logo/image
+  widgetLogoKey?: string
   // 🆕 Widget Configuration
   widgetTitle?: string
   widgetLanguage?: string
   widgetPrimaryColor?: string
+  widgetIcon?: string
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

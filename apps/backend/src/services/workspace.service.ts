@@ -74,6 +74,7 @@ interface UpdateWorkspaceData {
   widgetTitle?: string
   widgetLanguage?: string
   widgetPrimaryColor?: string
+  widgetIcon?: string
 }
 
 export const workspaceService = {
@@ -122,6 +123,7 @@ export const workspaceService = {
         widgetTitle: true,
         widgetLanguage: true,
         widgetPrimaryColor: true,
+        widgetIcon: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -176,6 +178,7 @@ export const workspaceService = {
         widgetTitle: true,
         widgetLanguage: true,
         widgetPrimaryColor: true,
+        widgetIcon: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -272,6 +275,7 @@ export const workspaceService = {
         widgetTitle: true,
         widgetLanguage: true,
         widgetPrimaryColor: true,
+        widgetIcon: true,
       },
     })
   },
@@ -351,6 +355,11 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
+        // 🆕 Widget Configuration
+        widgetTitle: true,
+        widgetLanguage: true,
+        widgetPrimaryColor: true,
+        widgetIcon: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,

@@ -63,6 +63,9 @@ export function WidgetEmbedPage() {
         decodeParam(params.get("logoUrl")) ||
         (window as any)?.eChatbotConfig?.logoUrl ||
         getDefaultLogoDataUri(),
+      icon:
+        decodeParam(params.get("icon")) ||
+        (window as any)?.eChatbotConfig?.icon,
       primaryColor:
         decodeParam(params.get("primaryColor")) ||
         (window as any)?.eChatbotConfig?.primaryColor,
@@ -85,6 +88,7 @@ export function WidgetEmbedPage() {
         workspaceId={config.workspaceId}
         title={config.title}
         logoUrl={config.logoUrl}
+        icon={config.icon}
         primaryColor={config.primaryColor}
         language={config.language}
         apiUrl={config.apiUrl}

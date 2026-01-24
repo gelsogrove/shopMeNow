@@ -201,6 +201,9 @@ For privacy inquiries, please contact our support team.`
       widgetTitle: (w as any).widgetTitle ?? undefined,
       widgetLanguage: (w as any).widgetLanguage ?? undefined,
       widgetPrimaryColor: (w as any).widgetPrimaryColor ?? undefined,
+      widgetIcon: (w as any).widgetIcon ?? "chat",
+      widgetLogoUrl: (w as any).widgetLogoUrl ?? undefined,
+      widgetLogoKey: (w as any).widgetLogoKey ?? undefined,
     }))
   }
 

@@ -86,6 +86,7 @@ export class WorkspaceController {
         widgetTitle: workspace.widgetTitle ?? null,
         widgetLanguage: workspace.widgetLanguage ?? "it",
         widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
+        widgetIcon: workspace.widgetIcon ?? "chat",
       }))
 
       return res.json(serializedWorkspaces)
@@ -169,6 +170,7 @@ export class WorkspaceController {
           widgetTitle: workspace.widgetTitle ?? null,
           widgetLanguage: workspace.widgetLanguage ?? "it",
           widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
+          widgetIcon: workspace.widgetIcon ?? "chat",
           // 🆕 Translation Settings
           translateProductNames: workspace.translateProductNames,
           translateCategoryNames: workspace.translateCategoryNames,
@@ -397,6 +399,7 @@ export class WorkspaceController {
         widgetTitle: workspace.widgetTitle ?? null,
         widgetLanguage: workspace.widgetLanguage ?? "it",
         widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
+        widgetIcon: workspace.widgetIcon ?? "chat",
         // 🆕 Translation Settings
         translateProductNames: workspace.translateProductNames,
         translateCategoryNames: workspace.translateCategoryNames,

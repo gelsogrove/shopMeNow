@@ -78,6 +78,15 @@ describe('Widget Configuration - Data Layer', () => {
       // Should have default value
       expect(workspace?.widgetPrimaryColor).toBe('#22c55e')
     })
+
+    it('should have widgetIcon field with default "chat"', async () => {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: testWorkspaceId },
+        select: { widgetIcon: true },
+      })
+
+      expect(workspace?.widgetIcon).toBe('chat')
+    })
   })
 
   describe('Logo Separation - Channel vs Widget', () => {
@@ -125,6 +134,7 @@ describe('Widget Configuration - Data Layer', () => {
         widgetTitle: 'Updated Chat',
         widgetLanguage: 'en',
         widgetPrimaryColor: '#ff5722',
+        widgetIcon: 'sparkles',
       }
 
       const workspace = await prisma.workspace.update({
@@ -135,6 +145,7 @@ describe('Widget Configuration - Data Layer', () => {
       expect(workspace.widgetTitle).toBe('Updated Chat')
       expect(workspace.widgetLanguage).toBe('en')
       expect(workspace.widgetPrimaryColor).toBe('#ff5722')
+      expect(workspace.widgetIcon).toBe('sparkles')
     })
 
     it('should persist widget config across reads (simulating page refresh)', async () => {

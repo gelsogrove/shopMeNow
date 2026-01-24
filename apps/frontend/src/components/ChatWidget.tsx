@@ -6,10 +6,25 @@
  * <ChatWidget workspaceId="your-workspace-id" position="bottom-right" />
  */
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, Send, X } from "lucide-react"
+import { 
+  Loader2, 
+  Send, 
+  X, 
+  MessageCircle, 
+  Sparkles, 
+  Bot, 
+  LifeBuoy,
+  Brain,
+  Zap,
+  MessageSquare,
+  HelpCircle,
+  Phone,
+  Cpu,
+  MessagesSquare,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ChatSurface } from "@/components/chat/ChatSurface"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -37,6 +52,7 @@ interface ChatWidgetProps {
   title?: string
   placeholder?: string
   primaryColor?: string
+  icon?: string
   language?: string
   apiUrl?: string
   onOpenChange?: (isOpen: boolean) => void
@@ -67,6 +83,7 @@ export function ChatWidget({
   title = "Chat with us 💬",
   placeholder = "Type a message...",
   primaryColor = DEFAULT_PRIMARY_COLOR,
+  icon,
   language,
   apiUrl,
   onOpenChange,
@@ -78,7 +95,50 @@ export function ChatWidget({
   const { language: headerLanguage } = useLanguage()
   
   // ⚠️ PRIORITY: Read from window.eChatbotConfig first (set by WidgetLoader)
-  const widgetConfig = typeof window !== "undefined" ? (window as any).eChatbotConfig : null
+  const [configVersion, setConfigVersion] = useState(0)
+  const widgetConfig = useMemo(() => {
+    if (typeof window === "undefined") return null
+    return (window as any).eChatbotConfig || null
+  }, [configVersion])
+
+  useEffect(() => {
+    const cfg = typeof window !== "undefined" ? (window as any).eChatbotConfig : null
+    console.debug("🔎 ChatWidget resolved config", {
+      fromWindow: cfg,
+      resolvedIcon,
+      resolvedPrimaryColor,
+      configVersion,
+    })
+  }, [configVersion]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fallback: poll window.eChatbotConfig for late injections (handles cases where events are missed)
+  const lastConfigRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const interval = setInterval(() => {
+      try {
+        const current = (window as any).eChatbotConfig || null
+        const serialized = current ? JSON.stringify(current) : null
+        if (serialized && serialized !== lastConfigRef.current) {
+          lastConfigRef.current = serialized
+          setConfigVersion((v) => v + 1)
+        }
+      } catch {
+        // ignore JSON errors
+      }
+    }, 800)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Re-render when WidgetLoader broadcasts config changes
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const handler = () => setConfigVersion((v) => v + 1)
+    window.addEventListener("echatbot-config-updated", handler)
+    // Run once in case config is already present
+    handler()
+    return () => window.removeEventListener("echatbot-config-updated", handler)
+  }, [])
   
   // Resolve workspaceId: window config > prop > fallback
   const resolvedWorkspaceId = widgetConfig?.workspaceId || workspaceId || (typeof localStorage !== "undefined" && localStorage.getItem("echatbot-workspace-id"))
@@ -90,6 +150,7 @@ export function ChatWidget({
   const resolvedTitle = widgetConfig?.title || title
   const resolvedPrimaryColor = widgetConfig?.primaryColor || primaryColor
   const resolvedLogoUrl = widgetConfig?.logoUrl || logoUrl
+  const resolvedIcon = widgetConfig?.icon || icon || "chat"
   const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
   
   console.log("✅ Resolved widget config:", {
@@ -292,8 +353,39 @@ export function ChatWidget({
     `
     return `data:image/svg+xml,${encodeURIComponent(svg)}`
   })()
-  const displayLogoUrl =
-    !resolvedLogoUrl || resolvedLogoUrl.endsWith("/logo.png") ? defaultLogoUrl : resolvedLogoUrl
+  const shouldUseLogo = Boolean(resolvedLogoUrl && !resolvedLogoUrl.endsWith("/logo.png"))
+  const displayLogoUrl = shouldUseLogo ? resolvedLogoUrl : null
+
+  const renderIconGlyph = (value: string) => {
+    switch (value) {
+      case "chat":
+        return <MessageCircle className="h-6 w-6 text-white" />
+      case "bot":
+        return <Bot className="h-6 w-6 text-white" />
+      case "sparkles":
+        return <Sparkles className="h-6 w-6 text-white" />
+      case "support":
+        return <LifeBuoy className="h-6 w-6 text-white" />
+      case "brain":
+        return <Brain className="h-6 w-6 text-white" />
+      case "zap":
+        return <Zap className="h-6 w-6 text-white" />
+      case "send":
+        return <Send className="h-6 w-6 text-white" />
+      case "message-square":
+        return <MessageSquare className="h-6 w-6 text-white" />
+      case "messages":
+        return <MessagesSquare className="h-6 w-6 text-white" />
+      case "help":
+        return <HelpCircle className="h-6 w-6 text-white" />
+      case "phone":
+        return <Phone className="h-6 w-6 text-white" />
+      case "cpu":
+        return <Cpu className="h-6 w-6 text-white" />
+      default:
+        return <MessageCircle className="h-6 w-6 text-white" />
+    }
+  }
   const positionClasses = {
     "bottom-right": isEmbedded ? "bottom-2 right-2" : "bottom-6 right-6",
     "bottom-left": isEmbedded ? "bottom-2 left-2" : "bottom-6 left-6",
@@ -384,12 +476,25 @@ export function ChatWidget({
             positionClasses[position]
           )}
           aria-label="Open chat"
+          title={`widget-icon:${resolvedIcon}`}
         >
-          <img
-            src={displayLogoUrl}
-            alt="Chat"
-            className="h-full w-full rounded-full object-cover"
-          />
+          {displayLogoUrl ? (
+            <img
+              src={displayLogoUrl || defaultLogoUrl}
+              alt="Chat"
+              className="h-full w-full rounded-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = defaultLogoUrl
+              }}
+            />
+          ) : (
+            <div
+              className="h-full w-full rounded-full flex items-center justify-center shadow-inner"
+              style={{ backgroundColor: resolvedPrimaryColor || DEFAULT_PRIMARY_COLOR }}
+            >
+              {renderIconGlyph(resolvedIcon)}
+            </div>
+          )}
         </button>
       )}
 

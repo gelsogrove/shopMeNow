@@ -319,6 +319,7 @@ export class PlatformConfigController {
           widgetTitle: true,
           widgetLanguage: true,
           widgetPrimaryColor: true,
+          widgetIcon: true,
           deletedAt: true,
           sellsProductsAndServices: true,
           debugMode: true,
@@ -348,7 +349,9 @@ export class PlatformConfigController {
         })
       }
 
-      if (workspace.debugMode) {
+      // Allow widget on debug workspaces when running locally/non-production to ease testing
+      const isProd = process.env.NODE_ENV === "production"
+      if (workspace.debugMode && isProd) {
         return res.status(200).json({
           success: true,
           data: {
@@ -380,6 +383,7 @@ export class PlatformConfigController {
             title: workspace.widgetTitle || "Chat with us 💬",
             language: workspace.widgetLanguage || "it",
             primaryColor: workspace.widgetPrimaryColor || "#22c55e",
+            icon: workspace.widgetIcon || "chat",
           },
           showWidgetChatbot,
           error: null,

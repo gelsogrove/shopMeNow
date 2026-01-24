@@ -16,6 +16,7 @@ import { IMG_BASE_URL } from "@/config"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { toast } from "@/lib/toast"
+import { cn } from "@/lib/utils"
 import { updateWorkspace } from "@/services/workspaceApi"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { Textarea } from "@/components/ui/textarea"
@@ -29,14 +30,25 @@ import {
   Shield,
   Save,
   Monitor,
+  Copy,
+  MessageCircle,
+  Sparkles,
+  LifeBuoy,
+  Brain,
+  Zap,
+  Send,
+  HelpCircle,
+  Phone,
+  Mail,
+  Cpu,
+  MessagesSquare,
   ShoppingCart,
   AlertCircle,
-  Users,
   Briefcase,
   Smile,
+  Users,
   Award,
   Coffee,
-  Copy
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
@@ -64,6 +76,7 @@ interface WorkspaceData {
   widgetTitle: string
   widgetPrimaryColor: string
   widgetLanguage: string
+  widgetIcon: string
   businessType: string
   chatbotName: string
   botIdentityResponse: string
@@ -135,6 +148,21 @@ const BUSINESS_TYPES = [
   { value: "other", label: "Other", desc: "Other business type" },
 ]
 
+const WIDGET_ICON_OPTIONS = [
+  { value: "chat", label: "Chat Bubble", icon: MessageCircle, hint: "Classic chat" },
+  { value: "bot", label: "Bot", icon: Bot, hint: "AI assistant" },
+  { value: "sparkles", label: "Sparkles", icon: Sparkles, hint: "AI magic" },
+  { value: "support", label: "Support", icon: LifeBuoy, hint: "Help & support" },
+  { value: "brain", label: "Brain", icon: Brain, hint: "Smart AI" },
+  { value: "zap", label: "Zap", icon: Zap, hint: "Fast replies" },
+  { value: "send", label: "Send", icon: Send, hint: "Quick message" },
+  { value: "message-square", label: "Message", icon: MessageSquare, hint: "Conversation" },
+  { value: "messages", label: "Messages", icon: MessagesSquare, hint: "Multi chat" },
+  { value: "help", label: "Help", icon: HelpCircle, hint: "Questions" },
+  { value: "phone", label: "Phone", icon: Phone, hint: "Contact" },
+  { value: "cpu", label: "CPU", icon: Cpu, hint: "Tech AI" },
+]
+
 const defaultWelcomeMessage = "👋 Welcome! I'm your digital assistant. How can I help you today?"
 const defaultWipMessage = "⚠️ System is currently under maintenance. Please try again later."
 
@@ -182,6 +210,7 @@ export function SettingsPage() {
     widgetTitle: "Chat with us",
     widgetPrimaryColor: "#22c55e",
     widgetLanguage: "it",
+    widgetIcon: "chat",
     businessType: "retail",
     chatbotName: "Sofia",
     botIdentityResponse: "",
@@ -221,6 +250,7 @@ export function SettingsPage() {
         widgetTitle: currentWorkspace.widgetTitle || "Chat with us",
         widgetPrimaryColor: currentWorkspace.widgetPrimaryColor || "#22c55e",
         widgetLanguage: currentWorkspace.widgetLanguage || "it",
+        widgetIcon: currentWorkspace.widgetIcon || "chat",
         businessType: currentWorkspace.businessType || "retail",
         chatbotName: currentWorkspace.chatbotName || "Sofia",
         botIdentityResponse: currentWorkspace.botIdentityResponse || "",
@@ -637,90 +667,152 @@ export function SettingsPage() {
   )
 
   const renderWidgetSection = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-          <Globe className="h-6 w-6 text-indigo-600" />
+    <div className="h-full flex flex-col">
+      {/* Header Compatto */}
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <Globe className="h-5 w-5 text-indigo-600" />
           Widget Configuration
         </h2>
-        <p className="text-sm text-gray-500 mt-1">Customize your website chat widget</p>
+        <p className="text-xs text-gray-500 mt-1">Customize your website chat widget</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="widgetTitle">Widget Title</Label>
-            <Input
-              id="widgetTitle"
-              value={formData.widgetTitle}
-              onChange={(e) => handleFieldChange("widgetTitle", e.target.value)}
-              placeholder="Chat with us"
-              disabled={!canEdit}
-            />
-          </div>
+      {/* Main Card - Layout compatto senza scroll */}
+      <Card className="shadow-sm border-gray-200 flex-1 flex flex-col">
+        <CardHeader className="border-b bg-gradient-to-r from-gray-50 to-white px-4 py-3">
+          <CardTitle className="text-base font-semibold text-gray-900">Widget Appearance</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 flex-1">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+            {/* Colonna Sinistra */}
+            <div className="space-y-4">
+              {/* Widget Title */}
+              <div className="space-y-2">
+                <Label htmlFor="widgetTitle" className="text-xs font-semibold text-gray-700">Widget Title</Label>
+                <Input
+                  id="widgetTitle"
+                  value={formData.widgetTitle}
+                  onChange={(e) => handleFieldChange("widgetTitle", e.target.value)}
+                  placeholder="Chat with us"
+                  disabled={!canEdit}
+                  className="h-9 text-sm"
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="widgetPrimaryColor">Primary Color</Label>
-            <Input
-              id="widgetPrimaryColor"
-              type="color"
-              value={formData.widgetPrimaryColor}
-              onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
-              disabled={!canEdit}
-              className="w-32 h-10"
-            />
-          </div>
+              {/* Widget Icon */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-gray-700">Widget Icon</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {WIDGET_ICON_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={cn(
+                        "h-16 rounded border-2 transition-all flex flex-col items-center justify-center gap-1 p-1",
+                        formData.widgetIcon === option.value
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      )}
+                      onClick={() => handleFieldChange("widgetIcon", option.value)}
+                      disabled={!canEdit}
+                      title={`${option.label} - ${option.hint}`}
+                    >
+                      <option.icon 
+                        className={cn(
+                          "h-5 w-5 flex-shrink-0",
+                          formData.widgetIcon === option.value ? "text-green-600" : "text-gray-600"
+                        )} 
+                      />
+                      <span className={cn(
+                        "text-[9px] font-medium leading-tight",
+                        formData.widgetIcon === option.value ? "text-green-700" : "text-gray-700"
+                      )}>
+                        {option.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label>Embed Code</Label>
-            <div className="relative">
-              <pre className="bg-slate-900 text-green-400 p-4 rounded-lg text-xs overflow-x-auto">
+              {/* Primary Color */}
+              <div className="space-y-2">
+                <Label htmlFor="widgetPrimaryColor" className="text-xs font-semibold text-gray-700">Primary Color</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="widgetPrimaryColor"
+                    type="color"
+                    value={formData.widgetPrimaryColor}
+                    onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
+                    disabled={!canEdit}
+                    className="w-12 h-9 cursor-pointer rounded border-2"
+                  />
+                  <Input
+                    type="text"
+                    value={formData.widgetPrimaryColor}
+                    onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
+                    disabled={!canEdit}
+                    className="flex-1 font-mono text-xs h-9"
+                    placeholder="#22c55e"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Colonna Destra - Embed Code */}
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-gray-700">Embed Code</Label>
+              <p className="text-[10px] text-gray-500">Copy this code into your website's HTML</p>
+              <div className="relative">
+                <pre className="bg-slate-900 text-green-400 p-3 rounded text-[10px] leading-tight overflow-x-auto border border-slate-700 h-[280px] overflow-y-auto">
 {`<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = {
     workspaceId: "${currentWorkspace?.id || 'YOUR_WORKSPACE_ID'}",
     title: "${formData.widgetTitle || 'Chat with us'}",
     primaryColor: "${formData.widgetPrimaryColor || '#22c55e'}",
+    icon: "${formData.widgetIcon || 'chat'}",
     language: "${formData.widgetLanguage || 'it'}"
   };
 </script>
-<script src="${window.location.origin}/widget.js?v=186" async></script>`}
-              </pre>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="absolute top-2 right-2 bg-white"
-                onClick={() => {
-                  const embedCode = `<!-- eChatbot Widget -->
+<script src="${window.location.origin}/widget.js?v=187" async></script>`}
+                </pre>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="absolute top-2 right-2 h-7 text-xs bg-white text-gray-900 hover:bg-gray-100"
+                  onClick={() => {
+                    const embedCode = `<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = {
     workspaceId: "${currentWorkspace?.id}",
     title: "${formData.widgetTitle || 'Chat with us'}",
     primaryColor: "${formData.widgetPrimaryColor || '#22c55e'}",
+    icon: "${formData.widgetIcon || 'chat'}",
     language: "${formData.widgetLanguage || 'it'}"
   };
 </script>
-<script src="${window.location.origin}/widget.js?v=186" async></script>`;
-                  navigator.clipboard.writeText(embedCode);
-                  toast.success("Code copied to clipboard!");
-                }}
-              >
-                <Copy className="h-4 w-4 mr-1" />
-                Copy
-              </Button>
+<script src="${window.location.origin}/widget.js?v=187" async></script>`;
+                    navigator.clipboard.writeText(embedCode);
+                    toast.success("Code copied to clipboard!");
+                  }}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Save Buttons */}
       {canEdit && (
-        <div className="flex justify-end gap-3">
-          <Button onClick={() => navigate(-1)} variant="outline">
+        <div className="flex justify-end gap-2 mt-3">
+          <Button onClick={() => navigate(-1)} variant="outline" size="sm">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!isDirty}>
-            <Save className="mr-2 h-4 w-4" />
+          <Button onClick={handleSave} disabled={!isDirty} size="sm">
+            <Save className="mr-1.5 h-3.5 w-3.5" />
             Save Changes
           </Button>
         </div>
@@ -1054,50 +1146,62 @@ export function SettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex h-screen">
-        {/* Left Sidebar Menu */}
-        <aside className="w-56 bg-white border-r border-gray-200 overflow-y-auto">
-          <div className="p-4">
-            <h1 className="text-lg font-bold text-gray-900 mb-4">Settings</h1>
-            <nav className="space-y-1">
-              {MENU_ITEMS.map((item) => {
-                const Icon = item.icon
-                const isActive = activeSection === item.key
-                
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setActiveSection(item.key)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors ${
-                      isActive
-                        ? "bg-green-50 text-green-700 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Icon className={`h-5 w-5 ${isActive ? "text-green-600" : "text-gray-400"}`} />
-                    <div className="flex-1">
-                      <div className="text-sm">{item.label}</div>
-                      {!isActive && (
-                        <div className="text-xs text-gray-400">{item.description}</div>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </nav>
+        {/* Left Sidebar Menu - Compatta */}
+        <aside className="w-56 bg-white border-r border-gray-200 flex flex-col h-full">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <h1 className="text-base font-bold text-gray-900">Settings</h1>
           </div>
+          <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+            {MENU_ITEMS.map((item) => {
+              const Icon = item.icon
+              const isActive = activeSection === item.key
+              
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveSection(item.key)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all ${
+                    isActive
+                      ? "bg-green-50 text-green-700 font-medium"
+                      : "text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-green-600" : "text-gray-400"}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate">{item.label}</div>
+                    {!isActive && (
+                      <div className="text-[10px] text-gray-400 truncate leading-tight">{item.description}</div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </nav>
         </aside>
 
-        {/* Right Content Area */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="container pl-0 pr-4 pt-4 pb-4">
-            {renderContent()}
+        {/* Right Content Area - Fixed height with scroll */}
+        <main className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-8">
+              {renderContent()}
+            </div>
           </div>
         </main>
       </div>
 
       {/* Chat Widget (always visible) */}
       {currentWorkspace && (
-        <ChatWidget workspaceId={currentWorkspace.id} />
+        <ChatWidget
+          key={`${formData.widgetTitle}-${formData.widgetPrimaryColor}-${formData.widgetIcon}-${formData.widgetLanguage}`}
+          workspaceId={currentWorkspace.id}
+          title={formData.widgetTitle}
+          primaryColor={formData.widgetPrimaryColor}
+          icon={formData.widgetIcon}
+          logoUrl={
+            formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined
+          }
+          language={formData.widgetLanguage}
+        />
       )}
     </div>
   )

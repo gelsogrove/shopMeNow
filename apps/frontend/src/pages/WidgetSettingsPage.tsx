@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, MessageCircle, Sparkles, Bot, LifeBuoy } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ImageCropUpload } from "@/components/shared/ImageCropUpload";
@@ -32,6 +32,7 @@ export default function WidgetSettingsPage() {
   const [title, setTitle] = useState<string>(workspace?.name || "eChatbot");
   const [language, setLanguage] = useState<string>("it");
   const [primaryColor, setPrimaryColor] = useState<string>("#22c55e");
+  const [icon, setIcon] = useState<string>("chat");
   const [copied, setCopied] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -43,6 +44,7 @@ export default function WidgetSettingsPage() {
       setTitle((workspace as any).widgetTitle || workspace.name || "eChatbot");
       setLanguage((workspace as any).widgetLanguage || "it");
       setPrimaryColor((workspace as any).widgetPrimaryColor || "#22c55e");
+      setIcon((workspace as any).widgetIcon || "chat");
     }
   }, [workspace]);
 
@@ -57,6 +59,7 @@ export default function WidgetSettingsPage() {
       apiUrl,
       title,
       logoUrl: logoUrl ? `${IMG_BASE_URL}${logoUrl}` : "",
+      icon,
       language,
       primaryColor,
     };
@@ -87,6 +90,13 @@ export default function WidgetSettingsPage() {
     { code: "en", name: "English" },
     { code: "es", name: "Spanish" },
     { code: "pt", name: "Portuguese" },
+  ];
+
+  const iconOptions = [
+    { value: "chat", label: "Chat Bubble", icon: MessageCircle, hint: "Rounded, friendly bubble" },
+    { value: "sparkles", label: "Sparkles", icon: Sparkles, hint: "Playful marketing vibe" },
+    { value: "support", label: "Human Support", icon: LifeBuoy, hint: "Highlights human help" },
+    { value: "bot", label: "Bot", icon: Bot, hint: "Tech-forward feel" },
   ];
 
   const handleLogoUpload = async (file: File) => {
@@ -151,12 +161,14 @@ export default function WidgetSettingsPage() {
         widgetTitle: title,
         widgetLanguage: language,
         widgetPrimaryColor: primaryColor,
+        widgetIcon: icon,
       });
       setCurrentWorkspace({
         ...workspace,
         widgetTitle: title,
         widgetLanguage: language,
         widgetPrimaryColor: primaryColor,
+        widgetIcon: icon,
       } as any);
       toast.success("Widget configuration saved!");
     } catch (error: any) {
@@ -174,10 +186,11 @@ export default function WidgetSettingsPage() {
   };
 
   const generateEmbedCode = (): string => {
+    const cacheBust = "187" // bump to force latest widget.js
     const widgetScriptUrl =
       typeof window !== "undefined" && window.location.hostname !== "localhost"
-        ? `${window.location.origin}/widget.js?v=186`
-        : "http://localhost:3000/widget.js?v=186";
+        ? `${window.location.origin}/widget.js?v=${cacheBust}`
+        : `http://localhost:3000/widget.js?v=${cacheBust}`;
     const config = getWidgetConfig();
     return `<!-- eChatbot Widget -->
 <script>
@@ -251,6 +264,26 @@ export default function WidgetSettingsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Widget Icon</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {iconOptions.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        variant={icon === option.value ? "default" : "outline"}
+                        className="justify-start gap-3 h-auto py-3"
+                        onClick={() => setIcon(option.value)}
+                      >
+                        <option.icon className="h-5 w-5" />
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm font-semibold">{option.label}</span>
+                          <span className="text-xs text-muted-foreground">{option.hint}</span>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="color">Primary Color</Label>
@@ -365,6 +398,7 @@ export default function WidgetSettingsPage() {
           workspaceId={workspace.id}
           title={title}
           logoUrl={logoUrl ? `${IMG_BASE_URL}${logoUrl}` : undefined}
+          icon={icon}
           primaryColor={primaryColor}
           language={language}
           placeholder={translations[language]?.placeholder || "Type a message..."}

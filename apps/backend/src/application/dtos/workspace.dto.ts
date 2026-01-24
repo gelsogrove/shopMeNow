@@ -157,10 +157,6 @@ export class WorkspaceDTO extends BaseDTO {
   @IsOptional()
   widgetIcon?: string;
 
-  @IsString()
-  @IsOptional()
-  widgetIcon?: string;
-
   @ValidateNested()
   @Type(() => WorkspaceContactDTO)
   @IsOptional()
@@ -326,6 +322,10 @@ export class UpdateWorkspaceDTO {
   @IsOptional()
   widgetPrimaryColor?: string;
 
+  @IsString()
+  @IsOptional()
+  widgetIcon?: string;
+ 
   @IsString()
   @IsOptional()
   url?: string;

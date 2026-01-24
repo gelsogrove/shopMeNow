@@ -56,10 +56,12 @@ export interface Workspace {
   chatbotName?: string // Custom name for the chatbot (e.g., "Sofia", "Marco")
   businessType?: string // Business sector (e.g., "food", "fashion", "electronics")
   // 🆕 Widget Configuration
-  logoUrl?: string
   widgetTitle?: string
   widgetLanguage?: string
   widgetPrimaryColor?: string
+  widgetIcon?: string
+  widgetLogoUrl?: string
+  widgetLogoKey?: string
 }
 
 export interface CreateWorkspaceData {
@@ -115,6 +117,7 @@ export interface UpdateWorkspaceData {
   widgetTitle?: string
   widgetLanguage?: string
   widgetPrimaryColor?: string
+  widgetIcon?: string
 }
 
 const workspaceApi = {

@@ -33,8 +33,8 @@ export function WidgetLoader() {
 
   // Check if widget should be visible
   const isHomePage = location.pathname === "/"
-  const isEcommerce = workspace?.sellsProductsAndServices === true
-  const shouldShowWidget = isHomePage && !isEcommerce
+  // Always allow widget on homepage; target workspace suitability is enforced by the backend
+  const shouldShowWidget = isHomePage
 
   // Load widget script dynamically from platform config
   useEffect(() => {
@@ -59,22 +59,34 @@ export function WidgetLoader() {
           return
         }
 
-        const data = await response.json()
-        
-        // Check if widget should be shown
-        if (!data.success || !data.data?.config) {
-          console.log("⚠️ No widget configured:", data.data?.error || "Unknown")
+        const payload = await response.json().catch((err) => {
+          console.error("❌ Widget config: failed to parse JSON", err)
+          return null
+        })
+
+        // Validate payload shape
+        const config = payload?.data?.config
+        if (
+          !payload?.success ||
+          !config ||
+          typeof config !== "object" ||
+          typeof config.workspaceId !== "string"
+        ) {
+          console.log(
+            "⚠️ No widget configured:",
+            payload?.data?.error || "Unknown shape",
+            "payload:",
+            payload
+          )
           clearWidgetConfig()
           return
         }
 
-        if (data.data?.showWidgetChatbot === false) {
+        if (payload?.data?.showWidgetChatbot === false) {
           console.log("⚠️ Widget disabled by platform config")
           clearWidgetConfig()
           return
         }
-
-        const config = data.data.config
 
         // Inject window.eChatbotConfig with language from header dropdown
         (window as any).eChatbotConfig = {
@@ -84,12 +96,18 @@ export function WidgetLoader() {
           language: language, // Use language from header dropdown
           primaryColor: config.primaryColor,
           logoUrl: config.logoUrl,
+          icon: config.icon || workspace?.widgetIcon || "chat",
         }
+
+        // Notify any live widget listeners to re-render with the new config
+        window.dispatchEvent(new Event("echatbot-config-updated"))
 
         console.log("✅ Widget config injected:", {
           workspaceId: config.workspaceId,
           language: language,
           title: config.title,
+          icon: config.icon || "chat",
+          primaryColor: config.primaryColor,
         })
 
         // Load widget script (local component - ChatWidget will read window.eChatbotConfig)
@@ -111,6 +129,7 @@ export function WidgetLoader() {
     // Cleanup on unmount or when rules change
     return () => {
       clearWidgetConfig()
+      window.dispatchEvent(new Event("echatbot-config-updated"))
     }
   }, [shouldShowWidget, language]) // Re-inject config when language changes
 
