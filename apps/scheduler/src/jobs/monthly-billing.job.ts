@@ -70,25 +70,91 @@ import logger from '../utils/logger'
  */
 
 /**
- * MOCK: Payment processing
- * TODO: Replace with real PayPal/Stripe integration
+ * REAL: Payment processing via PayPal Outstanding Balance
+ * When admin clicks "Process Payment", we update the subscription's outstanding balance
+ * PayPal then charges the customer automatically and sends webhook PAYMENT.SUCCESS
+ * 
+ * This scheduler now only creates PENDING invoices - actual payment is handled manually
  */
-async function processPayment(
+async function createPendingInvoice(
   userId: string,
   amount: number,
-  description: string
-): Promise<{ success: boolean; transactionId?: string; error?: string }> {
-  logger.info(`[PAYMENT MOCK] 💳 Processing $${amount.toFixed(2)} for user ${userId}`)
-  logger.info(`[PAYMENT MOCK] Description: ${description}`)
-
-  // TODO: Implement real payment processing
-  // const paymentResult = await paypalService.charge(userId, amount)
-  // return paymentResult
-
-  // For now, always succeed
-  return {
-    success: true,
-    transactionId: `MOCK_${Date.now()}_${userId.substring(0, 8)}`,
+  subscriptionFee: number,
+  creditDebt: number,
+  planType: string,
+  planDisplayName: string,
+  periodMonth: number,
+  periodYear: number
+): Promise<{ success: boolean; invoiceId?: string; error?: string }> {
+  logger.info(`[BILLING] 📋 Creating PENDING invoice: $${amount.toFixed(2)} for user ${userId}`)
+  
+  try {
+    const periodStart = new Date(periodYear, periodMonth - 1, 1, 0, 0, 0)
+    const periodEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59)
+    
+    // Create invoice with PENDING status - awaiting manual payment processing
+    const invoice = await prisma.monthlyInvoice.upsert({
+      where: {
+        userId_periodYear_periodMonth: {
+          userId,
+          periodYear,
+          periodMonth,
+        },
+      },
+      create: {
+        userId,
+        periodStart,
+        periodEnd,
+        periodMonth,
+        periodYear,
+        subscriptionAmount: subscriptionFee,
+        creditUsage: 0,
+        creditDebt: creditDebt,
+        creditNotesTotal: 0,
+        subtotalAmount: subscriptionFee,
+        taxRate: 0,
+        taxAmount: 0,
+        totalAmount: amount,
+        status: 'PENDING', // Ready for admin to process payment
+        planType: planType as any,
+        itemsBreakdown: {
+          messages: { count: 0, amount: 0 },
+          orders: { count: 0, amount: 0 },
+          pushNotifications: { count: 0, amount: 0 },
+          adjustments: { count: 0, amount: 0 },
+          totalConsumption: 0,
+          creditDebt: creditDebt,
+          subscriptionFee: subscriptionFee,
+        },
+      },
+      update: {
+        // If already exists (e.g., was DRAFT), update to PENDING
+        status: 'PENDING',
+        totalAmount: amount,
+        subscriptionAmount: subscriptionFee,
+        creditDebt: creditDebt,
+        itemsBreakdown: {
+          messages: { count: 0, amount: 0 },
+          orders: { count: 0, amount: 0 },
+          pushNotifications: { count: 0, amount: 0 },
+          adjustments: { count: 0, amount: 0 },
+          totalConsumption: 0,
+          creditDebt: creditDebt,
+          subscriptionFee: subscriptionFee,
+        },
+      },
+    })
+    
+    return {
+      success: true,
+      invoiceId: invoice.id,
+    }
+  } catch (error) {
+    logger.error(`[BILLING] ❌ Failed to create invoice for user ${userId}:`, error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
   }
 }
 
@@ -256,90 +322,54 @@ export async function monthlyBillingJob(): Promise<void> {
       // If credit is negative, add the debt to the charge
       const creditDebt = currentBalance < 0 ? Math.abs(currentBalance) : 0
       const totalCharge = subscriptionFee + creditDebt
+      
+      // Get billing month (previous month since we bill for completed month)
+      const now = new Date()
+      const billingMonth = now.getMonth() // 0-indexed (January = 0)
+      const billingYear = billingMonth === 0 ? now.getFullYear() - 1 : now.getFullYear()
+      const actualBillingMonth = billingMonth === 0 ? 12 : billingMonth // 1-indexed for display
 
       logger.info(
         `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription €${subscriptionFee} + Debt €${creditDebt.toFixed(2)} = Total €${totalCharge.toFixed(2)}`
       )
 
       // ═══════════════════════════════════════════════════════════════════
-      // STEP 6: Process payment
+      // STEP 6: Create PENDING invoice (payment processed manually by admin)
       // ═══════════════════════════════════════════════════════════════════
-      const paymentResult = await processPayment(
+      const invoiceResult = await createPendingInvoice(
         owner.id,
         totalCharge,
-        `Monthly billing ${monthName} - ${(planConfig as any).displayName}`
+        subscriptionFee,
+        creditDebt,
+        owner.planType as string,
+        (planConfig as any).displayName,
+        actualBillingMonth,
+        billingYear
       )
 
-      if (paymentResult.success) {
+      if (invoiceResult.success) {
         // ═══════════════════════════════════════════════════════════════
-        // PAYMENT SUCCESS - Update User billing fields
-        // ═══════════════════════════════════════════════════════════════
-        await prisma.$transaction([
-          // Update billing status (creditBalance stays UNCHANGED)
-          // Subscription fee is paid externally (PayPal/Stripe)
-    // Credit balance is ONLY for WhatsApp messages ($0.10 each)
-          prisma.user.update({
-            where: { id: owner.id },
-            data: {
-              // creditBalance: NOT TOUCHED - remains for message payments
-              subscriptionStatus: 'ACTIVE',
-              paymentFailureCount: 0,
-              lastPaymentFailedAt: null,
-              nextBillingDate: new Date(today.getFullYear(), today.getMonth() + 1, 1),
-            },
-          }),
-          // Create transaction record with userId (required)
-          // workspaceId is optional (null for owner-level billing)
-          prisma.billingTransaction.create({
-            data: {
-              userId: owner.id, // Feature 198: Required field
-              workspaceId: null, // Owner-level billing, not workspace-specific
-              type: 'MONTHLY_FEE',
-              amount: new Prisma.Decimal((-totalCharge).toFixed(2)),
-              balanceAfter: new Prisma.Decimal(currentBalance.toFixed(2)), // Credit balance UNCHANGED
-              description: `Monthly billing ${monthName} - ${(planConfig as any).displayName} (€${subscriptionFee})${creditDebt > 0 ? ` + Credit debt (€${creditDebt.toFixed(2)})` : ''} - Paid externally`,
-              referenceId: paymentResult.transactionId,
-              referenceType: 'payment',
-            },
-          }),
-        ])
-
-        logger.info(
-          `[BILLING] ✅ Payment success for ${ownerName}: €${totalCharge.toFixed(2)} (Tx: ${paymentResult.transactionId})`
-        )
-        stats.paymentSuccess++
-      } else {
-        // ═══════════════════════════════════════════════════════════════
-        // PAYMENT FAILED - Update User status (affects all workspaces)
+        // INVOICE CREATED - Now waiting for admin to process payment
         // ═══════════════════════════════════════════════════════════════
         await prisma.user.update({
           where: { id: owner.id },
           data: {
-            subscriptionStatus: 'PAYMENT_FAILED',
-            lastPaymentFailedAt: new Date(),
-            paymentFailureCount: { increment: 1 },
+            nextBillingDate: new Date(today.getFullYear(), today.getMonth() + 1, 1),
           },
         })
 
-        // Create failed transaction record
-        await prisma.billingTransaction.create({
-          data: {
-            userId: owner.id, // Feature 198: Required field
-            workspaceId: null, // Owner-level billing
-            type: 'MONTHLY_FEE',
-            amount: new Prisma.Decimal(0), // No charge
-            balanceAfter: new Prisma.Decimal(currentBalance.toFixed(2)),
-            description: `Monthly billing ${monthName} - PAYMENT FAILED: ${paymentResult.error || 'Unknown error'}`,
-          },
-        })
-
-        logger.warn(
-          `[BILLING] ❌ Payment failed for ${ownerName} (${workspaceCount} workspaces blocked): ${paymentResult.error || 'Unknown error'}`
+        logger.info(
+          `[BILLING] ✅ Invoice PENDING created for ${ownerName}: €${totalCharge.toFixed(2)} (Invoice: ${invoiceResult.invoiceId})`
         )
-        stats.paymentFailed++
-
-        // TODO: Send payment failed notification email
-        // await emailService.sendPaymentFailedNotification(owner)
+        stats.paymentSuccess++ // Rename to invoiceSuccess in future
+      } else {
+        // ═══════════════════════════════════════════════════════════════
+        // INVOICE CREATION FAILED - Log error
+        // ═══════════════════════════════════════════════════════════════
+        logger.error(
+          `[BILLING] ❌ Failed to create invoice for ${ownerName}: ${invoiceResult.error}`
+        )
+        stats.paymentFailed++ // Rename to invoiceFailed in future
       }
 
       stats.processed++
@@ -354,8 +384,8 @@ export async function monthlyBillingJob(): Promise<void> {
   logger.info(`[BILLING] 🏁 Monthly billing completed in ${duration}s`)
   logger.info(`[BILLING] 📊 Stats:`)
   logger.info(`   - Owners Processed: ${stats.processed}`)
-  logger.info(`   - Payment Success: ${stats.paymentSuccess}`)
-  logger.info(`   - Payment Failed: ${stats.paymentFailed}`)
+  logger.info(`   - Invoices Created: ${stats.paymentSuccess}`)
+  logger.info(`   - Invoices Failed: ${stats.paymentFailed}`)
   logger.info(`   - Pending Plans Applied: ${stats.pendingPlanApplied}`)
   logger.info(`   - Skipped (Paused): ${stats.skippedPaused}`)
   logger.info(`   - Skipped (Free Trial): ${stats.skippedFreeTrial}`)

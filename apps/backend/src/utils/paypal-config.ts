@@ -17,19 +17,6 @@ export const resolvePayPalEnvironment = (
   return "live"
 }
 
-const getRedirectUriForEnv = (environment: PayPalEnvironment): string => {
-  const envSpecific =
-    environment === "live"
-      ? process.env.PAYPAL_REDIRECT_URI_LIVE
-      : process.env.PAYPAL_REDIRECT_URI_SANDBOX
-
-  return (
-    envSpecific ||
-    process.env.PAYPAL_REDIRECT_URI ||
-    `${config.appUrl}/api/v1/paypal/callback`
-  )
-}
-
 export const loadPayPalConfigForEnv = (environment: PayPalEnvironment) => {
   const clientId =
     environment === "live"
@@ -47,7 +34,6 @@ export const loadPayPalConfigForEnv = (environment: PayPalEnvironment) => {
     environment === "live"
       ? "https://api-m.paypal.com"
       : "https://api-m.sandbox.paypal.com"
-  const redirectUri = getRedirectUriForEnv(environment)
   const planId =
     environment === "live"
       ? process.env.PAYPAL_PLAN_ID_LIVE
@@ -60,7 +46,6 @@ export const loadPayPalConfigForEnv = (environment: PayPalEnvironment) => {
     clientSecret,
     connectBaseUrl,
     apiBaseUrl,
-    redirectUri,
     planId,
   }
 }

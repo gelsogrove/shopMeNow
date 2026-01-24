@@ -2118,6 +2118,15 @@ router.get(
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 50,
+        include: {
+          invoice: {
+            select: {
+              periodMonth: true,
+              periodYear: true,
+              status: true,
+            },
+          },
+        },
       })
 
       res.json({
@@ -2127,6 +2136,10 @@ router.get(
           transactions: transactions.map((tx) => ({
             id: tx.id,
             invoiceId: tx.invoiceId,
+            invoicePeriod: tx.invoice
+              ? `${String(tx.invoice.periodMonth).padStart(2, "0")}/${tx.invoice.periodYear}`
+              : null,
+            invoiceStatus: tx.invoice?.status || null,
             amount: Number(tx.amount),
             currency: tx.currency,
             status: tx.status,
@@ -2249,6 +2262,92 @@ router.put(
 
 /**
  * @swagger
+ * /api/users/admin/paypal/transactions:
+ *   get:
+ *     summary: List all PayPal transactions (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [SUCCESS, FAILED]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ */
+router.get(
+  "/admin/paypal/transactions",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { status, limit = "100" } = req.query as { status?: string; limit?: string }
+
+      const where: any = {}
+      if (status && (status === "SUCCESS" || status === "FAILED")) {
+        where.status = status
+      }
+
+      const transactions = await prisma.payPalTransaction.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: parseInt(limit, 10),
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          invoice: {
+            select: {
+              id: true,
+              periodMonth: true,
+              periodYear: true,
+              totalAmount: true,
+              status: true,
+            },
+          },
+        },
+      })
+
+      res.json({
+        success: true,
+        data: transactions.map((tx) => ({
+          id: tx.id,
+          userId: tx.userId,
+          userEmail: tx.user?.email,
+          userName: tx.user ? `${tx.user.firstName || ""} ${tx.user.lastName || ""}`.trim() : null,
+          invoiceId: tx.invoiceId,
+          invoicePeriod: tx.invoice ? `${tx.invoice.periodMonth}/${tx.invoice.periodYear}` : null,
+          invoiceStatus: tx.invoice?.status,
+          amount: Number(tx.amount),
+          currency: tx.currency,
+          status: tx.status,
+          notes: tx.notes,
+          adminUserId: tx.adminUserId,
+          createdAt: tx.createdAt,
+        })),
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error fetching PayPal transactions:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch transactions",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
  * /api/users/admin/invoices/{invoiceId}/paypal/mock-payment:
  *   post:
  *     summary: Process PayPal monthly payment (admin, Subscriptions v2)
@@ -2258,7 +2357,7 @@ router.put(
  */
 // Backward-compat path kept for UI, and treated as real capture
 router.post(
-  "/admin/invoices/:invoiceId/paypal/mock-payment",
+  "/admin/invoices/:invoiceId/paypal/process-payment",
   authMiddleware,
   platformAdminMiddleware,
   async (req: Request, res: Response) => {
@@ -2267,104 +2366,70 @@ router.post(
       const { notes } = req.body as { notes?: string }
       const adminUser = (req as any).user
 
-      const invoice = await prisma.monthlyInvoice.findUnique({
-        where: { id: invoiceId },
-        include: {
-          user: {
-            select: {
-              id: true,
-              paypalStatus: true,
-              paypalEnvironment: true,
-              isPlatformAdmin: true,
-              isDeveloperUser: true,
-              paypalAccessTokenEncrypted: true,
-              paypalRefreshTokenEncrypted: true,
-            },
-          },
-        },
-      })
-
-      if (!invoice) {
-        res.status(404).json({ success: false, error: "Invoice not found" })
+      if (!adminUser?.id) {
+        res.status(401).json({ success: false, error: "Unauthorized" })
         return
       }
 
-      // Determine environment based on user role
-      const env: "sandbox" | "live" =
-        invoice.user.isPlatformAdmin || invoice.user.isDeveloperUser
-          ? "sandbox"
-          : "live"
+      // Import and use the PayPal billing service
+      const { processPayment } = await import("../../../services/paypal-billing.service")
+      
+      const result = await processPayment(invoiceId, adminUser.id, notes)
 
-      // Basic gating: require PayPal connection
-      if (invoice.user.paypalStatus !== PayPalStatus.CONNECTED) {
-        res.status(400).json({
-          success: false,
-          error: "PayPal connection required to process payment",
-          code: "PAYPAL_NOT_CONNECTED",
-        })
-        return
-      }
-
-      // TODO: Implement subscription payment capture
-      // Note: Subscription tracking logic removed (metadata field no longer exists)
-      const capture = { success: false, transactionId: null }
-
-      const success = capture.success
-      const status: PayPalTransactionStatus = success ? "SUCCESS" : "FAILED"
-
-      const transaction = await prisma.payPalTransaction.create({
-        data: {
-          userId: invoice.userId,
-          invoiceId: invoice.id,
-          amount: invoice.totalAmount,
-          currency: "USD",
-          status,
-          notes: notes
-            ? `${notes} | env:${env}`
-            : `env:${env}`,
-          adminUserId: adminUser?.id ?? null,
-        },
-      })
-
-      const paidAt = success ? new Date() : null
-
-      await prisma.monthlyInvoice.update({
-        where: { id: invoice.id },
-        data: {
-          status: success ? "PAID" : "FAILED",
-          paidAt,
-          adminNotes: notes ?? invoice.adminNotes ?? null,
-          adminMarkedById: adminUser?.id ?? null,
-          adminMarkedAt: new Date(),
-        },
-      })
-
-      if (success) {
-        await invoiceService.ensureInvoiceNumber(invoice.id, paidAt ?? new Date())
-        const owner = await prisma.user.findUnique({
-          where: { id: invoice.userId },
-          select: { creditBalance: true },
-        })
-        await prisma.billingTransaction.create({
+      if (result.success) {
+        res.json({
+          success: true,
           data: {
-            userId: invoice.userId,
-            workspaceId: null,
-            type: TransactionType.INVOICE_PAID,
-            amount: invoice.totalAmount,
-            balanceAfter: owner?.creditBalance ?? 0,
-            description: `Invoice ${invoice.periodMonth}/${invoice.periodYear} paid`,
-            referenceId: invoice.id,
-            referenceType: "invoice",
+            transactionId: result.transactionId,
+            message: "Payment initiated. Invoice will be marked PAID when PayPal confirms.",
           },
         })
+      } else {
+        const statusCode = result.errorCode === "RATE_LIMITED" ? 429 : 400
+        res.status(statusCode).json({
+          success: false,
+          error: result.error,
+          code: result.errorCode,
+          transactionId: result.transactionId,
+        })
       }
+    } catch (error) {
+      logger.error("[ADMIN] Error processing PayPal payment:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to process payment",
+      })
+    }
+  }
+)
+
+// Legacy mock endpoint - kept for backwards compatibility, redirects to new endpoint
+router.post(
+  "/admin/invoices/:invoiceId/paypal/mock-payment",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    // Redirect to the real payment processor
+    const { invoiceId } = req.params
+    const { notes } = req.body as { notes?: string }
+    const adminUser = (req as any).user
+
+    if (!adminUser?.id) {
+      res.status(401).json({ success: false, error: "Unauthorized" })
+      return
+    }
+
+    try {
+      const { processPayment } = await import("../../../services/paypal-billing.service")
+      const result = await processPayment(invoiceId, adminUser.id, notes)
 
       res.json({
-        success: true,
+        success: result.success,
         data: {
-          success,
-          transactionId: transaction.id,
-          status: transaction.status,
+          success: result.success,
+          transactionId: result.transactionId,
+          status: result.success ? "SUCCESS" : "FAILED",
+          error: result.error,
         },
       })
     } catch (error) {

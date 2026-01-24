@@ -40,7 +40,7 @@ import { api } from "@/services/api"
 import { deleteWorkspace, updateWorkspace } from "@/services/workspaceApi"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { useMutation } from "@tanstack/react-query"
-import { Check, Copy, HelpCircle, Loader2, Monitor, Save, Smartphone, Trash2, Store, Users, Headphones, Bot, MessageSquare, Globe, Shield, ChevronDown, ChevronUp, ChevronRight, AlertCircle, ShoppingCart, Edit3, Briefcase, Smile, Award, Coffee } from "lucide-react"
+import { Check, Copy, HelpCircle, Loader2, Monitor, Save, Smartphone, Trash2, Store, Users, Headphones, Bot, MessageSquare, Globe, Shield, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, AlertCircle, ShoppingCart, Edit3, Briefcase, Smile, Award, Coffee } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 
@@ -103,6 +103,15 @@ const defaultWelcomeMessage =
   "Welcome! I'm your digital assistant. How can I help you today?"
 
 const defaultWipMessage = "Work in progress. Please contact us later."
+
+type SectionKey =
+  | "business"
+  | "channels"
+  | "whatsapp"
+  | "widget"
+  | "personality"
+  | "support"
+  | "security"
 
 // Custom navigation blocker
 function useUnsavedChangesGuard(when: boolean, onSave: () => Promise<boolean>) {
@@ -446,8 +455,8 @@ export default function SettingsPage() {
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   
-  // Accordion state - which section is open (only one at a time)
-  const [openSection, setOpenSection] = useState<string>("")
+  // Sheet state - which section sheet is open
+  const [openSheetSection, setOpenSheetSection] = useState<SectionKey | null>(null)
   
   // Video modal state
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
@@ -516,6 +525,30 @@ export default function SettingsPage() {
   const customAiVariables = formData.sellsProductsAndServices
     ? [...baseCustomAiVariables, ...ecommerceCustomAiVariables]
     : baseCustomAiVariables
+
+  const sectionTitles: Record<SectionKey, string> = {
+    business: "Business Configuration",
+    channels: "Channel Selection",
+    whatsapp: "WhatsApp Configuration",
+    widget: "Widget Configuration",
+    personality: "AI Personality",
+    support: "Human Support",
+    security: "Security & Access",
+  }
+
+  const handleSectionOpen = (sectionId: SectionKey) => {
+    setOpenSheetSection(sectionId)
+  }
+
+  const handleSheetClose = () => {
+    setOpenSheetSection(null)
+  }
+
+  const layoutClass = "mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+  const tileCardClass = "min-h-[160px]"
+  const tileHoverClass =
+    "transition-all hover:shadow-lg hover:border-green-400 bg-white cursor-pointer group"
+  const iconWrapperBase = "flex h-10 w-10 items-center justify-center rounded-lg transition-transform duration-300 group-hover:scale-110"
 
   const { workspace: currentWorkspace, setCurrentWorkspace, loading: workspaceLoading } = useWorkspace()
   const { role: workspaceRole, isSuperAdmin } = useWorkspaceRole(currentWorkspace?.id)
@@ -843,26 +876,29 @@ export default function SettingsPage() {
         )}
         
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
               <p className="mt-1 text-sm text-gray-500">
                 Configure your channel and AI assistant
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2">
-                <Monitor className="h-4 w-4 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">Channel Active</span>
-                <Switch
-                  checked={formData.channelStatus}
-                  onCheckedChange={(checked) =>
-                    handleFieldChange("channelStatus", checked)
-                  }
-                  disabled={!canEdit}
-                />
-              </div>
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+                  <Monitor className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-600">Channel</span>
+                  <Switch
+                    checked={formData.channelStatus}
+                    onCheckedChange={(checked) =>
+                      handleFieldChange("channelStatus", checked)
+                    }
+                    disabled={!canEdit}
+                  />
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${formData.channelStatus ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {formData.channelStatus ? 'Active' : 'Off'}
+                  </span>
+                </div>
               <Button
                 onClick={() => setShowDeleteDialog(true)}
                 variant="outline"
@@ -870,24 +906,24 @@ export default function SettingsPage() {
                 className="text-red-600 border-red-200 hover:bg-red-50"
                 disabled={deleteWorkspaceMutation.isPending || !canEdit}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Channel
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Delete
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={saveSettingsMutation.isPending || !canEdit}
                 size="sm"
-                className="bg-green-600 text-white hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
                 {saveSettingsMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                     Saving...
                   </>
                 ) : (
                   <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                    <Save className="mr-1.5 h-4 w-4" />
+                    Save
                   </>
                 )}
               </Button>
@@ -896,30 +932,29 @@ export default function SettingsPage() {
         </div>
 
         {/* Card + Guide Layout */}
-        <div className="mt-6 space-y-6">
+        <div className={layoutClass}>
           {/* 1️⃣ Business Configuration */}
+          {isSectionVisible("business") && !focusedSection && (
           <div>
-            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
-              <CardHeader 
-                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
-                onClick={() => setOpenSection(openSection === "business" ? "" : "business")}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
-                      <Store className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Business Configuration</CardTitle>
-                      <CardDescription>
-                        Define your business type and basic information
-                      </CardDescription>
-                    </div>
+            <Card 
+              className={`rounded-xl border-2 border-gray-200 h-full flex flex-col ${tileHoverClass} ${tileCardClass} cursor-pointer`}
+              onClick={() => handleSectionOpen("business")}
+            >
+              <CardHeader className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`${iconWrapperBase} bg-purple-100`}>
+                    <Store className="h-5 w-5 text-purple-600" />
                   </div>
-                  <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${openSection === "business" ? "rotate-90" : ""}`} />
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-semibold text-gray-900">Business Configuration</CardTitle>
+                    <CardDescription className="text-sm text-gray-500">
+                      Define your business type and basic information
+                    </CardDescription>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </CardHeader>
-              {openSection === "business" && (
+              {isSectionOpen("business") && (
               <CardContent className="px-6 pb-6 pt-6">
                 <div className="grid gap-6 lg:grid-cols-12">
                   <div className="lg:col-span-8 space-y-6">
@@ -1020,7 +1055,7 @@ export default function SettingsPage() {
                   <div className="lg:col-span-4">
                     <GuideCard
                       guide={GUIDES.business}
-                      isOpen={openSection === "business"}
+                      isOpen={isSectionOpen("business")}
                     />
                   </div>
                 </div>
@@ -1028,30 +1063,30 @@ export default function SettingsPage() {
               )}
             </Card>
           </div>
+          )}
 
           {/* 2️⃣ Channel Selection */}
+          {isSectionVisible("channels") && !focusedSection && (
           <div>
-            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
-              <CardHeader 
-                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
-                onClick={() => setOpenSection(openSection === "channels" ? "" : "channels")}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
-                      <Smartphone className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Channel Selection</CardTitle>
-                      <CardDescription>
-                        Choose which channels to enable for customer communication
-                      </CardDescription>
-                    </div>
+            <Card 
+              className={`rounded-xl border-2 border-gray-200 h-full flex flex-col ${tileHoverClass} ${tileCardClass} cursor-pointer`}
+              onClick={() => handleSectionOpen("channels")}
+            >
+              <CardHeader className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`${iconWrapperBase} bg-green-100`}>
+                    <MessageSquare className="h-5 w-5 text-green-600" />
                   </div>
-                  <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${openSection === "channels" ? "rotate-90" : ""}`} />
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-semibold text-gray-900">Channel Selection</CardTitle>
+                    <CardDescription className="text-sm text-gray-500">
+                      Choose which channels to enable for customer communication
+                    </CardDescription>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-green-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </CardHeader>
-              {openSection === "channels" && (
+              {isSectionOpen("channels") && (
               <CardContent className="px-6 pb-6 pt-6">
                 <div className="grid gap-6 lg:grid-cols-12">
                   <div className="lg:col-span-8 space-y-4">
@@ -1098,7 +1133,7 @@ export default function SettingsPage() {
                   <div className="lg:col-span-4">
                     <GuideCard
                       guide={GUIDES.channels}
-                      isOpen={openSection === "channels"}
+                      isOpen={isSectionOpen("channels")}
                     />
                   </div>
                 </div>
@@ -1106,31 +1141,31 @@ export default function SettingsPage() {
               )}
             </Card>
           </div>
+          )}
 
           {/* 3️⃣ WhatsApp Settings (Conditional) */}
           {formData.enableWhatsapp && (
             <div>
-              <Card className="group rounded-2xl border-green-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
-                <CardHeader 
-                  className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
-                  onClick={() => setOpenSection(openSection === "whatsapp" ? "" : "whatsapp")}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-100">
-                        <Smartphone className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">WhatsApp Configuration</CardTitle>
-                        <CardDescription>
-                          Configure WhatsApp Business API credentials
-                        </CardDescription>
-                      </div>
+              {isSectionVisible("whatsapp") && !focusedSection && (
+              <Card 
+                className={`rounded-xl border-2 border-gray-200 h-full flex flex-col ${tileHoverClass} ${tileCardClass} cursor-pointer`}
+                onClick={() => handleSectionOpen("whatsapp")}
+              >
+                <CardHeader className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`${iconWrapperBase} bg-emerald-100`}>
+                      <Smartphone className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${openSection === "whatsapp" ? "rotate-90" : ""}`} />
+                    <div className="flex-1">
+                      <CardTitle className="text-base font-semibold text-gray-900">WhatsApp Configuration</CardTitle>
+                      <CardDescription className="text-sm text-gray-500">
+                        Configure WhatsApp Business API credentials
+                      </CardDescription>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
                   </div>
                 </CardHeader>
-                {openSection === "whatsapp" && (
+                {isSectionOpen("whatsapp") && (
                 <CardContent className="px-6 pb-6 pt-6">
                   <div className="grid gap-6 lg:grid-cols-12">
                     <div className="lg:col-span-8 space-y-4">
@@ -1193,40 +1228,40 @@ export default function SettingsPage() {
                     <div className="lg:col-span-4">
                       <GuideCard
                         guide={GUIDES.whatsapp}
-                        isOpen={openSection === "whatsapp"}
+                        isOpen={isSectionOpen("whatsapp")}
                       />
                     </div>
                   </div>
                 </CardContent>
                 )}
               </Card>
+              )}
             </div>
             )}
 
           {/* 4️⃣ Widget Settings (Conditional) */}
           {formData.enableWidget && (
             <div>
-              <Card className="group rounded-2xl border-blue-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
-                <CardHeader 
-                  className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
-                  onClick={() => setOpenSection(openSection === "widget" ? "" : "widget")}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
-                        <Monitor className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">Widget Configuration</CardTitle>
-                        <CardDescription>
-                          Customize your website chat widget
-                        </CardDescription>
-                      </div>
+              {isSectionVisible("widget") && !focusedSection && (
+              <Card 
+                className={`rounded-xl border-2 border-gray-200 h-full flex flex-col ${tileHoverClass} ${tileCardClass} cursor-pointer`}
+                onClick={() => handleSectionOpen("widget")}
+              >
+                <CardHeader className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`${iconWrapperBase} bg-blue-100`}>
+                      <Monitor className="h-5 w-5 text-blue-600" />
                     </div>
-                    <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${openSection === "widget" ? "rotate-90" : ""}`} />
+                    <div className="flex-1">
+                      <CardTitle className="text-base font-semibold text-gray-900">Widget Configuration</CardTitle>
+                      <CardDescription className="text-sm text-gray-500">
+                        Customize your website chat widget
+                      </CardDescription>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                   </div>
                 </CardHeader>
-                {openSection === "widget" && (
+                {isSectionOpen("widget") && (
                 <CardContent className="px-6 pb-6 pt-6">
                   <div className="grid gap-6 lg:grid-cols-12">
                     <div className="lg:col-span-8 space-y-4">
@@ -1295,39 +1330,39 @@ export default function SettingsPage() {
                     <div className="lg:col-span-4">
                       <GuideCard
                         guide={GUIDES.widget}
-                        isOpen={openSection === "widget"}
+                        isOpen={isSectionOpen("widget")}
                       />
                     </div>
                   </div>
                 </CardContent>
                 )}
               </Card>
+              )}
             </div>
             )}
 
           {/* 5️⃣ AI Personality */}
+          {isSectionVisible("personality") && !focusedSection && (
           <div>
-            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden bg-white">
-              <CardHeader 
-                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
-                onClick={() => setOpenSection(openSection === "personality" ? "" : "personality")}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
-                      <Bot className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">AI Personality</CardTitle>
-                      <CardDescription>
-                        Define how your AI assistant communicates
-                      </CardDescription>
-                    </div>
+            <Card 
+              className={`rounded-xl border-2 border-gray-200 h-full flex flex-col ${tileHoverClass} ${tileCardClass} cursor-pointer`}
+              onClick={() => handleSectionOpen("personality")}
+            >
+              <CardHeader className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`${iconWrapperBase} bg-indigo-100`}>
+                    <Bot className="h-5 w-5 text-indigo-600" />
                   </div>
-                  <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${openSection === "personality" ? "rotate-90" : ""}`} />
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-semibold text-gray-900">AI Personality</CardTitle>
+                    <CardDescription className="text-sm text-gray-500">
+                      Define how your AI assistant communicates
+                    </CardDescription>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </CardHeader>
-              {openSection === "personality" && (
+              {isSectionOpen("personality") && (
               <CardContent className="px-6 pb-6 pt-6">
                 <div className="grid gap-6 lg:grid-cols-12">
                   <div className="lg:col-span-8 space-y-4">
@@ -1518,43 +1553,49 @@ export default function SettingsPage() {
                       { name: "businessPhone", description: "Business phone" },
                     ]}
                   />
-                </div>
+                    </div>
                   </div>
-                  <div className="lg:col-span-4">
+                  <div className="lg:col-span-4 space-y-4">
                     <GuideCard
                       guide={GUIDES.personality}
-                      isOpen={openSection === "personality"}
+                      isOpen={isSectionOpen("personality")}
                     />
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-semibold text-slate-800">Widget preview</p>
+                      <p className="text-sm text-slate-600 mt-1">
+                        The live widget sits in the bottom-right corner so you can feel the tone changes while editing AI Personality.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
               )}
             </Card>
           </div>
+          )}
 
           {/* 6️⃣ Support Configuration */}
+          {isSectionVisible("support") && !focusedSection && (
           <div>
-            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
-              <CardHeader 
-                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
-                onClick={() => setOpenSection(openSection === "support" ? "" : "support")}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100">
-                      <Headphones className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Human Support</CardTitle>
-                      <CardDescription>
-                        Configure escalation to human operators
-                      </CardDescription>
-                    </div>
+            <Card 
+              className={`rounded-xl border-2 border-gray-200 h-full flex flex-col ${tileHoverClass} ${tileCardClass} cursor-pointer`}
+              onClick={() => handleSectionOpen("support")}
+            >
+              <CardHeader className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`${iconWrapperBase} bg-orange-100`}>
+                    <Headphones className="h-5 w-5 text-orange-600" />
                   </div>
-                  <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${openSection === "support" ? "rotate-90" : ""}`} />
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-semibold text-gray-900">Human Support</CardTitle>
+                    <CardDescription className="text-sm text-gray-500">
+                      Configure escalation to human operators
+                    </CardDescription>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </CardHeader>
-              {openSection === "support" && (
+              {isSectionOpen("support") && (
               <CardContent className="px-6 pt-6 pb-6">
                 <div className="grid gap-8 lg:grid-cols-12">
                   <div className="lg:col-span-8 space-y-6">
@@ -1660,7 +1701,7 @@ export default function SettingsPage() {
                   <div className="lg:col-span-4">
                     <GuideCard
                       guide={GUIDES.support}
-                      isOpen={openSection === "support"}
+                      isOpen={isSectionOpen("support")}
                     />
                   </div>
                 </div>
@@ -1668,30 +1709,30 @@ export default function SettingsPage() {
               )}
             </Card>
           </div>
+          )}
 
           {/* 7️⃣ Security Settings */}
+          {isSectionVisible("security") && !focusedSection && (
           <div>
-            <Card className="group rounded-2xl border-slate-200 shadow-sm h-full flex flex-col overflow-hidden">
-              <CardHeader 
-                className="cursor-pointer bg-white transition-colors group-hover:bg-slate-100 hover:bg-slate-200"
-                onClick={() => setOpenSection(openSection === "security" ? "" : "security")}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100">
-                      <Shield className="h-5 w-5 text-red-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Security & Access</CardTitle>
-                      <CardDescription>
-                        Control external domain access
-                      </CardDescription>
-                    </div>
+            <Card 
+              className={`rounded-xl border-2 border-gray-200 h-full flex flex-col ${tileHoverClass} ${tileCardClass} cursor-pointer`}
+              onClick={() => handleSectionOpen("security")}
+            >
+              <CardHeader className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`${iconWrapperBase} bg-red-100`}>
+                    <Shield className="h-5 w-5 text-red-600" />
                   </div>
-                  <ChevronRight className={`h-5 w-5 text-slate-400 transition-transform ${openSection === "security" ? "rotate-90" : ""}`} />
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-semibold text-gray-900">Security & Access</CardTitle>
+                    <CardDescription className="text-sm text-gray-500">
+                      Control external domain access
+                    </CardDescription>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
                 </div>
               </CardHeader>
-              {openSection === "security" && (
+              {isSectionOpen("security") && (
               <CardContent className="px-6 pt-6 pb-6">
                 <div className="grid gap-6 lg:grid-cols-12">
                   <div className="lg:col-span-8 space-y-4">
@@ -1710,7 +1751,7 @@ export default function SettingsPage() {
                   <div className="lg:col-span-4">
                     <GuideCard
                       guide={GUIDES.security}
-                      isOpen={openSection === "security"}
+                      isOpen={isSectionOpen("security")}
                     />
                   </div>
                 </div>
@@ -1718,6 +1759,7 @@ export default function SettingsPage() {
               )}
             </Card>
           </div>
+          )}
         </div>
 
         {/* Delete Confirmation Dialog */}
@@ -1781,8 +1823,8 @@ export default function SettingsPage() {
       </Dialog>
       </div>
 
-      {/* Widget Preview (hidden while edits are pending) */}
-      {!isDirty && (
+      {/* Widget Preview (visible during AI Personality editing) */}
+      {(!isDirty || focusedSection === "personality") && (
         <div className="fixed bottom-6 right-6 z-50">
           <ChatWidget
             workspaceId={currentWorkspace?.id}

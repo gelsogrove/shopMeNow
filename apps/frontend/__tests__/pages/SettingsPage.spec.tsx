@@ -120,7 +120,7 @@ describe('SettingsPage - Form Validation', () => {
     await user.clear(emailInput)
     await user.type(emailInput, 'invalid-email')
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: /^save$/i })
     await user.click(saveButton)
 
     await waitFor(() => {
@@ -139,7 +139,7 @@ describe('SettingsPage - Form Validation', () => {
     const nameInput = screen.getByLabelText(/channel name/i)
     await user.clear(nameInput)
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: /^save$/i })
     await user.click(saveButton)
 
     await waitFor(() => {
@@ -158,7 +158,7 @@ describe('SettingsPage - Form Validation', () => {
     const nameInput = screen.getByLabelText(/channel name/i)
     await user.clear(nameInput)
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: /^save$/i })
     await user.click(saveButton)
 
     await waitFor(() => {
@@ -200,6 +200,7 @@ describe('SettingsPage - Data Population', () => {
   })
 
   it('should populate form with workspace data', async () => {
+    const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)
 
     await waitForLoaded()
@@ -208,7 +209,12 @@ describe('SettingsPage - Data Population', () => {
     expect(screen.getByLabelText(/channel name/i)).toHaveValue('Test Channel')
     expect(screen.getByLabelText(/admin email/i)).toHaveValue('admin@test.com')
     expect(screen.getByLabelText(/website url/i)).toHaveValue('https://test.com')
-
+    
+    // Go back to overview before opening another section (UI uses focusedSection pattern)
+    const backButton = screen.getByRole('button', { name: /back/i })
+    await user.click(backButton)
+    
+    // Now WhatsApp section should be visible again
     await openSection('WhatsApp Configuration')
     expect(screen.getByLabelText(/^phone number$/i)).toHaveValue('+39 333 1234567')
   })
@@ -256,7 +262,7 @@ describe('SettingsPage - Save Functionality', () => {
     await user.clear(nameInput)
     await user.type(nameInput, 'Updated Channel')
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: /^save$/i })
     await user.click(saveButton)
 
     await waitFor(() => {
@@ -275,7 +281,7 @@ describe('SettingsPage - Save Functionality', () => {
 
     await waitForLoaded()
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: /^save$/i })
     await user.click(saveButton)
 
     await waitFor(() => {
@@ -291,7 +297,7 @@ describe('SettingsPage - Save Functionality', () => {
 
     await waitForLoaded()
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: /^save$/i })
     await user.click(saveButton)
 
     await waitFor(() => {
@@ -309,7 +315,7 @@ describe('SettingsPage - Save Functionality', () => {
     const nameInput = screen.getByLabelText(/channel name/i)
     await user.clear(nameInput)
 
-    const saveButton = screen.getByRole('button', { name: /save changes/i })
+    const saveButton = screen.getByRole('button', { name: /^save$/i })
     await user.click(saveButton)
 
     expect(workspaceApi.updateWorkspace).not.toHaveBeenCalled()

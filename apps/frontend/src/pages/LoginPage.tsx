@@ -42,7 +42,8 @@ import {
   CreditCard,
   ChevronDown,
 } from "lucide-react"
-import { useEffect, useState, useRef, useMemo, type FormEvent } from "react"
+import { useEffect, useState, useRef, type FormEvent } from "react"
+import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
@@ -1003,6 +1004,33 @@ export function LoginPage() {
     ? (userPlan.planType as PlanType)
     : undefined
 
+  const howItWorksCards = [
+    {
+      step: "1",
+      title: t("howItWorks.step1.title"),
+      description: t("howItWorks.step1.desc"),
+      gradient: "from-green-50 to-emerald-50",
+      border: "border-green-200",
+      showArrow: true,
+    },
+    {
+      step: "2",
+      title: t("howItWorks.step2.title"),
+      description: t("howItWorks.step2.desc"),
+      gradient: "from-blue-50 to-cyan-50",
+      border: "border-blue-200",
+      showArrow: true,
+    },
+    {
+      step: "3",
+      title: t("howItWorks.step3.title"),
+      description: t("howItWorks.step3.desc"),
+      gradient: "from-purple-50 to-pink-50",
+      border: "border-purple-200",
+      showArrow: false,
+    },
+  ]
+
   return (
     <div
       className="w-full min-h-screen"
@@ -1886,7 +1914,14 @@ export function LoginPage() {
       </div>
 
       {/* How It Works Section */}
-      <div id="features" className="py-16 bg-white">
+      <motion.section
+        id="features"
+        className="py-16 bg-white"
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        viewport={{ once: true, amount: 0.2 }}
+      >
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
             
@@ -1899,59 +1934,36 @@ export function LoginPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Step 1 */}
-            <div className="relative">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border-2 border-green-200 h-full shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col">
-                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
-                  1
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step1.title")}</h3>
-                <p className="text-slate-600 leading-relaxed flex-1">
-                  {t("howItWorks.step1.desc")}
-                </p>
-              </div>
-              {/* Arrow */}
-              <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
-                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </div>
+            {howItWorksCards.map((card, index) => (
+              <div className="relative" key={card.step}>
+                <motion.div
+                  className={`bg-gradient-to-br ${card.gradient} rounded-2xl p-8 border-2 ${card.border} h-full shadow-lg hover:shadow-xl transition-all duration-500 flex flex-col`}
+                  initial={{ opacity: 0, y: 60, scale: 0.98 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, amount: 0.35 }}
+                  transition={{ duration: 0.65, ease: "easeOut", delay: index * 0.08 }}
+                >
+                  <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6 shadow-lg shadow-emerald-200/40">
+                    {card.step}
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-4">{card.title}</h3>
+                  <p className="text-slate-600 leading-relaxed flex-1">
+                    {card.description}
+                  </p>
+                </motion.div>
 
-            {/* Step 2 */}
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border-2 border-blue-200 h-full shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col">
-                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
-                  2
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step2.title")}</h3>
-                <p className="text-slate-600 leading-relaxed flex-1">
-                  {t("howItWorks.step2.desc")}
-                </p>
+                {card.showArrow && (
+                  <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
+                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </div>
+                )}
               </div>
-              {/* Arrow */}
-              <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
-                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="relative">
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-200 h-full shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col">
-                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6">
-                  3
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-4">{t("howItWorks.step3.title")}</h3>
-                <p className="text-slate-600 leading-relaxed flex-1">
-                  {t("howItWorks.step3.desc")}
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
+      </motion.section>
 
       {/* Pricing Section */}
       <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
@@ -1976,10 +1988,16 @@ export function LoginPage() {
       {/* FAQ Section */}
       <HomeFAQ />
 
-      {/* Contact Section */}
+      {/* Contact Section (Demo highlight) */}
       <div id="demo" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="group relative">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
             {/* Decorative rotated background frame */}
             <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
@@ -2042,14 +2060,20 @@ export function LoginPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Human-in-the-loop Section */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="group relative">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: -80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
             <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
 
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
@@ -2082,14 +2106,20 @@ export function LoginPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Integration Section */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="group relative">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
             {/* Decorative rotated background frame - BLU for enterprise */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
@@ -2139,14 +2169,20 @@ export function LoginPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Team Collaboration Section */}
       <div className="py-20 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="group relative">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: -80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
             {/* Decorative rotated background frame - PURPLE for collaboration */}
             <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-3xl rotate-0 sm:-rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:-rotate-2 transition-transform duration-500"></div>
             
@@ -2182,14 +2218,20 @@ export function LoginPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Privacy Section */}
       <div className="py-20 bg-gradient-to-b from-white to-slate-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="group relative">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
             {/* Decorative rotated background frame */}
             <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
@@ -2236,7 +2278,7 @@ export function LoginPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 

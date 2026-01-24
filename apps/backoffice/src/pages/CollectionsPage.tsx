@@ -176,16 +176,34 @@ const renderPaymentToggle = (status: string) => {
   )
 }
 
+interface PayPalTransactionRow {
+  id: string
+  userId: string
+  userEmail: string | null
+  userName: string | null
+  invoiceId: string | null
+  invoicePeriod: string | null
+  invoiceStatus: string | null
+  amount: number
+  currency: string
+  status: 'SUCCESS' | 'FAILED'
+  notes: string | null
+  adminUserId: string | null
+  createdAt: string
+}
+
 export function CollectionsPage() {
-  const [viewMode, setViewMode] = useState<'current' | 'previous' | 'history' | 'failed'>('current')
+  const [viewMode, setViewMode] = useState<'current' | 'previous' | 'history' | 'failed' | 'transactions'>('current')
   const [currentRows, setCurrentRows] = useState<OwnerInvoiceRow[]>([])
   const [previousRows, setPreviousRows] = useState<OwnerInvoiceRow[]>([])
   const [failedRows, setFailedRows] = useState<OwnerInvoiceRow[]>([])
   const [historyRows, setHistoryRows] = useState<OwnerInvoiceRow[]>([])
+  const [transactionRows, setTransactionRows] = useState<PayPalTransactionRow[]>([])
   const [isCurrentLoading, setIsCurrentLoading] = useState(true)
   const [isPreviousLoading, setIsPreviousLoading] = useState(true)
   const [isFailedLoading, setIsFailedLoading] = useState(true)
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
+  const [isTransactionsLoading, setIsTransactionsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notesByInvoice, setNotesByInvoice] = useState<Record<string, string>>({})
   const [updating, setUpdating] = useState<string | null>(null)
@@ -306,6 +324,24 @@ export function CollectionsPage() {
     const paidHistory = response.data.filter((row) => row.invoice.status === 'PAID')
     setHistoryRows(paidHistory)
     setIsHistoryLoading(false)
+  }
+
+  const loadTransactions = async () => {
+    setIsTransactionsLoading(true)
+    setError(null)
+
+    const response = await api.users.getPayPalTransactions()
+
+    if (!response.success || !response.data) {
+      if (!shouldIgnoreError(response.error)) {
+        setError(response.error || 'Failed to load PayPal transactions')
+      }
+      setIsTransactionsLoading(false)
+      return
+    }
+
+    setTransactionRows(response.data)
+    setIsTransactionsLoading(false)
   }
 
   const loadInvoicePreview = useCallback(async (invoiceId: string) => {
@@ -829,6 +865,8 @@ export function CollectionsPage() {
               ? 'Retry or move failed payments to trash.'
               : viewMode === 'history'
               ? 'Paid invoices and documents.'
+              : viewMode === 'transactions'
+              ? 'All PayPal payment transactions (success and failed).'
               : 'Previous month totals ready to charge.'}
           </p>
           {viewMode === 'history' && historyLabel && (
@@ -844,6 +882,9 @@ export function CollectionsPage() {
             loadFailedInvoices()
             if (viewMode === 'history') {
               loadHistory({ month: historyMonth, year: historyYear })
+            }
+            if (viewMode === 'transactions') {
+              loadTransactions()
             }
           }}
           variant="outline"
@@ -884,6 +925,15 @@ export function CollectionsPage() {
         >
           History
         </Button>
+        <Button
+          variant={viewMode === 'transactions' ? 'default' : 'outline'}
+          onClick={() => {
+            setViewMode('transactions')
+            loadTransactions()
+          }}
+        >
+          Transactions
+        </Button>
       </div>
 
       {error && !shouldIgnoreError(error) && (
@@ -897,6 +947,88 @@ export function CollectionsPage() {
 
       <Card>
         <CardContent className="py-6 space-y-4">
+          {viewMode === 'transactions' ? (
+            /* Transactions View - PayPal payment history */
+            <div className="space-y-4">
+              {isTransactionsLoading ? (
+                <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading transactions...
+                </div>
+              ) : transactionRows.length === 0 ? (
+                <div className="text-center py-8 text-sm text-gray-500">
+                  No PayPal transactions found.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left p-3 font-medium text-gray-600">Date</th>
+                        <th className="text-left p-3 font-medium text-gray-600">User</th>
+                        <th className="text-left p-3 font-medium text-gray-600">Invoice</th>
+                        <th className="text-right p-3 font-medium text-gray-600">Amount</th>
+                        <th className="text-center p-3 font-medium text-gray-600">Status</th>
+                        <th className="text-left p-3 font-medium text-gray-600">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactionRows.map((tx) => (
+                        <tr key={tx.id} className="border-b hover:bg-gray-50">
+                          <td className="p-3 text-gray-600">
+                            {new Date(tx.createdAt).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                          <td className="p-3">
+                            <div className="font-medium text-gray-900">{tx.userEmail || '—'}</div>
+                            {tx.userName && (
+                              <div className="text-xs text-gray-500">{tx.userName}</div>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {tx.invoicePeriod ? (
+                              <div>
+                                <div className="font-mono text-xs text-gray-600">{tx.invoicePeriod}</div>
+                                {tx.invoiceStatus && (
+                                  <div className="text-xs text-gray-400">{tx.invoiceStatus}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-right font-medium">
+                            {formatUsd(tx.amount)} <span className="text-gray-400 text-xs">{tx.currency}</span>
+                          </td>
+                          <td className="p-3 text-center">
+                            {tx.status === 'SUCCESS' ? (
+                              <Badge className="bg-emerald-600 text-white">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                SUCCESS
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-red-600 text-white">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                FAILED
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="p-3 text-gray-500 max-w-[200px] truncate" title={tx.notes || ''}>
+                            {tx.notes || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ) : (
           <div className={`grid gap-4 ${viewMode === 'history' ? 'max-h-[640px] overflow-y-auto pr-1' : ''}`}>
             {viewMode === 'history' && isHistoryLoading ? (
               <div className="flex items-center justify-center py-8 text-sm text-gray-500">
@@ -1257,6 +1389,7 @@ export function CollectionsPage() {
               </div>
             )}
           </div>
+          )}
         </CardContent>
       </Card>
 

@@ -409,6 +409,16 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
           case "BILLING.SUBSCRIPTION.ACTIVATED":
             updateData.paypalSubscriptionStatus = "ACTIVE"
             updateData.paypalSubscriptionApprovedAt = new Date()
+            
+            // Auto-upgrade FREE_TRIAL users to BASIC when they connect PayPal
+            if (user.planType === "FREE_TRIAL") {
+              updateData.planType = "BASIC"
+              logger.info("[PAYPAL] Auto-upgrading FREE_TRIAL user to BASIC:", { 
+                userId: user.id, 
+                subscriptionId 
+              })
+            }
+            
             logger.info("[PAYPAL] Subscription activated:", subscriptionId)
             break
 
@@ -425,6 +435,26 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
           case "BILLING.SUBSCRIPTION.PAYMENT.FAILED":
             updateData.paypalFailedPaymentsCount = (user.paypalFailedPaymentsCount || 0) + 1
             updateData.lastPaymentFailedAt = new Date()
+            
+            // 🆕 Record failed payment in PayPalTransaction table
+            try {
+              const failedAmount = resource.billing_info?.outstanding_balance?.value
+                ? parseFloat(resource.billing_info.outstanding_balance.value)
+                : 0
+              
+              await prisma.payPalTransaction.create({
+                data: {
+                  userId: user.id,
+                  amount: failedAmount,
+                  currency: "USD",
+                  status: "FAILED",
+                  notes: `Webhook PAYMENT.FAILED - Subscription: ${subscriptionId}`,
+                },
+              })
+            } catch (txError) {
+              logger.error("[PAYPAL] Error creating failed transaction record:", txError)
+            }
+            
             logger.warn("[PAYPAL] Payment failed:", {
               subscriptionId,
               failureCount: updateData.paypalFailedPaymentsCount,
@@ -444,6 +474,27 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
             // Update outstanding balance
             if (resource.billing_info?.outstanding_balance?.value) {
               updateData.paypalOutstandingBalance = parseFloat(resource.billing_info.outstanding_balance.value)
+            }
+            
+            // 🆕 Handle invoice payment - mark PENDING invoices as PAID
+            try {
+              const { handlePaymentSuccess } = await import("../../../services/paypal-billing.service")
+              const paymentAmount = resource.billing_info?.last_payment?.amount?.value
+                ? parseFloat(resource.billing_info.last_payment.amount.value)
+                : 0
+              const paymentTime = resource.billing_info?.last_payment?.time
+                ? new Date(resource.billing_info.last_payment.time)
+                : new Date()
+              
+              await handlePaymentSuccess(
+                subscriptionId,
+                paymentAmount,
+                paymentTime,
+                resource.billing_info
+              )
+            } catch (invoiceError) {
+              logger.error("[PAYPAL] Error handling invoice payment:", invoiceError)
+              // Don't fail webhook - invoice handling is secondary
             }
             
             logger.info("[PAYPAL] Payment successful:", {
@@ -549,7 +600,6 @@ paypalRoutes.get("/config", authMiddleware, async (req: Request, res: Response) 
       data: {
         configured: paypalConfig.configured,
         environment: paypalConfig.environment,
-        redirectUri: paypalConfig.redirectUri,
       },
     })
   } catch (error) {
@@ -675,8 +725,6 @@ paypalRoutes.post(
         paypalConfig.clientId
       )}&response_type=code&scope=${encodeURIComponent(
         scope
-      )}&redirect_uri=${encodeURIComponent(
-        paypalConfig.redirectUri
       )}&state=${encodeURIComponent(state)}`
 
       res.json({
@@ -695,123 +743,6 @@ paypalRoutes.post(
     }
   }
 )
-
-paypalRoutes.get("/callback", async (req: Request, res: Response) => {
-  try {
-    const { code, state, error } = req.query as {
-      code?: string
-      state?: string
-      error?: string
-    }
-
-    if (error || !code || !state) {
-      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
-      return res.redirect(redirectUrl)
-    }
-
-    const { userId } = parseStateToken(state)
-    const userConfig = await getUserPayPalConfig(userId)
-    if (!userConfig) {
-      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
-      return res.redirect(redirectUrl)
-    }
-
-    const paypalConfig = userConfig.paypalConfig
-    if (!paypalConfig.configured) {
-      logger.error("[PAYPAL] Callback received but config missing")
-      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=missing_config`
-      return res.redirect(redirectUrl)
-    }
-
-    const tokenResponse = await fetch(
-      `${paypalConfig.apiBaseUrl}/v1/oauth2/token`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(
-            `${paypalConfig.clientId}:${paypalConfig.clientSecret}`
-          ).toString("base64")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: paypalConfig.redirectUri,
-        }).toString(),
-      }
-    )
-
-    if (!tokenResponse.ok) {
-      const errText = await tokenResponse.text()
-      logger.error("[PAYPAL] Token exchange failed:", errText)
-      const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
-      return res.redirect(redirectUrl)
-    }
-
-    const tokenData = await tokenResponse.json()
-    const accessToken = tokenData.access_token as string
-    const refreshToken = tokenData.refresh_token as string | undefined
-    const expiresIn = Number(tokenData.expires_in || 0)
-    const scope = tokenData.scope as string | undefined
-
-    const userInfoResponse = await fetch(
-      `${paypalConfig.apiBaseUrl}/v1/identity/oauth2/userinfo?schema=paypalv1`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    )
-
-    let paypalEmail: string | null = null
-    let paypalMerchantId: string | null = null
-
-    if (userInfoResponse.ok) {
-      const userInfo = await userInfoResponse.json()
-      paypalEmail =
-        userInfo.email || userInfo.email_address || userInfo.emails?.[0]?.value
-      paypalMerchantId = userInfo.payer_id || userInfo.user_id || null
-    }
-
-    const subscription = await createSubscription({
-      paypalConfig,
-      payerId: paypalMerchantId,
-      email: paypalEmail,
-      userId,
-    })
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        paypalStatus: PayPalStatus.CONNECTED,
-        paypalClientId: paypalConfig.clientId,
-        paypalMerchantId,
-        paypalEmail,
-        paypalEnvironment: paypalConfig.environment,
-        paypalConnectedAt: new Date(),
-        paypalAccessTokenEncrypted: encryptSecret(accessToken),
-        paypalRefreshTokenEncrypted: refreshToken
-          ? encryptSecret(refreshToken)
-          : null,
-        paypalTokenExpiresAt: expiresIn
-          ? new Date(Date.now() + expiresIn * 1000)
-          : null,
-        paypalTokenScope: scope || null,
-        // Subscription details
-        paypalSubscriptionId: subscription.id,
-        paypalPlanId: subscription.planId,
-        paypalSubscriptionStatus: subscription.status,
-      },
-    })
-
-    const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=connected`
-    return res.redirect(redirectUrl)
-  } catch (error) {
-    logger.error("[PAYPAL] OAuth callback error:", error)
-    const redirectUrl = `${config.frontendUrl}/workspace-selection?paypal=error`
-    return res.redirect(redirectUrl)
-  }
-})
 
 // 🆕 Subscription Approval Callback
 // Called by PayPal after user approves subscription

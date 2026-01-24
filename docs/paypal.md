@@ -99,3 +99,224 @@ The backend verifies every webhook event using PayPal's
 ## Notes
 - If credentials are missing, the Connect button is disabled and shows a warning.
 - Webhooks are not required for the OAuth connect flow. They are needed later for automated payouts/charges.
+
+---
+
+# PayPal Billing System (Monthly Invoices)
+
+## Overview
+
+The billing system uses PayPal Subscriptions with **Outstanding Balance** (MIB - Merchant Initiated Billing).
+This allows variable monthly charges based on actual usage.
+
+## Billing Flow
+
+```
+┌─────────────┐     ┌───────────────┐     ┌──────────────┐     ┌─────────────┐
+│  Scheduler  │ ──▶ │ Create PENDING │ ──▶ │ Admin Panel  │ ──▶ │ PayPal API  │
+│ (monthly)   │     │    Invoice     │     │ Process Pay  │     │ Capture $   │
+└─────────────┘     └───────────────┘     └──────────────┘     └─────────────┘
+                                                                      │
+                    ┌────────────────┐                                │
+                    │ PayPal Webhook │ ◀──────────────────────────────┘
+                    │ Update Invoice │
+                    └────────────────┘
+```
+
+### Step 1: Scheduler Creates Invoices
+
+The `monthly-billing.job.ts` runs on the 1st of each month:
+
+```typescript
+// Creates PENDING invoice for each active user
+await prisma.monthlyInvoice.upsert({
+  where: { userId_periodMonth_periodYear: { userId, periodMonth, periodYear } },
+  create: {
+    userId,
+    periodMonth,
+    periodYear,
+    totalAmount: calculatedAmount,
+    status: 'PENDING',  // NOT yet charged
+  },
+  update: {
+    totalAmount: calculatedAmount,
+  },
+})
+```
+
+**Important:** The scheduler does NOT call PayPal. It only creates PENDING invoices.
+
+### Step 2: Admin Processes Payment
+
+In the **Backoffice → Collections → Previous Month** tab, admin clicks "Process Payment":
+
+```
+POST /api/users/admin/invoices/:invoiceId/paypal/process-payment
+```
+
+This endpoint:
+1. Validates rate limiting (60s between attempts for same invoice)
+2. Calls PayPal `POST /v1/billing/subscriptions/{id}/capture`
+3. Creates a `PayPalTransaction` record
+4. PayPal processes the charge asynchronously
+
+### Step 3: PayPal Webhook Updates Invoice
+
+When PayPal completes the charge, it sends a webhook:
+
+- `PAYMENT.SUCCESS` → Invoice marked `PAID`, transaction status `SUCCESS`
+- `PAYMENT.FAILED` → Transaction status `FAILED`, invoice remains `PENDING`
+
+## Rate Limiting & Idempotency
+
+### Rate Limiting (60 seconds)
+
+Prevents double-charging by blocking rapid retries:
+
+```typescript
+// In-memory Map tracks last attempt time
+const paymentRateLimiter = new Map<string, number>()
+
+// Rejects if less than 60s since last attempt
+if (Date.now() - lastAttempt < 60000) {
+  throw new Error('Rate limited: wait 60 seconds')
+}
+```
+
+### Idempotency
+
+PayPal uses `PayPal-Request-Id` header to prevent duplicate captures:
+
+```typescript
+headers: {
+  'PayPal-Request-Id': `invoice_${invoiceId}_${timestamp}`
+}
+```
+
+## Database Tables
+
+### PayPalTransaction
+
+Stores all payment attempts (success AND failed):
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | UUID | Primary key |
+| userId | UUID | Owner being charged |
+| invoiceId | UUID | Related invoice (optional) |
+| amount | Decimal | Amount in USD |
+| currency | String | Always "USD" |
+| status | Enum | SUCCESS or FAILED |
+| paypalTransactionId | String | PayPal's transaction ID (if success) |
+| paypalPayerId | String | PayPal payer ID |
+| notes | String | Admin notes or error message |
+| adminUserId | UUID | Admin who triggered the payment |
+| createdAt | DateTime | When transaction was created |
+
+### MonthlyInvoice Status Flow
+
+```
+DRAFT → PENDING → PAID
+              ↘ (on failure, stays PENDING, can retry)
+```
+
+## Admin UI: Transactions Tab
+
+The **Collections** page includes a **Transactions** tab showing all PayPal payment attempts:
+
+| Column | Description |
+|--------|-------------|
+| Date | Transaction timestamp |
+| User | Owner email and name |
+| Invoice | Period (MM/YYYY) and status |
+| Amount | USD amount charged |
+| Status | SUCCESS (green) or FAILED (red) |
+| Notes | Admin notes or error message |
+
+### Visual Distinction
+
+- **SUCCESS**: Green badge with checkmark icon
+- **FAILED**: Red badge with alert icon
+
+## Endpoints
+
+### Process Payment (Admin)
+
+```
+POST /api/users/admin/invoices/:invoiceId/paypal/process-payment
+Body: { notes?: string }
+Response: { success: boolean, transactionId?: string, error?: string }
+```
+
+### List Transactions (Admin)
+
+```
+GET /api/users/admin/paypal/transactions?status=SUCCESS|FAILED&limit=100
+Response: Array<{
+  id, userId, userEmail, userName, invoiceId, invoicePeriod, invoiceStatus,
+  amount, currency, status, notes, adminUserId, createdAt
+}>
+```
+
+## Webhook Events
+
+| Event | Action |
+|-------|--------|
+| PAYMENT.SALE.COMPLETED | Invoice → PAID, Transaction → SUCCESS |
+| PAYMENT.SALE.DENIED | Transaction → FAILED (invoice stays PENDING) |
+| BILLING.SUBSCRIPTION.ACTIVATED | User plan → BASIC (auto-upgrade from FREE) |
+| BILLING.SUBSCRIPTION.CANCELLED | User → paypalStatus: 'disconnected' |
+
+## Error Handling
+
+| Scenario | Behavior |
+|----------|----------|
+| No subscription | Returns error, no charge attempted |
+| Subscription inactive | Returns error, no charge attempted |
+| Rate limited | Returns 429, must wait 60s |
+| PayPal API error | Transaction created with FAILED status |
+| Webhook verification failed | Event ignored, logged |
+
+## Testing
+
+Run unit tests:
+
+```bash
+cd apps/backend
+npm run test:unit -- paypal
+```
+
+### Test Coverage (48 tests)
+
+**Parameter Validation Tests** (`paypal-parameters-validation.spec.ts`):
+- ✅ PayPalTransaction CREATE validation (9 tests)
+  - Required: `userId`, `amount`, `currency`, `status`
+  - Status must be `SUCCESS` or `FAILED`
+  - Amount accepts zero and decimals
+  
+- ✅ MonthlyInvoice UPDATE validation (5 tests)
+  - Status must be valid: `DRAFT`, `PENDING`, `PAID`, `FAILED`, `CANCELLED`
+  - `paidAt` must be a Date
+  
+- ✅ Transaction Response Format (7 tests)
+  - Admin transactions list with user/invoice join
+  - User transactions list with zero-padded period
+  - Handles null user/invoice gracefully
+  
+- ✅ Process Payment Parameters (4 tests)
+  - Required: `invoiceId`, `adminUserId`
+  - Optional: `notes`
+  
+- ✅ Webhook Handler Parameters (5 tests)
+  - Required: `subscriptionId`, `paymentAmount`, `paymentTime`
+  
+- ✅ User PayPal Info Fields (6 tests)
+  - Required: `id`, `email`, `paypalStatus`, `isPaymentConnected`
+  
+- ✅ BillingTransaction Fields (6 tests)
+  - Required: `userId`, `type`, `amount`, `balanceAfter`, `description`
+
+**PayPal Config Tests** (`paypal-config.spec.ts`):
+- ✅ Environment resolution (sandbox for admin/dev, live otherwise)
+- ✅ Config loading for sandbox/live
+

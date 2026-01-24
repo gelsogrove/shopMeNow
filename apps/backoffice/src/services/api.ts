@@ -798,6 +798,8 @@ class BackofficeApi {
       transactions: Array<{
         id: string
         invoiceId: string | null
+        invoicePeriod: string | null
+        invoiceStatus: string | null
         amount: number
         currency: string
         status: string
@@ -850,6 +852,34 @@ class BackofficeApi {
         method: 'POST',
         body: JSON.stringify({ notes }),
       })
+    },
+
+    /**
+     * Get all PayPal transactions (for admin Transactions tab)
+     */
+    getPayPalTransactions: async (
+      status?: 'SUCCESS' | 'FAILED',
+      limit?: number
+    ): Promise<ApiResponse<Array<{
+      id: string
+      userId: string
+      userEmail: string | null
+      userName: string | null
+      invoiceId: string | null
+      invoicePeriod: string | null
+      invoiceStatus: string | null
+      amount: number
+      currency: string
+      status: 'SUCCESS' | 'FAILED'
+      notes: string | null
+      adminUserId: string | null
+      createdAt: string
+    }>>> => {
+      const params = new URLSearchParams()
+      if (status) params.append('status', status)
+      if (limit) params.append('limit', String(limit))
+      const query = params.toString() ? `?${params.toString()}` : ''
+      return this.fetch(`/users/admin/paypal/transactions${query}`)
     },
 
     /**

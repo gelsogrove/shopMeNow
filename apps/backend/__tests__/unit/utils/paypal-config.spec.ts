@@ -25,22 +25,23 @@ describe("PayPal config", () => {
     ).toBe("live")
   })
 
-  it("uses environment-specific redirect uri when provided", () => {
+  it("loads sandbox config correctly", () => {
     process.env.PAYPAL_CLIENT_ID_SANDBOX = "sandbox-id"
     process.env.PAYPAL_CLIENT_SECRET_SANDBOX = "sandbox-secret"
-    process.env.PAYPAL_REDIRECT_URI_SANDBOX = "http://sandbox.local/callback"
 
     const config = loadPayPalConfigForEnv("sandbox")
-    expect(config.redirectUri).toBe("http://sandbox.local/callback")
+    expect(config.configured).toBe(true)
+    expect(config.environment).toBe("sandbox")
+    expect(config.apiBaseUrl).toBe("https://api-m.sandbox.paypal.com")
   })
 
-  it("falls back to PAYPAL_REDIRECT_URI when env-specific value is missing", () => {
+  it("loads live config correctly", () => {
     process.env.PAYPAL_CLIENT_ID_LIVE = "live-id"
     process.env.PAYPAL_CLIENT_SECRET_LIVE = "live-secret"
-    process.env.PAYPAL_REDIRECT_URI_LIVE = ""
-    process.env.PAYPAL_REDIRECT_URI = "http://global.local/callback"
 
     const config = loadPayPalConfigForEnv("live")
-    expect(config.redirectUri).toBe("http://global.local/callback")
+    expect(config.configured).toBe(true)
+    expect(config.environment).toBe("live")
+    expect(config.apiBaseUrl).toBe("https://api-m.paypal.com")
   })
 })

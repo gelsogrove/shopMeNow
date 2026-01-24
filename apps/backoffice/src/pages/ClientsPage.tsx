@@ -181,6 +181,8 @@ export function ClientsPage() {
     transactions: Array<{
       id: string
       invoiceId: string | null
+      invoicePeriod: string | null
+      invoiceStatus: string | null
       amount: number
       currency: string
       status: string
@@ -1678,8 +1680,9 @@ export function ClientsPage() {
                 )}
 
                 <div className="rounded border border-gray-200">
-                  <div className="border-b border-gray-200 px-4 py-2 text-sm font-medium text-gray-700">
-                    Transactions
+                  <div className="border-b border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Transactions ({paypalInfo.transactions.length})
                   </div>
                   <div className="max-h-80 overflow-y-auto">
                     {paypalInfo.transactions.length === 0 ? (
@@ -1688,28 +1691,51 @@ export function ClientsPage() {
                       <div className="divide-y divide-gray-200 text-sm">
                         {paypalInfo.transactions.map((tx) => (
                           <div key={tx.id} className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                            <div className="space-y-1">
-                              <div className="font-medium text-gray-900">
-                                {tx.amount.toFixed(2)} {tx.currency}
+                            <div className="space-y-1 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-gray-900">
+                                  ${tx.amount.toFixed(2)}
+                                </span>
+                                <span className="text-xs text-gray-400">{tx.currency}</span>
+                                {tx.invoicePeriod && (
+                                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">
+                                    {tx.invoicePeriod}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {new Date(tx.createdAt).toLocaleString('it-IT')}
-                                {tx.invoiceId ? ` · Invoice ${tx.invoiceId}` : ''}
+                                {new Date(tx.createdAt).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
                               </div>
                               {tx.notes && (
-                                <div className="text-xs text-gray-600">
-                                  Notes: {tx.notes}
+                                <div className="text-xs text-gray-600 italic">
+                                  {tx.notes}
                                 </div>
                               )}
                             </div>
                             <span
-                              className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${
                                 tx.status === 'SUCCESS'
-                                  ? 'bg-emerald-100 text-emerald-700'
-                                  : 'bg-rose-100 text-rose-700'
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-red-600 text-white'
                               }`}
                             >
-                              {tx.status === 'SUCCESS' ? 'OK' : 'FAILS'}
+                              {tx.status === 'SUCCESS' ? (
+                                <>
+                                  <CheckCircle className="h-3 w-3" />
+                                  SUCCESS
+                                </>
+                              ) : (
+                                <>
+                                  <AlertCircle className="h-3 w-3" />
+                                  FAILED
+                                </>
+                              )}
                             </span>
                           </div>
                         ))}
