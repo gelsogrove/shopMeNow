@@ -54,7 +54,7 @@ import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 
 // Types
-type SectionKey = "business" | "channels" | "whatsapp" | "widget" | "personality" | "support" | "security"
+type SectionKey = "channels" | "ai" | "general" | "security"
 
 interface WorkspaceData {
   id: string
@@ -94,46 +94,28 @@ interface WorkspaceData {
 // Menu Items Configuration
 const MENU_ITEMS = [
   { 
-    key: "business" as SectionKey, 
-    icon: Store, 
-    label: "Business Configuration",
-    description: "Basic business settings"
-  },
-  { 
     key: "channels" as SectionKey, 
     icon: MessageSquare, 
-    label: "Channel Selection",
-    description: "Enable/disable channels"
+    label: "Channels & Connections",
+    description: "Enable/disable communication channels"
   },
   { 
-    key: "whatsapp" as SectionKey, 
-    icon: Smartphone, 
-    label: "WhatsApp",
-    description: "WhatsApp configuration"
-  },
-  { 
-    key: "widget" as SectionKey, 
-    icon: Globe, 
-    label: "Website Widget",
-    description: "Chat widget settings"
-  },
-  { 
-    key: "personality" as SectionKey, 
+    key: "ai" as SectionKey, 
     icon: Bot, 
-    label: "AI Personality",
-    description: "Bot behavior & tone"
+    label: "AI Configuration",
+    description: "Bot personality & behavior"
   },
   { 
-    key: "support" as SectionKey, 
-    icon: Headphones, 
-    label: "Human Support",
-    description: "Operator escalation"
+    key: "general" as SectionKey, 
+    icon: Store, 
+    label: "General Settings",
+    description: "Business info & branding"
   },
   { 
     key: "security" as SectionKey, 
     icon: Shield, 
-    label: "Security",
-    description: "Domain access control"
+    label: "Security & Support",
+    description: "Access control & human support"
   },
 ]
 
@@ -184,7 +166,7 @@ export function SettingsPage() {
   const canEdit = isOwner || isSuperAdmin
   
   // Active section from menu
-  const [activeSection, setActiveSection] = useState<SectionKey>("business")
+  const [activeSection, setActiveSection] = useState<SectionKey>("channels")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [isDirty, setIsDirty] = useState(false)
   const [isLogoUploading, setIsLogoUploading] = useState(false)
@@ -355,18 +337,12 @@ export function SettingsPage() {
   // Render Content based on active section
   const renderContent = () => {
     switch (activeSection) {
-      case "business":
-        return renderBusinessSection()
       case "channels":
         return renderChannelsSection()
-      case "whatsapp":
-        return renderWhatsAppSection()
-      case "widget":
-        return renderWidgetSection()
-      case "personality":
+      case "ai":
         return renderPersonalitySection()
-      case "support":
-        return renderSupportSection()
+      case "general":
+        return renderBusinessSection()
       case "security":
         return renderSecuritySection()
       default:
@@ -466,20 +442,6 @@ export function SettingsPage() {
                 disabled={!canEdit}
               />
             </div>
-
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-slate-600" />
-                <p className="font-medium text-sm">Debug Mode</p>
-              </div>
-              <Switch
-                checked={formData.debugMode}
-                onCheckedChange={(checked) =>
-                  handleFieldChange("debugMode", checked)
-                }
-                disabled={!canEdit}
-              />
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -503,14 +465,18 @@ export function SettingsPage() {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
           <MessageSquare className="h-6 w-6 text-green-600" />
-          Channel Selection
+          Channels & Connections
         </h2>
-        <p className="text-sm text-gray-500 mt-1">Choose which channels to enable for customer communication</p>
+        <p className="text-sm text-gray-500 mt-1">Enable/disable communication channels and configure technical settings</p>
       </div>
 
+      {/* Channel Status & Debug Mode */}
       <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-green-50 to-white">
+          <CardTitle className="text-base font-semibold">Channel Status</CardTitle>
+        </CardHeader>
         <CardContent className="pt-6 space-y-4">
-          {/* Channel Status Toggle - SPOSTATO QUI */}
+          {/* Channel Active Toggle */}
           <div className="flex items-center justify-between rounded-xl border-2 border-green-200 bg-green-50 p-4">
             <div className="flex items-center gap-3">
               <AlertCircle className="h-6 w-6 text-green-600" />
@@ -530,14 +496,34 @@ export function SettingsPage() {
             />
           </div>
 
+          {/* Debug Mode - MOVED HERE! */}
           <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-3">
-              <Smartphone className="h-6 w-6 text-slate-600" />
+              <AlertCircle className="h-5 w-5 text-slate-600" />
               <div>
-                <p className="font-semibold text-sm">WhatsApp</p>
-                <p className="text-xs text-slate-500">Message customers directly</p>
+                <p className="font-medium text-sm">Debug Mode</p>
+                <p className="text-xs text-slate-500">Show detailed logs for troubleshooting</p>
               </div>
             </div>
+            <Switch
+              checked={formData.debugMode}
+              onCheckedChange={(checked) =>
+                handleFieldChange("debugMode", checked)
+              }
+              disabled={!canEdit}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp Channel */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-white">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-emerald-600" />
+              WhatsApp Channel
+            </CardTitle>
             <Switch
               checked={formData.enableWhatsapp}
               onCheckedChange={(checked) =>
@@ -546,15 +532,78 @@ export function SettingsPage() {
               disabled={!canEdit}
             />
           </div>
-
-          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-center gap-3">
-              <Monitor className="h-6 w-6 text-slate-600" />
-              <div>
-                <p className="font-semibold text-sm">Website Widget</p>
-                <p className="text-xs text-slate-500">Embed chat on your site</p>
-              </div>
+        </CardHeader>
+        {formData.enableWhatsapp && (
+          <CardContent className="pt-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="whatsappPhoneNumber">Phone Number</Label>
+              <Input
+                id="whatsappPhoneNumber"
+                value={formData.whatsappPhoneNumber}
+                onChange={(e) => handleFieldChange("whatsappPhoneNumber", e.target.value)}
+                placeholder="+1234567890"
+                disabled={!canEdit}
+              />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappApiKey">API Key</Label>
+              <Input
+                id="whatsappApiKey"
+                type="password"
+                value={formData.whatsappApiKey}
+                onChange={(e) => handleFieldChange("whatsappApiKey", e.target.value)}
+                placeholder="Enter API key"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
+              <Input
+                id="whatsappPhoneNumberId"
+                value={formData.whatsappPhoneNumberId}
+                onChange={(e) => handleFieldChange("whatsappPhoneNumberId", e.target.value)}
+                placeholder="123456789012345"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappVerifyToken">Verify Token</Label>
+              <Input
+                id="whatsappVerifyToken"
+                value={formData.whatsappVerifyToken}
+                onChange={(e) => handleFieldChange("whatsappVerifyToken", e.target.value)}
+                placeholder="mySecureToken123"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="pt-2">
+              <Button
+                onClick={() => setIsVideoModalOpen(true)}
+                variant="outline"
+                className="w-full bg-purple-50 hover:bg-purple-100 border-purple-300 text-purple-700 font-semibold"
+                size="lg"
+                type="button"
+              >
+                <span className="mr-2">📺</span>
+                Watch: How to Connect WhatsApp API
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Website Widget Channel */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-indigo-50 to-white">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-indigo-600" />
+              Website Widget Channel
+            </CardTitle>
             <Switch
               checked={formData.enableWidget}
               onCheckedChange={(checked) =>
@@ -563,7 +612,70 @@ export function SettingsPage() {
               disabled={!canEdit}
             />
           </div>
-        </CardContent>
+        </CardHeader>
+        {formData.enableWidget && (
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              {/* Widget Title */}
+              <div className="space-y-2">
+                <Label htmlFor="widgetTitle" className="text-xs font-semibold text-gray-700">Widget Title</Label>
+                <Input
+                  id="widgetTitle"
+                  value={formData.widgetTitle}
+                  onChange={(e) => handleFieldChange("widgetTitle", e.target.value)}
+                  placeholder="Chat with us"
+                  disabled={!canEdit}
+                />
+              </div>
+
+              {/* Primary Color */}
+              <div className="space-y-2">
+                <Label htmlFor="widgetPrimaryColor" className="text-xs font-semibold text-gray-700">Primary Color</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="widgetPrimaryColor"
+                    type="color"
+                    value={formData.widgetPrimaryColor}
+                    onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
+                    disabled={!canEdit}
+                    className="w-12 h-9 cursor-pointer"
+                  />
+                  <Input
+                    type="text"
+                    value={formData.widgetPrimaryColor}
+                    onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
+                    disabled={!canEdit}
+                    className="flex-1 font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Widget Icon - Full Width */}
+              <div className="col-span-2 space-y-2">
+                <Label className="text-xs font-semibold text-gray-700">Widget Icon</Label>
+                <div className="grid grid-cols-6 gap-2">
+                  {WIDGET_ICON_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={cn(
+                        "h-16 rounded border-2 transition-all flex flex-col items-center justify-center gap-1",
+                        formData.widgetIcon === option.value
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      )}
+                      onClick={() => handleFieldChange("widgetIcon", option.value)}
+                      disabled={!canEdit}
+                    >
+                      <option.icon className={cn("h-5 w-5", formData.widgetIcon === option.value ? "text-green-600" : "text-gray-600")} />
+                      <span className="text-[9px]">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       {canEdit && (
@@ -774,7 +886,7 @@ export function SettingsPage() {
     language: "${formData.widgetLanguage || 'it'}"
   };
 </script>
-<script src="${window.location.origin}/widget.js?v=187" async></script>`}
+<script src="${window.location.origin}/widget.js" async></script>`}
                 </pre>
                 <Button
                   type="button"
@@ -791,7 +903,7 @@ export function SettingsPage() {
     language: "${formData.widgetLanguage || 'it'}"
   };
 </script>
-<script src="${window.location.origin}/widget.js?v=187" async></script>`;
+<script src="${window.location.origin}/widget.js" async></script>`;
                     navigator.clipboard.writeText(embedCode);
                     toast.success("Code copied to clipboard!");
                   }}
@@ -979,18 +1091,43 @@ export function SettingsPage() {
     </div>
   )
 
-  const renderSupportSection = () => (
+  const renderSecuritySection = () => (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-          <Headphones className="h-6 w-6 text-orange-600" />
-          Human Support
+          <Shield className="h-6 w-6 text-red-600" />
+          Security & Support
         </h2>
-        <p className="text-sm text-gray-500 mt-1">Configure escalation to human operators</p>
+        <p className="text-sm text-gray-500 mt-1">Access control and human operator escalation</p>
       </div>
 
+      {/* Security - External Domains */}
       <Card>
-        <CardContent className="pt-6 space-y-6">
+        <CardHeader className="border-b bg-gradient-to-r from-red-50 to-white">
+          <CardTitle className="text-base font-semibold">External Domain Access</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            <Label htmlFor="allowedExternalLinks">Allowed External Domains</Label>
+            <Textarea
+              id="allowedExternalLinks"
+              value={formData.allowedExternalLinks}
+              onChange={(e) => handleFieldChange("allowedExternalLinks", e.target.value)}
+              placeholder="example.com, trusted-site.com, docs.google.com, stripe.com"
+              disabled={!canEdit}
+              className="min-h-[80px]"
+            />
+            <p className="text-sm text-muted-foreground">💡 Comma-separated list of trusted external domains that the bot can link to. Examples: docs.google.com, stripe.com, instagram.com</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Human Support */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+          <CardTitle className="text-base font-semibold">Human Support Escalation</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
           <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-3">
               <Headphones className="h-5 w-5 text-slate-600" />
@@ -1102,56 +1239,15 @@ export function SettingsPage() {
     </div>
   )
 
-  const renderSecuritySection = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-          <Shield className="h-6 w-6 text-red-600" />
-          Security & Access
-        </h2>
-        <p className="text-sm text-gray-500 mt-1">Control external domain access</p>
-      </div>
-
-      <Card>
-        <CardContent className="pt-6">
-          <div className="space-y-2">
-            <Label htmlFor="allowedExternalLinks">Allowed External Domains</Label>
-            <Textarea
-              id="allowedExternalLinks"
-              value={formData.allowedExternalLinks}
-              onChange={(e) => handleFieldChange("allowedExternalLinks", e.target.value)}
-              placeholder="example.com, trusted-site.com, docs.google.com, stripe.com"
-              disabled={!canEdit}
-              className="min-h-[80px]"
-            />
-            <p className="text-sm text-muted-foreground">💡 Comma-separated list of trusted external domains that the bot can link to. Examples: docs.google.com, stripe.com, instagram.com</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {canEdit && (
-        <div className="flex justify-end gap-3">
-          <Button onClick={() => navigate(-1)} variant="outline">
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={!isDirty}>
-            <Save className="mr-2 h-4 w-4" />
-            Save Changes
-          </Button>
-        </div>
-      )}
-    </div>
-  )
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen">
-        {/* Left Sidebar Menu - Compatta */}
-        <aside className="w-56 bg-white border-r border-gray-200 flex flex-col h-full">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h1 className="text-base font-bold text-gray-900">Settings</h1>
+      <div className="flex h-full">
+        {/* Left Sidebar Menu */}
+        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+          <div className="px-4 py-4 border-b border-gray-200">
+            <h1 className="text-lg font-bold text-gray-900">Settings</h1>
           </div>
-          <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+          <nav className="px-3 py-4 space-y-1">
             {MENU_ITEMS.map((item) => {
               const Icon = item.icon
               const isActive = activeSection === item.key
@@ -1160,17 +1256,17 @@ export function SettingsPage() {
                 <button
                   key={item.key}
                   onClick={() => setActiveSection(item.key)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
                     isActive
                       ? "bg-green-50 text-green-700 font-medium"
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-green-600" : "text-gray-400"}`} />
+                  <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? "text-green-600" : "text-gray-400"}`} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{item.label}</div>
+                    <div className="text-sm font-medium truncate">{item.label}</div>
                     {!isActive && (
-                      <div className="text-[10px] text-gray-400 truncate leading-tight">{item.description}</div>
+                      <div className="text-xs text-gray-400 truncate leading-tight">{item.description}</div>
                     )}
                   </div>
                 </button>
@@ -1180,7 +1276,7 @@ export function SettingsPage() {
         </aside>
 
         {/* Right Content Area - Fixed height with scroll */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden">
+        <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
           <div className="flex-1 overflow-y-auto">
             <div className="p-8">
               {renderContent()}
@@ -1206,3 +1302,5 @@ export function SettingsPage() {
     </div>
   )
 }
+
+export default SettingsPage

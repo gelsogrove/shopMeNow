@@ -104,8 +104,25 @@
     return lang
   }
 
+  // Helper function to convert hex color to rgba
+  const hexToRgba = (hex, alpha = 1) => {
+    // Remove # if present
+    hex = hex.replace('#', '')
+    
+    // Parse hex values
+    const r = parseInt(hex.substring(0, 2), 16)
+    const g = parseInt(hex.substring(2, 4), 16)
+    const b = parseInt(hex.substring(4, 6), 16)
+    
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
   // CSS with placeholder for dynamic colors
-  const getCSS = (primaryColor) => `
+  const getCSS = (primaryColor) => {
+    const pulseColor = hexToRgba(primaryColor, 0.7)
+    const pulseColorTransparent = hexToRgba(primaryColor, 0)
+    
+    return `
     .echatbot-widget-overlay {
       position: fixed;
       top: 0;
@@ -156,13 +173,13 @@
 
     @keyframes echatbot-pulse {
       0% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+        box-shadow: 0 0 0 0 ${pulseColor};
       }
       50% {
-        box-shadow: 0 0 0 20px rgba(34, 197, 94, 0);
+        box-shadow: 0 0 0 20px ${pulseColorTransparent};
       }
       100% {
-        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        box-shadow: 0 0 0 0 ${pulseColorTransparent};
       }
     }
 
@@ -427,6 +444,10 @@
       justify-content: center;
       font-size: 18px;
       transition: all 0.2s;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+      pointer-events: auto;
     }
 
     .echatbot-widget-send-btn:hover {
@@ -456,6 +477,11 @@
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .echatbot-spinner {
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
     }
 
     /* Typing indicator with bouncing dots */
@@ -556,6 +582,7 @@
       }
     }
   `
+  }
 
   // ============================================================================
   // UTILITY FUNCTIONS
@@ -674,18 +701,18 @@
     const stroke = color
     switch ((iconName || "chat").toLowerCase()) {
       case "sparkles":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M32 8l4 10 10 4-10 4-4 10-4-10-10-4 10-4 4-10Z" fill="${stroke}" />
   <path d="M16 38l2.5 6.5L25 47l-6.5 2-2.5 6.5L13.5 49 7 47l6.5-2L16 38Z" fill="${stroke}" />
 </svg>`
       case "support":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="32" cy="32" r="18" stroke="${stroke}" stroke-width="3.2" />
   <circle cx="32" cy="32" r="8" stroke="${stroke}" stroke-width="3.2" />
   <path d="M32 14v6M32 44v6M18 32h-6M52 32h-6M21 21l-4.5-4.5M47.5 47.5 43 43M21 43l-4.5 4.5M47.5 16.5 43 21" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
 </svg>`
       case "bot":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect x="14" y="18" width="36" height="28" rx="8" stroke="${stroke}" stroke-width="3.2" />
   <circle cx="26" cy="32" r="3.2" fill="${stroke}" />
   <circle cx="38" cy="32" r="3.2" fill="${stroke}" />
@@ -693,7 +720,7 @@
   <path d="M22 44c3 3 17 3 20 0" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
 </svg>`
       case "messages":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M16 12c0-2.2 1.8-4 4-4h24c2.2 0 4 1.8 4 4v14c0 2.2-1.8 4-4 4h-8l-6 5v-5h-10c-2.2 0-4-1.8-4-4V12Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" />
   <path d="M18 32h-2c-2.2 0-4 1.8-4 4v14c0 2.2 1.8 4 4 4h10v5l6-5h8c2.2 0 4-1.8 4-4v-6" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" />
   <circle cx="26" cy="19" r="2" fill="${stroke}" />
@@ -701,38 +728,38 @@
   <circle cx="38" cy="19" r="2" fill="${stroke}" />
 </svg>`
       case "mail":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect x="8" y="16" width="48" height="32" rx="4" stroke="${stroke}" stroke-width="3.2" />
   <path d="M8 20l24 16 24-16" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
 </svg>`
       case "user":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <circle cx="32" cy="24" r="10" stroke="${stroke}" stroke-width="3.2" />
   <path d="M12 52c0-11 9-20 20-20s20 9 20 20" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
 </svg>`
       case "star":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M32 8l6.5 13 14.5 2-10.5 10 2.5 14.5L32 41l-13 6.5 2.5-14.5L11 23l14.5-2L32 8Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.3" />
 </svg>`
       case "heart":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M32 52S12 40 12 26c0-8 6-12 12-12 4 0 8 2 8 6 0-4 4-6 8-6 6 0 12 4 12 12 0 14-20 26-20 26Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.3" />
 </svg>`
       case "bell":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M24 52c0 4.4 3.6 8 8 8s8-3.6 8-8M48 40v-12c0-8.8-7.2-16-16-16s-16 7.2-16 16v12l-4 8h40l-4-8Z" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
 </svg>`
       case "shield":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M32 8l-16 6v12c0 12 8 22 16 26 8-4 16-14 16-26V14l-16-6Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.2" />
   <path d="M24 30l6 6 10-12" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
 </svg>`
       case "zap":
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M36 8L16 36h16l-4 20 20-28H32l4-20Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.3" />
 </svg>`
       default:
-        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        return `<svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
   <path d="M14 16c0-4.4 3.6-8 8-8h20c4.4 0 8 3.6 8 8v15c0 4.4-3.6 8-8 8H29l-8 7v-7h-7c-4.4 0-8-3.6-8-8V16Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" />
   <circle cx="24" cy="24" r="2.8" fill="${stroke}" />
   <circle cx="32" cy="24" r="2.8" fill="${stroke}" />
@@ -1086,6 +1113,7 @@
 
       // Send button
       this.sendBtn = document.createElement("button")
+      this.sendBtn.type = "button"
       this.sendBtn.className = "echatbot-widget-send-btn"
       this.sendBtn.innerHTML = "↗"
       inputContainer.appendChild(this.sendBtn)
@@ -1119,8 +1147,19 @@
       // Toggle popup on button click
       this.button.addEventListener("click", () => this.togglePopup())
 
-      // Send message on button click
-      this.sendBtn.addEventListener("click", () => this.sendMessage())
+      // Send message on button click (multiple handlers for reliability)
+      this.sendBtn.addEventListener("click", (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.sendMessage()
+      })
+      
+      // Fallback: also use onclick
+      this.sendBtn.onclick = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.sendMessage()
+      }
 
       // Send message on Enter (but allow Shift+Enter for newline)
       this.input.addEventListener("keydown", (e) => {
@@ -1210,6 +1249,9 @@
       this.input.style.height = "auto"
       this.sendBtn.disabled = true
       this.isLoading = true
+      
+      // Show loading spinner in button
+      this.sendBtn.innerHTML = `<svg class="echatbot-spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>`
 
       // Show typing indicator
       this.showTypingIndicator()
@@ -1270,6 +1312,8 @@
       } finally {
         this.isLoading = false
         this.sendBtn.disabled = false
+        // Restore send icon
+        this.sendBtn.innerHTML = "↗"
       }
     }
 
