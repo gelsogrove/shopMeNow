@@ -26,15 +26,22 @@ if (!DATABASE_URL) {
 
 import { PrismaClient, Prisma } from './generated/prisma/index.js'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 
 // ============================================================================
-// Prisma 7 with PrismaPg adapter using connectionString (no Pool)
+// Prisma 7 with PrismaPg adapter using Pool with SSL configuration
 // ============================================================================
-// This approach uses connectionString directly instead of Pool.
-// PrismaPg handles connection management internally.
-// Connection errors are thrown at query time, allowing retry logic in the app.
+// Using Pool with ssl config for Heroku/AWS RDS compatibility.
+// rejectUnauthorized: false is required for Heroku PostgreSQL connections.
 
-const adapter = new PrismaPg({ connectionString: DATABASE_URL })
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' || DATABASE_URL.includes('amazonaws.com')
+    ? { rejectUnauthorized: false }
+    : undefined,
+})
+
+const adapter = new PrismaPg(pool)
 
 export const prisma = new PrismaClient({
   adapter,

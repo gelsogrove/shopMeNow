@@ -16,4 +16,3 @@ export default defineConfig({
     url: process.env.DATABASE_URL || '',
   },
 })
-// Rebuild trigger 1769305805
