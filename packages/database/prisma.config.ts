@@ -13,8 +13,6 @@ export default defineConfig({
     seed: 'ts-node prisma/seed.ts',
   },
   datasource: {
-    url: process.env.DATABASE_URL
-      ? `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}sslmode=${process.env.NODE_ENV === 'production' ? 'require' : 'disable'}`
-      : '',
+    url: process.env.DATABASE_URL || '',
   },
 })
