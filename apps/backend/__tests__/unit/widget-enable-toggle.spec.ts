@@ -124,6 +124,8 @@ describe("Widget Enable/Disable Toggle", () => {
         channelStatus: true,
         debugMode: false,
         language: "it",
+        primaryColor: "#22c55e",
+        icon: "sparkles",
       })
     })
 
