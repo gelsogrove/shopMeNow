@@ -2,13 +2,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -16,7 +9,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
@@ -29,6 +21,8 @@ interface Customer {
   name: string
   email: string
   phone: string
+  company?: string
+  isActive?: boolean
   isBlacklisted?: boolean
   push_notifications_consent?: boolean
   last_privacy_version_accepted?: string
@@ -37,13 +31,12 @@ interface Customer {
 interface Campaign {
   id: string
   name: string
-  messagePreview: string
-  frequency: string
-  isActive: boolean
-  targetType: string
-  customerIds: string[]
-  createdAt: string
-  lastRunAt?: string
+  bodyPreview?: string
+  sendAt?: string | null
+  throttlePerSecond?: number | null
+  batchSize?: number | null
+  expectedRecipients?: number | null
+  createdAt?: string
 }
 
 interface CampaignSheetProps {
@@ -54,17 +47,6 @@ interface CampaignSheetProps {
   mode: "view" | "edit"
   workspaceId?: string
 }
-
-const frequencyOptions = [
-  { value: "ONCE", label: "One-time (send once)" },
-  { value: "WEEKLY", label: "Weekly (every 7 days)" },
-  { value: "BIWEEKLY", label: "Bi-weekly (every 14 days)" },
-  { value: "MONTHLY", label: "Monthly (every 30 days)" },
-  { value: "BIMONTHLY", label: "Bi-monthly (every 60 days)" },
-  { value: "QUARTERLY", label: "Quarterly (every 90 days)" },
-  { value: "SEMIANNUAL", label: "Semi-annual (every 6 months)" },
-  { value: "ANNUAL", label: "Annual (yearly)" },
-]
 
 export function CampaignSheet({
   campaign,
@@ -77,10 +59,11 @@ export function CampaignSheet({
   // Form state
   const [name, setName] = useState("")
   const [messagePreview, setMessagePreview] = useState("")
-  const [frequency, setFrequency] = useState("MONTHLY")
-  const [targetType, setTargetType] = useState("ALL")
+  const [sendAt, setSendAt] = useState<string>("")
+  const [throttlePerSecond, setThrottlePerSecond] = useState<number | "">("")
+  const [batchSize, setBatchSize] = useState<number | "">("")
+  const [recipientMode, setRecipientMode] = useState<"ALL" | "SELECTED">("ALL")
   const [customerIds, setCustomerIds] = useState<string[]>([])
-  const [isActive, setIsActive] = useState(true)
 
   // Additional state
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -98,19 +81,31 @@ export function CampaignSheet({
   useEffect(() => {
     if (campaign) {
       setName(campaign.name || "")
-      setMessagePreview(campaign.messagePreview || "")
-      setFrequency(campaign.frequency || "MONTHLY")
-      setTargetType(campaign.targetType || "ALL")
-      setCustomerIds(campaign.customerIds || [])
-      setIsActive(campaign.isActive !== undefined ? campaign.isActive : true)
+      setMessagePreview(campaign.bodyPreview || "")
+      setSendAt(
+        campaign.sendAt ? campaign.sendAt.slice(0, 16) : ""
+      )
+      setThrottlePerSecond(
+        campaign.throttlePerSecond !== undefined && campaign.throttlePerSecond !== null
+          ? campaign.throttlePerSecond
+          : ""
+      )
+      setBatchSize(
+        campaign.batchSize !== undefined && campaign.batchSize !== null
+          ? campaign.batchSize
+          : ""
+      )
+      setRecipientMode("ALL")
+      setCustomerIds([])
     } else {
       // Reset form for new campaign
       setName("")
       setMessagePreview("")
-      setFrequency("MONTHLY")
-      setTargetType("ALL")
+      setSendAt("")
+      setThrottlePerSecond("")
+      setBatchSize("")
+      setRecipientMode("ALL")
       setCustomerIds([])
-      setIsActive(true)
     }
   }, [campaign])
 
@@ -165,28 +160,45 @@ export function CampaignSheet({
       return
     }
 
-    if (!messagePreview.trim()) {
-      toast.error("Please enter campaign message")
+    const trimmedMessage = messagePreview.trim()
+    if (!trimmedMessage) {
+      toast.error("Please enter campaign message (body)")
       return
     }
 
-    if (targetType === "SELECTED" && customerIds.length === 0) {
-      toast.error("Please select at least one customer")
+    const selectedIds =
+      recipientMode === "ALL" ? customers.map((c) => c.id) : customerIds
+
+    if (selectedIds.length === 0) {
+      toast.error("Please select at least one recipient")
       return
+    }
+
+    let sendAtDate: string | null = null
+    if (sendAt) {
+      const parsed = new Date(sendAt)
+      if (isNaN(parsed.getTime())) {
+        toast.error("Invalid send date/time")
+        return
+      }
+      sendAtDate = parsed.toISOString()
     }
 
     const formData = {
-      name,
-      messagePreview,
-      frequency,
-      targetType,
-      customerIds,
-      isActive,
+      name: name.trim(),
+      bodyPreview: trimmedMessage,
+      sendAt: sendAtDate,
+      throttlePerSecond:
+        throttlePerSecond === "" ? undefined : Number(throttlePerSecond),
+      batchSize: batchSize === "" ? undefined : Number(batchSize),
+      recipients: {
+        customerIds: selectedIds,
+      },
     }
 
     try {
       setSaving(true)
-      onSubmit(formData, campaign?.id)
+      await onSubmit(formData, campaign?.id)
     } catch (error) {
       logger.error("Error submitting campaign:", error)
     } finally {
@@ -260,29 +272,74 @@ export function CampaignSheet({
             <p className="text-xs text-gray-500">
               {messagePreview.length}/500 characters
             </p>
+
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
+              <div className="font-semibold text-slate-800">Available variables</div>
+              <div className="flex flex-wrap gap-2">
+                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{name}}"}</code>
+                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{firstName}}"}</code>
+                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{lastName}}"}</code>
+                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{email}}"}</code>
+                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{phone}}"}</code>
+                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{company}}"}</code>
+                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{workspace}}"}</code>
+              </div>
+              <p className="text-[11px] text-slate-600">
+                Variables are replaced per recipient. Missing data stay as placeholders.
+              </p>
+              <p className="text-[11px] text-slate-600">
+                🌍 Each message is translated automatically to the customer&apos;s language (it/en/es/pt) before sending.
+              </p>
+            </div>
           </div>
 
-          {/* Frequency */}
-          <div className="space-y-2">
-            <Label htmlFor="frequency">
-              Send Frequency <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={frequency}
-              onValueChange={setFrequency}
-              disabled={!isEditMode}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {frequencyOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Schedule & controls */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="sendAt">Send time (optional)</Label>
+              <Input
+                id="sendAt"
+                type="datetime-local"
+                value={sendAt}
+                onChange={(e) => setSendAt(e.target.value)}
+                disabled={!isEditMode}
+              />
+              <p className="text-xs text-gray-500">
+                Leave empty to send as soon as the scheduler picks the job.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="throttle">Msgs/sec</Label>
+                <Input
+                  id="throttle"
+                  type="number"
+                  min={1}
+                  value={throttlePerSecond}
+                  onChange={(e) =>
+                    setThrottlePerSecond(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                  placeholder="Default (10)"
+                  disabled={!isEditMode}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="batchSize">Batch size</Label>
+                <Input
+                  id="batchSize"
+                  type="number"
+                  min={1}
+                  value={batchSize}
+                  onChange={(e) =>
+                    setBatchSize(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  placeholder="Default (50)"
+                  disabled={!isEditMode}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Target Selection */}
@@ -296,18 +353,18 @@ export function CampaignSheet({
                 <input
                   type="radio"
                   value="ALL"
-                  checked={targetType === "ALL"}
+                  checked={recipientMode === "ALL"}
                   onChange={(e) => {
-                    setTargetType(e.target.value)
+                    setRecipientMode(e.target.value as "ALL" | "SELECTED")
                     setCustomerIds([])
                   }}
                   disabled={!isEditMode}
                   className="mt-1 w-4 h-4 text-green-600"
                 />
                 <div>
-                  <span className="font-medium">All active customers</span>
+                  <span className="font-medium">All valid customers</span>
                   <p className="text-sm text-gray-500">
-                    Campaign will be sent to all workspace customers
+                    Campaign will be sent to all filtered customers ({customers.length})
                   </p>
                 </div>
               </label>
@@ -316,8 +373,10 @@ export function CampaignSheet({
                 <input
                   type="radio"
                   value="SELECTED"
-                  checked={targetType === "SELECTED"}
-                  onChange={(e) => setTargetType(e.target.value)}
+                  checked={recipientMode === "SELECTED"}
+                  onChange={(e) =>
+                    setRecipientMode(e.target.value as "ALL" | "SELECTED")
+                  }
                   disabled={!isEditMode}
                   className="mt-1 w-4 h-4 text-green-600"
                 />
@@ -331,7 +390,7 @@ export function CampaignSheet({
             </div>
 
             {/* Customer Selection (if SELECTED) */}
-            {targetType === "SELECTED" && (
+            {recipientMode === "SELECTED" && (
               <div className="mt-4">
                 <Label className="mb-2">Select Customers</Label>
                 {loading ? (
@@ -372,22 +431,11 @@ export function CampaignSheet({
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Active Status */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isActive"
-              checked={isActive}
-              onCheckedChange={setIsActive}
-              disabled={!isEditMode}
-            />
-            <Label htmlFor="isActive" className="cursor-pointer">
-              <span className="font-medium">Active campaign</span>
-              <p className="text-sm text-gray-500 font-normal">
-                If inactive, campaign will not send messages
+            {recipientMode === "ALL" && (
+              <p className="text-sm text-gray-600 mt-1">
+                All {customers.length} eligible customers will receive this campaign.
               </p>
-            </Label>
+            )}
           </div>
 
           {/* Footer Actions */}

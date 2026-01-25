@@ -1,5 +1,6 @@
 import { prisma, Prisma } from '../config/database'
 import logger from '../utils/logger'
+import { translationService } from '../services/translation.service'
 
 /**
  * Push Campaigns job (WhatsApp only).
@@ -28,7 +29,7 @@ export async function pushCampaignsJob(): Promise<void> {
     try {
       const workspace = await prisma.workspace.findUnique({
         where: { id: campaign.workspaceId },
-        select: { ownerId: true },
+        select: { ownerId: true, name: true },
       })
       if (!workspace?.ownerId) {
         await prisma.pushCampaign.update({
@@ -74,6 +75,57 @@ export async function pushCampaignsJob(): Promise<void> {
             continue
           }
 
+          // Load customer for variables, language, consent (defense-in-depth)
+          const customer = await prisma.customers.findUnique({
+            where: { id: recipient.customerId },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              company: true,
+              phone: true,
+              language: true,
+              isBlacklisted: true,
+              push_notifications_consent: true,
+              push_notifications_consent_at: true,
+            },
+          })
+
+          if (!customer) {
+            await prisma.pushCampaignRecipient.update({
+              where: { id: recipient.id },
+              data: {
+                status: 'SKIPPED',
+                errorCode: 'NO_CUSTOMER',
+                errorMessage: 'Customer not found',
+              },
+            })
+            continue
+          }
+          if (customer.isBlacklisted) {
+            await prisma.pushCampaignRecipient.update({
+              where: { id: recipient.id },
+              data: {
+                status: 'SKIPPED',
+                errorCode: 'BLACKLISTED',
+                errorMessage: 'Customer blacklisted',
+              },
+            })
+            continue
+          }
+          if (!customer.push_notifications_consent) {
+            await prisma.pushCampaignRecipient.update({
+              where: { id: recipient.id },
+              data: {
+                status: 'SKIPPED',
+                errorCode: 'OPT_OUT',
+                errorMessage: 'Marketing opt-in missing',
+                optOutAt: customer.push_notifications_consent_at ?? undefined,
+              },
+            })
+            continue
+          }
+
           // Credit check (owner-level)
           const owner = await prisma.user.findUnique({
             where: { id: workspace.ownerId },
@@ -96,8 +148,12 @@ export async function pushCampaignsJob(): Promise<void> {
             continue
           }
 
-          const messageContent =
-            campaign.bodyPreview || 'Campaign message (no preview provided)'
+          // Build message with variable replacement + translation
+          const messageContent = await buildMessageContent({
+            campaign,
+            customer,
+            workspaceName: workspace.name || 'eChatbot',
+          })
 
           await prisma.$transaction(async (tx) => {
             // Debit credit
@@ -209,4 +265,64 @@ export async function pushCampaignsJob(): Promise<void> {
       })
     }
   }
+}
+
+function normalizeLanguage(lang?: string | null): string {
+  if (!lang) return 'it'
+  const l = lang.toLowerCase()
+  if (l.startsWith('en')) return 'en'
+  if (l.startsWith('es')) return 'es'
+  if (l.startsWith('pt')) return 'pt'
+  return 'it'
+}
+
+async function buildMessageContent({
+  campaign,
+  customer,
+  workspaceName,
+}: {
+  campaign: any
+  customer: any
+  workspaceName: string
+}): Promise<string> {
+  const template = campaign.bodyPreview || 'Campaign message'
+  const name = customer.name || ''
+  const [firstName, ...rest] = name.split(' ')
+  const lastName = rest.join(' ').trim()
+
+  const replacements: Record<string, string> = {
+    name: name || 'Customer',
+    firstName: firstName || name || 'Customer',
+    lastName: lastName || '',
+    email: customer.email || '',
+    phone: customer.phone || '',
+    company: customer.company || '',
+    workspace: workspaceName || 'eChatbot',
+  }
+
+  const message = template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, key) => {
+    const k = String(key || '').trim()
+    return replacements[k] !== undefined && replacements[k] !== null
+      ? replacements[k]
+      : `{{${k}}}`
+  })
+
+  // Translate to customer's preferred language (best-effort)
+  const targetLanguage = normalizeLanguage(customer.language)
+  try {
+    const translated = await translationService.translateMessage(
+      message,
+      targetLanguage
+    )
+    return translated || message
+  } catch (error) {
+    logger.error('[PUSH-CAMPAIGN] Translation failed, using original', error)
+    return message
+  }
+}
+
+// Export helpers for unit testing
+export const __test = {
+  buildMessageContent,
+  normalizeLanguage,
 }

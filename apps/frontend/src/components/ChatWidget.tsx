@@ -24,6 +24,12 @@ import {
   Phone,
   Cpu,
   MessagesSquare,
+  Mail,
+  User,
+  Star,
+  Heart,
+  Bell,
+  Shield,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ChatSurface } from "@/components/chat/ChatSurface"
@@ -382,6 +388,18 @@ export function ChatWidget({
         return <Phone className="h-6 w-6 text-white" />
       case "cpu":
         return <Cpu className="h-6 w-6 text-white" />
+      case "mail":
+        return <Mail className="h-6 w-6 text-white" />
+      case "user":
+        return <User className="h-6 w-6 text-white" />
+      case "star":
+        return <Star className="h-6 w-6 text-white" />
+      case "heart":
+        return <Heart className="h-6 w-6 text-white" />
+      case "bell":
+        return <Bell className="h-6 w-6 text-white" />
+      case "shield":
+        return <Shield className="h-6 w-6 text-white" />
       default:
         return <MessageCircle className="h-6 w-6 text-white" />
     }

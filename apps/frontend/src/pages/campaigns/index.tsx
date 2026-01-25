@@ -1,6 +1,5 @@
 import { PageLayout } from "@/components/layout/PageLayout"
 import { CampaignSheet } from "@/components/shared/CampaignSheet"
-import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import { commonStyles } from "@/styles/common"
 import { ColumnDef } from "@tanstack/react-table"
-import { Calendar, Globe, Megaphone, Pencil, Sparkles, Trash2, Users, Clock, CheckCircle2 } from "lucide-react"
+import { Calendar, Globe, Megaphone, Pause, Sparkles, Trash2, Users, Clock, CheckCircle2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useWorkspace } from "../../contexts/WorkspaceContext"
 import { toast } from "../../lib/toast"
@@ -21,27 +20,15 @@ import { api } from "../../services/api"
 interface Campaign {
   id: string
   name: string
-  messagePreview: string
-  frequency: string
-  isActive: boolean
-  targetType: string
-  customerIds: string[]
-  createdAt: string
-  lastRunAt?: string
-  _count: {
-    sends: number
-    feedbacks: number
-  }
-}
-
-const frequencyLabels: Record<string, string> = {
-  WEEKLY: "Weekly",
-  BIWEEKLY: "Bi-weekly",
-  MONTHLY: "Monthly",
-  BIMONTHLY: "Bi-monthly",
-  QUARTERLY: "Quarterly",
-  SEMIANNUAL: "Semi-annual",
-  ANNUAL: "Annual",
+  status: string
+  sendAt?: string | null
+  expectedRecipients?: number | null
+  actualSent?: number | null
+  actualFailed?: number | null
+  actualSkipped?: number | null
+  costPerMessage?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export default function CampaignsPage() {
@@ -49,19 +36,13 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(
-    null
-  )
 
   // Campaign Sheet state
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
     null
   )
   const [campaignSheetOpen, setCampaignSheetOpen] = useState(false)
-  const [campaignSheetMode, setCampaignSheetMode] = useState<"view" | "edit">(
-    "edit"
-  )
+  const [campaignSheetMode] = useState<"view" | "edit">("edit")
 
   useEffect(() => {
     if (workspace?.id) {
@@ -72,7 +53,9 @@ export default function CampaignsPage() {
   const loadCampaigns = async () => {
     try {
       setLoading(true)
-      const { data } = await api.get(`/workspaces/${workspace?.id}/campaigns`)
+      const { data } = await api.get(
+        `/workspaces/${workspace?.id}/push-campaigns`
+      )
       setCampaigns(data.data || [])
     } catch (error) {
       toast.error("Error loading campaigns")
@@ -81,69 +64,66 @@ export default function CampaignsPage() {
     }
   }
 
-  const handleToggleActive = async (campaign: Campaign) => {
+  // Actions
+  const handleRunNow = async (campaign: Campaign) => {
     try {
-      const { data } = await api.patch(
-        `/workspaces/${workspace?.id}/campaigns/${campaign.id}/toggle`
+      await api.post(
+        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/run-now`
       )
-      toast.success(data.message)
+      toast.success("Campaign queued to run now")
       loadCampaigns()
-    } catch (error) {
-      toast.error("Error changing campaign status")
+    } catch {
+      toast.error("Error running campaign")
     }
   }
 
-  const handleDeleteClick = (campaign: Campaign) => {
-    setCampaignToDelete(campaign)
-    setShowDeleteDialog(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!campaignToDelete) return
-
+  const handlePause = async (campaign: Campaign) => {
     try {
-      await api.delete(
-        `/workspaces/${workspace?.id}/campaigns/${campaignToDelete.id}`
+      await api.post(
+        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/pause`
       )
-      toast.success("Campaign deleted successfully")
+      toast.success("Campaign paused")
       loadCampaigns()
-      setShowDeleteDialog(false)
-      setCampaignToDelete(null)
-    } catch (error) {
-      toast.error("Error deleting campaign")
+    } catch {
+      toast.error("Error pausing campaign")
     }
   }
 
-  // Handle edit campaign
-  const handleEditCampaign = (campaign: Campaign) => {
-    setSelectedCampaign(campaign)
-    setCampaignSheetMode("edit")
-    setCampaignSheetOpen(true)
+  const handleResume = async (campaign: Campaign) => {
+    try {
+      await api.post(
+        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/resume`
+      )
+      toast.success("Campaign resumed")
+      loadCampaigns()
+    } catch {
+      toast.error("Error resuming campaign")
+    }
   }
 
-  // Handle add new campaign
+  const handleCancel = async (campaign: Campaign) => {
+    try {
+      await api.post(
+        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/cancel`
+      )
+      toast.success("Campaign cancelled")
+      loadCampaigns()
+    } catch {
+      toast.error("Error cancelling campaign")
+    }
+  }
+
+  // Open sheet to create
   const handleAddCampaign = () => {
     setSelectedCampaign(null)
-    setCampaignSheetMode("edit")
     setCampaignSheetOpen(true)
   }
 
-  // Handle campaign form submission
-  const handleCampaignSubmit = async (formData: any, campaignId?: string) => {
+  // Handle campaign form submission (create + optional schedule)
+  const handleCampaignSubmit = async (formData: any) => {
     try {
-      if (campaignId) {
-        // Update existing campaign
-        await api.put(
-          `/workspaces/${workspace?.id}/campaigns/${campaignId}`,
-          formData
-        )
-        toast.success("Campaign updated successfully")
-      } else {
-        // Create new campaign
-        await api.post(`/workspaces/${workspace?.id}/campaigns`, formData)
-        toast.success("Campaign created successfully")
-      }
-
+      await api.post(`/workspaces/${workspace?.id}/push-campaigns`, formData)
+      toast.success("Campaign created")
       setCampaignSheetOpen(false)
       loadCampaigns()
     } catch (error: any) {
@@ -169,57 +149,55 @@ export default function CampaignsPage() {
       ),
     },
     {
-      accessorKey: "frequency",
-      header: "Frequency",
+      accessorKey: "status",
+      header: "Status",
       cell: ({ row }) => (
         <div className="flex items-center gap-1 text-sm">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          {frequencyLabels[row.original.frequency] || row.original.frequency}
+          <Badge
+            variant={
+              row.original.status === "COMPLETED"
+                ? "default"
+                : row.original.status === "FAILED" ||
+                  row.original.status === "CANCELLED"
+                ? "destructive"
+                : "secondary"
+            }
+          >
+            {row.original.status}
+          </Badge>
         </div>
       ),
     },
     {
-      accessorKey: "targetType",
+      accessorKey: "sendAt",
+      header: "Send at",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 text-sm">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          {row.original.sendAt
+            ? new Date(row.original.sendAt).toLocaleString()
+            : "Now"}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "expectedRecipients",
       header: "Recipients",
       cell: ({ row }) => (
         <div className="flex items-center gap-1 text-sm">
           <Users className="w-4 h-4 text-gray-400" />
-          {row.original.targetType === "ALL"
-            ? "All customers"
-            : `${row.original.customerIds.length} customers`}
+          {row.original.expectedRecipients ?? 0}
         </div>
       ),
     },
     {
-      accessorKey: "sends",
-      header: "Sent",
+      accessorKey: "actualSent",
+      header: "Sent/Failed/Skipped",
       cell: ({ row }) => (
-        <div className="text-sm text-gray-600">{row.original._count.sends}</div>
-      ),
-    },
-    {
-      accessorKey: "feedbacks",
-      header: "Feedback",
-      cell: ({ row }) => (
-        <div className="text-sm text-gray-600">
-          {row.original._count.feedbacks}
+        <div className="text-sm text-gray-700">
+          {row.original.actualSent ?? 0} / {row.original.actualFailed ?? 0} /{" "}
+          {row.original.actualSkipped ?? 0}
         </div>
-      ),
-    },
-    {
-      accessorKey: "isActive",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge
-          variant={row.original.isActive ? "default" : "secondary"}
-          className={
-            row.original.isActive
-              ? "bg-green-100 text-green-800 hover:bg-green-100"
-              : ""
-          }
-        >
-          {row.original.isActive ? "Active" : "Inactive"}
-        </Badge>
       ),
     },
   ]
@@ -232,16 +210,58 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleEditCampaign(campaign)}
+              onClick={() => handleRunNow(campaign)}
               className="h-8 w-8 p-0 flex items-center justify-center"
+              disabled={
+                ["COMPLETED", "CANCELLED", "FAILED"].includes(
+                  campaign.status || ""
+                ) || campaign.expectedRecipients === 0
+              }
             >
-              <Pencil
-                className={`${commonStyles.actionIcon} ${commonStyles.primary}`}
-              />
+              <Megaphone className="h-4 w-4 text-green-600" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Edit</p>
+            <p>Run now</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {campaign.status === "PAUSED" ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleResume(campaign)}
+                className="h-8 w-8 p-0 flex items-center justify-center"
+                disabled={
+                  ["COMPLETED", "CANCELLED", "FAILED"].includes(
+                    campaign.status || ""
+                  )
+                }
+              >
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handlePause(campaign)}
+                className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+                disabled={
+                  ["COMPLETED", "CANCELLED", "FAILED"].includes(
+                    campaign.status || ""
+                  )
+                }
+              >
+                <Pause className="h-4 w-4 text-amber-600" />
+              </Button>
+            )}
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{campaign.status === "PAUSED" ? "Resume" : "Pause"}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -252,14 +272,19 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleDeleteClick(campaign)}
+              onClick={() => handleCancel(campaign)}
               className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
+              disabled={
+                ["COMPLETED", "CANCELLED", "FAILED"].includes(
+                  campaign.status || ""
+                )
+              }
             >
-              <Trash2 className={commonStyles.actionIcon + " text-red-600"} />
+              <Trash2 className="h-4 w-4 text-red-600" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Delete</p>
+            <p>Cancel</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -364,16 +389,6 @@ export default function CampaignsPage() {
         onSubmit={handleCampaignSubmit}
         mode={campaignSheetMode}
         workspaceId={workspace?.id}
-      />
-
-      <ConfirmDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete Campaign"
-        description={`Are you sure you want to delete "${campaignToDelete?.name}"? This action cannot be undone.`}
-        onConfirm={handleDeleteConfirm}
-        confirmLabel="Delete"
-        variant="destructive"
       />
     </PageLayout>
   )

@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Copy, Check, MessageCircle, Sparkles, Bot, LifeBuoy } from "lucide-react";
+import { Copy, Check, MessageCircle, Sparkles, Bot, LifeBuoy, MessageSquare, Mail, User, Star, Heart, Bell, Shield, Zap } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { ImageCropUpload } from "@/components/shared/ImageCropUpload";
@@ -97,6 +97,14 @@ export default function WidgetSettingsPage() {
     { value: "sparkles", label: "Sparkles", icon: Sparkles, hint: "Playful marketing vibe" },
     { value: "support", label: "Human Support", icon: LifeBuoy, hint: "Highlights human help" },
     { value: "bot", label: "Bot", icon: Bot, hint: "Tech-forward feel" },
+    { value: "messages", label: "Messages", icon: MessageSquare, hint: "Modern chat interface" },
+    { value: "mail", label: "Mail", icon: Mail, hint: "Contact us" },
+    { value: "user", label: "User", icon: User, hint: "Personal assistant" },
+    { value: "star", label: "Star", icon: Star, hint: "Premium support" },
+    { value: "heart", label: "Heart", icon: Heart, hint: "Friendly & caring" },
+    { value: "bell", label: "Bell", icon: Bell, hint: "Notifications" },
+    { value: "shield", label: "Shield", icon: Shield, hint: "Secure & trusted" },
+    { value: "zap", label: "Zap", icon: Zap, hint: "Fast response" },
   ];
 
   const handleLogoUpload = async (file: File) => {

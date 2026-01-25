@@ -553,9 +553,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   const currentChannelUsage =
     sharedBillingOverview?.usage?.channelsCount ?? workspaces.length
   const channelLimitReached = currentChannelLimit > 0 && currentChannelUsage >= currentChannelLimit
-  // If plan info is missing, fail-safe: require payment to avoid free bypass
-  const requiresPaymentForChannels = currentPlanType !== "FREE_TRIAL" || !hasPlanInfo
-  const showPayPalWarning = requiresPaymentForChannels && (!isPayPalStatusReady || !isPaymentConnected)
+  // Require PayPal only for paid plans when we have plan info. Free trial users should NOT see the PayPal warning.
+  const requiresPaymentForChannels = hasPlanInfo && currentPlanType !== "FREE_TRIAL"
+  // Avoid flicker: show warning only after PayPal status is ready
+  const showPayPalWarning = requiresPaymentForChannels && isPayPalStatusReady && !isPaymentConnected
 
   const openWizardDialog = useCallback(() => {
     if (requiresPaymentForChannels && !isPayPalStatusReady) {

@@ -195,6 +195,7 @@ app.use(
                 "https://*.gstatic.com",
                 "https://www.google.com",
                 "https://www.gstatic.com",
+                "https://www.googletagmanager.com",
               ],
               styleSrc: [
                 "'self'",
@@ -223,12 +224,17 @@ app.use(
                 "https://accounts.google.com/gsi/",
                 "https://www.google.com",
               ],
+              frameAncestors: [
+                "'self'",
+                "https://accounts.google.com",
+                "https://www.google.com",
+              ],
               upgradeInsecureRequests: [],
             },
           }
         : false,
-    // X-Frame-Options: prevent clickjacking
-    frameguard: { action: "deny" },
+    // X-Frame-Options: prevent clickjacking (disabled to allow Google OAuth)
+    frameguard: false,
     // X-Content-Type-Options: prevent MIME sniffing
     noSniff: true,
     // X-XSS-Protection: enable browser XSS filter

@@ -146,11 +146,24 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: none;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
       transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       padding: 0;
       overflow: visible;
       background-image: none;
+      animation: echatbot-pulse 2s infinite;
+    }
+
+    @keyframes echatbot-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 20px rgba(34, 197, 94, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
     }
 
     .echatbot-widget-button::before,
@@ -160,11 +173,13 @@
 
     .echatbot-widget-button:hover {
       transform: scale(1.05);
+      animation-play-state: paused;
     }
 
     .echatbot-widget-button:active {
       transform: scale(1.15);
       transition: transform 0.1s ease;
+      animation-play-state: paused;
     }
 
     .echatbot-widget-button img {
@@ -520,6 +535,25 @@
         width: 66px;
         height: 66px;
       }
+
+      .echatbot-widget-footer {
+        padding: 10px 12px;
+      }
+
+      .echatbot-widget-footer-input {
+        gap: 6px;
+      }
+
+      .echatbot-widget-send-btn {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+      }
+
+      .echatbot-widget-input {
+        font-size: 16px;
+        max-height: 100px;
+      }
     }
   `
 
@@ -657,6 +691,45 @@
   <circle cx="38" cy="32" r="3.2" fill="${stroke}" />
   <path d="M32 10v6" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
   <path d="M22 44c3 3 17 3 20 0" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
+</svg>`
+      case "messages":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M16 12c0-2.2 1.8-4 4-4h24c2.2 0 4 1.8 4 4v14c0 2.2-1.8 4-4 4h-8l-6 5v-5h-10c-2.2 0-4-1.8-4-4V12Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" />
+  <path d="M18 32h-2c-2.2 0-4 1.8-4 4v14c0 2.2 1.8 4 4 4h10v5l6-5h8c2.2 0 4-1.8 4-4v-6" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" />
+  <circle cx="26" cy="19" r="2" fill="${stroke}" />
+  <circle cx="32" cy="19" r="2" fill="${stroke}" />
+  <circle cx="38" cy="19" r="2" fill="${stroke}" />
+</svg>`
+      case "mail":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="8" y="16" width="48" height="32" rx="4" stroke="${stroke}" stroke-width="3.2" />
+  <path d="M8 20l24 16 24-16" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>`
+      case "user":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="32" cy="24" r="10" stroke="${stroke}" stroke-width="3.2" />
+  <path d="M12 52c0-11 9-20 20-20s20 9 20 20" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" />
+</svg>`
+      case "star":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M32 8l6.5 13 14.5 2-10.5 10 2.5 14.5L32 41l-13 6.5 2.5-14.5L11 23l14.5-2L32 8Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.3" />
+</svg>`
+      case "heart":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M32 52S12 40 12 26c0-8 6-12 12-12 4 0 8 2 8 6 0-4 4-6 8-6 6 0 12 4 12 12 0 14-20 26-20 26Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.3" />
+</svg>`
+      case "bell":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M24 52c0 4.4 3.6 8 8 8s8-3.6 8-8M48 40v-12c0-8.8-7.2-16-16-16s-16 7.2-16 16v12l-4 8h40l-4-8Z" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>`
+      case "shield":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M32 8l-16 6v12c0 12 8 22 16 26 8-4 16-14 16-26V14l-16-6Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.2" />
+  <path d="M24 30l6 6 10-12" stroke="${stroke}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+</svg>`
+      case "zap":
+        return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M36 8L16 36h16l-4 20 20-28H32l4-20Z" stroke="${stroke}" stroke-width="3.2" stroke-linejoin="round" fill="${stroke}" fill-opacity="0.3" />
 </svg>`
       default:
         return `<svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -832,6 +905,16 @@
           if (data.language) {
             this.language = data.language
             console.log("✅ Widget language set from workspace:", this.language)
+          }
+          // 🎨 Use workspace configured primaryColor (overrides config)
+          if (data.primaryColor) {
+            this.config.primaryColor = data.primaryColor
+            console.log("✅ Widget primaryColor set from workspace:", this.config.primaryColor)
+          }
+          // 🎨 Use workspace configured icon (overrides config)
+          if (data.icon) {
+            this.config.icon = data.icon
+            console.log("✅ Widget icon set from workspace:", this.config.icon)
           }
         }
       } catch (error) {

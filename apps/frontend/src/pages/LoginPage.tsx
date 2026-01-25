@@ -2594,8 +2594,8 @@ export function LoginPage() {
       {/* Widget Configuration Loader - injects window.eChatbotConfig with language from header */}
       <WidgetLoader />
 
-      {/* Chat Widget - reads config from window.eChatbotConfig */}
-      <ChatWidget position="bottom-right" />
+      {/* Chat Widget - Support widget for eChatbot HQ */}
+      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" />
 
     </div>
   )

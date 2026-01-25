@@ -166,7 +166,7 @@ export const getBillingOverview = async (
   }
 
   // Create new request
-  const request = api.get(`/workspaces/${workspaceId}/subscription-billing`).then(response => {
+  const request = api.get(`/workspaces/${workspaceId}/billing`).then(response => {
     const data = response.data.data
     billingCache.set(workspaceId, { data, timestamp: Date.now() })
     return data
@@ -209,7 +209,7 @@ export const getBalance = async (
   }
 
   // Create new request
-  const request = api.get(`/workspaces/${workspaceId}/subscription-billing/balance`).then(response => {
+  const request = api.get(`/workspaces/${workspaceId}/billing/balance`).then(response => {
     const data = response.data.data
     balanceCache.set(workspaceId, { data, timestamp: Date.now() })
     return data
@@ -259,7 +259,7 @@ export const getTransactions = async (
   if (options.endDate) params.append("endDate", options.endDate)
 
   const response = await api.get(
-    `/workspaces/${workspaceId}/subscription-billing/transactions?${params.toString()}`
+    `/workspaces/${workspaceId}/billing/transactions?${params.toString()}`
   )
   return response.data.data
 }

@@ -76,6 +76,8 @@ export class WidgetChatController {
           debugMode: true,
           wipMessage: true,
           widgetLanguage: true, // 🌍 Widget language configuration
+          widgetPrimaryColor: true, // 🎨 Widget color
+          widgetIcon: true, // 🎨 Widget icon
           enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
         },
       })
@@ -145,6 +147,8 @@ export class WidgetChatController {
         channelStatus: workspace.channelStatus ?? true,
         debugMode: workspace.debugMode ?? false,
         language: workspace.widgetLanguage || "it", // 🌍 Widget configured language
+        primaryColor: workspace.widgetPrimaryColor || "#22c55e", // 🎨 Widget color
+        icon: workspace.widgetIcon || "sparkles", // 🎨 Widget icon
       })
     } catch (error) {
       logger.error("❌ Error getting widget status", error)
