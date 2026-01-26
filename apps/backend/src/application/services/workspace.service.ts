@@ -324,6 +324,8 @@ For privacy inquiries, please contact our support team.`
             workspaceId: createdWorkspace.id,
             phoneNumber: `+34-${createdWorkspace.id.substring(0, 8)}`,
             apiKey: "default-api-key",
+            webhookId: `webhook-${createdWorkspace.id}`,
+            webhookToken: `token-${Date.now()}`,
             gdpr: defaultGdprContent,
             adminEmail: adminEmail || null, // 🆕 Use adminEmail from creator
           },

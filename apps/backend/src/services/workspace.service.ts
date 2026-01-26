@@ -387,6 +387,8 @@ export const workspaceService = {
           workspaceId: id,
           phoneNumber: updatedWorkspace.whatsappPhoneNumber || "",
           apiKey: updatedWorkspace.whatsappApiKey || "",
+          webhookId: `webhook-${id}`,
+          webhookToken: `token-${Date.now()}`,
           adminEmail: adminEmail,
         },
         update: {

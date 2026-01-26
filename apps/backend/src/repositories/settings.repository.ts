@@ -68,6 +68,8 @@ export class SettingsRepository implements ISettingsRepository {
           phoneNumber,
           apiKey: data.apiKey || '',
           webhookUrl: data.webhookUrl,
+          webhookId: `webhook-${data.workspaceId}`,
+          webhookToken: `token-${Date.now()}`,
           settings: data.settings || {},
           gdpr: data.gdpr,
           workspaceId: data.workspaceId
@@ -252,7 +254,9 @@ export class SettingsRepository implements ISettingsRepository {
             workspaceId,
             gdpr: gdprContent,
             phoneNumber,
-            apiKey: ""
+            apiKey: "",
+            webhookId: `webhook-${workspaceId}`,
+            webhookToken: `token-${Date.now()}`,
           }
         });
         logger.info(`[GDPR REPO] Create completed successfully`);
