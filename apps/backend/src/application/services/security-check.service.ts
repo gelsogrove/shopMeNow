@@ -225,14 +225,8 @@ export class SecurityCheckService {
       }
     }
 
-    if (workspace.debugMode === true) {
-      return {
-        step: "BUSINESS_RULES",
-        passed: false,
-        reason: "Workspace in debug mode (test mode)",
-        retryAfter: 3600 * 1000, // Retry in 1 hour
-      }
-    }
+    // ✅ debugMode does NOT block - it's handled later by sending WIP message
+    // Only channelStatus=false should trigger WIP response
 
     return {
       step: "BUSINESS_RULES",
