@@ -451,6 +451,7 @@ export class WidgetChatController {
         customerLanguage: requestedLanguage || customer.language || workspace.language || "ENG",
         customerMessage: message,
         conversationId: chatSession.id,
+        channel: "widget",
       })
 
       if (welcomeResult.isWelcomeMessage) {

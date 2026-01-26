@@ -2633,14 +2633,10 @@ export class MessageRepository {
         throw new Error("Welcome message not configured in database")
       }
 
-      // welcomeMessage is Json (multilingual), extract English version
-      const welcomeMessageObj = workspace.welcomeMessage as {
-        en: string
-        es: string
-        it: string
-        pt: string
-      }
-      return welcomeMessageObj.en || JSON.stringify(workspace.welcomeMessage)
+      // welcomeMessage is now a simple String (English only - Translation Agent will translate)
+      return typeof workspace.welcomeMessage === 'string' 
+        ? workspace.welcomeMessage 
+        : JSON.stringify(workspace.welcomeMessage)
     } catch (error) {
       logger.error(
         `Error getting welcome message for workspace ${workspaceId}:`,
@@ -2676,18 +2672,15 @@ export class MessageRepository {
         return `Welcome back, ${customerName}! How can I help you today?`
       }
 
-      const afterRegMessages = workspace.afterRegistrationMessages as Record<
-        string,
-        string
-      >
-      const template =
-        afterRegMessages[language] ||
-        afterRegMessages["en"] ||
-        `Welcome back, {name}! How can I help you today?`
+      // afterRegistrationMessages is now a simple String (English only - Translation Agent will translate)
+      const template = typeof workspace.afterRegistrationMessages === 'string'
+        ? workspace.afterRegistrationMessages
+        : JSON.stringify(workspace.afterRegistrationMessages)
 
       return template
         .replace("{name}", customerName)
         .replace("{customerName}", customerName)
+        .replace("{{customerName}}", customerName)
         .replace("[nome]", customerName)
     } catch (error) {
       logger.error(

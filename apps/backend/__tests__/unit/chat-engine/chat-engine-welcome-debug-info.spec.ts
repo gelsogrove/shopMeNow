@@ -33,6 +33,10 @@ const mockPrisma = {
       return customer
     }),
   },
+  chatSession: {
+    findMany: jest.fn(async () => []),
+    findFirst: jest.fn(async () => null),
+  },
   conversationMessage: {
     count: jest.fn(async ({ where }) => {
       return messageStore.filter(
@@ -78,13 +82,26 @@ describe("ChatEngine - Welcome DebugInfo", () => {
       id: testWorkspaceId,
       name: "Test Workspace",
       sellsProductsAndServices: true,
-      welcomeMessage: { it: "Benvenuto!" },
+      welcomeMessage: "Benvenuto!",
+      chatbotName: "AI Assistant",
+      botIdentityResponse: "I am an AI assistant",
+      customAiRules: "",
+      address: "123 Test St",
+      toneOfVoice: "professional",
     })
 
     customerStore.set(testCustomerId, {
       id: testCustomerId,
       workspaceId: testWorkspaceId,
       isBlacklisted: false,
+      name: "Test Customer",
+      email: "test@example.com",
+      phone: "+1234567890",
+      discount: 0,
+      isActive: true,
+      language: "it",
+      company: "",
+      push_notifications_consent: false,
     })
 
     const chatEngine = new ChatEngineService(mockPrisma as any)

@@ -26,6 +26,7 @@ export interface WelcomeMessageInput {
   customerLanguage?: string
   customerMessage: string
   conversationId?: string
+  channel?: string
 }
 
 export interface WelcomeMessageResult {
@@ -47,12 +48,40 @@ export class WelcomeMessageHandler {
    */
   async handleWelcomeMessage(input: WelcomeMessageInput): Promise<WelcomeMessageResult> {
     try {
-      // Count previous USER messages from this customer in this workspace
+      const inputChannel = input.channel || (await this.getConversationChannel(input.conversationId))
+
+      // 🚫 Widget channel: welcome not applicable
+      if (inputChannel === "widget") {
+        logger.info("👋 [WelcomeMessageHandler] Skipping welcome for widget channel")
+        return { isWelcomeMessage: false }
+      }
+
+      let conversationFilter: { conversationId?: { in: string[] } } = {}
+      if (inputChannel) {
+        const sessions = await this.prisma.chatSession.findMany({
+          where: {
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+            channel: inputChannel,
+          },
+          select: { id: true },
+        })
+        const ids = sessions.map((s) => s.id)
+        if (ids.length > 0) {
+          conversationFilter = { conversationId: { in: ids } }
+        } else if (input.conversationId) {
+          // Fallback to current conversation to avoid repeat welcomes in the same thread
+          conversationFilter = { conversationId: { in: [input.conversationId] } }
+        }
+      }
+
+      // Count previous USER messages from this customer in this workspace (scoped by channel when provided)
       const previousMessageCount = await this.prisma.conversationMessage.count({
         where: {
           customerId: input.customerId,
           workspaceId: input.workspaceId,
           role: "user", // Only count user messages
+          ...conversationFilter,
         },
       })
 
@@ -283,6 +312,23 @@ export class WelcomeMessageHandler {
   private normalizeLanguageCode(lang: string): string {
     const normalized = lang.toLowerCase().substring(0, 2)
     return ["it", "en", "es", "pt", "fr", "de"].includes(normalized) ? normalized : "it"
+  }
+
+  private async getConversationChannel(conversationId?: string): Promise<string | null> {
+    if (!conversationId) return null
+    try {
+      const session = await this.prisma.chatSession.findFirst({
+        where: { id: conversationId },
+        select: { channel: true },
+      })
+      return session?.channel || null
+    } catch (error) {
+      logger.warn("⚠️ [WelcomeMessageHandler] Failed to load conversation channel", {
+        conversationId,
+        error: (error as Error).message,
+      })
+      return null
+    }
   }
 
   /**

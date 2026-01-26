@@ -159,7 +159,7 @@ describe.skip("ChatEngine - Expired numeric selection", () => {
       hasSalesAgents: false,
       hasHumanSupport: true,
       adminEmail: "hello@echatbot.ai",
-      welcomeMessage: {},
+      welcomeMessage: "Welcome!",
       botIdentityResponse: "Bot",
     })
     customerStore.set("cust-1", {

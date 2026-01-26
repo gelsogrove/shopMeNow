@@ -255,24 +255,15 @@ For privacy inquiries, please contact our support team.`
     delete (workspaceData as any).adminEmail // Remove from workspace data (stored in WhatsappSettings)
     delete (workspaceData as any).faqs // Remove FAQs from workspace data (stored in separate table)
 
-    // 🆕 DEFAULT WELCOME AND WIP MESSAGES
-    const defaultWelcomeMessage = {
-      en: "Welcome! I'm {{chatbotName}}, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?",
-      es: "¡Bienvenido! Soy {{chatbotName}}, tu asistente digital. Puedo ayudarte a descubrir productos gourmet italianos, responder preguntas y gestionar pedidos. ¿Cómo puedo ayudarte hoy?",
-      it: "Benvenuto! Sono {{chatbotName}}, il tuo assistente digitale. Posso aiutarti a scoprire prodotti gourmet italiani, rispondere alle tue domande e gestire ordini. Come posso aiutarti oggi?",
-      pt: "Bem-vindo! Sou {{chatbotName}}, a sua assistente digital. Posso ajudá-lo a descobrir produtos gourmet italianos, responder perguntas e gerir encomendas. Como posso ajudá-lo hoje?",
-    }
+    // 🆕 DEFAULT WELCOME AND WIP MESSAGES (English only - Translation Agent will translate)
+    const defaultWelcomeMessage = "Welcome! I'm {{chatbotName}}, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?"
+    const defaultWipMessage = "Work in progress. Please contact us later."
+    const defaultAfterRegistrationMessage = "Thank you for registering, {{customerName}}! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?"
 
-    const defaultWipMessage = {
-      en: "Work in progress. Please contact us later.",
-      es: "Trabajos en curso. Por favor, contáctenos más tarde.",
-      it: "Lavori in corso. Contattaci più tardi.",
-      pt: "Em manutenção. Por favor, contacte-nos mais tarde.",
-    }
-
-    // Add messages to workspace data
-    data.welcomeMessage = defaultWelcomeMessage
-    data.wipMessage = defaultWipMessage
+    // Add messages to workspace data (only if not provided)
+    if (!data.welcomeMessage) data.welcomeMessage = defaultWelcomeMessage
+    if (!data.wipMessage) data.wipMessage = defaultWipMessage
+    if (!data.afterRegistrationMessages) data.afterRegistrationMessages = defaultAfterRegistrationMessage
 
     // 🆕 Feature 199: Set default channel configuration values
     // These can be overridden by wizard input, but provide sensible defaults

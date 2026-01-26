@@ -1067,15 +1067,9 @@ export class WhatsAppWebhookController {
             return
           }
 
-          const wipMessages = (workspace?.wipMessage as any) || {}
-          const customerLanguage = (customer.language || "en").toLowerCase()
-          const rawWipMessage =
-            wipMessages[customerLanguage] ||
-            wipMessages.en ||
-            wipMessages.it ||
-            "Work in progress. Please contact us later."
-
-          let finalWipMessage = rawWipMessage
+          const wipMessage = workspace?.wipMessage || "Work in progress. Please contact us later."
+          
+          let finalWipMessage = wipMessage
           let safetyTokensUsed = 0
 
           try {
@@ -1086,13 +1080,13 @@ export class WhatsAppWebhookController {
 
             const safetyResult = await safetyAgent.process({
               workspaceId: customer.workspaceId,
-              response: rawWipMessage,
+              response: wipMessage,
               targetLanguage: customer.language || "it",
               customerName: customer.name || "Customer",
             })
 
             if (safetyResult.safe) {
-              finalWipMessage = safetyResult.translatedText || rawWipMessage
+              finalWipMessage = safetyResult.translatedText || wipMessage
               safetyTokensUsed = safetyResult.tokensUsed || 0
             }
           } catch (error) {
@@ -1252,6 +1246,7 @@ export class WhatsAppWebhookController {
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
         isPlayground, // 🧪 Pass playground flag
+        channel: "whatsapp",
       })
 
       logger.info("[WEBHOOK] ✅ ChatEngineService completed", {

@@ -164,6 +164,7 @@ export interface ChatEngineInput {
   customerLanguage?: string
   customerDiscount?: number
   isPlayground?: boolean // 🧪 Skip billing and real actions in playground mode
+  channel?: string
 }
 
 export interface ChatEngineOutput {
@@ -1623,6 +1624,7 @@ export class ChatEngineService {
         customerLanguage: input.customerLanguage,
         customerMessage: input.message,
         conversationId: input.conversationId,
+        channel: input.channel || "whatsapp",
       })
 
       if (welcomeResult.isWelcomeMessage) {

@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { PLAN_CONFIGS } from "@/config/planFeatures"
 import { BillingOverview } from "@/services/subscriptionBillingApi"
 import { Users, Radio, Loader2, Users2 } from "lucide-react"
 
@@ -36,7 +37,13 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
     )
   }
 
-  const { usage, limits } = billingOverview
+  const { usage, limits, billing, planConfig } = billingOverview
+
+  const planName =
+    planConfig?.displayName ||
+    PLAN_CONFIGS[billing.planType as keyof typeof PLAN_CONFIGS]?.name ||
+    billing.planType
+  const usageTitle = planName ? `${planName} Usage Limits` : "Usage Limits"
 
   const getProgressColor = (percentage: number) => {
     if (percentage >= 90) return "bg-red-500"
@@ -88,7 +95,7 @@ export function UsageLimitsCard({ billingOverview, isLoading = false }: UsageLim
     <Card className="h-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-medium text-green-600">
-          Usage Limits
+          {usageTitle}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

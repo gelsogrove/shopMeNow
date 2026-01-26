@@ -142,7 +142,7 @@ describe("ChatEngine - Informational services routing", () => {
       id: testWorkspaceId,
       name: "Info Only",
       sellsProductsAndServices: false,
-      welcomeMessage: { it: "Benvenuto" },
+      welcomeMessage: "Benvenuto",
     })
 
     customerStore.set(testCustomerId, {

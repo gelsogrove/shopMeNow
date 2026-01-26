@@ -96,6 +96,38 @@ export class CampaignService {
    */
   async create(data: CreateCampaignData): Promise<Campaign> {
     try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: data.workspaceId, deletedAt: null },
+        select: {
+          owner: {
+            select: {
+              creditBalance: true,
+              subscriptionStatus: true,
+              planType: true,
+            },
+          },
+        },
+      })
+
+      if (!workspace?.owner) {
+        throw new Error("Owner non trovato per il controllo credito")
+      }
+
+      if (workspace.owner.subscriptionStatus !== "ACTIVE") {
+        throw new Error("Sottoscrizione non attiva: attiva il piano prima di creare campagne")
+      }
+
+      const planConfig = await this.prisma.planConfiguration.findUnique({
+        where: { planType: workspace.owner.planType },
+        select: { messageCost: true },
+      })
+      const messageCost = Number(planConfig?.messageCost ?? 0.1)
+      const currentBalance = Number(workspace.owner.creditBalance)
+
+      if (currentBalance < messageCost) {
+        throw new Error("Credito insufficiente per creare la campagna")
+      }
+
       const campaign = await this.prisma.campaign.create({
         data: {
           workspaceId: data.workspaceId,

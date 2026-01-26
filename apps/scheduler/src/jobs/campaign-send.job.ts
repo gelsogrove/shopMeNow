@@ -1,6 +1,7 @@
 import { prisma, CampaignFrequency } from '../config/database'
 import logger from '../utils/logger'
 import { translationService } from '../services/translation.service'
+import { BillingService } from '../services/billing.service'
 
 /**
  * Campaign Send Job
@@ -15,6 +16,7 @@ import { translationService } from '../services/translation.service'
  */
 export async function campaignSendJob(): Promise<void> {
   logger.info('🚀 [CAMPAIGN] Starting daily campaign check...')
+  const billingService = new BillingService()
 
   // Find all active campaigns
   const activeCampaigns = await prisma.campaign.findMany({
@@ -42,6 +44,16 @@ export async function campaignSendJob(): Promise<void> {
       // Skip if workspace is in debug mode (test mode)
       if (campaign.workspace.debugMode === true) {
         logger.info(`[CAMPAIGN] Skipping campaign ${campaign.name} - workspace in debug mode`)
+        continue
+      }
+
+      const hasCredit = await billingService.hasOwnerCredit(campaign.workspaceId)
+      if (!hasCredit) {
+        await prisma.campaign.update({
+          where: { id: campaign.id },
+          data: { isActive: false },
+        })
+        logger.warn(`[CAMPAIGN] Deactivating campaign ${campaign.name} - insufficient credit or inactive subscription`)
         continue
       }
 

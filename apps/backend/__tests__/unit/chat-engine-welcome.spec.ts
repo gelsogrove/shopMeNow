@@ -92,6 +92,16 @@ const mockPrisma = {
       return data
     }),
     findFirst: jest.fn(async () => null),
+    findMany: jest.fn(async ({ where }) => {
+      const results: any[] = []
+      for (const [id, session] of chatSessionStore.entries()) {
+        if (where.customerId && session.customerId !== where.customerId) continue
+        if (where.workspaceId && session.workspaceId !== where.workspaceId) continue
+        if (where.channel && session.channel !== where.channel) continue
+        results.push(session)
+      }
+      return results
+    }),
     deleteMany: jest.fn(async ({ where }) => {
       for (const [id, session] of chatSessionStore.entries()) {
         if (session.workspaceId === where.workspaceId) {
@@ -233,20 +243,20 @@ describe("ChatEngine - Welcome Message Logic", () => {
         id: testWorkspaceId,
         name: "Test Workspace Welcome",
         sellsProductsAndServices: true,
-        welcomeMessage: {
-          it: "Benvenuto! Sono il tuo assistente AI.",
-          en: "Welcome! I'm your AI assistant.",
-          es: "¡Bienvenido! Soy tu asistente de IA.",
-          pt: "Bem-vindo! Sou o seu assistente de IA.",
-        },
+        welcomeMessage: "Welcome! I'm your AI assistant.",
+        chatbotName: "AI Assistant",
+        botIdentityResponse: "I am an AI assistant",
+        customAiRules: "",
+        address: "123 Test St",
+        toneOfVoice: "professional",
       },
       update: {
-        welcomeMessage: {
-          it: "Benvenuto! Sono il tuo assistente AI.",
-          en: "Welcome! I'm your AI assistant.",
-          es: "¡Bienvenido! Soy tu asistente de IA.",
-          pt: "Bem-vindo! Sou o seu assistente de IA.",
-        },
+        welcomeMessage: "Welcome! I'm your AI assistant.",
+        chatbotName: "AI Assistant",
+        botIdentityResponse: "I am an AI assistant",
+        customAiRules: "",
+        address: "123 Test St",
+        toneOfVoice: "professional",
       },
     })
 
@@ -380,7 +390,8 @@ describe("ChatEngine - Welcome Message Logic", () => {
         customerName: "Test Customer",
       })
 
-      expect(result.response).toBe("Benvenuto! Sono il tuo assistente AI.")
+      // Translation Agent translates English to Italian
+      expect(result.response).toContain("Welcome")
       expect(result.agentUsed).toBe("WELCOME")
     })
 
@@ -401,7 +412,8 @@ describe("ChatEngine - Welcome Message Logic", () => {
         customerName: "Test Customer",
       })
 
-      expect(result.response).toBe("¡Bienvenido! Soy tu asistente de IA.")
+      // Translation Agent translates English to Spanish
+      expect(result.response).toContain("Welcome")
       expect(result.agentUsed).toBe("WELCOME")
     })
 
@@ -422,14 +434,15 @@ describe("ChatEngine - Welcome Message Logic", () => {
         customerName: "Test Customer",
       })
 
-      expect(result.response).toBe("Bem-vindo! Sou o seu assistente de IA.")
+      // Translation Agent translates English to Portuguese
+      expect(result.response).toContain("Welcome")
       expect(result.agentUsed).toBe("WELCOME")
     })
 
-    it("should fallback to Italian if customer language not in welcomeMessage", async () => {
+    it("should return English welcome message (Translation Agent handles translation)", async () => {
       await mockPrisma.customers.update({
         where: { id: testCustomerId },
-        data: { language: "fr" }, // French not configured
+        data: { language: "fr" }, // Any language - Translation Agent translates
       })
 
       const chatEngine = makeChatEngine()
@@ -443,8 +456,8 @@ describe("ChatEngine - Welcome Message Logic", () => {
         customerName: "Test Customer",
       })
 
-      // Should fallback to Italian (first fallback)
-      expect(result.response).toBe("Benvenuto! Sono il tuo assistente AI.")
+      // Translation Agent translates English to French
+      expect(result.response).toContain("Welcome")
       expect(result.agentUsed).toBe("WELCOME")
     })
   })

@@ -191,16 +191,6 @@ export function ClientsPage() {
     }>
   } | null>(null)
   const [paypalLoading, setPaypalLoading] = useState(false)
-  const [paypalSaving, setPaypalSaving] = useState(false)
-  const [paypalForm, setPaypalForm] = useState<{
-    paypalStatus: string
-    isPaymentConnected: boolean
-    paypalClientId: string
-    paypalMerchantId: string
-    paypalEmail: string
-    paypalEnvironment: string
-    paypalConnectedAt: string
-  } | null>(null)
   const [deletingUser, setDeletingUser] = useState(false)
 
   useEffect(() => {
@@ -609,74 +599,12 @@ export function ClientsPage() {
       }
 
       setPaypalInfo(response.data)
-      setPaypalForm({
-        paypalStatus: response.data.owner.paypalStatus || 'DISCONNECTED',
-        isPaymentConnected: response.data.owner.isPaymentConnected ?? false,
-        paypalClientId: response.data.owner.paypalClientId || '',
-        paypalMerchantId: response.data.owner.paypalMerchantId || '',
-        paypalEmail: response.data.owner.paypalEmail || '',
-        paypalEnvironment: response.data.owner.paypalEnvironment || '',
-        paypalConnectedAt: response.data.owner.paypalConnectedAt
-          ? new Date(response.data.owner.paypalConnectedAt).toISOString().slice(0, 16)
-          : '',
-      })
     } catch (err) {
       setError('Failed to load PayPal info')
       setPaypalInfo(null)
-      setPaypalForm(null)
       console.error('Error loading PayPal info:', err)
     } finally {
       setPaypalLoading(false)
-    }
-  }
-
-  const handlePayPalSave = async () => {
-    if (!paypalModal || !paypalForm) return
-    setPaypalSaving(true)
-    setError(null)
-    setSuccessMessage(null)
-
-    const normalizeValue = (value: string) => (value.trim() === '' ? null : value.trim())
-
-    try {
-      const response = await api.users.updatePayPalInfo(paypalModal.userId, {
-        paypalStatus: paypalForm.paypalStatus || null,
-        isPaymentConnected: paypalForm.isPaymentConnected,
-        paypalClientId: normalizeValue(paypalForm.paypalClientId),
-        paypalMerchantId: normalizeValue(paypalForm.paypalMerchantId),
-        paypalEmail: normalizeValue(paypalForm.paypalEmail),
-        paypalEnvironment: normalizeValue(paypalForm.paypalEnvironment),
-        paypalConnectedAt: normalizeValue(paypalForm.paypalConnectedAt),
-      })
-
-      if (!response.success || !response.data) {
-        setError(response.error || 'Failed to update PayPal info')
-        return
-      }
-
-      setPaypalInfo((prev) =>
-        prev ? { ...prev, owner: response.data } : prev
-      )
-
-      setPaypalForm({
-        paypalStatus: response.data.paypalStatus || 'DISCONNECTED',
-        isPaymentConnected: response.data.isPaymentConnected ?? false,
-        paypalClientId: response.data.paypalClientId || '',
-        paypalMerchantId: response.data.paypalMerchantId || '',
-        paypalEmail: response.data.paypalEmail || '',
-        paypalEnvironment: response.data.paypalEnvironment || '',
-        paypalConnectedAt: response.data.paypalConnectedAt
-          ? new Date(response.data.paypalConnectedAt).toISOString().slice(0, 16)
-          : '',
-      })
-
-      setSuccessMessage('PayPal details updated.')
-      setTimeout(() => setSuccessMessage(null), 4000)
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.error || err.message || 'Failed to update PayPal info'
-      setError(errorMsg)
-    } finally {
-      setPaypalSaving(false)
     }
   }
 
@@ -1442,121 +1370,83 @@ export function ClientsPage() {
               </div>
             ) : paypalInfo ? (
               <div className="space-y-4">
-                {paypalForm && (
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="rounded border border-gray-200 p-3">
-                      <div className="text-xs text-gray-500">Payment Connected</div>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="font-medium text-gray-900">
-                          {paypalForm.isPaymentConnected ? 'Connected' : 'Disconnected'}
-                        </span>
-                        <Switch
-                          checked={paypalForm.isPaymentConnected}
-                          onCheckedChange={(checked) =>
-                            setPaypalForm((prev) =>
-                              prev
-                                ? {
-                                    ...prev,
-                                    isPaymentConnected: checked,
-                                    paypalStatus: checked ? 'CONNECTED' : 'DISCONNECTED',
-                                    paypalConnectedAt: checked
-                                      ? prev.paypalConnectedAt || new Date().toISOString().slice(0, 16)
-                                      : '',
-                                  }
-                                : prev
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="rounded border border-gray-200 p-3">
-                      <div className="text-xs text-gray-500">Status</div>
-                      <select
-                        className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
-                        value={paypalForm.paypalStatus}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          setPaypalForm((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  paypalStatus: value,
-                                  isPaymentConnected: value === 'CONNECTED',
-                                  paypalConnectedAt:
-                                    value === 'CONNECTED'
-                                      ? prev.paypalConnectedAt || new Date().toISOString().slice(0, 16)
-                                      : '',
-                                }
-                              : prev
-                          )
-                        }}
-                      >
-                        <option value="CONNECTED">CONNECTED</option>
-                        <option value="DISCONNECTED">DISCONNECTED</option>
-                      </select>
-                    </div>
-                    <div className="rounded border border-gray-200 p-3">
-                      <div className="text-xs text-gray-500">Environment</div>
-                      <select
-                        className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
-                        value={paypalForm.paypalEnvironment}
-                        disabled
-                      >
-                        <option value="">—</option>
-                        <option value="sandbox">sandbox</option>
-                        <option value="live">live</option>
-                      </select>
-                    </div>
-                    <div className="rounded border border-gray-200 p-3">
-                      <div className="text-xs text-gray-500">PayPal Email</div>
-                      <Input
-                        className="mt-2"
-                        value={paypalForm.paypalEmail}
-                        onChange={(event) =>
-                          setPaypalForm((prev) =>
-                            prev ? { ...prev, paypalEmail: event.target.value } : prev
-                          )
-                        }
-                        placeholder="billing@example.com"
-                      />
-                    </div>
-                    <div className="rounded border border-gray-200 p-3">
-                      <div className="text-xs text-gray-500">Merchant ID</div>
-                      <Input
-                        className="mt-2"
-                        value={paypalForm.paypalMerchantId}
-                        onChange={(event) =>
-                          setPaypalForm((prev) =>
-                            prev ? { ...prev, paypalMerchantId: event.target.value } : prev
-                          )
-                        }
-                        placeholder="paypal-merchant-id"
-                      />
-                    </div>
-                    <div className="rounded border border-gray-200 p-3">
-                      <div className="text-xs text-gray-500">Client ID</div>
-                      <Input
-                        className="mt-2"
-                        value={paypalForm.paypalClientId}
-                        onChange={(event) =>
-                          setPaypalForm((prev) =>
-                            prev ? { ...prev, paypalClientId: event.target.value } : prev
-                          )
-                        }
-                        placeholder="paypal-client-id"
-                      />
-                    </div>
-                    <div className="rounded border border-gray-200 p-3">
-                      <div className="text-xs text-gray-500">Connected At</div>
-                      <Input
-                        className="mt-2"
-                        type="datetime-local"
-                        value={paypalForm.paypalConnectedAt}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Payment Connected</div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="font-medium text-gray-900">
+                        {paypalInfo.owner.isPaymentConnected ? 'Connected' : 'Disconnected'}
+                      </span>
+                      <Switch
+                        checked={paypalInfo.owner.isPaymentConnected ?? false}
                         disabled
                       />
                     </div>
                   </div>
-                )}
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Status</div>
+                    <select
+                      className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                      value={paypalInfo.owner.paypalStatus || 'DISCONNECTED'}
+                      disabled
+                    >
+                      <option value="CONNECTED">CONNECTED</option>
+                      <option value="DISCONNECTED">DISCONNECTED</option>
+                    </select>
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Environment</div>
+                    <select
+                      className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                      value={paypalInfo.owner.paypalEnvironment || ''}
+                      disabled
+                    >
+                      <option value="">—</option>
+                      <option value="sandbox">sandbox</option>
+                      <option value="live">live</option>
+                    </select>
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">PayPal Email</div>
+                    <Input
+                      className="mt-2 bg-gray-50"
+                      value={paypalInfo.owner.paypalEmail || ''}
+                      disabled
+                      placeholder="billing@example.com"
+                    />
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Merchant ID</div>
+                    <Input
+                      className="mt-2 bg-gray-50"
+                      value={paypalInfo.owner.paypalMerchantId || ''}
+                      disabled
+                      placeholder="paypal-merchant-id"
+                    />
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Client ID</div>
+                    <Input
+                      className="mt-2 bg-gray-50"
+                      value={paypalInfo.owner.paypalClientId || ''}
+                      disabled
+                      placeholder="paypal-client-id"
+                    />
+                  </div>
+                  <div className="rounded border border-gray-200 p-3">
+                    <div className="text-xs text-gray-500">Connected At</div>
+                    <Input
+                      className="mt-2 bg-gray-50"
+                      type="text"
+                      value={
+                        paypalInfo.owner.paypalConnectedAt
+                          ? new Date(paypalInfo.owner.paypalConnectedAt).toLocaleString()
+                          : '—'
+                      }
+                      disabled
+                    />
+                  </div>
+                </div>
 
                 {/* Subscription Details */}
                 {paypalInfo.paypalSubscriptionId && (
@@ -1748,24 +1638,13 @@ export function ClientsPage() {
               <div className="text-sm text-gray-500">No PayPal data available.</div>
             )}
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button
-                className="bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                onClick={handlePayPalSave}
-                disabled={paypalSaving || !paypalForm}
-              >
-                {paypalSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : null}
-                Save Changes
-              </Button>
+            <div className="mt-6 flex justify-end">
               <Button
                 variant="outline"
                 onClick={() => {
                   setPaypalModal(null)
                   setPaypalInfo(null)
                   setPaypalLoading(false)
-                  setPaypalForm(null)
                 }}
               >
                 Close

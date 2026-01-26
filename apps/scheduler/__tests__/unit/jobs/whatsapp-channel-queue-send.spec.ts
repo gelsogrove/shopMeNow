@@ -1,5 +1,5 @@
 import { prisma } from '@echatbot/database'
-import { whatsappChannelQueueJob } from '../../../src/jobs/whatsapp-channel-queue.job'
+import { whatsappChannelQueueJob, clearRecipientThrottleCache } from '../../../src/jobs/whatsapp-channel-queue.job'
 import { getWorkspaceWhatsAppConfig } from '../../../src/services/whatsapp-config.service'
 import { SecurityAgentService } from '../../../src/services/security-agent.service'
 import { BillingService } from '../../../src/services/billing.service'
@@ -21,7 +21,9 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     mockedGetConfig.mockReset()
     securitySpy = jest.spyOn(SecurityAgentService.prototype, 'validateMessage').mockResolvedValue({ isSafe: true })
     billingSpy = jest.spyOn(BillingService.prototype, 'deductMessageCredit').mockResolvedValue({ success: true })
+    jest.spyOn(BillingService.prototype, 'hasOwnerCredit').mockResolvedValue(true)
     ;(global as any).fetch = jest.fn()
+    clearRecipientThrottleCache()
 
     workspaceModel = { findMany: jest.fn() }
     queueModel = { findMany: jest.fn(), update: jest.fn() }
@@ -71,6 +73,41 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     expect(queueModel.update).toHaveBeenCalled()
     const sentCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'sent')
     expect(sentCall?.[0].data.status).toBe('sent')
+  })
+
+  it('marks queue as error when credit or subscription is missing', async () => {
+    jest.spyOn(BillingService.prototype, 'hasOwnerCredit').mockResolvedValue(false)
+
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      apiKey: 'token',
+    })
+
+    workspaceModel.findMany.mockResolvedValue([
+      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
+    ])
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'q1',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+39000000000',
+        messageContent: 'ciao',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: undefined,
+      },
+    ])
+
+    queueModel.update.mockResolvedValue({})
+
+    await whatsappChannelQueueJob()
+
+    const errorCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'error')
+    expect(errorCall?.[0].data.status).toBe('error')
+    expect(errorCall?.[0].data.errorMessage).toContain('credit')
   })
 
   it('marks queue as error when WhatsApp API fails', async () => {

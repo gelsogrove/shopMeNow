@@ -30,6 +30,13 @@ jest.mock('../src/services/translation.service', () => ({
   },
 }))
 
+const mockHasOwnerCredit = jest.fn()
+jest.mock('../src/services/billing.service', () => ({
+  BillingService: jest.fn().mockImplementation(() => ({
+    hasOwnerCredit: mockHasOwnerCredit,
+  })),
+}))
+
 // Mock prisma
 const mockCampaignFindMany = jest.fn()
 const mockCampaignUpdate = jest.fn()
@@ -65,6 +72,7 @@ describe('Campaign Send Job', () => {
     jest.clearAllMocks()
     // Reset default mock behaviors
     mockTranslateMessage.mockImplementation((msg: string) => Promise.resolve(msg))
+    mockHasOwnerCredit.mockResolvedValue(true)
   })
 
   describe('Campaign Discovery', () => {
@@ -100,6 +108,29 @@ describe('Campaign Send Job', () => {
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('Skipping campaign Test Campaign - workspace in debug mode')
       )
+    })
+  
+    it('should deactivate campaign when credit/subscription is insufficient', async () => {
+      mockHasOwnerCredit.mockResolvedValue(false)
+      mockCampaignFindMany.mockResolvedValue([
+        {
+          id: 'camp-1',
+          name: 'Test Campaign',
+          workspaceId: 'ws-1',
+          messagePreview: 'Hello {{nome}}!',
+          frequency: 'WEEKLY',
+          lastRunAt: null,
+          workspace: { id: 'ws-1', name: 'Test', debugMode: false },
+        },
+      ])
+
+      await campaignSendJob()
+
+      expect(mockCampaignUpdate).toHaveBeenCalledWith({
+        where: { id: 'camp-1' },
+        data: { isActive: false },
+      })
+      expect(mockCustomersFindMany).not.toHaveBeenCalled()
     })
   })
 

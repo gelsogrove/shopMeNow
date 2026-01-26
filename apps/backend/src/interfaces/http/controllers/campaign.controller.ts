@@ -104,6 +104,9 @@ export class CampaignController {
 
       res.status(201).json(campaign)
     } catch (error) {
+      if (error instanceof Error && /credito|Sottoscrizione/i.test(error.message)) {
+        return res.status(400).json({ error: error.message })
+      }
       logger.error("Error creating campaign:", error)
       next(error)
     }
