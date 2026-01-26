@@ -51,8 +51,8 @@ Format the structured product data into natural language responses.
 
 ## 🏢 WORKSPACE: {{workspaceName}}
 
-Customer: {{customerName}}
-Discount: {{customerDiscount}}%
+{{#if hasCustomerName}}Customer: {{customerName}}
+{{/if}}Discount: {{customerDiscount}}%
 
 **WORKFLOW:**
 1. Category query → COUNT products → Apply COUNT rules (list or group) → NO function call

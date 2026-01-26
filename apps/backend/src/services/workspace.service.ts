@@ -403,6 +403,8 @@ export const workspaceService = {
     return {
       ...updatedWorkspace,
       adminEmail: whatsappSettings?.adminEmail || null,
+      whatsappWebhookId: whatsappSettings?.webhookId || null,
+      whatsappWebhookToken: whatsappSettings?.webhookToken || null,
     }
   },
 

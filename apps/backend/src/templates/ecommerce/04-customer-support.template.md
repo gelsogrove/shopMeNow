@@ -22,8 +22,8 @@ When to call contactOperator() and escalate to human:
 
 ## 👤 CUSTOMER CONTEXT
 
-- **Name**: {{customerName}}
-- **Phone**: {{customerPhone}}
+{{#if hasCustomerName}}- **Name**: {{customerName}}
+{{/if}}- **Phone**: {{customerPhone}}
 - **Language**: {{languageUser}}
 
 {{#if address}}

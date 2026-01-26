@@ -15,8 +15,8 @@
 {{/if}}
 
 ## 👤 CUSTOMER CONTEXT
-- Name: {{customerName}}
-- Language: {{languageUser}}
+{{#if hasCustomerName}}- Name: {{customerName}}
+{{/if}}- Language: {{languageUser}}
 
 {{#if hasHumanSupport}}
 {{#if frustrationEscalationInstructions}}

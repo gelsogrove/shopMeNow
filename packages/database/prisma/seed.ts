@@ -165,15 +165,29 @@ async function main() {
   }
 
   // 2. Create Admin User (Developer + Platform Admin)
-  console.log("👤 Creating admin user (Developer + Platform Admin)...")
+  console.log("👤 Creating/updating admin user (Developer + Platform Admin)...")
 
   const adminEmail = process.env.ADMIN_EMAIL || "gelsogrove@gmail.com"
   const adminPassword = process.env.ADMIN_PASSWORD || "Venezia44"
   
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
-  const adminUser = await prisma.user.create({
-    data: {
+  // ✅ Use upsert to avoid conflicts if user already exists
+  const adminUser = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      // Update existing user (preserve workspaces, just refresh data)
+      firstName: "Andrea",
+      lastName: "Gelsomino",
+      status: "ACTIVE",
+      role: "ADMIN",
+      planType: "ENTERPRISE",
+      isPlatformAdmin: true,
+      isDeveloperUser: true,
+      twoFactorEnabled: false,
+      // Keep existing creditBalance if user exists
+    },
+    create: {
       email: adminEmail,
       passwordHash: hashedPassword,
       firstName: "Andrea",
@@ -203,16 +217,23 @@ async function main() {
     },
   })
 
-  console.log(`✅ Admin user created: ${adminEmail}`)
+  console.log(`✅ Admin user created/updated: ${adminEmail}`)
   console.log(`📧 Email: ${adminEmail}`)
   console.log(`🔑 Password: ${adminPassword}`)
   console.log(`🔐 isPlatformAdmin: true (Backoffice access)`)
   console.log(`🔧 isDeveloperUser: true (Skip 2FA for testing)\n`)
 
   // 2.7. Create E-commerce Workspace for Admin User (BellItalia VIP)
-    console.log("🏢 Creating E-commerce workspace (BellItalia VIP) for admin user...")
+  console.log("🏢 Creating/updating E-commerce workspace (BellItalia VIP) for admin user...")
 
-    const ecommerceWorkspace = await prisma.workspace.create({
+  // ✅ Check if workspace already exists
+  let ecommerceWorkspace = await prisma.workspace.findUnique({
+    where: { id: "bellitalia-vip-ecommerce" }
+  })
+
+  if (!ecommerceWorkspace) {
+    console.log("   Creating new workspace...")
+    ecommerceWorkspace = await prisma.workspace.create({
       data: {
         id: "bellitalia-vip-ecommerce", // Fixed ID for consistent testing
         name: "BellItalia VIP",
@@ -298,96 +319,82 @@ https://echatbot.ai/order/123
 Need anything else?"`,
     },
   })
-
-  console.log(`✅ E-commerce workspace created: ${ecommerceWorkspace.name} (${ecommerceWorkspace.id})`)
-
-  // Associate admin user with e-commerce workspace
-  await prisma.userWorkspace.create({
-    data: {
-      userId: adminUser.id,
-      workspaceId: ecommerceWorkspace.id,
-      role: "SUPER_ADMIN",
-    },
-  })
-
-  // Create WhatsApp settings for e-commerce workspace
-  await prisma.whatsappSettings.create({
-    data: {
-      workspaceId: ecommerceWorkspace.id,
-      phoneNumber: "+34654728751",
-      apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
-      webhookUrl: process.env.WHATSAPP_WEBHOOK_URL || "https://echatbot.ai/webhook",
-      adminEmail: adminEmail,
-      smtpHost: "smtp.gmail.com",
-      smtpPort: 465,
-      smtpSecure: true,
-      smtpUser: process.env.SMTP_USER || adminEmail,
-      smtpPass: process.env.SMTP_PASS || "",
-      smtpFrom: `eChatbot <${adminEmail}>`,
-    },
-  })
-
-  // Create languages for e-commerce workspace
-  for (const lang of [
-    { code: "IT", name: "Italiano", isDefault: true },
-    { code: "ENG", name: "English", isDefault: false },
-    { code: "ESP", name: "Español", isDefault: false },
-    { code: "PRT", name: "Português", isDefault: false },
-  ]) {
-    await prisma.languages.create({
-      data: {
-        code: lang.code,
-        name: lang.name,
-        isDefault: lang.isDefault,
-        isActive: true,
-        workspaceId: ecommerceWorkspace.id,
-      },
-    })
+  } else {
+    console.log(`   ✅ Workspace already exists: ${ecommerceWorkspace.name}`)
   }
 
-  // 2.8. Create Informational Workspace for Admin User (BellItalia)
-  console.log("🏢 Creating Informational workspace (BellItalia) for admin user...")
+  console.log(`✅ E-commerce workspace ready: ${ecommerceWorkspace.name} (${ecommerceWorkspace.id})`)
 
-  const infoWorkspace = await prisma.workspace.create({
-    data: {
-      id: "bellitalia-info-workspace", // Fixed ID for consistent testing
-      name: "BellItalia",
-      slug: "bell-italia",
-      whatsappPhoneNumber: "+34654728752",
-      notificationEmail: "info@bellitalia.com",
-      language: "ENG",
-      currency: "EUR",
-      description: "Italian Gourmet Food - Information Channel",
-      url: "https://bellitalia.com",
-      channelStatus: true,
-      deletedAt: null,
-      debugMode: true,
-      welcomeMessage: "Welcome to BellItalia! Ask me anything about our products and services.",
-      wipMessage: "Sorry, I'm currently being improved. Please try again later.",
-      ownerId: adminUser.id,
-      planType: "PREMIUM",
-      creditBalance: 171.0,
-      trialEndsAt: null,
-      planStartedAt: new Date(),
-      sellsProductsAndServices: false,
-      hasSalesAgents: false,
-      hasHumanSupport: true,
-      humanSupportInstructions:
-        "Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto. Disattivo il chatbot finche' non ricevi assistenza.",
-      // 🆕 Feature 203: Custom escalation triggers (informational version)
-      frustrationEscalationInstructions: `Chiama l'operatore (contactOperator) quando il cliente:
+  // Associate admin user with e-commerce workspace (if not already)
+  const existingLink = await prisma.userWorkspace.findFirst({
+    where: {
+      userId: adminUser.id,
+      workspaceId: ecommerceWorkspace.id,
+    }
+  })
+
+  if (!existingLink) {
+    await prisma.userWorkspace.create({
+      data: {
+        userId: adminUser.id,
+        workspaceId: ecommerceWorkspace.id,
+        role: "SUPER_ADMIN",
+      },
+    })
+    console.log(`   ✅ Admin user linked to workspace`)
+  } else {
+    console.log(`   ✅ Admin user already linked to workspace`)
+  }
+
+  // 2.8. Create Informational Workspace (BellItalia Info)
+  console.log("🏢 Creating/updating Informational workspace (BellItalia) for admin user...")
+
+  let infoWorkspace = await prisma.workspace.findUnique({
+    where: { id: "bellitalia-info" }
+  })
+
+  if (!infoWorkspace) {
+    console.log("   Creating new workspace...")
+    infoWorkspace = await prisma.workspace.create({
+      data: {
+        id: "bellitalia-info-workspace", // Fixed ID for consistent testing
+        name: "BellItalia",
+        slug: "bell-italia",
+        whatsappPhoneNumber: "+34654728752",
+        notificationEmail: "info@bellitalia.com",
+        language: "ENG",
+        currency: "EUR",
+        description: "Italian Gourmet Food - Information Channel",
+        url: "https://bellitalia.com",
+        channelStatus: true,
+        deletedAt: null,
+        debugMode: true,
+        welcomeMessage: "Welcome to BellItalia! Ask me anything about our products and services.",
+        wipMessage: "Sorry, I'm currently being improved. Please try again later.",
+        ownerId: adminUser.id,
+        planType: "PREMIUM",
+        creditBalance: 171.0,
+        trialEndsAt: null,
+        planStartedAt: new Date(),
+        sellsProductsAndServices: false,
+        hasSalesAgents: false,
+        hasHumanSupport: true,
+        humanSupportInstructions:
+          "Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto. Disattivo il chatbot finche' non ricevi assistenza.",
+        // 🆕 Feature 203: Custom escalation triggers (informational version)
+        frustrationEscalationInstructions: `Chiama l'operatore (contactOperator) quando il cliente:
 - Ha URGENZA di informazioni che non trovi nella knowledge base
 - È FRUSTRATO perché non riesce a trovare le informazioni richieste
 - Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO
 - Ha una SITUAZIONE COMPLESSA che richiede assistenza personalizzata
 
 ⚠️ IMPORTANTE: Prima verifica SEMPRE se la risposta è nelle FAQ o nella knowledge base`,
-      operatorContactMethod: "EMAIL",
-      toneOfVoice: "PROFESSIONAL",
-      botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products and services! 📚",
-      chatbotName: "Marco",
-      businessType: "food",
-      customAiRules: `# Communication Style
+        operatorContactMethod: "EMAIL",
+        toneOfVoice: "PROFESSIONAL",
+        botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products and services! 📚",
+        chatbotName: "Marco",
+        businessType: "food",
+        customAiRules: `# Communication Style
 
 - Keep sentences SHORT - avoid long text blocks
 - Greet the user often using their name: {{customerName}}
@@ -413,17 +420,32 @@ https://echatbot.ai/info/products
 Would you like details about something specific?"`,  
     },
   })
+  } else {
+    console.log(`   ✅ Workspace already exists: ${infoWorkspace.name}`)
+  }
 
-  console.log(`✅ Informational workspace created: ${infoWorkspace.name} (${infoWorkspace.id})`)
+  console.log(`✅ Informational workspace ready: ${infoWorkspace.name} (${infoWorkspace.id})`)
 
-  // Associate admin user with informational workspace
-  await prisma.userWorkspace.create({
-    data: {
+  // Associate admin user with informational workspace (if not already)
+  const existingInfoLink = await prisma.userWorkspace.findFirst({
+    where: {
       userId: adminUser.id,
       workspaceId: infoWorkspace.id,
-      role: "SUPER_ADMIN",
-    },
+    }
   })
+
+  if (!existingInfoLink) {
+    await prisma.userWorkspace.create({
+      data: {
+        userId: adminUser.id,
+        workspaceId: infoWorkspace.id,
+        role: "SUPER_ADMIN",
+      },
+    })
+    console.log(`   ✅ Admin user linked to workspace`)
+  } else {
+    console.log(`   ✅ Admin user already linked to workspace`)
+  }
 
   // Create WhatsApp settings for informational workspace
   await prisma.whatsappSettings.create({
@@ -807,9 +829,15 @@ Would you like details about something specific?"`,
   }
 
   // 2.9. Create Enterprise support workspace for eChatbot
-  console.log("🏢 Creating Enterprise support workspace (eChatbot HQ)...")
+  console.log("🏢 Creating/updating Enterprise support workspace (eChatbot HQ)...")
 
-  const supportWorkspace = await prisma.workspace.create({
+  let supportWorkspace = await prisma.workspace.findUnique({
+    where: { id: "echatbot-hq-support" }
+  })
+
+  if (!supportWorkspace) {
+    console.log("   Creating new workspace...")
+    supportWorkspace = await prisma.workspace.create({
     data: {
       id: "echatbot-hq-support", // Fixed ID for consistent testing
       name: "eChatbot HQ",
@@ -903,18 +931,34 @@ https://echatbot.ai/docs
 Can I help with anything else?"`,  
     },
   })
+  } else {
+    console.log(`   ✅ Workspace already exists: ${supportWorkspace.name}`)
+  }
 
   console.log(
-    `✅ Enterprise support workspace created: ${supportWorkspace.name} (${supportWorkspace.id})`
+    `✅ Enterprise support workspace ready: ${supportWorkspace.name} (${supportWorkspace.id})`
   )
 
-  await prisma.userWorkspace.create({
-    data: {
+  // Associate admin user with support workspace (if not already)
+  const existingSupportLink = await prisma.userWorkspace.findFirst({
+    where: {
       userId: adminUser.id,
       workspaceId: supportWorkspace.id,
-      role: "SUPER_ADMIN",
-    },
+    }
   })
+
+  if (!existingSupportLink) {
+    await prisma.userWorkspace.create({
+      data: {
+        userId: adminUser.id,
+        workspaceId: supportWorkspace.id,
+        role: "SUPER_ADMIN",
+      },
+    })
+    console.log(`   ✅ Admin user linked to workspace`)
+  } else {
+    console.log(`   ✅ Admin user already linked to workspace`)
+  }
 
   await prisma.whatsappSettings.create({
     data: {

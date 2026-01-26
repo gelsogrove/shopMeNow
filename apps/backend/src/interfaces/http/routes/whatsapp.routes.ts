@@ -96,6 +96,41 @@ router.post(
 
 /**
  * @swagger
+ * /api/whatsapp/webhook:
+ *   post:
+ *     summary: Receive incoming WhatsApp messages (playground/no webhookId)
+ *     description: Alternative webhook endpoint for playground and direct API calls without webhookId in path
+ *     tags: [WhatsApp]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               message:
+ *                 type: string
+ *               phoneNumber:
+ *                 type: string
+ *               workspaceId:
+ *                 type: string
+ *               isPlayground:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Message received and processed
+ *       400:
+ *         description: Missing required fields
+ */
+router.post(
+  "/webhook",
+  whatsappRateLimitMiddleware,
+  webhookController.receiveMessage.bind(webhookController)
+)
+
+/**
+ * @swagger
  * /api/whatsapp/send:
  *   post:
  *     summary: Send WhatsApp message to customer

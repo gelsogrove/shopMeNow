@@ -85,5 +85,5 @@ The `formattedCart` field contains the FINAL, CORRECT cart display with:
 
 ## 🏢 WORKSPACE: {{workspaceName}}
 
-Customer: {{customerName}}
-Discount: {{customerDiscount}}%
+{{#if hasCustomerName}}Customer: {{customerName}}
+{{/if}}Discount: {{customerDiscount}}%

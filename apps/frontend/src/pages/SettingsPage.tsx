@@ -65,6 +65,10 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { useMutation } from "@tanstack/react-query"
 import { api } from "@/services/api"
 
+const WEBHOOK_BASE =
+  import.meta.env.VITE_PUBLIC_WEBHOOK_BASE ||
+  (typeof window !== "undefined" ? window.location.origin : "https://echatbot.ai")
+
 // Types
 type SectionKey = "channels" | "ai" | "general" | "security"
 
@@ -75,6 +79,9 @@ interface WorkspaceData {
   whatsappApiKey: string
   whatsappPhoneNumberId: string
   whatsappVerifyToken: string
+  whatsappWebhookId?: string
+  whatsappWebhookToken?: string
+  whatsappWebhookUrl?: string
   adminEmail: string
   url: string
   currency: string
@@ -183,6 +190,20 @@ export function SettingsPage() {
   const [isDirty, setIsDirty] = useState(false)
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+
+  const handleCopy = async (text?: string) => {
+    if (!text) {
+      toast.error("Nothing to copy")
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success("Copied to clipboard")
+    } catch (err) {
+      toast.error("Copy failed")
+      console.error(err)
+    }
+  }
   
   // Delete workspace dialog
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -195,6 +216,9 @@ export function SettingsPage() {
     whatsappApiKey: "",
     whatsappPhoneNumberId: "",
     whatsappVerifyToken: "",
+    whatsappWebhookId: undefined,
+    whatsappWebhookToken: undefined,
+    whatsappWebhookUrl: undefined,
     adminEmail: "",
     url: "http://localhost:3000",
     currency: "USD",
@@ -222,6 +246,9 @@ export function SettingsPage() {
     toneOfVoice: "friendly",
     logoUrl: undefined,
   })
+  const webhookDisplayUrl =
+    formData.whatsappWebhookUrl ||
+    `${WEBHOOK_BASE.replace(/\/$/, "")}/api/whatsapp/webhook/${formData.whatsappWebhookId || ""}`
 
   // Load workspace data
   useEffect(() => {
@@ -233,6 +260,9 @@ export function SettingsPage() {
         whatsappApiKey: currentWorkspace.whatsappApiKey || "",
         whatsappPhoneNumberId: currentWorkspace.whatsappPhoneNumberId || "",
         whatsappVerifyToken: currentWorkspace.whatsappVerifyToken || "",
+        whatsappWebhookId: currentWorkspace.whatsappWebhookId,
+        whatsappWebhookToken: currentWorkspace.whatsappWebhookToken,
+        whatsappWebhookUrl: currentWorkspace.whatsappWebhookUrl,
         adminEmail: currentWorkspace.adminEmail || "",
         url: currentWorkspace.url || "http://localhost:3000",
         currency: currentWorkspace.currency || "USD",
@@ -634,6 +664,29 @@ export function SettingsPage() {
                 placeholder="mySecureToken123"
                 disabled={!canEdit}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Webhook URL (paste in Meta)</Label>
+              <div className="flex gap-2 items-center">
+                <code className="flex-1 rounded border bg-slate-50 px-2 py-2 text-xs font-mono overflow-x-auto">
+                  {webhookDisplayUrl || "Not generated"}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleCopy(webhookDisplayUrl)}
+                  disabled={!webhookDisplayUrl}
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copy
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Inserisci questo URL nel webhook di Meta → {webhookDisplayUrl || `${WEBHOOK_BASE}/api/whatsapp/webhook/:webhookId`}
+                <br />
+                <strong>Verify Token</strong>: usa il token inserito sopra per configurare il webhook in Meta.
+              </p>
             </div>
 
             <div className="pt-2">
@@ -1109,6 +1162,43 @@ export function SettingsPage() {
               className="min-h-[150px]"
             />
             <p className="text-sm text-muted-foreground">💡 Custom rules override default AI behavior. Be specific and clear. Use variables to personalize responses.</p>
+          </div>
+
+          {/* Available Variables Reference */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+            <h4 className="font-semibold text-blue-900 flex items-center gap-2">
+              <span>📝</span>
+              Available Variables (use in Welcome Message, AI Rules, etc.)
+            </h4>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <code className="bg-blue-100 px-2 py-1 rounded text-blue-800">{"{{nome}}"}</code>
+                <span className="text-gray-600 ml-2">Customer name</span>
+              </div>
+              <div>
+                <code className="bg-blue-100 px-2 py-1 rounded text-blue-800">{"{{email}}"}</code>
+                <span className="text-gray-600 ml-2">Customer email</span>
+              </div>
+              <div>
+                <code className="bg-blue-100 px-2 py-1 rounded text-blue-800">{"{{telefono}}"}</code>
+                <span className="text-gray-600 ml-2">Customer phone</span>
+              </div>
+              <div>
+                <code className="bg-blue-100 px-2 py-1 rounded text-blue-800">{"{{lingua}}"}</code>
+                <span className="text-gray-600 ml-2">Customer language</span>
+              </div>
+              <div>
+                <code className="bg-blue-100 px-2 py-1 rounded text-blue-800">{"{{nomeAzienda}}"}</code>
+                <span className="text-gray-600 ml-2">Company name</span>
+              </div>
+              <div>
+                <code className="bg-blue-100 px-2 py-1 rounded text-blue-800">{"{{whatsapp}}"}</code>
+                <span className="text-gray-600 ml-2">WhatsApp number</span>
+              </div>
+            </div>
+            <p className="text-xs text-blue-700 mt-2">
+              💡 <strong>Tip</strong>: Use these variables to personalize messages. Example: "Ciao {`{{nome}}`}, welcome to {`{{nomeAzienda}}`}!"
+            </p>
           </div>
 
           <div className="space-y-2">

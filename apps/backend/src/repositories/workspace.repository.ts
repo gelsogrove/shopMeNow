@@ -24,6 +24,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       whatsappApiToken: data.whatsappApiKey, // ✅ LEGACY: Keep for backward compatibility
       whatsappPhoneNumberId: data.whatsappPhoneNumberId ?? null,
       whatsappVerifyToken: data.whatsappVerifyToken ?? null,
+      whatsappWebhookId: data.whatsappSettings?.webhookId ?? null,
+      whatsappWebhookToken: data.whatsappSettings?.webhookToken ?? null,
       whatsappWebhookUrl: data.whatsappWebhookUrl,
       webhookUrl: data.webhookUrl,
       notificationEmail: data.notificationEmail,
@@ -468,6 +470,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         delete dbData.adminEmail
       }
 
+      // 🔥 REMOVE DEPRECATED FIELDS: whatsappWebhookId and whatsappWebhookToken
+      // These fields only exist in WhatsappSettings, NOT in Workspace model
+      if (dbData.whatsappWebhookId !== undefined) {
+        delete dbData.whatsappWebhookId
+      }
+      if (dbData.whatsappWebhookToken !== undefined) {
+        delete dbData.whatsappWebhookToken
+      }
+
       // Handle JSON fields - ensure they are properly formatted
       if (
         dbData.welcomeMessage &&
@@ -523,6 +534,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
                   dbData.whatsappApiKey ||
                   data.whatsappApiToken ||
                   "placeholder",
+                webhookId: crypto.randomUUID(), // Generate unique webhook ID
+                webhookToken: crypto.randomUUID(), // Generate unique webhook token
                 adminEmail: adminEmail,
               },
               update: {

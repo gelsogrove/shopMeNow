@@ -153,6 +153,14 @@ For privacy inquiries, please contact our support team.`
       orderBy: {
         createdAt: "desc",
       },
+      include: {
+        whatsappSettings: {
+          select: {
+            webhookId: true,
+            webhookToken: true,
+          },
+        },
+      },
     })
 
     // Convert to Workspace entities
@@ -165,6 +173,8 @@ For privacy inquiries, please contact our support team.`
       whatsappApiKey: w.whatsappApiKey ?? undefined,
       whatsappPhoneNumberId: (w as any).whatsappPhoneNumberId ?? undefined,
       whatsappVerifyToken: (w as any).whatsappVerifyToken ?? undefined,
+      whatsappWebhookId: (w as any).whatsappSettings?.webhookId ?? null,
+      whatsappWebhookToken: (w as any).whatsappSettings?.webhookToken ?? null,
       webhookUrl: w.webhookUrl ?? undefined,
       notificationEmail: w.notificationEmail ?? undefined,
       language: w.language ?? 'it',

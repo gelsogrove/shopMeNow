@@ -101,10 +101,11 @@ export class WhatsAppWebhookController {
    */
   async receiveMessage(req: Request, res: Response): Promise<void> {
     const { webhookId } = req.params
-    if (!webhookId) {
-      res.status(400).json({ error: "missing_webhook_id" })
-      return
-    }
+    // webhookId is optional - playground doesn't provide it
+    // if (!webhookId) {
+    //   res.status(400).json({ error: "missing_webhook_id" })
+    //   return
+    // }
 
     // 🔒 STEP 0: Extract phone number FIRST for locking (before any processing)
     let phoneNumberForLock: string | undefined
@@ -321,27 +322,51 @@ export class WhatsAppWebhookController {
       // workspaceId already extracted above based on format
       // If not provided, try to lookup from channel phone number
 
-      // 🔍 Load workspace by webhookId (channel-scoped)
-      const whatsappSettings = await prisma.whatsappSettings.findUnique({
-        where: { webhookId },
-        select: {
-          workspaceId: true,
-          phoneNumber: true,
-          workspace: {
-            select: {
-              id: true,
-              name: true,
-              channelStatus: true,
-              deletedAt: true,
-              ownerId: true,
-              owner: { select: { status: true } },
+      // 🔍 Load workspace by webhookId OR workspaceId (for playground)
+      let whatsappSettings: any
+      
+      if (webhookId) {
+        // Production: lookup by webhookId
+        whatsappSettings = await prisma.whatsappSettings.findUnique({
+          where: { webhookId },
+          select: {
+            workspaceId: true,
+            phoneNumber: true,
+            workspace: {
+              select: {
+                id: true,
+                name: true,
+                channelStatus: true,
+                deletedAt: true,
+                ownerId: true,
+                owner: { select: { status: true } },
+              },
             },
           },
-        },
-      })
+        })
+      } else if (workspaceId) {
+        // Playground: lookup by workspaceId
+        whatsappSettings = await prisma.whatsappSettings.findUnique({
+          where: { workspaceId },
+          select: {
+            workspaceId: true,
+            phoneNumber: true,
+            workspace: {
+              select: {
+                id: true,
+                name: true,
+                channelStatus: true,
+                deletedAt: true,
+                ownerId: true,
+                owner: { select: { status: true } },
+              },
+            },
+          },
+        })
+      }
 
       if (!whatsappSettings?.workspace || whatsappSettings.workspace.deletedAt) {
-        logger.error("[WEBHOOK] ❌ Webhook not linked to active workspace", { webhookId })
+        logger.error("[WEBHOOK] ❌ Webhook not linked to active workspace", { webhookId, workspaceId })
         res.status(404).json({ error: "workspace_not_found_for_webhook" })
         return
       }
@@ -358,31 +383,35 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // Verify signature (strict)
-      const sigHeader = req.header("x-hub-signature-256")
-      if (!sigHeader) {
-        logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
-        res.status(403).json({ error: "missing_signature" })
-        return
-      }
+      // Verify signature (strict) - SKIP for playground mode
+      if (!isPlayground) {
+        const sigHeader = req.header("x-hub-signature-256")
+        if (!sigHeader) {
+          logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
+          res.status(403).json({ error: "missing_signature" })
+          return
+        }
 
-      try {
-        const bodyString = JSON.stringify(req.body || {})
-        const expected = `sha256=${crypto
-          .createHmac("sha256", whatsappSettings.webhookToken)
-          .update(bodyString, "utf8")
-          .digest("hex")}`
-        if (expected !== sigHeader) {
-          logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
+        try {
+          const bodyString = JSON.stringify(req.body || {})
+          const expected = `sha256=${crypto
+            .createHmac("sha256", whatsappSettings.webhookToken)
+            .update(bodyString, "utf8")
+            .digest("hex")}`
+          if (expected !== sigHeader) {
+            logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
+            res.status(403).json({ error: "invalid_signature" })
+            return
+          }
+        } catch (err) {
+          logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
+            error: (err as Error).message,
+          })
           res.status(403).json({ error: "invalid_signature" })
           return
         }
-      } catch (err) {
-        logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
-          error: (err as Error).message,
-        })
-        res.status(403).json({ error: "invalid_signature" })
-        return
+      } else {
+        logger.info("[WEBHOOK] 🧪 Playground mode - skipping signature verification")
       }
 
       workspaceId = whatsappSettings.workspaceId

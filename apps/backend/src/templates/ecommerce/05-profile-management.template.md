@@ -11,8 +11,8 @@ Format profile information and guide customer to secure edit link.
 
 ## 👤 CUSTOMER CONTEXT
 
-- **Name**: {{customerName}}
-- **Email**: {{customerEmail}}
+{{#if hasCustomerName}}- **Name**: {{customerName}}
+{{/if}}- **Email**: {{customerEmail}}
 - **Phone**: {{customerPhone}}
 - **Notifications**: {{pushNotificationsConsent}}
 - **Language**: {{languageUser}}

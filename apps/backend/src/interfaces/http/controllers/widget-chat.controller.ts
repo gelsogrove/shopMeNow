@@ -366,6 +366,46 @@ export class WidgetChatController {
 
       logger.info("✅ Workspace validation passed")
 
+      // 💰 CREDIT CHECK: Verify owner has sufficient credit (or within -$10 threshold)
+      // CRITICAL: Check BEFORE processing message (same as WhatsApp billing)
+      if (workspace.ownerId) {
+        const owner = await prisma.user.findUnique({
+          where: { id: workspace.ownerId },
+          select: { 
+            creditBalance: true,
+            subscriptionStatus: true,
+          },
+        })
+
+        if (owner) {
+          const currentBalance = Number(owner.creditBalance)
+          const MIN_BALANCE_THRESHOLD = -10.00 // Allow up to -$10 overdraft (same as WhatsApp)
+
+          if (currentBalance < MIN_BALANCE_THRESHOLD) {
+            logger.warn(`[WIDGET-BILLING] 🚫 Credit limit reached: $${currentBalance.toFixed(2)} < -$10.00`, {
+              workspaceId,
+              ownerId: workspace.ownerId,
+              currentBalance,
+            })
+
+            return res.status(402).json({
+              error: "INSUFFICIENT_CREDIT",
+              message: "Credit limit reached. Please add credits to continue using the service.",
+              currentBalance,
+              minimumRequired: MIN_BALANCE_THRESHOLD,
+            })
+          }
+
+          // ⚠️ Warn if balance is negative (but still allowed)
+          if (currentBalance < 0) {
+            logger.warn(
+              `[WIDGET-BILLING] ⚠️ Negative balance: $${currentBalance.toFixed(2)} (within -$10 threshold)`,
+              { workspaceId, ownerId: workspace.ownerId }
+            )
+          }
+        }
+      }
+
       // Find or create customer for this visitor
       logger.info("🔍 Finding or creating customer for visitor", { visitorId, workspaceId })
       let customer = await prisma.customers.findFirst({
@@ -516,6 +556,45 @@ export class WidgetChatController {
           tokensUsed: llmResult.tokensUsed || 0,
         },
       })
+
+      // 💰 BILLING: Deduct widget message credit ($0.05)
+      // NOTE: Widget billing happens AFTER successful LLM response (like WhatsApp)
+      // Uses SubscriptionBillingService.deductOwnerWidgetMessageCredit()
+      try {
+        if (!workspace.ownerId) {
+          logger.warn(`[WIDGET-BILLING] ⚠️ No owner for workspace ${workspaceId} - skipping billing`)
+        } else {
+          const billingService = new SubscriptionBillingService(prisma)
+          const messageId = `widget-${visitorId}-${Date.now()}`
+          
+          const billingResult = await billingService.deductOwnerWidgetMessageCredit(
+            workspace.ownerId,
+            workspaceId,
+            messageId
+          )
+
+          if (billingResult.success) {
+            logger.info(
+              `[WIDGET-BILLING] 💰 Widget message charged: $0.05 deducted. New balance: $${billingResult.newBalance.toFixed(2)}`
+            )
+          } else {
+            // ⚠️ CRITICAL: Check if balance below -$10 threshold
+            // If below -$10, we should have blocked earlier, but log error
+            logger.error(
+              `[WIDGET-BILLING] ❌ Failed to deduct widget message credit: ${billingResult.error}`,
+              { workspaceId, ownerId: workspace.ownerId, messageId }
+            )
+            // Don't fail the response - user already got their answer
+            // Just log the billing failure for admin monitoring
+          }
+        }
+      } catch (billingError) {
+        logger.error(
+          `[WIDGET-BILLING] ❌ Widget billing exception:`,
+          billingError
+        )
+        // Don't fail the response - billing failure shouldn't break UX
+      }
 
       // Return response directly (immediate delivery, no WhatsApp queue)
       return res.status(200).json({

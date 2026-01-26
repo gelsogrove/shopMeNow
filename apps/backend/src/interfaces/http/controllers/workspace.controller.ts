@@ -47,10 +47,13 @@ export class WorkspaceController {
         slug: workspace.slug,
         description: workspace.description,
         whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-        whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
+        whatsappApiKey: workspace.whatsappApiKey,
         whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
         whatsappVerifyToken: workspace.whatsappVerifyToken,
         webhookUrl: workspace.webhookUrl,
+        whatsappWebhookId: workspace.whatsappWebhookId || undefined,
+        whatsappWebhookToken: workspace.whatsappWebhookToken || undefined,
+        whatsappWebhookUrl: workspace.whatsappWebhookUrl || undefined,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
         language: workspace.language,
@@ -126,10 +129,13 @@ export class WorkspaceController {
           slug: workspace.slug,
           description: workspace.description,
           whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-          whatsappApiKey: workspace.whatsappApiKey, // ✅ FIXED: Use whatsappApiKey instead of whatsappApiToken
+          whatsappApiKey: workspace.whatsappApiKey,
           whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
           whatsappVerifyToken: workspace.whatsappVerifyToken,
           webhookUrl: workspace.webhookUrl,
+          whatsappWebhookId: workspace.whatsappWebhookId || undefined,
+          whatsappWebhookToken: workspace.whatsappWebhookToken || undefined,
+          whatsappWebhookUrl: workspace.whatsappWebhookUrl || undefined,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
           language: workspace.language,

@@ -6,8 +6,8 @@ This summary will be sent via email when a customer requests human support.
 ---
 
 ## CUSTOMER INFO
-- Name: {{customerName}}
-- Email: {{customerEmail}}
+{{#if hasCustomerName}}- Name: {{customerName}}
+{{/if}}- Email: {{customerEmail}}
 - Phone: {{customerPhone}}
 
 ---

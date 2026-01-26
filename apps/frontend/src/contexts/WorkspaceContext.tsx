@@ -21,6 +21,9 @@ export interface Workspace {
   whatsappApiKey?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
+  whatsappWebhookId?: string
+  whatsappWebhookToken?: string
+  whatsappWebhookUrl?: string
   adminEmail?: string
   url?: string
   debugMode?: boolean

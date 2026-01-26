@@ -12,8 +12,8 @@ Format order information into clear, friendly responses.
 
 ## 👤 CUSTOMER CONTEXT
 
-- **Name**: {{customerName}}
-- **Language**: {{languageUser}}
+{{#if hasCustomerName}}- **Name**: {{customerName}}
+{{/if}}- **Language**: {{languageUser}}
 - **Last Order**: {{lastOrderCode}}
 
 ## 📝 RESPONSE PATTERNS
