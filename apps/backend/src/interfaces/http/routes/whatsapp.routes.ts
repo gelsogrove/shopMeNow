@@ -9,8 +9,8 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
  * WhatsApp Routes
  *
  * Endpoints:
- * - GET  /api/whatsapp/webhook       → Meta verification (no auth)
- * - POST /api/whatsapp/webhook       → Receive messages (no auth, HMAC signature)
+ * - GET  /api/whatsapp/webhook/:webhookId       → Meta verification (no auth)
+ * - POST /api/whatsapp/webhook/:webhookId       → Receive messages (no auth, HMAC signature)
  * - POST /api/whatsapp/send          → Send messages (auth required)
  *
  * Security:
@@ -56,7 +56,7 @@ const sendController = new WhatsAppSendController()
  *       403:
  *         description: Invalid verification token
  */
-router.get("/webhook", webhookController.verifyWebhook.bind(webhookController))
+router.get("/webhook/:webhookId", webhookController.verifyWebhook.bind(webhookController))
 
 /**
  * @swagger
@@ -89,7 +89,7 @@ router.get("/webhook", webhookController.verifyWebhook.bind(webhookController))
  *         description: Processing error
  */
 router.post(
-  "/webhook",
+  "/webhook/:webhookId",
   whatsappRateLimitMiddleware,
   webhookController.receiveMessage.bind(webhookController)
 )

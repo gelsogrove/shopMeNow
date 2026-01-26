@@ -137,7 +137,7 @@ describe('🔒 Public Endpoints Security - Critical Routes', () => {
       // See: apps/backend/src/middlewares/auth.middleware.ts exemption
       
       expect(true).toBe(true)
-      console.log('✅ SECURITY: /whatsapp/webhook uses HMAC validation (not JWT)')
+      console.log('✅ SECURITY: /whatsapp/webhook/:webhookId uses HMAC validation (not JWT)')
     })
   })
 
@@ -177,7 +177,7 @@ describe('🔒 Critical Endpoint Access Control Matrix', () => {
       '/api/v1/auth/register': 'PUBLIC',
       '/api/v1/subscription/plans': 'PUBLIC',
       '/api/v1/platform-config': 'PUBLIC',
-      '/whatsapp/webhook': 'PUBLIC (HMAC validation)',
+      '/whatsapp/webhook/:webhookId': 'PUBLIC (HMAC validation)',
     }
 
     // This test documents the expected security posture

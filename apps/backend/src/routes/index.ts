@@ -406,7 +406,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/auth/oauth/google", // 🔒 OAuth Google login/register (creates sessionId after 2FA)
   "/health",
   "/session/validate",
-  "/whatsapp/webhook",
+  "/whatsapp/webhook/",
   "/chat", // WhatsApp compatibility endpoint
   "/cart-tokens", // Support interface
   "/token/", // TOKEN-BASED routes (NO sessionId required)

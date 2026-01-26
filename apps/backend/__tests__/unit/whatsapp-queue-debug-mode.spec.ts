@@ -98,21 +98,25 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
         id: workspaceId,
         name: "Test Workspace",
         debugMode: true, // 🔧 DEBUG MODE ENABLED
+        wipMessage: "Maintenance mode",
       })
 
       // Get the mocked repository
       const repoMock = (service as any).repository
+
+      // Mock findPending to return null (no pending messages)
+      repoMock.findPending.mockResolvedValue(null)
 
       await service.processPendingMessages(workspaceId)
 
       // Should check workspace debugMode
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true },
+        select: { debugMode: true, name: true, wipMessage: true },
       })
       
-      // Should NOT attempt to find pending messages when debugMode=true
-      expect(repoMock.findPending).not.toHaveBeenCalled()
+      // Should attempt to find pending messages to send WIP (but none found)
+      expect(repoMock.findPending).toHaveBeenCalledWith(workspaceId, 1)
     })
 
     it("should process messages normally when debugMode=false", async () => {
@@ -133,7 +137,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       // Should check debugMode and proceed to look for pending messages
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true },
+        select: { debugMode: true, name: true, wipMessage: true },
       })
       
       // Should attempt to find pending messages
@@ -175,6 +179,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
           id: workspaceA,
           name: "Workspace A",
           debugMode: true,
+          wipMessage: "Maintenance mode",
         })
         .mockResolvedValueOnce({
           id: workspaceB,
@@ -185,18 +190,22 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       // Get the mocked repository
       const repoMock = (service as any).repository
 
+      // Mock findPending to return no messages for both workspaces
+      repoMock.findPending.mockResolvedValue(null)
+
       // Process workspace A (debugMode=true)
       await service.processPendingMessages(workspaceA)
       
       // Process workspace B (debugMode=false)
       await service.processPendingMessages(workspaceB)
 
-      // Workspace A: should skip processing (debugMode=true)
-      // Workspace B: should proceed to check pending messages
+      // Workspace A: should fetch pending message (to send WIP) but no message found
+      // Workspace B: should fetch pending message (to process normally) but no message found
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledTimes(2)
       
-      // Only 1 call to findPending (from workspace B processing)
-      expect(repoMock.findPending).toHaveBeenCalledTimes(1)
+      // 2 calls to findPending: one from workspace A (debugMode WIP check), one from workspace B (normal processing)
+      expect(repoMock.findPending).toHaveBeenCalledTimes(2)
+      expect(repoMock.findPending).toHaveBeenCalledWith(workspaceA, 1)
       expect(repoMock.findPending).toHaveBeenCalledWith(workspaceB, 1)
     })
 
@@ -213,7 +222,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       // Verify workspace isolation - correct workspaceId passed
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true },
+        select: { debugMode: true, name: true, wipMessage: true },
       })
     })
   })

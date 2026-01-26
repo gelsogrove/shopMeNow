@@ -163,7 +163,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      box-shadow: 0 0 0 0 ${pulseColor};
       transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       padding: 0;
       overflow: visible;

@@ -20,3 +20,25 @@ export function normalizePhoneNumber(phone?: string | null): string | null {
 
   return digits || null
 }
+
+/**
+ * Build a set of comparable phone variants for lookups.
+ * Returns unique values in priority order:
+ * 1) trimmed original if present
+ * 2) +digits
+ * 3) digits only
+ */
+export function buildPhoneVariants(phone?: string | null): string[] {
+  if (!phone) return []
+  const variants = new Set<string>()
+  const trimmed = phone.trim()
+  if (trimmed) variants.add(trimmed)
+
+  const digits = trimmed.replace(/\D+/g, "")
+  if (digits) {
+    variants.add(`+${digits}`)
+    variants.add(digits)
+  }
+
+  return Array.from(variants)
+}

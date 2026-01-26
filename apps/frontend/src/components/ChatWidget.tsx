@@ -32,6 +32,46 @@ import {
   Shield,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+/**
+ * TypingIndicator - 3 bouncing dots animation (like Payload playground)
+ */
+function TypingIndicator({ primaryColor }: { primaryColor: string }) {
+  return (
+    <div className="flex items-center gap-1 px-4 py-3 bg-white border border-slate-200 rounded-2xl rounded-bl-md max-w-[85px] shadow-sm mb-3">
+      <style>{`
+        @keyframes typingBounce {
+          0%, 60%, 100% {
+            transform: translateY(0) scale(1);
+            opacity: 0.7;
+          }
+          30% {
+            transform: translateY(-8px) scale(1.1);
+            opacity: 1;
+          }
+        }
+        .typing-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          animation: typingBounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) {
+          animation-delay: 0s;
+        }
+        .typing-dot:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+        .typing-dot:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+      `}</style>
+      <div className="typing-dot" style={{ backgroundColor: primaryColor }} />
+      <div className="typing-dot" style={{ backgroundColor: primaryColor }} />
+      <div className="typing-dot" style={{ backgroundColor: primaryColor }} />
+    </div>
+  )
+}
 import { ChatSurface } from "@/components/chat/ChatSurface"
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
@@ -471,31 +511,49 @@ export function ChatWidget({
 
       {/* Widget Button - Glassmorphism Style */}
       {!isOpen && (
-        <button
-          data-widget-button
-          onClick={() => {
-            setIsOpen(true)
-            onOpenChange?.(true)
-          }}
-          className={cn(
-            isEmbedded ? "absolute" : "fixed",
-            "z-[2147483647] rounded-full",
-            embeddedButtonSizeClasses,
-            "active:scale-95",
-            // Transparent background
-            "bg-transparent",
-            "border-none",
-            "shadow-none",
-            "group flex items-center justify-center",
-            "transition-all duration-300 ease-out",
-            "hover:scale-110",
-            "hover:bg-transparent",
-            "focus:outline-none",
-            positionClasses[position]
-          )}
-          aria-label="Open chat"
-          title={`widget-icon:${resolvedIcon}`}
-        >
+        <>
+          <style>{`
+            @keyframes echatbot-pulse {
+              0% {
+                box-shadow: 0 0 0 0 ${resolvedPrimaryColor}cc;
+              }
+              50% {
+                box-shadow: 0 0 0 20px ${resolvedPrimaryColor}00;
+              }
+              100% {
+                box-shadow: 0 0 0 0 ${resolvedPrimaryColor}00;
+              }
+            }
+            .widget-button-pulse {
+              animation: echatbot-pulse 2s infinite;
+            }
+          `}</style>
+          <button
+            data-widget-button
+            onClick={() => {
+              setIsOpen(true)
+              onOpenChange?.(true)
+            }}
+            className={cn(
+              isEmbedded ? "absolute" : "fixed",
+              "z-[2147483647] rounded-full",
+              embeddedButtonSizeClasses,
+              "active:scale-95",
+              // Transparent background
+              "bg-transparent",
+              "border-none",
+              "shadow-none",
+              "group flex items-center justify-center",
+              "transition-all duration-300 ease-out",
+              "hover:scale-110",
+              "hover:bg-transparent",
+              "focus:outline-none",
+              "widget-button-pulse",
+              positionClasses[position]
+            )}
+            aria-label="Open chat"
+            title={`widget-icon:${resolvedIcon}`}
+          >
           {displayLogoUrl ? (
             <img
               src={displayLogoUrl || defaultLogoUrl}
@@ -513,7 +571,8 @@ export function ChatWidget({
               {renderIconGlyph(resolvedIcon)}
             </div>
           )}
-        </button>
+          </button>
+        </>
       )}
 
       {/* Widget Popup - Enhanced Design */}
@@ -604,6 +663,12 @@ export function ChatWidget({
                 msg.role === "user" ? "widget-user-message" : undefined
               }
             />
+            {/* Show typing indicator when waiting for bot response */}
+            {isLoading && (
+              <div className="flex items-start gap-2 mb-3">
+                <TypingIndicator primaryColor={resolvedPrimaryColor} />
+              </div>
+            )}
           </ScrollArea>
 
           {/* Footer with Input */}

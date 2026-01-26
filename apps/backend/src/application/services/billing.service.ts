@@ -13,13 +13,24 @@ export class BillingService {
    * Track message cost ($0.10) - used for all message interactions
    * This deducts from ALL workspace credits (shared across owner's channels)
    * AND records in billingTransactions for Transaction History
+   * @param isPlayground - Skip credit deduction for playground testing (default: false)
    */
   async trackMessage(
     workspaceId: string,
     customerId: string,
     description: string = "Message interaction",
-    userQuery?: string
+    userQuery?: string,
+    isPlayground: boolean = false
   ): Promise<void> {
+    // 🧪 PLAYGROUND: Skip billing for playground messages (testing environment)
+    if (isPlayground) {
+      logger.info(`[BILLING] 🧪 Playground mode - skipping credit deduction`, {
+        workspaceId,
+        customerId,
+      })
+      return
+    }
+
     try {
       // Get current price from database (fallback to 0.10 for safety)
       const messageCost =

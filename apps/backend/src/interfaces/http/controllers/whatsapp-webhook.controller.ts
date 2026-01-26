@@ -14,7 +14,8 @@ import {
 } from "../../../utils/language-detector"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
-import { normalizePhoneNumber } from "../../../utils/phone"
+import { buildPhoneVariants } from "../../../utils/phone"
+import crypto from "crypto"
 
 /**
  * 🔒 CONCURRENCY CONTROL: Customer-level message processing locks
@@ -47,30 +48,39 @@ const customerMessageLocks = new Map<string, Promise<void>>()
 
 export class WhatsAppWebhookController {
   /**
-   * GET /api/whatsapp/webhook
+   * GET /api/whatsapp/webhook/:webhookId
    * Webhook verification endpoint (one-time setup by Meta)
    *
    * SECURITY: Public endpoint (required by Meta for webhook setup)
    */
   async verifyWebhook(req: Request, res: Response): Promise<void> {
     try {
+      const { webhookId } = req.params
       const mode = req.query["hub.mode"]
       const token = req.query["hub.verify_token"]
       const channel = req.query["hub.channel"]
 
       logger.info("[WEBHOOK-VERIFY] Meta verification request received", {
         mode,
-        // TODO: Token verification will be configured when new WhatsApp library is integrated
+        webhookId,
         tokenReceived: !!token,
       })
 
-      // TODO: Re-enable token verification when new WhatsApp library is integrated
-      // For now, accept all verification requests in development
-      if (mode === "subscribe") {
-        logger.info("[WEBHOOK-VERIFY] ✅ Verification successful (dev mode)")
+      const settings = await prisma.whatsappSettings.findUnique({
+        where: { webhookId },
+        select: { webhookToken: true },
+      })
+
+      if (!settings) {
+        res.status(404).send("Webhook not found")
+        return
+      }
+
+      if (mode === "subscribe" && token === settings.webhookToken) {
+        logger.info("[WEBHOOK-VERIFY] ✅ Verification successful", { webhookId })
         res.status(200).send(channel)
       } else {
-        logger.warn("[WEBHOOK-VERIFY] ❌ Verification failed - invalid token")
+        logger.warn("[WEBHOOK-VERIFY] ❌ Verification failed - invalid token", { webhookId })
         res.status(403).send("Forbidden")
       }
     } catch (error: any) {
@@ -80,7 +90,7 @@ export class WhatsAppWebhookController {
   }
 
   /**
-   * POST /api/whatsapp/webhook
+   * POST /api/whatsapp/webhook/:webhookId
    * Receive messages from WhatsApp
    *
    * SECURITY:
@@ -90,6 +100,12 @@ export class WhatsAppWebhookController {
    * - ✅ Customer-level locking (prevents race conditions)
    */
   async receiveMessage(req: Request, res: Response): Promise<void> {
+    const { webhookId } = req.params
+    if (!webhookId) {
+      res.status(400).json({ error: "missing_webhook_id" })
+      return
+    }
+
     // 🔒 STEP 0: Extract phone number FIRST for locking (before any processing)
     let phoneNumberForLock: string | undefined
     
@@ -151,14 +167,9 @@ export class WhatsAppWebhookController {
    * Internal method - processes message with lock held
    */
   private async _receiveMessageLocked(req: Request, res: Response): Promise<void> {
+    const { webhookId } = req.params
     try {
-      // 🔒 SECURITY NOTE: HMAC verification removed for frontend compatibility
-      // TODO: Re-enable HMAC when using real WhatsApp API webhook
-      // For now, security relies on:
-      // 1. Customer must exist in database
-      // 2. Workspace validation
-      // 3. Rate limiting (future)
-      logger.info("[WEBHOOK] 📨 Receiving message (HMAC check disabled)")
+      logger.info("[WEBHOOK] 📨 Receiving message")
 
       // ✅ FIX: Extract message from weird frontend format
       // Frontend sends: { "Ciao": { phoneNumber, workspaceId } }
@@ -188,22 +199,43 @@ export class WhatsAppWebhookController {
 
       const data = extractedData
 
+      // Helper to extract text from WhatsApp message (text, button, interactive, media captions)
+      const extractMessageText = (msg: any): string => {
+        if (msg?.text?.body) return msg.text.body
+        if (msg?.button?.text) return msg.button.text
+        if (msg?.interactive?.button_reply?.title) return msg.interactive.button_reply.title
+        if (msg?.interactive?.list_reply?.title) return msg.interactive.list_reply.title
+        if (msg?.interactive?.type === "list" && msg?.interactive?.body?.text) return msg.interactive.body.text
+
+        const mediaTypes = ["image", "video", "document", "audio", "sticker"]
+        if (mediaTypes.includes(msg?.type)) {
+          const media = msg[msg.type]
+          const caption = media?.caption || media?.filename
+          if (caption) return caption
+          return `[${msg.type} message]`
+        }
+        return ""
+      }
+
       // 🔍 Extract message - Support THREE formats:
       // 1. WhatsApp API format: req.body.entry[0].changes[0].value.messages[0]
       // 2. Frontend simulator format (standard): req.body.message + req.body.phoneNumber
       // 3. Frontend simulator format (weird): message as object key
 
       let phoneNumber: string
+      let phoneVariants: string[] = []
       let messageText: string
       let whatsappMessageId: string
       let workspaceId: string | undefined
       let isPlayground: boolean = false // 🧪 Playground mode flag
+      let messageTimestamp: number | undefined
 
       // Check if it's WhatsApp API format
       const entry = data.entry?.[0]
       const changes = entry?.changes?.[0]
       const value = changes?.value
       const messages = value?.messages
+      const contactName: string | undefined = value?.contacts?.[0]?.profile?.name?.trim()
 
       if (messages && messages.length > 0) {
         // WhatsApp API format
@@ -216,14 +248,13 @@ export class WhatsAppWebhookController {
           return
         }
         
-        // WhatsApp API may send with or without +, ensure it's there (but only one!)
-        phoneNumber = message.from.startsWith("+")
-          ? message.from.trim()
-          : `+${message.from.trim()}`
-        messageText = message.text?.body || ""
+        phoneVariants = buildPhoneVariants(message.from)
+        phoneNumber = phoneVariants[0]
+        messageText = extractMessageText(message)
         whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
         isPlayground = value.isPlayground === true // 🧪 Extract playground flag
+        messageTimestamp = message.timestamp ? Number(message.timestamp) * 1000 : undefined
 
         logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {
           from: phoneNumber,
@@ -234,7 +265,8 @@ export class WhatsAppWebhookController {
         })
       } else if (data.message && data.phoneNumber) {
         // Frontend simulator format (standard)
-        phoneNumber = data.phoneNumber.trim() // ✅ Remove leading/trailing spaces
+        phoneVariants = buildPhoneVariants(data.phoneNumber)
+        phoneNumber = phoneVariants[0]
         messageText = data.message
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from standard format
@@ -251,7 +283,8 @@ export class WhatsAppWebhookController {
         )
       } else if (extractedMessage && data.phoneNumber) {
         // Frontend simulator format (weird: message as key)
-        phoneNumber = data.phoneNumber.trim() // ✅ Remove leading/trailing spaces
+        phoneVariants = buildPhoneVariants(data.phoneNumber)
+        phoneNumber = phoneVariants[0]
         messageText = extractedMessage
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from weird format
@@ -271,71 +304,114 @@ export class WhatsAppWebhookController {
         res.status(200).json({ status: "ok" })
         return
       }
+      
+      if (!messageText || messageText.trim() === "") {
+        logger.warn("[WEBHOOK] ⚠️ No message text extracted - ignoring", { webhookId })
+        res.status(200).json({ status: "ignored", reason: "no text" })
+        return
+      }
+      
+      if (!phoneNumber) {
+        logger.error("[WEBHOOK] ❌ Missing phone number in payload", { payloadKeys: Object.keys(data || {}) })
+        res.status(400).json({ error: "missing_phone_number", message: "WhatsApp payload missing 'from' / phoneNumber" })
+        return
+      }
 
       // 🔒 SECURITY STEP 2: Find customer in database OR handle new user
       // workspaceId already extracted above based on format
       // If not provided, try to lookup from channel phone number
 
-      if (!workspaceId) {
-        // 🔍 NEW: Try to find workspace from the channel phone number
-        // This allows backend to determine correct workspace when FE sends channel number
-        const channelPhoneNumber = data.channelPhoneNumber || data.whatsappPhoneNumber
-        
-        if (channelPhoneNumber) {
-          logger.info(
-            "[WEBHOOK] 🔍 No workspaceId provided, looking up from channel phone:",
-            channelPhoneNumber
-          )
-          
-          const workspace = await prisma.workspace.findFirst({
-            where: {
-              whatsappPhoneNumber: channelPhoneNumber.trim(),
-              deletedAt: null,
-              channelStatus: true,
-            },
-            select: { 
-              id: true, 
+      // 🔍 Load workspace by webhookId (channel-scoped)
+      const whatsappSettings = await prisma.whatsappSettings.findUnique({
+        where: { webhookId },
+        select: {
+          workspaceId: true,
+          phoneNumber: true,
+          workspace: {
+            select: {
+              id: true,
               name: true,
+              channelStatus: true,
+              deletedAt: true,
               ownerId: true,
-              owner: {
-                select: { status: true }
-              }
-            }
-          })
-          
-          if (workspace) {
-            // 🚫 OWNER STATUS CHECK: Block if owner is INACTIVE
-            if (workspace.owner?.status === "INACTIVE") {
-              logger.warn("[WEBHOOK] ❌ Message blocked: Owner inactive", {
-                workspaceId: workspace.id,
-                ownerId: workspace.ownerId,
-              })
-              res.status(200).json({ success: true, message: "Message received" })
-              return
-            }
-            
-            workspaceId = workspace.id
-            logger.info(
-              "[WEBHOOK] ✅ Found workspace from channel phone:",
-              {
-                channelPhone: channelPhoneNumber,
-                workspaceId,
-                workspaceName: workspace.name,
-              }
-            )
-          } else {
-            logger.error(
-              "[WEBHOOK] ❌ No workspace found for channel phone:",
-              channelPhoneNumber
-            )
-          }
-        } else {
-          logger.error("[WEBHOOK] ⚠️ No workspaceId or channel phone provided")
-        }
+              owner: { select: { status: true } },
+            },
+          },
+        },
+      })
 
-        if (!workspaceId) {
-          logger.error("[WEBHOOK] ⚠️ Could not determine workspaceId")
-          res.status(400).json({ error: "workspaceId required" })
+      if (!whatsappSettings?.workspace || whatsappSettings.workspace.deletedAt) {
+        logger.error("[WEBHOOK] ❌ Webhook not linked to active workspace", { webhookId })
+        res.status(404).json({ error: "workspace_not_found_for_webhook" })
+        return
+      }
+
+      // Owner inactive or channel disabled
+      if (whatsappSettings.workspace.owner?.status === "INACTIVE" || whatsappSettings.workspace.channelStatus === false) {
+        logger.warn("[WEBHOOK] 🚫 Channel disabled or owner inactive", {
+          webhookId,
+          workspaceId: whatsappSettings.workspace.id,
+          channelStatus: whatsappSettings.workspace.channelStatus,
+          ownerStatus: whatsappSettings.workspace.owner?.status,
+        })
+        res.status(200).json({ success: true, message: "Channel disabled" })
+        return
+      }
+
+      // Verify signature (strict)
+      const sigHeader = req.header("x-hub-signature-256")
+      if (!sigHeader) {
+        logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
+        res.status(403).json({ error: "missing_signature" })
+        return
+      }
+
+      try {
+        const bodyString = JSON.stringify(req.body || {})
+        const expected = `sha256=${crypto
+          .createHmac("sha256", whatsappSettings.webhookToken)
+          .update(bodyString, "utf8")
+          .digest("hex")}`
+        if (expected !== sigHeader) {
+          logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
+          res.status(403).json({ error: "invalid_signature" })
+          return
+        }
+      } catch (err) {
+        logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
+          error: (err as Error).message,
+        })
+        res.status(403).json({ error: "invalid_signature" })
+        return
+      }
+
+      workspaceId = whatsappSettings.workspaceId
+
+      // Anti-replay: reject stale messages (>5 minutes) when timestamp present
+      if (messageTimestamp) {
+        const now = Date.now()
+        const drift = Math.abs(now - messageTimestamp)
+        if (drift > 5 * 60 * 1000) {
+          logger.warn("[WEBHOOK] ⏱️ Stale message rejected", { webhookId, driftMs: drift })
+          res.status(409).json({ error: "stale_message" })
+          return
+        }
+      }
+
+      // Guardrail: ensure to-number/metadata matches channel phone
+      const channelVariants = buildPhoneVariants(whatsappSettings.phoneNumber)
+      const toVariants = buildPhoneVariants(
+        value?.metadata?.display_phone_number || messages?.[0]?.to
+      )
+      if (toVariants.length > 0 && channelVariants.length > 0) {
+        const match = toVariants.some((v) => channelVariants.includes(v))
+        if (!match) {
+          logger.warn("[WEBHOOK] 🚫 To-number mismatch with channel phone", {
+            webhookId,
+            toVariants,
+            channelVariants,
+          })
+          res.status(404).json({ error: "channel_mismatch" })
           return
         }
       }
@@ -344,6 +420,7 @@ export class WhatsAppWebhookController {
       logger.info("[WEBHOOK] 📞 Phone lookup debug", {
         phoneNumber: phoneNumber,
         workspaceId,
+        webhookId,
       })
       
       const customerSelect = {
@@ -368,12 +445,12 @@ export class WhatsAppWebhookController {
 
       let customer = null
 
-      // 🔧 SIMPLE LOOKUP: Search by exact phone number (no normalization magic)
-      // This is more reliable and avoids race conditions
+      // 🔧 LOOKUP: search by phone variants within workspace
+      const lookupVariants = phoneVariants.length > 0 ? phoneVariants : buildPhoneVariants(phoneNumber)
       customer = await prisma.customers.findFirst({
         where: {
-          phone: phoneNumber,
           workspaceId,
+          OR: lookupVariants.map((v) => ({ phone: v })),
         },
         select: customerSelect,
       })
@@ -401,6 +478,20 @@ export class WhatsAppWebhookController {
           phoneSearched: phoneNumber,
           workspaceId,
         })
+      }
+
+      if (customer && contactName && (!customer.name || customer.name.startsWith("New Customer"))) {
+        // Update name for existing customer if missing/placeholder
+        try {
+          await prisma.customers.update({
+            where: { id: customer.id },
+            data: { name: contactName },
+          })
+          customer = { ...customer, name: contactName }
+          logger.info("[WEBHOOK] ✏️ Updated customer name from contact", { customerId: customer.id, contactName })
+        } catch (err) {
+          logger.warn("[WEBHOOK] ⚠️ Failed to update customer name", { error: (err as Error).message })
+        }
       }
 
       if (!customer) {
@@ -517,7 +608,7 @@ export class WhatsAppWebhookController {
           return
         }
 
-        // Detect language from phone number
+      // Detect language from phone number
         const detectedLanguage = detectLanguageFromPhonePrefix(phoneNumber)
         logger.info("[WEBHOOK] 📱 Detected language from phone", {
           phoneNumber,
@@ -659,6 +750,10 @@ export class WhatsAppWebhookController {
         })
         
         const welcomeMessagePrice = await platformConfigService.getPrice("MESSAGE")
+        const phoneForStorage =
+          lookupVariants.find((v) => v.startsWith("+")) ||
+          lookupVariants[0] ||
+          phoneNumber
 
         const { tempCustomer, chatSession } = await prisma.$transaction(async (tx) => {
           // ✅ STEP 5: CREATE TEMPORARY CUSTOMER RECORD (will be updated after registration)
@@ -666,10 +761,10 @@ export class WhatsAppWebhookController {
           // 🔧 FIX: Save phone EXACTLY as received (with international prefix) to avoid normalization issues
           const tempCustomer = await tx.customers.create({
             data: {
-              phone: phoneNumber, // Save EXACTLY as received (e.g., +39111222333)
+              phone: phoneForStorage, // Save sanitized/normalized value
               workspaceId: workspaceId,
-              name: "New Customer", // Temporary name
-              email: `temp_${phoneNumber.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)
+              name: contactName || "New Customer", // Temporary name
+              email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)
               language: detectedLanguage,
               isActive: false, // Mark as inactive until registration complete
             },
@@ -1289,40 +1384,47 @@ export class WhatsAppWebhookController {
         responseLength: routerResult.response.length,
       })
 
-      try {
-        const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
-        const queueService = new WhatsAppQueueService(prisma)
-        
-        // Find the assistant message that was just created by ChatEngine
-        const assistantMessage = await prisma.conversationMessage.findFirst({
-          where: {
-            conversationId: chatSession.id,
-            role: "assistant",
-            content: routerResult.response,
-          },
-          orderBy: { createdAt: "desc" },
-        })
+      // 🧪 PLAYGROUND: Skip queue for playground messages (testing environment)
+      if (!isPlayground) {
+        try {
+          const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
+          const queueService = new WhatsAppQueueService(prisma)
+          
+          // Find the assistant message that was just created by ChatEngine
+          const assistantMessage = await prisma.conversationMessage.findFirst({
+            where: {
+              conversationId: chatSession.id,
+              role: "assistant",
+              content: routerResult.response,
+            },
+            orderBy: { createdAt: "desc" },
+          })
 
-        await queueService.enqueue({
-          workspaceId: customer.workspaceId,
-          customerId: customer.id,
-          phoneNumber: customer.phone,
-          messageContent: routerResult.response,
-          conversationMessageId: assistantMessage?.id,
-          isPlayground, // 🧪 Pass playground flag
-        })
+          await queueService.enqueue({
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+            phoneNumber: customer.phone,
+            messageContent: routerResult.response,
+            conversationMessageId: assistantMessage?.id,
+            isPlayground, // 🧪 Pass playground flag
+          })
 
-        logger.info("[WEBHOOK] ✅ Response queued for WhatsApp delivery", {
+          logger.info("[WEBHOOK] ✅ Response queued for WhatsApp delivery", {
+            customerId: customer.id,
+            queueStatus: "pending",
+          })
+        } catch (queueError) {
+          logger.error("[WEBHOOK] ❌ Failed to enqueue WhatsApp response", {
+            error: queueError,
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+          })
+          // Don't fail the flow if queue fails - message is already saved in conversation
+        }
+      } else {
+        logger.info("[WEBHOOK] 🧪 Playground mode - skipping queue (no WhatsApp send)", {
           customerId: customer.id,
-          queueStatus: "pending",
         })
-      } catch (queueError) {
-        logger.error("[WEBHOOK] ❌ Failed to enqueue WhatsApp response", {
-          error: queueError,
-          workspaceId: customer.workspaceId,
-          customerId: customer.id,
-        })
-        // Don't fail the flow if queue fails - message is already saved in conversation
       }
 
       logger.info("[WEBHOOK] ✅ Message processed successfully", {

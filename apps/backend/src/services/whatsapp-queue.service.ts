@@ -148,17 +148,48 @@ export class WhatsAppQueueService {
    */
   async processPendingMessages(workspaceId: string): Promise<void> {
     try {
-      // 🔧 DEBUG MODE CHECK: If debugMode is enabled, skip sending entirely
+      // 🔧 DEBUG MODE CHECK: If debugMode is enabled, send WIP message automatically
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true },
+        select: { debugMode: true, name: true, wipMessage: true },
       })
 
       if (workspace?.debugMode === true) {
         logger.info(
-          `[WhatsAppQueueService] 🔧 DEBUG MODE ENABLED for workspace "${workspace.name}" (${workspaceId}) - messages will NOT be sent`
+          `[WhatsAppQueueService] 🔧 DEBUG MODE ENABLED for workspace "${workspace.name}" (${workspaceId}) - sending WIP message`
         )
-        // Skip processing - messages remain in "pending" status
+        
+        // Fetch ONE pending message (FIFO) to send WIP response
+        const message = await this.repository.findPending(workspaceId, 1)
+        
+        if (!message) {
+          return // No messages to process
+        }
+
+        // Send WIP message automatically (no LLM, no extra cost)
+        const wipMessage = workspace.wipMessage || "We are in maintenance mode. Please try again later."
+        
+        try {
+          // TODO: Replace with actual WhatsApp send when ready
+          logger.info(`[WhatsAppQueueService] 🔧 WIP message sent: ${wipMessage}`, {
+            customerId: message.customerId,
+            phoneNumber: message.phoneNumber,
+          })
+          
+          // Mark as sent (WIP response)
+          await this.repository.updateStatus(message.id, "sent")
+          
+          // Mark as delivered in conversation history
+          await this.markDeliveredInHistory(
+            message.conversationMessageId,
+            message.customerId,
+            wipMessage
+          )
+        } catch (error) {
+          logger.error(`[WhatsAppQueueService] ❌ Failed to send WIP message:`, error)
+          await this.repository.updateStatus(message.id, "error", "Failed to send WIP message")
+        }
+        
         return
       }
 

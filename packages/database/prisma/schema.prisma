@@ -665,6 +665,8 @@ model WhatsappSettings {
   phoneNumber String    @unique
   apiKey      String
   webhookUrl  String?
+  webhookId   String    @unique
+  webhookToken String
   settings    Json?     @default("{}")
   adminEmail  String?
   smtpHost    String?   @default("smtp.ethereal.email")

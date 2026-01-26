@@ -9,11 +9,11 @@
 
 describe('authMiddleware - Documentation', () => {
   describe('WhatsApp Webhook Exemption', () => {
-    it('should skip auth for /whatsapp/webhook (HMAC validation instead)', () => {
+    it('should skip auth for /whatsapp/webhook/:webhookId (HMAC validation instead)', () => {
       // The auth middleware skips authentication for WhatsApp webhooks
       // because they use HMAC signature validation instead of JWT
-      const PUBLIC_WEBHOOK_PATHS = ['/whatsapp/webhook']
-      expect(PUBLIC_WEBHOOK_PATHS).toContain('/whatsapp/webhook')
+      const PUBLIC_WEBHOOK_PATHS = ['/whatsapp/webhook/:webhookId']
+      expect(PUBLIC_WEBHOOK_PATHS).toContain('/whatsapp/webhook/:webhookId')
     })
   })
 

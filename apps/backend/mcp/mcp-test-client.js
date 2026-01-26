@@ -55,7 +55,7 @@ const USERS = {
 // Configurazione base
 const CONFIG = {
   backendUrl: "http://localhost:3001",
-  apiEndpoint: "/api/whatsapp/webhook",
+  apiEndpoint: "/api/whatsapp/webhook/:webhookId",
   defaultUser: "Mario Rossi",
 }
 

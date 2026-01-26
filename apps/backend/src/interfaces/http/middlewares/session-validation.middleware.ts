@@ -19,7 +19,7 @@ import { SecureErrorResponses } from "../../../utils/secure-error-responses"
  * - /api/auth/register
  * - /api/health
  * - /api/session/validate (loop infinito!)
- * - /api/whatsapp/webhook (pubblico)
+ * - /api/whatsapp/webhook/:webhookId (pubblico)
  * - /api/internal/* (JWT token-based)
  */
 export const sessionValidationMiddleware = async (
