@@ -1032,11 +1032,17 @@ export class WhatsAppWebhookController {
       )
       const workspaceAccessService = new WorkspaceAccessService(prisma)
       
+      // 🧪 PLAYGROUND EXCEPTION: Skip workspace access check for playground
+      // Playground must ALWAYS work (even with debugMode=true) to allow testing and setup
+      const skipAccessCheck = isPlayground
+      
       // Check ALL access conditions including channel status
-      const accessResult = await workspaceAccessService.canProcessMessages(
-        customer.workspaceId,
-        false // DO check channelStatus - WIP mode needs special handling
-      )
+      const accessResult = skipAccessCheck 
+        ? { canProcess: true } 
+        : await workspaceAccessService.canProcessMessages(
+            customer.workspaceId,
+            false // DO check channelStatus - WIP mode needs special handling
+          )
 
       if (!accessResult.canProcess) {
         // 🚧 CHANNEL_DISABLED → Send WIP message (not silent like billing blocks)
