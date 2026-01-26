@@ -4,6 +4,13 @@
   command = "npm run build"
   publish = "dist"
 
+# API Proxy: Forward /api/* to Heroku backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://echatbot-app-1cba28556df2.herokuapp.com/api/:splat"
+  status = 200
+  force = true
+
 # SPA Redirect: All routes should serve index.html
 [[redirects]]
   from = "/*"
