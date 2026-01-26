@@ -2597,14 +2597,8 @@ export class MessageRepository {
         throw new Error("WIP message not configured in database")
       }
 
-      // wipMessage is Json (multilingual), extract English version
-      const wipMessageObj = workspace.wipMessage as {
-        en: string
-        es: string
-        it: string
-        pt: string
-      }
-      return wipMessageObj.en || JSON.stringify(workspace.wipMessage)
+      // wipMessage is now String (not Json) - return directly
+      return workspace.wipMessage
     } catch (error) {
       logger.error(
         `Error getting WIP message for workspace ${workspaceId}:`,
@@ -2711,14 +2705,8 @@ export class MessageRepository {
         throw new Error("Error message not configured in database")
       }
 
-      // wipMessage is Json (multilingual), extract English version
-      const wipMessageObj = workspace.wipMessage as {
-        en: string
-        es: string
-        it: string
-        pt: string
-      }
-      return wipMessageObj.en || JSON.stringify(workspace.wipMessage)
+      // wipMessage is now String (not Json) - return directly
+      return workspace.wipMessage
     } catch (error) {
       logger.error(
         `Error getting error message for workspace ${workspaceId}:`,
