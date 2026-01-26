@@ -191,7 +191,7 @@ async function main() {
       isPaymentConnected: true,
       paypalClientId: "paypal-client-demo-1234",
       paypalMerchantId: "paypal-merchant-5678",
-      paypalEmail: "gelsogrove@gmail.com",
+      paypalEmail: adminEmail, // Use admin email from env var
       paypalEnvironment: "sandbox",
       paypalConnectedAt: new Date(2025, 10, 1, 9, 30, 0),
       // 🧾 Billing Information (Andrea's requirement - sample data)
@@ -1712,7 +1712,7 @@ Can I help with anything else?"`,
     data: {
       firstName: "Alessandro",
       lastName: "Romano",
-      email: "andrea_gelsomino@hotmail.com", // Admin email
+      email: adminEmail, // Use admin email from env var
       phone: "+39 333 890 1234",
       workspaceId: workspace.id,
       isActive: true,

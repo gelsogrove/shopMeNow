@@ -45,7 +45,33 @@ git add -A
 git commit -m "✨ Feature name description"
 git push origin main
 
-# STEP 5: Heroku DB reset (⚠️ DESTROYS DATA)
+# ⚠️⚠️⚠️ CRITICAL: DATABASE RESET DECISION ⚠️⚠️⚠️
+# STOP HERE! Answer this BEFORE running pg:reset:
+#
+# Did you change schema.prisma?
+#   - Added/removed models? Added/removed fields?
+#   - Created new migrations in prisma/migrations/?
+#   YES → Database reset needed, but ONLY if customer approved
+#   NO → Skip pg:reset entirely! Don't touch production database
+#
+# NEVER reset database without:
+# 1️⃣  Customer/Andrea explicit approval
+# 2️⃣  BACKUP of current database (saved locally)
+# 3️⃣  Understanding that ALL DATA WILL BE DESTROYED
+#
+# BACKUP COMMAND (run BEFORE pg:reset):
+# heroku pg:backups:capture --app echatbot-app
+# heroku pg:backups:download --app echatbot-app
+#
+# If you're unsure → ASK ANDREA FIRST!
+
+# STEP 5: Heroku DB reset (⚠️⚠️⚠️ DESTROYS ALL DATA ⚠️⚠️⚠️)
+# Only run this if:
+# 1. Schema changed (schema.prisma modified)
+# 2. Customer/Andrea approved
+# 3. Backup has been saved
+#
+heroku pg:backups:capture --app echatbot-app  # BACKUP FIRST
 heroku pg:reset DATABASE --app echatbot-app --confirm echatbot-app
 
 # STEP 6: Push to all Heroku apps (in order)
@@ -53,13 +79,93 @@ git push heroku-app main
 git push heroku-backoffice main
 git push heroku-scheduler main
 
-# STEP 7: Monitor builds
-heroku logs -n 200 --app echatbot-app
+# 🚨 STEP 7: MANDATORY DATABASE MIGRATION CHECK (January 26, 2026 Lesson)
+# NEVER skip this! Production DB can be out of sync with code
+heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app
+
+# If you see "migrations have not yet been applied":
+heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app
+
+# If migration fails with "relation already exists":
+heroku run "cd packages/database && npx prisma migrate resolve --applied <migration_name>" -a echatbot-app
+# Then retry: heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app
+
+# Verify success (MUST say "Database schema is up to date!"):
+heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app
+
+# 🚨 IF MIGRATIONS WERE APPLIED: Database is now EMPTY → SEED REQUIRED!
+# Check if platform_config table is empty (will cause "Missing platform flag config" errors):
+echo "SELECT COUNT(*) FROM platform_config WHERE type = 'FLAG';" | heroku pg:psql DATABASE -a echatbot-app --command
+
+# If count is 0 or migration was just applied → RUN SEED:
+heroku run "cd packages/database && npx prisma db seed" -a echatbot-app
+
+# 🔄 AFTER SEED: MANDATORY RESTART (cache needs refresh)
+heroku restart -a echatbot-app
+
+# Verify seed worked (should show 8 flags):
+echo "SELECT key, type, value FROM platform_config WHERE type = 'FLAG' ORDER BY key;" | heroku pg:psql DATABASE -a echatbot-app --command
+
+# 🚨 STEP 8: VERIFY ENV VARIABLES (January 26, 2026 Lesson)
+# Check that critical env vars are set on Heroku:
+heroku config --app echatbot-app | grep -E "GOOGLE_CLIENT_ID|OPENROUTER_API_KEY|DATABASE_URL|JWT_SECRET"
+
+# If any are missing, set them:
+heroku config:set VARIABLE_NAME="value" -a echatbot-app
+
+# STEP 9: Monitor builds and verify no errors
+heroku logs -n 200 --app echatbot-app | grep -E "error|Error|500"
 ```
 
 ---
 
 ## ✅ Cosa Abbiamo Imparato
+
+### 🚨 DATABASE MIGRATION FAILURE (January 26, 2026 - CRITICAL LESSON)
+- **Problema**: OAuth login → 500 error con `"The table public.users does not exist"`
+- **Root Cause #1**: Push a Heroku completato MA 5 migration NON applicate al database
+- **Root Cause #2**: Migration applicate → Database vuoto → Seed NON eseguito
+- **Root Cause #3**: Seed eseguito → Backend cache NON ricaricata → "Missing platform flag config"
+- **Diagnosi**: 
+  1. `heroku run "npx prisma migrate status"` → "migrations have not yet been applied"
+  2. `heroku run "npx prisma migrate deploy"` → OK, ma database ora vuoto
+  3. API falliva: "Missing platform flag config" → cache vuota, seed non eseguito
+  4. `heroku run "npx prisma db seed"` → OK, ma backend ancora con cache vecchia
+  5. `heroku restart` → NECESSARIO per ricaricare cache dal DB seedato
+- **Soluzione Completa**:
+  ```bash
+  # 1. Apply migrations
+  heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app
+  
+  # 2. Seed database (popola platform_config e altre tabelle)
+  heroku run "cd packages/database && npx prisma db seed" -a echatbot-app
+  
+  # 3. MANDATORY: Restart app to reload cache
+  heroku restart -a echatbot-app
+  
+  # 4. Verify: Check flags endpoint
+  curl "https://www.echatbot.ai/api/v1/platform-config/flags/check"
+  ```
+- **Tempo perso**: 25 min debug totale
+- **Fix tempo**: 5 min se avessimo fatto deploy sequence corretta
+- **REGOLA D'ORO**: 
+  - Migration → Seed → Restart (ALWAYS this order!)
+  - NEVER skip restart after seed (cache doesn't auto-refresh)
+
+### 🔑 ENV VARIABLES MISSING ON HEROKU (January 26, 2026)
+- **Problema**: OAuth error `"OAuth authentication failed"` PRIMA del database issue
+- **Root Cause**: `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` NON erano configurate su Heroku
+- **Soluzione**: `heroku config:set GOOGLE_CLIENT_ID="..." GOOGLE_CLIENT_SECRET="..." -a echatbot-app`
+- **Lezione**: **Locale .env ≠ Heroku env vars!** Devi sincronizzare manualmente
+- **Fix tempo**: 1 min, ma 10 min persi cercando il problema
+- **REGOLA**: Prima di deploy, verificare che tutte le env vars critiche siano su Heroku:
+  ```bash
+  # Confronta .env locale con Heroku config
+  grep -E "^[A-Z_]+" .env | cut -d= -f1 | sort > /tmp/local_vars.txt
+  heroku config -a echatbot-app | grep -E "^[A-Z_]+" | awk '{print $1}' | tr -d ':' | sort > /tmp/heroku_vars.txt
+  diff /tmp/local_vars.txt /tmp/heroku_vars.txt
+  # Se ci sono differenze → AGGIUNGI le mancanti
+  ```
 
 ### TypeScript Enum Traps
 - **Problema**: `source: "FAST_PATH"` ma enum è `"PATTERN" | "KEYWORD" | "LLM_FALLBACK" | "LLM_CONTEXT"`
@@ -87,11 +193,126 @@ heroku logs -n 200 --app echatbot-app
 - Soluzione: `describe.skip()` per integration tests con API external
 - **→ Non far crashare test suite per una dependency flaky**
 
+### Database Reset is DANGEROUS (January 26 Lesson)
+- **NEVER reset database se non hai cambiato schema.prisma**
+- Il 26 Gennaio ho fatto `pg:reset` per codice TypeScript senza schema change → **ERRORE**
+- Schema change = quando aggiungi/rimuovi campi o tabelle in `schema.prisma`
+- Codice TypeScript fix = quando tocci solo `src/**/*.ts` senza toccare Prisma
+- **REGOLA FONDAMENTALE**: 
+  - ✅ Schema changed? Allora sì, reset (ma dopo backup + Andrea approval)
+  - ❌ Solo code fix? NO RESET! Codice nuovo auto-deploy, database stays intact
+- **ALWAYS**:
+  1. Ask Andrea if unsure
+  2. Backup database with `heroku pg:backups:capture`
+  3. Download backup: `heroku pg:backups:download`
+  4. Only then reset: `heroku pg:reset`
+
 ---
 
 ## ❌ Cosa NON Fare (Lessons from Near-Failures)
 
-### 1. **NON pushare codice senza local test**
+### 🚨 1. **CRITICAL: NON deployare senza migrare il database (January 26, 2026 - OAuth Failure)**
+```bash
+# ❌ PROBLEMA REALE (January 26, 2026 @ 10:24 UTC)
+# User tenta login OAuth → 500 error
+# Root cause: "The table `public.users` does not exist in the current database"
+# Diagnosi: 5 migration NON applicate su Heroku dopo push
+
+# ✅ SEQUENZA CORRETTA (MANDATORY!)
+# STEP 1: Check migration status PRIMA del deploy
+heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app
+
+# STEP 2: Se vedi "migrations have not yet been applied" → APPLICA SUBITO
+heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app
+
+# STEP 3: Verifica che database sia aggiornato
+heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app
+# DEVE dire: "Database schema is up to date!"
+
+# STEP 4: Se migration fallisce con "relation already exists" (conflitto)
+heroku run "cd packages/database && npx prisma migrate resolve --applied <migration_name>" -a echatbot-app
+# Poi riprova migrate deploy
+
+# 🎯 REGOLA D'ORO:
+# DOPO OGNI GIT PUSH A HEROKU:
+# 1. Check migration status
+# 2. Apply pending migrations
+# 3. Verify success
+# NON fidarti che "funzionava in locale" - production DB può essere indietro!
+```
+
+### 📝 **CHECKLIST ENV VARIABLES SU HEROKU (January 26, 2026)**
+```bash
+# Problema: OAuth falliva con "OAuth authentication failed"
+# Root cause: GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET NON erano su Heroku
+
+# ✅ PRIMA DI OGNI DEPLOY: Verifica che tutte le env vars siano su Heroku
+# List all env vars nel locale .env:
+grep -E "^[A-Z_]+" .env | cut -d= -f1 | sort
+
+# List all env vars su Heroku:
+heroku config --app echatbot-app | grep -E "^[A-Z_]+" | awk '{print $1}' | tr -d ':' | sort
+
+# Confronta i due output! Se mancano variabili su Heroku → AGGIUNGI
+heroku config:set VARIABILE="valore" -a echatbot-app
+
+# 🎯 Env vars critiche da verificare SEMPRE:
+# - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET (OAuth)
+# - ADMIN_EMAIL / ADMIN_PASSWORD (Seed user creation)
+# - OPENROUTER_API_KEY (LLM)
+# - DATABASE_URL (Prisma)
+# - WHATSAPP_API_TOKEN / WHATSAPP_WEBHOOK_TOKEN
+# - JWT_SECRET (auth)
+# - PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET
+```
+
+### 🔧 **SEED USER DUPLICATION (January 26, 2026)**
+```bash
+# Problema: Utente creato con OAuth (gelsogrove@gmail.com) NON aveva permessi admin
+# Root cause: Seed creava secondo utente perché ADMIN_EMAIL non era su Heroku
+# Risultato: Due utenti (gelsogrove OAuth + gelsogrve seed) → workspaces su utente sbagliato
+
+# ✅ SOLUZIONE PERMANENTE:
+# 1. Set ADMIN_EMAIL su Heroku PRIMA del seed
+heroku config:set ADMIN_EMAIL="gelsogrove@gmail.com" ADMIN_PASSWORD="Venezia44" -a echatbot-app
+
+# 2. Seed ora usa env var invece di fallback hardcoded
+# File: packages/database/prisma/seed.ts
+# Line 170: const adminEmail = process.env.ADMIN_EMAIL || "gelsogrove@gmail.com"
+# ✅ adminEmail usato in: user.email, user.paypalEmail, sales.email
+
+# 🔄 Se già esiste duplicazione:
+# Transfer workspaces to correct user:
+heroku pg:psql DATABASE -a echatbot-app --command "
+  UPDATE \"Workspace\" SET \"ownerId\" = '<correct_user_id>' WHERE \"ownerId\" = '<typo_user_id>';
+  UPDATE \"UserWorkspace\" SET \"userId\" = '<correct_user_id>' WHERE \"userId\" = '<typo_user_id>';
+  DELETE FROM users WHERE id = '<typo_user_id>';
+"
+
+# Update permissions for OAuth user:
+heroku pg:psql DATABASE -a echatbot-app --command "
+  UPDATE users 
+  SET \"isPlatformAdmin\" = true, \"isDeveloperUser\" = true, role = 'ADMIN', \"planType\" = 'ENTERPRISE'
+  WHERE email = 'gelsogrove@gmail.com';
+"
+```
+
+### 2. **NON resettare database senza schema change**
+```bash
+# ❌ WRONG (January 26, 2026 mistake)
+Only fixed TypeScript code → ran pg:reset anyway → WASTED reset, lost data by luck
+
+# ✅ CORRECT CHECK
+1. Did you edit schema.prisma? (Added/removed models or fields?)
+   YES → Schema change detected, reset OK (but backup first!)
+   NO → Don't reset! Just push code and deploy
+
+# How to verify:
+git diff HEAD~1 packages/database/prisma/schema.prisma
+# If empty → NO schema change → skip pg:reset!
+```
+
+### 2. **NON pushare codice senza local test**
 ```bash
 # ❌ WRONG
 git commit && git push heroku-app main
@@ -103,7 +324,7 @@ git commit && git push origin main && git push heroku-app main
 # → Instant success
 ```
 
-### 2. **NON assumere che i valori enum siano "ovvi"**
+### 3. **NON assumere che i valori enum siano "ovvi"**
 ```typescript
 // ❌ WRONG
 source: "FAST_PATH"  // feels right, but NOT in enum definition
@@ -114,7 +335,7 @@ source: "FAST_PATH"  // feels right, but NOT in enum definition
 source: "PATTERN"  // safe and documented
 ```
 
-### 3. **NON commitare file temporanei**
+### 4. **NON commitare file temporanei**
 ```bash
 # ❌ WRONG (git status shows these)
 temp-script.ts
@@ -127,7 +348,7 @@ git add -A  # but verify no temp files first
 git status  # always double-check before commit
 ```
 
-### 4. **NON modificare schema senza test locale**
+### 5. **NON modificare schema senza test locale**
 ```bash
 # ❌ WRONG
 Edit schema.prisma → push heroku → fail
@@ -140,28 +361,31 @@ Edit schema.prisma
 → commit & push
 ```
 
-### 5. **NON eseguire seed su Heroku via CLI**
+### 6. **NON eseguire seed su Heroku via CLI**
 ```bash
 # ❌ WRONG (dotenv-cli missing in production)
 heroku run "npm run seed" --app echatbot-app
 
 # ✅ CORRECT
 Test seed locally first
-→ heroku pg:reset (if needed)
-→ Database will have data from app startup
+→ heroku pg:reset (if needed, with backup first!)
+→ Database will have data from migrations
 ```
 
-### 6. **NON skippare il reset database senza ragione**
+### 7. **NON skippare il backup prima di reset**
 ```bash
 # ❌ WRONG
-Deploy new schema without pg:reset
-→ Old DB schema + new code = 500 error
+See schema change → immediately pg:reset → pray data is saved
 
-# ✅ CORRECT
-schema changes → pg:reset → deploy
+# ✅ CORRECT (MANDATORY)
+See schema change
+→ heroku pg:backups:capture --app echatbot-app  # BACKUP FIRST
+→ heroku pg:backups:download --app echatbot-app  # SAVE LOCALLY
+→ Ask Andrea for confirmation
+→ THEN run pg:reset
 ```
 
-### 7. **NON toccare import/export patterns che funzionano**
+### 8. **NON toccare import/export patterns che funzionano**
 ```typescript
 // ❌ WRONG (if it was working before)
 export default MyComponent  // was export function MyComponent
@@ -170,6 +394,22 @@ export default MyComponent  // was export function MyComponent
 // ✅ CORRECT
 If it works, DON'T change it
 Only fix what's actually broken
+```
+
+### 9. **🚨 CRITICAL: NON reset database per code fixes (January 26, 2026)**
+```
+Esempio ERRORE:
+- Changed TypeScript code only (src/**/*.ts)
+- NO schema change in schema.prisma
+- But ran pg:reset anyway → WASTED, could lose data
+
+Cosa dovevo fare:
+- Check schema change: git diff HEAD~1 packages/database/prisma/schema.prisma
+- Empty diff → no schema change → just push code
+- Code deployment is fast and safe, database stays intact
+
+Remember: Code updates deploy automatically. Database changes are RARE.
+If unsure whether schema changed: ASK ANDREA FIRST!
 ```
 
 ---
@@ -258,13 +498,22 @@ If you see:
 2. **Run `npm run build --workspaces`** (wait for success)
 3. **Run `npm run test:unit`** (min 106 suites)
 4. **`git push origin main`** (always to origin first)
-5. **`heroku pg:reset DATABASE --app echatbot-app --confirm echatbot-app`** (if schema changed)
+5. **Check schema change**: `git diff HEAD~1 packages/database/prisma/schema.prisma`
+   - If changed → `heroku pg:reset DATABASE --app echatbot-app --confirm echatbot-app` (backup first!)
+   - If NOT changed → Skip reset, just push code
 6. **`git push heroku-app main`** (watch logs)
-7. **`git push heroku-backoffice main`** (wait for success)
-8. **`git push heroku-scheduler main`** (wait for success)
-9. **Verify URLs alive** and check `heroku logs -n 50 --app echatbot-app`
+7. **🚨 MANDATORY**: `heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app`
+   - If pending migrations → `heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app`
+   - Verify: `heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app`
+8. **🚨 MANDATORY**: `heroku config --app echatbot-app | grep -E "GOOGLE_CLIENT_ID|OPENROUTER_API_KEY|DATABASE_URL|JWT_SECRET"`
+   - If missing → `heroku config:set VARIABLE="value" -a echatbot-app`
+9. **`git push heroku-backoffice main`** (wait for success)
+10. **`git push heroku-scheduler main`** (wait for success)
+11. **Verify URLs alive** and check `heroku logs -n 50 --app echatbot-app | grep -E "error|Error|500"`
 
-**Total time**: ~8-10 minutes. Non più di questo!
+**Total time**: ~10-12 minutes (including migration check). Non più di questo!
+
+**🔴 NEVER SKIP STEPS 7 & 8!** These catch 90% of production failures!
 
 ---
 

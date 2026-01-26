@@ -2,6 +2,7 @@ import { prisma } from '../config/database'
 import logger from '../utils/logger'
 import { SecurityAgentService } from '../services/security-agent.service'
 import { BillingService } from '../services/billing.service'
+import { getWorkspaceWhatsAppConfig, WorkspaceWhatsAppConfig } from '../services/whatsapp-config.service'
 
 /**
  * Timeline step interface for debugInfo append
@@ -111,6 +112,47 @@ async function isWipConversationMessage(conversationMessageId: string | null | u
   }
 }
 
+interface WhatsAppSendParams {
+  config: WorkspaceWhatsAppConfig
+  to: string
+  message: string
+}
+
+async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const { config, to, message } = params
+  const apiUrl = `https://graph.facebook.com/v18.0/${config.phoneNumber}/messages`
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: to.replace(/^\+/, ''),
+        type: 'text',
+        text: { body: message },
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error(`[WhatsApp Queue] WhatsApp API error ${response.status}: ${errorText}`)
+      return { success: false, error: `WhatsApp API error: ${response.status}` }
+    }
+
+    const data = (await response.json().catch(() => ({}))) as any
+    const messageId = data?.messages?.[0]?.id
+
+    return { success: true, messageId }
+  } catch (error: any) {
+    logger.error('[WhatsApp Queue] Error calling WhatsApp API', error)
+    return { success: false, error: error?.message || 'WhatsApp send failed' }
+  }
+}
+
 /**
  * In-memory lock to prevent concurrent executions
  * If the job is still running when the next cron tick happens, skip it
@@ -191,6 +233,9 @@ export async function whatsappChannelQueueJob(): Promise<void> {
         channelStatus: workspace.channelStatus,
         wipOnly,
       })
+
+      // Load WhatsApp credentials/config for this workspace
+      const workspaceWhatsAppConfig = await getWorkspaceWhatsAppConfig(workspace.id)
 
       // Get pending messages from queue (excluding playground messages)
       // ⚠️ LIMIT TO 10 per workspace per cycle
@@ -276,6 +321,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
             // ✅ Message passed security - proceed with delivery
             const deliveryStartTime = Date.now()
+            let deliveryNote: string | undefined
             
             // 🔀 CHANNEL-SPECIFIC DELIVERY
             if (message.channel === 'widget') {
@@ -297,11 +343,66 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                 messageId: message.id,
                 visitorId: message.visitorId,
               })
+              deliveryNote = `✅ Response saved for polling by visitor ${message.visitorId}`
             } else {
               // WhatsApp: Send via API
-              // TODO: Implement actual WhatsApp API call here
-              // await sendWhatsAppMessage(workspace, message)
-              
+              if (!workspaceWhatsAppConfig) {
+                await prisma.whatsAppQueue.update({
+                  where: { id: message.id },
+                  data: {
+                    status: 'error',
+                    errorMessage: 'WhatsApp not configured for this workspace',
+                  },
+                })
+                if (message.conversationMessageId) {
+                  await prisma.conversationMessage.update({
+                    where: { id: message.conversationMessageId },
+                    data: { deliveryStatus: 'error' },
+                  })
+                }
+                return { status: 'error', messageId: message.id, error: 'Missing WhatsApp config' }
+              }
+
+              if (!message.phoneNumber) {
+                await prisma.whatsAppQueue.update({
+                  where: { id: message.id },
+                  data: {
+                    status: 'error',
+                    errorMessage: 'Missing destination phone number',
+                  },
+                })
+                if (message.conversationMessageId) {
+                  await prisma.conversationMessage.update({
+                    where: { id: message.conversationMessageId },
+                    data: { deliveryStatus: 'error' },
+                  })
+                }
+                return { status: 'error', messageId: message.id, error: 'Missing phone number' }
+              }
+
+              const sendResult = await sendWhatsAppMessage({
+                config: workspaceWhatsAppConfig,
+                to: message.phoneNumber,
+                message: message.messageContent,
+              })
+
+              if (!sendResult.success) {
+                await prisma.whatsAppQueue.update({
+                  where: { id: message.id },
+                  data: { 
+                    status: 'error',
+                    errorMessage: sendResult.error || 'WhatsApp send failed',
+                  },
+                })
+                if (message.conversationMessageId) {
+                  await prisma.conversationMessage.update({
+                    where: { id: message.conversationMessageId },
+                    data: { deliveryStatus: 'error' },
+                  })
+                }
+                return { status: 'error', messageId: message.id, error: sendResult.error }
+              }
+
               await prisma.whatsAppQueue.update({
                 where: { id: message.id },
                 data: { 
@@ -309,6 +410,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                   deliveredAt: new Date(),
                 },
               })
+              deliveryNote = `✅ Message delivered to ${message.phoneNumber}${sendResult.messageId ? ` (waId: ${sendResult.messageId})` : ''}`
             }
             
             const deliveryDuration = Date.now() - deliveryStartTime
@@ -328,7 +430,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
               output: {
                 textResponse: message.channel === 'widget' 
                   ? `✅ Response saved for polling by visitor ${message.visitorId}\n\n${message.messageContent}`
-                  : `✅ Message delivered to ${message.phoneNumber}\n\n${message.messageContent}`,
+                  : `${deliveryNote || '✅ Message delivered to WhatsApp'}\n\n${message.messageContent}`,
               },
             })
 
@@ -373,6 +475,12 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                 errorMessage: (error as Error).message,
               },
             })
+            if (message.conversationMessageId) {
+              await prisma.conversationMessage.update({
+                where: { id: message.conversationMessageId },
+                data: { deliveryStatus: 'error' },
+              })
+            }
             return { status: 'error', messageId: message.id, error: (error as Error).message }
           }
         })
