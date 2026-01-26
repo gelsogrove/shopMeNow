@@ -17,9 +17,17 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { toast } from "@/lib/toast"
 import { cn } from "@/lib/utils"
-import { updateWorkspace } from "@/services/workspaceApi"
+import { updateWorkspace, deleteWorkspace } from "@/services/workspaceApi"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { 
   Store, 
   MessageSquare, 
@@ -49,9 +57,13 @@ import {
   Users,
   Award,
   Coffee,
+  Trash2,
+  Loader2,
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
+import { useMutation } from "@tanstack/react-query"
+import { api } from "@/services/api"
 
 // Types
 type SectionKey = "channels" | "ai" | "general" | "security"
@@ -171,6 +183,10 @@ export function SettingsPage() {
   const [isDirty, setIsDirty] = useState(false)
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  
+  // Delete workspace dialog
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
 
   const [formData, setFormData] = useState<WorkspaceData>({
     id: "",
@@ -334,6 +350,43 @@ export function SettingsPage() {
     }
   }
 
+  // Delete workspace mutation
+  const deleteWorkspaceMutation = useMutation({
+    mutationFn: async () => {
+      return deleteWorkspace(formData.id)
+    },
+    onSuccess: async () => {
+      console.log("✅ Workspace deleted successfully. Logging out...")
+      
+      // Logout user
+      const { api } = await import("@/services/api")
+      await api.post("/auth/logout")
+      
+      // Clear all storage
+      localStorage.clear()
+      sessionStorage.clear()
+      
+      // Redirect to login
+      navigate("/login")
+      toast.success("Workspace deleted successfully")
+    },
+    onError: (error: any) => {
+      console.error("❌ Failed to delete workspace:", error)
+      toast.error(error.message || "Failed to delete workspace")
+    },
+  })
+
+  const handleDelete = async () => {
+    if (deleteConfirmation !== "DELETE") {
+      toast.error("Please type DELETE to confirm")
+      return
+    }
+    
+    setShowDeleteDialog(false)
+    setDeleteConfirmation("")
+    deleteWorkspaceMutation.mutate()
+  }
+
   // Render Content based on active section
   const renderContent = () => {
     switch (activeSection) {
@@ -428,21 +481,24 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center gap-3">
-                <ShoppingCart className="h-5 w-5 text-slate-600" />
-                <p className="font-medium text-sm">E-commerce Features</p>
+          {/* E-commerce Features - Hide if only Widget is enabled (no WhatsApp) */}
+          {(formData.enableWhatsapp || !formData.enableWidget) && (
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  <ShoppingCart className="h-5 w-5 text-slate-600" />
+                  <p className="font-medium text-sm">E-commerce Features</p>
+                </div>
+                <Switch
+                  checked={formData.sellsProductsAndServices}
+                  onCheckedChange={(checked) =>
+                    handleFieldChange("sellsProductsAndServices", checked)
+                  }
+                  disabled={!canEdit}
+                />
               </div>
-              <Switch
-                checked={formData.sellsProductsAndServices}
-                onCheckedChange={(checked) =>
-                  handleFieldChange("sellsProductsAndServices", checked)
-                }
-                disabled={!canEdit}
-              />
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -1225,6 +1281,43 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Danger Zone - Delete Workspace (Super Admin only) */}
+      {isSuperAdmin && (
+        <Card className="border-red-200 bg-red-50/50">
+          <CardHeader className="border-b border-red-200">
+            <CardTitle className="text-base font-semibold text-red-700">Danger Zone</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <p className="font-medium text-sm text-gray-900">Delete Workspace</p>
+                <p className="text-sm text-gray-600">
+                  Permanently delete this workspace and all associated data. This action can be recovered within 90 days.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="text-red-600 border-red-200 hover:bg-red-100 hover:text-red-700"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deleteWorkspaceMutation.isPending}
+              >
+                {deleteWorkspaceMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Workspace
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {canEdit && (
         <div className="flex justify-end gap-3">
           <Button onClick={() => navigate(-1)} variant="outline">
@@ -1284,6 +1377,72 @@ export function SettingsPage() {
           </div>
         </main>
       </div>
+
+      {/* Delete Workspace Confirmation Dialog */}
+      <Dialog 
+        open={showDeleteDialog} 
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open)
+          if (!open) setDeleteConfirmation("")
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Delete Workspace
+            </DialogTitle>
+            <DialogDescription>
+              This action will soft-delete the workspace. You can recover it within 90 days by contacting support.
+              All data will be permanently deleted after 90 days.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="deleteConfirmation">
+                Type <span className="font-mono font-bold">DELETE</span> to confirm
+              </Label>
+              <Input
+                id="deleteConfirmation"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder="DELETE"
+                className="font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false)
+                setDeleteConfirmation("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteConfirmation !== "DELETE" || deleteWorkspaceMutation.isPending}
+            >
+              {deleteWorkspaceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Workspace
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Chat Widget (always visible) */}
       {currentWorkspace && (

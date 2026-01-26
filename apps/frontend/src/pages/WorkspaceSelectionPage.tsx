@@ -684,12 +684,19 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       }
 
       setIsLoading(true)
+      const startTime = Date.now()
       
       // Load workspaces and badge stats in parallel
       const [workspacesData, statsData] = await Promise.all([
         getWorkspaces(),
         workspaceApi.getBadgeStats(),
       ])
+      
+      // Ensure minimum 500ms loading time for smooth UX
+      const elapsed = Date.now() - startTime
+      if (elapsed < 500) {
+        await new Promise(resolve => setTimeout(resolve, 500 - elapsed))
+      }
       
       // Set workspaces sorted by createdAt asc (oldest first)
       const sortedWorkspaces = workspacesData.sort((a, b) => 
@@ -1131,12 +1138,31 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
         {/* ========== LOADING STATE ========== */}
         {isLoading && (
-          <Card className="max-w-xl mx-auto">
-            <CardContent className="py-12 text-center">
-              <div className="animate-spin h-8 w-8 border-4 border-green-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-500">Loading your channels...</p>
-            </CardContent>
-          </Card>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((n) => (
+              <Card key={n} className="group relative overflow-hidden animate-pulse">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                    <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                  <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                  <div className="flex gap-2 mt-4">
+                    <div className="h-8 bg-gray-200 rounded flex-1"></div>
+                    <div className="h-8 bg-gray-200 rounded w-20"></div>
+                  </div>
+                </CardContent>
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent"></div>
+              </Card>
+            ))}
+          </div>
         )}
 
         {/* ========== NO WORKSPACES: Show Welcome + Create Form ========== */}

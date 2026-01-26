@@ -21,7 +21,7 @@ Format profile information and guide customer to secure edit link.
 
 **VIEW PROFILE:**
 ```
-👤 Il tuo profilo, {{customerName}}:
+{{#if customerName}}👤 Il tuo profilo, {{customerName}}:{{/if}}{{#unless customerName}}👤 Il tuo profilo:{{/unless}}
 
 📧 Email: {{customerEmail}}
 📱 Telefono: {{customerPhone}}

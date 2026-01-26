@@ -69,19 +69,9 @@ export const WIDGET_FIXTURES = {
 
   scenarios: {
     happy_path: {
-      description: "User sends valid message, receives response",
+      description: "User sends valid message, receives response immediately",
       steps: [
-        { action: "POST /api/v1/widget/chat", payload: "messages.simple" },
-        { action: "GET /api/v1/widget/poll", attempt: 1, expectStatus: "pending" },
-        { action: "GET /api/v1/widget/poll", attempt: 30, expectStatus: "ready" },
-      ],
-    },
-    timeout: {
-      description: "Message processing exceeds 15 seconds",
-      steps: [
-        { action: "POST /api/v1/widget/chat", payload: "messages.simple" },
-        { action: "GET /api/v1/widget/poll", attempt: 30, expectStatus: "ready" },
-        { action: "GET /api/v1/widget/poll", attempt: 31, expectStatus: "error" },
+        { action: "POST /api/v1/widget/chat", payload: "messages.simple", expectStatus: 200 },
       ],
     },
     rate_limit: {

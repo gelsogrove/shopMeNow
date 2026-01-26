@@ -59,6 +59,8 @@ export class PromptProcessorService {
         hasServices: !!variables.services,
         hasOffers: !!variables.offers,
         hasAddress: !!variables.address,
+        // 🚫 WIDGET FIX: customerName as boolean for {{#if hasCustomerName}} conditionals
+        hasCustomerName: !!variables.customerName && variables.customerName.trim() !== '', // true if name exists and not empty
         // String values (truthiness for conditionals)
         address: variables.address,
         customAiRules: variables.customAiRules,
@@ -97,7 +99,9 @@ export class PromptProcessorService {
   private replaceStandardVariables(text: string, vars: PromptVariables): string {
     return text
       // Customer variables
-      .replace(/\{\{customerName\}\}/g, vars.customerName || 'Cliente')
+      // 🚫 WIDGET FIX: Don't use 'Cliente' fallback for empty customerName
+      // This allows visitor customers (widget) to have NO name in greetings
+      .replace(/\{\{customerName\}\}/g, vars.customerName !== undefined ? vars.customerName : 'Cliente')
       .replace(/\{\{customerPhone\}\}/g, vars.customerPhone || '')
       .replace(/\{\{customerEmail\}\}/g, vars.customerEmail || '')
       .replace(/\{\{customerDiscount\}\}/g, String(vars.customerDiscount || 0))
@@ -145,8 +149,9 @@ export class PromptProcessorService {
   private replaceLegacyAliases(text: string, vars: PromptVariables): string {
     return text
       // Customer aliases
-      .replace(/\{\{nameUser\}\}/g, vars.customerName || 'Cliente')
-      .replace(/\{\{nome\}\}/g, vars.customerName || 'Cliente')
+      // 🚫 WIDGET FIX: Don't use 'Cliente' fallback for empty customerName
+      .replace(/\{\{nameUser\}\}/g, vars.customerName !== undefined ? vars.customerName : 'Cliente')
+      .replace(/\{\{nome\}\}/g, vars.customerName !== undefined ? vars.customerName : 'Cliente')
       .replace(/\{\{phone\}\}/g, vars.customerPhone || '')
       .replace(/\{\{email\}\}/g, vars.customerEmail || '')
       .replace(/\{\{discountUser\}\}/g, String(vars.customerDiscount || 0))

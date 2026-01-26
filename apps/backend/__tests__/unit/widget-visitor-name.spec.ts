@@ -32,7 +32,11 @@ describe("Widget Visitor Name - Variable Replacement", () => {
       chatbotName: "SofiA",
     }
 
-    const variables = PromptVariableBuilder.build(customer, workspace, {})
+    const context = {
+      channel: "widget", // 🚫 WIDGET CHANNEL - filters out visitor names
+    }
+
+    const variables = PromptVariableBuilder.build(customer, workspace, {}, context)
 
     // 🎯 CRITICAL: customerName should be EMPTY for "Visitor XXXXX" names
     expect(variables.customerName).toBe("")
@@ -59,7 +63,11 @@ describe("Widget Visitor Name - Variable Replacement", () => {
       chatbotName: "SofiA",
     }
 
-    const variables = PromptVariableBuilder.build(customer, workspace, {})
+    const context = {
+      channel: "whatsapp", // WhatsApp keeps real names
+    }
+
+    const variables = PromptVariableBuilder.build(customer, workspace, {}, context)
 
     // ✅ Real names should be preserved
     expect(variables.customerName).toBe("Andrea Rossi")
@@ -84,25 +92,33 @@ describe("Widget Visitor Name - Variable Replacement", () => {
       name: "Test Shop",
     }
 
-    const variables = PromptVariableBuilder.build(customer, workspace, {})
+    const context = {
+      channel: "whatsapp", // Non-widget uses fallback
+    }
+
+    const variables = PromptVariableBuilder.build(customer, workspace, {}, context)
 
     // When no name, use default
     expect(variables.customerName).toBe("Cliente")
   })
 
-  it("should handle various 'Visitor' name formats", () => {
+  it("should handle various 'Visitor' name formats for widget channel", () => {
     const testCases = [
-      { name: "Visitor 12345", expected: "" },
-      { name: "Visitor -173737", expected: "" },
-      { name: "Visitor abc123", expected: "" },
-      { name: "visitor 123", expected: "visitor 123" }, // lowercase NOT filtered
-      { name: "My Visitor Shop", expected: "My Visitor Shop" }, // doesn't START with "Visitor"
-      { name: "Andrea", expected: "Andrea" },
+      { name: "Visitor 12345", expected: "" }, // Widget channel = filtered
+      { name: "Visitor -173737", expected: "" }, // Widget channel = filtered
+      { name: "Visitor abc123", expected: "" }, // Widget channel = filtered
+      { name: "visitor 123", expected: "" }, // Widget channel = ALL names filtered
+      { name: "My Visitor Shop", expected: "" }, // Widget channel = ALL names filtered
+      { name: "Andrea", expected: "" }, // Widget = empty (even real names)
     ]
 
     const workspace = {
       id: "workspace-id",
       name: "Test Shop",
+    }
+
+    const context = {
+      channel: "widget", // 🚫 Widget channel filters ALL names (visitors are anonymous)
     }
 
     for (const testCase of testCases) {
@@ -119,7 +135,7 @@ describe("Widget Visitor Name - Variable Replacement", () => {
         sales: null,
       }
 
-      const variables = PromptVariableBuilder.build(customer, workspace, {})
+      const variables = PromptVariableBuilder.build(customer, workspace, {}, context)
       expect(variables.customerName).toBe(testCase.expected)
     }
   })

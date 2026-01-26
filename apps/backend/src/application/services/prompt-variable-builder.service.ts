@@ -93,6 +93,8 @@ interface ContextInput {
   lastOrderCode?: string
   cartContents?: string
   channelName?: string
+  /** 🚫 WIDGET FIX: Channel type (widget vs whatsapp) */
+  channel?: string
 }
 
 /**
@@ -144,11 +146,12 @@ export class PromptVariableBuilder {
     // Start with defaults
     const variables: PromptVariables = {
       // Customer variables
-      // 🚫 WIDGET FIX: Don't use "Visitor XXXXX" names in welcome messages
-      // If customer name starts with "Visitor", use empty string (removes {{customerName}} variable)
-      customerName: (customer?.name && !customer.name.startsWith('Visitor ')) 
-        ? customer.name 
-        : (customer?.name?.startsWith('Visitor ') ? '' : VARIABLE_DEFAULTS.customerName!),
+      // 🚫 WIDGET FIX: Remove name from greetings ONLY for widget channel
+      // Widget visitors are anonymous/temporary, so no personalized greetings
+      // WhatsApp customers keep their names regardless (even if they start with "Visitor")
+      customerName: context?.channel === 'widget' 
+        ? '' // Widget: no name in greetings
+        : (customer?.name || VARIABLE_DEFAULTS.customerName!),
       customerPhone: customer?.phone || '',
       customerEmail: customer?.email || '',
       customerDiscount: customer?.discount || 0,
@@ -188,6 +191,7 @@ export class PromptVariableBuilder {
       lastOrderCode: context?.lastOrderCode,
       cartContents: context?.cartContents,
       tokenDuration: this.formatTokenDuration(process.env.TOKEN_EXPIRATION || '1h'),
+      channel: context?.channel || VARIABLE_DEFAULTS.channel,
       
       // Dynamic content (only if included)
       ...(options?.includeDynamicContent !== false && dynamicContent ? {

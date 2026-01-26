@@ -8,7 +8,7 @@
  */
 
 import { Request, Response } from "express"
-import { prisma, PrismaClient } from "@echatbot/database"
+import { prisma, PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../../../utils/logger"
 import { VisitorIdService } from "../../../application/services/visitor-id.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
@@ -454,52 +454,10 @@ export class WidgetChatController {
       })
 
       if (welcomeResult.isWelcomeMessage) {
-        const queueMessage = await prisma.whatsAppQueue.create({
-          data: {
-            workspaceId,
-            customerId: customer.id,
-            phoneNumber: "",
-            messageContent: message,
-            status: "sent",
-            channel: "widget",
-            visitorId,
-            isAnonymous: true,
-            expiresAt: VisitorIdService.getExpiryDate(visitorId),
-            pollingAttempts: 0,
-            responsePayload: {
-              response: welcomeResult.welcomeText,
-              agentUsed: "WELCOME",
-              tokensUsed: 0,
-              isBlocked: false,
-              processedAt: new Date().toISOString(),
-            },
-            deliveredAt: new Date(),
-          },
-        })
-
-        if (workspace.ownerId) {
-          try {
-            const billingService = new SubscriptionBillingService(prisma)
-            const billingResult = await billingService.deductOwnerWidgetMessageCredit(
-              workspace.ownerId,
-              workspaceId,
-              queueMessage.id
-            )
-            if (!billingResult.success) {
-              logger.warn("⚠️ Widget billing failed for welcome message", {
-                workspaceId,
-                visitorId,
-                error: billingResult.error,
-              })
-            }
-          } catch (billingError) {
-            logger.error("⚠️ Widget billing error for welcome message", billingError)
-          }
-        }
-
+        // No queue for widget: respond immediately
         return res.status(200).json({
           success: true,
-          messageId: queueMessage.id,
+          messageId: `widget-${visitorId}-${Date.now()}`,
           sessionId: chatSession.id,
           response: welcomeResult.welcomeText || "Welcome!",
           status: "ready",
@@ -513,6 +471,19 @@ export class WidgetChatController {
         message: message.substring(0, 50) + "...",
       })
 
+      // 📝 Save user message to conversation history
+      await prisma.conversationMessage.create({
+        data: {
+          workspaceId,
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          role: "user",
+          content: message,
+          agentType: AgentType.ROUTER,
+          tokensUsed: 0,
+        },
+      })
+
       const llmResult = await llmRouterService.routeMessage({
         workspaceId,
         customerId: customer.id,
@@ -522,6 +493,7 @@ export class WidgetChatController {
         customerLanguage: requestedLanguage || customer.language || workspace.language || "ENG",
         customerName: customer.name,
         isSystemMessage: false,
+        channel: "widget", // 🚫 WIDGET CHANNEL - disables personalized greetings
       })
 
       logger.info("✅ LLM processing completed", {
@@ -531,64 +503,23 @@ export class WidgetChatController {
         responseLength: llmResult.response?.length,
       })
 
-      // Determine status based on blocking
-      const queueStatus: "sent" | "blocked" = llmResult.isBlocked ? "blocked" : "sent"
-
-      // Create message in queue with LLM response already saved
-      const queueMessage = await prisma.whatsAppQueue.create({
+      // 📝 Save assistant message to conversation history
+      await prisma.conversationMessage.create({
         data: {
           workspaceId,
           customerId: customer.id,
-          phoneNumber: "", // Empty for widget
-          messageContent: message,
-          status: queueStatus,
-          channel: "widget",
-          visitorId,
-          isAnonymous: true,
-          expiresAt: VisitorIdService.getExpiryDate(visitorId),
-          pollingAttempts: 0,
-          responsePayload: {
-            response: llmResult.response,
-            agentUsed: llmResult.agentUsed,
-            tokensUsed: llmResult.tokensUsed,
-            isBlocked: llmResult.isBlocked,
-            processedAt: new Date().toISOString(),
-          },
-          deliveredAt: new Date(),
+          conversationId: chatSession.id,
+          role: "assistant",
+          content: llmResult.response || "Response unavailable",
+          agentType: llmResult.agentUsed || AgentType.ROUTER,
+          tokensUsed: llmResult.tokensUsed || 0,
         },
       })
 
-      logger.info("✅ Message saved to queue", {
-        messageId: queueMessage.id,
-        workspaceId,
-        visitorId,
-        status: queueMessage.status,
-      })
-
-      if (!llmResult.isBlocked && workspace.ownerId) {
-        try {
-          const billingService = new SubscriptionBillingService(prisma)
-          const billingResult = await billingService.deductOwnerWidgetMessageCredit(
-            workspace.ownerId,
-            workspaceId,
-            queueMessage.id
-          )
-          if (!billingResult.success) {
-            logger.warn("⚠️ Widget billing failed", {
-              workspaceId,
-              visitorId,
-              error: billingResult.error,
-            })
-          }
-        } catch (billingError) {
-          logger.error("⚠️ Widget billing error", billingError)
-        }
-      }
-
-      // Return response directly (immediate delivery)
+      // Return response directly (immediate delivery, no WhatsApp queue)
       return res.status(200).json({
         success: true,
-        messageId: queueMessage.id,
+        messageId: `widget-${visitorId}-${Date.now()}`,
         sessionId: chatSession.id,
         response: llmResult.response || "Mi dispiace, non ho capito la tua richiesta.",
         status: "ready",
@@ -614,92 +545,11 @@ export class WidgetChatController {
   async pollMessage(req: Request, res: Response): Promise<Response> {
     try {
       const { messageId } = req.params
-      const visitorId = req.headers["x-visitor-id"] as string
-      const workspaceId = req.headers["x-workspace-id"] as string
-
-      if (!visitorId || !workspaceId) {
-        return res.status(400).json({
-          error: "MISSING_HEADERS",
-          message: "Missing x-visitor-id or x-workspace-id header",
-        })
-      }
-
-      // Validate visitorId
-      if (!VisitorIdService.validate(visitorId)) {
-        return res.status(400).json({
-          error: "INVALID_VISITOR_ID",
-          message: "Invalid visitor ID format",
-        })
-      }
-
-      // Find message
-      const message = await prisma.whatsAppQueue.findUnique({
-        where: { id: messageId },
-      })
-
-      if (!message) {
-        return res.status(404).json({
-          error: "MESSAGE_NOT_FOUND",
-          message: "Message not found",
-        })
-      }
-
-      // Verify ownership
-      if (message.visitorId !== visitorId || message.workspaceId !== workspaceId) {
-        return res.status(403).json({
-          error: "FORBIDDEN",
-          message: "Access denied",
-        })
-      }
-
-      // Update polling attempts
-      await prisma.whatsAppQueue.update({
-        where: { id: messageId },
-        data: {
-          pollingAttempts: { increment: 1 },
-          lastPolledAt: new Date(),
-        },
-      })
-
-      // Check status
-      if (message.status === "sent" || message.status === "delivered") {
-        // Response ready
-        return res.status(200).json({
-          status: "ready",
-          message: message.responsePayload
-            ? (message.responsePayload as any).response
-            : "Grazie per il tuo messaggio!",
-          retryAfter: null,
-          isComplete: true,
-        })
-      }
-
-      if (message.status === "error" || message.status === "failed") {
-        // Error occurred
-        return res.status(200).json({
-          status: "error",
-          message: message.errorMessage || "Si è verificato un errore",
-          retryAfter: 500,
-          isComplete: false,
-        })
-      }
-
-      // Check timeout (30 attempts = 15 seconds)
-      if ((message.pollingAttempts ?? 0) >= 30) {
-        return res.status(200).json({
-          status: "error",
-          message: "Timeout: risposta non disponibile",
-          retryAfter: 500,
-          isComplete: false,
-        })
-      }
-
-      // Still pending
-      return res.status(200).json({
-        status: "pending",
-        message: null,
-        retryAfter: 500,
-        isComplete: false,
+      // Widget now responds immediately; polling is no longer supported
+      return res.status(410).json({
+        error: "POLL_NOT_SUPPORTED",
+        message: "Widget responses are returned immediately; polling is no longer required.",
+        messageId,
       })
     } catch (error) {
       logger.error("❌ Error polling widget message", error)

@@ -35,7 +35,7 @@ When to call contactOperator() and escalate to human:
 
 **FAQ ANSWER:**
 ```
-{{customerName}}, ecco le informazioni:
+{{#if hasCustomerName}}{{customerName}}, {{/if}}ecco le informazioni:
 
 [risposta dalla FAQ]
 
@@ -44,7 +44,7 @@ Posso aiutarti con altro?
 
 **ESCALATION CONFIRMED:**
 ```
-Capisco la tua situazione, {{customerName}}.
+{{#if hasCustomerName}}Capisco la tua situazione, {{customerName}}.{{/if}}{{#unless hasCustomerName}}Capisco la tua situazione.{{/unless}}
 
 ✅ Ho contattato il nostro team.
 📞 Ti richiameranno entro 2 ore.
@@ -54,7 +54,7 @@ Grazie per la pazienza! 🙏
 
 **NO HUMAN SUPPORT:**
 ```
-Mi dispiace, {{customerName}}.
+{{#if hasCustomerName}}Mi dispiace, {{customerName}}.{{/if}}{{#unless hasCustomerName}}Mi dispiace.{{/unless}}
 
 Per questa richiesta, scrivi a: {{adminEmail}}
 Rispondiamo entro 24 ore.
@@ -64,7 +64,7 @@ Posso aiutarti con altro nel frattempo?
 
 **GENERAL SUPPORT:**
 ```
-{{customerName}}, grazie per averci contattato.
+{{#if hasCustomerName}}{{customerName}}, {{/if}}grazie per averci contattato.
 
 [risposta empatica e chiara]
 

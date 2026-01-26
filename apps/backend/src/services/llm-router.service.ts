@@ -83,6 +83,7 @@ export interface RouteMessageParams {
   isSystemMessage?: boolean // 🆕 Feature 127: If true, skip Router/SubLLM and go direct to Safety+Translation
   conversationHistory?: Array<{ role: string; content: string }>
   customerDiscount?: number
+  channel?: string // 🚫 WIDGET FIX: Channel type (widget, whatsapp, etc.)
 }
 
 export interface RouteMessageResponse {
@@ -922,6 +923,7 @@ export class LLMRouterService {
         },
         {
           lastOrderCode: lastOrder?.orderCode || undefined,
+          channel: params.channel || 'whatsapp', // 🚫 WIDGET FIX: Pass channel to builder
         }
       )
 
@@ -2086,6 +2088,7 @@ export class LLMRouterService {
             },
             {
               lastOrderCode: lastOrder?.orderCode || undefined,
+              channel: params.channel || 'whatsapp', // 🚫 WIDGET FIX: Pass channel to builder
             }
           )
 

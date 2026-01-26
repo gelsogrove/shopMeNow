@@ -189,6 +189,7 @@ export class PushController {
             customerLanguage: customer.language,
             customerName: customer.name,
             isSystemMessage: true,
+            channel: "whatsapp", // Push notifications are for WhatsApp customers
           })
 
           logger.info(`[PUSH-CONTROLLER] 📥 routeMessage result for ${customer.name}`, {

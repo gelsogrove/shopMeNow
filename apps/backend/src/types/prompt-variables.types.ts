@@ -285,6 +285,14 @@ export interface PromptVariables {
    * Source: formatTokenDuration(process.env.TOKEN_EXPIRATION)
    */
   tokenDuration?: string
+  
+  /** 🚫 WIDGET FIX: Channel type (widget vs whatsapp)
+   * Used to determine if customer name should be in greetings
+   * Widget: customer name REMOVED from all greetings (visitors are anonymous)
+   * WhatsApp: customer name KEPT in greetings (customers have identity)
+   * Values: 'widget', 'whatsapp', or other channel type
+   */
+  channel?: string
 }
 
 /**
@@ -360,4 +368,5 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   operatorWhatsappNumber: '',
   websiteUrl: '',
   supportEmail: '',
+  channel: 'whatsapp', // Default to WhatsApp, widget will override
 }

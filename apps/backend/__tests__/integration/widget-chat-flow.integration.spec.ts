@@ -4,7 +4,7 @@
  * 1. Send message via POST /api/v1/widget/chat/:workspaceId
  * 2. Message processed through LLM
  * 3. Response saved in queue
- * 4. Poll message via GET /api/v1/widget/poll/:messageId
+ * 4. Poll (deprecated) - responses are synchronous now
  * 5. Receive LLM response
  */
 
@@ -33,11 +33,6 @@ describe("Widget Chat Flow Integration", () => {
   })
 
   afterAll(async () => {
-    // Cleanup: Delete test messages
-    await prisma.whatsAppQueue.deleteMany({
-      where: { visitorId: testVisitorId },
-    })
-
     // Cleanup: Delete test customer
     await prisma.customers.deleteMany({
       where: { customId: testVisitorId },
@@ -67,19 +62,20 @@ describe("Widget Chat Flow Integration", () => {
       expect(response.body).toHaveProperty("status", "ready") // Response immediately available
       expect(response.body).toHaveProperty("response") // Response IS returned when debugMode=OFF
 
-      // Verify message saved in database with LLM response
+      // No WhatsApp queue write for widget channel
       const message = await prisma.whatsAppQueue.findUnique({
         where: { id: response.body.messageId },
       })
+      expect(message).toBeNull()
 
-      expect(message).not.toBeNull()
-      expect(message!.channel).toBe("widget")
-      expect(message!.visitorId).toBe(testVisitorId)
-      expect(message!.status).toBe("sent") // Already processed
-      expect(message!.responsePayload).not.toBeNull()
-      expect(message!.responsePayload).toHaveProperty("response")
-      expect(message!.responsePayload).toHaveProperty("agentUsed")
-      expect(message!.responsePayload).toHaveProperty("tokensUsed")
+      // Conversation history should contain user + assistant
+      const history = await prisma.conversationMessage.findMany({
+        where: { conversationId: response.body.sessionId },
+        orderBy: { createdAt: "asc" },
+      })
+      expect(history.length).toBeGreaterThanOrEqual(2)
+      expect(history[0].role).toBe("user")
+      expect(history[1].role).toBe("assistant")
     })
 
     it("should validate visitorId format", async () => {
@@ -298,85 +294,7 @@ describe("Widget Chat Flow Integration", () => {
     })
   })
 
-  describe("GET /api/v1/widget/poll/:messageId", () => {
-    let testMessageId: string
-
-    beforeAll(async () => {
-      // Create a test message
-      const response = await request(app)
-        .post(`/api/v1/widget/chat/${testWorkspaceId}`)
-        .send({
-          visitorId: testVisitorId,
-          message: "Test message for polling",
-        })
-        .expect(200)
-
-      testMessageId = response.body.messageId
-    })
-
-    it("should return LLM response on first poll", async () => {
-      const response = await request(app)
-        .get(`/api/v1/widget/poll/${testMessageId}`)
-        .set("x-visitor-id", testVisitorId)
-        .set("x-workspace-id", testWorkspaceId)
-        .expect(200)
-
-      expect(response.body).toHaveProperty("status", "ready")
-      expect(response.body).toHaveProperty("message")
-      expect(typeof response.body.message).toBe("string")
-      expect(response.body.message.length).toBeGreaterThan(0)
-    })
-
-    it("should increment polling attempts", async () => {
-      // Poll multiple times
-      await request(app)
-        .get(`/api/v1/widget/poll/${testMessageId}`)
-        .set("x-visitor-id", testVisitorId)
-        .set("x-workspace-id", testWorkspaceId)
-        .expect(200)
-
-      await request(app)
-        .get(`/api/v1/widget/poll/${testMessageId}`)
-        .set("x-visitor-id", testVisitorId)
-        .set("x-workspace-id", testWorkspaceId)
-        .expect(200)
-
-      // Verify polling attempts incremented
-      const message = await prisma.whatsAppQueue.findUnique({
-        where: { id: testMessageId },
-      })
-
-      expect(message!.pollingAttempts).toBeGreaterThanOrEqual(2)
-    })
-
-    it("should reject invalid visitorId", async () => {
-      const response = await request(app)
-        .get(`/api/v1/widget/poll/${testMessageId}`)
-        .set("x-visitor-id", "wrong-visitor-id")
-        .set("x-workspace-id", testWorkspaceId)
-        .expect(403)
-
-      expect(response.body).toHaveProperty("error", "ACCESS_DENIED")
-    })
-
-    it("should require x-visitor-id header", async () => {
-      const response = await request(app)
-        .get(`/api/v1/widget/poll/${testMessageId}`)
-        .set("x-workspace-id", testWorkspaceId)
-        .expect(400)
-
-      expect(response.body).toHaveProperty("error", "MISSING_HEADERS")
-    })
-
-    it("should require x-workspace-id header", async () => {
-      const response = await request(app)
-        .get(`/api/v1/widget/poll/${testMessageId}`)
-        .set("x-visitor-id", testVisitorId)
-        .expect(400)
-
-      expect(response.body).toHaveProperty("error", "MISSING_HEADERS")
-    })
-  })
+  // Polling removed: widget responses are synchronous
 
   describe("End-to-End Flow", () => {
     it("should complete full widget chat cycle", async () => {
@@ -391,31 +309,10 @@ describe("Widget Chat Flow Integration", () => {
 
       expect(sendResponse.body.status).toBe("ready") // Response immediately available
 
-      const messageId = sendResponse.body.messageId
-
-      // Step 2: Poll for response (should return immediately)
-      const pollResponse = await request(app)
-        .get(`/api/v1/widget/poll/${messageId}`)
-        .set("x-visitor-id", testVisitorId)
-        .set("x-workspace-id", testWorkspaceId)
-        .expect(200)
-
-      expect(pollResponse.body.status).toBe("ready")
-      expect(pollResponse.body.message).toBeDefined()
-      expect(typeof pollResponse.body.message).toBe("string")
-      expect(pollResponse.body.message.length).toBeGreaterThan(10)
-
-      // Step 3: Verify message history preserved
-      const messages = await prisma.whatsAppQueue.findMany({
-        where: {
-          visitorId: testVisitorId,
-          workspaceId: testWorkspaceId,
-        },
-        orderBy: { createdAt: "asc" },
-      })
-
-      expect(messages.length).toBeGreaterThan(0)
-      expect(messages.every((m) => m.channel === "widget")).toBe(true)
+      // Response already returned in sendResponse; no polling needed
+      expect(sendResponse.body.response).toBeDefined()
+      expect(typeof sendResponse.body.response).toBe("string")
+      expect(sendResponse.body.response.length).toBeGreaterThan(10)
     })
 
     it("should handle multiple consecutive messages", async () => {
@@ -426,6 +323,7 @@ describe("Widget Chat Flow Integration", () => {
       ]
 
       const messageIds: string[] = []
+      let sessionId: string | undefined
 
       // Send all messages
       for (const message of messages) {
@@ -438,30 +336,23 @@ describe("Widget Chat Flow Integration", () => {
           .expect(200)
 
         messageIds.push(response.body.messageId)
+        expect(response.body.response).toBeTruthy()
+        sessionId = sessionId || response.body.sessionId
       }
 
-      // Poll all messages
-      for (const messageId of messageIds) {
-        const response = await request(app)
-          .get(`/api/v1/widget/poll/${messageId}`)
-          .set("x-visitor-id", testVisitorId)
-          .set("x-workspace-id", testWorkspaceId)
-          .expect(200)
-
-        expect(response.body.status).toBe("ready")
-        expect(response.body.message).toBeDefined()
-      }
-
-      // Verify all messages saved with responses
+      // No queue persistence expected for widget messages
       const savedMessages = await prisma.whatsAppQueue.findMany({
         where: { id: { in: messageIds } },
       })
+      expect(savedMessages.length).toBe(0)
 
-      expect(savedMessages.length).toBe(messages.length)
-      expect(
-        savedMessages.every((m) => m.status === "sent" || m.status === "blocked")
-      ).toBe(true)
-      expect(savedMessages.every((m) => m.responsePayload !== null)).toBe(true)
+      // Conversation history should accumulate messages
+      if (sessionId) {
+        const history = await prisma.conversationMessage.findMany({
+          where: { conversationId: sessionId },
+        })
+        expect(history.length).toBeGreaterThanOrEqual(messages.length * 2)
+      }
     })
   })
 
