@@ -46,12 +46,14 @@ Both channels work via **WhatsApp** or **Widget (Web)**.
 ### Priority Order of Checks
 
 ```
-1. debugMode = true → 📢 Return wipMessage
-2. channelStatus = false → 📢 Return wipMessage
-3. Workspace deleted → 503 Service Unavailable
+1. enableWidget = false → 403 Widget disabled
+2. Workspace deleted → 503 Service Unavailable
+3. channelStatus = false → 🚫 Block (Channel disabled)
 4. Owner inactive → 503 Service Unavailable
 5. Security Check (5 steps) → Pass or Block
-6. LLM Processing → Response
+6. Subscription/Credit Check → Pass or Block
+7. debugMode = true → 📢 Return wipMessage
+8. LLM Processing → Response
 ```
 
 ### 1. Widget Sends Message
@@ -157,9 +159,8 @@ WidgetChatController → prisma.whatsAppQueue.create()
 
 ## 🚧 Maintenance / WIP Mode
 
-WIP is shown when either:
+WIP is shown when:
 - `workspace.debugMode = true`
-- `workspace.channelStatus = false`
 
 | Behavior | Widget | WhatsApp |
 |----------|--------|----------|
@@ -180,6 +181,14 @@ WIP is shown when either:
 
 ---
 
+## 🚫 Channel Disabled (channelStatus=false)
+
+- `GET /api/v1/widget/status/:workspaceId` → `status: "disabled"`
+- `POST /api/v1/widget/chat/:workspaceId` → `403 CHANNEL_DISABLED`
+- No WIP, no LLM, no billing
+
+---
+
 ## ✅ Widget Status Endpoint
 
 The widget checks availability before rendering:
@@ -188,13 +197,13 @@ The widget checks availability before rendering:
 GET /api/v1/widget/status/:workspaceId
 ```
 
-**Example response**:
+**Example response** (debugMode=true):
 ```json
 {
   "success": true,
   "status": "wip",
-  "channelStatus": false,
-  "debugMode": false,
+  "channelStatus": true,
+  "debugMode": true,
   "wipMessage": "Work in progress. Please contact us later."
 }
 ```
@@ -460,7 +469,7 @@ npm run test:integration --workspace=@echatbot/backend -- widget-chat-flow.integ
 | Setting | Widget | WhatsApp |
 |---------|--------|----------|
 | **debugMode=true** | 📢 wipMessage (200) | 📢 wipMessage |
-| **channelStatus=false (WIP)** | 📢 wipMessage (200) | 📢 wipMessage |
+| **channelStatus=false** | 🚫 Disabled (403) | 🚫 Blocked at webhook |
 | **Normal** | ✅ LLM → Response | ✅ LLM → Queue → Send |
 
 ### Widget LLM Integration Status
@@ -469,7 +478,7 @@ npm run test:integration --workspace=@echatbot/backend -- widget-chat-flow.integ
 ✅ **Unified Queue**: Single table with channel discriminator  
 ✅ **Security**: 5-step validation pipeline  
 ✅ **Debug Mode**: Returns wipMessage without LLM  
-✅ **WIP Mode**: Returns wipMessage without LLM  
+✅ **WIP Mode**: Returns wipMessage without LLM (debugMode only)  
 ✅ **Testing**: Integration tests passing  
 ✅ **Performance**: 1-2 second response time  
 ✅ **Scalability**: Stateless architecture  

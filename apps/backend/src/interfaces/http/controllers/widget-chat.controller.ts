@@ -14,6 +14,7 @@ import { VisitorIdService } from "../../../application/services/visitor-id.servi
 import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
+import { WorkspaceAccessService } from "../../../application/services/workspace-access.service"
 import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
 import { detectLanguageFromHeader } from "../../../utils/email-templates"
 import {
@@ -127,7 +128,18 @@ export class WidgetChatController {
         })
       }
 
-      if (workspace.debugMode === true || workspace.channelStatus === false) {
+      // 🚫 channelStatus=false = total shutdown (no WIP)
+      if (workspace.channelStatus === false) {
+        return res.status(200).json({
+          success: true,
+          status: "disabled",
+          channelStatus: false,
+          debugMode: workspace.debugMode ?? false,
+          message: "Channel is disabled",
+        })
+      }
+
+      if (workspace.debugMode === true) {
         const wipMessage = this.resolveWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
           requestedLanguage
@@ -285,6 +297,18 @@ export class WidgetChatController {
         })
       }
 
+      // 🚫 channelStatus=false = total shutdown (no WIP)
+      if (workspace.channelStatus === false) {
+        logger.warn("❌ Widget message blocked: Channel disabled", {
+          workspaceId,
+          visitorId,
+        })
+        return res.status(403).json({
+          error: "CHANNEL_DISABLED",
+          message: "Channel is disabled",
+        })
+      }
+
       // Check owner status (same pattern as workspace validation middleware)
       if (workspace.ownerId) {
         const owner = await prisma.user.findUnique({
@@ -303,27 +327,6 @@ export class WidgetChatController {
             retryAfter: 3600000, // 1 hour
           })
         }
-      }
-
-      if (workspace.channelStatus === false || workspace.debugMode === true) {
-        logger.info("🛠️ Widget WIP - channel disabled or debug mode", {
-          workspaceId,
-          visitorId,
-          debugMode: workspace.debugMode,
-          channelStatus: workspace.channelStatus,
-        })
-
-        const rawLanguage = (req.body.language as string)?.toLowerCase() || "it"
-        const wipResponse = this.resolveWipMessage(
-          workspace.wipMessage as Record<string, string> | string | null,
-          rawLanguage
-        )
-
-        return res.status(200).json({
-          success: true,
-          status: "wip",
-          response: wipResponse,
-        })
       }
 
       // Execute 5-step security validation
@@ -362,49 +365,65 @@ export class WidgetChatController {
           error: failedStep.step,
           message: failedStep.reason || "Security check failed",
           retryAfter: failedStep.retryAfter,
-        })
+          })
       }
 
       logger.info("✅ Workspace validation passed")
 
-      // 💰 CREDIT CHECK: Verify owner has sufficient credit (or within -$10 threshold)
-      // CRITICAL: Check BEFORE processing message (same as WhatsApp billing)
-      if (workspace.ownerId) {
-        const owner = await prisma.user.findUnique({
-          where: { id: workspace.ownerId },
-          select: { 
-            creditBalance: true,
-            subscriptionStatus: true,
-          },
+      // 💰 SUBSCRIPTION + CREDIT CHECK (skip for playground)
+      if (isPlayground !== true) {
+        const workspaceAccessService = new WorkspaceAccessService(prisma)
+        const accessResult = await workspaceAccessService.canProcessMessages(
+          workspaceId,
+          true // skip channelStatus/debugMode checks (handled above)
+        )
+
+        if (!accessResult.canProcess) {
+          logger.warn("[WIDGET-BILLING] 🚫 Workspace blocked by billing/access rules", {
+            workspaceId,
+            blockReason: accessResult.blockReason,
+          })
+
+          const isBillingBlock =
+            accessResult.blockReason === "PAUSED" ||
+            accessResult.blockReason === "PAYMENT_FAILED" ||
+            accessResult.blockReason === "CREDIT_EXHAUSTED"
+
+          const errorCode =
+            accessResult.blockReason === "CREDIT_EXHAUSTED"
+              ? "INSUFFICIENT_CREDIT"
+              : accessResult.blockReason || "WORKSPACE_BLOCKED"
+
+          return res.status(isBillingBlock ? 402 : 403).json({
+            error: errorCode,
+            message: accessResult.message || "Workspace blocked",
+            details: accessResult.details,
+          })
+        }
+      } else {
+        logger.info("[WIDGET-BILLING] 🧪 Playground mode - skipping billing/access checks")
+      }
+
+      // 🛠️ DEBUG MODE (WIP) - after security + billing checks
+      if (workspace.debugMode === true && isPlayground !== true) {
+        logger.info("🛠️ Widget WIP - debug mode", {
+          workspaceId,
+          visitorId,
+          debugMode: workspace.debugMode,
+          channelStatus: workspace.channelStatus,
         })
 
-        if (owner) {
-          const currentBalance = Number(owner.creditBalance)
-          const MIN_BALANCE_THRESHOLD = -10.00 // Allow up to -$10 overdraft (same as WhatsApp)
+        const rawLanguage = (req.body.language as string)?.toLowerCase() || "it"
+        const wipResponse = this.resolveWipMessage(
+          workspace.wipMessage as Record<string, string> | string | null,
+          rawLanguage
+        )
 
-          if (currentBalance < MIN_BALANCE_THRESHOLD) {
-            logger.warn(`[WIDGET-BILLING] 🚫 Credit limit reached: $${currentBalance.toFixed(2)} < -$10.00`, {
-              workspaceId,
-              ownerId: workspace.ownerId,
-              currentBalance,
-            })
-
-            return res.status(402).json({
-              error: "INSUFFICIENT_CREDIT",
-              message: "Credit limit reached. Please add credits to continue using the service.",
-              currentBalance,
-              minimumRequired: MIN_BALANCE_THRESHOLD,
-            })
-          }
-
-          // ⚠️ Warn if balance is negative (but still allowed)
-          if (currentBalance < 0) {
-            logger.warn(
-              `[WIDGET-BILLING] ⚠️ Negative balance: $${currentBalance.toFixed(2)} (within -$10 threshold)`,
-              { workspaceId, ownerId: workspace.ownerId }
-            )
-          }
-        }
+        return res.status(200).json({
+          success: true,
+          status: "wip",
+          response: wipResponse,
+        })
       }
 
       // Find or create customer for this visitor

@@ -60,6 +60,12 @@ describe("WidgetChatController - welcome flow", () => {
       debugMode: false,
       wipMessage: null,
       enableWidget: true,
+      owner: {
+        subscriptionStatus: "ACTIVE",
+        creditBalance: 0,
+        paymentFailureCount: 0,
+        deletedAt: null,
+      },
     })
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: "owner-1",

@@ -23,7 +23,7 @@ eChatbot implements multiple blocking mechanisms to ensure:
 | `PAUSED` | - | Owner paused subscription | Chatbot silently ignores messages |
 | `PAYMENT_FAILED` | - | Monthly payment failed (tracking only) | **No automatic block** (admin disables user manually if needed) |
 | `CREDIT_EXHAUSTED` | - | Credit < -€10 | Chatbot blocked |
-| `CHANNEL_DISABLED` | - | channelStatus = false | WIP mode response |
+| `CHANNEL_DISABLED` | - | channelStatus = false | Total shutdown (blocked at webhook) |
 | `WORKSPACE_INACTIVE` | - | Workspace deleted | Full block |
 | `NO_OWNER` | - | Workspace has no owner | Full block |
 | `TRIAL_EXPIRED` | 402 | Trial 14 days passed | Full service block |

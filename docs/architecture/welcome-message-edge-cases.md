@@ -23,7 +23,7 @@ INCOMING MESSAGE
     │   └─ ⚠️ Salva messaggio, NO LLM, NO risposta
     ├─ 💾 Get/Create ChatSession
     ├─ 🔒 WORKSPACE ACCESS CHECK
-    │   ├─ channelStatus = false (WIP) → Salva + WIP message + enqueue WhatsApp
+    │   ├─ channelStatus = false → BLOCCO TOTALE (no WIP)
     │   └─ PAUSED/CREDIT_EXHAUSTED → SILENT BLOCK
     ├─ 💰 BILLING CHECK (credit availability)
     │   └─ ❌ No credit → return 402
@@ -47,7 +47,7 @@ INCOMING MESSAGE
 | # | Caso | count=0 | Riceve Welcome? | Return Code | Test Priority |
 |---|------|---------|-----------------|-------------|---------------|
 | 1 | ❌ ~~Utente bloccato (attemptCount >= 4)~~ | - | - | - | **REMOVED** |
-| 2 | Canale disabilitato (channelStatus=false) | ✅ | ❌ (WIP msg + enqueue) | 200 "channel_disabled" | 🔴 HIGH |
+| 2 | Canale disabilitato (channelStatus=false) | ✅ | ❌ (blocco totale, no WIP) | 200 "Channel disabled" | 🔴 HIGH |
 | 3 | Workspace senza credito | ✅ | ❌ | 402 SILENT | 🔴 HIGH |
 | 4 | Workspace cancellato | ✅ | ❌ | 402 SILENT | 🟡 MEDIUM |
 | 5 | activeChatbot=false | ✅ | ❌ | 200 "message_saved" | 🔴 HIGH |

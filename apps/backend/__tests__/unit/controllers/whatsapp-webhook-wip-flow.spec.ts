@@ -1,20 +1,20 @@
 /**
- * WhatsApp Webhook - WIP (Channel Disabled) Flow
+ * WhatsApp Webhook - WIP (debugMode) Flow
  *
- * DOCUMENTATION TEST: Verifica comportamento quando channelStatus=false
+ * DOCUMENTATION TEST: Verifica comportamento quando debugMode=true
  *
  * Questo test documenta il comportamento atteso del sistema quando
- * il canale è in manutenzione e il chatbot deve inviare il WIP message.
+ * il canale è in manutenzione (debugMode=true) e il chatbot deve inviare il WIP message.
  */
 
-describe("WhatsApp Webhook - WIP (Channel Disabled) Flow", () => {
-  it("should save user message, enqueue, and WIP assistant message when channelStatus=false", () => {
+describe("WhatsApp Webhook - WIP (debugMode) Flow", () => {
+  it("should save user message, enqueue, and WIP assistant message when debugMode=true", () => {
     /**
      * EXPECTED BEHAVIOR:
      *
      * 1. Customer scrive un messaggio WhatsApp
      * 2. Backend riceve il messaggio in whatsapp-webhook.controller.ts
-     * 3. WorkspaceAccessService ritorna blockReason=CHANNEL_DISABLED
+     * 3. WorkspaceAccessService ritorna blockReason=CHANNEL_DISABLED (debugMode=true)
      * 4. Sistema costruisce WIP message (workspace.wipMessage + SafetyTranslationAgent)
      * 5. Salva messaggio utente (role: user, agentType: NONE)
      * 6. Salva messaggio WIP (role: assistant, agentType: ROUTER, deliveryStatus: pending)
@@ -31,7 +31,7 @@ describe("WhatsApp Webhook - WIP (Channel Disabled) Flow", () => {
      */
 
     const expectedFlow = {
-      step3: "WorkspaceAccessService returns CHANNEL_DISABLED",
+      step3: "WorkspaceAccessService returns CHANNEL_DISABLED (debugMode)",
       step4: "Build WIP message with SafetyTranslationAgent",
       step5: "Save user message (agentType=NONE)",
       step6: "Save WIP assistant message (agentType=ROUTER, deliveryStatus=pending)",

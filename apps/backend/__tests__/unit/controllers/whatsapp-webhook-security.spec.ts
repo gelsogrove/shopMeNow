@@ -1,13 +1,10 @@
 import { WhatsAppWebhookController } from "../../../src/interfaces/http/controllers/whatsapp-webhook.controller"
 
-const enqueueMock = jest.fn()
-const routeMessageMock = jest.fn()
-const verifySignatureMock = jest.fn().mockReturnValue(true)
+// eslint-disable-next-line no-var
+var prismaMock: any
 
-let prismaMock: any
-
-jest.mock("../../../src/lib/prisma", () => {
-  prismaMock = {
+jest.mock("../../../src/lib/prisma", () => ({
+  prisma: (prismaMock = {
     whatsappSettings: {
       findUnique: jest.fn(),
     },
@@ -17,10 +14,11 @@ jest.mock("../../../src/lib/prisma", () => {
     customers: {
       findFirst: jest.fn(),
     },
-  }
+  }),
+}))
 
-  return { prisma: prismaMock }
-})
+const enqueueMock = jest.fn()
+const routeMessageMock = jest.fn()
 
 jest.mock("../../../src/services/whatsapp-queue.service", () => ({
   WhatsAppQueueService: jest.fn().mockImplementation(() => ({
@@ -35,7 +33,7 @@ jest.mock("../../../src/application/chat-engine", () => ({
 }))
 
 jest.mock("../../../src/utils/whatsapp-signature", () => ({
-  verifyWhatsAppSignature: verifySignatureMock,
+  verifyWhatsAppSignature: jest.fn().mockReturnValue(true),
 }))
 
 jest.mock("../../../src/middlewares/rateLimiter", () => ({
@@ -72,7 +70,7 @@ const buildWebhookReq = (overrides: Partial<any> = {}) => ({
                 {
                   from: "391234567890",
                   id: "wamid-123",
-                  timestamp: "1700000000",
+                  timestamp: String(Math.floor(Date.now() / 1000)),
                   text: { body: "ciao" },
                 },
               ],

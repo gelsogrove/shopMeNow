@@ -11,7 +11,7 @@
  * This allows workspace owners to test chatbot configuration without cost.
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { PrismaClient, Prisma } from "@echatbot/database"
 
 // Mock logger
 jest.mock("../../../src/utils/logger", () => ({
@@ -48,6 +48,12 @@ jest.mock("@echatbot/database", () => {
     prisma: mockPrismaInstance,
     AgentType: {
       ROUTER: "ROUTER",
+    },
+    Prisma: {
+      Decimal: jest.fn((value: any) => ({
+        toFixed: () => String(value),
+        toString: () => String(value),
+      })),
     },
   }
 })
@@ -148,6 +154,12 @@ describe("Widget Debug Mode - NO Billing", () => {
       debugMode: true, // 🔴 DEBUG MODE ON
       wipMessage: { it: "Sistema in manutenzione. Test in corso." },
       enableWidget: true,
+      owner: {
+        subscriptionStatus: "ACTIVE",
+        creditBalance: new Prisma.Decimal(50.0),
+        paymentFailureCount: 0,
+        deletedAt: null,
+      },
     })
 
     ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
@@ -174,7 +186,7 @@ describe("Widget Debug Mode - NO Billing", () => {
     )
   })
 
-  it("should NOT bill when channelStatus=false (exits before billing)", async () => {
+  it("should NOT bill when channelStatus=false (blocked before billing)", async () => {
     ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
       id: mockWorkspaceId,
       deletedAt: null,
@@ -184,6 +196,12 @@ describe("Widget Debug Mode - NO Billing", () => {
       debugMode: false,
       wipMessage: { it: "Canale temporaneamente offline" },
       enableWidget: true,
+      owner: {
+        subscriptionStatus: "ACTIVE",
+        creditBalance: new Prisma.Decimal(50.0),
+        paymentFailureCount: 0,
+        deletedAt: null,
+      },
     })
 
     ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
@@ -199,12 +217,10 @@ describe("Widget Debug Mode - NO Billing", () => {
     // 🎯 CRITICAL: Should NOT call billing service
     expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).not.toHaveBeenCalled()
 
-    expect(statusMock).toHaveBeenCalledWith(200)
+    expect(statusMock).toHaveBeenCalledWith(403)
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        success: true,
-        status: "wip",
-        response: "Canale temporaneamente offline",
+        error: "CHANNEL_DISABLED",
       })
     )
   })
@@ -219,6 +235,12 @@ describe("Widget Debug Mode - NO Billing", () => {
       debugMode: false, // ✅ DEBUG OFF
       wipMessage: null,
       enableWidget: true,
+      owner: {
+        subscriptionStatus: "ACTIVE",
+        creditBalance: new Prisma.Decimal(50.0),
+        paymentFailureCount: 0,
+        deletedAt: null,
+      },
     })
 
     ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({

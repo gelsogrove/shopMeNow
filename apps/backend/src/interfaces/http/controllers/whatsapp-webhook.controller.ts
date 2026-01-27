@@ -1227,7 +1227,7 @@ export class WhatsAppWebhookController {
       logger.info("[WEBHOOK] ✅ Security validation passed", { customerId: customer.id })
 
       // 🔒 Feature 197: Check workspace access BEFORE billing
-      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), CHANNEL_DISABLED (WIP)
+      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), CHANNEL_DISABLED (debugMode WIP)
       const { WorkspaceAccessService } = await import(
         "../../../application/services/workspace-access.service"
       )
@@ -1246,9 +1246,9 @@ export class WhatsAppWebhookController {
           )
 
       if (!accessResult.canProcess) {
-        // 🚧 CHANNEL_DISABLED → Send WIP message (not silent like billing blocks)
+        // 🚧 CHANNEL_DISABLED → Send WIP message (debugMode only; channelStatus=false is blocked earlier)
         if (accessResult.blockReason === "CHANNEL_DISABLED") {
-          logger.info("[WEBHOOK] 🚧 Channel disabled (WIP mode) - sending maintenance message", {
+          logger.info("[WEBHOOK] 🚧 Debug mode (WIP) - sending maintenance message", {
             workspaceId: customer.workspaceId,
             customerId: customer.id,
           })
@@ -1383,54 +1383,58 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // 💰 BILLING CHECK: Verify credit before processing with LLM
-      const { SubscriptionBillingService } = await import(
-        "../../../application/services/subscription-billing.service"
-      )
-      const billingService = new SubscriptionBillingService(prisma)
+      // 💰 BILLING CHECK: Verify credit before processing with LLM (skip for playground)
+      if (!isPlayground) {
+        const { SubscriptionBillingService } = await import(
+          "../../../application/services/subscription-billing.service"
+        )
+        const billingService = new SubscriptionBillingService(prisma)
 
-      // Check trial validity first
-      const trialStatus = await billingService.isTrialValid(customer.workspaceId)
-      if (trialStatus.isTrialPlan && !trialStatus.isValid) {
-        logger.warn("[WEBHOOK] 💰 Trial expired - SILENT BLOCK (no save, no response)", {
-          workspaceId: customer.workspaceId,
-          customerId: customer.id,
-        })
+        // Check trial validity first
+        const trialStatus = await billingService.isTrialValid(customer.workspaceId)
+        if (trialStatus.isTrialPlan && !trialStatus.isValid) {
+          logger.warn("[WEBHOOK] 💰 Trial expired - SILENT BLOCK (no save, no response)", {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+          })
 
-        // 🚨 CRITICAL: DO NOT save message, DO NOT respond - completely silent
-        // Customer won't see any response, message won't appear in history
-        res.status(402).json({
-          status: "billing_error",
-          code: "TRIAL_EXPIRED",
-          message: "Trial period has expired. Please upgrade your plan.",
-        })
-        return
-      }
+          // 🚨 CRITICAL: DO NOT save message, DO NOT respond - completely silent
+          // Customer won't see any response, message won't appear in history
+          res.status(402).json({
+            status: "billing_error",
+            code: "TRIAL_EXPIRED",
+            message: "Trial period has expired. Please upgrade your plan.",
+          })
+          return
+        }
 
-      // Check credit balance
-      const messageCost = await billingService.getOperationCost(customer.workspaceId, "message")
-      const creditCheck = await billingService.checkCredit(customer.workspaceId, messageCost)
+        // Check credit balance
+        const messageCost = await billingService.getOperationCost(customer.workspaceId, "message")
+        const creditCheck = await billingService.checkCredit(customer.workspaceId, messageCost)
 
-      if (!creditCheck.hasSufficientCredit) {
-        logger.warn("[WEBHOOK] 💰 Insufficient credit - SILENT BLOCK (no save, no response)", {
-          workspaceId: customer.workspaceId,
-          customerId: customer.id,
-          currentBalance: creditCheck.currentBalance,
-          requiredAmount: messageCost,
-        })
-
-        // 🚨 CRITICAL: DO NOT save message, DO NOT respond - completely silent
-        // Chatbot remains "mute" - no history, no LLM processing, nothing
-        res.status(402).json({
-          status: "billing_error",
-          code: "INSUFFICIENT_CREDIT",
-          message: "Insufficient credit. Please recharge your account.",
-          details: {
+        if (!creditCheck.hasSufficientCredit) {
+          logger.warn("[WEBHOOK] 💰 Insufficient credit - SILENT BLOCK (no save, no response)", {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
             currentBalance: creditCheck.currentBalance,
             requiredAmount: messageCost,
-          },
-        })
-        return
+          })
+
+          // 🚨 CRITICAL: DO NOT save message, DO NOT respond - completely silent
+          // Chatbot remains "mute" - no history, no LLM processing, nothing
+          res.status(402).json({
+            status: "billing_error",
+            code: "INSUFFICIENT_CREDIT",
+            message: "Insufficient credit. Please recharge your account.",
+            details: {
+              currentBalance: creditCheck.currentBalance,
+              requiredAmount: messageCost,
+            },
+          })
+          return
+        }
+      } else {
+        logger.info("[WEBHOOK] 🧪 Playground mode - skipping trial/credit checks")
       }
 
       // 🤖 Process with ChatEngineService (CODE decides, LLM formats)

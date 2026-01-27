@@ -22,7 +22,8 @@ This document describes the **playground testing mode** and **debugMode (WIP mod
 - ✅ **Immediate LLM response** (synchronous)
 - ❌ **NO queue enqueue** → message never reaches WhatsApp
 - ❌ **NO billing deduction** → free testing
-- ✅ **Bypasses ALL access checks** (debugMode, channelStatus, credit limits)
+- ✅ **Bypasses access checks for billing & debugMode** (credit limits, subscription checks)
+- ⚠️ **Does NOT bypass channelStatus=false** (channel disabled still blocks)
 - 🎯 **Use Case**: Testing prompt changes, agent configurations, new features
 
 **Detection**:
@@ -258,12 +259,12 @@ Prodotti: {{products}}
 
 ---
 
-### 2. **Playground Does NOT Bypass debugMode**
+### 2. **Playground Bypasses debugMode**
 
-Even though playground bypasses most access checks, the **LLM response** will still respect workspace configuration:
+Playground is intended for **testing LLM behavior**, so it **ignores debugMode** and still returns a normal LLM response:
 
-- If `debugMode=true` → LLM might return maintenance message in prompt
-- Playground tests the PROMPT, not the delivery mechanism
+- If `debugMode=true` → Playground still runs LLM (no WIP)
+- Playground tests the prompt/agents, not the delivery mechanism
 
 ---
 

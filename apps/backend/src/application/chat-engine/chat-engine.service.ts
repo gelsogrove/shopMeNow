@@ -4595,22 +4595,27 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // STEP 4: Build structured response
       // ========================================================================
       
-      // Check if workspace has Premium/Enterprise plan for optimization option
+      // Check if OWNER has Premium/Enterprise plan for optimization option (Feature 198)
       let showOptimizeOption = false
       if (finalLoadedData.type === "CART") {
         try {
           const workspace = await this.prisma.workspace.findUnique({
             where: { id: input.workspaceId },
-            select: { planType: true }
+            select: {
+              owner: {
+                select: { planType: true },
+              },
+            },
           })
-          const eligiblePlan = workspace?.planType === 'PREMIUM' || workspace?.planType === 'ENTERPRISE'
+          const ownerPlan = workspace?.owner?.planType
+          const eligiblePlan = ownerPlan === 'PREMIUM' || ownerPlan === 'ENTERPRISE'
           const transportTypes = finalLoadedData.cart?.transport
             ? Object.keys(finalLoadedData.cart.transport.byType || {})
             : []
           const hasMultipleTransports = transportTypes.length >= 2
           showOptimizeOption = eligiblePlan && hasMultipleTransports
         } catch (err) {
-          logger.warn("⚠️ [ChatEngine] Could not check workspace plan type for optimization option", { error: err, workspaceId: input.workspaceId })
+          logger.warn("⚠️ [ChatEngine] Could not check owner plan type for optimization option", { error: err, workspaceId: input.workspaceId })
         }
       }
       

@@ -76,7 +76,7 @@ if (workspace.deletedAt !== null) { // Workspace cancellato
     message: "Chat service is temporarily unavailable"
   })
 }
-// channelStatus controlla se bot risponde o WIP mode
+// channelStatus controlla se bot risponde o blocca (no WIP)
 ```
 
 ---
@@ -368,7 +368,7 @@ Toggle activation button (riga 680) - non serve più
 
 // LOGICA VISUAL:
 - Card verde = channelStatus: true (bot attivo)
-- Card grigia = channelStatus: false (bot in WIP mode)
+- Card grigia = channelStatus: false (bot OFF / blocked)
 - Badge "Disabled" = channelStatus: false (già corretto)
 ```
 
@@ -610,7 +610,7 @@ debugMode: boolean     // ✅ Debug mode
 ### **DOPO** (Solo 2 campi chiari):
 ```typescript
 deletedAt: DateTime?   // ✅ Workspace cancellato/attivo
-channelStatus: boolean // ✅ Bot ON/OFF (WIP mode)
+channelStatus: boolean // ✅ Bot ON/OFF (blocked when OFF)
 debugMode: boolean     // ✅ Debug mode
 ```
 

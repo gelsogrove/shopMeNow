@@ -161,6 +161,12 @@ describe("Widget Billing", () => {
       widgetLanguage: "it",
       widgetPrimaryColor: "#22c55e",
       widgetIcon: "sparkles",
+      owner: {
+        subscriptionStatus: "ACTIVE",
+        creditBalance: new Prisma.Decimal(50.0),
+        paymentFailureCount: 0,
+        deletedAt: null,
+      },
     })
 
     // Default owner mock (active, with sufficient credit)
@@ -270,7 +276,7 @@ describe("Widget Billing", () => {
       )
     })
 
-    it("should log warning if workspace has no owner", async () => {
+    it("should block message if workspace has no owner", async () => {
       ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
@@ -280,22 +286,41 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        owner: null,
       })
-
-      const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation()
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      // Should skip billing but still process message
+      // Should block before LLM/billing
+      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
       expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).not.toHaveBeenCalled()
-      expect(statusMock).toHaveBeenCalledWith(200)
-
-      consoleWarnSpy.mockRestore()
+      expect(statusMock).toHaveBeenCalledWith(403)
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "NO_OWNER",
+        })
+      )
     })
   })
 
   describe("Credit Limit Enforcement (-$10 threshold)", () => {
     it("should allow message when balance is positive", async () => {
+      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWorkspaceId,
+        deletedAt: null,
+        ownerId: mockOwnerId,
+        language: "ITA",
+        channelStatus: true,
+        debugMode: false,
+        wipMessage: null,
+        enableWidget: true,
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(100.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
+      })
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: mockOwnerId,
         status: "ACTIVE",
@@ -310,6 +335,22 @@ describe("Widget Billing", () => {
     })
 
     it("should allow message when balance is negative but above -$10", async () => {
+      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWorkspaceId,
+        deletedAt: null,
+        ownerId: mockOwnerId,
+        language: "ITA",
+        channelStatus: true,
+        debugMode: false,
+        wipMessage: null,
+        enableWidget: true,
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(-5.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
+      })
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: mockOwnerId,
         status: "ACTIVE",
@@ -324,6 +365,22 @@ describe("Widget Billing", () => {
     })
 
     it("should allow message when balance is exactly -$10", async () => {
+      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWorkspaceId,
+        deletedAt: null,
+        ownerId: mockOwnerId,
+        language: "ITA",
+        channelStatus: true,
+        debugMode: false,
+        wipMessage: null,
+        enableWidget: true,
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(-10.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
+      })
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: mockOwnerId,
         status: "ACTIVE",
@@ -338,6 +395,22 @@ describe("Widget Billing", () => {
     })
 
     it("should block message when balance below -$10", async () => {
+      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWorkspaceId,
+        deletedAt: null,
+        ownerId: mockOwnerId,
+        language: "ITA",
+        channelStatus: true,
+        debugMode: false,
+        wipMessage: null,
+        enableWidget: true,
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(-10.01),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
+      })
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: mockOwnerId,
         status: "ACTIVE",
@@ -355,14 +428,27 @@ describe("Widget Billing", () => {
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           error: "INSUFFICIENT_CREDIT",
-          message: expect.stringContaining("Credit limit reached"),
-          currentBalance: -10.01,
-          minimumRequired: -10.00,
         })
       )
     })
 
     it("should block message when balance is -$15 (far below threshold)", async () => {
+      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWorkspaceId,
+        deletedAt: null,
+        ownerId: mockOwnerId,
+        language: "ITA",
+        channelStatus: true,
+        debugMode: false,
+        wipMessage: null,
+        enableWidget: true,
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(-15.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
+      })
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: mockOwnerId,
         status: "ACTIVE",
@@ -377,6 +463,66 @@ describe("Widget Billing", () => {
     })
   })
 
+  describe("Subscription Status Enforcement", () => {
+    it("should block when subscriptionStatus=PAUSED", async () => {
+      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWorkspaceId,
+        deletedAt: null,
+        ownerId: mockOwnerId,
+        language: "ITA",
+        channelStatus: true,
+        debugMode: false,
+        wipMessage: null,
+        enableWidget: true,
+        owner: {
+          subscriptionStatus: "PAUSED",
+          creditBalance: new Prisma.Decimal(50.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
+      })
+
+      await controller.sendMessage(mockReq as Request, mockRes as Response)
+
+      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(statusMock).toHaveBeenCalledWith(402)
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "PAUSED",
+        })
+      )
+    })
+
+    it("should block when subscriptionStatus=PAYMENT_FAILED with failure count >= 3", async () => {
+      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: mockWorkspaceId,
+        deletedAt: null,
+        ownerId: mockOwnerId,
+        language: "ITA",
+        channelStatus: true,
+        debugMode: false,
+        wipMessage: null,
+        enableWidget: true,
+        owner: {
+          subscriptionStatus: "PAYMENT_FAILED",
+          creditBalance: new Prisma.Decimal(50.0),
+          paymentFailureCount: 3,
+          deletedAt: null,
+        },
+      })
+
+      await controller.sendMessage(mockReq as Request, mockRes as Response)
+
+      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(statusMock).toHaveBeenCalledWith(402)
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: "PAYMENT_FAILED",
+        })
+      )
+    })
+  })
+
   describe("Channel Status & Debug Mode", () => {
     it("should return WIP message when debugMode=true", async () => {
       ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
@@ -388,6 +534,12 @@ describe("Widget Billing", () => {
         debugMode: true, // Debug mode ON
         wipMessage: { it: "Siamo in manutenzione" },
         enableWidget: true,
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(50.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
       })
 
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
@@ -411,7 +563,7 @@ describe("Widget Billing", () => {
       )
     })
 
-    it("should return WIP message when channelStatus=false", async () => {
+    it("should block message when channelStatus=false", async () => {
       ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
@@ -421,6 +573,12 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: { it: "Canale temporaneamente offline" },
         enableWidget: true,
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(50.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
       })
 
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
@@ -431,12 +589,10 @@ describe("Widget Billing", () => {
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
-      expect(statusMock).toHaveBeenCalledWith(200)
+      expect(statusMock).toHaveBeenCalledWith(403)
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          success: true,
-          status: "wip",
-          response: "Canale temporaneamente offline", // Match actual wipMessage
+          error: "CHANNEL_DISABLED",
         })
       )
     })
@@ -450,6 +606,12 @@ describe("Widget Billing", () => {
         channelStatus: true,
         debugMode: false,
         enableWidget: false, // Widget disabled
+        owner: {
+          subscriptionStatus: "ACTIVE",
+          creditBalance: new Prisma.Decimal(50.0),
+          paymentFailureCount: 0,
+          deletedAt: null,
+        },
       })
 
       ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({
@@ -520,7 +682,7 @@ describe("Widget Billing", () => {
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
-          status: "wip",
+          status: "disabled",
           channelStatus: false,
         })
       )

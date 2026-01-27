@@ -48,7 +48,7 @@ Widget messages are charged at **$0.005 per message** (compared to WhatsApp's $0
 2. WORKSPACE STATUS CHECKS
    ├─ enableWidget=false → 403 "Widget disabled"
    ├─ deletedAt != null → 503 "Service unavailable"
-   ├─ channelStatus=false → 200 "WIP message"
+   ├─ channelStatus=false → 403 "Channel disabled"
    ├─ debugMode=true → 200 "WIP message"
    └─ All OK → Continue
 
@@ -59,9 +59,11 @@ Widget messages are charged at **$0.005 per message** (compared to WhatsApp's $0
    ├─ Workspace active
    └─ Visitor valid
 
-4. 💰 CREDIT CHECK (BEFORE LLM)
-   ├─ Get owner.creditBalance
-   ├─ Check if balance < -$10.00
+4. 💰 SUBSCRIPTION + CREDIT CHECK (BEFORE LLM)
+   ├─ Check owner.subscriptionStatus
+   │  ├─ PAUSED / PAYMENT_FAILED → 402 "Workspace blocked" (BLOCK)
+   │  └─ ACTIVE → Continue
+   ├─ Check owner.creditBalance < -$10.00
    │  ├─ YES → 402 "Insufficient credit" (BLOCK)
    │  └─ NO → Continue
    └─ Log warning if balance negative (but >= -$10)
@@ -210,20 +212,19 @@ const MIN_BALANCE_THRESHOLD = -10.00
 ### 2. Channel Offline (`channelStatus=false`)
 
 **Backend behavior**:
-- GET `/api/v1/widget/status/:workspaceId` returns `status: "wip"`
-- POST `/api/v1/widget/chat/:workspaceId` returns WIP message
+- GET `/api/v1/widget/status/:workspaceId` returns `status: "disabled"`
+- POST `/api/v1/widget/chat/:workspaceId` returns `403 CHANNEL_DISABLED`
 
 **Frontend behavior**:
-- Widget icon shows but disabled
-- Clicking shows WIP message
+- Widget icon hidden/disabled
+- No WIP message
 - No billing (LLM not called)
 
 **Response**:
 ```json
 {
-  "success": true,
-  "status": "wip",
-  "response": "Siamo in manutenzione. Riprova più tardi."
+  "error": "CHANNEL_DISABLED",
+  "message": "Channel is disabled"
 }
 ```
 
@@ -415,7 +416,7 @@ Widget charges appear in monthly invoices alongside WhatsApp charges:
 - [ ] Send widget message with balance = -$10.01 → 402 "Insufficient credit"
 - [ ] Verify transaction appears in `BillingTransaction` table with `referenceType: "widget_message"`
 - [ ] Verify widget cost appears in monthly invoice
-- [ ] Set `channelStatus=false` → Widget shows WIP, no billing
+- [ ] Set `channelStatus=false` → Widget disabled, no WIP, no billing
 - [ ] Set `debugMode=true` → Widget shows WIP, no billing
 - [ ] Set `enableWidget=false` → Widget disappears from page
 
@@ -438,7 +439,7 @@ File: `apps/backend/__tests__/unit/widget/widget-billing.spec.ts`
 
 3. Channel Status & Debug Mode
    - WIP message when `debugMode=true`
-   - WIP message when `channelStatus=false`
+   - Channel disabled when `channelStatus=false`
    - Block when `enableWidget=false`
 
 4. Billing Transaction Recording
