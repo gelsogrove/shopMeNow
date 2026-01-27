@@ -496,9 +496,6 @@ export class WidgetChatController {
           newLanguage: requestedLanguage,
           phoneUpdated: !!phoneNumber && !customer.phone,
         })
-          oldLanguage,
-          newLanguage: requestedLanguage,
-        })
       } else {
         logger.info("👤 Using existing customer", {
           customerId: customer.id,
