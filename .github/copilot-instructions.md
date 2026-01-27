@@ -71,11 +71,17 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 
 ### 7A. **Test Policy - Tests Are Specification**
 
-- Tests define expected behavior. Code must follow tests, not the other way around.
-- Do NOT change tests without explicit approval from Andrea.
+- **Tests define expected behavior. Code must follow tests, not the other way around.**
+- **DO NOT change tests without explicit approval from Andrea.**
 - If behavior must change, ask first, then update tests and docs together.
 - If a test fails, fix the implementation first. Only change tests if they are wrong and approved.
 - When tests are changed with approval, include the approval note in the PR description.
+- **ALWAYS add comprehensive comments in tests explaining the WHAT and WHY**:
+  - ✅ GOOD: `// SCENARIO: User selects Spanish in widget, but has Italian phone number`
+  - ✅ GOOD: `// RULE: Explicit language WINS over phone prefix`
+  - ❌ BAD: `it("should work", () => { ... })` - no context!
+- **Test comments are documentation** - they explain business logic to future developers
+- **Every test change = logic change** - treat test modifications as critical as code changes
 
 ### 8. **WhatsApp Testing Policy**
 

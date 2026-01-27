@@ -279,6 +279,7 @@ export default function ChannelsPage() {
           }
           title={selectedWorkspace.name}
           position="bottom-right"
+          phoneNumber={selectedWorkspace.whatsappPhoneNumber || undefined} // 📱 Pass phone for language detection
           language={widgetLanguages[selectedWorkspaceId] || "it"}
           onOpenChange={(isOpen) => {
             setWidgetOpen(isOpen)

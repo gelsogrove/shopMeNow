@@ -11,6 +11,7 @@ type WidgetSendInput = {
   workspaceId: string
   visitorId: string
   message: string
+  phoneNumber?: string // 📱 Optional phone number for language detection (playground)
   language?: string
   sessionId?: string | null
 }
@@ -120,12 +121,16 @@ export const sendWidgetMessage = async ({
   workspaceId,
   visitorId,
   message,
+  phoneNumber,
   language,
   sessionId,
 }: WidgetSendInput) => {
   const payload: Record<string, unknown> = {
     visitorId,
     message,
+  }
+  if (phoneNumber) {
+    payload.phoneNumber = phoneNumber // 📱 Send phone for language detection
   }
   if (language) {
     payload.language = language

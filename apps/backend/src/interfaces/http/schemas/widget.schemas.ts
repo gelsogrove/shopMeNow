@@ -41,6 +41,11 @@ export const WIDGET_MESSAGE_SCHEMA = z
       .max(5000, "Message must be less than 5000 characters")
       .trim()
       .describe("Customer message text"),
+    phoneNumber: z
+      .string()
+      .regex(/^\+\d{1,4}\d{6,14}$/, "Invalid phone number format. Expected: +[country_code][number]")
+      .optional()
+      .describe("Optional phone number with country code (e.g., +39 899 1234567) - used to detect customer language"),
     language: z.string().optional().describe("Optional visitor language"),
     sessionId: SESSION_ID_SCHEMA,
     isPlayground: z.boolean().optional().describe("If true, skip billing/queue and just respond"),

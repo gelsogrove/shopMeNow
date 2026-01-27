@@ -36,6 +36,7 @@ interface ChatWidgetProps {
   title?: string
   placeholder?: string
   primaryColor?: string
+  phoneNumber?: string // 📱 Optional phone number for playground testing (e.g., "+39 899 1234567")
   language?: string
   apiUrl?: string
   onOpenChange?: (isOpen: boolean) => void
@@ -66,6 +67,7 @@ export function ChatWidget({
   title = "Chat with us 💬",
   placeholder = "Type a message...",
   primaryColor = DEFAULT_PRIMARY_COLOR,
+  phoneNumber, // 📱 Playground phone number
   language,
   apiUrl,
   onOpenChange,
@@ -159,6 +161,7 @@ export function ChatWidget({
         apiUrl: apiUrl || DEFAULT_API_URL,
         workspaceId: resolvedWorkspaceId,
         visitorId,
+        phoneNumber, // 📱 Pass phone number to backend
         message,
         language: language || navigator.language || "it",
         sessionId,

@@ -17,6 +17,7 @@ import { SubscriptionBillingService } from "../../../application/services/subscr
 import { WorkspaceAccessService } from "../../../application/services/workspace-access.service"
 import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
 import { detectLanguageFromHeader } from "../../../utils/email-templates"
+import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import {
   WIDGET_MESSAGE_SCHEMA,
   type WidgetMessageInput,
@@ -200,34 +201,53 @@ export class WidgetChatController {
         })
       }
 
-      const { visitorId, message, sessionId, language, isPlayground } = validation.data
+      const { visitorId, message, sessionId, language, phoneNumber, isPlayground } = validation.data
       
       // 🌍 Language detection priority:
-      // 1. Explicit language from widget body (if provided)
-      // 2. Accept-Language HTTP header (browser preference)
-      // 3. Customer's saved language (if exists)
-      // 4. Workspace default language
-      // 5. Italian (system default)
+      // 1. Explicit language from widget body/API (if provided) - HIGHEST PRIORITY! ✅
+      // 2. Phone number prefix (if provided) - second priority 📱
+      // 3. Accept-Language HTTP header (browser preference) 🌐
+      // 4. Customer's saved language (if exists) 💾
+      // 5. Workspace default language 🏢
+      // 6. Italian (system default) 🇮🇹
+      
+      // Detect from explicit language parameter
+      const explicitLanguage = this.normalizeLanguage(language)
+      
+      // Detect from phone number prefix
+      let detectedLanguageFromPhone: string | null = null
+      if (phoneNumber) {
+        const langCode = detectLanguageFromPhonePrefix(phoneNumber)
+        detectedLanguageFromPhone = this.normalizeLanguage(langCode)
+        logger.info("📱 Language detected from phone number", {
+          phoneNumber,
+          detectedCode: langCode,
+          normalized: detectedLanguageFromPhone,
+        })
+      }
+      
+      // Detect from browser
       const acceptLanguageHeader = req.headers['accept-language']
       const browserLanguage = acceptLanguageHeader 
         ? detectLanguageFromHeader(acceptLanguageHeader)
         : null
-      
-      // Convert browser language (it/en/es/pt) to system format (ITA/ENG/ESP/PRT)
       const normalizedBrowserLang = browserLanguage 
         ? this.normalizeLanguage(browserLanguage)
         : null
       
-      const requestedLanguage = this.normalizeLanguage(language) || normalizedBrowserLang
+      // Apply priority: explicit > phone > browser
+      const requestedLanguage = explicitLanguage || detectedLanguageFromPhone || normalizedBrowserLang
 
       logger.info("📨 Widget message received", {
         workspaceId,
         visitorId,
         messageLength: message.length,
-        bodyLanguage: language || '(none)',
-        acceptLanguageHeader: acceptLanguageHeader || '(none)',
-        detectedFromHeader: browserLanguage || '(none)',
+        phoneNumber: phoneNumber || '(none)',
+        explicitLanguage: explicitLanguage || '(none)',
+        detectedFromPhone: detectedLanguageFromPhone || '(none)',
+        detectedFromBrowser: normalizedBrowserLang || '(none)',
         finalLanguage: requestedLanguage || '(fallback to workspace/customer)',
+        languagePriority: explicitLanguage ? 'explicit' : detectedLanguageFromPhone ? 'phone' : normalizedBrowserLang ? 'browser' : 'fallback',
         isPlayground: isPlayground === true
       })
 
@@ -443,6 +463,7 @@ export class WidgetChatController {
             customId: visitorId,
             name: `Visitor ${visitorId.slice(-8)}`,
             email: `${visitorId}@visitor.local`,
+            phone: phoneNumber || undefined, // 📱 Save phone if provided (playground scenario)
             isActive: false, // Anonymous users are NOT registered
             language: requestedLanguage || workspace.language || "ENG",
           },
@@ -451,17 +472,30 @@ export class WidgetChatController {
         logger.info("👤 Created anonymous customer", {
           customerId: customer.id,
           visitorId,
+          phone: phoneNumber || '(none)',
           language: customer.language,
         })
       } else if (requestedLanguage && customer.language !== requestedLanguage) {
+        // Update language if changed (respects priority: explicit > phone > browser)
         const oldLanguage = customer.language
+        const updateData: any = { language: requestedLanguage }
+        
+        // Update phone if provided and not set yet
+        if (phoneNumber && !customer.phone) {
+          updateData.phone = phoneNumber
+        }
+        
         await prisma.customers.update({
           where: { id: customer.id },
-          data: { language: requestedLanguage },
+          data: updateData,
         })
-        customer = { ...customer, language: requestedLanguage }
-        logger.info("🌍 Updated customer language", {
+        customer = { ...customer, ...updateData }
+        logger.info("🌍 Updated customer", {
           customerId: customer.id,
+          oldLanguage,
+          newLanguage: requestedLanguage,
+          phoneUpdated: !!phoneNumber && !customer.phone,
+        })
           oldLanguage,
           newLanguage: requestedLanguage,
         })
