@@ -10,7 +10,7 @@
 export enum BillingPrices {
   // 📱 MESSAGE COSTS
   MESSAGE = 0.1, // $0.10 - LLM chatbot message (conversational)
-  WIDGET_MESSAGE = 0.05, // $0.05 - Web widget message (site chat)
+  WIDGET_MESSAGE = 0.005, // $0.005 - Web widget message (site chat)
   WELCOME_MESSAGE = 1.18, // $1.18 - First message to new user (includes registration)
 
   // 📤 PUSH MESSAGING COSTS

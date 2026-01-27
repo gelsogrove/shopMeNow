@@ -664,6 +664,7 @@ model WhatsappSettings {
   id          String    @id @default(uuid())
   phoneNumber String    @unique
   apiKey      String
+  appSecret   String?   @db.Text
   webhookUrl  String?
   webhookId   String    @unique
   webhookToken String

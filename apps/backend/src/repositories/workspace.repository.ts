@@ -23,7 +23,9 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       whatsappApiKey: data.whatsappApiKey, // ✅ FIX: Use whatsappApiKey (new field name)
       whatsappApiToken: data.whatsappApiKey, // ✅ LEGACY: Keep for backward compatibility
       whatsappPhoneNumberId: data.whatsappPhoneNumberId ?? null,
-      whatsappVerifyToken: data.whatsappVerifyToken ?? null,
+      whatsappVerifyToken:
+        data.whatsappSettings?.webhookToken ?? data.whatsappVerifyToken ?? null,
+      whatsappAppSecret: data.whatsappSettings?.appSecret ?? null,
       whatsappWebhookId: data.whatsappSettings?.webhookId ?? null,
       whatsappWebhookToken: data.whatsappSettings?.webhookToken ?? null,
       whatsappWebhookUrl: data.whatsappWebhookUrl,
@@ -412,7 +414,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
   ): Promise<Workspace | null> {
     logger.debug(`Updating workspace with ID ${id}`)
     logger.debug(
-      `📥 Raw data received in repository.update: ${JSON.stringify(data, null, 2)}`
+      `📥 Raw data received in repository.update: ${JSON.stringify(
+        {
+          ...data,
+          whatsappAppSecret:
+            (data as any).whatsappAppSecret ? "****" : undefined,
+        },
+        null,
+        2
+      )}`
     )
     
     // 🔍 LOG FEATURE 199
@@ -470,6 +480,20 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         delete dbData.adminEmail
       }
 
+      // Handle WhatsApp App Secret - stored in whatsappSettings
+      let whatsappAppSecret: string | undefined
+      if (dbData.whatsappAppSecret !== undefined) {
+        whatsappAppSecret = dbData.whatsappAppSecret
+        delete dbData.whatsappAppSecret
+      }
+
+      // Handle WhatsApp Verify Token - stored in whatsappSettings.webhookToken (keep workspace field too)
+      let whatsappVerifyToken: string | undefined
+      if (dbData.whatsappVerifyToken !== undefined) {
+        const trimmedToken = String(dbData.whatsappVerifyToken).trim()
+        whatsappVerifyToken = trimmedToken.length > 0 ? trimmedToken : undefined
+      }
+
       // 🔥 REMOVE DEPRECATED FIELDS: whatsappWebhookId and whatsappWebhookToken
       // These fields only exist in WhatsappSettings, NOT in Workspace model
       if (dbData.whatsappWebhookId !== undefined) {
@@ -508,7 +532,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       }
 
       logger.debug(
-        `📝 Data prepared for Prisma update (workspace ${id}): ${JSON.stringify(dbData, null, 2)}`
+        `📝 Data prepared for Prisma update (workspace ${id}): ${JSON.stringify(
+          {
+            ...dbData,
+            whatsappAppSecret: whatsappAppSecret ? "****" : undefined,
+            whatsappVerifyToken: whatsappVerifyToken ? "****" : undefined,
+          },
+          null,
+          2
+        )}`
       )
       logger.debug(`📧 AdminEmail to update: ${adminEmail}`)
       
@@ -519,10 +551,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       logger.debug(`hasHumanSupport in dbData: ${dbData.hasHumanSupport}`)
 
       // Prepare the exact data object for Prisma
+      const shouldUpsertWhatsAppSettings =
+        adminEmail !== undefined ||
+        whatsappAppSecret !== undefined ||
+        whatsappVerifyToken !== undefined
+
       const prismaUpdateData: any = {
         ...dbData,
-        // Update whatsappSettings if adminEmail is provided
-        ...(adminEmail !== undefined && {
+        // Update whatsappSettings if adminEmail or appSecret is provided
+        ...(shouldUpsertWhatsAppSettings && {
           whatsappSettings: {
             upsert: {
               create: {
@@ -535,14 +572,24 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
                   data.whatsappApiToken ||
                   "placeholder",
                 webhookId: crypto.randomUUID(), // Generate unique webhook ID
-                webhookToken: crypto.randomUUID(), // Generate unique webhook token
-                adminEmail: adminEmail,
+                webhookToken:
+                  whatsappVerifyToken || crypto.randomUUID(), // Generate or use provided token
+                ...(adminEmail !== undefined ? { adminEmail } : {}),
+                ...(whatsappAppSecret !== undefined
+                  ? { appSecret: whatsappAppSecret }
+                  : {}),
               },
               update: {
                 phoneNumber:
                   data.whatsappPhoneNumber || dbData.whatsappPhoneNumber,
                 apiKey: dbData.whatsappApiKey || data.whatsappApiToken,
-                adminEmail: adminEmail,
+                ...(adminEmail !== undefined ? { adminEmail } : {}),
+                ...(whatsappAppSecret !== undefined
+                  ? { appSecret: whatsappAppSecret }
+                  : {}),
+                ...(whatsappVerifyToken !== undefined
+                  ? { webhookToken: whatsappVerifyToken }
+                  : {}),
               },
             },
           },
@@ -550,7 +597,43 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       }
 
       logger.debug(
-        `🔧 EXACT Prisma update data: ${JSON.stringify(prismaUpdateData, null, 2)}`
+        `🔧 EXACT Prisma update data: ${JSON.stringify(
+          {
+            ...prismaUpdateData,
+            whatsappSettings: prismaUpdateData.whatsappSettings
+              ? {
+                  ...prismaUpdateData.whatsappSettings,
+                  upsert: {
+                    ...prismaUpdateData.whatsappSettings.upsert,
+                    create: {
+                      ...prismaUpdateData.whatsappSettings.upsert.create,
+                      appSecret:
+                        prismaUpdateData.whatsappSettings.upsert.create.appSecret
+                          ? "****"
+                          : undefined,
+                      webhookToken:
+                        prismaUpdateData.whatsappSettings.upsert.create.webhookToken
+                          ? "****"
+                          : undefined,
+                    },
+                    update: {
+                      ...prismaUpdateData.whatsappSettings.upsert.update,
+                      appSecret:
+                        prismaUpdateData.whatsappSettings.upsert.update.appSecret
+                          ? "****"
+                          : undefined,
+                      webhookToken:
+                        prismaUpdateData.whatsappSettings.upsert.update.webhookToken
+                          ? "****"
+                          : undefined,
+                    },
+                  },
+                }
+              : undefined,
+          },
+          null,
+          2
+        )}`
       )
       logger.info(`🚀 Calling Prisma.workspace.update with ID: ${id}`)
 
@@ -620,6 +703,9 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
               id: true,
               phoneNumber: true,
               apiKey: true,
+              appSecret: true,
+              webhookId: true,
+              webhookToken: true,
               adminEmail: true,
             },
           },

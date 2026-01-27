@@ -65,11 +65,27 @@ export class SafetyTranslationAgent {
     const startTime = Date.now()
 
     try {
+      // 🌍 DEBUG: Log incoming parameters
+      logger.info("🌍 SafetyTranslationAgent.process() called", {
+        workspaceId: options.workspaceId,
+        targetLanguage: options.targetLanguage,
+        responseLength: options.response.length,
+        customerName: options.customerName,
+      })
+
       // 1. Load TRANSLATION agent config from database
       const safetyAgent = await this.agentConfigRepo.findByType(
         options.workspaceId,
         "TRANSLATION"
       )
+
+      // 🌍 DEBUG: Log agent lookup result
+      logger.info("🌍 TRANSLATION agent lookup result", {
+        found: !!safetyAgent,
+        isActive: safetyAgent?.isActive,
+        model: safetyAgent?.model,
+        workspaceId: options.workspaceId,
+      })
 
       if (!safetyAgent) {
         logger.warn(
@@ -188,12 +204,17 @@ export class SafetyTranslationAgent {
         parsed.translatedText || parsed.translatedResponse || options.response
       const blockedReason = parsed.blockedReason || parsed.reason
 
+      // 🌍 DEBUG: Log translation result
       logger.info("✅ SafetyTranslationAgent completed", {
         safe,
         blocked: !safe,
         blockedReason,
         tokensUsed,
         executionTimeMs,
+        targetLanguage: options.targetLanguage,
+        originalLength: options.response.length,
+        translatedLength: translatedText.length,
+        wasTranslated: options.response !== translatedText,
       })
 
       return {

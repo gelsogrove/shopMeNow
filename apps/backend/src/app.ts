@@ -52,6 +52,14 @@ const normalizeOrigin = (value?: string | null): string | null => {
   }
 }
 
+const parseEnvOrigins = (value?: string): string[] => {
+  if (!value) return []
+  return value
+    .split(",")
+    .map((origin) => normalizeOrigin(origin))
+    .filter((origin): origin is string => Boolean(origin))
+}
+
 const refreshWorkspaceOrigins = async () => {
   const workspaceUrls = await prisma.workspace.findMany({
     select: { websiteUrl: true, url: true },
@@ -86,6 +94,71 @@ const ensureWorkspaceOrigins = async (force = false) => {
   return workspaceOriginCache.pending
 }
 
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true) // Allow requests with no origin (mobile apps, Postman)
+    }
+
+    const normalized = origin.toLowerCase()
+
+    const envOrigins = parseEnvOrigins(
+      process.env.CORS_ORIGINS || process.env.CORS_ORIGIN
+    )
+
+    const defaultOrigins =
+      process.env.NODE_ENV === "production"
+        ? [
+            process.env.FRONTEND_URL || "https://echatbot.ai",
+            "https://www.echatbot.ai",
+            process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
+            "https://echatbot-backoffice-3497e777ec08.herokuapp.com",
+          ]
+        : [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+            "http://localhost:5173",
+          ]
+
+    const allowedOrigins = Array.from(
+      new Set(
+        [...defaultOrigins, ...envOrigins]
+          .map((value) => normalizeOrigin(value))
+          .filter((value): value is string => Boolean(value))
+      )
+    )
+
+    if (allowedOrigins.includes(normalized)) {
+      return callback(null, true)
+    }
+
+    if (workspaceOriginCache.values.has(normalized)) {
+      return callback(null, true)
+    }
+
+    ensureWorkspaceOrigins(true)
+      .then(() => {
+        if (workspaceOriginCache.values.has(normalized)) {
+          return callback(null, true)
+        }
+        return callback(null, false)
+      })
+      .catch(() => callback(null, false))
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "x-workspace-id",
+    "X-Session-Id",
+    "x-visitor-id",
+    "x-hub-signature-256",
+  ],
+  exposedHeaders: ["set-cookie", "Location", "location"],
+}
+
 // ⚠️  NOTE: Scheduler is now a separate microservice (apps/scheduler)
 // Run with: npm run dev:all (starts backend + frontend + scheduler)
 // Scheduler handles: WhatsApp queue, billing, cleanups, etc.
@@ -109,62 +182,10 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // Other middleware
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        return callback(null, true) // Allow requests with no origin (mobile apps, Postman)
-      }
-
-      const allowedOrigins =
-        process.env.NODE_ENV === "production"
-          ? [
-              "https://echatbot.ai", // Frontend without www
-              "https://www.echatbot.ai", // Frontend with www
-              process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
-              "https://echatbot-backoffice-3497e777ec08.herokuapp.com", // Temporary: Heroku URL until DNS propagates
-            ]
-          : [
-              "http://localhost:3000",
-              "http://localhost:3001",
-              "http://localhost:3002", // 🔐 Backoffice
-              "http://localhost:5173",
-            ]
-
-      // Allow app/backoffice origins
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true)
-      }
-
-      const normalized = origin.toLowerCase()
-      if (workspaceOriginCache.values.has(normalized)) {
-        return callback(null, true)
-      }
-
-      ensureWorkspaceOrigins(true)
-        .then(() => {
-          if (workspaceOriginCache.values.has(normalized)) {
-            return callback(null, true)
-          }
-          return callback(null, false)
-        })
-        .catch(() => callback(null, false))
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "x-workspace-id",
-      "X-Session-Id",
-      "x-visitor-id", // 🆕 WIDGET: Visitor tracking
-    ],
-    exposedHeaders: ["set-cookie", "Location", "location"],
-  })
-)
+app.use(cors(corsOptions))
 
 // Enable pre-flight requests for all routes
-app.options("*", cors())
+app.options("*", cors(corsOptions))
 
 // 🔒 SECURITY: Helmet with strict security headers
 app.use(

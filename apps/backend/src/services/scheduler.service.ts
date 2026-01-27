@@ -131,7 +131,7 @@ export class SchedulerService {
       this.cleanupOldAnalytics()
     }, this.ANALYTICS_CLEANUP_INTERVAL)
 
-    // Start campaign scheduler (runs daily at 10:00 AM)
+    // Start campaign scheduler (runs daily at 11:30 AM)
     this.campaignScheduler.start()
 
     logger.info(

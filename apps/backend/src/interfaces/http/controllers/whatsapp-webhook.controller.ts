@@ -15,7 +15,7 @@ import {
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { buildPhoneVariants } from "../../../utils/phone"
-import crypto from "crypto"
+import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 
 /**
  * 🔒 CONCURRENCY CONTROL: Customer-level message processing locks
@@ -58,7 +58,7 @@ export class WhatsAppWebhookController {
       const { webhookId } = req.params
       const mode = req.query["hub.mode"]
       const token = req.query["hub.verify_token"]
-      const channel = req.query["hub.channel"]
+      const challenge = req.query["hub.challenge"]
 
       logger.info("[WEBHOOK-VERIFY] Meta verification request received", {
         mode,
@@ -78,7 +78,11 @@ export class WhatsAppWebhookController {
 
       if (mode === "subscribe" && token === settings.webhookToken) {
         logger.info("[WEBHOOK-VERIFY] ✅ Verification successful", { webhookId })
-        res.status(200).send(channel)
+        if (challenge === undefined) {
+          res.status(400).send("Missing hub.challenge")
+          return
+        }
+        res.status(200).send(String(challenge))
       } else {
         logger.warn("[WEBHOOK-VERIFY] ❌ Verification failed - invalid token", { webhookId })
         res.status(403).send("Forbidden")
@@ -332,6 +336,7 @@ export class WhatsAppWebhookController {
           select: {
             workspaceId: true,
             phoneNumber: true,
+            appSecret: true,
             workspace: {
               select: {
                 id: true,
@@ -351,6 +356,7 @@ export class WhatsAppWebhookController {
           select: {
             workspaceId: true,
             phoneNumber: true,
+            appSecret: true,
             workspace: {
               select: {
                 id: true,
@@ -393,12 +399,17 @@ export class WhatsAppWebhookController {
         }
 
         try {
-          const bodyString = JSON.stringify(req.body || {})
-          const expected = `sha256=${crypto
-            .createHmac("sha256", whatsappSettings.webhookToken)
-            .update(bodyString, "utf8")
-            .digest("hex")}`
-          if (expected !== sigHeader) {
+          const appSecret = whatsappSettings.appSecret
+          if (!appSecret) {
+            logger.error("[WEBHOOK] ❌ Missing app secret in WhatsApp settings", { webhookId })
+            res.status(500).json({ error: "webhook_signature_config_missing" })
+            return
+          }
+
+          const rawBody = (req as any).rawBody || req.body || {}
+          const isValid = verifyWhatsAppSignature(rawBody, sigHeader, appSecret)
+
+          if (!isValid) {
             logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
             res.status(403).json({ error: "invalid_signature" })
             return

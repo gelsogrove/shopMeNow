@@ -77,6 +77,7 @@ interface WorkspaceData {
   name: string
   whatsappPhoneNumber: string
   whatsappApiKey: string
+  whatsappAppSecret: string
   whatsappPhoneNumberId: string
   whatsappVerifyToken: string
   whatsappWebhookId?: string
@@ -190,6 +191,7 @@ export function SettingsPage() {
   const [isDirty, setIsDirty] = useState(false)
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  const [showWhatsAppSecrets, setShowWhatsAppSecrets] = useState(false)
 
   const handleCopy = async (text?: string) => {
     if (!text) {
@@ -214,6 +216,7 @@ export function SettingsPage() {
     name: "",
     whatsappPhoneNumber: "",
     whatsappApiKey: "",
+    whatsappAppSecret: "",
     whatsappPhoneNumberId: "",
     whatsappVerifyToken: "",
     whatsappWebhookId: undefined,
@@ -258,8 +261,12 @@ export function SettingsPage() {
         name: currentWorkspace.name || "",
         whatsappPhoneNumber: currentWorkspace.whatsappPhoneNumber || "",
         whatsappApiKey: currentWorkspace.whatsappApiKey || "",
+        whatsappAppSecret: currentWorkspace.whatsappAppSecret || "",
         whatsappPhoneNumberId: currentWorkspace.whatsappPhoneNumberId || "",
-        whatsappVerifyToken: currentWorkspace.whatsappVerifyToken || "",
+        whatsappVerifyToken:
+          currentWorkspace.whatsappVerifyToken ||
+          currentWorkspace.whatsappWebhookToken ||
+          "",
         whatsappWebhookId: currentWorkspace.whatsappWebhookId,
         whatsappWebhookToken: currentWorkspace.whatsappWebhookToken,
         whatsappWebhookUrl: currentWorkspace.whatsappWebhookUrl,
@@ -365,6 +372,9 @@ export function SettingsPage() {
       const updateData: any = { ...formData }
       delete updateData.id
       delete updateData.logoUrl
+      if (!updateData.whatsappAppSecret) {
+        delete updateData.whatsappAppSecret
+      }
 
       const updatedWorkspace = await updateWorkspace(currentWorkspace!.id, updateData)
       
@@ -632,16 +642,40 @@ export function SettingsPage() {
               />
             </div>
 
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <Switch
+                checked={showWhatsAppSecrets}
+                onCheckedChange={setShowWhatsAppSecrets}
+                disabled={!canEdit}
+              />
+              <span>Show API key & App Secret</span>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="whatsappApiKey">API Key</Label>
               <Input
                 id="whatsappApiKey"
-                type="password"
+                type={showWhatsAppSecrets ? "text" : "password"}
                 value={formData.whatsappApiKey}
                 onChange={(e) => handleFieldChange("whatsappApiKey", e.target.value)}
                 placeholder="Enter API key"
                 disabled={!canEdit}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappAppSecret">App Secret</Label>
+              <Input
+                id="whatsappAppSecret"
+                type={showWhatsAppSecrets ? "text" : "password"}
+                value={formData.whatsappAppSecret}
+                onChange={(e) => handleFieldChange("whatsappAppSecret", e.target.value)}
+                placeholder="Enter App Secret"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Usato per verificare la firma del webhook (per canale).
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -824,16 +858,40 @@ export function SettingsPage() {
             />
           </div>
 
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <Switch
+              checked={showWhatsAppSecrets}
+              onCheckedChange={setShowWhatsAppSecrets}
+              disabled={!canEdit}
+            />
+            <span>Show API key & App Secret</span>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="whatsappApiKey">API Key</Label>
             <Input
               id="whatsappApiKey"
-              type="password"
+              type={showWhatsAppSecrets ? "text" : "password"}
               value={formData.whatsappApiKey}
               onChange={(e) => handleFieldChange("whatsappApiKey", e.target.value)}
               placeholder="Enter API key"
               disabled={!canEdit}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="whatsappAppSecret">App Secret</Label>
+            <Input
+              id="whatsappAppSecret"
+              type={showWhatsAppSecrets ? "text" : "password"}
+              value={formData.whatsappAppSecret}
+              onChange={(e) => handleFieldChange("whatsappAppSecret", e.target.value)}
+              placeholder="Enter App Secret"
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-gray-500">
+              Usato per verificare la firma del webhook (per canale).
+            </p>
           </div>
 
           <div className="space-y-2">

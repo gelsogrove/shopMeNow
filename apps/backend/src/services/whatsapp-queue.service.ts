@@ -151,7 +151,7 @@ export class WhatsAppQueueService {
       // 🔧 DEBUG MODE CHECK: If debugMode is enabled, send WIP message automatically
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true, wipMessage: true },
+        select: { debugMode: true, name: true, wipMessage: true, ownerId: true, channelStatus: true },
       })
 
       if (workspace?.debugMode === true) {
@@ -205,6 +205,44 @@ export class WhatsAppQueueService {
         `[WhatsAppQueueService] Processing message ID: ${message.id} for customer: ${message.customerId}`
       )
 
+      // 💰 PRE-SEND BILLING GUARD: Check owner credit/subscription BEFORE sending
+      if (workspace?.ownerId) {
+        const owner = await this.prisma.user.findUnique({
+          where: { id: workspace.ownerId },
+          select: { creditBalance: true, subscriptionStatus: true },
+        })
+
+        const MIN_BALANCE_THRESHOLD = -10.0
+        const currentBalance = owner ? Number(owner.creditBalance) : 0
+        const subscriptionStatus = owner?.subscriptionStatus || "ACTIVE"
+
+        if (subscriptionStatus !== "ACTIVE") {
+          await this.repository.updateStatus(
+            message.id,
+            "failed",
+            "SUBSCRIPTION_INACTIVE"
+          )
+          logger.warn(
+            `[WhatsAppQueueService] 🚫 Subscription inactive - failing message ${message.id}`,
+            { workspaceId, ownerId: workspace.ownerId, subscriptionStatus }
+          )
+          return
+        }
+
+        if (currentBalance < MIN_BALANCE_THRESHOLD) {
+          await this.repository.updateStatus(
+            message.id,
+            "failed",
+            "INSUFFICIENT_CREDIT"
+          )
+          logger.warn(
+            `[WhatsAppQueueService] 🚫 Insufficient credit pre-send for message ${message.id}`,
+            { workspaceId, ownerId: workspace.ownerId, currentBalance }
+          )
+          return
+        }
+      }
+
       // Validate and send
       const result = await this.validateAndSend(message)
 
@@ -217,10 +255,16 @@ export class WhatsAppQueueService {
 
         // 💰 BILLING: Deduct credit NOW that message is actually sent
         try {
-          const deductResult = await this.billingService.deductMessageCredit(
-            message.workspaceId,
-            message.id
-          )
+          const deductResult = workspace?.ownerId
+            ? await this.billingService.deductOwnerMessageCredit(
+                workspace.ownerId,
+                message.workspaceId,
+                message.id
+              )
+            : await this.billingService.deductMessageCredit(
+                message.workspaceId,
+                message.id
+              )
           if (deductResult.success) {
               logger.info(
                 `[WhatsAppQueueService] 💰 Credit deducted for message ${message.id}`,

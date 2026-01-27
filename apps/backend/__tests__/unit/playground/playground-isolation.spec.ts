@@ -9,12 +9,11 @@ jest.mock("../../../src/utils/logger", () => ({
   debug: jest.fn(),
 }))
 
-// Mock PricingRepository
-jest.mock("../../../src/repositories/pricing.repository", () => ({
-  PricingRepository: jest.fn().mockImplementation(() => ({
-    getValue: jest.fn().mockResolvedValue(0.1), // $0.10 per message
-    getByKey: jest.fn().mockResolvedValue({ key: "MESSAGE", value: 0.1 }),
-  })),
+// Mock PlatformConfigService price lookup
+jest.mock("../../../src/services/platform-config.service", () => ({
+  platformConfigService: {
+    getPrice: jest.fn().mockResolvedValue(0.1), // $0.10 per message
+  },
 }))
 
 // Mock Prisma

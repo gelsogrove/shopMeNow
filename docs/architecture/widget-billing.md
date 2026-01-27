@@ -1,6 +1,6 @@
 # 💰 Widget Billing System - Complete Documentation
 
-**Feature**: Widget message billing at **$0.05 per message** (50% discount vs WhatsApp $0.10)
+**Feature**: Widget message billing at **$0.005 per message** (95% discount vs WhatsApp $0.10)
 
 **Version**: v221  
 **Date**: January 26, 2026  
@@ -10,7 +10,7 @@
 
 ## 📊 Overview
 
-Widget messages are charged at **$0.05 per message** (compared to WhatsApp's $0.10). This lower cost reflects the fact that widget conversations are:
+Widget messages are charged at **$0.005 per message** (compared to WhatsApp's $0.10). This lower cost reflects the fact that widget conversations are:
 - **Anonymous visitors** (not registered customers)
 - **Lead generation** focused (not e-commerce)
 - **No order processing** (simplified flow)
@@ -20,7 +20,7 @@ Widget messages are charged at **$0.05 per message** (compared to WhatsApp's $0.
 
 | Feature | WhatsApp Channel | Widget Channel |
 |---------|------------------|----------------|
-| **Price per message** | $0.10 | $0.05 |
+| **Price per message** | $0.10 | $0.005 |
 | **Delivery method** | Scheduler queue | Immediate response |
 | **Customer type** | Registered (email/phone) | Anonymous visitors |
 | **E-commerce** | ✅ Full support | ❌ Disabled |
@@ -37,7 +37,7 @@ Widget messages are charged at **$0.05 per message** (compared to WhatsApp's $0.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ WIDGET MESSAGE FLOW (with $0.05 billing)                   │
+│ WIDGET MESSAGE FLOW (with $0.005 billing)                   │
 └─────────────────────────────────────────────────────────────┘
 
 1. WIDGET MESSAGE RECEIVED (POST /api/v1/widget/chat/:workspaceId)
@@ -110,13 +110,13 @@ Widget messages are charged at **$0.05 per message** (compared to WhatsApp's $0.
        ├─ agentType: from LLM
        └─ tokensUsed: from LLM
 
-11. 💰 BILLING: Deduct $0.05 (AFTER successful response)
+11. 💰 BILLING: Deduct $0.005 (AFTER successful response)
     ├─ Check if workspace has owner
     │  ├─ NO → Skip billing (log warning)
     │  └─ YES → Continue
     └─ Call: subscriptionBillingService.deductOwnerWidgetMessageCredit()
        ├─ Get owner billing info
-       ├─ Get widget message price ($0.05 from platformConfig)
+       ├─ Get widget message price ($0.005 from platformConfig)
        ├─ Check sufficient credit (allows -$10 overdraft)
        ├─ 🔒 TRANSACTION:
        │  ├─ Deduct from owner.creditBalance
@@ -124,12 +124,12 @@ Widget messages are charged at **$0.05 per message** (compared to WhatsApp's $0.
        │     ├─ userId: owner.id
        │     ├─ workspaceId: workspace.id
        │     ├─ type: "MESSAGE"
-       │     ├─ amount: -0.05 (negative = deduction)
+       │     ├─ amount: -0.005 (negative = deduction)
        │     ├─ balanceAfter: new balance
        │     ├─ description: "Widget message"
        │     ├─ referenceId: messageId
        │     └─ referenceType: "widget_message"
-       └─ Log: "💰 Widget message charged: $0.05"
+       └─ Log: "💰 Widget message charged: $0.005"
 
 12. RETURN RESPONSE TO USER (200 OK)
     └─ {
@@ -279,7 +279,7 @@ INSERT INTO "BillingTransaction" (
   'owner-id-uuid',
   'workspace-id-uuid',
   'MESSAGE',
-  -0.05,                              -- Negative = deduction
+  -0.005,                              -- Negative = deduction
   49.95,                              -- New balance after deduction
   'Widget message',
   'widget-visitor-12345-1737911234',  -- Message ID
@@ -340,9 +340,9 @@ Widget charges appear in monthly invoices alongside WhatsApp charges:
         "amount": 15.00
       },
       {
-        "description": "Widget Messages (300 msgs @ $0.05)",
+        "description": "Widget Messages (300 msgs @ $0.005)",
         "quantity": 300,
-        "unitPrice": 0.05,
+        "unitPrice": 0.005,
         "amount": 15.00
       },
       {
@@ -380,12 +380,12 @@ Widget charges appear in monthly invoices alongside WhatsApp charges:
 
 3. **Pricing Repository**  
    File: `apps/backend/src/infrastructure/repositories/pricing.repository.ts`  
-   - Method: `getValue("WIDGET_MESSAGE")` returns `0.05`
+   - Method: `getValue("WIDGET_MESSAGE")` returns `0.005`
 
 4. **Platform Config (Database)**  
    File: `packages/database/prisma/data/platformConfig.ts`  
    - Key: `WIDGET_MESSAGE`
-   - Value: `0.05`
+   - Value: `0.005`
    - Description: "Cost per web widget message (site chat)"
 
 ### Frontend Files
@@ -408,9 +408,9 @@ Widget charges appear in monthly invoices alongside WhatsApp charges:
 
 ### Manual Testing Checklist
 
-- [ ] Send widget message with positive balance → Charged $0.05
-- [ ] Send widget message with balance = $0.00 → Charged $0.05 (balance becomes -$0.05)
-- [ ] Send widget message with balance = -$9.99 → Charged $0.05 (balance becomes -$10.04)
+- [ ] Send widget message with positive balance → Charged $0.005
+- [ ] Send widget message with balance = $0.00 → Charged $0.005 (balance becomes -$0.005)
+- [ ] Send widget message with balance = -$9.99 → Charged $0.005 (balance becomes -$9.995)
 - [ ] Send widget message with balance = -$10.00 → Allowed (edge case)
 - [ ] Send widget message with balance = -$10.01 → 402 "Insufficient credit"
 - [ ] Verify transaction appears in `BillingTransaction` table with `referenceType: "widget_message"`
@@ -424,8 +424,8 @@ Widget charges appear in monthly invoices alongside WhatsApp charges:
 File: `apps/backend/__tests__/unit/widget/widget-billing.spec.ts`
 
 **Test Suites**:
-1. Widget Message Billing ($0.05)
-   - Charge $0.05 (not $0.10)
+1. Widget Message Billing ($0.005)
+   - Charge $0.005 (not $0.10)
    - Deduct from owner (not workspace)
    - Continue on billing failure (UX resilience)
    - Skip billing if no owner
@@ -514,7 +514,7 @@ try {
 ### Log Patterns
 
 ```
-[WIDGET-BILLING] 💰 Widget message charged: $0.05 deducted. New balance: $49.95
+[WIDGET-BILLING] 💰 Widget message charged: $0.005 deducted. New balance: $49.995
 [WIDGET-BILLING] ⚠️ No owner for workspace {id} - skipping billing
 [WIDGET-BILLING] ❌ Failed to deduct widget message credit: {error}
 [WIDGET-BILLING] 🚫 Credit limit reached: ${currentBalance} < -$10.00
@@ -527,7 +527,7 @@ try {
 
 | Aspect | WhatsApp | Widget |
 |--------|----------|--------|
-| **Price** | $0.10/msg | $0.05/msg |
+| **Price** | $0.10/msg | $0.005/msg |
 | **Trigger** | After queue delivery | After LLM response |
 | **Flow** | Async (queue) | Sync (immediate) |
 | **Service** | `BillingService.trackMessage()` | `SubscriptionBillingService.deductOwnerWidgetMessageCredit()` |
@@ -551,7 +551,7 @@ try {
 
 ## 🎯 Summary
 
-✅ **Widget messages cost $0.05** (50% less than WhatsApp)  
+✅ **Widget messages cost $0.005** (95% less than WhatsApp)  
 ✅ **Same -$10 overdraft limit** as WhatsApp  
 ✅ **Credit checked BEFORE LLM** (prevents abuse)  
 ✅ **Billing happens AFTER response** (but always deducted)  

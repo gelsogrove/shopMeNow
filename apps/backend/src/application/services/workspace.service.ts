@@ -158,6 +158,7 @@ For privacy inquiries, please contact our support team.`
           select: {
             webhookId: true,
             webhookToken: true,
+            appSecret: true,
           },
         },
       },
@@ -171,6 +172,7 @@ For privacy inquiries, please contact our support team.`
       description: w.description ?? undefined,
       whatsappPhoneNumber: w.whatsappPhoneNumber ?? undefined,
       whatsappApiKey: w.whatsappApiKey ?? undefined,
+      whatsappAppSecret: (w as any).whatsappSettings?.appSecret ?? null,
       whatsappPhoneNumberId: (w as any).whatsappPhoneNumberId ?? undefined,
       whatsappVerifyToken: (w as any).whatsappVerifyToken ?? undefined,
       whatsappWebhookId: (w as any).whatsappSettings?.webhookId ?? null,
@@ -282,6 +284,19 @@ For privacy inquiries, please contact our support team.`
     if (data.sellsProductsAndServices === undefined) data.sellsProductsAndServices = true
     if (data.toneOfVoice === undefined) data.toneOfVoice = "FRIENDLY"
     if (data.operatorContactMethod === undefined) data.operatorContactMethod = "EMAIL"
+
+    // Enforce channel-specific flags
+    const channelType = data.channelType || "WHATSAPP"
+    if (channelType === "WIDGET") {
+      data.enableWidget = true
+      data.enableWhatsapp = false
+      data.sellsProductsAndServices = false
+      data.hasSalesAgents = false
+      data.whatsappPhoneNumber = null
+    } else {
+      data.enableWhatsapp = true
+      data.enableWidget = false
+    }
     
     // Default human support instructions - use placeholder as default
     if (!data.humanSupportInstructions) {
@@ -324,8 +339,9 @@ For privacy inquiries, please contact our support team.`
             workspaceId: createdWorkspace.id,
             phoneNumber: `+34-${createdWorkspace.id.substring(0, 8)}`,
             apiKey: "default-api-key",
+            appSecret: data.whatsappAppSecret || undefined,
             webhookId: `webhook-${createdWorkspace.id}`,
-            webhookToken: `token-${Date.now()}`,
+            webhookToken: data.whatsappVerifyToken || `token-${Date.now()}`,
             gdpr: defaultGdprContent,
             adminEmail: adminEmail || null, // 🆕 Use adminEmail from creator
           },
@@ -610,6 +626,58 @@ For privacy inquiries, please contact our support team.`
       const existingWorkspace = await this.repository.findBySlug(data.slug)
       if (existingWorkspace && existingWorkspace.id !== id) {
         throw new Error(`Workspace with name "${data.name}" already exists`)
+      }
+    }
+
+    // 🛑 FREE PLAN GUARD: max 1 channel (WhatsApp OR Widget) for FREE_TRIAL owners
+    const existingWorkspace = await this.prisma.workspace.findUnique({
+      where: { id },
+      select: {
+        ownerId: true,
+        enableWhatsapp: true,
+        enableWidget: true,
+        deletedAt: true,
+      },
+    })
+
+    if (existingWorkspace?.ownerId) {
+      const owner = await this.prisma.user.findUnique({
+        where: { id: existingWorkspace.ownerId },
+        select: { planType: true },
+      })
+
+      const ownerPlan = owner?.planType || "FREE_TRIAL"
+      if (ownerPlan === "FREE_TRIAL") {
+        const newEnableWhatsapp =
+          data.enableWhatsapp ?? existingWorkspace.enableWhatsapp ?? false
+        const newEnableWidget =
+          data.enableWidget ?? existingWorkspace.enableWidget ?? false
+
+        const resultingChannelCount =
+          (newEnableWhatsapp ? 1 : 0) + (newEnableWidget ? 1 : 0)
+
+        if (resultingChannelCount > 1) {
+          const err: any = new Error("CHANNEL_LIMIT_EXCEEDED")
+          err.statusCode = 403
+          throw err
+        }
+
+        if (resultingChannelCount === 1) {
+          const otherActiveChannels = await this.prisma.workspace.count({
+            where: {
+              ownerId: existingWorkspace.ownerId,
+              deletedAt: null,
+              id: { not: id },
+              OR: [{ enableWhatsapp: true }, { enableWidget: true }],
+            },
+          })
+
+          if (otherActiveChannels >= 1) {
+            const err: any = new Error("CHANNEL_LIMIT_EXCEEDED")
+            err.statusCode = 403
+            throw err
+          }
+        }
       }
     }
 

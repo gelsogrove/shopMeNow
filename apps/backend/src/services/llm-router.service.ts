@@ -410,11 +410,20 @@ export class LLMRouterService {
           },
         })
 
+        // 🌍 DEBUG: Log language parameter BEFORE calling SafetyAgent
+        const targetLanguage = params.customerLanguage || "it"
+        logger.info("🌍 LLM Router calling SafetyTranslationAgent", {
+          customerLanguage: params.customerLanguage,
+          targetLanguage,
+          workspaceId: params.workspaceId,
+          messageLength: params.message.length,
+        })
+
         // Step 1: Translate with Safety & Translation Agent
         const safetyResult = await this.safetyAgent.process({
           workspaceId: params.workspaceId,
           response: params.message, // Message in Italian (base language)
-          targetLanguage: params.customerLanguage || "it",
+          targetLanguage,
           customerName: params.customerName,
         })
 

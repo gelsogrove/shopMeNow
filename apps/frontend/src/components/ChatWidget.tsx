@@ -425,23 +425,23 @@ export function ChatWidget({
       case "help":
         return <HelpCircle className="h-6 w-6 text-white" />
       case "phone":
-        return <Phone className="h-6 w-6 text-white" />
+        return <Phone className="h-8 w-8 text-white" />
       case "cpu":
-        return <Cpu className="h-6 w-6 text-white" />
+        return <Cpu className="h-8 w-8 text-white" />
       case "mail":
-        return <Mail className="h-6 w-6 text-white" />
+        return <Mail className="h-8 w-8 text-white" />
       case "user":
-        return <User className="h-6 w-6 text-white" />
+        return <User className="h-8 w-8 text-white" />
       case "star":
-        return <Star className="h-6 w-6 text-white" />
+        return <Star className="h-8 w-8 text-white" />
       case "heart":
-        return <Heart className="h-6 w-6 text-white" />
+        return <Heart className="h-8 w-8 text-white" />
       case "bell":
-        return <Bell className="h-6 w-6 text-white" />
+        return <Bell className="h-8 w-8 text-white" />
       case "shield":
-        return <Shield className="h-6 w-6 text-white" />
+        return <Shield className="h-8 w-8 text-white" />
       default:
-        return <MessageCircle className="h-6 w-6 text-white" />
+        return <MessageCircle className="h-8 w-8 text-white" />
     }
   }
   const positionClasses = {

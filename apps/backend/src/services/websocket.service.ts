@@ -2,6 +2,59 @@ import { Server as HTTPServer } from "http"
 import { Server as SocketIOServer } from "socket.io"
 import logger from "../utils/logger"
 
+const normalizeOrigin = (value?: string | null): string | null => {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const withScheme = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`
+  try {
+    const url = new URL(withScheme)
+    return url.origin.toLowerCase()
+  } catch (error) {
+    logger.warn("Invalid CORS origin in websocket allowlist", { value, error })
+    return null
+  }
+}
+
+const parseEnvOrigins = (value?: string): string[] => {
+  if (!value) return []
+  return value
+    .split(",")
+    .map((origin) => normalizeOrigin(origin))
+    .filter((origin): origin is string => Boolean(origin))
+}
+
+const getAllowedOrigins = (): string[] => {
+  const envOrigins = parseEnvOrigins(
+    process.env.CORS_ORIGINS || process.env.CORS_ORIGIN
+  )
+
+  const defaultOrigins =
+    process.env.NODE_ENV === "production"
+      ? [
+          process.env.FRONTEND_URL || "https://echatbot.ai",
+          "https://www.echatbot.ai",
+          process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
+          "https://echatbot-backoffice-3497e777ec08.herokuapp.com",
+        ]
+      : [
+          "http://localhost:3000",
+          "http://localhost:3001",
+          "http://localhost:3002",
+          "http://localhost:5173",
+        ]
+
+  return Array.from(
+    new Set(
+      [...defaultOrigins, ...envOrigins]
+        .map((value) => normalizeOrigin(value))
+        .filter((value): value is string => Boolean(value))
+    )
+  )
+}
+
 interface ClientMetadata {
   workspaceId: string
   userId?: string
@@ -29,9 +82,25 @@ export class WebSocketService {
    * Initialize Socket.io server attached to Express HTTP server
    */
   initialize(httpServer: HTTPServer): void {
+    const allowedOrigins = getAllowedOrigins()
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        origin: (origin, callback) => {
+          if (!origin) {
+            return callback(null, true)
+          }
+
+          const normalized = normalizeOrigin(origin)
+          if (!normalized) {
+            return callback(null, false)
+          }
+
+          if (allowedOrigins.includes(normalized)) {
+            return callback(null, true)
+          }
+
+          return callback(null, false)
+        },
         methods: ["GET", "POST"],
         credentials: true,
       },

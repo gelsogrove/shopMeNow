@@ -33,6 +33,13 @@ export class AgentConfigRepository {
     type: AgentType
   ): Promise<AgentConfig | null> {
     try {
+      // 🌍 DEBUG: Log query parameters
+      logger.info("🔍 AgentConfigRepository.findByType() called", {
+        workspaceId,
+        type,
+        searchingForActive: true,
+      })
+
       const agent = await this.prisma.agentConfig.findFirst({
         where: {
           workspaceId,
@@ -41,8 +48,27 @@ export class AgentConfigRepository {
         },
       })
 
+      // 🌍 DEBUG: Log result
       if (!agent) {
-        logger.warn(`Agent type ${type} not found for workspace ${workspaceId}`)
+        logger.warn(`⚠️ Agent type ${type} NOT FOUND for workspace ${workspaceId}`)
+        
+        // 🌍 DEBUG: Check if agent exists but is inactive
+        const inactiveAgent = await this.prisma.agentConfig.findFirst({
+          where: { workspaceId, type },
+        })
+        
+        if (inactiveAgent) {
+          logger.warn(`⚠️ Agent type ${type} EXISTS but isActive=${inactiveAgent.isActive}`)
+        } else {
+          logger.warn(`⚠️ Agent type ${type} DOES NOT EXIST in database for this workspace`)
+        }
+      } else {
+        logger.info(`✅ Agent type ${type} FOUND`, {
+          id: agent.id,
+          name: agent.name,
+          isActive: agent.isActive,
+          model: agent.model,
+        })
       }
 
       return agent

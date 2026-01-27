@@ -184,15 +184,15 @@ if (!creditCheck.hasSufficientCredit) {
 │                                                                  │
 │  Admin Panel Header:                                             │
 │  ┌────────────────────────────────────────────────────────────┐ │
-│  │  💰 €0.05  ⚠️ CREDITO BASSO                                │ │
+│  │  💰 €0.005  ⚠️ CREDITO BASSO                               │ │
 │  └────────────────────────────────────────────────────────────┘ │
 │                                                                  │
 │  Admin Panel Alert:                                              │
 │  ┌────────────────────────────────────────────────────────────┐ │
 │  │  ⚠️ Credito Insufficiente                                  │ │
 │  │                                                             │ │
-│  │  Saldo attuale: €0.05                                      │ │
-│  │  Richiesto: €0.15 per messaggio                            │ │
+│  │  Saldo attuale: €0.005                                     │ │
+│  │  Richiesto: €0.10 per messaggio                            │ │
 │  │                                                             │ │
 │  │  Il chatbot non può rispondere ai clienti.                 │ │
 │  │                                                             │ │

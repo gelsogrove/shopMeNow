@@ -18,7 +18,6 @@
  */
 
 import { PlanType, PrismaClient, TransactionType, SubscriptionStatus } from "@echatbot/database"
-import { PricingRepository } from "../../repositories/pricing.repository"
 import {
   BillingInfo,
   PlanLimits,
@@ -27,6 +26,7 @@ import {
 } from "../../repositories/subscription-billing.repository"
 import logger from "../../utils/logger"
 import { CREDIT_MIN_THRESHOLD } from "./workspace-access.service"
+import { platformConfigService } from "../../services/platform-config.service"
 
 export interface CreditCheckResult {
   hasSufficientCredit: boolean
@@ -67,12 +67,10 @@ export interface BillingOverview {
 
 export class SubscriptionBillingService {
   private repository: SubscriptionBillingRepository
-  private pricingRepository: PricingRepository
   private readonly PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
 
   constructor(private prisma: PrismaClient) {
     this.repository = new SubscriptionBillingRepository(prisma)
-    this.pricingRepository = new PricingRepository(prisma)
   }
 
   // ============================================================================
@@ -472,7 +470,7 @@ export class SubscriptionBillingService {
 
   /**
    * Deduct credit for a widget message from owner
-   * Uses pricing config key WIDGET_MESSAGE (not plan messageCost).
+   * Uses platform config key WIDGET_MESSAGE (not plan messageCost).
    */
   async deductOwnerWidgetMessageCredit(
     userId: string,
@@ -493,8 +491,7 @@ export class SubscriptionBillingService {
       }
     }
 
-    const widgetCost =
-      (await this.pricingRepository.getValue("WIDGET_MESSAGE")) ?? 0.05
+    const widgetCost = await platformConfigService.getPrice("WIDGET_MESSAGE")
 
     const result = await this.repository.deductCredit(
       userId,

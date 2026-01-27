@@ -64,7 +64,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should enable submit button when email is entered", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     render(<InviteMemberModal {...defaultProps} />)
 
     const emailInput = screen.getByLabelText(/Email Address/)
@@ -75,7 +75,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should show error for invalid email format", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     render(<InviteMemberModal {...defaultProps} />)
 
     const emailInput = screen.getByLabelText(/Email Address/)
@@ -91,7 +91,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should call API and show success on valid submission", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     vi.mocked(invitationApi.create).mockResolvedValueOnce({
       invitationId: "inv-123",
       message: "Invitation sent",
@@ -102,8 +102,8 @@ describe("InviteMemberModal", () => {
     const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "colleague@company.com")
 
-    const form = emailInput.closest("form")!
-    fireEvent.submit(form)
+    const submitButton = screen.getByRole("button", { name: /send invitation/i })
+    await user.click(submitButton)
 
     await waitFor(() => {
       expect(invitationApi.create).toHaveBeenCalledWith(mockWorkspaceId, {
@@ -119,7 +119,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should include first and last name when provided", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     vi.mocked(invitationApi.create).mockResolvedValueOnce({
       invitationId: "inv-456",
       message: "Invitation sent",
@@ -131,8 +131,8 @@ describe("InviteMemberModal", () => {
     await user.type(screen.getByLabelText("Last Name"), "Doe")
     await user.type(screen.getByLabelText(/Email Address/), "jane@company.com")
 
-    const form = screen.getByLabelText(/Email Address/).closest("form")!
-    fireEvent.submit(form)
+    const submitButton = screen.getByRole("button", { name: /send invitation/i })
+    await user.click(submitButton)
 
     await waitFor(() => {
       expect(invitationApi.create).toHaveBeenCalledWith(mockWorkspaceId, {
@@ -144,7 +144,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should trim email before validation", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     vi.mocked(invitationApi.create).mockResolvedValueOnce({
       invitationId: "inv-123",
       message: "Invitation sent",
@@ -155,8 +155,8 @@ describe("InviteMemberModal", () => {
     const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "  test@example.com  ")
 
-    const form = emailInput.closest("form")!
-    fireEvent.submit(form)
+    const submitButton = screen.getByRole("button", { name: /send invitation/i })
+    await user.click(submitButton)
 
     await waitFor(() => {
       expect(invitationApi.create).toHaveBeenCalledWith(mockWorkspaceId, {
@@ -168,7 +168,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should show error on API failure", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     vi.mocked(invitationApi.create).mockRejectedValueOnce({
       response: { data: { error: "User is already a member" } },
     })
@@ -178,8 +178,8 @@ describe("InviteMemberModal", () => {
     const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "existing@company.com")
 
-    const form = emailInput.closest("form")!
-    fireEvent.submit(form)
+    const submitButton = screen.getByRole("button", { name: /send invitation/i })
+    await user.click(submitButton)
 
     await waitFor(() => {
       expect(screen.getByText("User is already a member")).toBeInTheDocument()
@@ -190,7 +190,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should handle generic API error", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     vi.mocked(invitationApi.create).mockRejectedValueOnce(new Error("Network error"))
 
     render(<InviteMemberModal {...defaultProps} />)
@@ -198,8 +198,8 @@ describe("InviteMemberModal", () => {
     const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
-    const form = emailInput.closest("form")!
-    fireEvent.submit(form)
+    const submitButton = screen.getByRole("button", { name: /send invitation/i })
+    await user.click(submitButton)
 
     await waitFor(() => {
       expect(screen.getByText("Network error")).toBeInTheDocument()
@@ -207,7 +207,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should show loading state during submission", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     let resolvePromise: (value: any) => void
     vi.mocked(invitationApi.create).mockImplementationOnce(
       () => new Promise((resolve) => { resolvePromise = resolve })
@@ -218,8 +218,8 @@ describe("InviteMemberModal", () => {
     const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
-    const form = emailInput.closest("form")!
-    fireEvent.submit(form)
+    const submitButton = screen.getByRole("button", { name: /send invitation/i })
+    await user.click(submitButton)
 
     await waitFor(() => {
       expect(screen.getByText("Sending...")).toBeInTheDocument()
@@ -238,7 +238,7 @@ describe("InviteMemberModal", () => {
   })
 
   it("should clear form when modal is closed", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     render(<InviteMemberModal {...defaultProps} />)
 
     const emailInput = screen.getByLabelText(/Email Address/)
@@ -261,8 +261,8 @@ describe("InviteMemberModal", () => {
     const emailInput = screen.getByLabelText(/Email Address/)
     await user.type(emailInput, "test@example.com")
 
-    const form = emailInput.closest("form")!
-    fireEvent.submit(form)
+    const submitButton = screen.getByRole("button", { name: /send invitation/i })
+    await user.click(submitButton)
 
     await waitFor(() => {
       expect(screen.getByText("Sending...")).toBeInTheDocument()

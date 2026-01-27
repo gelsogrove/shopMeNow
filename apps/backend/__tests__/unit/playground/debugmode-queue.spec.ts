@@ -33,6 +33,10 @@ jest.mock("../../../src/application/agents/SecurityAgent", () => ({
 // Mock Billing Service
 jest.mock("../../../src/application/services/subscription-billing.service", () => ({
   SubscriptionBillingService: jest.fn().mockImplementation(() => ({
+    deductOwnerMessageCredit: jest.fn().mockResolvedValue({
+      success: true,
+      newBalance: 99.9,
+    }),
     deductMessageCredit: jest.fn().mockResolvedValue({
       success: true,
       newBalance: 99.9,
@@ -154,7 +158,7 @@ describe("debugMode in Queue Processor - Documentation", () => {
   describe("Integration with Billing", () => {
     it("should not deduct credit for WIP automatic response", () => {
       // WIP message is automatic response (no LLM tokens)
-      // - No call to billingService.deductMessageCredit()
+      // - No call to billingService.deductOwnerMessageCredit()
       // - Message marked as 'sent' but billing skipped
       // - Only deduct credit when LLM is called (debugMode=false)
 

@@ -35,6 +35,7 @@ export class SettingsService implements ISettingsService {
         workspaceId,
         phoneNumber: '',
         apiKey: '',
+        appSecret: undefined,
         webhookUrl: '',
         settings: {},
         gdpr: await this.getDefaultGdprContent()
@@ -72,6 +73,7 @@ export class SettingsService implements ISettingsService {
           workspaceId,
           phoneNumber: data.phoneNumber || '',
           apiKey: data.apiKey || '',
+          appSecret: data.appSecret || undefined,
           webhookUrl: data.webhookUrl || '',
           settings: data.settings || {},
           gdpr: data.gdpr || await this.getDefaultGdprContent()
@@ -88,6 +90,7 @@ export class SettingsService implements ISettingsService {
         workspaceId,
         phoneNumber: data.phoneNumber || '',
         apiKey: data.apiKey || '',
+        appSecret: data.appSecret || undefined,
         webhookUrl: data.webhookUrl || '',
         settings: data.settings || {},
         gdpr: data.gdpr || await this.getDefaultGdprContent(),
@@ -151,6 +154,7 @@ export class SettingsService implements ISettingsService {
         workspaceId,
         phoneNumber: '',
         apiKey: '',
+        appSecret: undefined,
         webhookUrl: '',
         settings: {},
         gdpr: content,

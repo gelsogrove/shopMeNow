@@ -43,6 +43,7 @@ export const WIDGET_MESSAGE_SCHEMA = z
       .describe("Customer message text"),
     language: z.string().optional().describe("Optional visitor language"),
     sessionId: SESSION_ID_SCHEMA,
+    isPlayground: z.boolean().optional().describe("If true, skip billing/queue and just respond"),
   })
   .strict() // Reject unknown properties
   .describe("Widget chat message")

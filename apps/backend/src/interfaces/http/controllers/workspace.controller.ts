@@ -48,12 +48,13 @@ export class WorkspaceController {
         description: workspace.description,
         whatsappPhoneNumber: workspace.whatsappPhoneNumber,
         whatsappApiKey: workspace.whatsappApiKey,
+        whatsappAppSecret: workspace.whatsappAppSecret ?? null,
         whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
         whatsappVerifyToken: workspace.whatsappVerifyToken,
         webhookUrl: workspace.webhookUrl,
-        whatsappWebhookId: workspace.whatsappWebhookId || undefined,
-        whatsappWebhookToken: workspace.whatsappWebhookToken || undefined,
-        whatsappWebhookUrl: workspace.whatsappWebhookUrl || undefined,
+        whatsappWebhookId: workspace.whatsappWebhookId ?? null,
+        whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
+        whatsappWebhookUrl: workspace.whatsappWebhookUrl ?? null,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
         language: workspace.language,
@@ -130,12 +131,13 @@ export class WorkspaceController {
           description: workspace.description,
           whatsappPhoneNumber: workspace.whatsappPhoneNumber,
           whatsappApiKey: workspace.whatsappApiKey,
+          whatsappAppSecret: workspace.whatsappAppSecret ?? null,
           whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
           whatsappVerifyToken: workspace.whatsappVerifyToken,
           webhookUrl: workspace.webhookUrl,
-          whatsappWebhookId: workspace.whatsappWebhookId || undefined,
-          whatsappWebhookToken: workspace.whatsappWebhookToken || undefined,
-          whatsappWebhookUrl: workspace.whatsappWebhookUrl || undefined,
+          whatsappWebhookId: workspace.whatsappWebhookId ?? null,
+          whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
+          whatsappWebhookUrl: workspace.whatsappWebhookUrl ?? null,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
           language: workspace.language,
@@ -320,7 +322,14 @@ export class WorkspaceController {
 
       logger.info(`Updating workspace ${id}`)
       logger.info(
-        `📦 Workspace data received: ${JSON.stringify(workspaceData, null, 2)}`
+        `📦 Workspace data received: ${JSON.stringify(
+          {
+            ...workspaceData,
+            whatsappAppSecret: workspaceData.whatsappAppSecret ? "****" : undefined,
+          },
+          null,
+          2
+        )}`
       )
 
       // 🔍 LOG SPECIFICO per whatsappApiKey
@@ -361,6 +370,7 @@ export class WorkspaceController {
         description: workspace.description,
         whatsappPhoneNumber: workspace.whatsappPhoneNumber,
         whatsappApiKey: workspace.whatsappApiKey,
+        whatsappAppSecret: workspace.whatsappAppSecret ?? null,
         whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
         whatsappVerifyToken: workspace.whatsappVerifyToken,
         webhookUrl: workspace.webhookUrl,
@@ -419,6 +429,17 @@ export class WorkspaceController {
       return res.json(serializedWorkspace)
     } catch (error) {
       logger.error(`Error updating workspace ${req.params.id}:`, error)
+      if (
+        (error as any).message === "FREE_PLAN_CHANNEL_LIMIT" ||
+        (error as any).message === "CHANNEL_LIMIT_EXCEEDED" ||
+        (error as any).code === "CHANNEL_LIMIT_EXCEEDED"
+      ) {
+        return res.status((error as any).statusCode || 403).json({
+          error: "Plan limit reached",
+          code: "CHANNEL_LIMIT_EXCEEDED",
+          message: "Il piano Free consente un solo canale attivo. Aggiorna il piano per aggiungerne altri.",
+        })
+      }
       return next(error)
     }
   }

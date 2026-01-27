@@ -56,6 +56,8 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
             channelType: 'WHATSAPP',
             operatorEmail: 'andrea@example.com',
             operatorContactMethod: 'email',
+            enableWhatsapp: true,
+            enableWidget: false,
           }),
         })
       )
@@ -110,6 +112,8 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
           data: expect.objectContaining({
             channelType: 'WIDGET',
             sellsProductsAndServices: false,
+            enableWidget: true,
+            enableWhatsapp: false,
           }),
         })
       )

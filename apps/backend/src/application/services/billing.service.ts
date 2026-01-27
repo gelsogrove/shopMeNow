@@ -1,16 +1,13 @@
 import { BillingType, PrismaClient } from "@echatbot/database"
-import { PricingRepository } from "../../repositories/pricing.repository"
 import logger from "../../utils/logger"
+import { platformConfigService } from "../../services/platform-config.service"
 
 export class BillingService {
-  private pricingRepository: PricingRepository
-
   constructor(private prisma: PrismaClient) {
-    this.pricingRepository = new PricingRepository(prisma)
   }
 
   /**
-   * Track message cost ($0.10) - used for all message interactions
+   * Track message cost (platform config MESSAGE) - used for all message interactions
    * This deducts from ALL workspace credits (shared across owner's channels)
    * AND records in billingTransactions for Transaction History
    * @param isPlayground - Skip credit deduction for playground testing (default: false)
@@ -32,9 +29,8 @@ export class BillingService {
     }
 
     try {
-      // Get current price from database (fallback to 0.10 for safety)
-      const messageCost =
-        (await this.pricingRepository.getValue("MESSAGE")) ?? 0.10
+      // Get current price from platform config (single source of truth)
+      const messageCost = await platformConfigService.getPrice("MESSAGE")
 
       // Get current total for this customer (for legacy billing table)
       const previousTotal = await this.getCurrentTotalForCustomer(

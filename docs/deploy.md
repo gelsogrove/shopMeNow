@@ -166,6 +166,7 @@ heroku logs -n 200 --app echatbot-app | grep -E "error|Error|500"
   diff /tmp/local_vars.txt /tmp/heroku_vars.txt
   # Se ci sono differenze → AGGIUNGI le mancanti
   ```
+- **Nota CORS**: `CORS_ORIGINS` (o `CORS_ORIGIN`) permette una allowlist extra (comma-separated) valida sia per API che WebSocket. Se vuota usa default: echatbot.ai/backoffice in prod, localhost in dev.
 
 ### TypeScript Enum Traps
 - **Problema**: `source: "FAST_PATH"` ma enum è `"PATTERN" | "KEYWORD" | "LLM_FALLBACK" | "LLM_CONTEXT"`

@@ -87,7 +87,7 @@ describe("Pricing Configuration", () => {
       id: "5b",
       key: "WIDGET_MESSAGE",
       type: "PRICE" as const,
-      value: "0.05",
+      value: "0.005",
       originalValue: null,
       description: "Cost per widget message",
       isActive: true,
@@ -149,10 +149,10 @@ describe("Pricing Configuration", () => {
       await expect(platformConfigService.getPrice("MESSAGE")).resolves.toBe(0.1)
     })
 
-    it("should have widget message cost of $0.05", async () => {
+    it("should have widget message cost of $0.005", async () => {
       await expect(
         platformConfigService.getPrice("WIDGET_MESSAGE")
-      ).resolves.toBe(0.05)
+      ).resolves.toBe(0.005)
     })
 
     it("should have push campaign cost of $1.00", async () => {

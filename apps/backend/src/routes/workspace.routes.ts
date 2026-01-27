@@ -106,10 +106,12 @@ const getCurrentWorkspace: RequestHandler = async (req, res): Promise<void> => {
       description: workspace.description,
       whatsappPhoneNumber: workspace.whatsappPhoneNumber,
       whatsappApiKey: workspace.whatsappApiKey,
+      whatsappAppSecret: workspace.whatsappAppSecret ?? null,
+      whatsappVerifyToken: workspace.whatsappVerifyToken ?? null,
       webhookUrl: workspace.webhookUrl,
-      whatsappWebhookId: undefined, // Removed deprecated webhookSettings
-      whatsappWebhookToken: undefined, // Removed deprecated webhookSettings
-      whatsappWebhookUrl: undefined, // Removed deprecated webhookSettings
+      whatsappWebhookId: workspace.whatsappWebhookId ?? null,
+      whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
+      whatsappWebhookUrl: workspace.whatsappWebhookUrl ?? null,
       notificationEmail: workspace.notificationEmail,
       adminEmail: workspace.adminEmail,
       language: workspace.language,

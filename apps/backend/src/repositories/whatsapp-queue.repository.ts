@@ -275,7 +275,7 @@ export class WhatsAppQueueRepository {
           where: { workspaceId, status: "sent" },
         }),
         this.prisma.whatsAppQueue.count({
-          where: { workspaceId, status: "error" },
+          where: { workspaceId, status: { in: ["error", "failed"] } },
         }),
         this.prisma.whatsAppQueue.count({
           where: { workspaceId },

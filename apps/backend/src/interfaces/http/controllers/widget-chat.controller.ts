@@ -188,7 +188,7 @@ export class WidgetChatController {
         })
       }
 
-      const { visitorId, message, sessionId, language } = validation.data
+      const { visitorId, message, sessionId, language, isPlayground } = validation.data
       
       // 🌍 Language detection priority:
       // 1. Explicit language from widget body (if provided)
@@ -215,7 +215,8 @@ export class WidgetChatController {
         bodyLanguage: language || '(none)',
         acceptLanguageHeader: acceptLanguageHeader || '(none)',
         detectedFromHeader: browserLanguage || '(none)',
-        finalLanguage: requestedLanguage || '(fallback to workspace/customer)'
+        finalLanguage: requestedLanguage || '(fallback to workspace/customer)',
+        isPlayground: isPlayground === true
       })
 
       // Validate visitorId format
@@ -525,13 +526,24 @@ export class WidgetChatController {
         },
       })
 
+      // 🌍 DEBUG: Log language BEFORE calling LLM Router
+      const customerLanguage = requestedLanguage || customer.language || workspace.language || "ENG"
+      logger.info("🌍 Widget calling LLM Router with language", {
+        requestedLanguage,
+        customerLanguage,
+        customerStoredLanguage: customer.language,
+        workspaceLanguage: workspace.language,
+        workspaceId,
+        customerId: customer.id,
+      })
+
       const llmResult = await llmRouterService.routeMessage({
         workspaceId,
         customerId: customer.id,
         conversationId: chatSession.id,
         messageId: `widget-${visitorId}-${Date.now()}`,
         message,
-        customerLanguage: requestedLanguage || customer.language || workspace.language || "ENG",
+        customerLanguage,
         customerName: customer.name,
         isSystemMessage: false,
         channel: "widget", // 🚫 WIDGET CHANNEL - disables personalized greetings
@@ -557,43 +569,42 @@ export class WidgetChatController {
         },
       })
 
-      // 💰 BILLING: Deduct widget message credit ($0.05)
-      // NOTE: Widget billing happens AFTER successful LLM response (like WhatsApp)
-      // Uses SubscriptionBillingService.deductOwnerWidgetMessageCredit()
-      try {
-        if (!workspace.ownerId) {
-          logger.warn(`[WIDGET-BILLING] ⚠️ No owner for workspace ${workspaceId} - skipping billing`)
-        } else {
-          const billingService = new SubscriptionBillingService(prisma)
-          const messageId = `widget-${visitorId}-${Date.now()}`
-          
-          const billingResult = await billingService.deductOwnerWidgetMessageCredit(
-            workspace.ownerId,
-            workspaceId,
-            messageId
-          )
-
-          if (billingResult.success) {
-            logger.info(
-              `[WIDGET-BILLING] 💰 Widget message charged: $0.05 deducted. New balance: $${billingResult.newBalance.toFixed(2)}`
-            )
+      // 💰 BILLING: Deduct widget message credit ($0.005) unless playground
+      if (isPlayground === true) {
+        logger.info("[WIDGET-BILLING] 🧪 Playground mode - skipping billing")
+      } else {
+        try {
+          if (!workspace.ownerId) {
+            logger.warn(`[WIDGET-BILLING] ⚠️ No owner for workspace ${workspaceId} - skipping billing`)
           } else {
-            // ⚠️ CRITICAL: Check if balance below -$10 threshold
-            // If below -$10, we should have blocked earlier, but log error
-            logger.error(
-              `[WIDGET-BILLING] ❌ Failed to deduct widget message credit: ${billingResult.error}`,
-              { workspaceId, ownerId: workspace.ownerId, messageId }
+            const billingService = new SubscriptionBillingService(prisma)
+            const messageId = `widget-${visitorId}-${Date.now()}`
+            
+            const billingResult = await billingService.deductOwnerWidgetMessageCredit(
+              workspace.ownerId,
+              workspaceId,
+              messageId
             )
-            // Don't fail the response - user already got their answer
-            // Just log the billing failure for admin monitoring
+
+            if (billingResult.success) {
+              logger.info(
+                `[WIDGET-BILLING] 💰 Widget message charged: $0.005 deducted. New balance: $${billingResult.newBalance.toFixed(3)}`
+              )
+            } else {
+              logger.error(
+                `[WIDGET-BILLING] ❌ Failed to deduct widget message credit: ${billingResult.error}`,
+                { workspaceId, ownerId: workspace.ownerId, messageId }
+              )
+              // Don't fail the response - user already got their answer
+            }
           }
+        } catch (billingError) {
+          logger.error(
+            `[WIDGET-BILLING] ❌ Widget billing exception:`,
+            billingError
+          )
+          // Don't fail the response - billing failure shouldn't break UX
         }
-      } catch (billingError) {
-        logger.error(
-          `[WIDGET-BILLING] ❌ Widget billing exception:`,
-          billingError
-        )
-        // Don't fail the response - billing failure shouldn't break UX
       }
 
       // Return response directly (immediate delivery, no WhatsApp queue)

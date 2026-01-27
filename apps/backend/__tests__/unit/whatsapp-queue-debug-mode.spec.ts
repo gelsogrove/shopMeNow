@@ -36,6 +36,10 @@ jest.mock("../../src/application/agents/SecurityAgent", () => {
 jest.mock("../../src/application/services/subscription-billing.service", () => {
   return {
     SubscriptionBillingService: jest.fn().mockImplementation(() => ({
+      deductOwnerMessageCredit: jest.fn().mockResolvedValue({
+        success: true,
+        newBalance: 100,
+      }),
       deductMessageCredit: jest.fn().mockResolvedValue({
         success: true,
         newBalance: 100,
@@ -112,7 +116,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       // Should check workspace debugMode
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true, wipMessage: true },
+        select: { debugMode: true, name: true, wipMessage: true, ownerId: true, channelStatus: true },
       })
       
       // Should attempt to find pending messages to send WIP (but none found)
@@ -137,7 +141,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       // Should check debugMode and proceed to look for pending messages
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true, wipMessage: true },
+        select: { debugMode: true, name: true, wipMessage: true, ownerId: true, channelStatus: true },
       })
       
       // Should attempt to find pending messages
@@ -222,7 +226,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       // Verify workspace isolation - correct workspaceId passed
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: workspaceId },
-        select: { debugMode: true, name: true, wipMessage: true },
+        select: { debugMode: true, name: true, wipMessage: true, ownerId: true, channelStatus: true },
       })
     })
   })
@@ -333,7 +337,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       await service.processPendingMessages(workspaceId)
 
       // Billing should NOT be called when debugMode=true
-      expect(billingMock.deductMessageCredit).not.toHaveBeenCalled()
+      expect(billingMock.deductOwnerMessageCredit).not.toHaveBeenCalled()
     })
 
     it("should NOT call billing when no pending messages exist", async () => {
@@ -356,7 +360,7 @@ describe("WhatsApp Queue Debug Mode - Unit Tests", () => {
       await service.processPendingMessages(workspaceId)
 
       // Billing should NOT be called when no messages to process
-      expect(billingMock.deductMessageCredit).not.toHaveBeenCalled()
+      expect(billingMock.deductOwnerMessageCredit).not.toHaveBeenCalled()
     })
 
     it("should call billing ONLY after successful WhatsApp send", async () => {

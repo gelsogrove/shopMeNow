@@ -14,12 +14,12 @@ import crypto from "crypto"
  *
  * @param payload - Raw request body (as object or string)
  * @param signature - Signature from 'x-hub-signature-256' header
- * @param appSecret - WhatsApp App Secret from environment
+ * @param appSecret - WhatsApp App Secret for the channel
  * @returns true if signature is valid, false otherwise
  *
  * @example
  * const signature = req.headers['x-hub-signature-256']
- * const isValid = verifyWhatsAppSignature(req.body, signature, process.env.WHATSAPP_APP_SECRET)
+ * const isValid = verifyWhatsAppSignature(req.body, signature, whatsappSettings.appSecret)
  * if (!isValid) return res.status(403).json({ error: 'Invalid signature' })
  */
 export function verifyWhatsAppSignature(

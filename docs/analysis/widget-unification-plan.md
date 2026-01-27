@@ -134,7 +134,7 @@ Namespace widget storage by workspace:
 2. Namespace widget storage.
 3. Plan UI unification (decide on shared renderer extraction or embedding React in widget).
 
-## New Requirement: Widget message cost = $0.05
+## New Requirement: Widget message cost = $0.005
 ### Impact Summary
 - **FE**: Pricing card on homepage and any billing UI must show widget cost.
 - **BE**: Billing/usage calculation must distinguish widget messages vs WhatsApp messages.
@@ -146,6 +146,6 @@ Namespace widget storage by workspace:
 If widget and WhatsApp share the same price key, usage is misbilled. We need a distinct price key and cost path.
 
 ### Proposed Approach
-- Add new price key: `WIDGET_MESSAGE = 0.05`.
+- Add new price key: `WIDGET_MESSAGE = 0.005`.
 - Track channel on messages (widget vs whatsapp) for billing aggregation.
-- Update pricing UI and homepage to show both (WhatsApp $0.10, Widget $0.05).
+- Update pricing UI and homepage to show both (WhatsApp $0.10, Widget $0.005).

@@ -15,6 +15,7 @@ export class SettingsRepository implements ISettingsRepository {
       id: settingsData.id,
       phoneNumber: settingsData.phoneNumber,
       apiKey: settingsData.apiKey,
+      appSecret: settingsData.appSecret,
       webhookUrl: settingsData.webhookUrl,
       settings: settingsData.settings,
       gdpr: settingsData.gdpr,
@@ -67,6 +68,7 @@ export class SettingsRepository implements ISettingsRepository {
         data: {
           phoneNumber,
           apiKey: data.apiKey || '',
+          appSecret: data.appSecret || undefined,
           webhookUrl: data.webhookUrl,
           webhookId: `webhook-${data.workspaceId}`,
           webhookToken: `token-${Date.now()}`,
@@ -85,6 +87,7 @@ export class SettingsRepository implements ISettingsRepository {
         id: 'temp-id',
         phoneNumber: data.phoneNumber || '',
         apiKey: data.apiKey || '',
+        appSecret: data.appSecret || undefined,
         webhookUrl: data.webhookUrl,
         settings: data.settings || {},
         gdpr: data.gdpr,
@@ -113,6 +116,7 @@ export class SettingsRepository implements ISettingsRepository {
           workspaceId,
           phoneNumber: data.phoneNumber || '',
           apiKey: data.apiKey || '',
+          appSecret: data.appSecret || undefined,
           webhookUrl: data.webhookUrl,
           settings: data.settings,
           gdpr: data.gdpr
@@ -139,6 +143,7 @@ export class SettingsRepository implements ISettingsRepository {
       }
       
       if (data.apiKey !== undefined) updateData.apiKey = data.apiKey;
+      if (data.appSecret !== undefined) updateData.appSecret = data.appSecret;
       if (data.webhookUrl !== undefined) updateData.webhookUrl = data.webhookUrl;
       if (data.settings !== undefined) updateData.settings = data.settings;
       if (data.gdpr !== undefined) updateData.gdpr = data.gdpr;
@@ -170,6 +175,7 @@ export class SettingsRepository implements ISettingsRepository {
         id: 'temp-id',
         phoneNumber: data.phoneNumber || '',
         apiKey: data.apiKey || '',
+        appSecret: data.appSecret || undefined,
         webhookUrl: data.webhookUrl,
         settings: data.settings || {},
         gdpr: data.gdpr,
@@ -274,6 +280,7 @@ export class SettingsRepository implements ISettingsRepository {
         id: 'temp-id',
         phoneNumber: `gdpr-${workspaceId.substring(0, 8)}`,
         apiKey: '',
+        appSecret: undefined,
         webhookUrl: '',
         settings: {},
         gdpr: gdprContent,

@@ -303,10 +303,10 @@ router.get("/default-gdpr", controller.getDefaultGdprContent.bind(controller));
 
 ---
 
-### MEDIUM-003: WhatsApp Webhook HMAC Validation Only
+### MEDIUM-003: WhatsApp Webhook HMAC Validation
 **File**: `whatsapp.routes.ts`  
 **Endpoint**: `POST /api/whatsapp/webhook`  
-**Status**: ✅ Has rate limiting, ⚠️ HMAC validation implementation needs verification
+**Status**: ✅ Rate limiting + HMAC validation enabled (per-channel app secret)
 
 ```typescript
 router.post(
@@ -316,7 +316,7 @@ router.post(
 )
 ```
 
-**Recommendation**: Verify HMAC signature validation is correctly implemented in controller
+**Recommendation**: Ensure each channel has `whatsapp_settings.appSecret` configured (required for signature validation)
 
 ---
 
@@ -537,7 +537,7 @@ router.post(
 
 1. **Token-Based Routes**: Routes using token-based authentication (cart, checkout, public-orders) need proper token validation and rate limiting to prevent abuse.
 
-2. **WhatsApp Webhooks**: HMAC signature verification is currently disabled in `whatsapp-webhook.controller.ts` (dev flow). **TODO (must-do before production)**: re-enable HMAC validation when real WhatsApp integration is live.
+2. **WhatsApp Webhooks**: HMAC signature verification is enabled and uses `whatsapp_settings.appSecret`. Channels without app secret will fail webhook validation.
 
 3. **Multi-tenant Isolation**: All routes handling workspace data MUST include `workspaceValidationMiddleware` or `validateWorkspaceOperation` to prevent cross-tenant data access.
 

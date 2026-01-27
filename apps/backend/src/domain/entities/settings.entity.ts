@@ -8,6 +8,7 @@ export interface SettingsProps {
   id?: string;
   phoneNumber: string;
   apiKey: string;
+  appSecret?: string;
   webhookUrl?: string;
   settings?: Record<string, any>;
   gdpr?: string;
@@ -24,6 +25,7 @@ export class Settings {
   readonly id: string;
   readonly phoneNumber: string;
   readonly apiKey: string;
+  readonly appSecret?: string;
   readonly webhookUrl?: string;
   readonly settings: Record<string, any>;
   readonly gdpr?: string;
@@ -35,6 +37,7 @@ export class Settings {
     this.id = props.id || uuidv4();
     this.phoneNumber = props.phoneNumber;
     this.apiKey = props.apiKey;
+    this.appSecret = props.appSecret;
     this.webhookUrl = props.webhookUrl;
     this.settings = props.settings || {};
     this.gdpr = props.gdpr;

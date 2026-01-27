@@ -10,6 +10,7 @@ interface CreateWorkspaceData {
   channelType?: 'WHATSAPP' | 'WIDGET' // 🆕 Channel type (default: WHATSAPP)
   whatsappPhoneNumber?: string // Required for WHATSAPP channels
   whatsappApiKey?: string
+  whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
   currency?: string
@@ -34,6 +35,8 @@ interface CreateWorkspaceData {
   adminEmail?: string // Admin email from user profile
   allowedExternalLinks?: string[] // Security: allowed domains
   createdBy?: string // User ID who created the workspace
+  enableWhatsapp?: boolean
+  enableWidget?: boolean
 }
 
 interface UpdateWorkspaceData {
@@ -43,6 +46,7 @@ interface UpdateWorkspaceData {
   channelType?: 'WHATSAPP' | 'WIDGET' // 🆕 Channel type
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
   currency?: string
@@ -231,23 +235,37 @@ export const workspaceService = {
 
   async create(data: CreateWorkspaceData) {
     // Extract FAQs to handle separately (Prisma relation)
-    const { faqs, ...workspaceData } = data
+    const { faqs, whatsappAppSecret, ...workspaceData } = data
+
+    // Enforce channel-specific flags
+    const channelType = workspaceData.channelType || "WHATSAPP"
+    if (channelType === "WIDGET") {
+      workspaceData.enableWidget = true
+      workspaceData.enableWhatsapp = false
+      workspaceData.sellsProductsAndServices = false
+      workspaceData.hasSalesAgents = false
+      workspaceData.whatsappPhoneNumber = null
+    } else {
+      workspaceData.enableWhatsapp = true
+      workspaceData.enableWidget = false
+    }
+
+    if (!workspaceData.operatorContactMethod) {
+      workspaceData.operatorContactMethod = "email"
+    }
+
+    if (!workspaceData.operatorEmail && workspaceData.adminEmail) {
+      workspaceData.operatorEmail = workspaceData.adminEmail
+    }
+
+    if (channelType === "WHATSAPP" && !workspaceData.whatsappPhoneNumber) {
+      throw new Error("WhatsApp phone number is required for WHATSAPP channels")
+    }
     
-    return prisma.workspace.create({
+    const created = await prisma.workspace.create({
       data: {
         ...workspaceData,
         slug: data.name.toLowerCase().replace(/\s+/g, "-"),
-        // Create FAQs as nested relation (if provided)
-        ...(faqs && faqs.length > 0 && {
-          faqs: {
-            createMany: {
-              data: faqs.map((faq) => ({
-                question: faq.question,
-                answer: faq.answer,
-              })),
-            },
-          },
-        }),
       },
       select: {
         id: true,
@@ -278,6 +296,21 @@ export const workspaceService = {
         widgetIcon: true,
       },
     })
+
+    if (faqs && faqs.length > 0) {
+      const filteredFaqs = faqs.filter((faq) => faq.answer && faq.answer.trim() !== "")
+      if (filteredFaqs.length > 0) {
+        await prisma.fAQ.createMany({
+          data: filteredFaqs.map((faq) => ({
+            question: faq.question,
+            answer: faq.answer,
+            workspaceId: created.id,
+          })),
+        })
+      }
+    }
+
+    return created
   },
 
   async update(id: string, data: UpdateWorkspaceData) {
@@ -285,6 +318,8 @@ export const workspaceService = {
     const { 
       id: _id,  // Remove id if present (shouldn't update primary key)
       adminEmail, // Extract adminEmail separately (goes to WhatsappSettings)
+      whatsappAppSecret,
+      whatsappVerifyToken,
       ...workspaceData 
     } = data as UpdateWorkspaceData & {
       id?: string  // Frontend might send id but we shouldn't update it
@@ -310,8 +345,69 @@ export const workspaceService = {
     
     logger.info(
       "Final workspaceData for Prisma:",
-      JSON.stringify(workspaceData, null, 2)
+      JSON.stringify(
+        {
+          ...workspaceData,
+          whatsappAppSecret: whatsappAppSecret ? "****" : undefined,
+        },
+        null,
+        2
+      )
     )
+
+    // 🛑 FREE PLAN GUARD: max 1 channel (WhatsApp OR Widget) for FREE_TRIAL owners
+    const existingWorkspace = await prisma.workspace.findUnique({
+      where: { id },
+      select: {
+        ownerId: true,
+        enableWhatsapp: true,
+        enableWidget: true,
+        deletedAt: true,
+      },
+    })
+
+    if (existingWorkspace?.ownerId) {
+      const owner = await prisma.user.findUnique({
+        where: { id: existingWorkspace.ownerId },
+        select: { planType: true },
+      })
+
+      const ownerPlan = owner?.planType || "FREE_TRIAL"
+      if (ownerPlan === "FREE_TRIAL") {
+        const newEnableWhatsapp =
+          workspaceData.enableWhatsapp ?? existingWorkspace.enableWhatsapp ?? false
+        const newEnableWidget =
+          workspaceData.enableWidget ?? existingWorkspace.enableWidget ?? false
+
+        const resultingChannelCount =
+          (newEnableWhatsapp ? 1 : 0) + (newEnableWidget ? 1 : 0)
+
+        // Block if trying to enable BOTH channels on same workspace
+        if (resultingChannelCount > 1) {
+          const err: any = new Error("CHANNEL_LIMIT_EXCEEDED")
+          err.statusCode = 403
+          throw err
+        }
+
+        // Block if another workspace already has an active channel
+        if (resultingChannelCount === 1) {
+          const otherActiveChannels = await prisma.workspace.count({
+            where: {
+              ownerId: existingWorkspace.ownerId,
+              deletedAt: null,
+              id: { not: id },
+              OR: [{ enableWhatsapp: true }, { enableWidget: true }],
+            },
+          })
+
+          if (otherActiveChannels >= 1) {
+            const err: any = new Error("CHANNEL_LIMIT_EXCEEDED")
+            err.statusCode = 403
+            throw err
+          }
+        }
+      }
+    }
 
     // Update workspace data
     const updatedWorkspace = await prisma.workspace.update({
@@ -377,8 +473,8 @@ export const workspaceService = {
     logger.info("channelStatus AFTER UPDATE:", updatedWorkspace.channelStatus, "type:", typeof updatedWorkspace.channelStatus)
     logger.info("Updated workspace:", JSON.stringify(updatedWorkspace, null, 2))
 
-    // Update adminEmail in WhatsappSettings if provided
-    if (adminEmail !== undefined) {
+    // Update adminEmail/appSecret in WhatsappSettings if provided
+    if (adminEmail !== undefined || whatsappAppSecret !== undefined || whatsappVerifyToken !== undefined) {
       await prisma.whatsappSettings.upsert({
         where: {
           workspaceId: id,
@@ -388,11 +484,14 @@ export const workspaceService = {
           phoneNumber: updatedWorkspace.whatsappPhoneNumber || "",
           apiKey: updatedWorkspace.whatsappApiKey || "",
           webhookId: `webhook-${id}`,
-          webhookToken: `token-${Date.now()}`,
-          adminEmail: adminEmail,
+          webhookToken: whatsappVerifyToken || `token-${Date.now()}`,
+          ...(adminEmail !== undefined ? { adminEmail } : {}),
+          ...(whatsappAppSecret !== undefined ? { appSecret: whatsappAppSecret } : {}),
         },
         update: {
-          adminEmail: adminEmail,
+          ...(adminEmail !== undefined ? { adminEmail } : {}),
+          ...(whatsappAppSecret !== undefined ? { appSecret: whatsappAppSecret } : {}),
+          ...(whatsappVerifyToken !== undefined ? { webhookToken: whatsappVerifyToken } : {}),
         },
       })
     }
@@ -407,6 +506,7 @@ export const workspaceService = {
       adminEmail: whatsappSettings?.adminEmail || null,
       whatsappWebhookId: whatsappSettings?.webhookId || null,
       whatsappWebhookToken: whatsappSettings?.webhookToken || null,
+      whatsappAppSecret: whatsappSettings?.appSecret || null,
     }
   },
 

@@ -62,7 +62,7 @@ export const pricingConfigData = [
   {
     type: "USAGE" as const,
     key: "WIDGET_MESSAGE",
-    value: 0.05,
+    value: 0.005,
     description: "Cost per web widget message (site chat)",
     isActive: true,
   },

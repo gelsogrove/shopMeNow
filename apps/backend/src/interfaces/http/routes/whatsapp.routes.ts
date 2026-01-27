@@ -29,7 +29,7 @@ const sendController = new WhatsAppSendController()
  * /api/whatsapp/webhook:
  *   get:
  *     summary: WhatsApp webhook verification endpoint
- *     description: Meta uses this endpoint to verify webhook ownership. Returns the channel value if token matches.
+ *     description: Meta uses this endpoint to verify webhook ownership. Returns hub.challenge if token matches.
  *     tags: [WhatsApp]
  *     parameters:
  *       - in: query
@@ -45,14 +45,14 @@ const sendController = new WhatsAppSendController()
  *         required: true
  *         description: Verification token (must match WHATSAPP_VERIFY_TOKEN)
  *       - in: query
- *         name: hub.channel
+ *         name: hub.challenge
  *         schema:
  *           type: string
  *         required: true
- *         description: Channel value to return
+ *         description: Challenge value to return
  *     responses:
  *       200:
- *         description: Verification successful, returns channel
+ *         description: Verification successful, returns challenge
  *       403:
  *         description: Invalid verification token
  */

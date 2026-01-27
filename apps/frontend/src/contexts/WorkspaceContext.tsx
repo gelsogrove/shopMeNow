@@ -19,6 +19,7 @@ export interface Workspace {
   updatedAt: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
   whatsappWebhookId?: string

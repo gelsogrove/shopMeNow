@@ -2,6 +2,7 @@ import { CampaignFrequency, PrismaClient } from "@echatbot/database"
 import * as cron from "node-cron"
 import { CampaignTokenService } from "../application/services/campaign-token.service"
 import { CampaignService } from "../application/services/campaign.service"
+import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
 import logger from "../utils/logger"
 import messageSendingService from "./message-sending.service"
 
@@ -17,20 +18,22 @@ export class CampaignScheduler {
   constructor(private prisma: PrismaClient) {
     this.campaignService = new CampaignService(prisma)
     this.tokenService = new CampaignTokenService(prisma)
+    this.billingService = new SubscriptionBillingService(prisma)
   }
+  private billingService: SubscriptionBillingService
 
   /**
    * Start the campaign scheduler
-   * Runs every day at 10:00 AM
+   * Runs every day at 11:30 AM
    */
   start(): void {
-    // Run every day at 10:00 AM
-    this.cronJob = cron.schedule("0 10 * * *", async () => {
-      logger.info("🚀 [CAMPAIGN SCHEDULER] Starting daily campaign check...")
+    // Run every day at 11:30 AM
+    this.cronJob = cron.schedule("30 11 * * *", async () => {
+      logger.info("🚀 [CAMPAIGN SCHEDULER] Starting daily campaign check (11:30)...")
       await this.processCampaigns()
     })
 
-    logger.info("✅ [CAMPAIGN SCHEDULER] Started - runs daily at 10:00 AM")
+    logger.info("✅ [CAMPAIGN SCHEDULER] Started - runs daily at 11:30 AM")
   }
 
   /**
@@ -56,6 +59,39 @@ export class CampaignScheduler {
 
       for (const campaign of activeCampaigns) {
         try {
+          // 💰 Guard: deactivate campaign if owner credit/subscription not sufficient
+          const workspace = await this.prisma.workspace.findUnique({
+            where: { id: campaign.workspaceId },
+            select: { ownerId: true },
+          })
+
+          if (workspace?.ownerId) {
+            const owner = await this.prisma.user.findUnique({
+              where: { id: workspace.ownerId },
+              select: { creditBalance: true, subscriptionStatus: true },
+            })
+
+            const pushCost = await this.billingService.getOwnerOperationCost(
+              workspace.ownerId,
+              "push"
+            )
+
+            const balance = owner ? Number(owner.creditBalance) : 0
+            const subscriptionStatus = owner?.subscriptionStatus || "ACTIVE"
+
+            if (subscriptionStatus !== "ACTIVE" || balance < pushCost) {
+              await this.prisma.campaign.update({
+                where: { id: campaign.id },
+                data: { isActive: false },
+              })
+              logger.warn(
+                `[CAMPAIGN SCHEDULER] 🚫 Deactivated campaign ${campaign.id} for insufficient funds/subscription`,
+                { workspaceId: campaign.workspaceId, balance, pushCost, subscriptionStatus }
+              )
+              continue
+            }
+          }
+
           await this.processSingleCampaign(campaign)
         } catch (error) {
           logger.error(

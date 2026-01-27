@@ -47,6 +47,7 @@ jest.mock("../../../src/application/agents/SecurityAgent", () => ({
 // Mock subscription billing service
 jest.mock("../../../src/application/services/subscription-billing.service", () => ({
   SubscriptionBillingService: jest.fn().mockImplementation(() => ({
+    deductOwnerMessageCredit: jest.fn().mockResolvedValue({ success: true, newBalance: 100 }),
     deductMessageCredit: jest.fn().mockResolvedValue({ success: true, newBalance: 100 }),
   })),
 }))
