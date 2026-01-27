@@ -69,6 +69,14 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - Integration tests require backend running (`npm run dev`)
 - If tests fail: verify backend (port 3001), database, seed
 
+### 7A. **Test Policy - Tests Are Specification**
+
+- Tests define expected behavior. Code must follow tests, not the other way around.
+- Do NOT change tests without explicit approval from Andrea.
+- If behavior must change, ask first, then update tests and docs together.
+- If a test fails, fix the implementation first. Only change tests if they are wrong and approved.
+- When tests are changed with approval, include the approval note in the PR description.
+
 ### 8. **WhatsApp Testing Policy**
 
 - **NEVER** test features directly via WhatsApp during development

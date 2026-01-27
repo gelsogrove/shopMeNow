@@ -47,6 +47,7 @@ export async function sendToWhatsApp(
       select: {
         whatsappApiKey: true,
         whatsappPhoneNumber: true,
+        whatsappPhoneNumberId: true,
       },
     })
 
@@ -61,7 +62,14 @@ export async function sendToWhatsApp(
 
     // 3. Prepare WhatsApp API request
     // TODO: Will be replaced with new WhatsApp library
-    const apiUrl = `https://graph.facebook.com/v18.0/${workspace.whatsappPhoneNumber}/messages`
+    const senderId = workspace.whatsappPhoneNumberId || workspace.whatsappPhoneNumber
+    if (!workspace.whatsappPhoneNumberId) {
+      logger.warn("[WhatsApp API] Missing phoneNumberId - falling back to phoneNumber", {
+        workspaceId,
+        phoneNumber: workspace.whatsappPhoneNumber,
+      })
+    }
+    const apiUrl = `https://graph.facebook.com/v18.0/${senderId}/messages`
 
     const payload = {
       messaging_product: "whatsapp",

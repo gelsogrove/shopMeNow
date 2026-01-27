@@ -78,6 +78,82 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     expect(sentCall?.[0].data.status).toBe('sent')
   })
 
+  it('uses phoneNumberId in Graph API URL (Meta expects ID, not display number)', async () => {
+    // Problem: sending to /{phoneNumber} breaks in production because Meta expects phoneNumberId.
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      phoneNumberId: '123456789012345',
+      apiKey: 'token',
+    })
+
+    workspaceModel.findMany.mockResolvedValue([
+      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
+    ])
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'q1',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+39000000000',
+        messageContent: 'hello world',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: undefined,
+      },
+    ])
+
+    queueModel.update.mockResolvedValue({})
+
+    ;(global as any).fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: 'wa-123' }] }),
+    })
+
+    await whatsappChannelQueueJob()
+
+    const [url] = (fetch as jest.Mock).mock.calls[0]
+    expect(url).toContain('/v18.0/123456789012345/messages')
+  })
+
+  it('falls back to phoneNumber when phoneNumberId is missing', async () => {
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      apiKey: 'token',
+    })
+
+    workspaceModel.findMany.mockResolvedValue([
+      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
+    ])
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'q1',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+39000000000',
+        messageContent: 'hello world',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: undefined,
+      },
+    ])
+
+    queueModel.update.mockResolvedValue({})
+
+    ;(global as any).fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: 'wa-123' }] }),
+    })
+
+    await whatsappChannelQueueJob()
+
+    const [url] = (fetch as jest.Mock).mock.calls[0]
+    expect(url).toContain('/v18.0/19999999999/messages')
+  })
+
   it('marks queue as error when credit or subscription is missing', async () => {
     jest.spyOn(BillingService.prototype, 'hasOwnerCredit').mockResolvedValue(false)
 

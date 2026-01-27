@@ -17,6 +17,12 @@ import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { buildPhoneVariants } from "../../../utils/phone"
 import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 
+const MINUTE_MS = 60_000
+const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
+  capacity: limitPerMin + burst,
+  refillPerMs: limitPerMin / MINUTE_MS,
+})
+
 /**
  * 🔒 CONCURRENCY CONTROL: Customer-level message processing locks
  * Prevents race conditions when customer sends multiple messages rapidly
@@ -426,6 +432,34 @@ export class WhatsAppWebhookController {
       }
 
       workspaceId = whatsappSettings.workspaceId
+
+      // 🔁 Deduplicate inbound webhook events (Meta retries can send same message multiple times)
+      if (!isPlayground && whatsappMessageId) {
+        try {
+          const prismaAny = prisma as any
+          await prismaAny.whatsappWebhookEvent.create({
+            data: {
+              workspaceId,
+              externalMessageId: whatsappMessageId,
+              channel: "whatsapp",
+            },
+          })
+        } catch (error: any) {
+          if (error?.code === "P2002") {
+            logger.info("[WEBHOOK] 🔁 Duplicate message ignored", {
+              webhookId,
+              workspaceId,
+              whatsappMessageId,
+            })
+            res.status(200).json({
+              status: "duplicate",
+              messageId: whatsappMessageId,
+            })
+            return
+          }
+          throw error
+        }
+      }
 
       // Anti-replay: reject stale messages (>5 minutes) when timestamp present
       if (messageTimestamp) {
@@ -952,38 +986,70 @@ export class WhatsAppWebhookController {
         customerName: customer.name,
       })
 
-      // 🚦 RATE LIMIT CHECK: Max 15 messages per minute per customer
-      const customerRateLimitKey = `customer:${customer.id}`
-      if (!whatsappMessageRateLimiter.isAllowed(customerRateLimitKey)) {
-        const timeToReset = whatsappMessageRateLimiter.getTimeToReset(customerRateLimitKey)
-        logger.warn("[WEBHOOK] 🚫 Rate limit exceeded for customer", {
-          customerId: customer.id,
-          timeToResetMs: timeToReset,
-        })
-        res.status(429).json({
-          status: "rate_limited",
-          code: "RATE_LIMIT_EXCEEDED",
-          message: "Too many messages. Please wait before sending more.",
-          retryAfterMs: timeToReset,
-        })
-        return
-      }
+      if (!isPlayground) {
+        // 🚦 RATE LIMIT CHECK (token bucket): prevent abuse but allow bursts
+        const [
+          customerPerMin,
+          customerBurst,
+          workspacePerMin,
+          workspaceBurst,
+        ] = await Promise.all([
+          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_CUSTOMER_PER_MIN"),
+          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_CUSTOMER_BURST"),
+          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_WORKSPACE_PER_MIN"),
+          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_WORKSPACE_BURST"),
+        ])
 
-      // 🚦 RATE LIMIT CHECK: Max 100 messages per minute per workspace
-      const workspaceRateLimitKey = `workspace:${customer.workspaceId}`
-      if (!whatsappWorkspaceRateLimiter.isAllowed(workspaceRateLimitKey)) {
-        const timeToReset = whatsappWorkspaceRateLimiter.getTimeToReset(workspaceRateLimitKey)
-        logger.warn("[WEBHOOK] 🚫 Rate limit exceeded for workspace", {
-          workspaceId: customer.workspaceId,
-          timeToResetMs: timeToReset,
-        })
-        res.status(429).json({
-          status: "rate_limited",
-          code: "WORKSPACE_RATE_LIMIT_EXCEEDED",
-          message: "Too many messages in this channel. Please wait.",
-          retryAfterMs: timeToReset,
-        })
-        return
+        const customerRateLimitKey = `customer:${customer.id}`
+        const customerLimiterConfig = buildTokenBucketConfig(
+          customerPerMin,
+          customerBurst
+        )
+        if (!whatsappMessageRateLimiter.isAllowed(customerRateLimitKey, customerLimiterConfig)) {
+          const timeToReset = whatsappMessageRateLimiter.getTimeToReset(
+            customerRateLimitKey,
+            customerLimiterConfig
+          )
+          logger.warn("[WEBHOOK] 🚫 Rate limit exceeded for customer", {
+            customerId: customer.id,
+            timeToResetMs: timeToReset,
+            limitPerMin: customerPerMin,
+          })
+          // ✅ Return 200 to prevent Meta retries (duplicates)
+          res.status(200).json({
+            status: "rate_limited",
+            code: "RATE_LIMIT_EXCEEDED",
+            message: "Too many messages. Please wait before sending more.",
+            retryAfterMs: timeToReset,
+          })
+          return
+        }
+
+        // 🚦 RATE LIMIT CHECK: Workspace-wide cap (token bucket)
+        const workspaceRateLimitKey = `workspace:${customer.workspaceId}`
+        const workspaceLimiterConfig = buildTokenBucketConfig(
+          workspacePerMin,
+          workspaceBurst
+        )
+        if (!whatsappWorkspaceRateLimiter.isAllowed(workspaceRateLimitKey, workspaceLimiterConfig)) {
+          const timeToReset = whatsappWorkspaceRateLimiter.getTimeToReset(
+            workspaceRateLimitKey,
+            workspaceLimiterConfig
+          )
+          logger.warn("[WEBHOOK] 🚫 Rate limit exceeded for workspace", {
+            workspaceId: customer.workspaceId,
+            timeToResetMs: timeToReset,
+            limitPerMin: workspacePerMin,
+          })
+          // ✅ Return 200 to prevent Meta retries (duplicates)
+          res.status(200).json({
+            status: "rate_limited",
+            code: "WORKSPACE_RATE_LIMIT_EXCEEDED",
+            message: "Too many messages in this channel. Please wait.",
+            retryAfterMs: timeToReset,
+          })
+          return
+        }
       }
 
       // 🆕 Feature 174: Removed 5-message limit for unregistered users - they can chat freely

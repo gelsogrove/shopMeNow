@@ -328,6 +328,22 @@ model WhatsAppQueue {
   @@map("whatsapp_queue")
 }
 
+// 🔐 WhatsApp inbound webhook de-duplication (prevents Meta retry duplicates)
+model WhatsappWebhookEvent {
+  id                String   @id @default(cuid())
+  workspaceId        String
+  externalMessageId  String
+  channel            String   @default("whatsapp") // "whatsapp" | "widget" (future)
+  receivedAt         DateTime @default(now())
+
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, channel, externalMessageId])
+  @@index([workspaceId])
+  @@index([receivedAt])
+  @@map("whatsapp_webhook_events")
+}
+
 model Customers {
   id                            String                 @id @default(uuid())
   name                          String

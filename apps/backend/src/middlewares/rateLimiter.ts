@@ -78,12 +78,100 @@ class RateLimiter {
   }
 }
 
+interface TokenBucketConfig {
+  capacity: number
+  refillPerMs: number
+}
+
+interface TokenBucketEntry extends TokenBucketConfig {
+  tokens: number
+  lastRefill: number
+}
+
+/**
+ * Token bucket limiter (supports bursts while enforcing average rate).
+ */
+class TokenBucketRateLimiter {
+  private buckets = new Map<string, TokenBucketEntry>()
+
+  isAllowed(identifier: string, config: TokenBucketConfig): boolean {
+    const now = Date.now()
+    const entry = this.getOrCreateEntry(identifier, config, now)
+
+    // Refill tokens based on elapsed time
+    const elapsed = now - entry.lastRefill
+    if (elapsed > 0) {
+      const refill = elapsed * entry.refillPerMs
+      entry.tokens = Math.min(entry.capacity, entry.tokens + refill)
+      entry.lastRefill = now
+    }
+
+    if (entry.tokens < 1) {
+      return false
+    }
+
+    entry.tokens -= 1
+    return true
+  }
+
+  getTimeToReset(identifier: string, config: TokenBucketConfig): number {
+    const now = Date.now()
+    const entry = this.getOrCreateEntry(identifier, config, now)
+
+    // Already has a token available
+    if (entry.tokens >= 1) {
+      return 0
+    }
+
+    if (entry.refillPerMs <= 0) {
+      return 60000
+    }
+
+    const missing = 1 - entry.tokens
+    return Math.ceil(missing / entry.refillPerMs)
+  }
+
+  private getOrCreateEntry(
+    identifier: string,
+    config: TokenBucketConfig,
+    now: number
+  ): TokenBucketEntry {
+    const existing = this.buckets.get(identifier)
+
+    if (!existing) {
+      const entry: TokenBucketEntry = {
+        capacity: config.capacity,
+        refillPerMs: config.refillPerMs,
+        tokens: config.capacity,
+        lastRefill: now,
+      }
+      this.buckets.set(identifier, entry)
+      return entry
+    }
+
+    // If config changed, reset the bucket to new limits
+    if (
+      existing.capacity !== config.capacity ||
+      existing.refillPerMs !== config.refillPerMs
+    ) {
+      const entry: TokenBucketEntry = {
+        capacity: config.capacity,
+        refillPerMs: config.refillPerMs,
+        tokens: Math.min(existing.tokens, config.capacity),
+        lastRefill: now,
+      }
+      this.buckets.set(identifier, entry)
+      return entry
+    }
+
+    return existing
+  }
+}
+
 // Rate limiter for /chat/recent endpoint: max 50 requests per 10 seconds per IP
 export const recentChatsRateLimiter = new RateLimiter(10000, 50)
 
-// Rate limiter for WhatsApp messages: max 15 messages per minute per customer
-// This prevents abuse and protects the system from message flooding
-export const whatsappMessageRateLimiter = new RateLimiter(60000, 15)
-
-// Rate limiter for WhatsApp messages per workspace: max 100 messages per minute
-export const whatsappWorkspaceRateLimiter = new RateLimiter(60000, 100)
+// Token bucket limiters for WhatsApp inbound traffic (configurable via PlatformConfig)
+export const whatsappMessageRateLimiter = new TokenBucketRateLimiter()
+export const whatsappWorkspaceRateLimiter = new TokenBucketRateLimiter()
+export const whatsappIpRateLimiter = new TokenBucketRateLimiter()

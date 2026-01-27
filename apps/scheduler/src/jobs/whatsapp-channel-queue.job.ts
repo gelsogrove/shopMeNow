@@ -132,7 +132,16 @@ interface WhatsAppSendParams {
 
 async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ success: boolean; error?: string; messageId?: string }> {
   const { config, to, message } = params
-  const apiUrl = `https://graph.facebook.com/v18.0/${config.phoneNumber}/messages`
+  // 🔑 WhatsApp Cloud API expects PHONE NUMBER ID, not the display phone number.
+  // Fallback to phoneNumber only to avoid breaking legacy configs.
+  const senderId = config.phoneNumberId || config.phoneNumber
+  if (!config.phoneNumberId) {
+    logger.warn('[WhatsApp Queue] Missing phoneNumberId - falling back to phoneNumber', {
+      workspaceId: config.workspaceId,
+      phoneNumber: config.phoneNumber,
+    })
+  }
+  const apiUrl = `https://graph.facebook.com/v18.0/${senderId}/messages`
 
   const attemptSend = async (): Promise<{ success: boolean; status?: number; error?: string; messageId?: string }> => {
     const response = await fetch(apiUrl, {

@@ -3,6 +3,7 @@
 ## Quick Links
 
 - [PRD.md](PRD.md) - Product Requirements Document (specifica completa)
+- [testing-policy.md](testing-policy.md) - Tests are specification; changes require approval
 
 ---
 

@@ -54,7 +54,6 @@ export class WorkspaceController {
         webhookUrl: workspace.webhookUrl,
         whatsappWebhookId: workspace.whatsappWebhookId ?? null,
         whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
-        whatsappWebhookUrl: workspace.whatsappWebhookUrl ?? null,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
         language: workspace.language,
@@ -137,7 +136,6 @@ export class WorkspaceController {
           webhookUrl: workspace.webhookUrl,
           whatsappWebhookId: workspace.whatsappWebhookId ?? null,
           whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
-          whatsappWebhookUrl: workspace.whatsappWebhookUrl ?? null,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
           language: workspace.language,
