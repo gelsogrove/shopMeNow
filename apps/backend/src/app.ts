@@ -110,9 +110,13 @@ const corsOptions: cors.CorsOptions = {
       process.env.NODE_ENV === "production"
         ? [
             process.env.FRONTEND_URL || "https://echatbot.ai",
+            "https://echatbot.ai",
             "https://www.echatbot.ai",
+            "https://api.echatbot.ai",
             process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
+            "https://backoffice.echatbot.ai",
             "https://echatbot-backoffice-3497e777ec08.herokuapp.com",
+            "https://echatbot-app-1cba28556df2.herokuapp.com",
           ]
         : [
             "http://localhost:3000",

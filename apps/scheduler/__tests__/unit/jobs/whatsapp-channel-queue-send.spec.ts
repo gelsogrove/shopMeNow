@@ -15,6 +15,7 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
   let billingSpy: jest.SpyInstance
   let workspaceModel: any
   let queueModel: any
+  let conversationModel: any
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -27,8 +28,10 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
 
     workspaceModel = { findMany: jest.fn() }
     queueModel = { findMany: jest.fn(), update: jest.fn() }
+    conversationModel = { findUnique: jest.fn(), update: jest.fn() }
     ;(prisma as any).workspace = workspaceModel
     ;(prisma as any).whatsAppQueue = queueModel
+    ;(prisma as any).conversationMessage = conversationModel
   })
 
   afterEach(() => {
@@ -147,5 +150,82 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     expect(queueModel.update).toHaveBeenCalled()
     const errorCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'error')
     expect(errorCall?.[0].data.status).toBe('error')
+  })
+
+  it('sends ONLY WIP messages when channelStatus is false', async () => {
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      apiKey: 'token',
+    })
+
+    workspaceModel.findMany.mockResolvedValue([
+      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: false, debugMode: false },
+    ])
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'msg-wip',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+39000000000',
+        messageContent: 'Maintenance message',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: 'conv-1',
+      },
+    ])
+
+    conversationModel.findUnique.mockResolvedValue({
+      debugInfo: JSON.stringify({ channelDisabled: true }),
+    })
+    conversationModel.update.mockResolvedValue({})
+    queueModel.update.mockResolvedValue({})
+
+    ;(global as any).fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ messages: [{ id: 'wa-456' }] }),
+    })
+
+    await whatsappChannelQueueJob()
+
+    const sentCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'sent')
+    expect(sentCall?.[0].data.status).toBe('sent')
+    expect(billingSpy).not.toHaveBeenCalled()
+  })
+
+  it('skips non-WIP messages when channelStatus is false', async () => {
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      apiKey: 'token',
+    })
+
+    workspaceModel.findMany.mockResolvedValue([
+      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: false, debugMode: false },
+    ])
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'msg-normal',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+39000000000',
+        messageContent: 'Hello',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: 'conv-2',
+      },
+    ])
+
+    conversationModel.findUnique.mockResolvedValue({
+      debugInfo: JSON.stringify({ channelDisabled: false }),
+    })
+
+    await whatsappChannelQueueJob()
+
+    expect(queueModel.update).not.toHaveBeenCalled()
+    expect(billingSpy).not.toHaveBeenCalled()
+    expect((global as any).fetch).not.toHaveBeenCalled()
   })
 })
