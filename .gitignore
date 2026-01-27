@@ -72,6 +72,7 @@ lerna-debug.log*
 browser-tools-mcp/ 
 .specstory/
 .cursor/
+dump/
 
 # Uploaded files
 apps/backend/uploads/

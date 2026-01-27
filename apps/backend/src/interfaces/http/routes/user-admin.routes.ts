@@ -182,7 +182,6 @@ router.get(
           description: true,
           url: true,
           logoUrl: true,
-          whatsappPhoneNumber: true,
           debugMode: true,
           channelStatus: true,
           deletedAt: true,
@@ -199,6 +198,11 @@ router.get(
               lastName: true,
               status: true, // USER_STATUS: ACTIVE, INACTIVE, etc.
             }
+          },
+          whatsappSettings: {
+            select: {
+              phoneNumber: true,
+            }
           }
         },
         orderBy: {
@@ -206,11 +210,18 @@ router.get(
         }
       })
 
-      // DEBUG: Verifica logoUrl
-      logger.info(`📸 Logos debug: ${workspaces.map(w => `${w.name}: ${w.logoUrl || 'NULL'}`).join(', ')}`)
+      // Map workspaces to include whatsappPhoneNumber from whatsappSettings
+      const workspacesWithPhone = workspaces.map(w => ({
+        ...w,
+        whatsappPhoneNumber: w.whatsappSettings?.phoneNumber || null,
+        whatsappSettings: undefined, // Remove nested object from response
+      }))
 
-      logger.info(`✅ Admin backoffice: returning ${workspaces.length} workspaces`)
-      res.json(workspaces)
+      // DEBUG: Verifica logoUrl
+      logger.info(`📸 Logos debug: ${workspacesWithPhone.map(w => `${w.name}: ${w.logoUrl || 'NULL'}`).join(', ')}`)
+
+      logger.info(`✅ Admin backoffice: returning ${workspacesWithPhone.length} workspaces`)
+      res.json(workspacesWithPhone)
     } catch (error: any) {
       logger.error("❌ Error fetching admin workspaces:", error)
       res.status(500).json({ error: "Failed to fetch workspaces" })
