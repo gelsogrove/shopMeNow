@@ -218,8 +218,60 @@ export class OAuthController {
           return
         }
 
-        // Check if 2FA is enabled
+        // Check if 2FA is enabled (BUT skip if Platform Admin or Developer User)
         if (!existingUser.twoFactorEnabled || !existingUser.twoFactorSecret) {
+          // 🔧 SKIP 2FA SETUP for Platform Admins and Developer Users (same as login check)
+          if (skip2FA) {
+            logger.info(`🔧 [OAuth Google] User ${email} has no 2FA but SKIPPING setup (isPlatformAdmin=${existingUser.isPlatformAdmin}, isDeveloperUser=${existingUser.isDeveloperUser})`)
+            
+            // 🕐 Update lastLogin timestamp
+            await prisma.user.update({
+              where: { id: existingUser.id },
+              data: { lastLogin: new Date() },
+            })
+            logger.info(`🕐 [OAuth Google] Updated lastLogin for ${email}`)
+            
+            // Create session immediately (no 2FA required, no setup required)
+            const sessionId = await this.adminSessionService.createSession(
+              existingUser.id,
+              null,
+              ipAddress,
+              userAgent
+            )
+            
+            const token = this.generateToken(existingUser)
+            
+            await logAuthAttempt({
+              userId: existingUser.id,
+              email: existingUser.email,
+              attemptType: 'oauth',
+              success: true,
+              ipAddress,
+              userAgent,
+              metadata: { provider: 'google', action: 'login_skip_2fa_setup' },
+            })
+            
+            // Return full login response (no 2FA needed, no setup needed)
+            res.status(200).json({
+              sessionId,
+              token,
+              user: {
+                id: existingUser.id,
+                email: existingUser.email,
+                firstName: existingUser.firstName,
+                lastName: existingUser.lastName,
+                role: existingUser.role,
+                isPlatformAdmin: existingUser.isPlatformAdmin,
+                isDeveloperUser: existingUser.isDeveloperUser,
+                authProvider: existingUser.authProvider || 'google',
+                profilePicture: existingUser.profilePicture,
+              },
+              provider: 'google',
+              message: 'Login successful (2FA not required for admins/developers)',
+            })
+            return
+          }
+          
           logger.warn(`⚠️ [OAuth Google] User ${email} exists but 2FA not configured`)
           
           // USER ALREADY EXISTS BUT 2FA NOT COMPLETED
