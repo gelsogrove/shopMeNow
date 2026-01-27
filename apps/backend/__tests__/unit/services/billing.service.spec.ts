@@ -45,11 +45,11 @@ const mockPrisma = {
   }),
 }
 
-// Mock PricingRepository
-jest.mock("../../../src/repositories/pricing.repository", () => ({
-  PricingRepository: jest.fn().mockImplementation(() => ({
-    getValue: jest.fn().mockResolvedValue(0.10),
-  })),
+// Mock PlatformConfigService
+jest.mock("../../../src/services/platform-config.service", () => ({
+  platformConfigService: {
+    getPrice: jest.fn().mockResolvedValue(0.10),
+  },
 }))
 
 describe("Billing Service - Feature 198 Owner-Based Billing", () => {
