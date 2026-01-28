@@ -20,6 +20,7 @@ export class Product {
   certifications: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
   transportType: string
   region: string | null // ✅ Feature 123 - Geographic region (Campania, Puglia, etc.)
+  link: string | null // ✅ Feature 134 - External product link (max 120 chars)
   createdAt: Date
   updatedAt: Date
   category?: Category
@@ -47,6 +48,7 @@ export class Product {
     this.certifications = data.certifications || []
     this.transportType = data.transportType || "Temperatura ambiente"
     this.region = data.region || null // ✅ Feature 123 - Geographic region
+    this.link = data.link || null // ✅ Feature 134 - External product link
     this.createdAt = data.createdAt || new Date()
     this.updatedAt = data.updatedAt || new Date()
     this.category = data.category
