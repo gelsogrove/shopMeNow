@@ -111,7 +111,8 @@ export function WhatsAppChatModal({
 
   // 🧪 Playground safety states
   const [isPlaygroundMode, setIsPlaygroundMode] = useState(true) // Default to safe playground mode
-  const PLAYGROUND_PHONE = "+39 999 1234567" // Fake test number
+  const [customPhone, setCustomPhone] = useState("") // Custom phone number input
+  const PLAYGROUND_PHONE = "+39 999 1234567" // Fake test number (default)
   const defaultLogoUrl =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2322c55e'/%3E%3Ccircle cx='35' cy='40' r='6' fill='%23fff'/%3E%3Ccircle cx='65' cy='40' r='6' fill='%23fff'/%3E%3Cpath d='M30 60 Q50 75 70 60' stroke='%23fff' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
 
@@ -368,10 +369,13 @@ export function WhatsAppChatModal({
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
 
+      // Use custom phone if provided, otherwise use default test number
+      const phoneToUse = customPhone.trim() || PLAYGROUND_PHONE
+
       // Include isNewConversation flag for new chats
       const response = await api.post("/whatsapp/webhook", {
         message: userMessage.content,
-        phoneNumber: PLAYGROUND_PHONE,
+        phoneNumber: phoneToUse,
         workspaceId: currentWorkspaceId,
         channelPhoneNumber: phoneNumber, // 🔧 NEW: Send channel phone number for workspace lookup
         isNewConversation: true, // Add flag to indicate new conversation
@@ -411,7 +415,7 @@ export function WhatsAppChatModal({
             sessionId: response.data.data.sessionId,
             customerId: response.data.data.customerId || "unknown",
             customerName: "Customer",
-            customerPhone: PLAYGROUND_PHONE,
+            customerPhone: phoneToUse,
             lastMessage: initialMessage,
             lastMessageTime: new Date().toISOString(),
             unreadCount: 0,
@@ -567,6 +571,9 @@ export function WhatsAppChatModal({
       // Use provided workspaceId or get from config
       const currentWorkspaceId = getWorkspaceId(workspaceId)
 
+      // Use custom phone if provided, otherwise use default test number
+      const phoneToUse = customPhone.trim() || PLAYGROUND_PHONE
+
       const response = await api.post("/whatsapp/webhook", {
         entry: [
           {
@@ -575,7 +582,7 @@ export function WhatsAppChatModal({
                 value: {
                   messages: [
                     {
-                      from: PLAYGROUND_PHONE,
+                      from: phoneToUse,
                       text: {
                         body: userMessage.content,
                       },
@@ -880,12 +887,14 @@ export function WhatsAppChatModal({
                 <div className="text-xs text-white/80">{PLAYGROUND_PHONE}</div>
               </div>
             </div>
-            {/* PLAYGROUND Badge */}
-            <div className="flex items-center gap-2">
-              <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">
-                🧪 PLAYGROUND
-              </span>
-            </div>
+            {/* PLAYGROUND Badge - only show if chat started */}
+            {chatStarted && (
+              <div className="flex items-center gap-2">
+                <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">
+                  🧪 PLAYGROUND
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Chat Content Area - Flex layout: header top, messages flex-1, input bottom */}
@@ -906,13 +915,19 @@ export function WhatsAppChatModal({
                 )}
 
                 <div className="space-y-6">
-                  <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-                    <div className="text-sm font-medium text-green-900">
-                      Playground uses a fixed fake number
-                    </div>
-                    <div className="text-xs text-green-700 mt-1">
-                      {PLAYGROUND_PHONE} • Safe testing only (no real customer)
-                    </div>
+                  <div>
+                    <Label htmlFor="phone-number">Phone Number (optional)</Label>
+                    <input
+                      id="phone-number"
+                      type="text"
+                      placeholder="e.g. +39 333 1234567 (leave empty for test number)"
+                      value={customPhone}
+                      onChange={(e) => setCustomPhone(e.target.value)}
+                      className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Leave empty to use default test number: {PLAYGROUND_PHONE}
+                    </p>
                   </div>
 
                   <div>
@@ -936,7 +951,6 @@ export function WhatsAppChatModal({
                     onClick={startChat}
                     disabled={
                       !hasValidWorkspace ||
-                      !isValidPhoneNumber(PLAYGROUND_PHONE) ||
                       !initialMessage.trim() ||
                       isLoading
                     }
