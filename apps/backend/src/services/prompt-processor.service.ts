@@ -122,6 +122,7 @@ export class PromptProcessorService {
       .replace(/\{\{channelName\}\}/g, vars.channelName || 'Shop')
       .replace(/\{\{workspaceUrl\}\}/g, vars.workspaceUrl || '')
       .replace(/\{\{url\}\}/g, vars.workspaceUrl || '') // Alias
+      .replace(/\{\{website\}\}/g, vars.workspaceUrl || '') // ✅ Feature: Website scraping context
       .replace(/\{\{toneOfVoice\}\}/g, vars.toneOfVoice || 'friendly')
       .replace(/\{\{humanSupportInstructions\}\}/g, vars.humanSupportInstructions || '')
       .replace(/\{\{allowedExternalLinks\}\}/g, vars.allowedExternalLinks || '')

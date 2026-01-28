@@ -89,6 +89,7 @@
     "ts-jest": "^29.1.2"
   },
   "optionalDependencies": {
-    "axios": "^1.13.2"
+    "axios": "^1.13.4",
+    "cheerio": "^1.2.0"
   }
 }

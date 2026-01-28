@@ -182,6 +182,11 @@ export class FunctionExecutor {
           result = await this.delegateToProfileManagement(args, context)
           break
 
+        // Website scraping function
+        case "fetchWebsitePage":
+          result = await this.fetchWebsitePage(args, context)
+          break
+
         // Direct function calls (Sub-Agents)
         // NOTE: searchProducts removed - LLM uses {{products}} from prompt
 
@@ -823,5 +828,26 @@ export class FunctionExecutor {
       query: args.query,
       message: `Delegating to Profile Management Agent for: ${args.query}`,
     }
+  }
+
+  /**
+   * 🌐 Fetch Website Page - Scrape content from business website
+   * USE ONLY when customer asks info NOT in FAQ/products/services
+   */
+  private async fetchWebsitePage(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("🌐 Fetching website content", { args, context })
+
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctionsService = new CallingFunctionsService()
+
+    const result = await callingFunctionsService.fetchWebsitePage({
+      url: args.url,
+      workspaceId: context.workspaceId,
+    })
+
+    return result
   }
 }

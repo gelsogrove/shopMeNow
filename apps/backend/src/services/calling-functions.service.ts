@@ -13,6 +13,8 @@ import {
 } from "../types/whatsapp.types"
 import logger from "../utils/logger"
 import { prisma } from "@echatbot/database"
+import axios from "axios"
+import * as cheerio from "cheerio"
 
 export interface GetAllProductsRequest {
   workspaceId: string
@@ -1480,6 +1482,140 @@ export class CallingFunctionsService {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
         message: "Errore nel salvataggio statistiche (non critico)",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * 🌐 Fetch Website Content - Feature: Website Scraping for Context
+   * 
+   * Scrapes content from a specific page of the business website.
+   * Used by LLM when customer asks info NOT found in DB (FAQ, products, services).
+   * 
+   * PRIORITY ORDER (LLM should check first):
+   * 1. FAQ database {{faqs}}
+   * 2. Products {{products}}
+   * 3. Services {{services}}
+   * 4. Offers {{offers}}
+   * 5. fetchWebsitePage() ← LAST RESORT
+   * 
+   * @param request - URL or path to fetch, workspaceId
+   * @returns Scraped content (max 2000 chars) or error message
+   * 
+   * @example
+   * // LLM calls this when customer asks about hours (not in DB)
+   * fetchWebsitePage({ url: "https://ristorante.com/contatti", workspaceId })
+   * // Returns: "Orari: Lun-Ven 12-15, 19-23..."
+   */
+  public async fetchWebsitePage(request: {
+    url: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      const { url, workspaceId } = request
+
+      logger.info("🌐 Fetching website content:", {
+        url: url.substring(0, 100),
+        workspaceId,
+      })
+
+      // Validate URL format
+      let fullUrl = url
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        // If path provided, get workspace website and append
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { websiteUrl: true },
+        })
+
+        if (!workspace?.websiteUrl) {
+          return {
+            success: false,
+            error: "Website URL not configured",
+            message:
+              "Il sito web non è configurato. Visita le Impostazioni per aggiungere l'URL.",
+            timestamp: new Date().toISOString(),
+          }
+        }
+
+        fullUrl = workspace.websiteUrl.endsWith("/")
+          ? workspace.websiteUrl + url.replace(/^\//, "")
+          : workspace.websiteUrl + (url.startsWith("/") ? url : "/" + url)
+      }
+
+      // Fetch HTML with timeout
+      const response = await axios.get(fullUrl, {
+        timeout: 5000, // 5 seconds max
+        headers: {
+          "User-Agent":
+            "eChatbot/1.0 (Website Content Fetcher for Customer Support)",
+        },
+        maxRedirects: 3,
+      })
+
+      // Parse HTML and extract text
+      const $ = cheerio.load(response.data)
+
+      // Remove unwanted elements
+      $("script, style, nav, footer, header, iframe, noscript").remove()
+
+      // Extract main content
+      const mainContent =
+        $("main").text() || $("article").text() || $("body").text()
+
+      // Clean and truncate
+      const cleanText = mainContent
+        .replace(/\s+/g, " ") // Normalize whitespace
+        .trim()
+        .substring(0, 2000) // Max 2000 chars (~500 tokens)
+
+      if (!cleanText || cleanText.length < 50) {
+        return {
+          success: false,
+          error: "No content found",
+          message: `Non ho trovato contenuti utili su ${fullUrl}. Prova a visitare direttamente il sito.`,
+          timestamp: new Date().toISOString(),
+        }
+      }
+
+      logger.info("✅ Website content fetched successfully", {
+        url: fullUrl.substring(0, 50),
+        contentLength: cleanText.length,
+      })
+
+      return {
+        success: true,
+        message: cleanText,
+        data: {
+          url: fullUrl,
+          contentLength: cleanText.length,
+          scrapedAt: new Date().toISOString(),
+        },
+        timestamp: new Date().toISOString(),
+      }
+    } catch (error: any) {
+      logger.error("❌ Error fetching website content:", error.message)
+
+      // User-friendly error messages
+      let userMessage = "Non riesco ad accedere al sito web. "
+
+      if (error.code === "ENOTFOUND" || error.code === "EAI_AGAIN") {
+        userMessage += "Verifica che l'URL sia corretto."
+      } else if (error.code === "ETIMEDOUT" || error.code === "ECONNABORTED") {
+        userMessage += "Il sito non risponde. Riprova più tardi."
+      } else if (error.response?.status === 404) {
+        userMessage += "Pagina non trovata."
+      } else if (error.response?.status === 403) {
+        userMessage += "Accesso negato dal sito."
+      } else {
+        userMessage += "Prova a visitare direttamente il sito."
+      }
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: userMessage,
         timestamp: new Date().toISOString(),
       }
     }

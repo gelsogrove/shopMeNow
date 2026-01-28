@@ -119,6 +119,25 @@ export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "fetchWebsitePage",
+      description:
+        "🌐 Fetch content from business website. USE ONLY when customer asks info NOT in FAQ/products/services (e.g., hours, location, policies). PRIORITY: 1) Check FAQ {{faq}}, 2) Check products/services, 3) fetchWebsitePage() LAST RESORT. Provide specific page URL or path (e.g., '/contatti', '/chi-siamo').",
+      parameters: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description:
+              "Full URL (https://example.com/page) or path (/contatti) to fetch. System will append to workspace website URL if path provided.",
+          },
+        },
+        required: ["url"],
+      },
+    },
+  },
 ]
 
 /**
