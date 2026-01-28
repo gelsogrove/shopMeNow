@@ -116,6 +116,8 @@ export async function contactOperator(
       }
 
       // �📧 SEND EMAIL TO AGENT with summary of last hour conversation
+      let chatSummary = "" // 📧 Declare chatSummary in outer scope
+      
       try {
         // Get active chat session
         const session = await prisma.chatSession.findFirst({
