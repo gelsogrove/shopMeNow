@@ -552,6 +552,9 @@ describe("Widget Billing", () => {
       // Should NOT call LLM
       expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
 
+      // 🎯 CRITICAL: Should NOT call billing when debugMode=true
+      expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).not.toHaveBeenCalled()
+
       // Should return WIP message
       expect(statusMock).toHaveBeenCalledWith(200)
       expect(jsonMock).toHaveBeenCalledWith(

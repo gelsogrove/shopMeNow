@@ -14,6 +14,7 @@ type WidgetSendInput = {
   phoneNumber?: string // 📱 Optional phone number for language detection (playground)
   language?: string
   sessionId?: string | null
+  isPlayground?: boolean // 🧪 Playground mode - no billing
 }
 
 const STORAGE_PREFIX = {
@@ -124,6 +125,7 @@ export const sendWidgetMessage = async ({
   phoneNumber,
   language,
   sessionId,
+  isPlayground,
 }: WidgetSendInput) => {
   const payload: Record<string, unknown> = {
     visitorId,
@@ -137,6 +139,9 @@ export const sendWidgetMessage = async ({
   }
   if (typeof sessionId === "string" && sessionId.length > 0) {
     payload.sessionId = sessionId
+  }
+  if (isPlayground !== undefined) {
+    payload.isPlayground = isPlayground // 🧪 Playground flag for billing
   }
 
   const response = await fetch(`${apiUrl}/widget/chat/${workspaceId}`, {

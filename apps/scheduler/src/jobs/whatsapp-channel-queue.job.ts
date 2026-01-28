@@ -3,6 +3,7 @@ import logger from '../utils/logger'
 import { SecurityAgentService } from '../services/security-agent.service'
 import { BillingService } from '../services/billing.service'
 import { getWorkspaceWhatsAppConfig, WorkspaceWhatsAppConfig } from '../services/whatsapp-config.service'
+import { whatsAppInteractiveConverter, WhatsAppMessage } from '../services/whatsapp-interactive-converter.service'
 
 const MAX_DEBUG_STEPS = 50
 const RECIPIENT_COOLDOWN_MS = 6000 // WhatsApp limit ~1 msg / 6s per recipient
@@ -127,7 +128,7 @@ async function isWipConversationMessage(conversationMessageId: string | null | u
 interface WhatsAppSendParams {
   config: WorkspaceWhatsAppConfig
   to: string
-  message: string
+  message: string | WhatsAppMessage // Support both text and interactive messages
 }
 
 async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ success: boolean; error?: string; messageId?: string }> {
@@ -143,7 +144,12 @@ async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ succes
   }
   const apiUrl = `https://graph.facebook.com/v18.0/${senderId}/messages`
 
-  const attemptSend = async (): Promise<{ success: boolean; status?: number; error?: string; messageId?: string }> => {
+  // Convert text to WhatsApp message format (interactive buttons/lists/media/CTA)
+  const whatsAppPayload = typeof message === 'string' 
+    ? whatsAppInteractiveConverter.convert(message)
+    : message
+
+  const attemptSend = async (payload: any): Promise<{ success: boolean; status?: number; error?: string; messageId?: string }> => {
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -151,10 +157,9 @@ async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ succes
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        ...payload,
         messaging_product: 'whatsapp',
         to: to.replace(/^\+/, ''),
-        type: 'text',
-        text: { body: message },
       }),
     })
 
@@ -170,13 +175,41 @@ async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ succes
   }
 
   try {
-    const first = await attemptSend()
+    // Handle array of messages (e.g., interactive + image)
+    if (Array.isArray(whatsAppPayload)) {
+      logger.info('[WhatsApp Queue] Sending multiple messages (interactive + media)', {
+        count: whatsAppPayload.length,
+      })
+      
+      // Send each message sequentially
+      for (let i = 0; i < whatsAppPayload.length; i++) {
+        const payload = whatsAppPayload[i]
+        const result = await attemptSend(payload)
+        
+        if (!result.success) {
+          logger.error(`[WhatsApp Queue] Failed to send message ${i + 1}/${whatsAppPayload.length}`, {
+            error: result.error,
+          })
+          return result // Return first failure
+        }
+        
+        // Small delay between messages
+        if (i < whatsAppPayload.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 200))
+        }
+      }
+      
+      return { success: true } // All messages sent
+    }
+
+    // Single message
+    const first = await attemptSend(whatsAppPayload)
     if (first.success) return first
 
     // Retry once for transient errors (5xx / 429)
     if (first.status && (first.status >= 500 || first.status === 429)) {
       await new Promise((resolve) => setTimeout(resolve, 500))
-      const second = await attemptSend()
+      const second = await attemptSend(whatsAppPayload)
       return second
     }
 

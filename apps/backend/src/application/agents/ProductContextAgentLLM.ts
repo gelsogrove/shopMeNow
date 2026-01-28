@@ -81,20 +81,16 @@ export class ProductContextAgentLLM {
   }
 
   /**
-   * Get relative image path (frontend will resolve with IMG_BASE_URL)
+   * Get image URL - return as-is (frontend will resolve relative paths)
+   * For absolute URLs (Cloudinary), DO NOT extract pathname - return full URL!
    */
   private getFullImageUrl(imageUrl: string | null | undefined): string {
     if (!imageUrl) return "N/A"
-    // If already absolute URL, extract just the path
+    // If already absolute URL (Cloudinary), return as-is - DO NOT truncate!
     if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-      try {
-        const url = new URL(imageUrl)
-        return url.pathname // Extract /uploads/products/...
-      } catch {
-        return imageUrl
-      }
+      return imageUrl // ✅ Keep full URL for Cloudinary
     }
-    // Ensure path starts with /
+    // For local paths, ensure they start with /
     return imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
   }
   async handleQuestion(input: ProductContextAgentInput): Promise<ProductContextAgentResponse> {

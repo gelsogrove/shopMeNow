@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, Send, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ChatSurface } from "@/components/chat/ChatSurface"
+import { TypingIndicator } from "@/components/chat/TypingIndicator"
 import {
   getOrCreateVisitorId,
   loadWidgetMessages,
@@ -38,6 +39,8 @@ interface ChatWidgetProps {
   primaryColor?: string
   phoneNumber?: string // 📱 Optional phone number for playground testing (e.g., "+39 899 1234567")
   language?: string
+  debugMode?: boolean // 🐛 Debug mode indicator (red dot if true)
+  isPlayground?: boolean // 🧪 Playground mode - disables billing (default: false)
   apiUrl?: string
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
@@ -69,6 +72,8 @@ export function ChatWidget({
   primaryColor = DEFAULT_PRIMARY_COLOR,
   phoneNumber, // 📱 Playground phone number
   language,
+  debugMode = false, // 🐛 Debug mode flag
+  isPlayground = false, // 🧪 Playground mode - no billing
   apiUrl,
   onOpenChange,
   onConvert,
@@ -86,7 +91,21 @@ export function ChatWidget({
   const [isLoading, setIsLoading] = useState(false)
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [showTooltip, setShowTooltip] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  /**
+   * Tooltip translations (multilingua)
+   */
+  const getTooltipText = (lang: string): string => {
+    const translations: Record<string, string> = {
+      it: "Ciao! 👋 Sono qui per aiutarti con qualsiasi domanda: come posso aiutarti oggi?",
+      en: "Hello! 👋 I'm here to help you with any question: how can I help you today?",
+      es: "¡Hola! 👋 Estoy aquí para ayudarte con cualquier pregunta: ¿cómo puedo ayudarte hoy?",
+      pt: "Olá! 👋 Estou aqui para ajudá-lo com qualquer pergunta: como posso ajudá-lo hoje?",
+    }
+    return translations[lang] || translations.en
+  }
 
   // Initialize visitor ID
   useEffect(() => {
@@ -134,7 +153,7 @@ export function ChatWidget({
   }, [isOpen])
 
   /**
-   * Send message to API
+   * Send message to API with minimum 500ms loading
    */
   const handleSendMessage = async () => {
     const message = inputValue.trim()
@@ -156,6 +175,9 @@ export function ChatWidget({
     setInputValue("")
     setIsLoading(true)
 
+    // ⏱️ Track start time for minimum 500ms loading
+    const startTime = Date.now()
+
     try {
       const data = await sendWidgetMessage({
         apiUrl: apiUrl || DEFAULT_API_URL,
@@ -164,8 +186,17 @@ export function ChatWidget({
         phoneNumber, // 📱 Pass phone number to backend
         message,
         language: language || navigator.language || "it",
+        isPlayground, // 🧪 Pass playground flag for billing logic
         sessionId,
       })
+
+      // ⏱️ Ensure minimum 500ms loading time
+      const elapsedTime = Date.now() - startTime
+      const remainingTime = Math.max(0, 500 - elapsedTime)
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime))
+      }
 
       // Save session ID if provided
       if (data.sessionId && resolvedWorkspaceId) {
@@ -186,6 +217,15 @@ export function ChatWidget({
       }
     } catch (error) {
       console.error("Failed to send message:", error)
+      
+      // ⏱️ Ensure minimum 500ms even for errors
+      const elapsedTime = Date.now() - startTime
+      const remainingTime = Math.max(0, 500 - elapsedTime)
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime))
+      }
+      
       const errorMessage: Message = {
         role: "bot",
         content:
@@ -276,38 +316,139 @@ export function ChatWidget({
 
   return (
     <>
-      {/* Widget Button - Clean Minimal Design */}
+      {/* Widget Button - Refactored Design with Tooltip */}
       {!isOpen && (
-        <button
-          data-widget-button
-          onClick={() => {
-            setIsOpen(true)
-            onOpenChange?.(true)
-          }}
-          className={cn(
-            isEmbedded ? "absolute" : "fixed",
-            "z-[2147483647] rounded-full",
-            embeddedButtonSizeClasses,
-            "p-0",
-            // Clean white background with subtle shadow
-            "bg-white",
-            "border border-gray-200/50",
-            "shadow-lg",
-            "group flex items-center justify-center",
-            "transition-all duration-200 ease-out",
-            "hover:shadow-xl hover:border-gray-300",
-            "active:scale-95",
-            "focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:ring-offset-2",
-            positionClasses[position]
+        <div className={cn(
+          isEmbedded ? "absolute" : "fixed",
+          "z-[2147483647]",
+          positionClasses[position]
+        )}>
+          {/* Tooltip Balloon - Above the button */}
+          {showTooltip && (
+            <div
+              className="absolute bottom-full right-0 mb-4 animate-in slide-in-from-bottom-2 fade-in duration-300"
+              style={{ 
+                width: "280px !important",
+                maxWidth: "280px !important"
+              }}
+            >
+              <div 
+                className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 relative"
+                style={{
+                  borderRadius: "16px !important",
+                  padding: "16px !important",
+                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important"
+                }}
+              >
+                {/* Close button X */}
+                <button
+                  onClick={() => setShowTooltip(false)}
+                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  style={{
+                    width: "20px !important",
+                    height: "20px !important",
+                    padding: "0 !important"
+                  }}
+                  aria-label="Close tooltip"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                
+                {/* Tooltip Text */}
+                <p 
+                  className="text-sm text-gray-700 pr-6 leading-relaxed"
+                  style={{
+                    fontSize: "14px !important",
+                    lineHeight: "1.5 !important",
+                    color: "#374151 !important"
+                  }}
+                >
+                  {getTooltipText(language || "en")}
+                </p>
+                
+                {/* Triangle pointer */}
+                <div 
+                  className="absolute -bottom-2 right-6 w-4 h-4 bg-white border-r border-b border-gray-200 transform rotate-45"
+                  style={{
+                    width: "16px !important",
+                    height: "16px !important"
+                  }}
+                />
+              </div>
+            </div>
           )}
-          aria-label="Open chat"
-        >
-          <img
-            src={resolvedLogoUrl}
-            alt="Chat"
-            className="h-full w-full rounded-full object-cover"
-          />
-        </button>
+
+          {/* Main Widget Button */}
+          <button
+            data-widget-button
+            onClick={() => {
+              setIsOpen(true)
+              setShowTooltip(false)
+              onOpenChange?.(true)
+            }}
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setTimeout(() => setShowTooltip(false), 300)}
+            className={cn(
+              "rounded-full",
+              "p-0",
+              "bg-white",
+              "border border-gray-200/50",
+              "shadow-lg",
+              "group flex items-center justify-center",
+              "transition-all duration-200 ease-out",
+              "hover:shadow-xl hover:border-gray-300",
+              "active:scale-95",
+              "focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:ring-offset-2",
+              "relative"
+            )}
+            style={{
+              width: "64px !important",
+              height: "64px !important",
+              minWidth: "64px !important",
+              minHeight: "64px !important"
+            }}
+            aria-label="Open chat"
+          >
+            {/* Status Indicator - Top right corner */}
+            <div
+              className="absolute -top-1 -right-1 rounded-full border-2 border-white"
+              style={{
+                width: "16px !important",
+                height: "16px !imdebugMode ? "#ef4444 !important" : "#22c55e !important",
+                zIndex: "10 !important"
+              }}
+              title={debugMode
+                (window as any).ECHATBOT_DEBUG_MODE === true) ? "Debug Mode" : "Online"}
+            />
+
+            {/* Chat Icon - Larger */}
+            <div 
+              className="flex items-center justify-center"
+              style={{
+                width: "100% !important",
+                height: "100% !important"
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-green-600"
+                style={{
+                  width: "36px !important",
+                  height: "36px !important",
+                  color: primaryColor + " !important"
+                }}
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+          </button>
+        </div>
       )}
 
       {/* Widget Popup - Enhanced Design */}
@@ -372,6 +513,13 @@ export function ChatWidget({
                 msg.role === "user" ? "widget-user-message" : undefined
               }
             />
+            
+            {/* Typing Indicator - Shows while loading */}
+            {isLoading && (
+              <div className="flex justify-start mb-2">
+                <TypingIndicator primaryColor={primaryColor} />
+              </div>
+            )}
           </ScrollArea>
 
           {/* Footer with Input */}

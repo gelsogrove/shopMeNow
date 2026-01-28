@@ -390,8 +390,9 @@ export class WidgetChatController {
 
       logger.info("✅ Workspace validation passed")
 
-      // 💰 SUBSCRIPTION + CREDIT CHECK (skip for playground)
-      if (isPlayground !== true) {
+      // 💰 SUBSCRIPTION + CREDIT CHECK (skip for playground OR debugMode)
+      // RULE: Billing ONLY for widget/WhatsApp when debugMode=false AND NOT playground
+      if (isPlayground !== true && workspace.debugMode !== true) {
         const workspaceAccessService = new WorkspaceAccessService(prisma)
         const accessResult = await workspaceAccessService.canProcessMessages(
           workspaceId,
@@ -421,11 +422,15 @@ export class WidgetChatController {
           })
         }
       } else {
-        logger.info("[WIDGET-BILLING] 🧪 Playground mode - skipping billing/access checks")
+        const skipReason = isPlayground === true ? "Playground mode" : "Debug mode"
+        logger.info(`[WIDGET-BILLING] 🧪 ${skipReason} - skipping billing/access checks`, {
+          isPlayground,
+          debugMode: workspace.debugMode,
+        })
       }
 
-      // 🛠️ DEBUG MODE (WIP) - after security + billing checks
-      if (workspace.debugMode === true && isPlayground !== true) {
+      // 🛠️ DEBUG MODE (WIP) - after security checks, return WIP message
+      if (workspace.debugMode === true) {
         logger.info("🛠️ Widget WIP - debug mode", {
           workspaceId,
           visitorId,

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Bug, CheckCircle2, AlertCircle, X } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Bug, CheckCircle2, AlertCircle, X, Phone } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { workspaceApi } from "@/services/workspaceApi"
 import ChatWidget from "@/components/ChatWidget"
@@ -37,6 +39,72 @@ export default function ChannelsPage() {
   const [widgetOpen, setWidgetOpen] = useState(false)
   const [selectedWorkspace, setSelectedWorkspace] = useState<Channel | null>(null)
   const [widgetLanguages, setWidgetLanguages] = useState<Record<string, string>>({})
+  const [playgroundPhoneNumbers, setPlaygroundPhoneNumbers] = useState<Record<string, string>>({})
+  const [phoneValidationErrors, setPhoneValidationErrors] = useState<Record<string, string>>({})
+
+  /**
+   * Validate phone number prefix
+   * Supported: +39 (IT), +34 (ES), +351 (PT), +1 (EN), +44 (EN)
+   */
+  const validatePhoneNumber = (phone: string): { valid: boolean; message?: string; detectedLanguage?: string } => {
+    if (!phone || phone.trim() === "") {
+      return { valid: true } // Empty is valid (will use default)
+    }
+
+    const trimmed = phone.trim()
+
+    // Must start with +
+    if (!trimmed.startsWith("+")) {
+      return { valid: false, message: "Phone must start with + (e.g., +39)" }
+    }
+
+    // Detect language from prefix
+    if (trimmed.startsWith("+39")) {
+      return { valid: true, detectedLanguage: "it" }
+    }
+    if (trimmed.startsWith("+34")) {
+      return { valid: true, detectedLanguage: "es" }
+    }
+    if (trimmed.startsWith("+351")) {
+      return { valid: true, detectedLanguage: "pt" }
+    }
+    if (trimmed.startsWith("+1") || trimmed.startsWith("+44")) {
+      return { valid: true, detectedLanguage: "en" }
+    }
+
+    // Unknown prefix - still valid but defaults to English
+    return { valid: true, detectedLanguage: "en" }
+  }
+
+  const handlePhoneNumberChange = (workspaceId: string, value: string) => {
+    setPlaygroundPhoneNumbers((prev) => ({
+      ...prev,
+      [workspaceId]: value,
+    }))
+
+    // Validate and auto-update language
+    const validation = validatePhoneNumber(value)
+    if (validation.valid) {
+      setPhoneValidationErrors((prev) => {
+        const next = { ...prev }
+        delete next[workspaceId]
+        return next
+      })
+
+      // Auto-update language if detected
+      if (validation.detectedLanguage) {
+        setWidgetLanguages((prev) => ({
+          ...prev,
+          [workspaceId]: validation.detectedLanguage!,
+        }))
+      }
+    } else {
+      setPhoneValidationErrors((prev) => ({
+        ...prev,
+        [workspaceId]: validation.message || "Invalid phone number",
+      }))
+    }
+  }
 
   const normalizeLanguage = (value?: string) => {
     const normalized = (value || "").toLowerCase()
@@ -204,6 +272,37 @@ export default function ChannelsPage() {
                     </Select>
                   </div>
 
+                  {/* 📱 NEW: Playground Phone Number Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor={`phone-${channel.id}`} className="text-xs font-medium text-gray-700 flex items-center gap-2">
+                      <Phone className="w-3 h-3" />
+                      Playground Phone Number
+                    </Label>
+                    <Input
+                      id={`phone-${channel.id}`}
+                      type="text"
+                      placeholder="+39 999 1234567"
+                      value={playgroundPhoneNumbers[channel.id] || ""}
+                      onChange={(e) => handlePhoneNumberChange(channel.id, e.target.value)}
+                      className={`text-xs h-8 ${phoneValidationErrors[channel.id] ? "border-red-500" : ""}`}
+                    />
+                    {phoneValidationErrors[channel.id] && (
+                      <p className="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {phoneValidationErrors[channel.id]}
+                      </p>
+                    )}
+                    {!phoneValidationErrors[channel.id] && playgroundPhoneNumbers[channel.id] && (
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Valid • Auto-detected: {widgetLanguages[channel.id]?.toUpperCase()}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      💡 Prefix detection: +39 (IT), +34 (ES), +351 (PT), +1/+44 (EN)
+                    </p>
+                  </div>
+
                   <div className="text-sm text-gray-600 space-y-1">
                     <p>
                       <span className="font-medium">Owner ID:</span> {channel.ownerId || 'N/A'}
@@ -279,8 +378,10 @@ export default function ChannelsPage() {
           }
           title={selectedWorkspace.name}
           position="bottom-right"
-          phoneNumber={selectedWorkspace.whatsappPhoneNumber || undefined} // 📱 Pass phone for language detection
+          phoneNumber={playgroundPhoneNumbers[selectedWorkspaceId] || selectedWorkspace.whatsappPhoneNumber || "+39 999 1234567"} // 📱 Use custom or default
           language={widgetLanguages[selectedWorkspaceId] || "it"}
+          debugMode={selectedWorkspace.debugMode === true} // 🐛 Pass debug mode status
+          isPlayground={true} // 🧪 PLAYGROUND: Never deduct credits
           onOpenChange={(isOpen) => {
             setWidgetOpen(isOpen)
             if (!isOpen) {

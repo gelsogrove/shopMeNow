@@ -1121,21 +1121,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 pb-24">{/* pb-24 = 6rem per vedere bene il footer */}
 
-        {/* ========== PAYPAL WARNING (System Alert) ========== */}
-        {showPayPalWarning && (
-          <div className="flex items-center gap-3 p-4 bg-red-100 dark:bg-red-950 rounded-lg border-2 border-red-500">
-            <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
-            <div className="flex-1">
-              <p className="font-bold text-red-800 dark:text-red-200 text-lg">
-                ⚠️ PayPal Connection Required
-              </p>
-              <p className="text-sm text-red-700 dark:text-red-300">
-                You must connect PayPal to add new channels or invite team members.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* ========== LOADING STATE ========== */}
         {isLoading && (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -1296,7 +1281,23 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
         {/* ========== HAS WORKSPACES: Show List ========== */}
         {!isLoading && workspaces.length > 0 && (
-          <Card>
+          <>
+            {/* ========== PAYPAL WARNING (Above Your Channels) ========== */}
+            {showPayPalWarning && (
+              <div className="flex items-center gap-3 p-4 mb-6 bg-red-50 dark:bg-red-950 rounded-lg border border-red-400">
+                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-800 dark:text-red-200">
+                    PayPal Connection Required
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-0.5">
+                    You must connect PayPal to add new channels or invite team members.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -1589,6 +1590,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
             </div>
           </CardContent>
         </Card>
+          </>
         )}
 
         {/* ============================================================================ */}

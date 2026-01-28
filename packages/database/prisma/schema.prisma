@@ -354,7 +354,7 @@ model Customers {
   address                       String?
   company                       String?
   discount                      Float?                 @default(0)
-  language                      String?                @default("ENG")
+  language                      String?                @default("it") // 🌍 Default to Italian (base language) - detects from phone prefix
   currency                      String?                @default("USD")
   notes                         String?
   serviceIds                    String[]               @default([])
