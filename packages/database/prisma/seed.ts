@@ -276,7 +276,7 @@ Sono qui per aiutarti 😊`,
       hasSalesAgents: true,
       hasHumanSupport: true,
       humanSupportInstructions:
-        "Ciao {{nameUser}}, mi sto mettendo in contatto con l'agente {{agentName}}. Ti richiamera' al piu' presto (tel: {{agentPhone}} - email: {{agentEmail}}). Disattivo il chatbot finche' non ricevi risposta.",
+        "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝",
       // 🆕 Feature 203: Custom escalation triggers
       frustrationEscalationInstructions: `Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
 - Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)

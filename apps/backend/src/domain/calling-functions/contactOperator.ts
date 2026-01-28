@@ -76,15 +76,7 @@ export async function contactOperator(
         return {
           success: true,
           message:
-            "Mi dispiace molto per l'inconveniente! �\n\n" +
-            "Ricevere merce scaduta è inaccettabile e capisco la tua frustrazione.\n\n" +
-            "Ecco cosa faremo IMMEDIATAMENTE:\n" +
-            "1. ✅ Rimborso completo entro 24 ore\n" +
-            "2. 📦 Sostituzione gratuita del prodotto\n" +
-            "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
-            "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
-            "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
-            "Grazie per la pazienza! 😊",
+            "We're connecting you with our support team. You will receive a response as soon as possible. Thank you for your patience! 🤝",
           timestamp: new Date().toISOString(),
         }
       }
@@ -105,11 +97,23 @@ export async function contactOperator(
           operatorContactMethod: true,
           operatorWhatsappNumber: true,
           hasHumanSupport: true,
+          humanSupportInstructions: true,
           whatsappSettings: {
             select: { adminEmail: true },
           },
         },
       })
+
+      // 🚨 CHECK: hasHumanSupport must be true
+      if (!workspace?.hasHumanSupport) {
+        logger.warn("⚠️ [contactOperator] Human support disabled for workspace:", request.workspaceId)
+        return {
+          success: false,
+          message: "Human support is not available at the moment. Please try again later.",
+          timestamp: new Date().toISOString(),
+          error: "Human support disabled for this workspace"
+        }
+      }
 
       // �📧 SEND EMAIL TO AGENT with summary of last hour conversation
       try {
@@ -393,8 +397,32 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 
           if (targetPhoneNumber) {
             try {
-              // Create WhatsApp queue entry
-              const whatsappMessage = `Hello, customer ${customer.name} is requesting your support. -eChatbot.ai`
+              // Create WhatsApp message with AI summary
+              const chatLink = session?.id 
+                ? `${process.env.FRONTEND_URL || "http://localhost:5173"}/chat/${session.id}`
+                : null
+
+              const whatsappMessage = `
+🔔 *RICHIESTA ASSISTENZA OPERATORE*
+
+⚠️ *ATTENZIONE*: Il cliente *${customer.name}* ha richiesto di parlare con un operatore.
+
+📋 *Dettagli della richiesta*:
+• Cliente: ${customer.name}
+• Telefono: ${customer.phone}
+• Email: ${customer.email || "N/A"}
+• Data/Ora: ${new Date().toLocaleString("it-IT")}
+${request.reason ? `• Motivo: ${request.reason}` : ""}
+
+🤖 *Riassunto AI della conversazione* (ultima ora):
+
+${chatSummary}
+
+${chatLink ? `📱 Visualizza chat completa: ${chatLink}` : ""}
+
+---
+_Questa notifica è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore._
+              `.trim()
               
               await prisma.whatsAppQueue.create({
                 data: {
@@ -440,18 +468,26 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 
       await prisma.$disconnect()
 
+      // 📝 Build response message with variable replacement
+      let responseMessage = workspace?.humanSupportInstructions || 
+        "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝"
+
+      // Replace variables
+      const agentName = customer.sales 
+        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim() 
+        : "Support Team"
+      const agentPhone = customer.sales?.phone || workspace?.operatorWhatsappNumber || "N/A"
+      const agentEmail = customer.sales?.email || workspace?.whatsappSettings?.adminEmail || "N/A"
+
+      responseMessage = responseMessage
+        .replace(/\{\{nameUser\}\}/g, customer.name)
+        .replace(/\{\{agentName\}\}/g, agentName)
+        .replace(/\{\{agentPhone\}\}/g, agentPhone)
+        .replace(/\{\{agentEmail\}\}/g, agentEmail)
+
       return {
         success: true,
-        message:
-          "Mi dispiace molto per l'inconveniente! �\n\n" +
-          "Ricevere merce scaduta è inaccettabile e capisco la tua frustrazione.\n\n" +
-          "Ecco cosa faremo IMMEDIATAMENTE:\n" +
-          "1. ✅ Rimborso completo entro 24 ore\n" +
-          "2. 📦 Sostituzione gratuita del prodotto\n" +
-          "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
-          "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
-          "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
-          "Grazie per la pazienza! 😊",
+        message: responseMessage,
         timestamp: new Date().toISOString(),
         ticketId,
         summaryAgentExecuted: true, // Indica che il Summary Agent è stato eseguito
@@ -467,15 +503,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
       return {
         success: true,
         message:
-          "Mi dispiace molto per l'inconveniente! �\n\n" +
-          "Ricevere merce scaduta è inaccettabile e capisco la tua frustrazione.\n\n" +
-          "Ecco cosa faremo IMMEDIATAMENTE:\n" +
-          "1. ✅ Rimborso completo entro 24 ore\n" +
-          "2. 📦 Sostituzione gratuita del prodotto\n" +
-          "3. 📞 Contatto diretto con il tuo agente per assistenza immediata\n\n" +
-          "L'agente ti contatterà il prima possibile per risolvere la situazione.\n\n" +
-          "**Da questo momento disattiviamo il chatbot e aspettiamo che si colleghi l'agente.** 🤝\n\n" +
-          "Grazie per la pazienza! 😊",
+          "We're connecting you with our support team. You will receive a response as soon as possible. Thank you for your patience! 🤝",
         timestamp: new Date().toISOString(),
         summaryAgentExecuted: false, // Summary Agent non eseguito in caso di errore DB
         summaryEmailSent: false,

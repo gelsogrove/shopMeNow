@@ -785,7 +785,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         sellsProductsAndServices: finalSellsProducts,
         // hasSalesAgents: removed - Andrea: "non serve più"
         hasHumanSupport: wizardData.hasHumanSupport,
-        humanSupportInstructions: wizardData.humanSupportInstructions || undefined,
+        humanSupportInstructions: wizardData.hasHumanSupport 
+          ? (wizardData.humanSupportInstructions || "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝")
+          : undefined,
         operatorContactMethod: 'email', // 🆕 Default to email (changed to whatsapp if enabled in Settings)
         operatorEmail: userEmail, // 🆕 AUTO from token (Andrea's requirement)
         toneOfVoice: wizardData.toneOfVoice,
@@ -1949,7 +1951,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             ? 'border-green-500 bg-green-50' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
-                        onClick={() => updateWizardData('hasHumanSupport', false)}
+                        onClick={() => {
+                          updateWizardData('hasHumanSupport', false)
+                          updateWizardData('humanSupportInstructions', '') // Clear instructions if disabled
+                        }}
                       >
                         <div className="flex items-start gap-4">
                           <div className={`p-3 rounded-lg ${!wizardData.hasHumanSupport ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
