@@ -314,7 +314,7 @@ export async function softDeleteCleanupJob(): Promise<void> {
         where: { workspaceId: { in: workspaceIds } }
       })).count
 
-      deletedCounts.transportTypes = (await tx.transportType.deleteMany({
+      deletedCounts.types = (await tx.type.deleteMany({
         where: { workspaceId: { in: workspaceIds } }
       })).count
 
