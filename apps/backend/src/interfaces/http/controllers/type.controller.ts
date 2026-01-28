@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { PrismaClient } from "@echatbot/database"
-import { TypeService } from "../services/type.service"
+import { TypeService } from "../../../application/services/type.service"
 import logger from "../../../utils/logger"
 
 export class TypeController {

@@ -219,7 +219,141 @@ heroku logs -n 200 --app echatbot-app | grep -E "error|Error|500"
 # Root cause: "The table `public.users` does not exist in the current database"
 # Diagnosi: 5 migration NON applicate su Heroku dopo push
 
-# ✅ SEQUENZA CORRETTA (MANDATORY!)
+# ✅ SEQUENZA CORRETTA (SEMPRE questa!):
+heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app
+heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app  
+heroku run "cd packages/database && npx prisma db seed" -a echatbot-app
+heroku restart -a echatbot-app
+
+### 🚨 2. **NON resettare database per fix TypeScript**
+```bash
+# ❌ ERRORE COMUNE
+# Fix TypeScript enum → pg:reset → DISTRUGGE DATI
+# Schema.prisma NON cambiato → Database reset NON necessario
+
+# ✅ REGOLA
+# Solo code fix (.ts files) → Deploy normale, NO database reset
+# Schema change (.prisma files) → Backup + Reset + Seed
+```
+
+### 🚨 3. **NON skippare env vars sync**
+```bash
+# ❌ PROBLEMA
+# .env locale ha GOOGLE_CLIENT_ID, Heroku no → OAuth fail
+
+# ✅ VERIFICA SEMPRE
+heroku config --app echatbot-app | grep -E "GOOGLE_CLIENT_ID|OPENROUTER_API_KEY"
+```
+
+---
+
+## 📊 RECENT ANALYSIS & IMPROVEMENTS (December 2024)
+
+### 🎯 **47 Tasks Identified - 203h Total Effort**
+
+**Priority Breakdown**:
+- 🔴 **CRITICAL (12 tasks)**: Security, billing, new channel UX
+- 🟠 **HIGH (20 tasks)**: Settings UI, mobile responsive, LLM optimization  
+- 🟡 **MEDIUM (15 tasks)**: Performance, documentation, testing
+
+**By Type**:
+- **Backend (18 tasks - 73h)**: Security priority chain, billing migration, workspace isolation
+- **Frontend (12 tasks - 56h)**: Settings UI complete, onboarding wizard, mobile responsive
+- **LLM (8 tasks - 32h)**: Prompt file loading, variable validation, context management
+- **Testing (5 tasks - 27h)**: Security testing suite, integration tests
+- **Documentation (2 tasks - 7h)**: API docs, architecture
+- **Search (2 tasks - 8h)**: Product search optimization
+
+### 🔧 **Template Enhancement Strategy (NEW)**
+
+**Problem Identified**: Current `{{products}}` variable only includes name + price, missing product characteristics needed for specific searches like "piso de 40mq".
+
+**Solution**: **Additive approach** - enhance existing template without losing information:
+
+```typescript
+// NEW: Enhanced PromptVariableBuilder
+const variables = {
+  // ✅ KEEP existing variables
+  products: this.buildProductsList(workspace.id), // Simple list
+  categories: this.buildCategoriesList(workspace.id),
+  
+  // ➕ ADD new detailed variables
+  productsWithDetails: await this.buildProductsWithCharacteristics(workspace.id),
+  productsByCategory: await this.buildProductsByCategory(workspace.id),
+  featuredProducts: await this.buildFeaturedProducts(workspace.id),
+  productCharacteristics: await this.buildProductCharacteristics(workspace.id)
+}
+```
+
+**Template Enhancement**:
+```markdown
+## 📦 CATALOGO PRODOTTI COMPLETO
+{{productsWithDetails}}
+
+## 🏷️ PRODOTTI PER CATEGORIA  
+{{productsByCategory}}
+
+## ⭐ PRODOTTI IN EVIDENZA
+{{featuredProducts}}
+
+## 🔍 CARATTERISTICHE DISPONIBILI
+{{productCharacteristics}}
+
+## 📋 LISTA PRODOTTI SEMPLICE (riferimento rapido)
+{{products}}
+```
+
+**Benefits**:
+- ✅ **Zero data loss**: Maintains all existing context
+- ✅ **Enhanced search**: LLM can match specific characteristics (superficie, taglia, etc.)
+- ✅ **Backward compatible**: Existing templates continue working
+- ✅ **Flexible usage**: LLM can choose simple list OR detailed info
+
+**Implementation Priority**: 🔴 **CRITICAL** - 3h effort
+
+### 🚨 **Top 3 Immediate Blockers**
+
+1. **New Channel Onboarding UX (12h)** - 80% user abandonment after creating empty workspace
+2. **Settings UI Complete (8h)** - 15+ workspace fields not configurable in UI
+3. **Security Priority Chain (6h)** - No P1/P2/P3 security checks implemented
+
+### 📈 **4-Sprint Roadmap**
+
+**Sprint 1 (Week 1-2)**: CRITICAL Foundation
+- Security priority chain
+- Billing owner-based migration  
+- New channel onboarding UX
+- Template enhancement with characteristics
+
+**Sprint 2 (Week 3-4)**: HIGH Impact
+- Settings UI complete implementation
+- Mobile responsive fixes
+- Workspace isolation audit
+
+**Sprint 3 (Week 5-6)**: MEDIUM Stability  
+- Caching layer implementation
+- Real-time updates WebSocket
+- Integration testing suite
+
+**Sprint 4 (Week 7-8)**: Optimization
+- Performance improvements
+- Documentation completion
+- Search optimization
+
+---
+
+## 🔄 **Updated Deploy Sequence with Analysis Integration**
+
+```bash
+# STEP 0: Pre-deploy Analysis Check
+# Review current sprint tasks from Epics/analisi-per-tipo.md
+# Ensure no CRITICAL blockers are being introduced
+
+# STEP 1: Enhanced Template Check (if LLM changes)
+if [[ $(git diff --name-only | grep -E "docs/prompts/|prompt-variable-builder") ]]; then
+  echo "🔍 LLM/Template changes detected - verify variable replacement"
+  cd apps/backend && npm run test:prompt-variables
+fi CORRETTA (MANDATORY!)
 # STEP 1: Check migration status PRIMA del deploy
 heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app
 
