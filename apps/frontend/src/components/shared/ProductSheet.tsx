@@ -59,6 +59,7 @@ export function ProductSheet({
   // Form state
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
+  const [link, setLink] = useState("")
   const [price, setPrice] = useState("")
   const [stock, setStock] = useState("0")
   const [categoryId, setCategoryId] = useState("")
@@ -73,6 +74,7 @@ export function ProductSheet({
     if (product) {
       setName(product.name || "")
       setDescription(product.description || "")
+      setLink(product.link || "")
       setPrice(product.price || "")
       setStock(product.stock?.toString() || "0")
       setCategoryId(product.categoryId || "")
@@ -82,6 +84,7 @@ export function ProductSheet({
       // Reset form for new product
       setName("")
       setDescription("")
+      setLink("")
       setPrice("")
       setStock("0")
       setCategoryId("")
@@ -97,6 +100,9 @@ export function ProductSheet({
     const formData = new FormData()
     formData.append("name", name)
     formData.append("description", description)
+    if (link) {
+      formData.append("link", link)
+    }
     formData.append("price", price)
     formData.append("stock", stock)
 
@@ -166,6 +172,26 @@ export function ProductSheet({
                   placeholder="Enter product description"
                   className="min-h-[120px]"
                 />
+              </div>
+
+              {/* Product Link */}
+              <div className="space-y-2">
+                <Label htmlFor="link" className="text-sm font-medium">
+                  Product Link <span className="text-gray-500">(optional, max 120 characters)</span>
+                </Label>
+                <Input
+                  id="link"
+                  name="link"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="https://example.com/product"
+                  maxLength={120}
+                />
+                {link && link.length > 100 && (
+                  <p className="text-xs text-gray-500">
+                    {link.length}/120 characters
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

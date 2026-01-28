@@ -54,8 +54,7 @@ interface WizardFormData {
   whatsappNumber: string // Only required if channelType === 'WHATSAPP'
   // Step 2: Business Type (E-commerce) - ONLY for WhatsApp
   sellsProductsAndServices: boolean
-  // Step 3: Sales Agents (conditional)
-  hasSalesAgents: boolean
+  // Step 3: REMOVED - Sales Agents (Andrea: "non serve più")
   // Step 4: Human Support
   hasHumanSupport: boolean
   humanSupportInstructions: string
@@ -71,7 +70,7 @@ interface WizardFormData {
 const WIZARD_STEPS = [
   { id: 1, title: "Channel Type", description: "WhatsApp or Web Widget?", icon: Smartphone },
   { id: 2, title: "E-commerce", description: "Sell products/services?", icon: Store },
-  { id: 3, title: "Sales Team", description: "Do you have sales agents?", icon: Users },
+  // Step 3 (Sales Team) removed - Andrea: "non serve più il flag di salesAgent true o false"
   { id: 4, title: "Human Support", description: "Talk to an operator?", icon: Headphones },
   { id: 5, title: "Tone of Voice", description: "How should the bot communicate?", icon: MessageSquare },
   { id: 6, title: "Bot Identity", description: "How should the bot introduce itself?", icon: Bot },
@@ -99,7 +98,7 @@ const initialWizardData: WizardFormData = {
   channelType: 'WHATSAPP',
   whatsappNumber: "",
   sellsProductsAndServices: true,
-  hasSalesAgents: false,
+  // hasSalesAgents removed - Andrea: "non serve più"
   hasHumanSupport: true,
   humanSupportInstructions: "",
   toneOfVoice: 'friendly',
@@ -259,20 +258,20 @@ export function WorkspaceSelectionPage() {
 
   const getNextStep = () => {
     if (wizardStep === 1 && wizardData.channelType === 'WIDGET') {
-      return 3 // Skip step 2 (E-commerce) for Widget
+      return 4 // Skip step 2 (E-commerce) AND step 3 (Sales Agents) for Widget
     }
-    if (wizardStep === 2 && !wizardData.sellsProductsAndServices) {
-      return 4 // Skip step 3 (Sales Agents)
+    if (wizardStep === 2) {
+      return 4 // Skip step 3 (Sales Agents) - Andrea: not needed anymore
     }
     return wizardStep + 1
   }
 
   const getPrevStep = () => {
-    if (wizardStep === 3 && wizardData.channelType === 'WIDGET') {
-      return 1 // Skip back over step 2 (E-commerce) for Widget
+    if (wizardStep === 4 && wizardData.channelType === 'WIDGET') {
+      return 1 // Skip back over step 2 AND step 3 for Widget
     }
-    if (wizardStep === 4 && !wizardData.sellsProductsAndServices) {
-      return 2 // Skip back over step 3
+    if (wizardStep === 4) {
+      return 2 // Skip back over step 3 (Sales Agents)
     }
     return wizardStep - 1
   }
@@ -770,7 +769,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       
       // 🆕 Widget channels CANNOT sell products (Andrea's rule)
       const finalSellsProducts = wizardData.channelType === 'WIDGET' ? false : wizardData.sellsProductsAndServices
-      const finalHasSalesAgents = wizardData.channelType === 'WIDGET' ? false : wizardData.hasSalesAgents
+      // hasSalesAgents removed - Andrea: "non serve più il flag"
       
       // 🆕 Auto-use email from logged user (from token)
       const allowedLinks = ["echatbot.ai", "paypal.com"]
@@ -784,10 +783,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         allowedExternalLinks: allowedLinks,
         // 🆕 Channel Configuration (Simplified Wizard)
         sellsProductsAndServices: finalSellsProducts,
-        hasSalesAgents: finalHasSalesAgents,
+        // hasSalesAgents: removed - Andrea: "non serve più"
         hasHumanSupport: wizardData.hasHumanSupport,
         humanSupportInstructions: wizardData.humanSupportInstructions || undefined,
-        operatorContactMethod: 'email', // 🆕 ALWAYS email (use userEmail from profile)
+        operatorContactMethod: 'email', // 🆕 Default to email (changed to whatsapp if enabled in Settings)
         operatorEmail: userEmail, // 🆕 AUTO from token (Andrea's requirement)
         toneOfVoice: wizardData.toneOfVoice,
         botIdentityResponse: wizardData.botIdentityResponse || undefined,
@@ -802,7 +801,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       logger.info("📋 Wizard configuration:", {
         channelType: wizardData.channelType,
         sellsProductsAndServices: finalSellsProducts,
-        hasSalesAgents: finalHasSalesAgents,
         hasHumanSupport: wizardData.hasHumanSupport,
         toneOfVoice: wizardData.toneOfVoice,
       })
@@ -1282,21 +1280,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         {/* ========== HAS WORKSPACES: Show List ========== */}
         {!isLoading && workspaces.length > 0 && (
           <>
-            {/* ========== PAYPAL WARNING (Above Your Channels) ========== */}
-            {showPayPalWarning && (
-              <div className="flex items-center gap-3 p-4 mb-6 bg-red-50 dark:bg-red-950 rounded-lg border border-red-400">
-                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="font-semibold text-red-800 dark:text-red-200">
-                    PayPal Connection Required
-                  </p>
-                  <p className="text-sm text-red-700 dark:text-red-300 mt-0.5">
-                    You must connect PayPal to add new channels or invite team members.
-                  </p>
-                </div>
-              </div>
-            )}
-
             <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -2272,6 +2255,21 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 (paypalStatus?.paypalStatus === "CONNECTED")
               }
             />
+          </div>
+        )}
+
+        {/* PayPal Warning - ABOVE PayPal box (Andrea's request) */}
+        {isSuperAdmin && showPayPalWarning && (
+          <div className="mt-6 flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-400">
+            <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="font-semibold text-red-800 dark:text-red-200">
+                PayPal Connection Required
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-0.5">
+                You must connect PayPal to add new channels or invite team members.
+              </p>
+            </div>
           </div>
         )}
 

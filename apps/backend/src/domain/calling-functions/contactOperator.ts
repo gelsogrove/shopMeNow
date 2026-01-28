@@ -97,7 +97,21 @@ export async function contactOperator(
 
       logger.info("✅ Chatbot disabled for customer:", customer.id)
 
-      // 📧 SEND EMAIL TO AGENT with summary of last hour conversation
+      // � GET WORKSPACE (needed for both email and WhatsApp)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: request.workspaceId },
+        select: {
+          name: true,
+          operatorContactMethod: true,
+          operatorWhatsappNumber: true,
+          hasHumanSupport: true,
+          whatsappSettings: {
+            select: { adminEmail: true },
+          },
+        },
+      })
+
+      // �📧 SEND EMAIL TO AGENT with summary of last hour conversation
       try {
         // Get active chat session
         const session = await prisma.chatSession.findFirst({
@@ -265,20 +279,13 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
             `.trim()
           }
 
-          // Get workspace and initialize EmailService
-          const workspace = await prisma.workspace.findUnique({
-            where: { id: request.workspaceId },
-            select: {
-              name: true,
-              whatsappSettings: {
-                select: { adminEmail: true },
-              },
-            },
-          })
+          // Workspace config already loaded at the beginning
 
           logger.info("🔍 [contactOperator] Workspace config loaded:", {
             workspaceId: request.workspaceId,
             workspaceName: workspace?.name,
+            operatorContactMethod: workspace?.operatorContactMethod,
+            operatorWhatsappNumber: workspace?.operatorWhatsappNumber,
             hasWhatsappSettings: !!workspace?.whatsappSettings,
             adminEmail: workspace?.whatsappSettings?.adminEmail || "NOT SET",
           })
@@ -290,55 +297,23 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
             } = require("../../application/services/email.service")
             const emailService = new EmailService()
 
-            // Send email to customer's sales agent (if exists)
-            if (customer.sales?.email) {
-              logger.info(
-                "📧 [contactOperator] Preparing to send email to sales agent:",
-                customer.sales.email,
-                `(${customer.sales.firstName} ${customer.sales.lastName})`
-              )
+            // PRIORITY LOGIC (Andrea's spec - same as WhatsApp):
+            // 1. If customer has salesId → send to agent's email
+            // 2. Otherwise → send to admin user email
+            
+            let targetEmail: string | null = null
+            let targetName = "Operatore"
 
-              try {
-                // Customer has assigned sales agent - send to them
-                const emailResult =
-                  await emailService.sendOperatorNotificationEmail({
-                    to: customer.sales.email, // Direct email address
-                    customerName: customer.name,
-                    chatSummary: chatSummary,
-                    chatId: session?.id,
-                    workspaceName: workspace.name,
-                    subject: `🚨 Richiesta Operatore - ${customer.name}`,
-                    fromEmail: workspace.whatsappSettings?.adminEmail,
-                  })
-
-                logger.info(
-                  "📧 [contactOperator] Email service returned:",
-                  emailResult
-                )
-
-                if (emailResult) {
-                  logger.info(
-                    "✅ [contactOperator] Email sent successfully to sales agent:",
-                    customer.sales.email,
-                    `(${customer.sales.firstName} ${customer.sales.lastName})`,
-                    "for customer:",
-                    customer.name
-                  )
-                  emailSentSuccessfully = true
-                } else {
-                  logger.error(
-                    "❌ [contactOperator] Email sending FAILED (returned false) to sales agent:",
-                    customer.sales.email
-                  )
-                }
-              } catch (emailError) {
-                logger.error(
-                  "❌ [contactOperator] Email sending EXCEPTION:",
-                  emailError
-                )
-              }
+            if (customer.salesId && customer.sales?.email) {
+              // ✅ Customer has assigned agent → send to agent
+              targetEmail = customer.sales.email
+              targetName = `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+              logger.info("✅ [contactOperator] Sending email to assigned agent:", {
+                agentName: targetName,
+                agentEmail: targetEmail,
+              })
             } else {
-              // No sales agent assigned - fallback to admin user
+              // ❌ No agent → send to admin
               const adminUser = await prisma.user.findFirst({
                 where: {
                   role: "ADMIN",
@@ -349,54 +324,96 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
               })
 
               if (adminUser?.email) {
-                logger.info(
-                  "📧 [contactOperator] No sales agent - sending to admin:",
-                  adminUser.email
-                )
-
-                try {
-                  const emailResult =
-                    await emailService.sendOperatorNotificationEmail({
-                      to: adminUser.email, // Direct email address
-                      customerName: customer.name,
-                      chatSummary: chatSummary,
-                      chatId: session?.id,
-                      workspaceName: workspace.name,
-                      subject: `🚨 Richiesta Operatore - ${customer.name}`,
-                      fromEmail: workspace.whatsappSettings?.adminEmail,
-                    })
-
-                  logger.info(
-                    "📧 [contactOperator] Email service returned (admin):",
-                    emailResult
-                  )
-
-                  if (emailResult) {
-                    logger.info(
-                      "✅ [contactOperator] Email sent successfully to admin:",
-                      adminUser.email,
-                      "for customer:",
-                      customer.name
-                    )
-                    emailSentSuccessfully = true
-                  } else {
-                    logger.error(
-                      "❌ [contactOperator] Email sending FAILED (returned false) to admin:",
-                      adminUser.email
-                    )
-                  }
-                } catch (emailError) {
-                  logger.error(
-                    "❌ [contactOperator] Email sending EXCEPTION (admin):",
-                    emailError
-                  )
-                }
+                targetEmail = adminUser.email
+                logger.info("✅ [contactOperator] Sending email to admin:", {
+                  adminEmail: targetEmail,
+                })
               } else {
-                logger.warn(
-                  "⚠️ No sales agent or admin user found for workspace:",
-                  request.workspaceId
-                )
+                logger.warn("⚠️ [contactOperator] No agent or admin user found for workspace:", request.workspaceId)
               }
+            }
+
+            if (targetEmail) {
+              try {
+                const emailResult = await emailService.sendOperatorNotificationEmail({
+                  to: targetEmail,
+                  customerName: customer.name,
+                  chatSummary: chatSummary,
+                  chatId: session?.id,
+                  workspaceName: workspace.name,
+                  subject: `🚨 Richiesta Operatore - ${customer.name}`,
+                  fromEmail: workspace.whatsappSettings?.adminEmail,
+                })
+
+                if (emailResult) {
+                  logger.info("✅ [contactOperator] Email sent successfully", {
+                    targetEmail,
+                    targetName,
+                    customerName: customer.name,
+                  })
+                  emailSentSuccessfully = true
+                } else {
+                  logger.error("❌ [contactOperator] Email sending FAILED (returned false) to:", targetEmail)
+                }
+              } catch (emailError) {
+                logger.error("❌ [contactOperator] Email sending EXCEPTION:", emailError)
+              }
+            }
+          }
+        }
+
+        // 📱 WHATSAPP NOTIFICATION (if method = "whatsapp")
+        if (workspace?.operatorContactMethod === "whatsapp") {
+          logger.info("📱 [contactOperator] WhatsApp notification enabled")
+
+          // PRIORITY LOGIC (Andrea's spec):
+          // 1. If customer has salesId → send to agent's phone
+          // 2. Otherwise → send to workspace.operatorWhatsappNumber
+          
+          let targetPhoneNumber: string | null = null
+          let targetName = "Operatore"
+
+          if (customer.salesId && customer.sales?.phone) {
+            // ✅ Customer has assigned agent → send to agent
+            targetPhoneNumber = customer.sales.phone
+            targetName = `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
+            logger.info("✅ [contactOperator] Sending WhatsApp to assigned agent:", {
+              agentName: targetName,
+              agentPhone: targetPhoneNumber,
+            })
+          } else if (workspace.operatorWhatsappNumber) {
+            // ❌ No agent → send to generic operator
+            targetPhoneNumber = workspace.operatorWhatsappNumber
+            logger.info("✅ [contactOperator] Sending WhatsApp to generic operator:", {
+              operatorPhone: targetPhoneNumber,
+            })
+          } else {
+            logger.warn("⚠️ [contactOperator] WhatsApp method selected but no operator number configured")
+          }
+
+          if (targetPhoneNumber) {
+            try {
+              // Create WhatsApp queue entry
+              const whatsappMessage = `Hello, customer ${customer.name} is requesting your support. -eChatbot.ai`
+              
+              await prisma.whatsAppQueue.create({
+                data: {
+                  workspaceId: request.workspaceId,
+                  customerId: customer.id, // System customer for billing
+                  phoneNumber: targetPhoneNumber, // 🎯 Operator/agent number
+                  messageContent: whatsappMessage,
+                  status: "pending",
+                  channel: "whatsapp",
+                },
+              })
+
+              logger.info("✅ [contactOperator] WhatsApp message queued successfully", {
+                targetPhoneNumber,
+                targetName,
+                customerName: customer.name,
+              })
+            } catch (whatsappError) {
+              logger.error("❌ [contactOperator] Failed to queue WhatsApp message:", whatsappError)
             }
           }
         }

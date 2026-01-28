@@ -200,6 +200,7 @@ model Products {
   workspaceId           String
   categoryId            String? // DEPRECATED: Use productCategories relation instead
   slug                  String                 @unique
+  link                  String?                @db.VarChar(120) // Optional product external link (max 120 chars)
   status                ProductStatus          @default(ACTIVE)
   imageUrl              String[]               @default([])
   imageKey              String? // 💾 Storage key for cleanup (e.g., "products/workspace-id/product-id.jpg")

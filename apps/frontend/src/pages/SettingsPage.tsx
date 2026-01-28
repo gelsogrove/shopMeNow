@@ -817,6 +817,56 @@ export function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {/* ========== EMBED CODE - DENTRO Website Widget Channel ========== */}
+            <div className="space-y-3 pt-6 mt-6 border-t-2 border-gray-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    📋 Embed Code
+                  </Label>
+                  <p className="text-sm text-gray-600 mt-1">Copy this code into your website's HTML to activate the widget</p>
+                </div>
+                <Button
+                  type="button"
+                  size="default"
+                  className="h-10 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg"
+                  onClick={() => {
+                    const embedCode = `<!-- eChatbot Widget -->
+<script>
+  window.eChatbotConfig = {
+    workspaceId: "${currentWorkspace?.id}",
+    title: "${formData.widgetTitle || 'Chat with us'}",
+    primaryColor: "${formData.widgetPrimaryColor || '#22c55e'}",
+    icon: "${formData.widgetIcon || 'chat'}",
+    language: "${formData.widgetLanguage || 'it'}"
+  };
+</script>
+<script src="${window.location.origin}/widget.js" async></script>`;
+                    navigator.clipboard.writeText(embedCode);
+                    toast.success("✅ Code copied to clipboard!");
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Code
+                </Button>
+              </div>
+              <div className="relative">
+                <pre className="bg-slate-900 text-green-400 p-5 rounded-xl text-sm leading-relaxed overflow-x-auto border-2 border-slate-600 shadow-xl">
+{`<!-- eChatbot Widget -->
+<script>
+  window.eChatbotConfig = {
+    workspaceId: "${currentWorkspace?.id || 'YOUR_WORKSPACE_ID'}",
+    title: "${formData.widgetTitle || 'Chat with us'}",
+    primaryColor: "${formData.widgetPrimaryColor || '#22c55e'}",
+    icon: "${formData.widgetIcon || 'chat'}",
+    language: "${formData.widgetLanguage || 'it'}"
+  };
+</script>
+<script src="${window.location.origin}/widget.js" async></script>`}
+                </pre>
+              </div>
+            </div>
           </CardContent>
         )}
       </Card>
@@ -962,23 +1012,49 @@ export function SettingsPage() {
           <CardTitle className="text-base font-semibold text-gray-900">Widget Appearance</CardTitle>
         </CardHeader>
         <CardContent className="p-4 flex-1">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-            {/* Colonna Sinistra */}
-            <div className="space-y-4">
-              {/* Widget Title */}
-              <div className="space-y-2">
-                <Label htmlFor="widgetTitle" className="text-xs font-semibold text-gray-700">Widget Title</Label>
-                <Input
-                  id="widgetTitle"
-                  value={formData.widgetTitle}
-                  onChange={(e) => handleFieldChange("widgetTitle", e.target.value)}
-                  placeholder="Chat with us"
-                  disabled={!canEdit}
-                  className="h-9 text-sm"
-                />
+          <div className="space-y-6">
+            {/* Widget Configuration */}
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              {/* Colonna Sinistra */}
+              <div className="space-y-4">
+                {/* Widget Title */}
+                <div className="space-y-2">
+                  <Label htmlFor="widgetTitle" className="text-xs font-semibold text-gray-700">Widget Title</Label>
+                  <Input
+                    id="widgetTitle"
+                    value={formData.widgetTitle}
+                    onChange={(e) => handleFieldChange("widgetTitle", e.target.value)}
+                    placeholder="Chat with us"
+                    disabled={!canEdit}
+                    className="h-9 text-sm"
+                  />
+                </div>
+
+                {/* Primary Color */}
+                <div className="space-y-2">
+                  <Label htmlFor="widgetPrimaryColor" className="text-xs font-semibold text-gray-700">Primary Color</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="widgetPrimaryColor"
+                      type="color"
+                      value={formData.widgetPrimaryColor}
+                      onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
+                      disabled={!canEdit}
+                      className="w-12 h-9 cursor-pointer rounded border-2"
+                    />
+                    <Input
+                      type="text"
+                      value={formData.widgetPrimaryColor}
+                      onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
+                      disabled={!canEdit}
+                      className="flex-1 font-mono text-xs h-9"
+                      placeholder="#22c55e"
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Widget Icon */}
+              {/* Colonna Destra - Widget Icon */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold text-gray-700">Widget Icon</Label>
                 <div className="grid grid-cols-4 gap-2">
@@ -1012,53 +1088,21 @@ export function SettingsPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Primary Color */}
-              <div className="space-y-2">
-                <Label htmlFor="widgetPrimaryColor" className="text-xs font-semibold text-gray-700">Primary Color</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="widgetPrimaryColor"
-                    type="color"
-                    value={formData.widgetPrimaryColor}
-                    onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
-                    disabled={!canEdit}
-                    className="w-12 h-9 cursor-pointer rounded border-2"
-                  />
-                  <Input
-                    type="text"
-                    value={formData.widgetPrimaryColor}
-                    onChange={(e) => handleFieldChange("widgetPrimaryColor", e.target.value)}
-                    disabled={!canEdit}
-                    className="flex-1 font-mono text-xs h-9"
-                    placeholder="#22c55e"
-                  />
-                </div>
-              </div>
             </div>
 
-            {/* Colonna Destra - Embed Code */}
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold text-gray-700">Embed Code</Label>
-              <p className="text-[10px] text-gray-500">Copy this code into your website's HTML</p>
-              <div className="relative">
-                <pre className="bg-slate-900 text-green-400 p-3 rounded text-[10px] leading-tight overflow-x-auto border border-slate-700 h-[280px] overflow-y-auto">
-{`<!-- eChatbot Widget -->
-<script>
-  window.eChatbotConfig = {
-    workspaceId: "${currentWorkspace?.id || 'YOUR_WORKSPACE_ID'}",
-    title: "${formData.widgetTitle || 'Chat with us'}",
-    primaryColor: "${formData.widgetPrimaryColor || '#22c55e'}",
-    icon: "${formData.widgetIcon || 'chat'}",
-    language: "${formData.widgetLanguage || 'it'}"
-  };
-</script>
-<script src="${window.location.origin}/widget.js" async></script>`}
-                </pre>
+            {/* ========== EMBED CODE - DENTRO LA CARD, SEMPRE VISIBILE ========== */}
+            <div className="space-y-3 pt-6 mt-6 border-t-2 border-gray-300">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    📋 Embed Code
+                  </Label>
+                  <p className="text-sm text-gray-600 mt-1">Copy this code into your website's HTML to activate the widget</p>
+                </div>
                 <Button
                   type="button"
-                  size="sm"
-                  className="absolute top-2 right-2 h-7 text-xs bg-white text-gray-900 hover:bg-gray-100"
+                  size="default"
+                  className="h-10 bg-green-600 hover:bg-green-700 text-white font-semibold shadow-lg"
                   onClick={() => {
                     const embedCode = `<!-- eChatbot Widget -->
 <script>
@@ -1072,12 +1116,27 @@ export function SettingsPage() {
 </script>
 <script src="${window.location.origin}/widget.js" async></script>`;
                     navigator.clipboard.writeText(embedCode);
-                    toast.success("Code copied to clipboard!");
+                    toast.success("✅ Code copied to clipboard!");
                   }}
                 >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Copy
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Code
                 </Button>
+              </div>
+              <div className="relative">
+                <pre className="bg-slate-900 text-green-400 p-5 rounded-xl text-sm leading-relaxed overflow-x-auto border-2 border-slate-600 shadow-xl">
+{`<!-- eChatbot Widget -->
+<script>
+  window.eChatbotConfig = {
+    workspaceId: "${currentWorkspace?.id || 'YOUR_WORKSPACE_ID'}",
+    title: "${formData.widgetTitle || 'Chat with us'}",
+    primaryColor: "${formData.widgetPrimaryColor || '#22c55e'}",
+    icon: "${formData.widgetIcon || 'chat'}",
+    language: "${formData.widgetLanguage || 'it'}"
+  };
+</script>
+<script src="${window.location.origin}/widget.js" async></script>`}
+                </pre>
               </div>
             </div>
           </div>
@@ -1346,24 +1405,15 @@ export function SettingsPage() {
             />
           </div>
 
-          {formData.sellsProductsAndServices && (
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-slate-600" />
-                <p className="font-medium text-sm">Sales Agents</p>
-              </div>
-              <Switch
-                checked={formData.hasSalesAgents}
-                onCheckedChange={(checked) =>
-                  handleFieldChange("hasSalesAgents", checked)
-                }
-                disabled={!canEdit}
-              />
-            </div>
-          )}
+          {/* hasSalesAgents toggle REMOVED - Andrea: "non serve più il flag" */}
 
           {formData.hasHumanSupport && (
             <>
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>✨ Smart Agent Routing:</strong> If a customer has an assigned sales agent, support requests will automatically be sent to that agent. Otherwise, they'll go to the operator configured below.
+                </p>
+              </div>
               <div className="space-y-3">
                 <Label>Contact Method</Label>
                 <div className="space-y-2">

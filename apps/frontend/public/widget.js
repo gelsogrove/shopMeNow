@@ -153,34 +153,36 @@
     }
 
     .echatbot-widget-button {
-      width: 110px;
-      height: 110px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
       background-color: ${primaryColor};
       background: ${primaryColor};
-      border: 2px solid ${primaryColor};
+      border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 0 0 ${pulseColor};
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
       transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       padding: 0;
       overflow: visible;
       background-image: none;
-      animation: echatbot-pulse 2s infinite;
+      position: relative;
     }
 
-    @keyframes echatbot-pulse {
-      0% {
-        box-shadow: 0 0 0 0 ${pulseColor};
-      }
-      50% {
-        box-shadow: 0 0 0 20px ${pulseColorTransparent};
-      }
-      100% {
-        box-shadow: 0 0 0 0 ${pulseColorTransparent};
-      }
+    /* Pallino verde status indicator */
+    .echatbot-widget-status-dot {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 20px;
+      height: 20px;
+      background-color: #22c55e;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.5);
+      z-index: 10;
     }
 
     .echatbot-widget-button::before,
@@ -189,41 +191,104 @@
     }
 
     .echatbot-widget-button:hover {
-      transform: scale(1.05);
-      animation-play-state: paused;
+      transform: scale(1.1);
     }
 
     .echatbot-widget-button:active {
-      transform: scale(1.15);
+      transform: scale(0.95);
       transition: transform 0.1s ease;
-      animation-play-state: paused;
+    }
+
+    .echatbot-widget-button-icon svg {
+      width: 40px !important;
+      height: 40px !important;
+      stroke: white !important;
+      stroke-width: 1.8 !important;
+      fill: none !important;
     }
 
     .echatbot-widget-button img {
-      width: 110px;
-      height: 110px;
-      object-fit: contain;
+      width: 64px;
+      height: 64px;
+      object-fit: cover;
       display: block;
-      border-radius: 0;
+      border-radius: 50%;
       background: transparent;
-      background-color: transparent;
       box-shadow: none;
-      filter: none;
-    }
-
-    .echatbot-widget-button img {
-      display: none !important;
     }
 
     .echatbot-widget-button * {
-      background: transparent !important;
-      box-shadow: none !important;
-      filter: none !important;
+      pointer-events: none;
     }
-    
-    .echatbot-widget-button img[src*="data:image"] {
-      width: 110px;
-      height: 110px;
+
+    /* Balloon sopra il cerchio */
+    .echatbot-widget-balloon {
+      position: absolute;
+      bottom: calc(100% + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 280px;
+      max-width: 90vw;
+      background: white;
+      border-radius: 20px;
+      padding: 16px 40px 16px 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      z-index: 9999;
+      animation: echatbot-slide-up 0.5s ease-out;
+    }
+
+    @keyframes echatbot-slide-up {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
+    .echatbot-widget-balloon::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -8px;
+      transform: translateX(-50%) rotate(45deg);
+      width: 16px;
+      height: 16px;
+      background: white;
+      box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+      clip-path: polygon(0 0, 100% 0, 100% 100%);
+    }
+
+    .echatbot-widget-balloon-text {
+      font-size: 14px;
+      line-height: 1.4;
+      font-weight: 500;
+      color: #1f2937;
+    }
+
+    .echatbot-widget-balloon-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+
+    .echatbot-widget-balloon-close:hover {
+      color: #374151;
+      background: #f3f4f6;
     }
 
     .echatbot-widget-popup {
@@ -1052,6 +1117,39 @@
         }
       })
       observer.observe(this.button, { childList: true, subtree: true })
+
+      // Pallino verde status indicator (aggiunto DOPO il button)
+      const statusDot = document.createElement("div")
+      statusDot.className = "echatbot-widget-status-dot"
+      statusDot.title = "Online"
+      this.button.appendChild(statusDot)
+
+      // Balloon SOPRA il cerchio (con localStorage per chiusura permanente)
+      const balloonKey = `echatbot-balloon-closed:${this.config.workspaceId}`
+      const isBalloonClosed = localStorage.getItem(balloonKey) === "true"
+      
+      if (!isBalloonClosed) {
+        const balloon = document.createElement("div")
+        balloon.className = "echatbot-widget-balloon"
+        
+        const balloonText = document.createElement("p")
+        balloonText.className = "echatbot-widget-balloon-text"
+        balloonText.textContent = t.welcome || "👋 How can I help you today?"
+        balloon.appendChild(balloonText)
+        
+        const closeBtn = document.createElement("button")
+        closeBtn.className = "echatbot-widget-balloon-close"
+        closeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'
+        closeBtn.title = "Close"
+        closeBtn.addEventListener("click", (e) => {
+          e.stopPropagation()
+          balloon.remove()
+          localStorage.setItem(balloonKey, "true")
+        })
+        balloon.appendChild(closeBtn)
+        
+        this.container.insertBefore(balloon, this.button)
+      }
 
       this.container.appendChild(this.button)
 

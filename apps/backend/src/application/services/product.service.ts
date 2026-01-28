@@ -113,6 +113,11 @@ export class ProductService {
         throw new Error("Product price must be a non-negative number")
       }
 
+      // Validate link field (max 120 chars)
+      if (productData.link && productData.link.length > 120) {
+        throw new Error("Product link must not exceed 120 characters")
+      }
+
       if (!productData.workspaceId) {
         throw new Error("WorkspaceId is required")
       }
@@ -204,6 +209,11 @@ export class ProductService {
       // Check if price is valid when provided
       if (productData.price !== undefined && productData.price < 0) {
         throw new Error("Product price must be a non-negative number")
+      }
+
+      // Validate link field (max 120 chars)
+      if (productData.link && productData.link.length > 120) {
+        throw new Error("Product link must not exceed 120 characters")
       }
 
       // Validate certificationIds if provided

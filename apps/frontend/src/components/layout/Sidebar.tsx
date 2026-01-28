@@ -125,8 +125,8 @@ export function Sidebar() {
           label: "Offers",
           icon: Percent,
         },
-        // Sales menu - only if hasSalesAgents is true
-        ...(workspace?.hasSalesAgents === true ? [{
+        // Sales menu - visible if e-commerce is enabled (Andrea: "menu lo lasci aperto se è un utente di ecommerce")
+        ...(workspace?.sellsProductsAndServices === true ? [{
           href: "/sales",
           label: "Sales",
           icon: UserCircle,

@@ -98,6 +98,9 @@ describe("ContactOperator Email Notifications", () => {
   const mockWorkspace = {
     id: workspaceId,
     name: "BellItalia Foods",
+    operatorContactMethod: "email", // 🆕 Test email method
+    operatorWhatsappNumber: null,
+    hasHumanSupport: true,
     whatsappSettings: {
       adminEmail: "admin@bellitalia.com",
     },
@@ -164,6 +167,111 @@ describe("ContactOperator Email Notifications", () => {
           to: mockSalesAgent.email,
         })
       )
+    })
+  })
+
+  describe("Priority Logic - Email to agent vs admin (Andrea's spec)", () => {
+    it("should send email to agent when customer has salesId", async () => {
+      // SCENARIO: Customer has assigned agent
+      // RULE: Email should go to sales.email (Andrea: same logic as WhatsApp)
+      
+      const request: ContactOperatorRequest = {
+        phoneNumber,
+        workspaceId,
+        customerId,
+        reason: "Expired product",
+      }
+
+      await contactOperator(request)
+
+      // ✅ RULE: Customer has salesId → send to agent
+      expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
+      expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: mockSalesAgent.email, // 🎯 Agent's email
+          customerName: mockCustomer.name,
+        })
+      )
+      
+      // ❌ Should NOT query admin user (agent email used directly)
+      expect(mockPrisma.user.findFirst).not.toHaveBeenCalled()
+    })
+
+    it("should send email to admin when customer has NO salesId", async () => {
+      // SCENARIO: Customer has NO assigned agent
+      // RULE: Email should go to admin email (Andrea: same as WhatsApp logic)
+      
+      const mockCustomerNoAgent = {
+        ...mockCustomer,
+        salesId: null,
+        sales: null,
+      }
+
+      const mockAdminUser = {
+        id: "admin-123",
+        email: "admin@bellitalia.com",
+        role: "ADMIN",
+      }
+
+      mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgent)
+      mockPrisma.user.findFirst.mockResolvedValue(mockAdminUser)
+
+      const request: ContactOperatorRequest = {
+        phoneNumber,
+        workspaceId,
+        customerId,
+        reason: "Need help",
+      }
+
+      await contactOperator(request)
+
+      // ✅ RULE: Customer has NO salesId → query admin
+      expect(mockPrisma.user.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            role: "ADMIN",
+            workspaces: {
+              some: { workspaceId },
+            },
+          }),
+        })
+      )
+      
+      expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
+      expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: mockAdminUser.email, // 🎯 Admin's email
+          customerName: mockCustomerNoAgent.name,
+        })
+      )
+    })
+
+    it("should warn when no agent or admin found", async () => {
+      // SCENARIO: Customer has NO agent AND no admin user exists
+      // EXPECTED: Log warning, no email sent
+      
+      const mockCustomerNoAgent = {
+        ...mockCustomer,
+        salesId: null,
+        sales: null,
+      }
+
+      mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgent)
+      mockPrisma.user.findFirst.mockResolvedValue(null) // No admin
+
+      const request: ContactOperatorRequest = {
+        phoneNumber,
+        workspaceId,
+        customerId,
+      }
+
+      await contactOperator(request)
+
+      // ✅ Should query admin
+      expect(mockPrisma.user.findFirst).toHaveBeenCalled()
+      
+      // ❌ No email sent (no target)
+      expect(mockEmailService.sendOperatorNotificationEmail).not.toHaveBeenCalled()
     })
   })
 

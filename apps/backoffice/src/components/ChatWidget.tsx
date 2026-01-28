@@ -91,8 +91,26 @@ export function ChatWidget({
   const [isLoading, setIsLoading] = useState(false)
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [showTooltip, setShowTooltip] = useState(false)
+  const [showBalloon, setShowBalloon] = useState(true) // 🎈 Always show balloon initially
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Check if balloon was previously closed
+  useEffect(() => {
+    if (resolvedWorkspaceId) {
+      const balloonClosed = localStorage.getItem(`echatbot-balloon-closed:${resolvedWorkspaceId}`)
+      if (balloonClosed === 'true') {
+        setShowBalloon(false)
+      }
+    }
+  }, [resolvedWorkspaceId])
+
+  // Close balloon permanently
+  const closeBalloon = () => {
+    setShowBalloon(false)
+    if (resolvedWorkspaceId) {
+      localStorage.setItem(`echatbot-balloon-closed:${resolvedWorkspaceId}`, 'true')
+    }
+  }
 
   /**
    * Tooltip translations (multilingua)
@@ -323,130 +341,105 @@ export function ChatWidget({
           "z-[2147483647]",
           positionClasses[position]
         )}>
-          {/* Tooltip Balloon - Above the button */}
-          {showTooltip && (
+          {/* Balloon - SEMPRE VISIBILE sopra il cerchio */}
+          {showBalloon && (
             <div
-              className="absolute bottom-full right-0 mb-4 animate-in slide-in-from-bottom-2 fade-in duration-300"
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 animate-in slide-in-from-bottom-4 fade-in duration-500"
               style={{ 
                 width: "280px !important",
-                maxWidth: "280px !important"
+                maxWidth: "90vw !important"
               }}
             >
               <div 
-                className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 relative"
+                className="bg-white rounded-2xl shadow-2xl p-4 pr-10 relative"
                 style={{
-                  borderRadius: "16px !important",
-                  padding: "16px !important",
-                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important"
+                  borderRadius: "20px !important",
+                  padding: "16px 40px 16px 16px !important",
+                  boxShadow: "0 10px 40px rgba(0, 0, 0, 0.2) !important",
+                  border: "1px solid rgba(0, 0, 0, 0.05) !important"
                 }}
               >
-                {/* Close button X */}
+                {/* X button - SEMPRE VISIBILE */}
                 <button
-                  onClick={() => setShowTooltip(false)}
-                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
-                  style={{
-                    width: "20px !important",
-                    height: "20px !important",
-                    padding: "0 !important"
-                  }}
-                  aria-label="Close tooltip"
+                  onClick={closeBalloon}
+                  className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all"
+                  aria-label="Close"
                 >
                   <X className="w-4 h-4" />
                 </button>
                 
-                {/* Tooltip Text */}
+                {/* Testo balloon */}
                 <p 
-                  className="text-sm text-gray-700 pr-6 leading-relaxed"
+                  className="text-gray-800 font-medium"
                   style={{
                     fontSize: "14px !important",
-                    lineHeight: "1.5 !important",
-                    color: "#374151 !important"
+                    lineHeight: "1.4 !important",
+                    fontWeight: "500 !important"
                   }}
                 >
-                  {getTooltipText(language || "en")}
+                  👋 How can I help you today?
                 </p>
                 
-                {/* Triangle pointer */}
+                {/* Triangolo che punta al cerchio */}
                 <div 
-                  className="absolute -bottom-2 right-6 w-4 h-4 bg-white border-r border-b border-gray-200 transform rotate-45"
+                  className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 bg-white transform rotate-45"
                   style={{
-                    width: "16px !important",
-                    height: "16px !important"
+                    boxShadow: "2px 2px 4px rgba(0, 0, 0, 0.1) !important",
+                    clipPath: "polygon(0 0, 100% 0, 100% 100%)"
                   }}
                 />
               </div>
             </div>
           )}
 
-          {/* Main Widget Button */}
+          {/* Main Widget Button - VIOLA con icona BIANCA GRANDE */}
           <button
             data-widget-button
             onClick={() => {
               setIsOpen(true)
-              setShowTooltip(false)
+              closeBalloon()
               onOpenChange?.(true)
             }}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setTimeout(() => setShowTooltip(false), 300)}
-            className={cn(
-              "rounded-full",
-              "p-0",
-              "bg-white",
-              "border border-gray-200/50",
-              "shadow-lg",
-              "group flex items-center justify-center",
-              "transition-all duration-200 ease-out",
-              "hover:shadow-xl hover:border-gray-300",
-              "active:scale-95",
-              "focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:ring-offset-2",
-              "relative"
-            )}
+            className="rounded-full p-0 shadow-2xl group flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 active:scale-95 focus:outline-none relative"
             style={{
               width: "64px !important",
               height: "64px !important",
               minWidth: "64px !important",
-              minHeight: "64px !important"
+              minHeight: "64px !important",
+              backgroundColor: primaryColor || "#6366f1",
+              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1) !important"
             }}
             aria-label="Open chat"
           >
-            {/* Status Indicator - Top right corner */}
+            {/* Pallino verde - GRANDE e VISIBILE */}
             <div
-              className="absolute -top-1 -right-1 rounded-full border-2 border-white"
+              className="absolute -top-1 -right-1 rounded-full border-3 border-white"
               style={{
-                width: "16px !important",
-                height: "16px !imdebugMode ? "#ef4444 !important" : "#22c55e !important",
-                zIndex: "10 !important"
+                width: "20px !important",
+                height: "20px !important",
+                backgroundColor: debugMode ? "#ef4444" : "#22c55e",
+                zIndex: "10",
+                boxShadow: "0 2px 8px rgba(34, 197, 94, 0.5)"
               }}
-              title={debugMode
-                (window as any).ECHATBOT_DEBUG_MODE === true) ? "Debug Mode" : "Online"}
+              title={debugMode ? "Debug Mode" : "Online"}
             />
 
-            {/* Chat Icon - Larger */}
-            <div 
-              className="flex items-center justify-center"
+            {/* Icona chat - BIANCA e MOLTO GRANDE */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{
-                width: "100% !important",
-                height: "100% !important"
+                width: "40px !important",
+                height: "40px !important"
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-green-600"
-                style={{
-                  width: "36px !important",
-                  height: "36px !important",
-                  color: primaryColor + " !important"
-                }}
-              >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-            </div>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
           </button>
         </div>
       )}
