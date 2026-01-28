@@ -232,24 +232,24 @@ export class ProductController {
       // Remove certificationIds from productData (handled separately)
       delete productData.certificationIds
 
-      // Parse transportTypeIds array from JSON string (sent from frontend)
-      let transportTypeIds: string[] = []
+      // Parse typeIds array from JSON string (sent from frontend)
+      let typeIds: string[] = []
       if (
-        productData.transportTypeIds &&
-        typeof productData.transportTypeIds === "string"
+        productData.typeIds &&
+        typeof productData.typeIds === "string"
       ) {
         try {
-          transportTypeIds = JSON.parse(productData.transportTypeIds)
+          typeIds = JSON.parse(productData.typeIds)
         } catch (error) {
-          logger.error("Failed to parse transportTypeIds JSON:", error)
-          transportTypeIds = []
+          logger.error("Failed to parse typeIds JSON:", error)
+          typeIds = []
         }
-      } else if (Array.isArray(productData.transportTypeIds)) {
-        transportTypeIds = productData.transportTypeIds
+      } else if (Array.isArray(productData.typeIds)) {
+        typeIds = productData.typeIds
       }
 
-      // Remove transportTypeIds from productData (handled separately)
-      delete productData.transportTypeIds
+      // Remove typeIds from productData (handled separately)
+      delete productData.typeIds
 
       // Parse categoryIds array from JSON string (sent from frontend) - many-to-many
       let categoryIds: string[] = []
@@ -280,9 +280,9 @@ export class ProductController {
         productData.categoryId = null
       }
 
-      // Handle transportType: set default if not provided
-      if (!productData.transportType) {
-        productData.transportType = "Temperatura ambiente"
+      // Handle type: set default if not provided
+      if (!productData.type) {
+        productData.type = "Temperatura ambiente"
       }
 
       logger.info(
@@ -334,7 +334,7 @@ export class ProductController {
       const product = await this.productService.createProduct(
         productData,
         certificationIds,
-        transportTypeIds,
+        typeIds,
         categoryIds
       )
 
@@ -420,24 +420,24 @@ export class ProductController {
       // Remove certificationIds from productData (handled separately)
       delete productData.certificationIds
 
-      // Parse transportTypeIds array from JSON string (sent from frontend)
-      let transportTypeIds: string[] = []
+      // Parse typeIds array from JSON string (sent from frontend)
+      let typeIds: string[] = []
       if (
-        productData.transportTypeIds &&
-        typeof productData.transportTypeIds === "string"
+        productData.typeIds &&
+        typeof productData.typeIds === "string"
       ) {
         try {
-          transportTypeIds = JSON.parse(productData.transportTypeIds)
+          typeIds = JSON.parse(productData.typeIds)
         } catch (error) {
-          logger.error("Failed to parse transportTypeIds JSON:", error)
-          transportTypeIds = []
+          logger.error("Failed to parse typeIds JSON:", error)
+          typeIds = []
         }
-      } else if (Array.isArray(productData.transportTypeIds)) {
-        transportTypeIds = productData.transportTypeIds
+      } else if (Array.isArray(productData.typeIds)) {
+        typeIds = productData.typeIds
       }
 
-      // Remove transportTypeIds from productData (handled separately)
-      delete productData.transportTypeIds
+      // Remove typeIds from productData (handled separately)
+      delete productData.typeIds
 
       // Parse categoryIds array from JSON string (sent from frontend) - many-to-many
       let categoryIds: string[] = []
@@ -468,9 +468,9 @@ export class ProductController {
         productData.categoryId = null
       }
 
-      // Handle transportType: set default if not provided
-      if (!productData.transportType) {
-        productData.transportType = "Temperatura ambiente"
+      // Handle type: set default if not provided
+      if (!productData.type) {
+        productData.type = "Temperatura ambiente"
       }
 
       logger.info(
@@ -553,7 +553,7 @@ export class ProductController {
         productData,
         workspaceId,
         certificationIds,
-        transportTypeIds,
+        typeIds,
         categoryIds
       )
       if (!updatedProduct) {
@@ -782,7 +782,7 @@ export class ProductController {
         "isActive",
         "supplierName",
         "categoryName",
-        "transportType",
+        "type",
         "region",
         "allergens",
         "certifications",
@@ -813,7 +813,7 @@ export class ProductController {
           product.isActive ? "true" : "false",
           "",  // supplierName - deprecated
           escapeCsv(product.category?.name),
-          escapeCsv(product.transportType),
+          escapeCsv(product.type),
           escapeCsv(product.region),
           escapeCsv(product.allergens?.join("|")),
           escapeCsv(product.certifications?.join("|")),
@@ -994,7 +994,7 @@ export class ProductController {
                 status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
                 isActive: rowData.isactive?.toLowerCase() !== "false",
                 categoryId: categoryId || existingProduct.categoryId,
-                transportType: rowData.transporttype || existingProduct.transportType,
+                type: rowData.transporttype || existingProduct.type,
                 region: rowData.region || existingProduct.region,
                 allergens,
                 certifications,
@@ -1015,7 +1015,7 @@ export class ProductController {
                 status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
                 isActive: rowData.isactive?.toLowerCase() !== "false",
                 categoryId,
-                transportType: rowData.transporttype || "Temperatura ambiente",
+                type: rowData.transporttype || "Temperatura ambiente",
                 region: rowData.region || null,
                 allergens,
                 certifications,

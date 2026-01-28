@@ -1,14 +1,14 @@
-import { PrismaClient, TransportType } from "@echatbot/database"
+import { PrismaClient, Type } from "@echatbot/database"
 import logger from "../utils/logger"
 
-export class TransportTypeRepository {
+export class TypeRepository {
   constructor(private prisma: PrismaClient) {}
 
   /**
    * Find all transport types for a workspace
    */
-  async findByWorkspace(workspaceId: string): Promise<TransportType[]> {
-    return this.prisma.transportType.findMany({
+  async findByWorkspace(workspaceId: string): Promise<Type[]> {
+    return this.prisma.type.findMany({
       where: { workspaceId },
       orderBy: { name: "asc" },
     })
@@ -20,8 +20,8 @@ export class TransportTypeRepository {
   async findById(
     id: string,
     workspaceId: string
-  ): Promise<TransportType | null> {
-    return this.prisma.transportType.findFirst({
+  ): Promise<Type | null> {
+    return this.prisma.type.findFirst({
       where: { id, workspaceId },
     })
   }
@@ -32,8 +32,8 @@ export class TransportTypeRepository {
   async findByName(
     name: string,
     workspaceId: string
-  ): Promise<TransportType | null> {
-    return this.prisma.transportType.findFirst({
+  ): Promise<Type | null> {
+    return this.prisma.type.findFirst({
       where: {
         workspaceId,
         name: {
@@ -50,8 +50,8 @@ export class TransportTypeRepository {
   async create(
     workspaceId: string,
     name: string
-  ): Promise<TransportType> {
-    return this.prisma.transportType.create({
+  ): Promise<Type> {
+    return this.prisma.type.create({
       data: {
         workspaceId,
         name: name.trim(),
@@ -66,8 +66,8 @@ export class TransportTypeRepository {
     id: string,
     workspaceId: string,
     name: string
-  ): Promise<TransportType> {
-    return this.prisma.transportType.update({
+  ): Promise<Type> {
+    return this.prisma.type.update({
       where: { id },
       data: { name: name.trim() },
     })
@@ -77,7 +77,7 @@ export class TransportTypeRepository {
    * Delete transport type (only if not used by products)
    */
   async delete(id: string, workspaceId: string): Promise<void> {
-    await this.prisma.transportType.delete({
+    await this.prisma.type.delete({
       where: { id },
     })
   }
@@ -85,9 +85,9 @@ export class TransportTypeRepository {
   /**
    * Count products using this transport type
    */
-  async countProductsUsing(transportTypeId: string): Promise<number> {
-    const count = await this.prisma.productTransportType.count({
-      where: { transportTypeId },
+  async countProductsUsing(typeId: string): Promise<number> {
+    const count = await this.prisma.productType.count({
+      where: { typeId },
     })
     return count
   }
@@ -97,12 +97,12 @@ export class TransportTypeRepository {
    */
   async findByWorkspaceWithCounts(
     workspaceId: string
-  ): Promise<Array<TransportType & { _count: { productTransportTypes: number } }>> {
-    return this.prisma.transportType.findMany({
+  ): Promise<Array<Type & { _count: { productTypes: number } }>> {
+    return this.prisma.type.findMany({
       where: { workspaceId },
       include: {
         _count: {
-          select: { productTransportTypes: true },
+          select: { productTypes: true },
         },
       },
       orderBy: { name: "asc" },
@@ -118,7 +118,7 @@ export class TransportTypeRepository {
   async findActiveWithPrices(
     workspaceId: string
   ): Promise<Array<{ id: string; name: string; price: number; isActive: boolean }>> {
-    const transportTypes = await this.prisma.transportType.findMany({
+    const types = await this.prisma.type.findMany({
       where: { 
         workspaceId,
         isActive: true,
@@ -133,7 +133,7 @@ export class TransportTypeRepository {
     })
     
     // Convert Decimal to number for price
-    return transportTypes.map(t => ({
+    return types.map(t => ({
       ...t,
       price: Number(t.price),
     }))
@@ -145,7 +145,7 @@ export class TransportTypeRepository {
    * @returns true if at least one active transport type has price > 0
    */
   async hasConfiguredPrices(workspaceId: string): Promise<boolean> {
-    const count = await this.prisma.transportType.count({
+    const count = await this.prisma.type.count({
       where: {
         workspaceId,
         isActive: true,

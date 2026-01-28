@@ -21,7 +21,7 @@ import logger from '../utils/logger'
  * 2. Messages, MessageArchive, ConversationMessage, AgentConversationLog
  * 3. ChatSession
  * 4. Campaign-related: CampaignSent, Campaign
- * 5. Product-related: ProductCertification, ProductTransportType, ProductCategory
+ * 5. Product-related: ProductCertification, ProductType, ProductCategory
  * 6. Cart-related: CartItems, Carts
  * 7. Order-related: CreditNote, OrderItems, Orders
  * 8. Customer-related: CustomerFeedback, SearchConversations, Customers
@@ -239,7 +239,7 @@ export async function softDeleteCleanupJob(): Promise<void> {
         where: { product: { workspaceId: { in: workspaceIds } } }
       })).count
 
-      deletedCounts.productTransportType = (await tx.productTransportType.deleteMany({
+      deletedCounts.productType = (await tx.productType.deleteMany({
         where: { product: { workspaceId: { in: workspaceIds } } }
       })).count
 

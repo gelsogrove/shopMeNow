@@ -89,7 +89,7 @@ import { cartRouter } from "../interfaces/http/routes/cart.routes"
 import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
 import certificationRoutes from "../interfaces/http/routes/certification.routes"
 import creditNoteRoutes from "../interfaces/http/routes/credit-note.routes"
-import transportTypeRoutes from "../interfaces/http/routes/transport-type.routes"
+import typeRoutes from "../interfaces/http/routes/type.routes"
 import { chatRouter } from "../interfaces/http/routes/chat.routes"
 import { checkoutRouter } from "../interfaces/http/routes/checkout.routes"
 import { offersRouter } from "../interfaces/http/routes/offers.routes"
@@ -715,9 +715,9 @@ logger.info("Registered sales router with workspace routes")
 router.use("/workspaces/:workspaceId/certifications", certificationRoutes)
 logger.info("Registered certification router with workspace routes")
 
-// Mount transport type routes
-router.use("/workspaces/:workspaceId/transport-types", transportTypeRoutes)
-logger.info("Registered transport type router with workspace routes")
+// Mount type routes
+router.use("/workspaces/:workspaceId/types", typeRoutes)
+logger.info("Registered type router with workspace routes")
 
 // Mount WhatsApp queue routes
 router.use(whatsappQueueRoutes)

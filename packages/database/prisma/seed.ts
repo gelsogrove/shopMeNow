@@ -131,7 +131,7 @@ async function main() {
     await prisma.offers.deleteMany()
     await prisma.services.deleteMany()
     // ✅ Feature 179: Delete pivot tables before parent tables
-    await prisma.productTransportType.deleteMany()
+    await prisma.productType.deleteMany()
     await prisma.productCertification.deleteMany()
     await prisma.products.deleteMany()
     await prisma.productSearch.deleteMany()
@@ -1613,7 +1613,7 @@ Can I help with anything else?"`,
       }
     }
 
-    // ✅ Feature 179: Create ProductTransportType pivot record
+    // ✅ Feature 179: Create ProductType pivot record
     // Map Italian transport types to English
     const transportTypeMapping: Record<string, string> = {
       "Temperatura ambiente": "Ambient Temperature",
@@ -1623,11 +1623,11 @@ Can I help with anything else?"`,
       "Congelato": "Frozen",
     }
 
-    const englishTransportType = transportTypeMapping[transportType] || "Ambient Temperature"
-    const transportTypeId = transportTypeMap.get(englishTransportType)
+    const englishType = transportTypeMapping[transportType] || "Ambient Temperature"
+    const transportTypeId = transportTypeMap.get(englishType)
 
     if (transportTypeId) {
-      await prisma.productTransportType.create({
+      await prisma.productType.create({
         data: {
           productId: product.id,
           transportTypeId: transportTypeId,

@@ -51,7 +51,7 @@ const createMockPrisma = () => ({
   campaignSent: { deleteMany: jest.fn() },
   campaign: { deleteMany: jest.fn() },
   productCertification: { deleteMany: jest.fn() },
-  productTransportType: { deleteMany: jest.fn() },
+  productType: { deleteMany: jest.fn() },
   productCategory: { deleteMany: jest.fn() },
   cartItems: { deleteMany: jest.fn() },
   carts: { deleteMany: jest.fn() },
@@ -61,7 +61,7 @@ const createMockPrisma = () => ({
   customerFeedback: { deleteMany: jest.fn() },
   searchConversations: { deleteMany: jest.fn() },
   certification: { deleteMany: jest.fn() },
-  transportType: { deleteMany: jest.fn() },
+  type: { deleteMany: jest.fn() },
   products: { deleteMany: jest.fn() },
   categories: { deleteMany: jest.fn() },
   offers: { deleteMany: jest.fn() },
@@ -664,7 +664,7 @@ describe('TrashController', () => {
         campaignSent: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         campaign: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
         productCertification: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
-        productTransportType: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
+        productType: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
         productCategory: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
         cartItems: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         carts: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -675,7 +675,7 @@ describe('TrashController', () => {
         searchConversations: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         customers: { deleteMany: jest.fn().mockResolvedValue({ count: 4 }) },
         certification: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
-        transportType: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        type: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
         products: { deleteMany: jest.fn().mockResolvedValue({ count: 10 }) },
         categories: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
         offers: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -745,7 +745,7 @@ describe('TrashController', () => {
         campaignSent: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         campaign: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
         productCertification: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
-        productTransportType: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
+        productType: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
         productCategory: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
         cartItems: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         carts: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
@@ -756,7 +756,7 @@ describe('TrashController', () => {
         searchConversations: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
         customers: { deleteMany: jest.fn().mockResolvedValue({ count: 4 }) },
         certification: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
-        transportType: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
+        type: { deleteMany: jest.fn().mockResolvedValue({ count: 2 }) },
         products: { deleteMany: jest.fn().mockResolvedValue({ count: 10 }) },
         categories: { deleteMany: jest.fn().mockResolvedValue({ count: 3 }) },
         offers: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -1107,7 +1107,7 @@ describe('TrashController - Full Cascade Delete Tests', () => {
     txMock.campaignSent.deleteMany = trackDelete('campaignSent')
     txMock.campaign.deleteMany = trackDelete('campaign')
     txMock.productCertification.deleteMany = trackDelete('productCertification')
-    txMock.productTransportType.deleteMany = trackDelete('productTransportType')
+    txMock.productType.deleteMany = trackDelete('productType')
     txMock.productCategory.deleteMany = trackDelete('productCategory')
     txMock.cartItems.deleteMany = trackDelete('cartItems')
     txMock.carts.deleteMany = trackDelete('carts')
@@ -1118,7 +1118,7 @@ describe('TrashController - Full Cascade Delete Tests', () => {
     txMock.searchConversations.deleteMany = trackDelete('searchConversations')
     txMock.customers.deleteMany = trackDelete('customers')
     txMock.certification.deleteMany = trackDelete('certification')
-    txMock.transportType.deleteMany = trackDelete('transportType')
+    txMock.type.deleteMany = trackDelete('type')
     txMock.products.deleteMany = trackDelete('products')
     txMock.categories.deleteMany = trackDelete('categories')
     txMock.offers.deleteMany = trackDelete('offers')
@@ -1222,7 +1222,7 @@ describe('TrashController - Full Cascade Delete Tests', () => {
       campaignSent: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       campaign: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       productCertification: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
-      productTransportType: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      productType: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       productCategory: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       cartItems: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       carts: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
@@ -1233,7 +1233,7 @@ describe('TrashController - Full Cascade Delete Tests', () => {
       searchConversations: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       customers: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       certification: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
-      transportType: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      type: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       products: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       categories: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
       offers: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },

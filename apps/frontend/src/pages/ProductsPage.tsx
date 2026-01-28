@@ -29,8 +29,8 @@ import { toast } from "@/lib/toast"
 import { categoriesApi } from "@/services/categoriesApi"
 import * as certificationsApi from "@/services/certificationsApi"
 import { type Certification } from "@/services/certificationsApi"
-import * as transportTypesApi from "@/services/transportTypesApi"
-import { type TransportType } from "@/services/transportTypesApi"
+import * as typesApi from "@/services/typesApi"
+import { type Type } from "@/services/typesApi"
 import { productsApi, type Product } from "@/services/productsApi"
 import { supplierApi, type Supplier } from "@/services/supplier"
 import { commonStyles } from "@/styles/common"
@@ -46,15 +46,15 @@ export function ProductsPage() {
     Array<{ id: string; name: string }>
   >([])
   const [certifications, setCertifications] = useState<Certification[]>([])
-  const [transportTypes, setTransportTypes] = useState<TransportType[]>([])
+  const [types, setTypes] = useState<Type[]>([])
   const [selectedCertificationIds, setSelectedCertificationIds] = useState<
     string[]
   >([])
-  const [selectedTransportTypeIds, setSelectedTransportTypeIds] = useState<
+  const [selectedTypeIds, setSelectedTypeIds] = useState<
     string[]
   >([])
   const [formCertificationIds, setFormCertificationIds] = useState<string[]>([])
-  const [formTransportTypeIds, setFormTransportTypeIds] = useState<string[]>([])
+  const [formTypeIds, setFormTypeIds] = useState<string[]>([])
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([])
   const [formCategoryIds, setFormCategoryIds] = useState<string[]>([])
   const [showCategoriesPanel, setShowCategoriesPanel] = useState(false)
@@ -63,7 +63,7 @@ export function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showCertificationsPanel, setShowCertificationsPanel] = useState(false)
-  const [showTransportTypesPanel, setShowTransportTypesPanel] = useState(false)
+  const [showTypesPanel, setShowTypesPanel] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("none")
   const [productIsActive, setProductIsActive] = useState(true)
@@ -112,14 +112,14 @@ export function ProductsPage() {
           productsApi.getAllForWorkspace(workspace.id),
           categoriesApi.getAllForWorkspace(workspace.id),
           certificationsApi.getAllForWorkspace(workspace.id),
-          transportTypesApi.getAllForWorkspace(workspace.id),
+          typesApi.getAllForWorkspace(workspace.id),
         ])
 
         const [
           productsResult,
           categoriesResult,
           certificationsResult,
-          transportTypesResult,
+          typesResult,
         ] = results
 
         // Set products
@@ -145,7 +145,7 @@ export function ProductsPage() {
         // Set other data (defaults to empty on failure)
         setCategories(categoriesResult.status === "fulfilled" ? categoriesResult.value : [])
         setCertifications(certificationsResult.status === "fulfilled" ? certificationsResult.value : [])
-        setTransportTypes(transportTypesResult.status === "fulfilled" ? transportTypesResult.value : [])
+        setTypes(typesResult.status === "fulfilled" ? typesResult.value : [])
 
         if (!coreLoadFailed) {
           logger.info("✅ All data loaded successfully")
@@ -181,7 +181,7 @@ export function ProductsPage() {
       searchValue,
       sortBy,
       selectedCertificationIds,
-      selectedTransportTypeIds,
+      selectedTypeIds,
     })
 
     // Filter by search
@@ -231,10 +231,10 @@ export function ProductsPage() {
     logger.info("🔍 After certification filters:", filtered.length)
 
     // Filter by selected transport types (dynamic from database)
-    if (selectedTransportTypeIds.length > 0) {
+    if (selectedTypeIds.length > 0) {
       filtered = filtered.filter((product) =>
-        selectedTransportTypeIds.every((typeId) =>
-          product.productTransportTypes?.some((pt) => pt.transportTypeId === typeId)
+        selectedTypeIds.every((typeId) =>
+          product.productTypes?.some((pt) => pt.typeId === typeId)
         )
       )
       logger.info("🔍 After transport type filters:", filtered.length)
@@ -261,8 +261,8 @@ export function ProductsPage() {
     sortBy,
     selectedCertificationIds,
     certifications,
-    selectedTransportTypeIds,
-    transportTypes,
+    selectedTypeIds,
+    types,
   ])
 
   // Export products to CSV
@@ -345,8 +345,8 @@ export function ProductsPage() {
     // Send certificationIds array to backend
     formData.set("certificationIds", JSON.stringify(formCertificationIds))
     
-    // Send transportTypeIds array to backend
-    formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
+    // Send typeIds array to backend
+    formData.set("typeIds", JSON.stringify(formTypeIds))
 
     // Send categoryIds array to backend (many-to-many)
     formData.set("categoryIds", JSON.stringify(formCategoryIds))
@@ -362,7 +362,7 @@ export function ProductsPage() {
       setSelectedCategoryId("none")
       setFormCategoryIds([])
       setFormCertificationIds([])
-      setFormTransportTypeIds([])
+      setFormTypeIds([])
 
       toast.success(
         "Product created successfully. Edit it to add details and images."
@@ -400,12 +400,12 @@ export function ProductsPage() {
     logger.info("🔖 handleEdit - Extracted certificationIds:", certIds)
     setFormCertificationIds(certIds)
 
-    // Load product's transport type IDs from productTransportTypes relation
-    const transportIds = (product as any).productTransportTypes?.map(
-      (pt: any) => pt.transportTypeId
+    // Load product's transport type IDs from productTypes relation
+    const transportIds = (product as any).productTypes?.map(
+      (pt: any) => pt.typeId
     ) || []
-    logger.info("🚚 handleEdit - Extracted transportTypeIds:", transportIds)
-    setFormTransportTypeIds(transportIds)
+    logger.info("🚚 handleEdit - Extracted typeIds:", transportIds)
+    setFormTypeIds(transportIds)
 
     const imageUrls = Array.isArray(product.imageUrl)
       ? product.imageUrl
@@ -456,8 +456,8 @@ export function ProductsPage() {
     // Send certificationIds array to backend
     formData.set("certificationIds", JSON.stringify(formCertificationIds))
     
-    // Send transportTypeIds array to backend
-    formData.set("transportTypeIds", JSON.stringify(formTransportTypeIds))
+    // Send typeIds array to backend
+    formData.set("typeIds", JSON.stringify(formTypeIds))
 
     // Send categoryIds array to backend (many-to-many)
     formData.set("categoryIds", JSON.stringify(formCategoryIds))
@@ -489,9 +489,9 @@ export function ProductsPage() {
       setReorderedImageUrls(null) // Reset reordered image URLs
       setFormCategoryIds([]) // Reset category IDs
       setFormCertificationIds([]) // Reset certification IDs
-      setFormTransportTypeIds([]) // Reset transport type IDs
+      setFormTypeIds([]) // Reset transport type IDs
       
-      // Force reload to get fresh productCertifications and productTransportTypes
+      // Force reload to get fresh productCertifications and productTypes
       const response = await productsApi.getAllForWorkspace(workspace.id)
       if (response && Array.isArray(response.products)) {
         setProducts(response.products)
@@ -674,29 +674,29 @@ export function ProductsPage() {
 
   // Transport Types Panel Management
   const [ttAddFormName, setTtAddFormName] = useState("")
-  const [selectedTt, setSelectedTt] = useState<TransportType | null>(null)
+  const [selectedTt, setSelectedTt] = useState<Type | null>(null)
   const [showTtEdit, setShowTtEdit] = useState(false)
   const [showTtDelete, setShowTtDelete] = useState(false)
 
-  const filteredTts = transportTypes
+  const filteredTts = types
 
   const handleTtAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (!workspace?.id || !ttAddFormName.trim()) return
 
     try {
-      await transportTypesApi.create(workspace.id, { name: ttAddFormName.trim() })
+      await typesApi.create(workspace.id, { name: ttAddFormName.trim() })
       toast.success("Transport type added successfully")
       setTtAddFormName("")
-      const response = await transportTypesApi.getAllForWorkspace(workspace.id)
-      setTransportTypes(response || [])
+      const response = await typesApi.getAllForWorkspace(workspace.id)
+      setTypes(response || [])
     } catch (error: any) {
       logger.error("Error adding transport type:", error)
       toast.error(error.message || "Failed to add transport type")
     }
   }
 
-  const handleTtEdit = (tt: TransportType) => {
+  const handleTtEdit = (tt: Type) => {
     setSelectedTt(tt)
     setShowTtEdit(true)
   }
@@ -712,19 +712,19 @@ export function ProductsPage() {
     if (!name?.trim()) return
 
     try {
-      await transportTypesApi.update(workspace.id, selectedTt.id, { name: name.trim() })
+      await typesApi.update(workspace.id, selectedTt.id, { name: name.trim() })
       toast.success("Transport type updated successfully")
       setShowTtEdit(false)
       setSelectedTt(null)
-      const response = await transportTypesApi.getAllForWorkspace(workspace.id)
-      setTransportTypes(response || [])
+      const response = await typesApi.getAllForWorkspace(workspace.id)
+      setTypes(response || [])
     } catch (error: any) {
       logger.error("Error updating transport type:", error)
       toast.error(error.message || "Failed to update transport type")
     }
   }
 
-  const handleTtDelete = (tt: TransportType) => {
+  const handleTtDelete = (tt: Type) => {
     setSelectedTt(tt)
     setShowTtDelete(true)
   }
@@ -733,12 +733,12 @@ export function ProductsPage() {
     if (!selectedTt?.id || !workspace?.id) return
 
     try {
-      await transportTypesApi.remove(workspace.id, selectedTt.id)
+      await typesApi.remove(workspace.id, selectedTt.id)
       toast.success("Transport type deleted successfully")
       setShowTtDelete(false)
       setSelectedTt(null)
-      const response = await transportTypesApi.getAllForWorkspace(workspace.id)
-      setTransportTypes(response || [])
+      const response = await typesApi.getAllForWorkspace(workspace.id)
+      setTypes(response || [])
     } catch (error: any) {
       logger.error("Error deleting transport type:", error)
       toast.error(error.message || "Failed to delete transport type")
@@ -859,27 +859,27 @@ export function ProductsPage() {
         )}
 
         {/* Dynamic Transport Types Section */}
-        {transportTypes.length > 0 && (
+        {types.length > 0 && (
           <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
             <Label className="text-base font-semibold">Transport Types</Label>
             <p className="text-xs text-gray-500 mb-3">
               Select applicable transport types for this product
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {transportTypes.map((type) => (
+              {types.map((type) => (
                 <label
                   key={type.id}
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <input
                     type="checkbox"
-                    checked={formTransportTypeIds.includes(type.id)}
+                    checked={formTypeIds.includes(type.id)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setFormTransportTypeIds([...formTransportTypeIds, type.id])
+                        setFormTypeIds([...formTypeIds, type.id])
                       } else {
-                        setFormTransportTypeIds(
-                          formTransportTypeIds.filter((id) => id !== type.id)
+                        setFormTypeIds(
+                          formTypeIds.filter((id) => id !== type.id)
                         )
                       }
                     }}
@@ -1089,27 +1089,27 @@ export function ProductsPage() {
         )}
 
         {/* Dynamic Transport Types Section */}
-        {transportTypes.length > 0 && (
+        {types.length > 0 && (
           <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
             <Label className="text-base font-semibold">Transport Types</Label>
             <p className="text-xs text-gray-500 mb-3">
               Select applicable transport types for this product
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {transportTypes.map((type) => (
+              {types.map((type) => (
                 <label
                   key={type.id}
                   className="flex items-center gap-2 cursor-pointer"
                 >
                   <input
                     type="checkbox"
-                    checked={formTransportTypeIds.includes(type.id)}
+                    checked={formTypeIds.includes(type.id)}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setFormTransportTypeIds([...formTransportTypeIds, type.id])
+                        setFormTypeIds([...formTypeIds, type.id])
                       } else {
-                        setFormTransportTypeIds(
-                          formTransportTypeIds.filter((id) => id !== type.id)
+                        setFormTypeIds(
+                          formTypeIds.filter((id) => id !== type.id)
                         )
                       }
                     }}
@@ -1246,7 +1246,7 @@ export function ProductsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowTransportTypesPanel(true)}
+              onClick={() => setShowTypesPanel(true)}
               className="text-xs h-7"
             >
               <Truck className="h-3 w-3 mr-1" />
@@ -1311,23 +1311,23 @@ export function ProductsPage() {
                 {cert.name}
               </label>
             ))}
-            {transportTypes.map((type) => (
+            {types.map((type) => (
               <label
                 key={type.id}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs cursor-pointer transition-colors ${
-                  selectedTransportTypeIds.includes(type.id)
+                  selectedTypeIds.includes(type.id)
                     ? "bg-blue-100 text-blue-800 border border-blue-300"
                     : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300"
                 }`}
               >
                 <input
                   type="checkbox"
-                  checked={selectedTransportTypeIds.includes(type.id)}
+                  checked={selectedTypeIds.includes(type.id)}
                   onChange={(e) => {
                     if (e.target.checked) {
-                      setSelectedTransportTypeIds([...selectedTransportTypeIds, type.id])
+                      setSelectedTypeIds([...selectedTypeIds, type.id])
                     } else {
-                      setSelectedTransportTypeIds(selectedTransportTypeIds.filter((id) => id !== type.id))
+                      setSelectedTypeIds(selectedTypeIds.filter((id) => id !== type.id))
                     }
                   }}
                   className="sr-only"
@@ -1336,12 +1336,12 @@ export function ProductsPage() {
                 {type.name}
               </label>
             ))}
-            {(selectedCategoryIds.length > 0 || selectedCertificationIds.length > 0 || selectedTransportTypeIds.length > 0) && (
+            {(selectedCategoryIds.length > 0 || selectedCertificationIds.length > 0 || selectedTypeIds.length > 0) && (
               <button
                 onClick={() => {
                   setSelectedCategoryIds([])
                   setSelectedCertificationIds([])
-                  setSelectedTransportTypeIds([])
+                  setSelectedTypeIds([])
                 }}
                 className="text-xs text-gray-500 hover:text-gray-700 underline ml-2"
               >
@@ -1441,15 +1441,15 @@ export function ProductsPage() {
                         </div>
                       )}
                       {/* Transport Type Badges */}
-                      {(product as any).productTransportTypes?.length > 0 && (
+                      {(product as any).productTypes?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {(product as any).productTransportTypes.map(
+                          {(product as any).productTypes.map(
                             (pt: any) => (
                               <span
-                                key={pt.transportTypeId}
+                                key={pt.typeId}
                                 className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full"
                               >
-                                🚚 {pt.transportType?.name}
+                                🚚 {pt.type?.name}
                               </span>
                             )
                           )}
@@ -1660,7 +1660,7 @@ export function ProductsPage() {
       />
 
       {/* Transport Types Management Panel */}
-      <Sheet open={showTransportTypesPanel} onOpenChange={setShowTransportTypesPanel}>
+      <Sheet open={showTypesPanel} onOpenChange={setShowTypesPanel}>
         <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
           <SheetHeader>
             <SheetTitle>Manage Transport Types</SheetTitle>
@@ -1702,9 +1702,9 @@ export function ProductsPage() {
                     >
                       <div className="flex-1">
                         <p className="font-medium">{tt.name}</p>
-                        {tt._count?.productTransportTypes !== undefined && (
+                        {tt._count?.productTypes !== undefined && (
                           <p className="text-xs text-gray-500">
-                            Used by {tt._count.productTransportTypes} product(s)
+                            Used by {tt._count.productTypes} product(s)
                           </p>
                         )}
                       </div>
@@ -1722,8 +1722,8 @@ export function ProductsPage() {
                           size="icon"
                           onClick={() => handleTtDelete(tt)}
                           disabled={
-                            tt._count?.productTransportTypes &&
-                            tt._count.productTransportTypes > 0
+                            tt._count?.productTypes &&
+                            tt._count.productTypes > 0
                           }
                           className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
@@ -1792,8 +1792,8 @@ export function ProductsPage() {
         description={
           selectedTt
             ? `Are you sure you want to delete "${selectedTt.name}"? ${
-                selectedTt._count?.productTransportTypes
-                  ? `This transport type is used by ${selectedTt._count.productTransportTypes} product(s) and cannot be deleted.`
+                selectedTt._count?.productTypes
+                  ? `This transport type is used by ${selectedTt._count.productTypes} product(s) and cannot be deleted.`
                   : "This action cannot be undone."
               }`
             : ""

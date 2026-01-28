@@ -1,9 +1,9 @@
-import { TransportTypeService } from "../../../src/services/transport-type.service"
-import { TransportTypeRepository } from "../../../src/repositories/transport-type.repository"
+import { TypeService } from "../../../src/application/services/type.service"
+import { TypeRepository } from "../../../src/repositories/type.repository"
 
-describe("TransportTypeService - UNIT Tests", () => {
-  let service: TransportTypeService
-  let mockRepository: jest.Mocked<TransportTypeRepository>
+describe("TypeService - UNIT Tests", () => {
+  let service: TypeService
+  let mockRepository: jest.Mocked<TypeRepository>
 
   beforeEach(() => {
     mockRepository = {
@@ -17,8 +17,8 @@ describe("TransportTypeService - UNIT Tests", () => {
       findByWorkspaceWithCounts: jest.fn(),
     } as any
 
-    service = new TransportTypeService(null as any)
-    ;(service as any).transportTypeRepository = mockRepository
+    service = new TypeService(null as any)
+    ;(service as any).typeRepository = mockRepository
   })
 
   describe("Validation Rules", () => {
@@ -210,7 +210,7 @@ describe("TransportTypeService - UNIT Tests", () => {
     })
   })
 
-  describe("validateTransportTypeIds", () => {
+  describe("validateTypeIds", () => {
     it("should validate all IDs exist in workspace", async () => {
       mockRepository.findByWorkspace.mockResolvedValue([
         {
@@ -229,7 +229,7 @@ describe("TransportTypeService - UNIT Tests", () => {
         },
       ])
 
-      const result = await service.validateTransportTypeIds(
+      const result = await service.validateTypeIds(
         ["tt1", "tt2"],
         "workspace1"
       )
@@ -248,7 +248,7 @@ describe("TransportTypeService - UNIT Tests", () => {
         },
       ])
 
-      const result = await service.validateTransportTypeIds(
+      const result = await service.validateTypeIds(
         ["tt1", "invalid"],
         "workspace1"
       )
@@ -257,7 +257,7 @@ describe("TransportTypeService - UNIT Tests", () => {
     })
 
     it("should handle empty array", async () => {
-      const result = await service.validateTransportTypeIds([], "workspace1")
+      const result = await service.validateTypeIds([], "workspace1")
       expect(result).toBe(true)
       expect(mockRepository.findByWorkspace).not.toHaveBeenCalled()
     })

@@ -14,7 +14,7 @@ const baseProduct = (overrides: Partial<ProductData> = {}): ProductData => ({
   formato: overrides.formato,
   certifications: overrides.certifications || [],
   allergens: overrides.allergens || [],
-  transportType: overrides.transportType,
+  type: overrides.type,
   isAvailable: overrides.isAvailable ?? true,
   sku: overrides.sku,
   description: overrides.description,
@@ -25,17 +25,17 @@ describe("CatalogQuery executeCatalogQuery", () => {
     baseProduct({
       id: "ambient",
       name: "Pane Carasau",
-      transportType: "Temperatura ambiente",
+      type: "Temperatura ambiente",
     }),
     baseProduct({
       id: "cold",
       name: "Mozzarella",
-      transportType: "Trasporto refrigerato",
+      type: "Trasporto refrigerato",
     }),
     baseProduct({
       id: "frozen",
       name: "Arancini Surgelati",
-      transportType: "Trasporto congelato",
+      type: "Trasporto congelato",
     }),
   ]
 

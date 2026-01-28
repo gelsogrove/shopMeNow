@@ -15,7 +15,7 @@ export interface ProductData {
   slug: string
   categoryName: string
   region?: string // Italian region in English (e.g., "Emilia-Romagna", "Tuscany")
-  transportType?: string // "Trasporto refrigerato", "Trasporto congelato", "Temperatura ambiente"
+  type?: string // Product type (e.g., "Refrigerated", "Frozen", "Ambient")
   imageUrl?: string[]
   certifications?: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP", "IGP", "IGT"]
 }
@@ -105,7 +105,7 @@ export const products: ProductData[] = [
     categoryName: "Salumi",
     imageUrl: ["/uploads/products/SALUMI001_1760561414803_ho7x60.jpg"],
     region: "Emilia-Romagna",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["DOP"],
   },
   {
@@ -120,7 +120,7 @@ export const products: ProductData[] = [
     slug: "mortadella-bologna-igp-1760539790639-1760541634627-1760541681115-1760542111894-1760542245190-1760543283324-1760544291555-1760544741656-1760544839639-1760561170872-1760562939890-1760565166838-1760565309374-1760565465274-1760565693099-1760655750301-1760715768901",
     categoryName: "Salumi",
     imageUrl: ["/uploads/products/SALUMI003_1760557074306_bij2tp.webp"],
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["IGP"],
   },
   {
@@ -136,7 +136,7 @@ export const products: ProductData[] = [
     categoryName: "Salumi",
     imageUrl: ["/uploads/products/SALUMI004_1760561954262_q2q4ii.jpg"],
     region: "Trentino-South Tyrol",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["IGP"],
   },
   {
@@ -152,7 +152,7 @@ export const products: ProductData[] = [
     categoryName: "Salumi",
     imageUrl: ["/uploads/products/SALUMI002_1760556332343_qoonfk.jpg"],
     region: "Lombardy",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
   },
   {
     name: "Bresaola della Valtellina IGP",
@@ -167,7 +167,7 @@ export const products: ProductData[] = [
     categoryName: "Salumi",
     imageUrl: ["/uploads/products/SALUMI-005_1764806803450_9hm8sb.jpg"],
     certifications: ["IGP"],
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
   },
   {
     name: "Coppa di Parma",
@@ -182,7 +182,7 @@ export const products: ProductData[] = [
     categoryName: "Salumi",
     imageUrl: ["/uploads/products/SALUMI-006_1764807133217_ydze5j.jpeg"],
     region: "Emilia-Romagna",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
   },
   {
     name: "Gorgonzola Dolce DOP",
@@ -197,7 +197,7 @@ export const products: ProductData[] = [
     categoryName: "Formaggi",
     imageUrl: ["/uploads/products/FORMAG002_1760561371143_uv0za8.webp"],
     region: "Lombardy",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["DOP"],
   },
   {
@@ -213,7 +213,7 @@ export const products: ProductData[] = [
     categoryName: "Formaggi",
     imageUrl: ["/uploads/products/FORMAG001_1760544790018_cseoji.jpg"],
     region: "Emilia-Romagna",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["DOP"],
   },
   {
@@ -229,7 +229,7 @@ export const products: ProductData[] = [
     categoryName: "Formaggi",
     imageUrl: ["/uploads/products/FORMAG003_1760561901985_j1nh6a.jpg"],
     region: "Campania",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["DOP"],
   },
   {
@@ -245,7 +245,7 @@ export const products: ProductData[] = [
     categoryName: "Formaggi",
     imageUrl: ["/uploads/products/FORMAG004_1760544997355_qqurf1.webp"],
     region: "Lazio",
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["DOP"],
   },
   {
@@ -260,7 +260,7 @@ export const products: ProductData[] = [
     slug: "taleggio-dop-1760539790656-1760541634647-1760541681133-1760542111977-1760542245222-1760543283365-1760544291619-1760544741682-1760544839663-1760561170893-1760562939935-1760565166860-1760565309399-1760565465293-1760565693120-1760655750328-1760715768920",
     categoryName: "Formaggi",
     imageUrl: ["/uploads/products/FORMAG005_1760562254180_li39w3.jpg"],
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
     certifications: ["DOP"],
   },
   {
@@ -275,7 +275,7 @@ export const products: ProductData[] = [
     slug: "provolone-piccante-1760539790660-1760541634652-1760541681138-1760542111986-1760542245231-1760543283372-1760544291635-1760544741689-1760544839669-1760561170898-1760562939942-1760565166866-1760565309404-1760565465298-1760565693125-1760655750334-1760715768924",
     categoryName: "Formaggi",
     imageUrl: ["/uploads/products/FORMAG007_1760557047801_iwxll7.webp"],
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
   },
   {
     name: "Burrata Pugliese",
@@ -289,7 +289,7 @@ export const products: ProductData[] = [
     slug: "burrata-pugliese-1760539790658-1760541634649-1760541681135-1760542111982-1760542245226-1760543283368-1760544291625-1760544741686-1760544839666-1760561170896-1760562939938-1760565166863-1760565309402-1760565465295-1760565693122-1760655750330-1760715768922",
     categoryName: "Formaggi",
     imageUrl: ["/uploads/products/FORMAG-007_1764806839864_0xcxsa.jpeg"],
-    transportType: "Trasporto refrigerato",
+    type: "Trasporto refrigerato",
   },
   {
     name: "Olio Extravergine di Oliva Toscano IGP",
@@ -706,6 +706,6 @@ export const products: ProductData[] = [
     categoryName: "Surgelati",
     imageUrl: ["/uploads/products/FROZ-ARA-001_1764806721939_76fa60.jpg"],
     region: "Sicily",
-    transportType: "Trasporto congelato",
+    type: "Trasporto congelato",
   },
 ]

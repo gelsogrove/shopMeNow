@@ -1,13 +1,13 @@
 import { Request, Response } from "express"
 import { PrismaClient } from "@echatbot/database"
-import { TransportTypeService } from "../../../services/transport-type.service"
+import { TypeService } from "../services/type.service"
 import logger from "../../../utils/logger"
 
-export class TransportTypeController {
-  private transportTypeService: TransportTypeService
+export class TypeController {
+  private typeService: TypeService
 
   constructor(private prisma: PrismaClient) {
-    this.transportTypeService = new TransportTypeService(prisma)
+    this.typeService = new TypeService(prisma)
   }
 
   /**
@@ -15,7 +15,7 @@ export class TransportTypeController {
    * /api/workspaces/{workspaceId}/transport-types:
    *   get:
    *     summary: Get all transport types for workspace
-   *     tags: [TransportTypes]
+   *     tags: [Types]
    *     parameters:
    *       - in: path
    *         name: workspaceId
@@ -30,10 +30,10 @@ export class TransportTypeController {
     try {
       const workspaceId = (req as any).workspaceId
 
-      const transportTypes =
-        await this.transportTypeService.getAllWithCounts(workspaceId)
+      const types =
+        await this.typeService.getAllWithCounts(workspaceId)
 
-      return res.json(transportTypes)
+      return res.json(types)
     } catch (error) {
       logger.error("Error getting transport types:", error)
       return res.status(500).json({
@@ -48,7 +48,7 @@ export class TransportTypeController {
    * /api/workspaces/{workspaceId}/transport-types/{id}:
    *   get:
    *     summary: Get transport type by ID
-   *     tags: [TransportTypes]
+   *     tags: [Types]
    *     parameters:
    *       - in: path
    *         name: workspaceId
@@ -67,16 +67,16 @@ export class TransportTypeController {
       const { id } = req.params
       const workspaceId = (req as any).workspaceId
 
-      const transportType = await this.transportTypeService.getById(
+      const type = await this.typeService.getById(
         id,
         workspaceId
       )
 
-      if (!transportType) {
+      if (!type) {
         return res.status(404).json({ error: "Transport type not found" })
       }
 
-      return res.json(transportType)
+      return res.json(type)
     } catch (error) {
       logger.error("Error getting transport type:", error)
       return res.status(500).json({
@@ -91,7 +91,7 @@ export class TransportTypeController {
    * /api/workspaces/{workspaceId}/transport-types:
    *   post:
    *     summary: Create new transport type
-   *     tags: [TransportTypes]
+   *     tags: [Types]
    *     parameters:
    *       - in: path
    *         name: workspaceId
@@ -121,13 +121,13 @@ export class TransportTypeController {
         return res.status(400).json({ error: "Transport type name is required" })
       }
 
-      const transportType = await this.transportTypeService.create(
+      const type = await this.typeService.create(
         workspaceId,
         name
       )
 
-      logger.info(`Transport type created: ${transportType.id} (${name})`)
-      return res.status(201).json(transportType)
+      logger.info(`Transport type created: ${type.id} (${name})`)
+      return res.status(201).json(type)
     } catch (error) {
       logger.error("Error creating transport type:", error)
 
@@ -157,7 +157,7 @@ export class TransportTypeController {
    * /api/workspaces/{workspaceId}/transport-types/{id}:
    *   put:
    *     summary: Update transport type
-   *     tags: [TransportTypes]
+   *     tags: [Types]
    *     parameters:
    *       - in: path
    *         name: workspaceId
@@ -190,14 +190,14 @@ export class TransportTypeController {
         return res.status(400).json({ error: "Transport type name is required" })
       }
 
-      const transportType = await this.transportTypeService.update(
+      const type = await this.typeService.update(
         id,
         workspaceId,
         name
       )
 
       logger.info(`Transport type updated: ${id} (${name})`)
-      return res.json(transportType)
+      return res.json(type)
     } catch (error) {
       logger.error("Error updating transport type:", error)
 
@@ -228,7 +228,7 @@ export class TransportTypeController {
    * /api/workspaces/{workspaceId}/transport-types/{id}:
    *   delete:
    *     summary: Delete transport type
-   *     tags: [TransportTypes]
+   *     tags: [Types]
    *     parameters:
    *       - in: path
    *         name: workspaceId
@@ -249,7 +249,7 @@ export class TransportTypeController {
       const { id } = req.params
       const workspaceId = (req as any).workspaceId
 
-      await this.transportTypeService.delete(id, workspaceId)
+      await this.typeService.delete(id, workspaceId)
 
       logger.info(`Transport type deleted: ${id}`)
       return res.json({ message: "Transport type deleted successfully" })

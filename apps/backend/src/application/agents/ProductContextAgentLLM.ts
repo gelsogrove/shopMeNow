@@ -17,7 +17,7 @@ export interface ProductContextData {
   price?: number | null
   region?: string | null
   certifications?: string[]
-  transportType?: string | null
+  type?: string | null
   ingredients?: string[]
   tags?: string[]
   storageInfo?: string | null
@@ -268,7 +268,7 @@ export class ProductContextAgentLLM {
     if (product.format) facts.push(`Formato: ${product.format}`)
     if (product.certifications?.length)
       facts.push(`Certificazioni: ${product.certifications.join(", ")}`)
-    if (product.transportType) facts.push(`Trasporto: ${product.transportType}`)
+    if (product.type) facts.push(`Trasporto: ${product.type}`)
     if (product.ingredients?.length)
       facts.push(`Ingredienti: ${product.ingredients.join(", ")}`)
     if (product.tags?.length) facts.push(`Note: ${product.tags.join(", ")}`)
@@ -297,7 +297,7 @@ export class ProductContextAgentLLM {
       "PRODUCT_CERTIFICATIONS",
       formatList(product.certifications)
     )
-    result = replaceAll(result, "PRODUCT_TRANSPORT", product.transportType || "N/A")
+    result = replaceAll(result, "PRODUCT_TRANSPORT", product.type || "N/A")
     result = replaceAll(result, "PRODUCT_INGREDIENTS", formatList(product.ingredients))
     result = replaceAll(result, "PRODUCT_TAGS", formatList(product.tags))
     result = replaceAll(result, "PRODUCT_STORAGE", product.storageInfo || "N/A")

@@ -141,7 +141,7 @@ export class OrderOptimizationAgentLLM {
       const llmInput = {
         analysis: {
           transports: analysis.transports.map(t => ({
-            transportTypeName: t.transportTypeName,
+            typeName: t.typeName,
             transportPrice: t.transportPrice,
             totalQuantity: t.totalQuantity,
             productCount: t.productCount,
@@ -332,9 +332,9 @@ Rispondi in JSON con: explanation (string), recommendations (array), nextAction 
     if (analysis.transports && analysis.transports.length > 0) {
       lines.push("**Trasporti richiesti:**")
       for (const t of analysis.transports) {
-        const emoji = t.transportTypeName.toLowerCase().includes("frozen") ? "🧊" :
-                      t.transportTypeName.toLowerCase().includes("refriger") ? "❄️" : "📦"
-        lines.push(`${emoji} ${t.transportTypeName}: €${t.transportPrice.toFixed(2)} (${t.totalQuantity} prodotti)`)
+        const emoji = t.typeName.toLowerCase().includes("frozen") ? "🧊" :
+                      t.typeName.toLowerCase().includes("refriger") ? "❄️" : "📦"
+        lines.push(`${emoji} ${t.typeName}: €${t.transportPrice.toFixed(2)} (${t.totalQuantity} prodotti)`)
       }
       lines.push("")
     }

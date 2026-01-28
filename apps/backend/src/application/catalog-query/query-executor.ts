@@ -53,7 +53,7 @@ export function executeCatalogQuery(
 
     if (filter.field === "transport") {
       const term = filter.value.toLowerCase()
-      list = list.filter((p) => (p.transportType || "").toLowerCase().includes(term))
+      list = list.filter((p) => (p.type || "").toLowerCase().includes(term))
       continue
     }
 
@@ -177,7 +177,7 @@ function getGroupKeys(
   }
 
   if (field === "transport") {
-    return product.transportType ? [product.transportType] : []
+    return product.type ? [product.type] : []
   }
 
   return []

@@ -1076,8 +1076,8 @@ export class ChatEngineService {
         productCertifications: {
           include: { certification: true },
         },
-        productTransportTypes: {
-          include: { transportType: true },
+        productTypes: {
+          include: { type: true },
         },
       },
     })
@@ -1101,9 +1101,9 @@ export class ChatEngineService {
       if (inline) certifications.add(inline)
     }
 
-    const transportType =
-      productRecord.productTransportTypes?.[0]?.transportType?.name ||
-      productRecord.transportType ||
+    const type =
+      productRecord.productTypes?.[0]?.type?.name ||
+      productRecord.type ||
       null
 
     const productData: ProductContextData = {
@@ -1114,7 +1114,7 @@ export class ChatEngineService {
       price: productRecord.price,
       region: productRecord.region,
       certifications: Array.from(certifications),
-      transportType,
+      type,
       tags: [productRecord.category?.name, productRecord.region].filter(Boolean) as string[],
       storageInfo: null,
       pairingSuggestions: undefined,
@@ -2536,17 +2536,17 @@ export class ChatEngineService {
                   for (const transport of transports.slice(0, 3)) {
                     optimizationOptions.push({
                       number: optionCounter++,
-                      name: `${this.getTransportEmoji(transport.transportTypeName)} Mostra prodotti ${transport.transportTypeName}`,
+                      name: `${this.getTransportEmoji(transport.typeName)} Mostra prodotti ${transport.typeName}`,
                       id: "SHOW_TRANSPORT_PRODUCTS",
-                      metadata: { transportTypeName: transport.transportTypeName },
+                      metadata: { typeName: transport.typeName },
                     })
                   }
                 } else {
                   // Fallback options if analysis did not return transport names
                   optimizationOptions.push(
-                    { number: optionCounter++, name: "🧊 Mostra prodotti Congelati", id: "SHOW_FROZEN_PRODUCTS", metadata: { transportTypeName: "Trasporto congelato" } },
-                    { number: optionCounter++, name: "❄️ Mostra prodotti Refrigerati", id: "SHOW_REFRIGERATED_PRODUCTS", metadata: { transportTypeName: "Trasporto refrigerato" } },
-                    { number: optionCounter++, name: "📦 Mostra prodotti Temperatura Ambiente", id: "SHOW_AMBIENT_PRODUCTS", metadata: { transportTypeName: "Temperatura ambiente" } },
+                    { number: optionCounter++, name: "🧊 Mostra prodotti Congelati", id: "SHOW_FROZEN_PRODUCTS", metadata: { typeName: "Trasporto congelato" } },
+                    { number: optionCounter++, name: "❄️ Mostra prodotti Refrigerati", id: "SHOW_REFRIGERATED_PRODUCTS", metadata: { typeName: "Trasporto refrigerato" } },
+                    { number: optionCounter++, name: "📦 Mostra prodotti Temperatura Ambiente", id: "SHOW_AMBIENT_PRODUCTS", metadata: { typeName: "Temperatura ambiente" } },
                   )
                 }
 
@@ -4609,10 +4609,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           })
           const ownerPlan = workspace?.owner?.planType
           const eligiblePlan = ownerPlan === 'PREMIUM' || ownerPlan === 'ENTERPRISE'
-          const transportTypes = finalLoadedData.cart?.transport
+          const types = finalLoadedData.cart?.transport
             ? Object.keys(finalLoadedData.cart.transport.byType || {})
             : []
-          const hasMultipleTransports = transportTypes.length >= 2
+          const hasMultipleTransports = types.length >= 2
           showOptimizeOption = eligiblePlan && hasMultipleTransports
         } catch (err) {
           logger.warn("⚠️ [ChatEngine] Could not check owner plan type for optimization option", { error: err, workspaceId: input.workspaceId })

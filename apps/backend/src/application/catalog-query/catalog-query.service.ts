@@ -227,15 +227,15 @@ export class CatalogQueryService {
           imageUrl: true,
           region: true,
           formato: true,
-          transportType: true,
+          type: true,
           productCategories: {
             select: { category: { select: { id: true, name: true } } },
           },
           productCertifications: {
             select: { certification: { select: { name: true } } },
           },
-          productTransportTypes: {
-            select: { transportType: { select: { name: true } } },
+          productTypes: {
+            select: { type: { select: { name: true } } },
           },
           certifications: true,
           allergens: true,
@@ -290,9 +290,9 @@ export class CatalogQueryService {
       formato: product.formato || undefined,
       certifications: certs,
       allergens,
-      transportType:
-        product.transportType ||
-        product.productTransportTypes?.[0]?.transportType?.name ||
+      type:
+        product.type ||
+        product.productTypes?.[0]?.type?.name ||
         undefined,
       isAvailable: product.stock > 0,
     }
@@ -341,7 +341,7 @@ Rules:
           category: product.categoryName || "",
           region: product.region || "",
           formato: product.formato || "",
-          transport: product.transportType || "",
+          transport: product.type || "",
           certifications: product.certifications || [],
         }))
 
@@ -414,7 +414,7 @@ Rules:
             category: product!.categoryName || "",
             region: product!.region || "",
             formato: product!.formato || "",
-            transport: product!.transportType || "",
+            transport: product!.type || "",
             certifications: product!.certifications || [],
           }))
 
@@ -455,7 +455,7 @@ Rules:
               categoryName: entry.category,
               region: entry.region,
               formato: entry.formato,
-              transportType: entry.transport,
+              type: entry.transport,
               certifications: entry.certifications,
             })) as ProductData[], byId)
             if (ids.length > 0) {
@@ -601,7 +601,7 @@ Rules:
       product.categoryName,
       product.region,
       product.formato,
-      product.transportType,
+      product.type,
       ...(product.certifications || []),
     ]
       .filter(Boolean)
@@ -632,7 +632,7 @@ Rules:
       product.categoryName,
       product.region,
       product.formato,
-      product.transportType,
+      product.type,
       ...(product.certifications || []),
     ]
       .filter(Boolean)

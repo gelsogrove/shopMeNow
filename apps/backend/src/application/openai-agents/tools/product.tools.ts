@@ -187,8 +187,8 @@ export const getProductDetailsTool = tool({
           productCertifications: {
             include: { certification: true },
           },
-          productTransportTypes: {
-            include: { transportType: true },
+          productTypes: {
+            include: { type: true },
           },
         },
       })

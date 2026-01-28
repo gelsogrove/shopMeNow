@@ -223,8 +223,13 @@ export async function confirmOrder(
 
     logger.info("🗑️ Cart cleared after order creation")
 
-    // 8. 📧 Notify assigned sales agent about new order
+    // 8. 📧 Notify assigned sales agent OR workspace owner about new order
     try {
+      let recipientEmail: string | null = null
+      let recipientName: string = ""
+      let recipientType: "agent" | "owner" = "agent"
+
+      // Try to send to assigned sales agent first
       if (customer.salesId) {
         const salesAgent = await prisma.sales.findUnique({
           where: { id: customer.salesId },
@@ -232,49 +237,74 @@ export async function confirmOrder(
         })
         
         if (salesAgent?.email) {
-          // Get workspace info
-          const workspace = await prisma.workspace.findUnique({
-            where: { id: request.workspaceId },
-            select: { name: true }
-          })
-          
-          // Use EmailService to send notification
-          const { EmailService } = require("../../application/services/email.service")
-          const emailService = new EmailService()
-          
-          const agentName = `${salesAgent.firstName} ${salesAgent.lastName}`.trim()
-          
-          // Build order items summary
-          const itemsSummary = orderItems.map((item: any) => 
-            `• ${item.quantity}x - €${item.totalPrice.toFixed(2)}`
-          ).join('\n')
-          
-          const emailSent = await emailService.sendOperatorNotificationEmail({
-            to: salesAgent.email,
-            customerName: customer.name,
-            chatSummary: `
-📦 **NUOVO ORDINE RICEVUTO**
+          recipientEmail = salesAgent.email
+          recipientName = `${salesAgent.firstName} ${salesAgent.lastName}`.trim()
+          recipientType = "agent"
+        }
+      }
 
-**Codice Ordine:** ${order.orderCode}
-**Totale:** €${totalAmount.toFixed(2)}
-**Articoli:** ${order.items.length}
+      // Fallback: Send to workspace owner if no agent assigned or agent has no email
+      if (!recipientEmail) {
+        const workspaceWithOwner = await prisma.workspace.findUnique({
+          where: { id: request.workspaceId },
+          select: {
+            name: true,
+            ownerId: true,
+            owner: {
+              select: { email: true, firstName: true, lastName: true }
+            }
+          }
+        })
+        
+        if (workspaceWithOwner?.owner?.email) {
+          recipientEmail = workspaceWithOwner.owner.email
+          recipientName = `${workspaceWithOwner.owner.firstName || ''} ${workspaceWithOwner.owner.lastName || ''}`.trim()
+          recipientType = "owner"
+        }
+      }
+
+      // Send email if we have a recipient
+      if (recipientEmail) {
+        // Get workspace info
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: request.workspaceId },
+          select: { name: true }
+        })
+        
+        // Use EmailService to send notification
+        const { EmailService } = require("../../application/services/email.service")
+        const emailService = new EmailService()
+        
+        // Build order items summary (English)
+        const itemsSummary = orderItems.map((item: any) => 
+          `• ${item.quantity}x - €${item.totalPrice.toFixed(2)}`
+        ).join('\n')
+        
+        const emailSent = await emailService.sendOperatorNotificationEmail({
+          to: recipientEmail,
+          customerName: customer.name,
+          chatSummary: `
+📦 **NEW ORDER RECEIVED**
+
+**Order Code:** ${order.orderCode}
+**Total:** €${totalAmount.toFixed(2)}
+**Items:** ${order.items.length}
 
 ${itemsSummary}
 
-Il cliente attende conferma e dettagli di pagamento.
-            `.trim(),
-            workspaceName: workspace?.name || 'N/A',
-            subject: `🛒 Nuovo Ordine ${order.orderCode} da ${customer.name} - €${totalAmount.toFixed(2)}`,
-          })
-          
-          if (emailSent) {
-            logger.info(`📧 New order notification email sent to agent ${salesAgent.email}`)
-          } else {
-            logger.warn(`⚠️ Failed to send new order notification email to agent ${salesAgent.email}`)
-          }
+The customer is waiting for confirmation and payment details.
+          `.trim(),
+          workspaceName: workspace?.name || 'N/A',
+          subject: `🛒 New Order ${order.orderCode} from ${customer.name} - €${totalAmount.toFixed(2)}`,
+        })
+        
+        if (emailSent) {
+          logger.info(`📧 New order notification email sent to ${recipientType} ${recipientEmail}`)
         } else {
-          logger.info(`ℹ️ Sales agent has no email - skipping email notification`)
+          logger.warn(`⚠️ Failed to send new order notification email to ${recipientType} ${recipientEmail}`)
         }
+      } else {
+        logger.warn(`⚠️ No email recipient found for order ${order.orderCode} - neither sales agent nor workspace owner has email`)
       }
     } catch (notificationError) {
       // Don't fail the order if notification fails

@@ -41,7 +41,7 @@ import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
 import { ServiceRepository } from "../../repositories/service.repository"
-import { TransportTypeRepository } from "../../repositories/transport-type.repository"
+import { TypeRepository } from "../repositories/type.repository"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { getSystemContextService, SystemContextService } from "../../services/system-context.service"
@@ -1157,13 +1157,13 @@ export class CartManagementAgentLLM {
           lines.push("")
           lines.push("Spedizione:")
           
-          const selectedTransportId = analysis.selectedTransportTypeId
+          const selectedTransportId = analysis.selectedTypeId
           const selectedTransportCost = analysis.totalTransportCost
           for (const transport of analysis.transports) {
             // Translate transport type: "Refrigerated" → "Frigorifero"
-            const transportName = transport.transportTypeName === "Refrigerated" ? "Frigorifero" : transport.transportTypeName
+            const transportName = transport.typeName === "Refrigerated" ? "Frigorifero" : transport.typeName
             const isSelected = selectedTransportId
-              ? transport.transportTypeId === selectedTransportId
+              ? transport.typeId === selectedTransportId
               : Math.abs(transport.transportPrice - selectedTransportCost) < 0.01
             const selectionLabel = isSelected ? " (selezionata)" : ""
             lines.push(`- ${transportName}${selectionLabel}: ${formatCartPrice(transport.transportPrice)}`)

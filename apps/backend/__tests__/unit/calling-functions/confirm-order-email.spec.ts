@@ -2,9 +2,10 @@
  * Test Suite: Order Email Notifications
  *
  * Verifies that ConfirmOrder function sends email notifications:
- * 1. Email to sales agent when order is created
- * 2. Email includes order details (code, total, items)
- * 3. Handles missing salesAgent gracefully
+ * 1. Email to sales agent when customer has salesId assigned
+ * 2. Email to workspace owner when customer has NO salesId
+ * 3. Email includes order details (code, total, items) in ENGLISH
+ * 4. Handles missing recipients gracefully
  *
  * @requirement Feature 176: Email notification system
  */
@@ -93,6 +94,19 @@ describe("Order Email Notifications", () => {
     firstName: "Giovanni",
     lastName: "Bianchi",
     email: "giovanni.bianchi@bellitalia.com",
+  }
+
+  const mockWorkspaceOwner = {
+    email: "owner@bellitalia.com",
+    firstName: "Andrea",
+    lastName: "Rossi",
+  }
+
+  const mockWorkspaceWithOwner = {
+    id: workspaceId,
+    name: "BellItalia Foods",
+    ownerId: "owner-123",
+    owner: mockWorkspaceOwner,
   }
 
   const mockCart = {
@@ -253,13 +267,16 @@ describe("Order Email Notifications", () => {
   })
 
   describe("Email handling when sales agent has no email", () => {
-    it("should NOT send email when sales agent has no email", async () => {
+    it("should fallback to workspace owner when sales agent has no email", async () => {
       mockPrisma.sales.findUnique.mockResolvedValue({
         id: salesId,
         firstName: "Giovanni",
         lastName: "Bianchi",
         email: null, // No email
       })
+      
+      // Workspace findUnique should return owner info for fallback
+      mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspaceWithOwner)
 
       const request: ConfirmOrderRequest = {
         customerId,
@@ -269,16 +286,24 @@ describe("Order Email Notifications", () => {
       const result = await confirmOrder(request)
 
       expect(result.success).toBe(true)
-      expect(mockEmailService.sendOperatorNotificationEmail).not.toHaveBeenCalled()
+      // Should still send email to workspace owner
+      expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: mockWorkspaceOwner.email,
+        })
+      )
     })
 
-    it("should log info when skipping email due to missing sales email", async () => {
+    it("should log success when email sent to owner (fallback)", async () => {
       mockPrisma.sales.findUnique.mockResolvedValue({
         id: salesId,
         firstName: "Giovanni",
         lastName: "Bianchi",
         email: null,
       })
+      
+      mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspaceWithOwner)
+      mockEmailService.sendOperatorNotificationEmail.mockResolvedValue(true)
 
       const request: ConfirmOrderRequest = {
         customerId,
@@ -288,17 +313,19 @@ describe("Order Email Notifications", () => {
       await confirmOrder(request)
 
       expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining("Sales agent has no email")
+        expect.stringContaining("New order notification email sent to owner")
       )
     })
   })
 
   describe("Email handling when customer has no assigned sales agent", () => {
-    it("should NOT send email when customer has no salesId", async () => {
+    it("should send email to workspace owner when customer has no salesId", async () => {
       mockPrisma.customers.findFirst.mockResolvedValue({
         ...mockCustomer,
         salesId: null, // No sales agent assigned
       })
+      
+      mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspaceWithOwner)
 
       const request: ConfirmOrderRequest = {
         customerId,
@@ -309,7 +336,99 @@ describe("Order Email Notifications", () => {
 
       expect(result.success).toBe(true)
       expect(mockPrisma.sales.findUnique).not.toHaveBeenCalled()
+      // Should send to workspace owner
+      expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: mockWorkspaceOwner.email,
+        })
+      )
+    })
+
+    it("should log success when email sent to owner (no agent)", async () => {
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        ...mockCustomer,
+        salesId: null,
+      })
+      
+      mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspaceWithOwner)
+      mockEmailService.sendOperatorNotificationEmail.mockResolvedValue(true)
+
+      const request: ConfirmOrderRequest = {
+        customerId,
+        workspaceId,
+      }
+
+      await confirmOrder(request)
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining("New order notification email sent to owner")
+      )
+    })
+  })
+
+  describe("Email content in English", () => {
+    it("should send email with English subject", async () => {
+      const request: ConfirmOrderRequest = {
+        customerId,
+        workspaceId,
+      }
+
+      await confirmOrder(request)
+
+      expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: expect.stringContaining("New Order"), // English
+        })
+      )
+    })
+
+    it("should send email with English body content", async () => {
+      const request: ConfirmOrderRequest = {
+        customerId,
+        workspaceId,
+      }
+
+      await confirmOrder(request)
+
+      const emailCall = mockEmailService.sendOperatorNotificationEmail.mock.calls[0][0]
+      expect(emailCall.chatSummary).toContain("NEW ORDER RECEIVED") // English
+      expect(emailCall.chatSummary).toContain("Order Code") // English
+      expect(emailCall.chatSummary).toContain("Total") // English
+      expect(emailCall.chatSummary).toContain("Items") // English
+      expect(emailCall.chatSummary).toContain("The customer is waiting for confirmation") // English
+    })
+  })
+
+  describe("No email recipient available", () => {
+    it("should log warning when neither agent nor owner has email", async () => {
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        ...mockCustomer,
+        salesId: null,
+      })
+      
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: workspaceId,
+        name: "BellItalia Foods",
+        ownerId: "owner-123",
+        owner: {
+          email: null, // Owner has no email
+          firstName: "Andrea",
+          lastName: "Rossi",
+        },
+      })
+
+      const request: ConfirmOrderRequest = {
+        customerId,
+        workspaceId,
+      }
+
+      const result = await confirmOrder(request)
+
+      expect(result.success).toBe(true)
       expect(mockEmailService.sendOperatorNotificationEmail).not.toHaveBeenCalled()
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("No email recipient found")
+      )
     })
   })
 

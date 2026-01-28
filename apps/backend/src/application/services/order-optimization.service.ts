@@ -15,7 +15,7 @@
  */
 
 import { PrismaClient } from "@echatbot/database"
-import { TransportTypeRepository } from "../../repositories/transport-type.repository"
+import { TypeRepository } from "../../repositories/type.repository"
 import { CartRepository } from "../../repositories/cart.repository"
 import logger from "../../utils/logger"
 
@@ -24,8 +24,8 @@ import logger from "../../utils/logger"
 // ============================================================================
 
 export interface TransportBreakdown {
-  transportTypeId: string
-  transportTypeName: string
+  typeId: string
+  typeName: string
   transportPrice: number       // Costo fisso per questo tipo di trasporto
   productCount: number         // Quanti prodotti usano questo trasporto
   totalQuantity: number        // Quantità totale di prodotti
@@ -39,7 +39,7 @@ export interface CartProductSummary {
   quantity: number
   unitPrice: number
   lineTotal: number
-  transportTypeName: string
+  typeName: string
 }
 
 export interface TransportAnalysis {
@@ -56,8 +56,8 @@ export interface TransportAnalysis {
   totalTransportCost: number     // Selected transport cost applied to order
   grandTotal: number             // totalProductsCost + totalTransportCost
   shippingCostPerUnit: number    // Average shipping per unit
-  selectedTransportTypeId: string | null
-  selectedTransportTypeName: string | null
+  selectedTypeId: string | null
+  selectedTypeName: string | null
 
   // IVA breakdown (22%)
   ivaAmount: number              // IVA included in grandTotal
@@ -84,12 +84,12 @@ export interface TransportAnalysis {
 
 export class OrderOptimizationService {
   private prisma: PrismaClient
-  private transportTypeRepo: TransportTypeRepository
+  private typeRepo: TypeRepository
   private cartRepo: CartRepository
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
-    this.transportTypeRepo = new TransportTypeRepository(prisma)
+    this.typeRepo = new TypeRepository(prisma)
     this.cartRepo = new CartRepository()
   }
 
@@ -99,7 +99,7 @@ export class OrderOptimizationService {
    * @returns true if at least one transport type has price > 0
    */
   async hasTransportPricesConfigured(workspaceId: string): Promise<boolean> {
-    return this.transportTypeRepo.hasConfiguredPrices(workspaceId)
+    return this.typeRepo.hasConfiguredPrices(workspaceId)
   }
 
   /**
@@ -135,28 +135,28 @@ export class OrderOptimizationService {
     }
 
     // 3. Get transport types with prices
-    const transportTypes = await this.transportTypeRepo.findActiveWithPrices(workspaceId)
-    const transportMap = new Map(transportTypes.map(t => [t.id, t]))
+    const types = await this.typeRepo.findActiveWithPrices(workspaceId)
+    const transportMap = new Map(types.map(t => [t.id, t]))
 
     // 4. Get product transport types (many-to-many relation)
     const productIds = cart.items
       .filter(item => item.productId)
       .map(item => item.productId!)
 
-    const productTransportTypes = await this.prisma.productTransportType.findMany({
+    const productTypes = await this.prisma.productType.findMany({
       where: { productId: { in: productIds } },
-      include: { transportType: true },
+      include: { type: true },
     })
 
-    // Map: productId -> transportType
+    // Map: productId -> type
     const productToTransport = new Map<string, { id: string; name: string; price: number }>()
-    for (const ptt of productTransportTypes) {
+    for (const ptt of productTypes) {
       // If product has multiple transports, use the first one (primary)
       if (!productToTransport.has(ptt.productId)) {
         productToTransport.set(ptt.productId, {
-          id: ptt.transportType.id,
-          name: ptt.transportType.name,
-          price: Number(ptt.transportType.price),
+          id: ptt.type.id,
+          name: ptt.type.name,
+          price: Number(ptt.type.price),
         })
       }
     }
@@ -180,7 +180,7 @@ export class OrderOptimizationService {
       const transport = productToTransport.get(item.productId!)
       if (!transport) {
         // Fallback: use "Ambient Temperature" or first available
-        const defaultTransport = transportTypes[0]
+        const defaultTransport = types[0]
         if (defaultTransport) {
           productToTransport.set(item.productId!, {
             id: defaultTransport.id,
@@ -199,8 +199,8 @@ export class OrderOptimizationService {
       // Add to transport group
       if (!transportGroups.has(productTransport.id)) {
         transportGroups.set(productTransport.id, {
-          transportTypeId: productTransport.id,
-          transportTypeName: productTransport.name,
+          typeId: productTransport.id,
+          typeName: productTransport.name,
           transportPrice: productTransport.price,
           productCount: 0,
           totalQuantity: 0,
@@ -219,7 +219,7 @@ export class OrderOptimizationService {
         quantity,
         unitPrice,
         lineTotal,
-        transportTypeName: productTransport.name,
+        typeName: productTransport.name,
       })
     }
 
@@ -303,8 +303,8 @@ export class OrderOptimizationService {
       allocationByItem,
       isConfigured: true,
       isEmpty: false,
-      selectedTransportTypeId: selectedTransport?.transportTypeId ?? null,
-      selectedTransportTypeName: selectedTransport?.transportTypeName ?? null,
+      selectedTypeId: selectedTransport?.typeId ?? null,
+      selectedTypeName: selectedTransport?.typeName ?? null,
     }
   }
 
@@ -332,8 +332,8 @@ export class OrderOptimizationService {
       allocationByItem: [],
       isConfigured,
       isEmpty: true,
-      selectedTransportTypeId: null,
-      selectedTransportTypeName: null,
+      selectedTypeId: null,
+      selectedTypeName: null,
     }
   }
 
@@ -358,15 +358,15 @@ export class OrderOptimizationService {
 
     // Transport breakdown
     for (const transport of analysis.transports) {
-      const emoji = this.getTransportEmoji(transport.transportTypeName)
+      const emoji = this.getTransportEmoji(transport.typeName)
       lines.push(
-        `${emoji} **${transport.transportTypeName}**: €${transport.transportPrice.toFixed(2)} (${transport.totalQuantity} prodotti)`
+        `${emoji} **${transport.typeName}**: €${transport.transportPrice.toFixed(2)} (${transport.totalQuantity} prodotti)`
       )
     }
 
-    if (analysis.selectedTransportTypeName) {
+    if (analysis.selectedTypeName) {
       lines.push("")
-      lines.push(`✅ **Spedizione applicata:** ${analysis.selectedTransportTypeName}`)
+      lines.push(`✅ **Spedizione applicata:** ${analysis.selectedTypeName}`)
     }
 
     lines.push("")
@@ -404,8 +404,8 @@ export class OrderOptimizationService {
     excludeProductIds: string[],
     limit: number = 5
   ): Promise<Array<{
-    transportTypeName: string
-    transportTypeId: string
+    typeName: string
+    typeId: string
     products: Array<{
       id: string
       name: string
@@ -414,19 +414,19 @@ export class OrderOptimizationService {
     }>
   }>> {
     // Get transport types
-    const transportTypes = await this.transportTypeRepo.findActiveWithPrices(workspaceId)
+    const types = await this.typeRepo.findActiveWithPrices(workspaceId)
     
     const result: Array<{
-      transportTypeName: string
-      transportTypeId: string
+      typeName: string
+      typeId: string
       products: Array<{ id: string; name: string; price: number; category: string }>
     }> = []
 
-    for (const transport of transportTypes) {
+    for (const transport of types) {
       // Get products for this transport type
-      const productTransports = await this.prisma.productTransportType.findMany({
+      const productTransports = await this.prisma.productType.findMany({
         where: {
-          transportTypeId: transport.id,
+          typeId: transport.id,
           product: {
             workspaceId,
             isActive: true,
@@ -455,8 +455,8 @@ export class OrderOptimizationService {
 
       if (productTransports.length > 0) {
         result.push({
-          transportTypeName: transport.name,
-          transportTypeId: transport.id,
+          typeName: transport.name,
+          typeId: transport.id,
           products: productTransports.map(pt => ({
             id: pt.product.id,
             name: pt.product.name,

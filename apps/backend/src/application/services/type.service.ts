@@ -1,26 +1,26 @@
-import { PrismaClient, TransportType } from "@echatbot/database"
-import { TransportTypeRepository } from "../repositories/transport-type.repository"
-import logger from "../utils/logger"
+import { PrismaClient, Type } from "@echatbot/database"
+import { TypeRepository } from "../../repositories/type.repository"
+import logger from "../../utils/logger"
 
-export class TransportTypeService {
-  private transportTypeRepository: TransportTypeRepository
+export class TypeService {
+  private typeRepository: TypeRepository
 
   constructor(private prisma: PrismaClient) {
-    this.transportTypeRepository = new TransportTypeRepository(prisma)
+    this.typeRepository = new TypeRepository(prisma)
   }
 
   /**
    * Get all transport types for a workspace
    */
-  async getAllForWorkspace(workspaceId: string): Promise<TransportType[]> {
-    return this.transportTypeRepository.findByWorkspace(workspaceId)
+  async getAllForWorkspace(workspaceId: string): Promise<Type[]> {
+    return this.typeRepository.findByWorkspace(workspaceId)
   }
 
   /**
    * Get all transport types with product counts
    */
   async getAllWithCounts(workspaceId: string) {
-    return this.transportTypeRepository.findByWorkspaceWithCounts(workspaceId)
+    return this.typeRepository.findByWorkspaceWithCounts(workspaceId)
   }
 
   /**
@@ -29,14 +29,14 @@ export class TransportTypeService {
   async getById(
     id: string,
     workspaceId: string
-  ): Promise<TransportType | null> {
-    return this.transportTypeRepository.findById(id, workspaceId)
+  ): Promise<Type | null> {
+    return this.typeRepository.findById(id, workspaceId)
   }
 
   /**
    * Create new transport type
    */
-  async create(workspaceId: string, name: string): Promise<TransportType> {
+  async create(workspaceId: string, name: string): Promise<Type> {
     // Validate name
     const trimmedName = name.trim()
     if (!trimmedName) {
@@ -48,7 +48,7 @@ export class TransportTypeService {
     }
 
     // Check for duplicate (case-insensitive)
-    const existing = await this.transportTypeRepository.findByName(
+    const existing = await this.typeRepository.findByName(
       trimmedName,
       workspaceId
     )
@@ -56,7 +56,7 @@ export class TransportTypeService {
       throw new Error("Transport type already exists")
     }
 
-    return this.transportTypeRepository.create(workspaceId, trimmedName)
+    return this.typeRepository.create(workspaceId, trimmedName)
   }
 
   /**
@@ -66,7 +66,7 @@ export class TransportTypeService {
     id: string,
     workspaceId: string,
     name: string
-  ): Promise<TransportType> {
+  ): Promise<Type> {
     // Validate name
     const trimmedName = name.trim()
     if (!trimmedName) {
@@ -78,16 +78,16 @@ export class TransportTypeService {
     }
 
     // Check if transport type exists
-    const transportType = await this.transportTypeRepository.findById(
+    const type = await this.typeRepository.findById(
       id,
       workspaceId
     )
-    if (!transportType) {
+    if (!type) {
       throw new Error("Transport type not found")
     }
 
     // Check for duplicate name (case-insensitive), excluding current transport type
-    const existing = await this.transportTypeRepository.findByName(
+    const existing = await this.typeRepository.findByName(
       trimmedName,
       workspaceId
     )
@@ -95,7 +95,7 @@ export class TransportTypeService {
       throw new Error("Transport type name already exists")
     }
 
-    return this.transportTypeRepository.update(id, workspaceId, trimmedName)
+    return this.typeRepository.update(id, workspaceId, trimmedName)
   }
 
   /**
@@ -103,17 +103,17 @@ export class TransportTypeService {
    */
   async delete(id: string, workspaceId: string): Promise<void> {
     // Check if transport type exists
-    const transportType = await this.transportTypeRepository.findById(
+    const type = await this.typeRepository.findById(
       id,
       workspaceId
     )
-    if (!transportType) {
+    if (!type) {
       throw new Error("Transport type not found")
     }
 
     // Check if transport type is used by products
     const productCount =
-      await this.transportTypeRepository.countProductsUsing(id)
+      await this.typeRepository.countProductsUsing(id)
     if (productCount > 0) {
       throw new Error(
         `Cannot delete. Used by ${productCount} products. Remove from products first.`
@@ -121,24 +121,24 @@ export class TransportTypeService {
     }
 
     // Delete transport type
-    await this.transportTypeRepository.delete(id, workspaceId)
-    logger.info(`Transport type deleted: ${id} (${transportType.name})`)
+    await this.typeRepository.delete(id, workspaceId)
+    logger.info(`Transport type deleted: ${id} (${type.name})`)
   }
 
   /**
    * Validate transport type IDs belong to workspace
    */
-  async validateTransportTypeIds(
-    transportTypeIds: string[],
+  async validateTypeIds(
+    typeIds: string[],
     workspaceId: string
   ): Promise<boolean> {
-    if (transportTypeIds.length === 0) return true
+    if (typeIds.length === 0) return true
 
-    const transportTypes = await this.transportTypeRepository.findByWorkspace(
+    const types = await this.typeRepository.findByWorkspace(
       workspaceId
     )
-    const validIds = transportTypes.map((t) => t.id)
+    const validIds = types.map((t) => t.id)
 
-    return transportTypeIds.every((id) => validIds.includes(id))
+    return typeIds.every((id) => validIds.includes(id))
   }
 }

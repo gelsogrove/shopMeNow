@@ -1,6 +1,6 @@
 import { DataLoaderService } from "../../../src/application/data-loader/data-loader.service"
 
-describe("DataLoaderService.loadProductsByTransportType", () => {
+describe("DataLoaderService.loadProductsByType", () => {
   it("should query both inline and relational transport types and map relation name", async () => {
     const findMany = jest.fn().mockResolvedValue([
       {
@@ -13,11 +13,11 @@ describe("DataLoaderService.loadProductsByTransportType", () => {
         imageUrl: [],
         region: "Emilia-Romagna",
         formato: "500g",
-        transportType: null,
+        type: null,
         certifications: [],
         allergens: [],
         productCertifications: [],
-        productTransportTypes: [{ transportType: { name: "Trasporto refrigerato" } }],
+        productTypes: [{ type: { name: "Trasporto refrigerato" } }],
         productCategories: [{ category: { id: "cat-1", name: "Pasta" } }],
       },
     ])
@@ -28,7 +28,7 @@ describe("DataLoaderService.loadProductsByTransportType", () => {
 
     const service = new DataLoaderService(prismaMock)
 
-    const result = await (service as any).loadProductsByTransportType(
+    const result = await (service as any).loadProductsByType(
       "workspace-1",
       10,
       "Trasporto refrigerato"
@@ -40,11 +40,11 @@ describe("DataLoaderService.loadProductsByTransportType", () => {
       workspaceId: "workspace-1",
       isActive: true,
       OR: [
-        { transportType: { contains: "Trasporto refrigerato", mode: "insensitive" } },
+        { type: { contains: "Trasporto refrigerato", mode: "insensitive" } },
         {
-          productTransportTypes: {
+          productTypes: {
             some: {
-              transportType: {
+              type: {
                 name: { contains: "Trasporto refrigerato", mode: "insensitive" },
               },
             },
@@ -55,7 +55,7 @@ describe("DataLoaderService.loadProductsByTransportType", () => {
 
     expect(result.type).toBe("PRODUCTS")
     expect(result.products).toHaveLength(1)
-    expect(result.products[0].transportType).toBe("Trasporto refrigerato")
+    expect(result.products[0].type).toBe("Trasporto refrigerato")
   })
 })
 

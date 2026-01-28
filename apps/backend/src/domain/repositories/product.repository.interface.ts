@@ -52,9 +52,9 @@ export interface IProductRepository {
     productId: string,
     certificationIds: string[]
   ): Promise<void>
-  syncProductTransportTypes(
+  syncProductTypes(
     productId: string,
-    transportTypeIds: string[]
+    typeIds: string[]
   ): Promise<void>
   syncProductCategories(
     productId: string,

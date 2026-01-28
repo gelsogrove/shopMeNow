@@ -32,10 +32,10 @@ export interface Product {
       name: string
     }
   }>
-  transportType: string
-  productTransportTypes?: Array<{
-    transportTypeId: string
-    transportType: {
+  type: string
+  productTypes?: Array<{
+    typeId: string
+    type: {
       id: string
       name: string
     }
@@ -71,7 +71,7 @@ export interface CreateProductData {
   region?: string
   isActive?: boolean
   certifications?: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
-  transportType?: string
+  type?: string
 }
 
 export interface UpdateProductData {
@@ -87,7 +87,7 @@ export interface UpdateProductData {
   region?: string
   isActive?: boolean
   certifications?: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
-  transportType?: string
+  type?: string
 }
 
 // Helper to process product data

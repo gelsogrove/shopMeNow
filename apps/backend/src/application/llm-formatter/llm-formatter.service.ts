@@ -617,8 +617,8 @@ export class LLMFormatterService {
       detailLines.push(`- ${codeAndFormat.join(" - ")}`)
     }
 
-    if (product.transportType) {
-      detailLines.push(`- Trasporto: ${product.transportType}`)
+    if (product.type) {
+      detailLines.push(`- Trasporto: ${product.type}`)
     }
 
     if (product.region) {
@@ -1140,8 +1140,8 @@ CRITICAL:
     if (p.certifications && p.certifications.length > 0) {
       detailLines.push(`Certificazioni: ${p.certifications.join(", ")}`)
     }
-    if (p.transportType) {
-      detailLines.push(`Tipo di trasporto: ${p.transportType}`)
+    if (p.type) {
+      detailLines.push(`Tipo di trasporto: ${p.type}`)
     }
     
     // 🔒 Feature 174: Only show availability and cart prompt for registered users
@@ -1253,7 +1253,7 @@ CRITICAL:
     const transportLines: string[] = []
     if (cart.transport && cart.transport.totalTransportCost > 0) {
       const entries = Object.entries(cart.transport.byType || {})
-      const selectedName = cart.transport.selectedTransportTypeName
+      const selectedName = cart.transport.selectedTypeName
       const selectedCost = cart.transport.totalTransportCost
       for (const [typeName, info] of entries) {
         const isSelected = selectedName

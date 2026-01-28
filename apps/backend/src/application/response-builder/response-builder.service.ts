@@ -1629,7 +1629,7 @@ export class ResponseBuilderService {
     const formatoValues = products.map(p => p.formato?.trim()).filter(Boolean) as string[]
     const hasUsefulFormato = formatoValues.length > 0 && formatoValues.some(f => !isJustWeight(f))
     const hasRegion = products.some(p => p.region && p.region.trim() !== "")
-    const hasTransport = products.some(p => (p as any).transportType && String((p as any).transportType).trim() !== "")
+    const hasTransport = products.some(p => (p as any).type && String((p as any).type).trim() !== "")
 
     const normalizedText = (product: ProductData): string =>
       `${product.name || ""} ${product.description || ""}`.toLowerCase()
@@ -1688,9 +1688,9 @@ export class ResponseBuilderService {
       } else if (hasRegion && product.region && product.region.trim() !== "") {
         // Strategy 2: Group by region (e.g., "Toscana", "Piemonte")
         groupKey = product.region.trim()
-      } else if (hasTransport && (product as any).transportType && String((product as any).transportType).trim() !== "") {
+      } else if (hasTransport && (product as any).type && String((product as any).type).trim() !== "") {
         // Strategy 3: Group by transport type when available
-        groupKey = String((product as any).transportType).trim()
+        groupKey = String((product as any).type).trim()
       } else if (hasUsefulFormato && product.formato && product.formato.trim() !== "" && !isJustWeight(product.formato)) {
         // Strategy 4: Group by formato (e.g., "Stagionato", "Fresco") - but NOT if it's just weight
         groupKey = product.formato.trim()

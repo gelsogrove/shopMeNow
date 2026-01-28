@@ -1279,7 +1279,7 @@ export class CallingFunctionsService {
             stock: product.stock,
             category: product.category?.name,
             region: product.region,
-            transportType: product.transportType,
+            type: product.type,
             certifications: certifications,
             // ✅ Include full image URL for display
             imageUrl: getFullImageUrl(Array.isArray(product.imageUrl) ? product.imageUrl[0] : product.imageUrl),

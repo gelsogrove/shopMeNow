@@ -6,7 +6,7 @@ import {
 } from "../../domain/repositories/product.repository.interface"
 import { ProductRepository } from "../../repositories/product.repository"
 import { CertificationService } from "../../services/certification.service"
-import { TransportTypeService } from "../../services/transport-type.service"
+import { TypeService } from "../services/type.service"
 import { prisma } from "../../lib/prisma"
 import logger from "../../utils/logger"
 
@@ -29,18 +29,18 @@ interface Offer {
 export class ProductService {
   private productRepository: IProductRepository
   private certificationService: CertificationService
-  private transportTypeService: TransportTypeService
+  private typeService: TypeService
 
   constructor(
     productRepository?: IProductRepository,
     certificationService?: CertificationService,
-    transportTypeService?: TransportTypeService
+    typeService?: TypeService
   ) {
     this.productRepository = productRepository || new ProductRepository()
     this.certificationService =
       certificationService || new CertificationService(prisma)
-    this.transportTypeService =
-      transportTypeService || new TransportTypeService(prisma)
+    this.typeService =
+      typeService || new TypeService(prisma)
   }
 
   async getAllProducts(workspaceId: string, filters?: ProductFilters) {
@@ -100,7 +100,7 @@ export class ProductService {
   async createProduct(
     productData: Partial<Product>,
     certificationIds?: string[],
-    transportTypeIds?: string[],
+    typeIds?: string[],
     categoryIds?: string[]
   ): Promise<Product> {
     try {
@@ -130,10 +130,10 @@ export class ProductService {
         )
       }
 
-      // Validate transportTypeIds if provided
-      if (transportTypeIds && transportTypeIds.length > 0) {
-        await this.transportTypeService.validateTransportTypeIds(
-          transportTypeIds,
+      // Validate typeIds if provided
+      if (typeIds && typeIds.length > 0) {
+        await this.typeService.validateTypeIds(
+          typeIds,
           productData.workspaceId
         )
       }
@@ -169,10 +169,10 @@ export class ProductService {
       }
 
       // Sync transport types if provided
-      if (transportTypeIds && transportTypeIds.length > 0) {
-        await this.productRepository.syncProductTransportTypes(
+      if (typeIds && typeIds.length > 0) {
+        await this.productRepository.syncProductTypes(
           createdProduct.id,
-          transportTypeIds
+          typeIds
         )
       }
 
@@ -202,7 +202,7 @@ export class ProductService {
     productData: Partial<Product>,
     workspaceId: string,
     certificationIds?: string[],
-    transportTypeIds?: string[],
+    typeIds?: string[],
     categoryIds?: string[]
   ): Promise<Product | null> {
     try {
@@ -224,10 +224,10 @@ export class ProductService {
         )
       }
 
-      // Validate transportTypeIds if provided
-      if (transportTypeIds && transportTypeIds.length > 0) {
-        await this.transportTypeService.validateTransportTypeIds(
-          transportTypeIds,
+      // Validate typeIds if provided
+      if (typeIds && typeIds.length > 0) {
+        await this.typeService.validateTypeIds(
+          typeIds,
           workspaceId
         )
       }
@@ -248,10 +248,10 @@ export class ProductService {
       }
 
       // Sync transport types (even if empty array to clear all)
-      if (transportTypeIds !== undefined) {
-        await this.productRepository.syncProductTransportTypes(
+      if (typeIds !== undefined) {
+        await this.productRepository.syncProductTypes(
           id,
-          transportTypeIds
+          typeIds
         )
       }
 

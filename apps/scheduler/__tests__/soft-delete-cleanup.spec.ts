@@ -53,7 +53,7 @@ jest.mock('../src/config/database', () => ({
     campaignSent: { deleteMany: jest.fn() },
     campaign: { deleteMany: jest.fn() },
     productCertification: { deleteMany: jest.fn() },
-    productTransportType: { deleteMany: jest.fn() },
+    productType: { deleteMany: jest.fn() },
     productCategory: { deleteMany: jest.fn() },
     cartItems: { deleteMany: jest.fn() },
     carts: { deleteMany: jest.fn() },
@@ -116,7 +116,7 @@ jest.mock('../src/config/database', () => ({
         campaignSent: { deleteMany: createDeleteManyMock() },
         campaign: { deleteMany: createDeleteManyMock() },
         productCertification: { deleteMany: createDeleteManyMock() },
-        productTransportType: { deleteMany: createDeleteManyMock() },
+        productType: { deleteMany: createDeleteManyMock() },
         productCategory: { deleteMany: createDeleteManyMock() },
         cartItems: { deleteMany: createDeleteManyMock() },
         carts: { deleteMany: createDeleteManyMock() },
@@ -282,7 +282,7 @@ describe('Soft Delete Cleanup Job', () => {
         'campaignSent',
         'campaign',
         'productCertification',
-        'productTransportType',
+        'productType',
         'productCategory',
         'cartItems',
         'carts',
@@ -463,7 +463,7 @@ describe('Soft Delete Cleanup Job', () => {
       // Verify all 30+ workspace-related tables are handled
       const workspaceRelatedTables = [
         'message', 'conversationMessage', 'agentConversationLog', 'chatSession',
-        'campaignSent', 'campaign', 'productCertification', 'productTransportType',
+        'campaignSent', 'campaign', 'productCertification', 'productType',
         'productCategory', 'cartItems', 'carts', 'creditNote', 'orderItems', 'orders',
         'customerFeedback', 'searchConversations', 'customers', 'certification',
         'transportType', 'products', 'categories', 'offers', 'services', 'fAQ',
@@ -586,7 +586,7 @@ describe('Soft Delete Cleanup Job', () => {
         'campaign',
         // Product relations
         'productCertification',
-        'productTransportType',
+        'productType',
         'productCategory',
         // Cart
         'cartItems',

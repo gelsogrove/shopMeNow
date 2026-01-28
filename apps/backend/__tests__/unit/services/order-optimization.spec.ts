@@ -10,11 +10,11 @@ import { OrderOptimizationService, TransportAnalysis } from "../../../src/applic
 
 // Mock Prisma
 const mockPrisma = {
-  transportType: {
+  type: {
     count: jest.fn(),
     findMany: jest.fn(),
   },
-  productTransportType: {
+  productType: {
     findMany: jest.fn(),
   },
   carts: {
@@ -24,8 +24,8 @@ const mockPrisma = {
 }
 
 // Mock repositories
-jest.mock("../../../src/repositories/transport-type.repository", () => ({
-  TransportTypeRepository: jest.fn().mockImplementation(() => ({
+jest.mock("../../../src/repositories/type.repository", () => ({
+  TypeRepository: jest.fn().mockImplementation(() => ({
     hasConfiguredPrices: jest.fn(),
     findActiveWithPrices: jest.fn(),
   })),
@@ -49,15 +49,15 @@ describe("OrderOptimizationService", () => {
     jest.clearAllMocks()
 
     // Get mock instances
-    const { TransportTypeRepository } = require("../../../src/repositories/transport-type.repository")
+    const { TypeRepository } = require("../../../src/repositories/type.repository")
     const { CartRepository } = require("../../../src/repositories/cart.repository")
 
-    mockTransportRepo = new TransportTypeRepository()
+    mockTransportRepo = new TypeRepository()
     mockCartRepo = new CartRepository()
 
     service = new OrderOptimizationService(mockPrisma as any)
     // Replace internal repos with mocks
-    ;(service as any).transportTypeRepo = mockTransportRepo
+    ;(service as any).typeRepo = mockTransportRepo
     ;(service as any).cartRepo = mockCartRepo
   })
 
@@ -81,7 +81,7 @@ describe("OrderOptimizationService", () => {
   })
 
   describe("analyzeCart", () => {
-    const mockTransportTypes = [
+    const mockTypes = [
       { id: "transport-1", name: "Temperatura Ambiente", price: 8, isActive: true },
       { id: "transport-2", name: "Refrigerato", price: 12, isActive: true },
       { id: "transport-3", name: "Congelato", price: 15, isActive: true },
@@ -107,16 +107,16 @@ describe("OrderOptimizationService", () => {
       ],
     }
 
-    const mockProductTransportTypes = [
-      { productId: "prod-1", transportType: { id: "transport-1", name: "Temperatura Ambiente", price: 8 } },
-      { productId: "prod-2", transportType: { id: "transport-3", name: "Congelato", price: 15 } },
+    const mockProductTypes = [
+      { productId: "prod-1", type: { id: "transport-1", name: "Temperatura Ambiente", price: 8 } },
+      { productId: "prod-2", type: { id: "transport-3", name: "Congelato", price: 15 } },
     ]
 
     beforeEach(() => {
       mockTransportRepo.hasConfiguredPrices.mockResolvedValue(true)
-      mockTransportRepo.findActiveWithPrices.mockResolvedValue(mockTransportTypes)
+      mockTransportRepo.findActiveWithPrices.mockResolvedValue(mockTypes)
       mockCartRepo.getOrCreateCart.mockResolvedValue(mockCart)
-      mockPrisma.productTransportType.findMany.mockResolvedValue(mockProductTransportTypes)
+      mockPrisma.productType.findMany.mockResolvedValue(mockProductTypes)
     })
 
     it("should return empty analysis when transport prices not configured", async () => {
@@ -147,12 +147,12 @@ describe("OrderOptimizationService", () => {
       // 2 transport types used: Ambient (Pasta) and Frozen (Gelato)
       expect(result.transports).toHaveLength(2)
 
-      const ambientTransport = result.transports.find(t => t.transportTypeName === "Temperatura Ambiente")
+      const ambientTransport = result.transports.find(t => t.typeName === "Temperatura Ambiente")
       expect(ambientTransport).toBeDefined()
       expect(ambientTransport!.transportPrice).toBe(8)
       expect(ambientTransport!.totalQuantity).toBe(2) // 2x Pasta
 
-      const frozenTransport = result.transports.find(t => t.transportTypeName === "Congelato")
+      const frozenTransport = result.transports.find(t => t.typeName === "Congelato")
       expect(frozenTransport).toBeDefined()
       expect(frozenTransport!.transportPrice).toBe(15)
       expect(frozenTransport!.totalQuantity).toBe(1) // 1x Gelato
@@ -166,7 +166,7 @@ describe("OrderOptimizationService", () => {
 
       // Transport: highest requirement (Frozen) = 15
       expect(result.totalTransportCost).toBe(15)
-      expect(result.selectedTransportTypeName).toBe("Congelato")
+      expect(result.selectedTypeName).toBe("Congelato")
 
       // Grand total: 45 + 15 = 60
       expect(result.grandTotal).toBe(60)
@@ -206,9 +206,9 @@ describe("OrderOptimizationService", () => {
 
     it("should handle single transport type", async () => {
       // All products use same transport
-      mockPrisma.productTransportType.findMany.mockResolvedValue([
-        { productId: "prod-1", transportType: { id: "transport-1", name: "Temperatura Ambiente", price: 8 } },
-        { productId: "prod-2", transportType: { id: "transport-1", name: "Temperatura Ambiente", price: 8 } },
+      mockPrisma.productType.findMany.mockResolvedValue([
+        { productId: "prod-1", type: { id: "transport-1", name: "Temperatura Ambiente", price: 8 } },
+        { productId: "prod-2", type: { id: "transport-1", name: "Temperatura Ambiente", price: 8 } },
       ])
 
       const result = await service.analyzeCart(WORKSPACE_ID, CUSTOMER_ID)
@@ -236,8 +236,8 @@ describe("OrderOptimizationService", () => {
         allocationByItem: [],
         isConfigured: false,
         isEmpty: true,
-        selectedTransportTypeId: null,
-        selectedTransportTypeName: null,
+        selectedTypeId: null,
+        selectedTypeName: null,
       }
 
       const result = service.formatAnalysisForDisplay(analysis)
@@ -262,8 +262,8 @@ describe("OrderOptimizationService", () => {
         allocationByItem: [],
         isConfigured: true,
         isEmpty: true,
-        selectedTransportTypeId: null,
-        selectedTransportTypeName: null,
+        selectedTypeId: null,
+        selectedTypeName: null,
       }
 
       const result = service.formatAnalysisForDisplay(analysis)
@@ -278,8 +278,8 @@ describe("OrderOptimizationService", () => {
         timestamp: new Date(),
         transports: [
           {
-            transportTypeId: "t1",
-            transportTypeName: "Congelato",
+            typeId: "t1",
+            typeName: "Congelato",
             transportPrice: 15,
             productCount: 1,
             totalQuantity: 2,
@@ -287,8 +287,8 @@ describe("OrderOptimizationService", () => {
             subtotal: 30,
           },
           {
-            transportTypeId: "t2",
-            transportTypeName: "Refrigerato",
+            typeId: "t2",
+            typeName: "Refrigerato",
             transportPrice: 12,
             productCount: 1,
             totalQuantity: 1,
@@ -306,8 +306,8 @@ describe("OrderOptimizationService", () => {
         allocationByItem: [],
         isConfigured: true,
         isEmpty: false,
-        selectedTransportTypeId: "t1",
-        selectedTransportTypeName: "Congelato",
+        selectedTypeId: "t1",
+        selectedTypeName: "Congelato",
       }
 
       const result = service.formatAnalysisForDisplay(analysis)

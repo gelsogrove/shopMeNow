@@ -1321,7 +1321,7 @@ export class MessageRepository {
             },
           },
           region: true, // ✅ Feature 123 - C2: Add region for single product details
-          transportType: true, // ✅ Bonus: Temperature info for product search
+          type: true, // ✅ Bonus: Temperature info for product search
           category: {
             select: {
               name: true,

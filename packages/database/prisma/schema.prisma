@@ -38,33 +38,32 @@ model Workspace {
   websiteUrl                String?   @db.Text // Custom domain/base URL for this workspace (e.g., "https://shop.acme.com")
 
   // 🆕 Web Widget Configuration
-  widgetLogoUrl             String? // Widget logo URL (for customer-facing chat widget)
-  widgetLogoKey             String? // 💾 Storage key for cleanup
-  widgetTitle               String? // Custom title for chat widget (default: workspace name)
-  widgetLanguage            String? @default("it") // Default language: it, en, es, pt
-  widgetPrimaryColor        String? @default("#22c55e") // Primary color in hex format
-  widgetTextColor           String? @default("#0f172a") // Text color for widget accents (links, labels)
-  widgetIcon                String? @default("chat") // Icon for widget trigger button
+  widgetLogoUrl      String? // Widget logo URL (for customer-facing chat widget)
+  widgetLogoKey      String? // 💾 Storage key for cleanup
+  widgetTitle        String? // Custom title for chat widget (default: workspace name)
+  widgetLanguage     String? @default("it") // Default language: it, en, es, pt
+  widgetPrimaryColor String? @default("#22c55e") // Primary color in hex format
+  widgetTextColor    String? @default("#0f172a") // Text color for widget accents (links, labels)
+  widgetIcon         String? @default("chat") // Icon for widget trigger button
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
-  enableWhatsapp                    Boolean @default(true)
-  enableWidget                      Boolean @default(false)
-  sellsProductsAndServices          Boolean @default(true) // Does this channel sell products/services? (enables E-commerce menu)
-  hasSalesAgents                    Boolean @default(false) // Has sales team for customer assignment?
-  hasHumanSupport                   Boolean @default(true) // Can customers request human support?
-  humanSupportInstructions          String? @db.Text // Instructions for human support requests
-  frustrationEscalationInstructions String? @db.Text // 🆕 Feature 203: Custom triggers for when chatbot should call operator (panic/frustration cases)
-  operatorContactMethod             String? @default("email") // 'email' | 'whatsapp'
+  enableWhatsapp                    Boolean     @default(true)
+  enableWidget                      Boolean     @default(false)
+  sellsProductsAndServices          Boolean     @default(true) // Does this channel sell products/services? (enables E-commerce menu)
+  hasSalesAgents                    Boolean     @default(false) // Has sales team for customer assignment?
+  hasHumanSupport                   Boolean     @default(true) // Can customers request human support?
+  humanSupportInstructions          String?     @db.Text // Instructions for human support requests
+  frustrationEscalationInstructions String?     @db.Text // 🆕 Feature 203: Custom triggers for when chatbot should call operator (panic/frustration cases)
+  operatorContactMethod             String?     @default("email") // 'email' | 'whatsapp'
   operatorEmail                     String? // Email for human support notifications
   operatorWhatsappNumber            String? // WhatsApp number for human support (if method='whatsapp')
-  toneOfVoice                       String? @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
-  botIdentityResponse               String? @db.Text // Response when customer asks "Who are you?"
-  customAiRules                     String? @db.Text // Custom AI rules/instructions that override default behavior
-  address                           String? @db.Text // Physical address/location for "where are you?" questions
-  chatbotName                       String? @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
-  businessType                      String? @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
-
+  toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
+  botIdentityResponse               String?     @db.Text // Response when customer asks "Who are you?"
+  customAiRules                     String?     @db.Text // Custom AI rules/instructions that override default behavior
+  address                           String?     @db.Text // Physical address/location for "where are you?" questions
+  chatbotName                       String?     @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
+  businessType                      String?     @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
 
   // �🆕 Translation Settings (Feature: Configurable Translation Layer)
   translateProductNames  Boolean @default(false) // Translate product names to customer language (false = preserve original, e.g., "Pecorino Romano")
@@ -93,44 +92,44 @@ model Workspace {
   lastPaymentFailedAt      DateTime? // Last payment failure timestamp
   paymentFailureCount      Int                @default(0) // Consecutive failed payments
 
-  users                 UserWorkspace[]
-  invitations           WorkspaceInvitation[]
-  agentConfigs          AgentConfig[]
-  agentConversationLogs AgentConversationLog[]
-  conversationMessages  ConversationMessage[]
-  whatsappWebhookEvents WhatsappWebhookEvent[]
-  carts                 Carts[]
-  categories            Categories[]
-  chatSessions          ChatSession[]
-  customers             Customers[]
-  documents             Documents[]
-  faqs                  FAQ[]
-  gdprContent           GdprContent[]
-  languages             Languages[]
-  offers                Offers[]
-  orders                Orders[]
-  products              Products[]
-  sales                 Sales[]
-  secureTokens          SecureToken[]
-  services              Services[]
-  billings              Billing[]
-  shortUrls             ShortUrls[]
-  usage                 Usage[]
-  whatsappSettings      WhatsappSettings?
-  adminSessions         AdminSession[]
-  campaigns             Campaign[]
-  productSearches       ProductSearch[]
-  searchConversations   SearchConversations[]
-  certifications        Certification[]
-  transportTypes        TransportType[]
-  whatsappQueue         WhatsAppQueue[]
-  billingTransactions   BillingTransaction[]
-  softDeleteAuditLogs   SoftDeleteAuditLog[]
-  callingFunctions      WorkspaceCallingFunction[] // ✅ Inverse relation
-  supportTickets        SupportTicket[] // 🎫 Support tickets for this workspace
-  pushCampaigns         PushCampaign[]
+  users                  UserWorkspace[]
+  invitations            WorkspaceInvitation[]
+  agentConfigs           AgentConfig[]
+  agentConversationLogs  AgentConversationLog[]
+  conversationMessages   ConversationMessage[]
+  whatsappWebhookEvents  WhatsappWebhookEvent[]
+  carts                  Carts[]
+  categories             Categories[]
+  chatSessions           ChatSession[]
+  customers              Customers[]
+  documents              Documents[]
+  faqs                   FAQ[]
+  gdprContent            GdprContent[]
+  languages              Languages[]
+  offers                 Offers[]
+  orders                 Orders[]
+  products               Products[]
+  sales                  Sales[]
+  secureTokens           SecureToken[]
+  services               Services[]
+  billings               Billing[]
+  shortUrls              ShortUrls[]
+  usage                  Usage[]
+  whatsappSettings       WhatsappSettings?
+  adminSessions          AdminSession[]
+  campaigns              Campaign[]
+  productSearches        ProductSearch[]
+  searchConversations    SearchConversations[]
+  certifications         Certification[]
+  types                  Type[]
+  whatsappQueue          WhatsAppQueue[]
+  billingTransactions    BillingTransaction[]
+  softDeleteAuditLogs    SoftDeleteAuditLog[]
+  callingFunctions       WorkspaceCallingFunction[] // ✅ Inverse relation
+  supportTickets         SupportTicket[] // 🎫 Support tickets for this workspace
+  pushCampaigns          PushCampaign[]
   pushCampaignRecipients PushCampaignRecipient[]
-  customerFeedbacks     CustomerFeedback[] // 👍👎 Customer feedback
+  customerFeedbacks      CustomerFeedback[] // 👍👎 Customer feedback
 
   @@index([ownerId])
   @@index([planType])
@@ -204,14 +203,14 @@ model Products {
   status                ProductStatus          @default(ACTIVE)
   imageUrl              String[]               @default([])
   imageKey              String? // 💾 Storage key for cleanup (e.g., "products/workspace-id/product-id.jpg")
-  transportType         String                 @default("Temperatura ambiente")
+  type                  String                 @default("Temperatura ambiente")
   region                String?
   allergens             String[]               @default([])
   certifications        String[]               @default([]) // DEPRECATED: Use ProductCertification relation instead
   cartItems             CartItems[]
   orderItems            OrderItems[]
   productCertifications ProductCertification[]
-  productTransportTypes ProductTransportType[]
+  productTypes          ProductType[]
   productCategories     ProductCategory[]
   category              Categories?            @relation(fields: [categoryId], references: [id]) // DEPRECATED
   workspace             Workspace              @relation(fields: [workspaceId], references: [id])
@@ -249,34 +248,34 @@ model ProductCertification {
   @@map("ProductCertification")
 }
 
-model TransportType {
-  id                    String                 @id @default(uuid())
-  name                  String
-  workspaceId           String
-  price                 Decimal                @default(0) @db.Decimal(10, 2)
-  isActive              Boolean                @default(true)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  workspace             Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  productTransportTypes ProductTransportType[]
+model Type {
+  id           String        @id @default(uuid())
+  name         String
+  workspaceId  String
+  price        Decimal       @default(0) @db.Decimal(10, 2)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productTypes ProductType[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
   @@index([name])
   @@index([isActive])
-  @@map("TransportType")
+  @@map("Type")
 }
 
-model ProductTransportType {
-  productId       String
-  transportTypeId String
-  product         Products      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  transportType   TransportType @relation(fields: [transportTypeId], references: [id], onDelete: Cascade)
+model ProductType {
+  productId String
+  typeId    String
+  product   Products @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type      Type     @relation(fields: [typeId], references: [id], onDelete: Cascade)
 
-  @@id([productId, transportTypeId])
+  @@id([productId, typeId])
   @@index([productId])
-  @@index([transportTypeId])
-  @@map("ProductTransportType")
+  @@index([typeId])
+  @@map("ProductType")
 }
 
 model ProductCategory {
@@ -303,18 +302,18 @@ model WhatsAppQueue {
   createdAt             DateTime  @default(now())
   deliveredAt           DateTime?
   conversationMessageId String? // FK to ConversationMessage for timeline tracking
-  
+
   // 🆕 Widget Support
-  channel               String    @default("whatsapp") // "whatsapp" | "widget"
-  visitorId             String?   // For anonymous widget users (e.g., "visitor_1726262000000_a7k2m9x1")
-  isAnonymous           Boolean   @default(false) // true for widget visitors without phone
-  expiresAt             DateTime? // Session expiry for anonymous widget sessions (24 hours)
-  responsePayload       Json?     // Response from LLM (cached for polling)
-  pollingAttempts       Int       @default(0) // Track polling attempts
-  lastPolledAt          DateTime? // Last time response was checked
-  
+  channel         String    @default("whatsapp") // "whatsapp" | "widget"
+  visitorId       String? // For anonymous widget users (e.g., "visitor_1726262000000_a7k2m9x1")
+  isAnonymous     Boolean   @default(false) // true for widget visitors without phone
+  expiresAt       DateTime? // Session expiry for anonymous widget sessions (24 hours)
+  responsePayload Json? // Response from LLM (cached for polling)
+  pollingAttempts Int       @default(0) // Track polling attempts
+  lastPolledAt    DateTime? // Last time response was checked
+
   // 🧪 Playground Mode
-  isPlayground          Boolean   @default(false) // true for test messages (skip billing & real sending)
+  isPlayground Boolean @default(false) // true for test messages (skip billing & real sending)
 
   workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer            Customers            @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -333,12 +332,12 @@ model WhatsAppQueue {
 // 🔐 WhatsApp inbound webhook de-duplication (prevents Meta retry duplicates)
 model WhatsappWebhookEvent {
   id                String   @id @default(cuid())
-  workspaceId        String
-  externalMessageId  String
-  channel            String   @default("whatsapp") // "whatsapp" | "widget" (future)
-  receivedAt         DateTime @default(now())
+  workspaceId       String
+  externalMessageId String
+  channel           String   @default("whatsapp") // "whatsapp" | "widget" (future)
+  receivedAt        DateTime @default(now())
 
-  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, channel, externalMessageId])
   @@index([workspaceId])
@@ -347,35 +346,35 @@ model WhatsappWebhookEvent {
 }
 
 model Customers {
-  id                            String                 @id @default(uuid())
+  id                            String                  @id @default(uuid())
   name                          String
   email                         String
   phone                         String?
-  customId                      String?                @unique // 🆕 Widget: visitor tracking ID (e.g., "webvisitor-abc123")
+  customId                      String?                 @unique // 🆕 Widget: visitor tracking ID (e.g., "webvisitor-abc123")
   address                       String?
   company                       String?
-  discount                      Float?                 @default(0)
-  language                      String?                @default("it") // 🌍 Default to Italian (base language) - detects from phone prefix
-  currency                      String?                @default("USD")
+  discount                      Float?                  @default(0)
+  language                      String?                 @default("it") // 🌍 Default to Italian (base language) - detects from phone prefix
+  currency                      String?                 @default("USD")
   notes                         String?
-  serviceIds                    String[]               @default([])
-  isBlacklisted                 Boolean                @default(false)
-  createdAt                     DateTime               @default(now())
-  updatedAt                     DateTime               @updatedAt
+  serviceIds                    String[]                @default([])
+  isBlacklisted                 Boolean                 @default(false)
+  createdAt                     DateTime                @default(now())
+  updatedAt                     DateTime                @updatedAt
   deletedAt                     DateTime?
-  isActive                      Boolean                @default(false) // 🔒 Feature 174: Rule #4 - New customers are NOT registered by default
+  isActive                      Boolean                 @default(false) // 🔒 Feature 174: Rule #4 - New customers are NOT registered by default
   workspaceId                   String
   last_privacy_version_accepted String?
   privacy_accepted_at           DateTime?
-  push_notifications_consent    Boolean                @default(false)
+  push_notifications_consent    Boolean                 @default(false)
   push_notifications_consent_at DateTime?
-  activeChatbot                 Boolean                @default(true)
+  activeChatbot                 Boolean                 @default(true)
   invoiceAddress                Json?
   salesId                       String?
   cart                          Carts?
   chatSessions                  ChatSession[]
-  sales                         Sales?                 @relation(fields: [salesId], references: [id])
-  workspace                     Workspace              @relation(fields: [workspaceId], references: [id])
+  sales                         Sales?                  @relation(fields: [salesId], references: [id])
+  workspace                     Workspace               @relation(fields: [workspaceId], references: [id])
   orders                        Orders[]
   usage                         Usage[]
   billings                      Billing[]
@@ -577,27 +576,27 @@ model User {
   paymentFailureCount Int       @default(0) // Consecutive failed payments
 
   // PayPal configuration (owner-level)
-  paypalStatus      PayPalStatus @default(DISCONNECTED)
-  isPaymentConnected Boolean      @default(false)
-  paypalClientId    String?
-  paypalMerchantId  String?
-  paypalEmail       String?
-  paypalEnvironment String? // "sandbox" | "live"
-  paypalConnectedAt DateTime?
-  paypalAccessTokenEncrypted String?
+  paypalStatus                PayPalStatus @default(DISCONNECTED)
+  isPaymentConnected          Boolean      @default(false)
+  paypalClientId              String?
+  paypalMerchantId            String?
+  paypalEmail                 String?
+  paypalEnvironment           String? // "sandbox" | "live"
+  paypalConnectedAt           DateTime?
+  paypalAccessTokenEncrypted  String?
   paypalRefreshTokenEncrypted String?
-  paypalTokenExpiresAt DateTime?
-  paypalTokenScope String?
+  paypalTokenExpiresAt        DateTime?
+  paypalTokenScope            String?
 
   // 💳 PayPal Subscriptions (Feature: Monthly Billing)
-  paypalSubscriptionId      String?   // I-XXXXX - Subscription ID from PayPal
-  paypalPlanId              String?   // P-XXXXX - Plan ID used for subscription
-  paypalSubscriptionStatus  String?   // APPROVAL_PENDING | ACTIVE | SUSPENDED | CANCELLED
-  paypalNextBillingTime     DateTime? // Next automatic billing date
-  paypalLastPaymentTime     DateTime? // Last successful payment timestamp
-  paypalFailedPaymentsCount Int       @default(0) // Consecutive failed payments counter
-  paypalCyclesCompleted     Int       @default(0) // Number of billing cycles completed
-  paypalOutstandingBalance  Decimal   @default(0) @db.Decimal(10, 2) // Outstanding balance to be charged
+  paypalSubscriptionId         String? // I-XXXXX - Subscription ID from PayPal
+  paypalPlanId                 String? // P-XXXXX - Plan ID used for subscription
+  paypalSubscriptionStatus     String? // APPROVAL_PENDING | ACTIVE | SUSPENDED | CANCELLED
+  paypalNextBillingTime        DateTime? // Next automatic billing date
+  paypalLastPaymentTime        DateTime? // Last successful payment timestamp
+  paypalFailedPaymentsCount    Int       @default(0) // Consecutive failed payments counter
+  paypalCyclesCompleted        Int       @default(0) // Number of billing cycles completed
+  paypalOutstandingBalance     Decimal   @default(0) @db.Decimal(10, 2) // Outstanding balance to be charged
   paypalSubscriptionApprovedAt DateTime? // When user approved the subscription
 
   workspaces              UserWorkspace[]
@@ -679,26 +678,26 @@ model UserWorkspace {
 }
 
 model WhatsappSettings {
-  id          String    @id @default(uuid())
-  phoneNumber String    @unique
-  apiKey      String
-  appSecret   String?   @db.Text
-  webhookUrl  String?
-  webhookId   String    @unique
+  id           String    @id @default(uuid())
+  phoneNumber  String    @unique
+  apiKey       String
+  appSecret    String?   @db.Text
+  webhookUrl   String?
+  webhookId    String    @unique
   webhookToken String
-  settings    Json?     @default("{}")
-  adminEmail  String?
-  smtpHost    String?   @default("smtp.ethereal.email")
-  smtpPort    Int?      @default(587)
-  smtpSecure  Boolean?  @default(false)
-  smtpUser    String?
-  smtpPass    String?
-  smtpFrom    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspaceId String    @unique
-  gdpr        String?
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  settings     Json?     @default("{}")
+  adminEmail   String?
+  smtpHost     String?   @default("smtp.ethereal.email")
+  smtpPort     Int?      @default(587)
+  smtpSecure   Boolean?  @default(false)
+  smtpUser     String?
+  smtpPass     String?
+  smtpFrom     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspaceId  String    @unique
+  gdpr         String?
+  workspace    Workspace @relation(fields: [workspaceId], references: [id])
 
   @@map("whatsapp_settings")
 }
@@ -732,10 +731,10 @@ model ChatSession {
   customer    Customers @relation(fields: [customerId], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
   messages    Message[]
-  
+
   // 🆕 Widget Support
   isAnonymous Boolean   @default(false) // true for widget visitors without phone
-  visitorId   String?   // For anonymous widget users (same format as WhatsAppQueue)
+  visitorId   String? // For anonymous widget users (same format as WhatsAppQueue)
   expiresAt   DateTime? // Session expiry for anonymous visitors (24 hours)
   channel     String    @default("whatsapp") // "whatsapp" | "widget"
 
@@ -1361,8 +1360,8 @@ enum PayPalTransactionStatus {
 }
 
 model MonthlyInvoice {
-  id     String @id @default(cuid())
-  userId String // Owner of the invoice (Feature 198)
+  id            String  @id @default(cuid())
+  userId        String // Owner of the invoice (Feature 198)
   invoiceNumber String? @unique // Human-readable invoice number (e.g. INV-2026-01-0001)
 
   // Period
@@ -1589,8 +1588,8 @@ model CustomerFeedback {
   createdAt   DateTime @default(now())
 
   // Relations
-  customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  customer  Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  campaign  Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
@@ -1625,8 +1624,8 @@ model PushCampaign {
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User?    @relation(fields: [createdByUserId], references: [id])
+  workspace  Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy  User?                   @relation(fields: [createdByUserId], references: [id])
   recipients PushCampaignRecipient[]
 
   @@index([workspaceId])
@@ -1635,32 +1634,32 @@ model PushCampaign {
 }
 
 model PushCampaignRecipient {
-  id             String                      @id @default(cuid())
-  campaignId     String
-  workspaceId    String
-  customerId     String?
-  phone          String
-  status         PushCampaignRecipientStatus @default(PENDING)
-  errorCode      String?
-  errorMessage   String?                     @db.Text
-  sentAt         DateTime?
-  messageId      String?
-  priceCharged   Decimal                     @default(0) @db.Decimal(10, 2)
-  isBlacklisted  Boolean                     @default(false)
-  isBlocked      Boolean                     @default(false)
-  isFake         Boolean                     @default(false)
-  optOutAt       DateTime?
-  createdAt      DateTime                    @default(now())
-  updatedAt      DateTime                    @updatedAt
+  id            String                      @id @default(cuid())
+  campaignId    String
+  workspaceId   String
+  customerId    String?
+  phone         String
+  status        PushCampaignRecipientStatus @default(PENDING)
+  errorCode     String?
+  errorMessage  String?                     @db.Text
+  sentAt        DateTime?
+  messageId     String?
+  priceCharged  Decimal                     @default(0) @db.Decimal(10, 2)
+  isBlacklisted Boolean                     @default(false)
+  isBlocked     Boolean                     @default(false)
+  isFake        Boolean                     @default(false)
+  optOutAt      DateTime?
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
 
   campaign  PushCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer  Customers?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  @@unique([campaignId, phone])
   @@index([campaignId])
   @@index([workspaceId])
   @@index([status])
-  @@unique([campaignId, phone])
 }
 
 model AdminSession {
@@ -1850,15 +1849,15 @@ model SupportTicket {
 }
 
 model SupportMessage {
-  id           String              @id @default(cuid())
-  ticketId     String
-  ticket       SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  senderId     String // User ID (owner or admin)
-  senderType   SupportSenderType // CUSTOMER or ADMIN
-  content      String              @db.Text // Rich HTML content from WYSIWYG
-  attachments  SupportAttachment[]
-  isRead       Boolean             @default(false)
-  createdAt    DateTime            @default(now())
+  id          String              @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId    String // User ID (owner or admin)
+  senderType  SupportSenderType // CUSTOMER or ADMIN
+  content     String              @db.Text // Rich HTML content from WYSIWYG
+  attachments SupportAttachment[]
+  isRead      Boolean             @default(false)
+  createdAt   DateTime            @default(now())
 
   @@index([ticketId])
   @@index([senderId])
@@ -1867,15 +1866,15 @@ model SupportMessage {
 }
 
 model SupportAttachment {
-  id        String         @id @default(cuid())
-  messageId String
-  message   SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  filename  String
-  url       String // S3 URL
+  id         String         @id @default(cuid())
+  messageId  String
+  message    SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  filename   String
+  url        String // S3 URL
   storageKey String // S3 key for cleanup
-  mimeType  String
-  size      Int // File size in bytes
-  createdAt DateTime       @default(now())
+  mimeType   String
+  size       Int // File size in bytes
+  createdAt  DateTime       @default(now())
 
   @@index([messageId])
   @@map("support_attachments")

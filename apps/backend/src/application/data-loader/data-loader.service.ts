@@ -63,7 +63,7 @@ export interface ProductData {
   formato?: string
   certifications: string[]
   allergens: string[]
-  transportType?: string
+  type?: string
   isAvailable: boolean
 }
 
@@ -94,8 +94,8 @@ export interface CartItemData {
 export interface TransportCostBreakdown {
   byType: Record<string, { itemCount: number; cost: number }>
   totalTransportCost: number
-  selectedTransportTypeName?: string | null
-  selectedTransportTypeId?: string | null
+  selectedTypeName?: string | null
+  selectedTypeId?: string | null
 }
 
 export interface CartData {
@@ -542,7 +542,7 @@ export class DataLoaderService {
             ])
 
             if (transportOptionIds.has(selectIntent.optionId)) {
-              const targetTransport = this.resolveTransportTypeName(selectIntent)
+              const targetTransport = this.resolveTypeName(selectIntent)
               if (!targetTransport) {
                 logger.warn("🚚 [DataLoader] Transport option missing metadata", {
                   optionId: selectIntent.optionId,
@@ -551,7 +551,7 @@ export class DataLoaderService {
                 })
                 return { type: "EMPTY", reason: "missing_transport_type" }
               }
-              return this.loadProductsByTransportType(workspaceId, customerDiscount, targetTransport)
+              return this.loadProductsByType(workspaceId, customerDiscount, targetTransport)
             }
 
             logger.warn("🚚 [DataLoader] Unknown ORDER_OPTIMIZATION_ACTION", { optionId: selectIntent.optionId })
@@ -879,7 +879,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
-          transportType: true,
+          type: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -928,7 +928,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
-          transportType: true,
+          type: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -952,15 +952,15 @@ export class DataLoaderService {
    * 🚚 Load products by transport type (Frozen, Refrigerated, Ambient Temperature)
    * Used for Order Optimization feature
    */
-  private async loadProductsByTransportType(
+  private async loadProductsByType(
     workspaceId: string,
     customerDiscount: number,
-    transportTypeName: string
+    typeName: string
   ): Promise<LoadedData> {
     try {
       logger.info("🚚 [DataLoader] Loading products by transport type", {
         workspaceId,
-        transportTypeName,
+        typeName,
       })
       
       const products = await this.prisma.products.findMany({
@@ -968,12 +968,12 @@ export class DataLoaderService {
           workspaceId,
           isActive: true,
           OR: [
-            { transportType: { contains: transportTypeName, mode: "insensitive" } },
+            { type: { contains: typeName, mode: "insensitive" } },
             {
-              productTransportTypes: {
+              productTypes: {
                 some: {
-                  transportType: {
-                    name: { contains: transportTypeName, mode: "insensitive" },
+                  type: {
+                    name: { contains: typeName, mode: "insensitive" },
                   },
                 },
               },
@@ -990,7 +990,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
-          transportType: true,
+          type: true,
           certifications: true,
           allergens: true,
           productCertifications: {
@@ -998,9 +998,9 @@ export class DataLoaderService {
               certification: { select: { name: true } },
             },
           },
-          productTransportTypes: {
+          productTypes: {
             select: {
-              transportType: { select: { name: true } },
+              type: { select: { name: true } },
             },
           },
           productCategories: {
@@ -1014,18 +1014,18 @@ export class DataLoaderService {
       })
 
       logger.info("🚚 [DataLoader] Found products by transport type", {
-        transportTypeName,
+        typeName,
         count: products.length,
       })
 
       if (products.length === 0) {
-        return { type: "EMPTY", reason: `no_products_for_transport_${transportTypeName}` }
+        return { type: "EMPTY", reason: `no_products_for_transport_${typeName}` }
       }
 
       const productData = this.mapProducts(products, customerDiscount)
       return { type: "PRODUCTS", products: productData }
     } catch (error) {
-      logger.error("❌ [DataLoader] Error loading products by transport type", { error, transportTypeName })
+      logger.error("❌ [DataLoader] Error loading products by transport type", { error, typeName })
       return { type: "ERROR", error: "Failed to load products by transport type" }
     }
   }
@@ -1056,7 +1056,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
-          transportType: true,
+          type: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -1443,13 +1443,13 @@ export class DataLoaderService {
           if (!analysis.isEmpty && analysis.transports.length > 0) {
             const byType: Record<string, { itemCount: number; cost: number }> = {}
             for (const t of analysis.transports) {
-              byType[t.transportTypeName] = { itemCount: t.productCount, cost: t.transportPrice }
+              byType[t.typeName] = { itemCount: t.productCount, cost: t.transportPrice }
             }
             transport = {
               byType,
               totalTransportCost: analysis.totalTransportCost,
-              selectedTransportTypeName: analysis.selectedTransportTypeName,
-              selectedTransportTypeId: analysis.selectedTransportTypeId,
+              selectedTypeName: analysis.selectedTypeName,
+              selectedTypeId: analysis.selectedTypeId,
             }
           }
         }
@@ -2312,7 +2312,7 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
-          transportType: true,
+          type: true,
           certifications: true,
           allergens: true,
           productCategories: {
@@ -2580,8 +2580,8 @@ export class DataLoaderService {
   /**
    * Resolve the transport type name from selection metadata or label
    */
-  private resolveTransportTypeName(selectIntent: SelectOptionIntent): string | null {
-    const metadataName = (selectIntent.optionMetadata as any)?.transportTypeName
+  private resolveTypeName(selectIntent: SelectOptionIntent): string | null {
+    const metadataName = (selectIntent.optionMetadata as any)?.typeName
     if (typeof metadataName === "string" && metadataName.trim().length > 0) {
       return metadataName.trim()
     }
@@ -2625,9 +2625,9 @@ export class DataLoaderService {
       certs = p.certifications.map(String)
     }
     const allergenList = Array.isArray(p.allergens) ? p.allergens.map(String) : []
-    let transportType = p.transportType || undefined
-    if (!transportType && Array.isArray(p.productTransportTypes) && p.productTransportTypes.length > 0) {
-      transportType = p.productTransportTypes[0]?.transportType?.name || transportType
+    let type = p.type || undefined
+    if (!type && Array.isArray(p.productTypes) && p.productTypes.length > 0) {
+      type = p.productTypes[0]?.type?.name || type
     }
 
     return {
@@ -2645,7 +2645,7 @@ export class DataLoaderService {
       formato: p.formato || undefined,
       certifications: certs,
       allergens: allergenList,
-      transportType,
+      type,
       isAvailable: p.stock > 0,
     }
   }

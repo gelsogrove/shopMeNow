@@ -530,7 +530,7 @@ export class TrashController {
           await tx.productCertification.deleteMany({
             where: { product: { workspaceId: wsId } },
           })
-          await tx.productTransportType.deleteMany({
+          await tx.productType.deleteMany({
             where: { product: { workspaceId: wsId } },
           })
           await tx.productCategory.deleteMany({
@@ -561,7 +561,7 @@ export class TrashController {
           
           // ===== CONTENT TABLES =====
           await tx.certification.deleteMany({ where: { workspaceId: wsId } })
-          await tx.transportType.deleteMany({ where: { workspaceId: wsId } })
+          await tx.type.deleteMany({ where: { workspaceId: wsId } })
           await tx.products.deleteMany({ where: { workspaceId: wsId } })
           await tx.categories.deleteMany({ where: { workspaceId: wsId } })
           await tx.offers.deleteMany({ where: { workspaceId: wsId } })
@@ -634,7 +634,7 @@ export class TrashController {
             await tx.productCertification.deleteMany({
               where: { product: { workspaceId: wsId } },
             })
-            await tx.productTransportType.deleteMany({
+            await tx.productType.deleteMany({
               where: { product: { workspaceId: wsId } },
             })
             await tx.productCategory.deleteMany({
@@ -665,7 +665,7 @@ export class TrashController {
             
             // ===== CONTENT TABLES =====
             await tx.certification.deleteMany({ where: { workspaceId: wsId } })
-            await tx.transportType.deleteMany({ where: { workspaceId: wsId } })
+            await tx.type.deleteMany({ where: { workspaceId: wsId } })
             await tx.products.deleteMany({ where: { workspaceId: wsId } })
             await tx.categories.deleteMany({ where: { workspaceId: wsId } })
             await tx.offers.deleteMany({ where: { workspaceId: wsId } })

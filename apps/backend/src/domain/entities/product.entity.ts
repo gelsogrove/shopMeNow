@@ -18,7 +18,7 @@ export class Product {
   imageUrl: string[]
   imageKey: string | null // 💾 Storage key for cleanup
   certifications: string[] // Array: ["bio", "vegan", "gluten-free", "halal", "whole-grain", "DOP"]
-  transportType: string
+  type: string
   region: string | null // ✅ Feature 123 - Geographic region (Campania, Puglia, etc.)
   link: string | null // ✅ Feature 134 - External product link (max 120 chars)
   createdAt: Date
@@ -46,7 +46,7 @@ export class Product {
     this.imageUrl = data.imageUrl || []
     this.imageKey = data.imageKey || null
     this.certifications = data.certifications || []
-    this.transportType = data.transportType || "Temperatura ambiente"
+    this.type = data.type || "Temperatura ambiente"
     this.region = data.region || null // ✅ Feature 123 - Geographic region
     this.link = data.link || null // ✅ Feature 134 - External product link
     this.createdAt = data.createdAt || new Date()

@@ -277,7 +277,7 @@ export class ProductRepository implements IProductRepository {
         categoryId: product.categoryId,
         supplierId: product.supplierId,
         certifications: product.certifications, // ✅ Use certifications array instead of boolean fields
-        transportType: product.transportType,
+        type: product.type,
         region: product.region,
       }
 
@@ -449,18 +449,18 @@ export class ProductRepository implements IProductRepository {
         isActive: true, // Only active products
       }
 
-      // Keywords search (name, sku, transportType, formato, region)
+      // Keywords search (name, sku, type, formato, region)
       // 🔧 CRITICAL: If categoryId is provided, keywords become OPTIONAL (OR)
       // This allows "formaggi?" to match category WITHOUT requiring "formaggi" in product name
       if (filters.keywords && filters.keywords.length > 0) {
         const orConditions: Prisma.ProductsWhereInput[] = []
 
         filters.keywords.forEach((keyword) => {
-          // Search in: name, sku, transportType, formato, region (case-insensitive)
+          // Search in: name, sku, type, formato, region (case-insensitive)
           orConditions.push(
             { name: { contains: keyword, mode: "insensitive" } },
             { sku: { contains: keyword, mode: "insensitive" } },
-            { transportType: { contains: keyword, mode: "insensitive" } },
+            { type: { contains: keyword, mode: "insensitive" } },
             { formato: { contains: keyword, mode: "insensitive" } },
             { region: { contains: keyword, mode: "insensitive" } }
           )
@@ -572,9 +572,9 @@ export class ProductRepository implements IProductRepository {
               certification: true,
             },
           },
-          productTransportTypes: {
+          productTypes: {
             include: {
-              transportType: true,
+              type: true,
             },
           },
         },
@@ -605,9 +605,9 @@ export class ProductRepository implements IProductRepository {
           certification: true,
         },
       },
-      productTransportTypes: {
+      productTypes: {
         include: {
-          transportType: true,
+          type: true,
         },
       },
       productCategories: {
@@ -646,22 +646,22 @@ export class ProductRepository implements IProductRepository {
   /**
    * Sync product transport types (delete old + create new)
    */
-  async syncProductTransportTypes(
+  async syncProductTypes(
     productId: string,
-    transportTypeIds: string[]
+    typeIds: string[]
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // Delete existing transport types
-      await tx.productTransportType.deleteMany({
+      await tx.productType.deleteMany({
         where: { productId },
       })
 
       // Create new transport types
-      if (transportTypeIds.length > 0) {
-        await tx.productTransportType.createMany({
-          data: transportTypeIds.map((transportTypeId) => ({
+      if (typeIds.length > 0) {
+        await tx.productType.createMany({
+          data: typeIds.map((typeId) => ({
             productId,
-            transportTypeId,
+            typeId,
           })),
         })
       }
@@ -700,10 +700,10 @@ export class ProductRepository implements IProductRepository {
         (pc: any) => pc.certification.name
       ) || data.certifications || []
 
-    // Extract transport type names from productTransportTypes relation
-    const transportTypeNames =
-      data.productTransportTypes?.map(
-        (pt: any) => pt.transportType.name
+    // Extract transport type names from productTypes relation
+    const typeNames =
+      data.productTypes?.map(
+        (pt: any) => pt.type.name
       ) || []
 
     // Extract category IDs from productCategories relation (many-to-many)
@@ -729,7 +729,7 @@ export class ProductRepository implements IProductRepository {
       imageUrl: data.imageUrl || [],
       imageKey: data.imageKey || null, // 💾 Storage key for cleanup
       certifications: certificationNames, // Use relation data or fallback to array
-      transportType: data.transportType || "Temperatura ambiente",
+      type: data.type || "Temperatura ambiente",
       region: data.region,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
@@ -739,8 +739,8 @@ export class ProductRepository implements IProductRepository {
     // Add productCertifications relation to the product object (for frontend use)
     ;(product as any).productCertifications = data.productCertifications || []
     
-    // Add productTransportTypes relation to the product object (for frontend use)
-    ;(product as any).productTransportTypes = data.productTransportTypes || []
+    // Add productTypes relation to the product object (for frontend use)
+    ;(product as any).productTypes = data.productTypes || []
 
     // Add productCategories relation to the product object (for frontend use)
     ;(product as any).productCategories = data.productCategories || []
