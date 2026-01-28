@@ -13,6 +13,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { api } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { 
@@ -33,7 +35,8 @@ import {
   ShieldOff,
   LogIn,
   Clock,
-  Trash2
+  Trash2,
+  Plus
 } from 'lucide-react'
 
 interface OwnedWorkspace {
@@ -148,6 +151,17 @@ export function ClientsPage() {
   const [extendDays, setExtendDays] = useState('7')
   const [extendReason, setExtendReason] = useState('')
   const [extendingTrial, setExtendingTrial] = useState(false)
+  
+  // New Customer modal state
+  const [newCustomerModal, setNewCustomerModal] = useState(false)
+  const [newCustomerData, setNewCustomerData] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: '',
+    email: '',
+    companyName: ''
+  })
+  const [creatingCustomer, setCreatingCustomer] = useState(false)
   
   // Impersonation state (Feature 190)
   const [impersonating, setImpersonating] = useState<string | null>(null)
@@ -528,9 +542,78 @@ export function ClientsPage() {
       }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to impersonate user')
-      console.error('Error impersonating user:', err)
+      console.error('Error impersonate user:', err)
     } finally {
       setImpersonating(null)
+    }
+  }
+  
+  // Handle Create New Customer - Simulates WhatsApp message arrival
+  const handleCreateCustomer = async () => {
+    // Validate phone number is required
+    if (!newCustomerData.phoneNumber.trim()) {
+      setError('Phone number is required')
+      return
+    }
+    
+    // Validate phone format (basic check)
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/
+    if (!phoneRegex.test(newCustomerData.phoneNumber.replace(/\s/g, ''))) {
+      setError('Please enter a valid phone number with country code (e.g., +39 123 456 7890)')
+      return
+    }
+    
+    setCreatingCustomer(true)
+    setError(null)
+    
+    try {
+      // Simulate WhatsApp webhook message
+      const payload = {
+        message: `New chat started`,
+        phoneNumber: newCustomerData.phoneNumber.replace(/\s/g, ''),
+        workspaceId: 'bellitalia-vip-ecommerce', // TODO: Get from context
+        isPlayground: true,
+        customerData: {
+          firstName: newCustomerData.firstName || undefined,
+          lastName: newCustomerData.lastName || undefined,
+          email: newCustomerData.email || undefined,
+          companyName: newCustomerData.companyName || undefined
+        }
+      }
+      
+      const response = await fetch('/api/whatsapp/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+      
+      if (response.ok) {
+        setSuccessMessage(`Chat started with ${newCustomerData.phoneNumber}!`)
+        setTimeout(() => setSuccessMessage(null), 3000)
+        
+        // Close modal and reset form
+        setNewCustomerModal(false)
+        setNewCustomerData({
+          firstName: '',
+          lastName: '',
+          phoneNumber: '',
+          email: '',
+          companyName: ''
+        })
+        
+        // Reload users
+        loadUsers()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Failed to start chat')
+      }
+    } catch (err: any) {
+      setError('Failed to start chat')
+      console.error('Error starting chat:', err)
+    } finally {
+      setCreatingCustomer(false)
     }
   }
 
@@ -646,6 +729,10 @@ export function ClientsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="default" onClick={() => setNewCustomerModal(true)} className="gap-2 bg-green-600 hover:bg-green-700">
+            <Plus className="h-4 w-4" />
+            New Chat
+          </Button>
           <Button variant="outline" onClick={loadUsers} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Refresh
@@ -1653,6 +1740,116 @@ export function ClientsPage() {
           </div>
         </div>
       )}
+      
+      {/* New Customer Modal */}
+      <Dialog open={newCustomerModal} onOpenChange={setNewCustomerModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start New Chat</DialogTitle>
+            <DialogDescription>
+              Simulate a WhatsApp message from a new customer
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone Number *</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="+39 123 456 7890"
+                value={newCustomerData.phoneNumber}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, phoneNumber: e.target.value })}
+                required
+              />
+              <p className="text-xs text-gray-500">Include country code (e.g., +39 for Italy)</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Mario"
+                  value={newCustomerData.firstName}
+                  onChange={(e) => setNewCustomerData({ ...newCustomerData, firstName: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Rossi"
+                  value={newCustomerData.lastName}
+                  onChange={(e) => setNewCustomerData({ ...newCustomerData, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="mario.rossi@example.com"
+                value={newCustomerData.email}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, email: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Acme Inc."
+                value={newCustomerData.companyName}
+                onChange={(e) => setNewCustomerData({ ...newCustomerData, companyName: e.target.value })}
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-3 mt-6">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setNewCustomerModal(false)
+                setNewCustomerData({
+                  firstName: '',
+                  lastName: '',
+                  phoneNumber: '',
+                  email: '',
+                  companyName: ''
+                })
+              }}
+              disabled={creatingCustomer}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={handleCreateCustomer}
+              disabled={creatingCustomer || !newCustomerData.phoneNumber.trim()}
+            >
+              {creatingCustomer ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Starting Chat...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Start Chat
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -20,22 +20,31 @@ export function CategoriesPage() {
     null
   )
 
+  // Separate function to load categories (for refetch)
+  const loadCategories = async () => {
+    if (!workspace?.id) return
+    try {
+      const data = await categoriesApi.getAllForWorkspace(workspace.id)
+      setCategories(data)
+    } catch (error) {
+      logger.error("Error loading categories:", error)
+      toast.error("Failed to load categories")
+    }
+  }
+
   useEffect(() => {
-    const loadCategories = async () => {
+    const loadData = async () => {
       if (!workspace?.id) return
       try {
-        const data = await categoriesApi.getAllForWorkspace(workspace.id)
-        setCategories(data)
-      } catch (error) {
-        logger.error("Error loading categories:", error)
-        toast.error("Failed to load categories")
+        setIsLoading(true)
+        await loadCategories()
       } finally {
         setIsLoading(false)
       }
     }
 
     if (!isLoadingWorkspace) {
-      loadCategories()
+      loadData()
     }
   }, [workspace?.id, isLoadingWorkspace])
 
@@ -67,6 +76,9 @@ export function CategoriesPage() {
       setCategories([...categories, newCategory])
       setShowAddDialog(false)
       toast.success("Category created successfully")
+      
+      // 🔄 REFRESH: Reload categories after creation
+      await loadCategories()
     } catch (error) {
       logger.error("Error creating category:", error)
       toast.error("Failed to create category")
@@ -104,6 +116,9 @@ export function CategoriesPage() {
       setShowEditDialog(false)
       setSelectedCategory(null)
       toast.success("Category updated successfully")
+      
+      // 🔄 REFRESH: Reload categories after update
+      await loadCategories()
     } catch (error) {
       logger.error("Error updating category:", error)
       toast.error("Failed to update category")
@@ -124,6 +139,9 @@ export function CategoriesPage() {
       setShowDeleteDialog(false)
       setSelectedCategory(null)
       toast.success("Category deleted successfully")
+      
+      // 🔄 REFRESH: Reload categories after deletion
+      await loadCategories()
     } catch (error) {
       logger.error("Error deleting category:", error)
       toast.error("Failed to delete category")

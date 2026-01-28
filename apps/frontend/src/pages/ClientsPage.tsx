@@ -4,6 +4,8 @@ import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import {
   Tooltip,
   TooltipContent,
@@ -149,6 +151,17 @@ export default function ClientsPage(): JSX.Element {
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null)
   const { chats: allChats, enableFetching } = useChatList()
   const [showPlayground, setShowPlayground] = useState(false)
+  
+  // New Chat Modal state
+  const [showNewChatModal, setShowNewChatModal] = useState(false)
+  const [newChatData, setNewChatData] = useState({
+    phoneNumber: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    company: ''
+  })
+  const [creatingChat, setCreatingChat] = useState(false)
 
   // 🆕 Enable chat fetching when entering this page (for chat count)
   useEffect(() => {
@@ -559,10 +572,58 @@ export default function ClientsPage(): JSX.Element {
 
   // Handle opening the new chat modal
   const handleOpenNewChat = () => {
-    // Clear any existing selectedChat first
-    storage.clearSelectedChat()
-    // Then open the chat modal
-    setShowPlayground(true)
+    setShowNewChatModal(true)
+  }
+  
+  // Handle starting new chat - simulates WhatsApp message
+  const handleStartNewChat = async () => {
+    if (!newChatData.phoneNumber.trim()) {
+      toast.error('Phone number is required')
+      return
+    }
+    
+    // Validate phone format
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/
+    if (!phoneRegex.test(newChatData.phoneNumber.replace(/\s/g, ''))) {
+      toast.error('Please enter a valid phone number with country code (e.g., +39 123 456 7890)')
+      return
+    }
+    
+    setCreatingChat(true)
+    
+    try {
+      // Simulate WhatsApp webhook message
+      const response = await api.post('/whatsapp/webhook', {
+        message: 'New chat started',
+        phoneNumber: newChatData.phoneNumber.replace(/\s/g, ''),
+        workspaceId: workspace?.id,
+        isPlayground: true,
+        customerData: {
+          firstName: newChatData.firstName || undefined,
+          lastName: newChatData.lastName || undefined,
+          email: newChatData.email || undefined,
+          companyName: newChatData.company || undefined
+        }
+      })
+      
+      if (response.data) {
+        toast.success(`Chat started with ${newChatData.phoneNumber}!`)
+        setShowNewChatModal(false)
+        setNewChatData({
+          phoneNumber: '',
+          firstName: '',
+          lastName: '',
+          email: '',
+          company: ''
+        })
+        refetchClients()
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to start chat')
+      console.error('Error starting chat:', error)
+    } finally {
+      setCreatingChat(false)
+    }
   }
 
   // In the return, use isLoading from useQuery
@@ -614,17 +675,15 @@ export default function ClientsPage(): JSX.Element {
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="max-w-xs bg-white"
               />
-          {/* New Chat button - visible ONLY in debugMode */}
-          {workspace?.debugMode === true && (
-            <Button
-              variant="default"
-              className="bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleOpenNewChat}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              New Chat (Playground)
-            </Button>
-          )}
+              {/* New Chat button - always visible, simulates WhatsApp message */}
+              <Button
+                variant="default"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={handleOpenNewChat}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                New Chat
+              </Button>
         </div>
       </div>
 
@@ -827,6 +886,106 @@ export default function ClientsPage(): JSX.Element {
         confirmLabel="Delete"
         variant="destructive"
       />
+      
+      {/* New Chat Modal */}
+      <Dialog open={showNewChatModal} onOpenChange={setShowNewChatModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start New Chat</DialogTitle>
+            <DialogDescription>
+              Simulate a WhatsApp message from a new customer
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Phone Number *</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="+39 123 456 7890"
+                value={newChatData.phoneNumber}
+                onChange={(e) => setNewChatData({ ...newChatData, phoneNumber: e.target.value })}
+                required
+              />
+              <p className="text-xs text-gray-500">Include country code (e.g., +39 for Italy)</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Mario"
+                  value={newChatData.firstName}
+                  onChange={(e) => setNewChatData({ ...newChatData, firstName: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Rossi"
+                  value={newChatData.lastName}
+                  onChange={(e) => setNewChatData({ ...newChatData, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="mario.rossi@example.com"
+                value={newChatData.email}
+                onChange={(e) => setNewChatData({ ...newChatData, email: e.target.value })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="company">Company Name</Label>
+              <Input
+                id="company"
+                type="text"
+                placeholder="Acme Inc."
+                value={newChatData.company}
+                onChange={(e) => setNewChatData({ ...newChatData, company: e.target.value })}
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-3 mt-6">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowNewChatModal(false)
+                setNewChatData({
+                  phoneNumber: '',
+                  firstName: '',
+                  lastName: '',
+                  email: '',
+                  company: ''
+                })
+              }}
+              disabled={creatingChat}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={handleStartNewChat}
+              disabled={creatingChat || !newChatData.phoneNumber.trim()}
+            >
+              {creatingChat ? 'Starting Chat...' : 'Start Chat'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

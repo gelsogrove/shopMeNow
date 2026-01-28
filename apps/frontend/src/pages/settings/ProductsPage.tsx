@@ -39,14 +39,25 @@ export function ProductsPage() {
   // Get currency symbol based on workspace settings
   const currencySymbol = getCurrencySymbol(workspace?.currency)
 
+  // Separate function to load products (for refetch)
+  const loadProducts = async () => {
+    if (!workspace?.id) return
+    try {
+      const productsData = await productsApi.getAllForWorkspace(workspace.id)
+      setProducts(productsData.products || [])
+    } catch (error) {
+      logger.error("Error loading products:", error)
+      toast.error("Failed to load products")
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
       if (!workspace?.id) return
       try {
         setIsLoading(true)
         // Load products
-        const productsData = await productsApi.getAllForWorkspace(workspace.id)
-        setProducts(productsData.products || [])
+        await loadProducts()
 
         // Load categories for the dropdown
         const categoriesData = await categoriesApi.getAllForWorkspace(
@@ -119,6 +130,9 @@ export function ProductsPage() {
       setShowAddDialog(false)
       setSelectedImage(null)
       toast.success("Product created successfully")
+      
+      // 🔄 REFRESH: Reload products to ensure list is up-to-date
+      await loadProducts()
     } catch (error: any) {
       const errorData = error?.response?.data
       if (errorData?.code === "PLAN_LIMIT_REACHED") {
@@ -160,6 +174,9 @@ export function ProductsPage() {
       setSelectedProduct(null)
       setSelectedImage(null)
       toast.success("Product updated successfully")
+      
+      // 🔄 REFRESH: Reload products to get latest data (including new image URLs)
+      await loadProducts()
     } catch (error) {
       logger.error("Error updating product:", error)
       toast.error("Failed to update product")
@@ -180,6 +197,9 @@ export function ProductsPage() {
       setShowDeleteDialog(false)
       setSelectedProduct(null)
       toast.success("Product deleted successfully")
+      
+      // 🔄 REFRESH: Reload products after deletion
+      await loadProducts()
     } catch (error) {
       logger.error("Error deleting product:", error)
       toast.error("Failed to delete product")
