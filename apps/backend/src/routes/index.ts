@@ -119,7 +119,10 @@ import { servicesRouter } from "../interfaces/http/routes/services.routes"
 import { cartTokenLimiter } from "../config/rate-limiters"
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import { billingRouter } from "../interfaces/http/routes/billing.routes"
-import { publicBillingRoutes } from "../interfaces/http/routes/subscription-billing.routes"
+import { 
+  publicBillingRoutes, 
+  billingRoutes as subscriptionBillingRoutes 
+} from "../interfaces/http/routes/subscription-billing.routes"
 import { ownerBillingRoutes } from "../interfaces/http/routes/owner-billing.routes"
 import debugRoutes from "../interfaces/http/routes/debug.routes"
 import { createLanguagesRouter } from "../interfaces/http/routes/languages.routes"
@@ -733,6 +736,10 @@ const faqsRouterInstance = faqsRouter()
 router.use("/workspaces/:workspaceId/faqs", faqsRouterInstance)
 router.use("/faqs", faqsRouterInstance)
 logger.info("Registered FAQs router with workspace routes")
+
+// Mount billing routes (workspace-scoped) - Feature 185
+router.use("/workspaces/:workspaceId/billing", subscriptionBillingRoutes)
+logger.info("✅ Registered workspace billing routes: /api/workspaces/:workspaceId/billing")
 
 router.use("/settings", createSettingsRouter())
 router.use("/languages", createLanguagesRouter())
