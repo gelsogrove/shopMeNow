@@ -1,30 +1,19 @@
-import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { CheckCircle, XCircle } from "lucide-react"
 
 export function PayPalResultPage() {
   const [searchParams] = useSearchParams()
-  const [countdown, setCountdown] = useState(5)
   const status = searchParams.get("paypal")
 
-  useEffect(() => {
-    if (status === "subscription_approved") {
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer)
-            window.location.href = "/workspace-selection"
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-
-      return () => clearInterval(timer)
+  const handleCloseWithRefresh = () => {
+    // Refresh parent window to show updated PayPal connection status
+    if (window.opener && !window.opener.closed) {
+      window.opener.location.reload()
     }
-  }, [status])
+    window.close()
+  }
 
   const getContent = () => {
     switch (status) {
@@ -39,13 +28,12 @@ export function PayPalResultPage() {
             "Monthly payments will be processed automatically",
             "You can manage your subscription anytime from your workspace settings",
           ],
-          redirectMessage: `Redirecting to your workspace in ${countdown} seconds...`,
           action: (
             <Button
               className="mt-4"
-              onClick={() => window.close()}
+              onClick={handleCloseWithRefresh}
             >
-              Close Window Now
+              Close Window
             </Button>
           ),
         }
@@ -67,7 +55,7 @@ export function PayPalResultPage() {
                 Please try again or contact our support team for assistance.
               </p>
               <div className="flex gap-4 justify-center">
-                <Button onClick={() => window.close()}>
+                <Button onClick={handleCloseWithRefresh}>
                   Close Window
                 </Button>
                 <Button
@@ -93,7 +81,7 @@ export function PayPalResultPage() {
           action: (
             <Button
               className="mt-6"
-              onClick={() => window.close()}
+              onClick={handleCloseWithRefresh}
             >
               Close Window
             </Button>
@@ -165,15 +153,6 @@ export function PayPalResultPage() {
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-
-          {content.redirectMessage && (
-            <div className="text-center">
-              <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {content.redirectMessage}
-              </p>
             </div>
           )}
 
