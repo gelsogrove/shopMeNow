@@ -660,7 +660,7 @@ paypalRoutes.post(
           paypalSubscriptionId: subscription.id,
           paypalPlanId: subscription.planId,
           paypalSubscriptionStatus: subscription.status,
-          paypalEnvironment: environment as any, // CRITICAL: Save environment for callback
+          paypalEnvironment: paypalConfig.environment as any, // CRITICAL: Save environment for callback
         },
       })
 
