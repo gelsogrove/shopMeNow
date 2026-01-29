@@ -1,5 +1,6 @@
 import { Router } from "express"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { checkTrialValid } from "../middlewares/billing.middleware"
 import { PushCampaignController } from "../controllers/push-campaign.controller"
 
 export const pushCampaignRoutes = () => {
@@ -12,7 +13,7 @@ export const pushCampaignRoutes = () => {
   router.get("/:id", controller.get.bind(controller))
   router.get("/:id/recipients", controller.recipients.bind(controller))
 
-  router.post("/", controller.create.bind(controller))
+  router.post("/", checkTrialValid, controller.create.bind(controller)) // Block campaign creation if FREE_TRIAL expired
   router.post("/:id/schedule", controller.schedule.bind(controller))
   router.post("/:id/run-now", controller.runNow.bind(controller))
   router.post("/:id/pause", controller.pause.bind(controller))

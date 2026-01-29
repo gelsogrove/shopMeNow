@@ -2297,7 +2297,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       )}
                     </div>
                     <CardDescription className="text-blue-700">
-                      Connect your PayPal account to receive monthly payouts.
+                      {paypalStatus?.paypalStatus === "CONNECTED" 
+                        ? "Your PayPal account is connected and ready to receive monthly payouts."
+                        : "Connect your PayPal account to receive monthly payouts."}
                     </CardDescription>
                   </div>
                 </div>

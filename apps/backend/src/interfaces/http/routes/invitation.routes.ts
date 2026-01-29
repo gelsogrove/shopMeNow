@@ -4,6 +4,7 @@ import { invitationController } from "../controllers/invitation.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { validateWorkspaceOperation } from "../../../middlewares/workspace-validation.middleware"
+import { checkTrialValid } from "../middlewares/billing.middleware"
 import {
   requireSuperAdmin,
   requireWorkspaceMember,
@@ -47,6 +48,7 @@ export const invitationRouter = (): Router => {
     authMiddleware,
     validateWorkspaceOperation,
     requireSuperAdmin,
+    checkTrialValid, // 🔒 Block creating invitations if FREE_TRIAL expired
     asyncHandler(invitationController.createInvitation)
   )
 

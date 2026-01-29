@@ -2,10 +2,10 @@
  * Trial Expired Dialog
  * 
  * Modal che appare quando un utente con trial scaduto cerca di fare operazioni.
- * Blocca l'utente e lo forza a scegliere un piano.
+ * Blocca l'utente e lo forza a collegare PayPal o scegliere un piano.
  */
 
-import { AlertCircle, CreditCard, ArrowRight } from "lucide-react"
+import { AlertCircle, CreditCard, ArrowRight, Zap } from "lucide-react"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -22,18 +22,30 @@ interface TrialExpiredDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     attemptedAction?: string // Optional: what was the user trying to do
+    isPaymentConnected?: boolean // PayPal connection status
 }
 
 export function TrialExpiredDialog({
     open,
     onOpenChange,
     attemptedAction,
+    isPaymentConnected = false,
 }: TrialExpiredDialogProps) {
     const { t } = useLanguage()
 
+    const handleConnectPayPal = () => {
+        onOpenChange(false)
+        // Scroll to PayPal section
+        window.location.href = "/#paypal-section"
+        setTimeout(() => {
+            const paypalSection = document.querySelector('[id*="paypal"]')
+            paypalSection?.scrollIntoView({ behavior: "smooth", block: "center" })
+        }, 100)
+    }
+
     const handleUpgrade = () => {
         onOpenChange(false)
-        window.location.href = "/billing"
+        window.location.href = "/#billing-section"
     }
 
     return (
@@ -58,9 +70,27 @@ export function TrialExpiredDialog({
 
                         <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mt-4">
                             <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                                ⏰ Your free trial period has ended. Choose a plan to continue using eChatbot.
+                                ⏰ Your free trial period has ended. {isPaymentConnected 
+                                    ? "Choose a plan to continue." 
+                                    : "Connect PayPal to continue using eChatbot."}
                             </p>
                         </div>
+
+                        {!isPaymentConnected && (
+                            <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-3">
+                                <div className="flex items-start gap-3">
+                                    <Zap className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                                            Quick Setup Required
+                                        </p>
+                                        <p className="text-xs text-blue-800 dark:text-blue-300">
+                                            Connect your PayPal account (30 seconds) to unlock all features and choose a plan.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="space-y-2 pt-2">
                             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -92,14 +122,26 @@ export function TrialExpiredDialog({
                     >
                         Close
                     </Button>
-                    <AlertDialogAction
-                        onClick={handleUpgrade}
-                        className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                    >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        {t("billing.choosePlan")}
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                    </AlertDialogAction>
+                    
+                    {!isPaymentConnected ? (
+                        <AlertDialogAction
+                            onClick={handleConnectPayPal}
+                            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Connect PayPal Now
+                            <ArrowRight className="h-4 w-4 ml-2" />
+                        </AlertDialogAction>
+                    ) : (
+                        <AlertDialogAction
+                            onClick={handleUpgrade}
+                            className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                        >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            {t("billing.choosePlan")}
+                            <ArrowRight className="h-4 w-4 ml-2" />
+                        </AlertDialogAction>
+                    )}
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>

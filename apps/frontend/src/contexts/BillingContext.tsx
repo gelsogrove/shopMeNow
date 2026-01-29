@@ -126,6 +126,7 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
   // Trial expired dialog state
   const [showTrialExpiredDialog, setShowTrialExpiredDialog] = useState(false)
   const [trialExpiredAttemptedAction, setTrialExpiredAttemptedAction] = useState<string | null>(null)
+  const [isPaymentConnected, setIsPaymentConnected] = useState(false)
 
   /**
    * Fetch quick balance info (for header)
@@ -179,6 +180,7 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
       setIsTrialPlan(data.billing.planType === "FREE_TRIAL")
       setTrialDaysRemaining(data.billing.daysUntilTrialExpires)
       setIsTrialExpired(data.billing.isTrialExpired)
+      setIsPaymentConnected(data.billing.isPaymentConnected ?? false)
     } catch (err) {
       console.error("[BillingContext] Error fetching overview:", err)
       setError(err instanceof Error ? err.message : "Error loading billing info")
@@ -258,6 +260,7 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
         open={showTrialExpiredDialog}
         onOpenChange={closeTrialExpiredDialog}
         attemptedAction={trialExpiredAttemptedAction}
+        isPaymentConnected={isPaymentConnected}
       />
     </BillingContext.Provider>
   )

@@ -1,6 +1,7 @@
 import { NextFunction, Response, Router } from "express"
 import { ServicesController } from "../controllers/services.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { checkTrialValid } from "../middlewares/billing.middleware"
 import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
 import { workspaceContextMiddleware } from "../middlewares/workspace-context.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
@@ -192,6 +193,7 @@ export const servicesRouter = (controller: ServicesController): Router => {
     uploadImage.array("images", 10), // Support up to 10 images
     handleUploadError,
     workspaceContextMiddleware,
+    checkTrialValid, // Block service creation if FREE_TRIAL expired
     (req: WorkspaceRequest, res: Response, next: NextFunction): void => {
       controller.createService(req, res).catch(next)
     }
