@@ -1,8 +1,0 @@
-{
-  "name": "echatbot-frontend",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "cd ../.. && npm install && cd apps/frontend && npm run build",
-    "preview": "vite preview"
-  }
-}
