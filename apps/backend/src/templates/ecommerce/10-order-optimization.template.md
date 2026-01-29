@@ -76,7 +76,7 @@ Vuoi tornare al carrello per confermare?
   "analysis": {
     "transports": [
       {
-        "transportTypeName": "Frozen",
+        "typeName": "Frozen",
         "transportPrice": 15.00,
         "totalQuantity": 1,
         "products": [...]
@@ -121,9 +121,9 @@ Valori possibili per `nextAction`:
 {
   "analysis": {
     "transports": [
-      {"transportTypeName": "Frozen", "transportPrice": 15.00, "totalQuantity": 1},
-      {"transportTypeName": "Refrigerated", "transportPrice": 12.00, "totalQuantity": 1},
-      {"transportTypeName": "Ambient Temperature", "transportPrice": 8.00, "totalQuantity": 1}
+      {"typeName": "Frozen", "transportPrice": 15.00, "totalQuantity": 1},
+      {"typeName": "Refrigerated", "transportPrice": 12.00, "totalQuantity": 1},
+      {"typeName": "Ambient Temperature", "transportPrice": 8.00, "totalQuantity": 1}
     ],
     "totalTransportCost": 35.00,
     "grandTotal": 60.00

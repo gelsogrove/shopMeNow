@@ -48,7 +48,7 @@ describe('Soft Delete - Complete Cascade Test', () => {
       supportMessage: { deleteMany: createDeleteMany() },
       supportAttachment: { deleteMany: createDeleteMany() },
       certification: { deleteMany: createDeleteMany() },
-      transportType: { deleteMany: createDeleteMany() },
+      type: { deleteMany: createDeleteMany() },
       products: { deleteMany: createDeleteMany() },
       categories: { deleteMany: createDeleteMany() },
       offers: { deleteMany: createDeleteMany() },

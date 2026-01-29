@@ -145,7 +145,7 @@ async function main() {
     await prisma.searchConversations.deleteMany() // 🆕 Delete before workspace
     // ✅ Feature 178 & 179: Delete certification and transport type tables
     await prisma.certification.deleteMany()
-    await prisma.transportType.deleteMany()
+    await prisma.type.deleteMany()
 
     // Delete user-related tables
     await prisma.workspaceInvitation.deleteMany() // Must delete before users (foreign key)
@@ -1504,21 +1504,21 @@ Can I help with anything else?"`,
 
   console.log(`✅ Created ${certificationNames.length} certifications`)
 
-  // 6.6 Create Transport Types (Feature 179 + Transport Optimization)
-  console.log("🚚 Creating transport types with prices...")
+  // 6.6 Create Types (Feature 179 + Transport Optimization)
+  console.log("🚚 Creating types with prices...")
 
-  // Transport types with prices (EUR, IVA inclusa)
+  // Types with prices (EUR, IVA inclusa)
   // Prices based on optimize-cart.md spec: Ambiente=8€, Refrigerato=12€, Frozen=15€
-  const transportTypesData = [
+  const typesData = [
     { name: "Temperatura Ambiente", price: 8.00 },  // Ambient Temperature
     { name: "Refrigerato", price: 12.00 },           // Refrigerated
     { name: "Congelato", price: 15.00 },             // Frozen
   ]
 
-  const transportTypeMap = new Map<string, string>()
+  const typeMap = new Map<string, string>()
 
-  for (const typeData of transportTypesData) {
-    const transportType = await prisma.transportType.create({
+  for (const typeData of typesData) {
+    const type = await prisma.type.create({
       data: {
         name: typeData.name,
         workspaceId: workspace.id,
@@ -1526,10 +1526,10 @@ Can I help with anything else?"`,
         isActive: true,
       },
     })
-    transportTypeMap.set(typeData.name, transportType.id)
+    typeMap.set(typeData.name, type.id)
   }
 
-  console.log(`✅ Created ${transportTypesData.length} transport types with prices`)
+  console.log(`✅ Created ${typesData.length} types with prices`)
 
   // 7. Create Products
   console.log("📦 Creating products...")
@@ -1576,9 +1576,9 @@ Can I help with anything else?"`,
     if (isWholeGrain) certificationNames.push("Whole-Grain")
     if (isDOP) certificationNames.push("DOP")
 
-    // ✅ Read region and transportType from source data (products.ts)
+    // ✅ Read region and type from source data (products.ts)
     const region = prod.region || null
-    const transportType = prod.transportType || "Temperatura ambiente"
+    const type = prod.type || "Temperatura ambiente"
 
     // ✅ Feature 178: Create product with many-to-many certifications
     const product = await prisma.products.create({
@@ -1594,7 +1594,7 @@ Can I help with anything else?"`,
         categoryId: categoryId,
         workspaceId: workspace.id,
         imageUrl: prod.imageUrl || [],
-        transportType: transportType,
+        type: type,
         region: region,
         certifications: [], // ⚠️ DEPRECATED: Keep empty array for backward compatibility
       },
@@ -1614,8 +1614,8 @@ Can I help with anything else?"`,
     }
 
     // ✅ Feature 179: Create ProductType pivot record
-    // Map Italian transport types to English
-    const transportTypeMapping: Record<string, string> = {
+    // Map Italian types to English
+    const typeMapping: Record<string, string> = {
       "Temperatura ambiente": "Ambient Temperature",
       "Trasporto refrigerato": "Refrigerated",
       "Refrigerato": "Refrigerated",
@@ -1623,14 +1623,14 @@ Can I help with anything else?"`,
       "Congelato": "Frozen",
     }
 
-    const englishType = transportTypeMapping[transportType] || "Ambient Temperature"
-    const transportTypeId = transportTypeMap.get(englishType)
+    const englishType = typeMapping[type] || "Ambient Temperature"
+    const typeId = typeMap.get(englishType)
 
-    if (transportTypeId) {
+    if (typeId) {
       await prisma.productType.create({
         data: {
           productId: product.id,
-          transportTypeId: transportTypeId,
+          typeId: typeId,
         },
       })
     }

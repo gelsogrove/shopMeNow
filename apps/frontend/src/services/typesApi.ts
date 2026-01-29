@@ -29,7 +29,7 @@ export const getAllForWorkspace = async (
   try {
     logger.info("Fetching types for workspace:", workspaceId)
     const response = await api.get(`/workspaces/${workspaceId}/types`)
-    logger.info("Transport types response:", response.data)
+    logger.info("Types response:", response.data)
     return response.data || []
   } catch (error) {
     logger.error("Error fetching types:", error)

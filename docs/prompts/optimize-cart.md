@@ -139,7 +139,7 @@ Ogni prodotto **DEVE** avere **almeno 1 tipo di trasporto** associato (obbligato
 Supporto per **2 trasporti** (caso speciale, es. prodotto che richiede sia refrigerazione che ulteriore protezione):
 
 * `product.transportTypeId` (obbligatorio)
-* `product.secondaryTransportTypeId` (opzionale)
+* `product.secondaryTypeId` (opzionale)
 
 > **Regola:** Un prodotto senza trasporto primario **non deve essere aggiunto al catalogo** (DB constraint + validazione FE).
 > Nel caso legacy (prodotti vecchi senza trasporto), aggiungere script di migrazione che assegna un trasporto di default (Ambiente).
@@ -180,7 +180,7 @@ Regole:
 
 Prima di qualsiasi calcolo:
 
-1. Caricare i `TransportType` del workspace
+1. Caricare i `Type` del workspace
 2. Verificare:
 
    * esiste almeno 1 trasporto
@@ -212,7 +212,7 @@ Responsabilità:
 
 1. Caricare carrello e righe
 2. Per ogni prodotto, leggere i trasporti (1 o 2)
-3. Determinare `requiredTransportTypes` (set univoco)
+3. Determinare `requiredTypes` (set univoco)
 4. Calcolare:
 
    * `totalUnits`
@@ -226,7 +226,7 @@ Responsabilità:
 
 Prima di qualsiasi calcolo:
 
-1. Caricare i `TransportType` del workspace
+1. Caricare i `Type` del workspace
 2. Verificare:
 
    * esiste almeno 1 trasporto
@@ -258,7 +258,7 @@ Responsabilità:
 
 1. Caricare carrello e righe
 2. Per ogni prodotto, leggere i trasporti (1 o 2)
-3. Determinare `requiredTransportTypes` (set univoco)
+3. Determinare `requiredTypes` (set univoco)
 4. Calcolare:
 
    * `totalUnits`
@@ -276,7 +276,7 @@ Responsabilità:
 
 1. Caricare carrello e righe
 2. Per ogni prodotto, leggere i trasporti (1 o 2)
-3. Determinare `requiredTransportTypes` (set univoco)
+3. Determinare `requiredTypes` (set univoco)
 4. Calcolare:
 
    * `totalUnits`
@@ -307,7 +307,7 @@ Responsabilità:
 
 1. Caricare carrello e righe
 2. Per ogni prodotto, leggere i trasporti (1 o 2)
-3. Determinare `requiredTransportTypes` (set univoco)
+3. Determinare `requiredTypes` (set univoco)
 4. Calcolare:
 
    * `totalUnits`
@@ -515,7 +515,7 @@ Mostrare:
 
 ### Fase 1 — Database & Seed
 
-* [ ] Aggiungere campo `price` alla tabella `TransportType`
+* [ ] Aggiungere campo `price` alla tabella `Type`
 * [ ] Migrazione DB + backward compatibility
 * [ ] Aggiornare seed trasporti con valori di default:
 

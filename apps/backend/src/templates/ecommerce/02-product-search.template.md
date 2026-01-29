@@ -104,7 +104,7 @@ Use this EXACT format:
 <img src="{imageUrl}" alt="{Product Name}" />
 - Codice: {sku} - Formato: {formato}
 - Prezzo: {price} Euro
-- Trasporto: {transportType}
+- Trasporto: {type}
 - Regione: {region}
 - Disponibilità: ✅ Disponibile / ❌ Non disponibile
 

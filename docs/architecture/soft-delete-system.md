@@ -146,7 +146,7 @@ PERMANENT DELETE (cannot be undone):
   │                                     │
   │ 5. Products & Relations             │
   │    • ProductCertification           │
-  │    • ProductTransportType           │
+  │    • ProductType           │
   │    • ProductCategory                │
   │                                     │
   │ 6. Carts & CartItems                │

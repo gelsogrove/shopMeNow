@@ -159,7 +159,7 @@ async delete(id: string, workspaceId: string): Promise<void> {
 }
 ```
 
-### 7. **TransportTypeRepository - delete() weak validation**
+### 7. **TypeRepository - delete() weak validation**
 **File**: `apps/backend/src/repositories/transport-type.repository.ts:80`
 **Risk**: Accepts workspaceId parameter but doesn't use it in the delete query.
 
@@ -368,7 +368,7 @@ Based on review, the prompt processing service correctly:
 ### Priority 2 - MEDIUM (Fix This Sprint)
 5. Fix `OfferRepository.delete()` - Add workspaceId parameter and filter
 6. Fix `CertificationRepository.delete()` - Use workspaceId parameter
-7. Fix `TransportTypeRepository.delete()` - Use workspaceId parameter
+7. Fix `TypeRepository.delete()` - Use workspaceId parameter
 8. Fix `CartRepository.getItemById()` - Add workspaceId filter
 9. Review `UserRepository.findAll()` - Document if intentional
 

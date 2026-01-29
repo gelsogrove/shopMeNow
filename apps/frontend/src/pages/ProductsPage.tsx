@@ -689,7 +689,7 @@ export function ProductsPage() {
     }
   }
 
-  // Transport Types Panel Management
+  // Types Panel Management
   const [ttAddFormName, setTtAddFormName] = useState("")
   const [selectedTt, setSelectedTt] = useState<Type | null>(null)
   const [showTtEdit, setShowTtEdit] = useState(false)
@@ -703,7 +703,7 @@ export function ProductsPage() {
 
     try {
       await typesApi.create(workspace.id, { name: ttAddFormName.trim() })
-      toast.success("Transport type added successfully")
+      toast.success("Type added successfully")
       setTtAddFormName("")
       const response = await typesApi.getAllForWorkspace(workspace.id)
       setTypes(response || [])
@@ -730,7 +730,7 @@ export function ProductsPage() {
 
     try {
       await typesApi.update(workspace.id, selectedTt.id, { name: name.trim() })
-      toast.success("Transport type updated successfully")
+      toast.success("Type updated successfully")
       setShowTtEdit(false)
       setSelectedTt(null)
       const response = await typesApi.getAllForWorkspace(workspace.id)
@@ -751,7 +751,7 @@ export function ProductsPage() {
 
     try {
       await typesApi.remove(workspace.id, selectedTt.id)
-      toast.success("Transport type deleted successfully")
+      toast.success("Type deleted successfully")
       setShowTtDelete(false)
       setSelectedTt(null)
       const response = await typesApi.getAllForWorkspace(workspace.id)
@@ -875,10 +875,10 @@ export function ProductsPage() {
           </div>
         )}
 
-        {/* Dynamic Transport Types Section */}
+        {/* Dynamic Types Section */}
         {types.length > 0 && (
           <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-            <Label className="text-base font-semibold">Transport Types</Label>
+            <Label className="text-base font-semibold">Types</Label>
             <p className="text-xs text-gray-500 mb-3">
               Select applicable transport types for this product
             </p>
@@ -1177,10 +1177,10 @@ export function ProductsPage() {
           </div>
         )}
 
-        {/* Dynamic Transport Types Section */}
+        {/* Dynamic Types Section */}
         {types.length > 0 && (
           <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-            <Label className="text-base font-semibold">Transport Types</Label>
+            <Label className="text-base font-semibold">Types</Label>
             <p className="text-xs text-gray-500 mb-3">
               Select applicable transport types for this product
             </p>
@@ -1529,7 +1529,7 @@ export function ProductsPage() {
                           )}
                         </div>
                       )}
-                      {/* Transport Type Badges */}
+                      {/* Type Badges */}
                       {(product as any).productTypes?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {(product as any).productTypes.map(
@@ -1748,11 +1748,11 @@ export function ProductsPage() {
         }
       />
 
-      {/* Transport Types Management Panel */}
+      {/* Types Management Panel */}
       <Sheet open={showTypesPanel} onOpenChange={setShowTypesPanel}>
         <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
           <SheetHeader>
-            <SheetTitle>Manage Transport Types</SheetTitle>
+            <SheetTitle>Manage Types</SheetTitle>
             <SheetDescription>
               Add, edit, or delete transport types for products
             </SheetDescription>
@@ -1761,7 +1761,7 @@ export function ProductsPage() {
           <div className="mt-6 space-y-6">
             {/* Add Form */}
             <div className="border rounded-lg p-4 bg-gray-50">
-              <h3 className="font-semibold mb-3">Add New Transport Type</h3>
+              <h3 className="font-semibold mb-3">Add New Type</h3>
               <form onSubmit={handleTtAdd} className="flex gap-2">
                 <Input
                   placeholder="e.g., Air, Sea, Land, Rail"
@@ -1776,7 +1776,7 @@ export function ProductsPage() {
 
             <div className="space-y-2">
               <h3 className="font-semibold">
-                Transport Types ({filteredTts.length})
+                Types ({filteredTts.length})
               </h3>
               <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {filteredTts.length === 0 ? (
@@ -1828,11 +1828,11 @@ export function ProductsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Transport Type Edit Sheet */}
+      {/* Type Edit Sheet */}
       <Sheet open={showTtEdit} onOpenChange={setShowTtEdit}>
         <SheetContent side="right" className="w-[600px]">
           <SheetHeader>
-            <SheetTitle>Edit Transport Type</SheetTitle>
+            <SheetTitle>Edit Type</SheetTitle>
             <SheetDescription>
               Update transport type information
             </SheetDescription>
@@ -1840,7 +1840,7 @@ export function ProductsPage() {
           {selectedTt && (
             <form onSubmit={handleTtEditSubmit} className="space-y-4 mt-6">
               <div className="space-y-2">
-                <Label htmlFor="tt-edit-name">Transport Type Name *</Label>
+                <Label htmlFor="tt-edit-name">Type Name *</Label>
                 <Input
                   id="tt-edit-name"
                   name="name"
@@ -1853,7 +1853,7 @@ export function ProductsPage() {
 
               <div className="flex gap-2 pt-4">
                 <Button type="submit" className="flex-1">
-                  Update Transport Type
+                  Update Type
                 </Button>
                 <Button
                   type="button"
@@ -1872,12 +1872,12 @@ export function ProductsPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Transport Type Delete Dialog */}
+      {/* Type Delete Dialog */}
       <ConfirmDialog
         open={showTtDelete}
         onOpenChange={setShowTtDelete}
         onConfirm={confirmTtDelete}
-        title="Delete Transport Type"
+        title="Delete Type"
         description={
           selectedTt
             ? `Are you sure you want to delete "${selectedTt.name}"? ${

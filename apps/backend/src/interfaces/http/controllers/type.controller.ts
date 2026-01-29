@@ -14,7 +14,7 @@ export class TypeController {
    * @swagger
    * /api/workspaces/{workspaceId}/transport-types:
    *   get:
-   *     summary: Get all transport types for workspace
+   *     summary: Get all types for workspace
    *     tags: [Types]
    *     parameters:
    *       - in: path
@@ -24,7 +24,7 @@ export class TypeController {
    *           type: string
    *     responses:
    *       200:
-   *         description: List of transport types
+   *         description: List of types
    */
   async getAll(req: Request, res: Response) {
     try {
@@ -35,9 +35,9 @@ export class TypeController {
 
       return res.json(types)
     } catch (error) {
-      logger.error("Error getting transport types:", error)
+      logger.error("Error getting types:", error)
       return res.status(500).json({
-        error: "Failed to get transport types",
+        error: "Failed to get types",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }
@@ -47,7 +47,7 @@ export class TypeController {
    * @swagger
    * /api/workspaces/{workspaceId}/transport-types/{id}:
    *   get:
-   *     summary: Get transport type by ID
+   *     summary: Get type by ID
    *     tags: [Types]
    *     parameters:
    *       - in: path
@@ -58,9 +58,9 @@ export class TypeController {
    *         required: true
    *     responses:
    *       200:
-   *         description: Transport type details
+   *         description: type details
    *       404:
-   *         description: Transport type not found
+   *         description: type not found
    */
   async getById(req: Request, res: Response) {
     try {
@@ -73,14 +73,14 @@ export class TypeController {
       )
 
       if (!type) {
-        return res.status(404).json({ error: "Transport type not found" })
+        return res.status(404).json({ error: "type not found" })
       }
 
       return res.json(type)
     } catch (error) {
-      logger.error("Error getting transport type:", error)
+      logger.error("Error getting type:", error)
       return res.status(500).json({
-        error: "Failed to get transport type",
+        error: "Failed to get type",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }
@@ -90,7 +90,7 @@ export class TypeController {
    * @swagger
    * /api/workspaces/{workspaceId}/transport-types:
    *   post:
-   *     summary: Create new transport type
+   *     summary: Create new type
    *     tags: [Types]
    *     parameters:
    *       - in: path
@@ -108,7 +108,7 @@ export class TypeController {
    *                 example: "Air"
    *     responses:
    *       201:
-   *         description: Transport type created
+   *         description: type created
    *       400:
    *         description: Validation error
    */
@@ -118,7 +118,7 @@ export class TypeController {
       const workspaceId = (req as any).workspaceId
 
       if (!name) {
-        return res.status(400).json({ error: "Transport type name is required" })
+        return res.status(400).json({ error: "type name is required" })
       }
 
       const type = await this.typeService.create(
@@ -126,27 +126,27 @@ export class TypeController {
         name
       )
 
-      logger.info(`Transport type created: ${type.id} (${name})`)
+      logger.info(`type created: ${type.id} (${name})`)
       return res.status(201).json(type)
     } catch (error) {
-      logger.error("Error creating transport type:", error)
+      logger.error("Error creating type:", error)
 
       if (
         error instanceof Error &&
-        error.message === "Transport type already exists"
+        error.message === "type already exists"
       ) {
         return res.status(400).json({ error: error.message })
       }
 
       if (
         error instanceof Error &&
-        error.message.includes("Transport type name")
+        error.message.includes("type name")
       ) {
         return res.status(400).json({ error: error.message })
       }
 
       return res.status(500).json({
-        error: "Failed to create transport type",
+        error: "Failed to create type",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }
@@ -156,7 +156,7 @@ export class TypeController {
    * @swagger
    * /api/workspaces/{workspaceId}/transport-types/{id}:
    *   put:
-   *     summary: Update transport type
+   *     summary: Update type
    *     tags: [Types]
    *     parameters:
    *       - in: path
@@ -176,9 +176,9 @@ export class TypeController {
    *                 type: string
    *     responses:
    *       200:
-   *         description: Transport type updated
+   *         description: type updated
    *       404:
-   *         description: Transport type not found
+   *         description: type not found
    */
   async update(req: Request, res: Response) {
     try {
@@ -187,7 +187,7 @@ export class TypeController {
       const workspaceId = (req as any).workspaceId
 
       if (!name) {
-        return res.status(400).json({ error: "Transport type name is required" })
+        return res.status(400).json({ error: "type name is required" })
       }
 
       const type = await this.typeService.update(
@@ -196,28 +196,28 @@ export class TypeController {
         name
       )
 
-      logger.info(`Transport type updated: ${id} (${name})`)
+      logger.info(`type updated: ${id} (${name})`)
       return res.json(type)
     } catch (error) {
-      logger.error("Error updating transport type:", error)
+      logger.error("Error updating type:", error)
 
       if (
         error instanceof Error &&
-        error.message === "Transport type not found"
+        error.message === "type not found"
       ) {
         return res.status(404).json({ error: error.message })
       }
 
       if (
         error instanceof Error &&
-        (error.message === "Transport type name already exists" ||
-          error.message.includes("Transport type name"))
+        (error.message === "type name already exists" ||
+          error.message.includes("type name"))
       ) {
         return res.status(400).json({ error: error.message })
       }
 
       return res.status(500).json({
-        error: "Failed to update transport type",
+        error: "Failed to update type",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }
@@ -227,7 +227,7 @@ export class TypeController {
    * @swagger
    * /api/workspaces/{workspaceId}/transport-types/{id}:
    *   delete:
-   *     summary: Delete transport type
+   *     summary: Delete type
    *     tags: [Types]
    *     parameters:
    *       - in: path
@@ -238,11 +238,11 @@ export class TypeController {
    *         required: true
    *     responses:
    *       200:
-   *         description: Transport type deleted
+   *         description: type deleted
    *       400:
    *         description: Cannot delete - used by products
    *       404:
-   *         description: Transport type not found
+   *         description: type not found
    */
   async delete(req: Request, res: Response) {
     try {
@@ -251,14 +251,14 @@ export class TypeController {
 
       await this.typeService.delete(id, workspaceId)
 
-      logger.info(`Transport type deleted: ${id}`)
-      return res.json({ message: "Transport type deleted successfully" })
+      logger.info(`type deleted: ${id}`)
+      return res.json({ message: "type deleted successfully" })
     } catch (error) {
-      logger.error("Error deleting transport type:", error)
+      logger.error("Error deleting type:", error)
 
       if (
         error instanceof Error &&
-        error.message === "Transport type not found"
+        error.message === "type not found"
       ) {
         return res.status(404).json({ error: error.message })
       }
@@ -271,7 +271,7 @@ export class TypeController {
       }
 
       return res.status(500).json({
-        error: "Failed to delete transport type",
+        error: "Failed to delete type",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }

@@ -120,7 +120,7 @@ detailLines.push(`Prezzo: ${formatDisplayPrice(displayPrice || 0)}`)  // Shows â
 - [ ] Region
 - [ ] Format
 - [ ] Certifications
-- [ ] Transport type
+- [ ] type
 - [ ] Registration message ("Per vedere i prezzi...")
 
 **MUST NOT show:**
