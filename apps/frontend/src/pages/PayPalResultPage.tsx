@@ -104,27 +104,6 @@ export function PayPalResultPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader className="text-center space-y-4 pb-6">
-          {/* Logo */}
-          <div className="flex justify-center mb-4">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg p-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-12 w-12 text-white"
-              >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                <path d="M8 10h.01" />
-                <path d="M12 10h.01" />
-                <path d="M16 10h.01" />
-              </svg>
-            </div>
-          </div>
-
           {content.icon}
 
           <div>
