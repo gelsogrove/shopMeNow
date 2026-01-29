@@ -5,7 +5,6 @@
  * Blocca l'utente e lo forza a scegliere un piano.
  */
 
-import { useNavigate } from "react-router-dom"
 import { AlertCircle, CreditCard, ArrowRight } from "lucide-react"
 import {
     AlertDialog,
@@ -30,12 +29,11 @@ export function TrialExpiredDialog({
     onOpenChange,
     attemptedAction,
 }: TrialExpiredDialogProps) {
-    const navigate = useNavigate()
     const { t } = useLanguage()
 
     const handleUpgrade = () => {
         onOpenChange(false)
-        navigate("/billing")
+        window.location.href = "/billing"
     }
 
     return (
