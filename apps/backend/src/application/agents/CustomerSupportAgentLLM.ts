@@ -127,20 +127,20 @@ export class CustomerSupportAgentLLM {
       const MessageRepository = require("../../repositories/message.repository").MessageRepository
       const messageRepo = new MessageRepository()
       const faqsFormatted = await messageRepo.getActiveFaqs(context.workspaceId)
-      
+
       logger.info(`📚 Loaded FAQs for CUSTOMER_SUPPORT`, {
         hasFaqs: faqsFormatted.length > 0,
         formattedLength: faqsFormatted.length,
         preview: faqsFormatted.substring(0, 300),
       })
-      
+
       // STEP 1.8: Load system prompt from template files (include FAQ presence for conditionals)
       let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
         "CUSTOMER_SUPPORT",
         context.workspaceId,
         { faq: faqsFormatted, faqs: faqsFormatted }
       )
-      
+
       // Inject address if available
       if (workspace?.address) {
         const addressSection = `\n\n## OUR LOCATION\nWhen customer asks "where are you?", "your address?", "dove siete?", "indirizzo?":\nRespond with: "${workspace.address}"\n`
@@ -148,7 +148,7 @@ export class CustomerSupportAgentLLM {
         systemPrompt = systemPrompt + addressSection
         logger.info(`📍 Injected address into CUSTOMER_SUPPORT prompt: ${workspace.address}`)
       }
-      
+
       // Inject custom AI rules if available
       if (workspace?.customAiRules) {
         const rulesSection = `\n\n## ⚠️ PRIORITY RULES (OVERRIDE)\nThe following rules have PRIORITY over all other instructions:\n${workspace.customAiRules}\n`
@@ -159,7 +159,7 @@ export class CustomerSupportAgentLLM {
       // 🔧 STEP 1.6: Replace ALL variables ({{companyName}}, {{nameUser}}, etc.)
       // CRITICAL: Must call preProcessPrompt to render variables before passing to LLM
       const promptProcessor = new PromptProcessorService()
-      
+
       // 🔧 OPTIMIZATION: Use pre-loaded customerData from Router if available (avoids duplicate DB queries)
       // 🔴 CRITICAL FIX: Merge Router data with workspace fallbacks to ensure no empty values
       const baseCustomerData = {
@@ -176,7 +176,7 @@ export class CustomerSupportAgentLLM {
         botIdentityResponse: workspace?.botIdentityResponse || "",
         adminEmail: workspace?.notificationEmail || "", // 🆕 For support/escalation
       }
-      
+
       // Merge: Router data takes priority, but fallback to local workspace data if empty
       const customerDataForPrompt = context.customerData ? {
         ...baseCustomerData,
@@ -186,7 +186,7 @@ export class CustomerSupportAgentLLM {
         botIdentityResponse: context.customerData.botIdentityResponse || workspace?.botIdentityResponse || "",
         adminEmail: context.customerData.adminEmail || workspace?.notificationEmail || "", // 🆕 For support/escalation
       } : baseCustomerData
-      
+
       // 🔍 DEBUG: Log what we're passing to preProcessPrompt
       logger.info(`📋 CustomerSupportAgent customerDataForPrompt:`, {
         companyName: customerDataForPrompt.companyName,
@@ -195,7 +195,7 @@ export class CustomerSupportAgentLLM {
         hasRouterData: !!context.customerData,
         workspaceName: workspace?.name,
       })
-      
+
       logger.info(`📚 Loaded FAQs for CUSTOMER_SUPPORT`, {
         hasFaqs: faqsFormatted.length > 0,
         formattedLength: faqsFormatted.length,
@@ -243,17 +243,17 @@ export class CustomerSupportAgentLLM {
         hasFaqSection: processedPrompt.includes("FREQUENTLY ASKED QUESTIONS"),
         faqSnippet: processedPrompt.includes("FREQUENTLY ASKED QUESTIONS")
           ? processedPrompt
-              .slice(
-                processedPrompt.indexOf("FREQUENTLY ASKED QUESTIONS"),
-                processedPrompt.indexOf("FREQUENTLY ASKED QUESTIONS") + 400
-              )
+            .slice(
+              processedPrompt.indexOf("FREQUENTLY ASKED QUESTIONS"),
+              processedPrompt.indexOf("FREQUENTLY ASKED QUESTIONS") + 400
+            )
           : undefined,
       })
 
       // 🔍 DEBUG: Log if FAQs section is present in final prompt
       const hasFaqSection = processedPrompt.includes("FREQUENTLY ASKED QUESTIONS")
       const hasFaqContent = processedPrompt.includes("D:") && processedPrompt.includes("R:")
-      
+
       logger.info(`🔍 [DEBUG] FAQ presence check:`, {
         hasFaqSection,
         hasFaqContent,
@@ -268,7 +268,7 @@ export class CustomerSupportAgentLLM {
         },
         {
           role: "user" as const,
-          content: context.query,
+          content: PromptProcessorService.wrapUserInput(context.query), // 🛡️ Input Wrapping Defense
         },
       ]
 
@@ -339,11 +339,11 @@ export class CustomerSupportAgentLLM {
         // 🔧 DIRECT RETURN: For ContactOperator - return message directly without LLM reformulation
         // This preserves the empathetic message and formatting
         const isContactOperator = functionName.toLowerCase() === "contactoperator"
-        
+
         if (isContactOperator && functionResult?.success && functionResult?.message) {
           logger.info(`🚀 ContactOperator: Returning message directly (no LLM reformulation)`)
           finalResponse = functionResult.message
-          
+
           // Replace customer name variable if present
           if (finalResponse.includes("{{nameUser}}")) {
             finalResponse = finalResponse.replace(/\{\{nameUser\}\}/gi, context.customerName || "Cliente")
@@ -401,10 +401,10 @@ export class CustomerSupportAgentLLM {
         // Axios specific error fields
         ...(error && typeof error === "object" && "response" in error
           ? {
-              status: (error as any).response?.status,
-              statusText: (error as any).response?.statusText,
-              data: (error as any).response?.data,
-            }
+            status: (error as any).response?.status,
+            statusText: (error as any).response?.statusText,
+            data: (error as any).response?.data,
+          }
           : {}),
       }
 

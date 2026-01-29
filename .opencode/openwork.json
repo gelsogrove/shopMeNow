@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "shopME",
+    "createdAt": 1769637886760,
+    "preset": "starter"
+  },
+  "authorizedRoots": [
+    "/Users/gelso/workspace/shopME"
+  ]
+}

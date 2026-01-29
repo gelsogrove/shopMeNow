@@ -101,7 +101,8 @@ export class ProductService {
     productData: Partial<Product>,
     certificationIds?: string[],
     typeIds?: string[],
-    categoryIds?: string[]
+    categoryIds?: string[],
+    characteristics?: Array<{ name: string; value: string }>
   ): Promise<Product> {
     try {
       if (!productData.name) {
@@ -184,6 +185,17 @@ export class ProductService {
         )
       }
 
+      // ========================================
+      // 🔑 SYNC CHARACTERISTICS (NEW FEATURE)
+      // ========================================
+      // Sync characteristics if provided
+      if (characteristics && characteristics.length > 0) {
+        await this.productRepository.syncProductCharacteristics(
+          createdProduct.id,
+          characteristics
+        )
+      }
+
       // Re-fetch product with certifications
       return (
         (await this.productRepository.findById(
@@ -203,7 +215,8 @@ export class ProductService {
     workspaceId: string,
     certificationIds?: string[],
     typeIds?: string[],
-    categoryIds?: string[]
+    categoryIds?: string[],
+    characteristics?: Array<{ name: string; value: string }>
   ): Promise<Product | null> {
     try {
       // Check if price is valid when provided
@@ -260,6 +273,14 @@ export class ProductService {
         await this.productRepository.syncProductCategories(
           id,
           categoryIds
+        )
+      }
+
+      // Sync characteristics (even if empty array to clear all)
+      if (characteristics !== undefined) {
+        await this.productRepository.syncProductCharacteristics(
+          id,
+          characteristics
         )
       }
 

@@ -162,6 +162,7 @@ export class ProductRepository implements IProductRepository {
         },
         include: {
           category: true,
+          characteristics: true,
         },
       })
 
@@ -615,6 +616,7 @@ export class ProductRepository implements IProductRepository {
           category: true,
         },
       },
+      characteristics: true,
     }
   }
 
@@ -693,6 +695,29 @@ export class ProductRepository implements IProductRepository {
     })
   }
 
+  async syncProductCharacteristics(
+    productId: string,
+    characteristics: Array<{ name: string; value: string }>
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Delete existing characteristics
+      await tx.productCharacteristic.deleteMany({
+        where: { productId },
+      })
+
+      // Create new characteristics
+      if (characteristics.length > 0) {
+        await tx.productCharacteristic.createMany({
+          data: characteristics.map((char) => ({
+            productId,
+            name: char.name,
+            value: char.value,
+          })),
+        })
+      }
+    })
+  }
+
   private mapToDomainEntity(data: any): Product {
     // Extract certification names from productCertifications relation
     const certificationNames =
@@ -745,6 +770,9 @@ export class ProductRepository implements IProductRepository {
     // Add productCategories relation to the product object (for frontend use)
     ;(product as any).productCategories = data.productCategories || []
     ;(product as any).categoryIds = categoryIds
+
+    // Add characteristics relation to the product object (for frontend use)
+    ;(product as any).characteristics = data.characteristics || []
 
     return product
   }

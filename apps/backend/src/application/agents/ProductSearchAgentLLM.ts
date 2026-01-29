@@ -190,12 +190,12 @@ export class ProductSearchAgentLLM {
         })
         customerDataForPrompt = customer
           ? {
-              nameUser: customer.name || "Cliente",
-              email: customer.email || "",
-              phone: customer.phone || "",
-              discountUser: customer.discount || 0,
-              languageUser: customer.language || "ITALIANO",
-            }
+            nameUser: customer.name || "Cliente",
+            email: customer.email || "",
+            phone: customer.phone || "",
+            discountUser: customer.discount || 0,
+            languageUser: customer.language || "ITALIANO",
+          }
           : {}
         customerDiscount = customer?.discount || 0
         customerIsActive = customer?.isActive ?? false // 🔒 Feature 174: Get registration status
@@ -221,7 +221,7 @@ export class ProductSearchAgentLLM {
         customerDiscount, // 🔴 CRITICAL: Pass customer discount to calculate prices correctly
         customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
       )
-      
+
       // 🔒 DEBUG: Log what getActiveProducts returns
       logger.info(`🔍 ProductSearch DEBUG: getActiveProducts result`, {
         customerIsActive,
@@ -332,14 +332,18 @@ export class ProductSearchAgentLLM {
       // This becomes part of system prompt so LLM follows it as instruction
       let finalSystemPrompt =
         processedPrompt +
-        "\n\n## 🎯 CURRENT REQUEST (FOLLOW THESE INSTRUCTIONS)\n" +
-        context.query
+        "\n\n## 🎯 CURRENT REQUEST (DATA TO PROCESS)\n" +
+        PromptProcessorService.wrapUserInput(context.query)
 
       if (runtimeDirectives) {
         finalSystemPrompt +=
           "\n\n## RUNTIME DIRECTIVES (HIGH PRIORITY)\n" +
           runtimeDirectives.trim()
       }
+
+      // 🛡️ RE-APPLY SANDWICH DEFENSE at the very end
+      // Since we appended user input after the initial preProcessPrompt sandwich, we must re-assert safety here.
+      finalSystemPrompt = PromptProcessorService.appendSafetySandwich(finalSystemPrompt)
 
       logger.info(`✅ Prompt variables replaced + Router instructions added`, {
         originalLength: systemPrompt.length,
@@ -522,7 +526,7 @@ export class ProductSearchAgentLLM {
             productName: product.name,
             timestamp: new Date().toISOString(),
           }
-          
+
           // 🆕 Store selectedProduct for pendingAction in chat-engine
           selectedProductForCart = {
             sku: product.sku,
@@ -535,7 +539,7 @@ export class ProductSearchAgentLLM {
             productName: product.name,
           })
         }
-        
+
         // Check for service details too
         if (productDetailsFunctionCall?.result?.found && productDetailsFunctionCall?.result?.service) {
           const service = productDetailsFunctionCall.result.service
@@ -617,10 +621,10 @@ export class ProductSearchAgentLLM {
         // Axios specific error fields
         ...(error && typeof error === "object" && "response" in error
           ? {
-              status: (error as any).response?.status,
-              statusText: (error as any).response?.statusText,
-              data: (error as any).response?.data,
-            }
+            status: (error as any).response?.status,
+            statusText: (error as any).response?.statusText,
+            data: (error as any).response?.data,
+          }
           : {}),
       }
 
@@ -862,7 +866,7 @@ export class ProductSearchAgentLLM {
     // Pattern to match product list lines: "1. Product Name - €Price" or "1. Product Name €Price"
     // Also matches lines like "1. Product Name (€7.50/kg)" or variations
     const productLinePattern = /^\s*\d+\.\s+[^(]+(?:€[\d.,]+|[\d.,]+\s*€)/gm
-    
+
     const matches = response.match(productLinePattern) || []
     const productLineCount = matches.length
 
@@ -942,32 +946,32 @@ Rispondi ORA con i gruppi, NON con la lista prodotti.`,
     functionCalls: Array<{ name: string; arguments: any; result: any }>
   ): ListItem[] {
     const items: ListItem[] = []
-    
+
     // Pattern 1: Numbered list with products or groups
     // e.g., "1. Parmigiano Reggiano - €12.50 [SKU:PARM-24]"
     // e.g., "1. Formaggi Stagionati (4 items) [SKUS:SKU1,SKU2,SKU3,SKU4]"
     const numberedLinePattern = /^(\d+)[.)]\s*(.+)$/gm
     let match
-    
+
     while ((match = numberedLinePattern.exec(response)) !== null) {
       const index = parseInt(match[1], 10)
       const label = match[2].trim()
-      
+
       // Try to extract single SKU (format: [SKU:XXX])
       const skuMatch = label.match(/\[SKU:([A-Z0-9-]+)\]/i)
-      
+
       // Try to extract multiple SKUs (format: [SKUS:XXX,YYY,ZZZ])
       const skusMatch = label.match(/\[SKUS?:([A-Z0-9-,]+)\]/i)
-      
+
       // Check if this looks like a grouping (contains "prodotti" or "products" count)
       const isGrouping = /\(\d+\s*(?:prodotti?|products?|items?)\)/i.test(label)
-      
+
       // Clean the label by removing SKU tags
       const cleanLabel = label
         .replace(/\[SKU:[A-Z0-9-]+\]/gi, '')
         .replace(/\[SKUS?:[A-Z0-9-,]+\]/gi, '')
         .trim()
-      
+
       if (isGrouping && skusMatch) {
         // This is a grouping with multiple SKUs
         const skus = skusMatch[1].split(',').map(s => s.trim())
@@ -994,7 +998,7 @@ Rispondi ORA con i gruppi, NON con la lista prodotti.`,
         })
       }
     }
-    
+
     // Pattern 2: Try to get SKUs from function call results (backup)
     for (const fc of functionCalls) {
       if (fc.name === "getProductDetails" && fc.result?.product) {
@@ -1007,7 +1011,7 @@ Rispondi ORA con i gruppi, NON con la lista prodotti.`,
           matchingItem.sku = product.sku
         }
       }
-      
+
       // Handle searchProducts results
       if (fc.name === "searchProducts" && fc.result?.products) {
         const products = fc.result.products
@@ -1019,7 +1023,7 @@ Rispondi ORA con i gruppi, NON con la lista prodotti.`,
         })
       }
     }
-    
+
     return items
   }
 

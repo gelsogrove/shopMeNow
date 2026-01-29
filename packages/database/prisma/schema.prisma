@@ -212,6 +212,7 @@ model Products {
   productCertifications ProductCertification[]
   productTypes          ProductType[]
   productCategories     ProductCategory[]
+  characteristics       ProductCharacteristic[]
   category              Categories?            @relation(fields: [categoryId], references: [id]) // DEPRECATED
   workspace             Workspace              @relation(fields: [workspaceId], references: [id])
 
@@ -289,6 +290,19 @@ model ProductCategory {
   @@index([productId])
   @@index([categoryId])
   @@map("ProductCategory")
+}
+
+model ProductCharacteristic {
+  id        String   @id @default(uuid())
+  productId String
+  name      String   // Characteristic name (e.g., "superficie", "colore", "taglia")
+  value     String   // Characteristic value (e.g., "42mq", "rosso", "L")
+  createdAt DateTime @default(now())
+  product   Products @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([name])
+  @@map("ProductCharacteristic")
 }
 
 model WhatsAppQueue {

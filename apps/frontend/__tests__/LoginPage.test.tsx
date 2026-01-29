@@ -90,7 +90,7 @@ describe('LoginPage', () => {
   describe('UI Rendering', () => {
     it('should render login form by default', async () => {
       renderLoginPage()
-      
+
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/your@email.com/i)).toBeInTheDocument()
         expect(screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i)).toBeInTheDocument()
@@ -101,15 +101,15 @@ describe('LoginPage', () => {
 
     it('should render language selector with 4 languages', async () => {
       renderLoginPage()
-      
+
       await waitFor(() => {
-        expect(screen.getByText(/EN/)).toBeInTheDocument()
+        expect(screen.getByText(/🇬🇧/)).toBeInTheDocument()
       })
     })
 
     it('should render hero section with slides', async () => {
       renderLoginPage()
-      
+
       await waitFor(() => {
         const heroImages = screen.getAllByAltText(/WhatsApp AI agent dashboard/i)
         expect(heroImages.length).toBeGreaterThan(0)
@@ -118,7 +118,7 @@ describe('LoginPage', () => {
 
     it('should show Google OAuth button', async () => {
       renderLoginPage()
-      
+
       await waitFor(() => {
         expect(screen.getByText(/Or continue with/i)).toBeInTheDocument()
       })
@@ -128,28 +128,28 @@ describe('LoginPage', () => {
   describe('Login Form', () => {
     it('should display validation error for invalid email', async () => {
       renderLoginPage()
-      
+
       const emailInput = await screen.findByPlaceholderText(/your@email.com/i)
       const passwordInput = screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i)
-      
+
       fireEvent.change(emailInput, { target: { value: 'invalid-email' } })
       fireEvent.change(passwordInput, { target: { value: 'password123' } })
       fireEvent.submit(emailInput.closest('form') as HTMLFormElement)
-      
+
       expect(await screen.findByText(/Invalid email address/i)).toBeInTheDocument()
     })
 
     it('should display validation error for empty password', async () => {
       renderLoginPage()
-      
+
       await waitFor(() => {
         const emailInput = screen.getByPlaceholderText(/your@email.com/i)
         const submitButton = screen.getByRole('button', { name: /^Sign In$/ })
-        
+
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
         fireEvent.click(submitButton)
       })
-      
+
       await waitFor(() => {
         expect(screen.getByText(/Password is required/i)).toBeInTheDocument()
       })
@@ -166,12 +166,12 @@ describe('LoginPage', () => {
       vi.mocked(authService.login).mockImplementation(mockLogin)
 
       renderLoginPage()
-      
+
       await waitFor(() => {
         const emailInput = screen.getByPlaceholderText(/your@email.com/i)
         const passwordInput = screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i)
         const submitButton = screen.getByRole('button', { name: /^Sign In$/ })
-        
+
         fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
         fireEvent.change(passwordInput, { target: { value: 'Password123!' } })
         fireEvent.click(submitButton)
@@ -189,7 +189,7 @@ describe('LoginPage', () => {
   describe('Registration Form', () => {
     it('should switch to register form when clicking "Create one"', async () => {
       renderLoginPage()
-      
+
       const createButton = await screen.findByRole('button', { name: /Create one/i })
       fireEvent.click(createButton)
 
@@ -199,7 +199,7 @@ describe('LoginPage', () => {
 
     it('should display password validation errors', async () => {
       renderLoginPage()
-      
+
       // Switch to register form
       await waitFor(() => {
         const createButton = screen.getByText(/Create one/i)
@@ -220,7 +220,7 @@ describe('LoginPage', () => {
 
     it('should validate password confirmation match', async () => {
       renderLoginPage()
-      
+
       // Switch to register form
       await waitFor(() => {
         const createButton = screen.getByText(/Create one/i)
@@ -253,13 +253,12 @@ describe('LoginPage', () => {
         canRegister: true,
         workingInProgress: true,
         registerFirst: false,
-        cantryDemo: true,
         isLoading: false,
       })
 
       window.history.pushState({}, '', '/')
       renderLoginPage()
-      
+
       await waitFor(() => {
         // Look for the red banner with specific styling (instead of translated text)
         const banner = document.querySelector('.bg-red-600.rotate-12')
@@ -273,13 +272,12 @@ describe('LoginPage', () => {
         canRegister: true,
         workingInProgress: true,
         registerFirst: false,
-        cantryDemo: true,
         isLoading: false,
       })
 
       window.history.pushState({}, '', '?admin=true')
       renderLoginPage()
-      
+
       await waitFor(() => {
         const banner = screen.queryByText(/wip\.banner/i)
         expect(banner).not.toBeInTheDocument()
@@ -292,13 +290,12 @@ describe('LoginPage', () => {
         canRegister: false,
         workingInProgress: true,
         registerFirst: false,
-        cantryDemo: false,
         isLoading: false,
       })
 
       window.history.pushState({}, '', '?admin=true')
       renderLoginPage()
-      
+
       await waitFor(() => {
         const emailInput = screen.getByPlaceholderText(/your@email.com/i) as HTMLInputElement
         expect(emailInput).not.toBeDisabled()
@@ -311,13 +308,12 @@ describe('LoginPage', () => {
         canRegister: true,
         workingInProgress: true,
         registerFirst: false,
-        cantryDemo: true,
         isLoading: false,
       })
 
       window.history.pushState({}, '', '/')
       renderLoginPage()
-      
+
       await waitFor(() => {
         const emailInput = screen.getByPlaceholderText(/your@email.com/i) as HTMLInputElement
         expect(emailInput).toBeDisabled()
@@ -327,19 +323,18 @@ describe('LoginPage', () => {
     it('should clear sessionStorage when no admin param in URL', async () => {
       // Pre-set sessionStorage
       sessionStorage.setItem('adminBypass', 'true')
-      
+
       mockUseFeatureFlags.mockReturnValue({
         canLogin: true,
         canRegister: true,
         workingInProgress: true,
         registerFirst: false,
-        cantryDemo: true,
         isLoading: false,
       })
 
       window.history.pushState({}, '', '/')
       renderLoginPage()
-      
+
       await waitFor(() => {
         expect(sessionStorage.getItem('adminBypass')).toBeNull()
       })
@@ -348,19 +343,18 @@ describe('LoginPage', () => {
     it('should clear sessionStorage when ?admin=false', async () => {
       // Pre-set sessionStorage
       sessionStorage.setItem('adminBypass', 'true')
-      
+
       mockUseFeatureFlags.mockReturnValue({
         canLogin: true,
         canRegister: true,
         workingInProgress: true,
         registerFirst: false,
-        cantryDemo: true,
         isLoading: false,
       })
 
       window.history.pushState({}, '', '?admin=false')
       renderLoginPage()
-      
+
       await waitFor(() => {
         expect(sessionStorage.getItem('adminBypass')).toBeNull()
       })
@@ -372,13 +366,12 @@ describe('LoginPage', () => {
         canRegister: true,
         workingInProgress: true,
         registerFirst: false,
-        cantryDemo: true,
         isLoading: false,
       })
 
       window.history.pushState({}, '', '?admin=true')
       renderLoginPage()
-      
+
       await waitFor(() => {
         expect(sessionStorage.getItem('adminBypass')).toBe('true')
       })
@@ -388,11 +381,11 @@ describe('LoginPage', () => {
   describe('Password Visibility Toggle', () => {
     it('should toggle password visibility when clicking eye icon', async () => {
       renderLoginPage()
-      
+
       await waitFor(() => {
         const passwordInput = screen.getByPlaceholderText(/\*\*\*\*\*\*\*\*/i) as HTMLInputElement
         expect(passwordInput.type).toBe('password')
-        
+
         const eyeButton = passwordInput.parentElement?.querySelector('button') as HTMLButtonElement
         fireEvent.click(eyeButton)
       })
@@ -407,10 +400,10 @@ describe('LoginPage', () => {
   describe('Language Switching', () => {
     it('should render language selector trigger', async () => {
       renderLoginPage()
-      
+
       const langButton = screen
         .getAllByRole('button')
-        .find((button) => button.getAttribute('aria-haspopup') === 'menu' && button.textContent?.includes('EN'))
+        .find((button) => button.getAttribute('aria-haspopup') === 'menu' && button.textContent?.includes('🇬🇧'))
 
       expect(langButton).toBeTruthy()
     })

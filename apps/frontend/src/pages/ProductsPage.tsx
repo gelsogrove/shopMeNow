@@ -74,6 +74,9 @@ export function ProductsPage() {
     null
   )
 
+  // Product Characteristics state (key-value pairs)
+  const [characteristics, setCharacteristics] = useState<Array<{ name: string; value: string }>>([])
+
   // Import/Export state
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
@@ -407,6 +410,14 @@ export function ProductsPage() {
     logger.info("🚚 handleEdit - Extracted typeIds:", transportIds)
     setFormTypeIds(transportIds)
 
+    // Load product's characteristics (key-value pairs)
+    const chars = (product as any).characteristics?.map((c: any) => ({ 
+      name: c.name, 
+      value: c.value 
+    })) || []
+    logger.info("🔑 handleEdit - Extracted characteristics:", chars)
+    setCharacteristics(chars)
+
     const imageUrls = Array.isArray(product.imageUrl)
       ? product.imageUrl
       : product.imageUrl
@@ -462,10 +473,15 @@ export function ProductsPage() {
     // Send categoryIds array to backend (many-to-many)
     formData.set("categoryIds", JSON.stringify(formCategoryIds))
 
+    // Send characteristics array to backend
+    const validCharacteristics = characteristics.filter(c => c.name.trim() && c.value.trim())
+    formData.set("characteristics", JSON.stringify(validCharacteristics))
+
     // Debug logging
     logger.info("Form data being sent for product update")
     logger.info("CategoryIds:", formCategoryIds)
     logger.info("CertificationIds:", formCertificationIds)
+    logger.info("Characteristics:", validCharacteristics)
 
     try {
       const updatedProduct = await productsApi.update(
@@ -490,6 +506,7 @@ export function ProductsPage() {
       setFormCategoryIds([]) // Reset category IDs
       setFormCertificationIds([]) // Reset certification IDs
       setFormTypeIds([]) // Reset transport type IDs
+      setCharacteristics([]) // Reset characteristics
       
       // Force reload to get fresh productCertifications and productTypes
       const response = await productsApi.getAllForWorkspace(workspace.id)
@@ -1052,6 +1069,78 @@ export function ProductsPage() {
           <p className="text-xs text-gray-500">
             Region of origin or production (optional, in English)
           </p>
+        </div>
+
+        {/* Product Characteristics (Key-Value) Section */}
+        <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base font-semibold">Product Characteristics</Label>
+              <p className="text-xs text-gray-500 mt-1">
+                Add custom key-value attributes (e.g., superficie: 42mq, locali: 2, colore: rosso)
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setCharacteristics([...characteristics, { name: '', value: '' }])
+              }}
+            >
+              Add Characteristic
+            </Button>
+          </div>
+
+          {characteristics.length > 0 && (
+            <div className="space-y-2 mt-4">
+              {characteristics.map((char, index) => (
+                <div key={index} className="flex gap-2 items-start">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Name (e.g., superficie, colore, taglia)"
+                      value={char.name}
+                      onChange={(e) => {
+                        const newChars = [...characteristics]
+                        newChars[index].name = e.target.value
+                        setCharacteristics(newChars)
+                      }}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Value (e.g., 42mq, rosso, L)"
+                      value={char.value}
+                      onChange={(e) => {
+                        const newChars = [...characteristics]
+                        newChars[index].value = e.target.value
+                        setCharacteristics(newChars)
+                      }}
+                      className="text-sm"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setCharacteristics(characteristics.filter((_, i) => i !== index))
+                    }}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {characteristics.length === 0 && (
+            <p className="text-xs text-gray-400 text-center py-4">
+              No characteristics added yet. Click "Add Characteristic" to start.
+            </p>
+          )}
         </div>
 
         {/* Dynamic Certifications Section */}

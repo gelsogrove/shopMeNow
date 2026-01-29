@@ -60,4 +60,8 @@ export interface IProductRepository {
     productId: string,
     categoryIds: string[]
   ): Promise<void>
+  syncProductCharacteristics(
+    productId: string,
+    characteristics: Array<{ name: string; value: string }>
+  ): Promise<void>
 }

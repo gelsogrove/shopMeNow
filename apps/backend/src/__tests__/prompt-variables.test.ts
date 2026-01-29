@@ -8,8 +8,17 @@
 import { PromptVariableBuilder } from '../application/services/prompt-variable-builder.service'
 import { PromptVariables } from '../types/prompt-variables.types'
 
+// Mock SmartPromptBuilder to avoid DB connection/compilation issues during unit test
+jest.mock('../services/smart-prompt-builder.service', () => ({
+  SmartPromptBuilder: {
+    buildOptimizedProductList: jest.fn().mockResolvedValue({ products: '' }),
+    buildProductsByCategory: jest.fn().mockResolvedValue(''),
+    buildProductCharacteristics: jest.fn().mockResolvedValue(''),
+  }
+}))
+
 describe('PromptVariableBuilder - Variable Replace Test', () => {
-  
+
   // Mock data
   const mockCustomer = {
     id: 'cust_123',
@@ -57,6 +66,10 @@ describe('PromptVariableBuilder - Variable Replace Test', () => {
     services: 'Degustazione, Consulenza',
     offers: 'Sconto 20% su vini - fino al 31/12',
     faqs: 'Q: Spedite in tutta Italia? A: Sì, spediamo ovunque',
+    productsWithDetails: '📦 Chianti Classico... 📋 Caratteristiche: Rosso, 0.75L',
+    featuredProducts: '⭐ Chianti Classico - €25',
+    productCharacteristics: '🔍 Colore: Rosso, Bianco',
+    productsByCategory: '🏷️ Vini:\n • Chianti',
   }
 
   const mockContext = {
@@ -122,7 +135,7 @@ Channel Type: {{channel}}
    */
   function replaceVariables(template: string, variables: PromptVariables): string {
     let result = template
-    
+
     for (const [key, value] of Object.entries(variables)) {
       if (value !== undefined && value !== null) {
         const placeholder = `{{${key}}}`
@@ -130,7 +143,7 @@ Channel Type: {{channel}}
         result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement)
       }
     }
-    
+
     return result
   }
 
@@ -214,7 +227,11 @@ Channel Type: {{channel}}
       expect(variables.categories).toBe('Vini, Formaggi, Salumi')
       expect(variables.services).toBe('Degustazione, Consulenza')
       expect(variables.offers).toBe('Sconto 20% su vini - fino al 31/12')
+      expect(variables.offers).toBe('Sconto 20% su vini - fino al 31/12')
       expect(variables.faqs).toBe('Q: Spedite in tutta Italia? A: Sì, spediamo ovunque')
+      expect(variables.productsWithDetails).toContain('Chianti Classico')
+      expect(variables.featuredProducts).toContain('Chianti Classico')
+      expect(variables.productsByCategory).toContain('Vini')
     })
 
     it('should include context variables', () => {
@@ -361,7 +378,7 @@ Channel Type: {{channel}}
       )
 
       const validation = PromptVariableBuilder.validate(variables)
-      
+
       expect(validation.valid).toBe(true)
       expect(validation.errors).toHaveLength(0)
     })
@@ -370,7 +387,7 @@ Channel Type: {{channel}}
   describe('Performance', () => {
     it('should build variables quickly', () => {
       const start = Date.now()
-      
+
       for (let i = 0; i < 100; i++) {
         PromptVariableBuilder.build(
           mockCustomer,
@@ -380,7 +397,7 @@ Channel Type: {{channel}}
           { skipValidation: true }
         )
       }
-      
+
       const duration = Date.now() - start
       expect(duration).toBeLessThan(1000) // Should complete 100 builds in < 1s
     })
@@ -394,11 +411,11 @@ Channel Type: {{channel}}
       )
 
       const start = Date.now()
-      
+
       for (let i = 0; i < 100; i++) {
         replaceVariables(testTemplate, variables)
       }
-      
+
       const duration = Date.now() - start
       expect(duration).toBeLessThan(500) // Should complete 100 replacements in < 0.5s
     })

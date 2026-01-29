@@ -270,6 +270,29 @@ export class ProductController {
       // Remove categoryIds from productData (handled separately via many-to-many)
       delete productData.categoryIds
 
+      // ========================================
+      // 🔑 CHARACTERISTICS PARSING (NEW FEATURE)
+      // ========================================
+      // Parse characteristics array from JSON string (sent from frontend)
+      let characteristics: Array<{ name: string; value: string }> = []
+      if (
+        productData.characteristics &&
+        typeof productData.characteristics === "string"
+      ) {
+        try {
+          characteristics = JSON.parse(productData.characteristics)
+          logger.info("✅ CREATE - Parsed characteristics:", characteristics)
+        } catch (error) {
+          logger.error("❌ CREATE - Failed to parse characteristics JSON:", error)
+          characteristics = []
+        }
+      } else if (Array.isArray(productData.characteristics)) {
+        characteristics = productData.characteristics
+      }
+
+      // Remove characteristics from productData (handled separately)
+      delete productData.characteristics
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
@@ -335,7 +358,8 @@ export class ProductController {
         productData,
         certificationIds,
         typeIds,
-        categoryIds
+        categoryIds,
+        characteristics
       )
 
       // Map backend 'Sku' field to frontend 'code' field
@@ -458,6 +482,29 @@ export class ProductController {
       // Remove categoryIds from productData (handled separately via many-to-many)
       delete productData.categoryIds
 
+      // ========================================
+      // 🔑 CHARACTERISTICS PARSING (NEW FEATURE)
+      // ========================================
+      // Parse characteristics array from JSON string (sent from frontend)
+      let characteristics: Array<{ name: string; value: string }> = []
+      if (
+        productData.characteristics &&
+        typeof productData.characteristics === "string"
+      ) {
+        try {
+          characteristics = JSON.parse(productData.characteristics)
+          logger.info("✅ UPDATE - Parsed characteristics:", characteristics)
+        } catch (error) {
+          logger.error("❌ UPDATE - Failed to parse characteristics JSON:", error)
+          characteristics = []
+        }
+      } else if (Array.isArray(productData.characteristics)) {
+        characteristics = productData.characteristics
+      }
+
+      // Remove characteristics from productData (handled separately)
+      delete productData.characteristics
+
       // Handle supplierId: convert empty string to null
       if (productData.supplierId === "" || productData.supplierId === "none") {
         productData.supplierId = null
@@ -554,7 +601,8 @@ export class ProductController {
         workspaceId,
         certificationIds,
         typeIds,
-        categoryIds
+        categoryIds,
+        characteristics
       )
       if (!updatedProduct) {
         return res.status(404).json({ message: "Product not found" })
