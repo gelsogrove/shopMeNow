@@ -433,6 +433,16 @@ app.get(
 )
 logger.info("✅ Registered PUBLIC services endpoint at /api/services/public")
 
+// 🔓 PUBLIC PayPal callback route (legacy - redirects to /v1)
+// PayPal may use /api/paypal/* instead of /api/v1/paypal/*
+app.get("/api/paypal/subscription/callback", (req, res) => {
+  const queryString = new URLSearchParams(req.query as any).toString()
+  const redirectUrl = `/api/v1/paypal/subscription/callback?${queryString}`
+  logger.info(`[PAYPAL] Redirecting legacy callback to: ${redirectUrl}`)
+  res.redirect(307, redirectUrl) // 307 = Temporary Redirect (preserve method)
+})
+logger.info("✅ Registered PUBLIC PayPal callback redirect at /api/paypal/subscription/callback")
+
 // Versioned routes - API v1 is the only endpoint
 app.use("/api/v1", apiRouter)
 

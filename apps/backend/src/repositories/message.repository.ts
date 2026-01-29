@@ -1310,6 +1310,7 @@ export class MessageRepository {
           description: true, // Aggiungi description per il prompt
           formato: true, // Aggiungi formato per il prompt
           stock: true, // Aggiungi stock per disponibilità
+          link: true, // ✅ Product link for {{products}} template
           productCertifications: {
             // ✅ Feature 178: Many-to-many certifications from database
             select: {
@@ -1318,6 +1319,13 @@ export class MessageRepository {
                   name: true,
                 },
               },
+            },
+          },
+          characteristics: {
+            // ✅ Product characteristics for {{products}} template
+            select: {
+              name: true,
+              value: true,
             },
           },
           region: true, // ✅ Feature 123 - C2: Add region for single product details
@@ -1388,23 +1396,39 @@ export class MessageRepository {
         // Mostra tutti i prodotti della categoria
         const productsToShow = productList
 
-        // Formato: ogni prodotto su una riga separata - SEMPLICE per template LLM
-        // ✅ Generico: funziona per panettoni, borse, qualsiasi prodotto
+        // Formato: ogni prodotto su una riga separata con TUTTE le info
         productsToShow.forEach((p) => {
           const formatoStr = p.formato ? ` ${p.formato}` : ""
           
-          // 🔒 Feature 174: Hide prices for non-registered customers - SEMPLICE
+          // 🔒 Feature 174: Hide prices for non-registered customers
           let priceSection = ''
           if (customerIsActive) {
-            // Registered customer: show basic price
             const finalPrice = Number(p.finalPrice).toFixed(2)
             priceSection = ` - ${currencySymbol}${finalPrice}`
           }
-          // Non-registered: no price section at all (cleaner template)
           
-          // TEMPLATE FORMAT: Simple list for LLM to format as numbered list
-          // • [SKU] Nome Formato - €price (only if registered)
+          // Base product line: • [SKU] Nome Formato - €price
           formattedProducts += `• [${p.sku}] ${p.name}${formatoStr}${priceSection}\n`
+          
+          // ✅ Add link if available
+          if (p.link) {
+            formattedProducts += `  🔗 Link: ${p.link}\n`
+          }
+          
+          // ✅ Add description if available
+          if (p.description) {
+            formattedProducts += `  📝 Descrizione: ${p.description}\n`
+          }
+          
+          // ✅ Add characteristics if available
+          if (p.characteristics && p.characteristics.length > 0) {
+            const charsList = p.characteristics
+              .map(c => `${c.name}: ${c.value}`)
+              .join(", ")
+            formattedProducts += `  🏷️ Caratteristiche: ${charsList}\n`
+          }
+          
+          formattedProducts += "\n" // Extra line between products
         })
         formattedProducts += "\n"
       }

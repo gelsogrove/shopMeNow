@@ -747,6 +747,8 @@ paypalRoutes.post(
 // 🆕 Subscription Approval Callback
 // Called by PayPal after user approves subscription
 // URL: /api/v1/paypal/subscription/callback?subscription_id=I-XXX&ba_token=BA-YYY
+// 🔓 PUBLIC - No auth required (called by PayPal, not user)
+// ⚠️ PayPal adds token=XXX param - don't confuse with JWT auth!
 paypalRoutes.get("/subscription/callback", async (req: Request, res: Response) => {
   try {
     const { subscription_id, ba_token } = req.query as {

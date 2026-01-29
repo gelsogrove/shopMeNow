@@ -14,6 +14,13 @@ terraform/crash.*.log
 
 # Dependencies - Single node_modules at root for monorepo
 node_modules/
+dump/
+.cursor/
+.specstory/
+.agent/
+.claude/
+.opencode/
+.husky
 
 # Testing
 coverage/
