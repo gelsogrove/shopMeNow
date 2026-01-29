@@ -48,10 +48,16 @@ interface BillingContextState {
   isLoadingOverview: boolean
   error: string | null
 
+  // Trial expired dialog state
+  showTrialExpiredDialog: boolean
+  trialExpiredAttemptedAction: string | null
+
   // Actions
   refreshBalance: () => Promise<void>
   refreshOverview: () => Promise<void>
   updateBalanceLocally: (newBalance: number) => void
+  openTrialExpiredDialog: (attemptedAction?: string) => void
+  closeTrialExpiredDialog: () => void
 }
 
 const defaultState: BillingContextState = {
@@ -65,9 +71,13 @@ const defaultState: BillingContextState = {
   isLoadingBalance: false,
   isLoadingOverview: false,
   error: null,
-  refreshBalance: async () => {},
-  refreshOverview: async () => {},
-  updateBalanceLocally: () => {},
+  showTrialExpiredDialog: false,
+  trialExpiredAttemptedAction: null,
+  refreshBalance: async () => { },
+  refreshOverview: async () => { },
+  updateBalanceLocally: () => { },
+  openTrialExpiredDialog: () => { },
+  closeTrialExpiredDialog: () => { },
 }
 
 // ============================================================================
@@ -111,6 +121,10 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
   const [isLoadingBalance, setIsLoadingBalance] = useState(false)
   const [isLoadingOverview, setIsLoadingOverview] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Trial expired dialog state
+  const [showTrialExpiredDialog, setShowTrialExpiredDialog] = useState(false)
+  const [trialExpiredAttemptedAction, setTrialExpiredAttemptedAction] = useState<string | null>(null)
 
   /**
    * Fetch quick balance info (for header)

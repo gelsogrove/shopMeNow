@@ -644,6 +644,103 @@ app.post("/api/paypal/webhook", async (req, res) => {
 })
 logger.info("✅ Registered PUBLIC PayPal webhook at /api/paypal/webhook (direct, no auth)")
 
+// 🔀 Redirect old webhook path to new one
+app.post("/api/v1/paypal/webhook", async (req, res) => {
+  logger.info("[PAYPAL] 🔀 Redirecting webhook from /api/v1/paypal/webhook to /api/paypal/webhook")
+  
+  // Forward the webhook to the non-authenticated endpoint
+  const { loadPayPalConfigForEnv } = await import("./utils/paypal-config")
+  const configs = [
+    loadPayPalConfigForEnv("live"),
+    loadPayPalConfigForEnv("sandbox"),
+  ].filter((config) => config.configured)
+
+  if (configs.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "PayPal credentials are not configured",
+    })
+  }
+
+  const eventType = req.body?.event_type as string | undefined
+  const resource = req.body?.resource || {}
+  const subscriptionId =
+    resource.id ||
+    resource.subscription_id ||
+    resource.billing_agreement_id ||
+    resource?.supplementary_data?.related_ids?.subscription_id ||
+    resource?.supplementary_data?.related_ids?.billing_agreement_id
+
+  logger.info("[PAYPAL] 🔔 Webhook received (via v1 path):", {
+    eventType,
+    resourceType: req.body?.resource_type,
+    subscriptionId,
+  })
+
+  // Handle subscription events
+  if (subscriptionId && eventType?.startsWith("BILLING.SUBSCRIPTION.")) {
+    const user = await prisma.user.findFirst({
+      where: { paypalSubscriptionId: subscriptionId },
+    })
+
+    if (user) {
+      const updateData: any = {}
+
+      switch (eventType) {
+        case "BILLING.SUBSCRIPTION.ACTIVATED":
+          updateData.paypalSubscriptionStatus = "ACTIVE"
+          updateData.paypalSubscriptionApprovedAt = new Date()
+          
+          if (user.planType === "FREE_TRIAL") {
+            updateData.planType = "BASIC"
+            logger.info("[PAYPAL] Auto-upgrading FREE_TRIAL user to BASIC:", { 
+              userId: user.id, 
+              subscriptionId 
+            })
+          }
+          
+          logger.info("[PAYPAL] Subscription activated:", subscriptionId)
+          break
+
+        case "BILLING.SUBSCRIPTION.CANCELLED":
+          updateData.paypalSubscriptionStatus = "CANCELLED"
+          logger.info("[PAYPAL] Subscription cancelled:", subscriptionId)
+          break
+
+        case "BILLING.SUBSCRIPTION.SUSPENDED":
+          updateData.paypalSubscriptionStatus = "SUSPENDED"
+          logger.warn("[PAYPAL] Subscription suspended:", subscriptionId)
+          break
+
+        case "BILLING.SUBSCRIPTION.PAYMENT.FAILED":
+          updateData.paypalFailedPaymentsCount = (user.paypalFailedPaymentsCount || 0) + 1
+          updateData.lastPaymentFailedAt = new Date()
+          logger.warn("[PAYPAL] Payment failed:", subscriptionId)
+          break
+
+        case "BILLING.SUBSCRIPTION.PAYMENT.SUCCESS":
+          updateData.paypalFailedPaymentsCount = 0
+          updateData.paypalLastPaymentTime = new Date()
+          updateData.paypalCyclesCompleted = (user.paypalCyclesCompleted || 0) + 1
+          logger.info("[PAYPAL] Payment successful:", subscriptionId)
+          break
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: updateData,
+        })
+      }
+    } else {
+      logger.warn("[PAYPAL] Webhook received for unknown subscription:", subscriptionId)
+    }
+  }
+
+  res.status(200).json({ success: true })
+})
+logger.info("✅ Registered PayPal webhook handler at /api/v1/paypal/webhook (legacy path, no auth)")
+
 // Versioned routes - API v1 is the only endpoint
 app.use("/api/v1", apiRouter)
 
