@@ -376,6 +376,7 @@ export function Header() {
             <Button
               variant="ghost"
               className="relative h-16 w-16 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+              data-testid="user-avatar-button"
               >
                 {profilePicture ? (
                   <img 
