@@ -40,6 +40,14 @@ export function PayPalResultPage() {
             "You can manage your subscription anytime from your workspace settings",
           ],
           redirectMessage: `Redirecting to your workspace in ${countdown} seconds...`,
+          action: (
+            <Button
+              className="mt-4"
+              onClick={() => window.close()}
+            >
+              Close Window Now
+            </Button>
+          ),
         }
 
       case "error":
@@ -59,8 +67,8 @@ export function PayPalResultPage() {
                 Please try again or contact our support team for assistance.
               </p>
               <div className="flex gap-4 justify-center">
-                <Button onClick={() => (window.location.href = "/workspace-selection")}>
-                  Return to Workspace
+                <Button onClick={() => window.close()}>
+                  Close Window
                 </Button>
                 <Button
                   variant="outline"
@@ -85,9 +93,9 @@ export function PayPalResultPage() {
           action: (
             <Button
               className="mt-6"
-              onClick={() => (window.location.href = "/workspace-selection")}
+              onClick={() => window.close()}
             >
-              Return to Workspace
+              Close Window
             </Button>
           ),
         }
