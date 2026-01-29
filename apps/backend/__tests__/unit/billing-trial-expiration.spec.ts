@@ -21,6 +21,9 @@ describe("🔒 BILLING SYSTEM - Trial Expiration", () => {
     let testWorkspaceId: string
 
     beforeAll(async () => {
+        console.log("DEBUG: prisma object keys:", Object.keys(prisma || {}));
+        console.log("DEBUG: prisma.billingTransaction:", !!prisma?.billingTransaction);
+
         billingService = new SubscriptionBillingService(prisma)
 
         // Create test user with EXPIRED trial
