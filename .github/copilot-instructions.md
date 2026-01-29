@@ -41,12 +41,15 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - Watch for compilation errors in existing terminal output
 - Only restart manually if process crashes or hangs
 
-### 4. **Environment Protection**
+### 4. **Environment Protection** (🚨 CRITICAL - NEVER TOUCH .env)
 
-- **MANDATORY**: Before ANY `.env` interaction: `cp .env .env.backup.$(date +%Y%m%d_%H%M%S)`
-- Always inform Andrea when creating backups
-- Never commit `.env` files to git
-- If `.env` is lost: restore from most recent `.env.backup.*` file
+- **ABSOLUTELY FORBIDDEN**: NEVER read, modify, delete, or interact with `.env` file
+- **NEVER** run commands like `cat .env`, `vim .env`, `rm .env`, etc.
+- **NEVER** suggest changes to `.env` file
+- **NEVER** backup `.env` file (Andrea manages this manually)
+- If configuration is needed: ASK Andrea, don't touch `.env`
+- `.env` is SACRED - any interaction will break production
+- Exception: ONLY if Andrea explicitly says "modify .env" with exact content
 
 ### 5. **PDF File Protection**
 
@@ -69,19 +72,23 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - Integration tests require backend running (`npm run dev`)
 - If tests fail: verify backend (port 3001), database, seed
 
-### 7A. **Test Policy - Tests Are Specification**
+### 7A. **Test Policy - Tests Are The Bible** (🚨 SACRED)
 
+- **TESTS ARE THE BIBLE - TESTS DEFINE TRUTH**
 - **Tests define expected behavior. Code must follow tests, not the other way around.**
+- **Unit tests are the specification - they document what the system MUST do**
 - **DO NOT change tests without explicit approval from Andrea.**
 - If behavior must change, ask first, then update tests and docs together.
 - If a test fails, fix the implementation first. Only change tests if they are wrong and approved.
 - When tests are changed with approval, include the approval note in the PR description.
+- **Before ANY implementation**: Check if tests exist. Tests come FIRST.
 - **ALWAYS add comprehensive comments in tests explaining the WHAT and WHY**:
   - ✅ GOOD: `// SCENARIO: User selects Spanish in widget, but has Italian phone number`
   - ✅ GOOD: `// RULE: Explicit language WINS over phone prefix`
   - ❌ BAD: `it("should work", () => { ... })` - no context!
 - **Test comments are documentation** - they explain business logic to future developers
 - **Every test change = logic change** - treat test modifications as critical as code changes
+- **If implementation contradicts test**: Implementation is WRONG, not the test
 
 ### 8. **WhatsApp Testing Policy**
 
