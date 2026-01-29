@@ -750,6 +750,12 @@ paypalRoutes.post(
 // 🔓 PUBLIC - No auth required (called by PayPal, not user)
 // ⚠️ PayPal adds token=XXX param - don't confuse with JWT auth!
 paypalRoutes.get("/subscription/callback", async (req: Request, res: Response) => {
+  logger.info("[PAYPAL] 🎯 Callback received:", {
+    subscription_id: req.query.subscription_id,
+    ba_token: req.query.ba_token,
+    has_token_param: !!req.query.token,
+  })
+  
   try {
     const { subscription_id, ba_token } = req.query as {
       subscription_id?: string
@@ -762,6 +768,8 @@ paypalRoutes.get("/subscription/callback", async (req: Request, res: Response) =
       return res.redirect(redirectUrl)
     }
 
+    logger.info("[PAYPAL] Finding user for subscription:", subscription_id)
+    
     // Find user by subscriptionId
     const user = await prisma.user.findFirst({
       where: { paypalSubscriptionId: subscription_id },
