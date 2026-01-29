@@ -65,6 +65,7 @@ import { WorkspaceProvider } from "./contexts/WorkspaceContext"
 import { VerifyOtpPage } from "./pages/VerifyOtpPage"
 import { WorkspacePage } from "./pages/WorkspacePage"
 import { WorkspaceSelectionPage } from "./pages/WorkspaceSelectionPage"
+import { PayPalResultPage } from "./pages/PayPalResultPage"
 
 const CustomerProfilePublicPage = lazy(
   () => import("./pages/CustomerProfilePublicPage")
@@ -169,6 +170,9 @@ export function App() {
                 <Route path="/accept-invite" element={<AcceptInvitePage />} />
                 {/* Public widget iframe */}
                 <Route path="/widget-embed" element={<WidgetEmbedPage />} />
+                
+                {/* PayPal callback result page - NO AUTH REQUIRED */}
+                <Route path="/paypal-result" element={<PayPalResultPage />} />
 
                 {/* NOTE: Short URLs (/s/:code) are handled by Vite proxy directly to backend */}
                 {/* No React route needed - see vite.config.ts proxy for "^/s/" */}

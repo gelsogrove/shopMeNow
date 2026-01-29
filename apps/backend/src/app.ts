@@ -450,7 +450,7 @@ app.get("/api/paypal/subscription/callback", async (req, res) => {
 
     if (!subscription_id) {
       logger.error("[PAYPAL] Subscription callback missing subscription_id")
-      return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+      return res.redirect(`${process.env.FRONTEND_URL}/paypal-result?paypal=error`)
     }
 
     // Find user by subscriptionId
@@ -486,7 +486,7 @@ app.get("/api/paypal/subscription/callback", async (req, res) => {
       })
       logger.info("[PAYPAL] 🔍 DEBUG - Users with similar subscription:", allUsers)
       
-      return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+      return res.redirect(`${process.env.FRONTEND_URL}/paypal-result?paypal=error`)
     }
 
     const { loadPayPalConfigForEnv } = await import("./utils/paypal-config")
@@ -525,7 +525,7 @@ app.get("/api/paypal/subscription/callback", async (req, res) => {
 
     if (!subResponse.ok) {
       logger.error("[PAYPAL] Failed to fetch subscription")
-      return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+      return res.redirect(`${process.env.FRONTEND_URL}/paypal-result?paypal=error`)
     }
 
     const subscription = await subResponse.json()
@@ -557,10 +557,10 @@ app.get("/api/paypal/subscription/callback", async (req, res) => {
       status: subscription.status,
     })
 
-    return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=subscription_approved`)
+    return res.redirect(`${process.env.FRONTEND_URL}/paypal-result?paypal=subscription_approved`)
   } catch (error) {
     logger.error("[PAYPAL] Subscription callback error:", error)
-    return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+    return res.redirect(`${process.env.FRONTEND_URL}/paypal-result?paypal=error`)
   }
 })
 logger.info("✅ Registered PUBLIC PayPal subscription callback at /api/paypal/subscription/callback (direct, no auth)")
