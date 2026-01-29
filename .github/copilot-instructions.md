@@ -217,29 +217,38 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
   - ✅ **CORRECT**: `"Categorie: {{categories}}\nOfferte: {{offers}}\nProdotti: {{products}}"` → Multiple different variables OK
 - See `.specify/memory/constitution.md` Principle III (Variable Uniqueness Constraint) for complete details
 
-### 12. **Code Cleanliness & Technical Debt Prevention**
+### 12. **Repository Cleanliness - Keep Solution Clean** (🚨 MANDATORY)
 
-- **ALWAYS** maintain clean codebase free of temporary files, unused code, and duplication
+- **ALWAYS** maintain clean repository free of obsolete files, temporary scripts, and unused artifacts
+- **PROACTIVE CLEANUP**: Regularly identify and remove files that no longer serve a purpose
 - **Critical Requirements**:
   - ❌ **NO temporary scripts**: Never commit `test.js`, `temp.ts`, `backup-old.sql` files
-  - ❌ **NO backup files**: Never commit `.backup`, `.old`, `.tmp` files (use git history)
+  - ❌ **NO backup files**: Never commit `.backup`, `.old`, `.tmp`, `.bak` files (use git history)
   - ❌ **NO unused code**: Remove commented-out code, unused imports, dead functions
   - ❌ **NO code duplication**: Extract shared logic to utilities, services, or base classes
+  - ❌ **NO obsolete dependencies**: Remove unused packages from package.json
+  - ❌ **NO duplicate directories**: Remove redundant folder structures (e.g., duplicate .husky)
+  - ❌ **NO unused media files**: Remove videos, images, PDFs not referenced in code
   - ✅ **Immediate cleanup**: Delete temporary files before commit
   - ✅ **File size limits**: Keep files under 500 lines (extract if larger)
+  - ✅ **Periodic audits**: Regularly check for obsolete files and remove them
+  - ✅ **Ask before cleaning**: If unsure whether file is needed, ASK Andrea
 - **Pre-Commit Checklist**:
   - [ ] No temporary/backup files in `git status`
   - [ ] All imports are used (no IDE warnings)
   - [ ] No commented-out code (use git history instead)
   - [ ] No duplicate logic across files
   - [ ] All files under 500 lines (extract if larger)
+  - [ ] No obsolete files accumulating in repository
 - **Examples**:
-  - ❌ **WRONG**: Unused imports, commented code, backup files
-  - ✅ **CORRECT**: Clean imports, no dead code, extracted utilities for shared logic
+  - ❌ **WRONG**: Unused imports, commented code, backup files, duplicate .husky directories, 31MB video.mp4 not used
+  - ✅ **CORRECT**: Clean imports, no dead code, extracted utilities, single source of config, removed obsolete files
 - **Enforcement**:
   - Pre-commit hook rejects `*.backup`, `*.old`, `*.tmp`, `temp.*`, `test-*.js`
   - ESLint catches unused imports/variables
   - Code reviews verify no duplication or dead code
+  - Regular cleanup sessions to remove obsolete files
+- **RATIONALE**: Clean repository = faster builds, smaller slugs, easier maintenance
 - See `.specify/memory/constitution.md` Principle VII for complete details
 
 ### 13. **NEVER Touch Working Code** (🚨 CRITICAL)
@@ -724,26 +733,36 @@ const userId = (req as any).user.id // Set by authMiddleware
 ❌ Queries without `workspaceId` filter  
 ❌ Generic catch blocks without error details (always show full stack)  
 ❌ Modifying layout/graphics without Andrea's explicit approval  
+❌ Running `git commit` (Andrea does this manually)  
 ❌ Running `git push` (Andrea does this manually)  
 ❌ Creating test/placeholder pages marked "WIP"  
 ❌ Duplicating components instead of reusing existing ones  
 ❌ Using OpenAI directly (use OpenRouter instead)  
 ❌ Creating fake/mock functions outside test environments  
 ❌ Inventing features not documented in PRD  
-❌ Touching `.env` without backup
+❌ Touching `.env` file (ABSOLUTELY FORBIDDEN)
 
 ✅ Always pull from database  
 ✅ Always filter by workspace  
 ✅ Always log full error stack  
 ✅ Always respect existing design system  
-✅ Always create git commits for Andrea to push  
+✅ Always prepare changes with `git add -A` but NEVER commit  
 ✅ Always build production-ready features  
 ✅ Always check for existing implementations first  
 ✅ Always ask Andrea before inventing new features  
 ✅ Always update database seed if schema changes
 
-IMPORTANTE !!!
-NON DEVI FARE COMMIT CI PENSa L'UTENTE !!!!
+## 🚨 CRITICAL GIT WORKFLOW
+
+**AGENT RESPONSIBILITIES**:
+- ✅ Make code changes
+- ✅ Run tests to verify changes
+- ✅ Stage files with `git add -A`
+- ✅ Show git status/diff if needed
+- ❌ **NEVER** run `git commit` - Andrea does this
+- ❌ **NEVER** run `git push` - Andrea does this
+
+**RATIONALE**: Andrea reviews and commits changes manually to maintain control over git history and deployment workflow.
 
 USA SEMPRE COME CONTESTO
 docs/memory-bank/PRD.md
