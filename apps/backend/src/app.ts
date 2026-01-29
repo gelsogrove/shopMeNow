@@ -433,15 +433,117 @@ app.get(
 )
 logger.info("✅ Registered PUBLIC services endpoint at /api/services/public")
 
-// 🔓 PUBLIC PayPal callback route (legacy - redirects to /v1)
-// PayPal may use /api/paypal/* instead of /api/v1/paypal/*
-app.get("/api/paypal/subscription/callback", (req, res) => {
-  const queryString = new URLSearchParams(req.query as any).toString()
-  const redirectUrl = `/api/v1/paypal/subscription/callback?${queryString}`
-  logger.info(`[PAYPAL] Redirecting legacy callback to: ${redirectUrl}`)
-  res.redirect(307, redirectUrl) // 307 = Temporary Redirect (preserve method)
+// 🔓 PUBLIC PayPal callback routes - MUST be BEFORE /api/v1 to bypass auth middlewares
+// These routes are called by PayPal servers, not by authenticated users
+app.get("/api/paypal/subscription/callback", async (req, res) => {
+  try {
+    const { subscription_id, ba_token } = req.query as {
+      subscription_id?: string
+      ba_token?: string
+    }
+
+    logger.info("[PAYPAL] 🎯 Callback received (legacy path):", {
+      subscription_id,
+      ba_token,
+      has_token_param: !!req.query.token,
+    })
+
+    if (!subscription_id) {
+      logger.error("[PAYPAL] Subscription callback missing subscription_id")
+      return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+    }
+
+    // Find user by subscriptionId
+    const user = await prisma.user.findFirst({
+      where: { paypalSubscriptionId: subscription_id },
+      select: { 
+        id: true, 
+        isPlatformAdmin: true, 
+        isDeveloperUser: true,
+        paypalEnvironment: true,
+      },
+    })
+
+    if (!user || !user.paypalEnvironment) {
+      logger.error("[PAYPAL] User not found for subscription:", subscription_id)
+      return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+    }
+
+    const { loadPayPalConfigForEnv } = await import("./utils/paypal-config")
+    const paypalConfig = loadPayPalConfigForEnv(user.paypalEnvironment as any)
+    
+    // Get app token
+    const tokenResponse = await fetch(`${paypalConfig.apiBaseUrl}/v1/oauth2/token`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(
+          `${paypalConfig.clientId}:${paypalConfig.clientSecret}`
+        ).toString("base64")}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
+    })
+
+    if (!tokenResponse.ok) {
+      logger.error("[PAYPAL] Failed to get app token")
+      return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+    }
+
+    const tokenData = await tokenResponse.json()
+    const appToken = tokenData.access_token
+
+    // Fetch subscription details
+    const subResponse = await fetch(
+      `${paypalConfig.apiBaseUrl}/v1/billing/subscriptions/${subscription_id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${appToken}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    if (!subResponse.ok) {
+      logger.error("[PAYPAL] Failed to fetch subscription")
+      return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+    }
+
+    const subscription = await subResponse.json()
+
+    // Update user
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        paypalSubscriptionStatus: subscription.status,
+        paypalSubscriptionApprovedAt: new Date(),
+        paypalNextBillingTime: subscription.billing_info?.next_billing_time
+          ? new Date(subscription.billing_info.next_billing_time)
+          : null,
+        paypalLastPaymentTime: subscription.billing_info?.last_payment?.time
+          ? new Date(subscription.billing_info.last_payment.time)
+          : null,
+        paypalFailedPaymentsCount: subscription.billing_info?.failed_payments_count || 0,
+        paypalCyclesCompleted: 
+          subscription.billing_info?.cycle_executions?.find((c: any) => c.tenure_type === 'REGULAR')?.cycles_completed || 0,
+        paypalOutstandingBalance: parseFloat(
+          subscription.billing_info?.outstanding_balance?.value || '0'
+        ),
+      },
+    })
+
+    logger.info("[PAYPAL] ✅ Subscription approved:", {
+      userId: user.id,
+      subscriptionId: subscription_id,
+      status: subscription.status,
+    })
+
+    return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=subscription_approved`)
+  } catch (error) {
+    logger.error("[PAYPAL] Subscription callback error:", error)
+    return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
+  }
 })
-logger.info("✅ Registered PUBLIC PayPal callback redirect at /api/paypal/subscription/callback")
+logger.info("✅ Registered PUBLIC PayPal subscription callback at /api/paypal/subscription/callback (direct, no auth)")
 
 // Versioned routes - API v1 is the only endpoint
 app.use("/api/v1", apiRouter)
