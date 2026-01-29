@@ -131,7 +131,9 @@ echo ""
 echo -e "${BLUE}📋 STEP 4: Local Prisma client check...${NC}"
 if ask_yes_no "Regenerate Prisma client locally for testing?"; then
     echo -e "${BLUE}🔄 Generating Prisma client from apps/backend/prisma/schema.prisma...${NC}"
-    (cd apps/backend && npx prisma generate)
+    cd apps/backend
+    npx prisma generate
+    cd ../..
     echo -e "${GREEN}✅ Prisma client regenerated locally${NC}"
 else
     echo -e "${YELLOW}⏭️  Local Prisma generate skipped${NC}"
