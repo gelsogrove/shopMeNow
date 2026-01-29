@@ -32,6 +32,7 @@ scripts/
 docker-compose.yml
 .env.example
 .env.backup.*
+dump
 
 # ✅ Keep runtime prompt assets and backend templates (CRITICAL FOR LLM)
 !docs/prompts/**

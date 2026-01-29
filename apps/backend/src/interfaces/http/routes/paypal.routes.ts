@@ -206,7 +206,7 @@ const createSubscription = async ({
         payer_selected: "PAYPAL",
         payee_preferred: "IMMEDIATE_PAYMENT_REQUIRED",
       },
-      return_url: `${config.appUrl}/api/v1/paypal/subscription/callback`,
+      return_url: `${config.appUrl}/api/paypal/subscription/callback`,
       cancel_url: `${config.frontendUrl}/workspace-selection?paypal=cancelled`,
     },
     quantity: "1",
