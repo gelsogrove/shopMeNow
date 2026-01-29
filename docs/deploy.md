@@ -61,7 +61,11 @@ git push origin main
 #
 # BACKUP COMMAND (run BEFORE pg:reset):
 # heroku pg:backups:capture --app echatbot-app
-# heroku pg:backups:download --app echatbot-app
+# heroku pg:backups:download --app echatbot-app --output /Users/gelso/workspace/shopME/dump/backup-$(date +%Y%m%d_%H%M%S).dump
+#
+# 📂 DUMP STORAGE LOCATION:
+# Save all database dumps in: /Users/gelso/workspace/shopME/dump/
+# This folder is git-ignored and used for local backups only.
 #
 # If you're unsure → ASK ANDREA FIRST!
 
