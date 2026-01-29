@@ -91,7 +91,7 @@ echo -e "${BLUE}📋 STEP 3: Database migration check...${NC}"
 if ask_yes_no "Do you need to run Prisma MIGRATE in production?"; then
     echo -e "${YELLOW}⚠️  This will modify production database schema!${NC}"
     if ask_yes_no "Are you SURE you want to run migrations in production?"; then
-        echo -e "${BLUE}📝 Generating migration SQL...${NC}"
+        echo -e "${BLUE}📝 Generating migration SQL preview...${NC}"
         cd apps/backend
         npx prisma migrate diff \
           --from-schema-datamodel prisma/schema.prisma \
@@ -104,8 +104,13 @@ if ask_yes_no "Do you need to run Prisma MIGRATE in production?"; then
             echo ""
             
             if ask_yes_no "Execute these migrations on Heroku database?"; then
+                echo -e "${BLUE}🔄 Running migrations on Heroku...${NC}"
                 heroku run -a echatbot-app "cd apps/backend && npx prisma migrate deploy"
                 echo -e "${GREEN}✅ Migrations executed in production${NC}"
+                
+                echo -e "${BLUE}🔄 Regenerating Prisma client on Heroku...${NC}"
+                heroku run -a echatbot-app "cd apps/backend && npx prisma generate"
+                echo -e "${GREEN}✅ Prisma client regenerated on Heroku${NC}"
             else
                 echo -e "${YELLOW}⏭️  Migrations skipped${NC}"
             fi
@@ -122,15 +127,14 @@ else
 fi
 echo ""
 
-# 4. PRISMA GENERATE
-echo -e "${BLUE}📋 STEP 4: Prisma client generation...${NC}"
-if ask_yes_no "Do you need to regenerate Prisma client?"; then
-    cd apps/backend
-    npx prisma generate
-    cd ../..
-    echo -e "${GREEN}✅ Prisma client regenerated${NC}"
+# 4. LOCAL PRISMA GENERATE (optional)
+echo -e "${BLUE}📋 STEP 4: Local Prisma client check...${NC}"
+if ask_yes_no "Regenerate Prisma client locally for testing?"; then
+    echo -e "${BLUE}🔄 Generating Prisma client from apps/backend/prisma/schema.prisma...${NC}"
+    (cd apps/backend && npx prisma generate)
+    echo -e "${GREEN}✅ Prisma client regenerated locally${NC}"
 else
-    echo -e "${GREEN}✅ Using existing Prisma client${NC}"
+    echo -e "${YELLOW}⏭️  Local Prisma generate skipped${NC}"
 fi
 echo ""
 
