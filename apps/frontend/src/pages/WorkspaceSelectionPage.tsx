@@ -2288,7 +2288,14 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     <img src="/paypal.png" alt="PayPal" className="w-9 h-auto object-contain" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">PayPal Account</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">PayPal Account</CardTitle>
+                      {paypalStatus?.paypalStatus === "CONNECTED" && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          ACTIVE
+                        </span>
+                      )}
+                    </div>
                     <CardDescription className="text-blue-700">
                       Connect your PayPal account to receive monthly payouts.
                     </CardDescription>
@@ -2318,34 +2325,11 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               <CardContent className="pt-2">
                 {paypalLoading ? (
                   <p className="text-sm text-gray-500">Loading PayPal status...</p>
-                ) : paypalStatus?.paypalStatus === "CONNECTED" ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-700">
-                    <div className="rounded-lg bg-white/70 px-3 py-2">
-                      <span className="text-xs uppercase text-gray-500">Status</span>
-                      <div className="font-semibold">
-                        {paypalStatus?.paypalStatus}
-                      </div>
-                    </div>
-                    <div className="rounded-lg bg-white/70 px-3 py-2">
-                      <span className="text-xs uppercase text-gray-500">PayPal Email</span>
-                      <div className="font-semibold truncate">
-                        {paypalStatus?.paypalEmail || "Not connected"}
-                      </div>
-                    </div>
-                    <div className="rounded-lg bg-white/70 px-3 py-2 sm:col-span-2">
-                      <span className="text-xs uppercase text-gray-500">Merchant ID</span>
-                      <div className="font-semibold truncate">
-                        {paypalStatus?.paypalMerchantId || "Not connected"}
-                      </div>
-                    </div>
+                ) : paypalConfig?.configured === false ? (
+                  <div className="rounded-lg bg-yellow-50 px-3 py-2 text-yellow-800">
+                    PayPal is not configured. Add sandbox/live credentials to enable Connect.
                   </div>
-                ) : (
-                  paypalConfig?.configured === false && (
-                    <div className="rounded-lg bg-yellow-50 px-3 py-2 text-yellow-800">
-                      PayPal is not configured. Add sandbox/live credentials to enable Connect.
-                    </div>
-                  )
-                )}
+                ) : null}
               </CardContent>
             )}
           </Card>
