@@ -20,6 +20,7 @@ import {
   BalanceResponse,
   PlanType,
 } from "../services/subscriptionBillingApi"
+import { TrialExpiredDialog } from "@/components/billing/TrialExpiredDialog"
 
 // Helper to check if user is authenticated
 const isAuthenticated = (): boolean => {
@@ -198,6 +199,22 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     setIsLowBalance(newBalance < lowThreshold)
   }, [billingOverview])
 
+  /**
+   * Open trial expired dialog
+   */
+  const openTrialExpiredDialog = useCallback((attemptedAction?: string) => {
+    setTrialExpiredAttemptedAction(attemptedAction || null)
+    setShowTrialExpiredDialog(true)
+  }, [])
+
+  /**
+   * Close trial expired dialog
+   */
+  const closeTrialExpiredDialog = useCallback(() => {
+    setShowTrialExpiredDialog(false)
+    setTrialExpiredAttemptedAction(null)
+  }, [])
+
   // Reset state when workspace changes (no auto-load to avoid errors)
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -208,6 +225,8 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
       setIsTrialExpired(false)
       setPlanType(null)
       setBillingOverview(null)
+      setShowTrialExpiredDialog(false)
+      setTrialExpiredAttemptedAction(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId])
@@ -223,14 +242,23 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     isLoadingBalance,
     isLoadingOverview,
     error,
+    showTrialExpiredDialog,
+    trialExpiredAttemptedAction,
     refreshBalance,
     refreshOverview,
     updateBalanceLocally,
+    openTrialExpiredDialog,
+    closeTrialExpiredDialog,
   }
 
   return (
     <BillingContext.Provider value={value}>
       {children}
+      <TrialExpiredDialog
+        open={showTrialExpiredDialog}
+        onOpenChange={closeTrialExpiredDialog}
+        attemptedAction={trialExpiredAttemptedAction}
+      />
     </BillingContext.Provider>
   )
 }

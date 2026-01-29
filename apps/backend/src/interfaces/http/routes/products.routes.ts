@@ -5,6 +5,7 @@ import { ProductController } from "../controllers/product.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { handleUploadError, uploadImage } from "../middlewares/uploadMiddleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import { checkTrialValid, checkPlanLimits } from "../middlewares/billing.middleware"
 
 // Multer config for CSV upload (memory storage)
 const csvUpload = multer({
@@ -391,6 +392,8 @@ export default function setupProductRoutes(): Router {
     "/",
     authMiddleware,
     workspaceValidationMiddleware,
+    checkTrialValid,
+    checkPlanLimits("products"),
     uploadImage.array("images", 10), // Supporto per massimo 10 immagini
     handleUploadError,
     productController.createProduct

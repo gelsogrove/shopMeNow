@@ -2,6 +2,7 @@ import { Router } from "express"
 import { FaqController } from "../controllers/faq.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import { checkTrialValid } from "../middlewares/billing.middleware"
 
 /**
  * @swagger
@@ -120,7 +121,7 @@ export const faqsRouter = (): Router => {
    *             schema:
    *               $ref: '#/components/schemas/FAQ'
    */
-  router.post("/", controller.createFaq.bind(controller))
+  router.post("/", checkTrialValid, controller.createFaq.bind(controller))
 
   /**
    * @swagger

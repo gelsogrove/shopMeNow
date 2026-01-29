@@ -454,18 +454,38 @@ app.get("/api/paypal/subscription/callback", async (req, res) => {
     }
 
     // Find user by subscriptionId
+    logger.info(`[PAYPAL] 🔍 Searching for user with subscriptionId: ${subscription_id}`)
+    
     const user = await prisma.user.findFirst({
       where: { paypalSubscriptionId: subscription_id },
       select: { 
         id: true, 
+        email: true,
         isPlatformAdmin: true, 
         isDeveloperUser: true,
         paypalEnvironment: true,
+        paypalSubscriptionId: true,
+        paypalSubscriptionStatus: true,
       },
     })
 
+    logger.info(`[PAYPAL] 🔍 User found:`, user ? { id: user.id, email: user.email, subId: user.paypalSubscriptionId } : 'NULL')
+
     if (!user || !user.paypalEnvironment) {
-      logger.error("[PAYPAL] User not found for subscription:", subscription_id)
+      logger.error("[PAYPAL] ❌ User not found for subscription:", subscription_id)
+      
+      // DEBUG: Check if ANY user has this subscription_id (case sensitive issue?)
+      const allUsers = await prisma.user.findMany({
+        where: {
+          OR: [
+            { paypalSubscriptionId: subscription_id },
+            { paypalSubscriptionId: { contains: subscription_id } },
+          ]
+        },
+        select: { id: true, email: true, paypalSubscriptionId: true }
+      })
+      logger.info("[PAYPAL] 🔍 DEBUG - Users with similar subscription:", allUsers)
+      
       return res.redirect(`${process.env.FRONTEND_URL}/workspace-selection?paypal=error`)
     }
 
