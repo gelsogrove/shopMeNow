@@ -536,6 +536,8 @@ app.get("/api/paypal/subscription/callback", async (req, res) => {
       data: {
         paypalSubscriptionStatus: subscription.status,
         paypalSubscriptionApprovedAt: new Date(),
+        paypalStatus: subscription.status === 'ACTIVE' ? 'CONNECTED' : undefined,  // 🔧 FIX: Set status on approval
+        isPaymentConnected: subscription.status === 'ACTIVE' ? true : undefined,    // 🔧 FIX: Mark connected on approval
         paypalNextBillingTime: subscription.billing_info?.next_billing_time
           ? new Date(subscription.billing_info.next_billing_time)
           : null,
@@ -609,6 +611,8 @@ app.post("/api/paypal/webhook", async (req, res) => {
           case "BILLING.SUBSCRIPTION.ACTIVATED":
             updateData.paypalSubscriptionStatus = "ACTIVE"
             updateData.paypalSubscriptionApprovedAt = new Date()
+            updateData.paypalStatus = "CONNECTED"  // 🔧 FIX: Set PayPal status to CONNECTED
+            updateData.isPaymentConnected = true   // 🔧 FIX: Mark payment as connected
             
             if (user.planType === "FREE_TRIAL") {
               updateData.planType = "BASIC"
@@ -623,6 +627,8 @@ app.post("/api/paypal/webhook", async (req, res) => {
 
           case "BILLING.SUBSCRIPTION.CANCELLED":
             updateData.paypalSubscriptionStatus = "CANCELLED"
+            updateData.paypalStatus = "DISCONNECTED"  // 🔧 FIX: Reset status on cancellation
+            updateData.isPaymentConnected = false     // 🔧 FIX: Mark payment as disconnected
             logger.info("[PAYPAL] Subscription cancelled:", subscriptionId)
             break
 
