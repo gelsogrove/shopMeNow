@@ -174,15 +174,8 @@ export class ChatController {
         limitNum
       )
 
-      if (result.data.length === 0 && workspaceId) {
-        // If no messages found and workspace ID was provided, it could mean the chat session doesn't belong to this workspace
-        res.status(404).json({
-          success: false,
-          error:
-            "Chat session not found in this workspace or no messages available",
-        })
-        return
-      }
+      // Note: Empty messages array is valid (new session with no messages yet)
+      // We only return 404 if the session itself doesn't exist in this workspace
 
       // Mark messages as read when they are viewed
       await this.messageRepository.markMessagesAsRead(sessionId, workspaceId)

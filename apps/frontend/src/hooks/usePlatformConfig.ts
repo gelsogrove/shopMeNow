@@ -42,6 +42,7 @@ export interface PlatformConfigData {
   prices: Record<string, PriceInfo>
   flags: Record<string, boolean>
   limits: Record<string, number>
+  freeTrialCredit?: number
 }
 
 interface PlatformConfigState {
@@ -196,11 +197,14 @@ export function usePlatformConfig() {
   // Convenience accessors for common flags
   const canLogin = state.data?.flags.canLogin ?? false
   const canRegister = state.data?.flags.canRegister ?? false
+  const freeTrialCredit = state.data?.freeTrialCredit ?? 22
+
   return {
     // Raw data
     prices: state.data?.prices ?? {},
     flags: state.data?.flags ?? {},
     limits: state.data?.limits ?? {},
+    freeTrialCredit,
 
     // State
     isLoading: state.isLoading,

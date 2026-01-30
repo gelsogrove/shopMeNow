@@ -351,4 +351,99 @@ router.post(
   platformConfigController.invalidateCache.bind(platformConfigController)
 )
 
+// ============================================================================
+// PLAN CONFIGURATION ROUTES (require platform admin)
+// ============================================================================
+
+/**
+ * @swagger
+ * /api/platform-config/plans:
+ *   get:
+ *     summary: Get all plan configurations
+ *     description: Returns all plan configurations (FREE_TRIAL, BASIC, PREMIUM, ENTERPRISE)
+ *     tags: [Platform Config]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Plan configurations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       planType:
+ *                         type: string
+ *                       displayName:
+ *                         type: string
+ *                       monthlyFee:
+ *                         type: number
+ *                       initialCredit:
+ *                         type: number
+ *                       maxChannels:
+ *                         type: integer
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  "/plans",
+  authMiddleware,
+  platformAdminMiddleware,
+  platformConfigController.getPlanConfigurations.bind(platformConfigController)
+)
+
+/**
+ * @swagger
+ * /api/platform-config/plans/{planType}:
+ *   put:
+ *     summary: Update a plan configuration field
+ *     description: Update a specific field of a plan configuration
+ *     tags: [Platform Config]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: planType
+ *         required: true
+ *         schema:
+ *           type: string
+ *           enum: [FREE_TRIAL, BASIC, PREMIUM, ENTERPRISE]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - field
+ *               - value
+ *             properties:
+ *               field:
+ *                 type: string
+ *                 description: Field to update (e.g., initialCredit, monthlyFee)
+ *               value:
+ *                 type: number
+ *                 description: New value
+ *     responses:
+ *       200:
+ *         description: Plan configuration updated
+ *       400:
+ *         description: Invalid request
+ *       401:
+ *         description: Unauthorized
+ */
+router.put(
+  "/plans/:planType",
+  authMiddleware,
+  platformAdminMiddleware,
+  platformConfigController.updatePlanConfiguration.bind(platformConfigController)
+)
+
 export default router

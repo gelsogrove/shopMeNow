@@ -11,7 +11,8 @@ import {
   Loader2,
   XCircle,
   DollarSign,
-  TrendingDown
+  TrendingDown,
+  Settings
 } from 'lucide-react'
 
 interface PriceConfig {
@@ -32,9 +33,33 @@ interface LimitConfig {
   editValue?: string
 }
 
+interface PlanConfig {
+  id: string
+  planType: string
+  displayName: string
+  monthlyFee: number
+  maxChannels: number
+  maxProducts: number
+  maxCustomers: number
+  maxTeamMembers: number | null
+  messageCost: number
+  orderCost: number
+  pushCost: number
+  lowBalanceThreshold: number
+  trialDays: number
+  initialCredit: number
+  features: any
+  isActive: boolean
+  // Edit state
+  isEditing?: boolean
+  editField?: string
+  editValue?: string
+}
+
 export function PricingPage() {
   const [prices, setPrices] = useState<PriceConfig[]>([])
   const [limits, setLimits] = useState<LimitConfig[]>([])
+  const [planConfigs, setPlanConfigs] = useState<PlanConfig[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -43,12 +68,20 @@ export function PricingPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await api.getAdminConfig()
-      if (response.success && response.data) {
-        setPrices(response.data.prices.map(p => ({ ...p, isEditing: false })))
-        setLimits(response.data.limits.map(l => ({ ...l, isEditing: false })))
+      const [configResponse, planResponse] = await Promise.all([
+        api.getAdminConfig(),
+        api.getPlanConfigurations()
+      ])
+      
+      if (configResponse.success && configResponse.data) {
+        setPrices(configResponse.data.prices.map(p => ({ ...p, isEditing: false })))
+        setLimits(configResponse.data.limits.map(l => ({ ...l, isEditing: false })))
       } else {
-        setError(response.error || 'Failed to fetch configuration')
+        setError(configResponse.error || 'Failed to fetch configuration')
+      }
+      
+      if (planResponse.success && planResponse.data) {
+        setPlanConfigs(planResponse.data.map(p => ({ ...p, isEditing: false })))
       }
     } catch (err) {
       setError('Failed to connect to server')
@@ -61,6 +94,43 @@ export function PricingPage() {
   useEffect(() => {
     fetchConfig()
   }, [])
+
+  // Plan Configuration editing
+  const startEditingPlan = (planType: string, field: string, currentValue: number | string | null) => {
+    setPlanConfigs(prev => prev.map(p => 
+      p.planType === planType 
+        ? { ...p, isEditing: true, editField: field, editValue: String(currentValue ?? '') }
+        : p
+    ))
+  }
+
+  const cancelEditingPlan = (planType: string) => {
+    setPlanConfigs(prev => prev.map(p => 
+      p.planType === planType ? { ...p, isEditing: false, editField: undefined, editValue: undefined } : p
+    ))
+  }
+
+  const savePlanConfig = async (planType: string, field: string, value: string) => {
+    setIsSaving(`plan-${planType}-${field}`)
+    try {
+      const numValue = parseFloat(value)
+      const response = await api.updatePlanConfiguration(planType, field, numValue)
+      if (response.success) {
+        setPlanConfigs(prev => prev.map(p => 
+          p.planType === planType 
+            ? { ...p, [field]: numValue, isEditing: false, editField: undefined, editValue: undefined }
+            : p
+        ))
+      } else {
+        setError(response.error || 'Failed to save')
+      }
+    } catch (err) {
+      setError('Failed to save plan configuration')
+      console.error(err)
+    } finally {
+      setIsSaving(null)
+    }
+  }
 
   const startEditing = (key: string, type: 'price' | 'limit') => {
     if (type === 'price') {
@@ -647,6 +717,255 @@ export function PricingPage() {
                 </div>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Plan Configurations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Plan Configurations
+          </CardTitle>
+          <p className="text-sm text-gray-500">
+            Configure plan-specific settings like initial credit, monthly fees, and limits
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="pb-3 font-semibold">Plan</th>
+                  <th className="pb-3 font-semibold">Monthly Fee</th>
+                  <th className="pb-3 font-semibold">Initial Credit</th>
+                  <th className="pb-3 font-semibold">Trial Days</th>
+                  <th className="pb-3 font-semibold">Max Channels</th>
+                  <th className="pb-3 font-semibold">Max Customers</th>
+                  <th className="pb-3 font-semibold">Message Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {planConfigs.map((plan) => (
+                  <tr key={plan.planType} className="border-b hover:bg-gray-50">
+                    <td className="py-4">
+                      <div>
+                        <span className="font-medium">{plan.displayName}</span>
+                        <span className="text-xs text-gray-400 ml-2">({plan.planType})</span>
+                      </div>
+                    </td>
+                    {/* Monthly Fee */}
+                    <td className="py-4">
+                      {plan.isEditing && plan.editField === 'monthlyFee' ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={plan.editValue}
+                            onChange={(e) => setPlanConfigs(prev => prev.map(p => 
+                              p.planType === plan.planType ? { ...p, editValue: e.target.value } : p
+                            ))}
+                            className="w-20"
+                          />
+                          {isSaving === `plan-${plan.planType}-monthlyFee` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => savePlanConfig(plan.planType, 'monthlyFee', plan.editValue || '')}>
+                                <Save className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => cancelEditingPlan(plan.planType)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditingPlan(plan.planType, 'monthlyFee', plan.monthlyFee)}
+                          className="text-green-600 font-semibold hover:underline cursor-pointer"
+                        >
+                          ${plan.monthlyFee.toFixed(2)}
+                        </button>
+                      )}
+                    </td>
+                    {/* Initial Credit */}
+                    <td className="py-4">
+                      {plan.isEditing && plan.editField === 'initialCredit' ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={plan.editValue}
+                            onChange={(e) => setPlanConfigs(prev => prev.map(p => 
+                              p.planType === plan.planType ? { ...p, editValue: e.target.value } : p
+                            ))}
+                            className="w-20"
+                          />
+                          {isSaving === `plan-${plan.planType}-initialCredit` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => savePlanConfig(plan.planType, 'initialCredit', plan.editValue || '')}>
+                                <Save className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => cancelEditingPlan(plan.planType)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditingPlan(plan.planType, 'initialCredit', plan.initialCredit)}
+                          className={`font-semibold hover:underline cursor-pointer ${plan.initialCredit > 0 ? 'text-emerald-600' : 'text-gray-400'}`}
+                        >
+                          {plan.initialCredit > 0 ? `$${plan.initialCredit.toFixed(2)}` : '—'}
+                        </button>
+                      )}
+                    </td>
+                    {/* Trial Days */}
+                    <td className="py-4">
+                      {plan.isEditing && plan.editField === 'trialDays' ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={plan.editValue}
+                            onChange={(e) => setPlanConfigs(prev => prev.map(p => 
+                              p.planType === plan.planType ? { ...p, editValue: e.target.value } : p
+                            ))}
+                            className="w-16"
+                          />
+                          {isSaving === `plan-${plan.planType}-trialDays` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => savePlanConfig(plan.planType, 'trialDays', plan.editValue || '')}>
+                                <Save className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => cancelEditingPlan(plan.planType)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditingPlan(plan.planType, 'trialDays', plan.trialDays)}
+                          className={`hover:underline cursor-pointer ${plan.trialDays > 0 ? 'text-blue-600 font-medium' : 'text-gray-400'}`}
+                        >
+                          {plan.trialDays > 0 ? `${plan.trialDays}d` : '—'}
+                        </button>
+                      )}
+                    </td>
+                    {/* Max Channels */}
+                    <td className="py-4">
+                      {plan.isEditing && plan.editField === 'maxChannels' ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={plan.editValue}
+                            onChange={(e) => setPlanConfigs(prev => prev.map(p => 
+                              p.planType === plan.planType ? { ...p, editValue: e.target.value } : p
+                            ))}
+                            className="w-16"
+                          />
+                          {isSaving === `plan-${plan.planType}-maxChannels` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => savePlanConfig(plan.planType, 'maxChannels', plan.editValue || '')}>
+                                <Save className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => cancelEditingPlan(plan.planType)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditingPlan(plan.planType, 'maxChannels', plan.maxChannels)}
+                          className="hover:underline cursor-pointer"
+                        >
+                          {plan.maxChannels}
+                        </button>
+                      )}
+                    </td>
+                    {/* Max Customers */}
+                    <td className="py-4">
+                      {plan.isEditing && plan.editField === 'maxCustomers' ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={plan.editValue}
+                            onChange={(e) => setPlanConfigs(prev => prev.map(p => 
+                              p.planType === plan.planType ? { ...p, editValue: e.target.value } : p
+                            ))}
+                            className="w-20"
+                          />
+                          {isSaving === `plan-${plan.planType}-maxCustomers` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => savePlanConfig(plan.planType, 'maxCustomers', plan.editValue || '')}>
+                                <Save className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => cancelEditingPlan(plan.planType)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditingPlan(plan.planType, 'maxCustomers', plan.maxCustomers)}
+                          className="hover:underline cursor-pointer"
+                        >
+                          {plan.maxCustomers}
+                        </button>
+                      )}
+                    </td>
+                    {/* Message Cost */}
+                    <td className="py-4">
+                      {plan.isEditing && plan.editField === 'messageCost' ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={plan.editValue}
+                            onChange={(e) => setPlanConfigs(prev => prev.map(p => 
+                              p.planType === plan.planType ? { ...p, editValue: e.target.value } : p
+                            ))}
+                            className="w-20"
+                          />
+                          {isSaving === `plan-${plan.planType}-messageCost` ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => savePlanConfig(plan.planType, 'messageCost', plan.editValue || '')}>
+                                <Save className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => cancelEditingPlan(plan.planType)}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startEditingPlan(plan.planType, 'messageCost', plan.messageCost)}
+                          className="text-gray-600 hover:underline cursor-pointer"
+                        >
+                          ${plan.messageCost.toFixed(2)}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

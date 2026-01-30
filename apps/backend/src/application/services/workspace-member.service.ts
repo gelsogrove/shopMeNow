@@ -227,7 +227,8 @@ export class WorkspaceMemberService {
   }
 
   /**
-   * Check if user is SUPER_ADMIN (owner) of a workspace
+   * Check if user is SUPER_ADMIN of a workspace
+   * User is SUPER_ADMIN if they are the owner OR have SUPER_ADMIN role
    */
   async isSuperAdmin(workspaceId: string, userId: string): Promise<boolean> {
     const workspace = await this.prisma.workspace.findUnique({
@@ -235,7 +236,22 @@ export class WorkspaceMemberService {
       select: { ownerId: true },
     })
 
-    return workspace?.ownerId === userId
+    // If user is owner, they are always super admin
+    if (workspace?.ownerId === userId) {
+      return true
+    }
+
+    // Check if user has SUPER_ADMIN role in the workspace
+    const membership = await this.prisma.userWorkspace.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId,
+          workspaceId,
+        },
+      },
+    })
+
+    return membership?.role === 'SUPER_ADMIN'
   }
 
   /**

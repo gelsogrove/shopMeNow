@@ -18,8 +18,14 @@ const mockPlatformConfig = {
   update: jest.fn(),
 }
 
+const mockPlanConfiguration = {
+  findUnique: jest.fn(),
+  findMany: jest.fn(),
+}
+
 const mockPrisma = {
   platformConfig: mockPlatformConfig,
+  planConfiguration: mockPlanConfiguration,
 }
 
 jest.mock("@echatbot/database", () => ({
@@ -151,6 +157,10 @@ describe("PlatformConfigService", () => {
     ;(mockPlatformConfig.findMany as jest.Mock).mockResolvedValue(
       mockConfigData
     )
+    // Mock PlanConfiguration for getPublicConfig
+    ;(mockPlanConfiguration.findUnique as jest.Mock).mockResolvedValue({
+      initialCredit: 22,
+    })
     await platformConfigService.invalidateCache()
   })
 
@@ -252,6 +262,9 @@ describe("PlatformConfigService", () => {
       expect(config.flags.canRegister).toBe(false)
 
       expect(config.limits.FREE_PRODUCTS).toBe(50)
+      
+      // freeTrialCredit should come from PlanConfiguration.initialCredit (FREE_TRIAL)
+      expect(config.freeTrialCredit).toBe(22)
     })
   })
 

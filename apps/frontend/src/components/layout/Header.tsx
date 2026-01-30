@@ -25,10 +25,12 @@ import { getUnreadCount } from "@/services/supportApi"
 import {
   ArrowLeft,
   Bot,
+  Clock,
   CreditCard,
   Crown,
   LogOut,
   Mail,
+  Rocket,
   Send,
   Settings,
   User,
@@ -41,7 +43,7 @@ export function Header() {
 
   // ✅ FIX: Use WorkspaceContext (single source of truth)
   const { workspace } = useWorkspace()
-  const { isOwner } = useWorkspaceRole(workspace?.id)
+  const { isOwner, isSuperAdmin } = useWorkspaceRole(workspace?.id)
 
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
@@ -51,6 +53,8 @@ export function Header() {
   const [userData, setUserData] = useState<any>(null)
   // Real-time plan type from billing API
   const [actualPlanType, setActualPlanType] = useState<string | null>(null)
+  // Trial days remaining
+  const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null)
   // Support ticket unread count
   const [supportUnreadCount, setSupportUnreadCount] = useState<number>(0)
 
@@ -106,11 +110,20 @@ export function Header() {
       try {
         const billingData = await getBillingOverview(workspace.id, true) // forceRefresh=true
         setActualPlanType(billingData.billing.planType)
-        logger.info("💳 [Header] Billing plan loaded:", billingData.billing.planType)
+        
+        // Set trial days remaining (null if not in trial)
+        if (billingData.billing.planType === 'FREE_TRIAL' && billingData.billing.daysUntilTrialExpires !== null) {
+          setTrialDaysRemaining(billingData.billing.daysUntilTrialExpires)
+        } else {
+          setTrialDaysRemaining(null)
+        }
+        
+        logger.info("💳 [Header] Billing plan loaded:", billingData.billing.planType, "Trial days:", billingData.billing.daysUntilTrialExpires)
       } catch (error) {
         logger.error("Failed to load billing plan:", error)
         // Fallback to workspace planType
         setActualPlanType(workspace.planType || null)
+        setTrialDaysRemaining(null)
       }
     }
     loadBillingPlan()
@@ -284,8 +297,31 @@ export function Header() {
             </Button>
           </nav>
 
-          {/* Right side: Support Inbox + Settings + Plan Badge + Profile menu */}
+          {/* Right side: Trial Banner + Support Inbox + Settings + Plan Badge + Profile menu */}
           <div className="flex items-center gap-4">
+            {/* 🎯 Trial Days Countdown Banner - Only for FREE_TRIAL users */}
+            {(actualPlanType === 'FREE_TRIAL' || (!actualPlanType && workspace?.planType === 'FREE_TRIAL')) && trialDaysRemaining !== null && (
+              <button
+                onClick={() => navigate("/workspace-selection?upgrade=true")}
+                className="group relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white font-medium text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
+              >
+                {/* Animated background shimmer */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                
+                <Clock className="h-4 w-4 animate-pulse" />
+                <span className="relative">
+                  {trialDaysRemaining <= 0 ? (
+                    <span className="font-bold">Trial Expired!</span>
+                  ) : trialDaysRemaining === 1 ? (
+                    <span><span className="font-bold">1</span> day left</span>
+                  ) : (
+                    <span><span className="font-bold">{trialDaysRemaining}</span> days left</span>
+                  )}
+                </span>
+                <Rocket className="h-4 w-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              </button>
+            )}
+            
             {/* Support Inbox Icon with Badge */}
             <TooltipProvider delayDuration={100}>
               <Tooltip>

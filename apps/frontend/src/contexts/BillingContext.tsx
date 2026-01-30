@@ -233,6 +233,13 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId])
 
+  // Auto-load balance when user is authenticated (for FeatureGate to work)
+  useEffect(() => {
+    if (isAuthenticated() && !planType && !isLoadingBalance) {
+      refreshBalance()
+    }
+  }, [planType, isLoadingBalance, refreshBalance])
+
   const value: BillingContextState = {
     creditBalance,
     isLowBalance,

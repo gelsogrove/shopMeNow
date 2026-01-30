@@ -212,6 +212,39 @@ class BackofficeApi {
     })
   }
 
+  // Plan Configuration - Admin endpoints
+  async getPlanConfigurations(): Promise<ApiResponse<Array<{
+    id: string
+    planType: string
+    displayName: string
+    monthlyFee: number
+    maxChannels: number
+    maxProducts: number
+    maxCustomers: number
+    maxTeamMembers: number | null
+    messageCost: number
+    orderCost: number
+    pushCost: number
+    lowBalanceThreshold: number
+    trialDays: number
+    initialCredit: number
+    features: any
+    isActive: boolean
+  }>>> {
+    return this.fetch('/platform-config/plans')
+  }
+
+  async updatePlanConfiguration(
+    planType: string,
+    field: string,
+    value: number | string | null
+  ): Promise<ApiResponse<{ planType: string; [key: string]: any }>> {
+    return this.fetch(`/platform-config/plans/${planType}`, {
+      method: 'PUT',
+      body: JSON.stringify({ field, value }),
+    })
+  }
+
   // Auth - Real authentication via Backend API
   auth = {
     /**

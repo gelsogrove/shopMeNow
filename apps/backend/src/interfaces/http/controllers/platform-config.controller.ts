@@ -458,6 +458,80 @@ export class PlatformConfigController {
       })
     }
   }
+
+  // ============================================================================
+  // PLAN CONFIGURATION ENDPOINTS
+  // ============================================================================
+
+  /**
+   * GET /api/platform-config/plans
+   * Get all plan configurations for admin
+   */
+  async getPlanConfigurations(_req: Request, res: Response): Promise<Response> {
+    try {
+      const plans = await platformConfigService.getAllPlanConfigurations()
+
+      return res.status(200).json({
+        success: true,
+        data: plans,
+      })
+    } catch (error) {
+      logger.error("[PlatformConfigController] Error getting plan configurations:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to fetch plan configurations",
+      })
+    }
+  }
+
+  /**
+   * PUT /api/platform-config/plans/:planType
+   * Update a plan configuration field
+   */
+  async updatePlanConfiguration(req: Request, res: Response): Promise<Response> {
+    try {
+      const { planType } = req.params
+      const { field, value } = req.body
+
+      if (!planType) {
+        return res.status(400).json({
+          success: false,
+          error: "Plan type is required",
+        })
+      }
+
+      if (!field) {
+        return res.status(400).json({
+          success: false,
+          error: "Field is required",
+        })
+      }
+
+      if (value === undefined) {
+        return res.status(400).json({
+          success: false,
+          error: "Value is required",
+        })
+      }
+
+      const updated = await platformConfigService.updatePlanConfiguration(
+        planType,
+        field,
+        value
+      )
+
+      return res.status(200).json({
+        success: true,
+        data: updated,
+      })
+    } catch (error) {
+      logger.error("[PlatformConfigController] Error updating plan configuration:", error)
+      return res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to update plan configuration",
+      })
+    }
+  }
 }
 
 // Export singleton instance

@@ -112,51 +112,15 @@ const initialWizardData: WizardFormData = {
 }
 
 // FAQ templates based on channel type
-const getDefaultFAQs = (channelType: 'WHATSAPP' | 'WIDGET', sellsProducts: boolean): Array<{ question: string; answer: string }> => {
-  if (channelType === 'WIDGET' || !sellsProducts) {
-    // Support-only FAQs (Widget or non-commerce WhatsApp)
-    return [
-      { question: "What services do you offer?", answer: "" },
-      { question: "What are your business hours?", answer: "" },
-      { question: "How can I contact support?", answer: "" },
-      { question: "Do you offer consultations?", answer: "" },
-    ]
-  } else {
-    // E-commerce FAQs (WhatsApp with products)
-    return [
-      { question: "How long does it take to receive the order?", answer: "" },
-      { question: "What is your refund policy?", answer: "" },
-      { question: "What are your business hours?", answer: "" },
-      { question: "What payment methods do you accept?", answer: "" },
-    ]
-  }
+const getDefaultFAQs = (_channelType: 'WHATSAPP' | 'WIDGET', _sellsProducts: boolean): Array<{ question: string; answer: string }> => {
+  // No default FAQs - user adds their own
+  return []
 }
 
-// Additional FAQ suggestions for "Add FAQ" button
-const getAdditionalFAQSuggestions = (channelType: 'WHATSAPP' | 'WIDGET', sellsProducts: boolean): string[] => {
-  if (channelType === 'WIDGET' || !sellsProducts) {
-    // Support-only additional FAQs
-    return [
-      "What types of services do you provide?",
-      "Do you have pricing information?",
-      "How do I schedule an appointment?",
-      "What is your response time?",
-      "Do you offer remote assistance?",
-      "What languages do you support?",
-    ]
-  } else {
-    // E-commerce additional FAQs
-    return [
-      "What types of products do you sell?",
-      "Do you offer international shipping?",
-      "How can I track my order?",
-      "Do you have a minimum order amount?",
-      "Can I modify my order after placing it?",
-      "Do you offer gift wrapping?",
-      "What are your shipping costs?",
-      "Do you have a loyalty program?",
-    ]
-  }
+// No pre-filled suggestions - user writes their own questions
+const getAdditionalFAQSuggestions = (_channelType: 'WHATSAPP' | 'WIDGET', _sellsProducts: boolean): string[] => {
+  // Return empty array - user types their own questions
+  return []
 }
 
 // Badge stats type
@@ -416,18 +380,28 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    
+    // Handle PayPal callback
     const paypalParam = params.get("paypal")
-    if (!paypalParam) return
-
-    if (paypalParam === "connected") {
-      toast.success("PayPal connected successfully.")
-    } else if (paypalParam === "missing_config") {
-      toast.error("PayPal is not configured. Add sandbox/live credentials first.")
-    } else {
-      toast.error("PayPal connection failed. Please try again.")
+    if (paypalParam) {
+      if (paypalParam === "connected") {
+        toast.success("PayPal connected successfully.")
+      } else if (paypalParam === "missing_config") {
+        toast.error("PayPal is not configured. Add sandbox/live credentials first.")
+      } else {
+        toast.error("PayPal connection failed. Please try again.")
+      }
+      params.delete("paypal")
     }
-
-    params.delete("paypal")
+    
+    // Handle upgrade dialog open
+    const upgradeParam = params.get("upgrade")
+    if (upgradeParam === "true") {
+      setOpenChangePlanDialog(true)
+      params.delete("upgrade")
+    }
+    
+    // Clean up URL
     const nextQuery = params.toString()
     const nextUrl = nextQuery
       ? `${window.location.pathname}?${nextQuery}`
@@ -2183,7 +2157,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </Button>
 
                     <p className="text-xs text-gray-500 text-center">
-                      Default FAQs are provided as suggestions. Feel free to modify or remove them.
+                      Add the most common questions your customers ask. You can add more FAQs later.
                     </p>
                   </div>
                 )}

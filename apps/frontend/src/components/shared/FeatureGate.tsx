@@ -64,8 +64,8 @@ export function FeatureGate({
   const featureKey = FEATURE_KEYS[feature]
   const hasFeature = planHasFeature(planType, featureKey)
   
-  // Show loading state while checking plan
-  if (isLoadingBalance) {
+  // Show loading state while checking plan OR if planType not yet loaded
+  if (isLoadingBalance || planType === null) {
     return (
       <div className="animate-pulse bg-gray-100 rounded-lg h-96" />
     )
@@ -87,7 +87,7 @@ export function FeatureGate({
       </div>
       
       {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/90 to-white/95 flex items-center justify-center">
+      <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-white/90 to-white/95 flex items-start justify-center pt-16">
         <div className="text-center max-w-md px-6 py-8 bg-white/95 rounded-2xl shadow-xl border border-gray-200">
           {/* Lock Icon */}
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
@@ -113,7 +113,7 @@ export function FeatureGate({
           
           {/* CTA Button */}
           <Button 
-            onClick={() => navigate("/settings/profile?tab=billing")}
+            onClick={() => navigate("/workspace-selection?upgrade=true")}
             className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8"
             size="lg"
           >

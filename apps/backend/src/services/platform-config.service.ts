@@ -274,6 +274,7 @@ class PlatformConfigService {
     prices: Record<string, { current: number; original: number | null }>
     flags: Record<string, boolean>
     limits: Record<string, number>
+    freeTrialCredit: number
   }> {
     await this.ensureCache()
 
@@ -297,7 +298,16 @@ class PlatformConfigService {
       limits[key] = parseInt(item.value, 10)
     }
 
-    return { prices, flags, limits }
+    // Get FREE_TRIAL initialCredit from PlanConfiguration
+    const freeTrial = await this.prisma.planConfiguration.findUnique({
+      where: { planType: "FREE_TRIAL" },
+      select: { initialCredit: true },
+    })
+    const freeTrialCredit = freeTrial?.initialCredit
+      ? Number(freeTrial.initialCredit)
+      : 22.0 // Fallback
+
+    return { prices, flags, limits, freeTrialCredit }
   }
 
   /**
@@ -489,6 +499,85 @@ class PlatformConfigService {
       },
     })
     await this.invalidateCache()
+  }
+
+  // ============================================================================
+  // PLAN CONFIGURATION METHODS (PlanConfiguration table)
+  // ============================================================================
+
+  /**
+   * Get all plan configurations for admin
+   */
+  async getAllPlanConfigurations() {
+    const plans = await this.prisma.planConfiguration.findMany({
+      where: { isActive: true },
+      orderBy: { planType: "asc" },
+    })
+
+    return plans.map((plan) => ({
+      id: plan.id,
+      planType: plan.planType,
+      displayName: plan.displayName,
+      monthlyFee: Number(plan.monthlyFee),
+      maxChannels: plan.maxChannels,
+      maxProducts: plan.maxProducts,
+      maxCustomers: plan.maxCustomers,
+      maxTeamMembers: plan.maxTeamMembers,
+      messageCost: Number(plan.messageCost),
+      orderCost: Number(plan.orderCost),
+      pushCost: Number(plan.pushCost),
+      lowBalanceThreshold: Number(plan.lowBalanceThreshold),
+      trialDays: plan.trialDays,
+      initialCredit: Number(plan.initialCredit),
+      features: plan.features,
+      isActive: plan.isActive,
+    }))
+  }
+
+  /**
+   * Update a plan configuration field
+   */
+  async updatePlanConfiguration(
+    planType: string,
+    field: string,
+    value: number | string | null
+  ) {
+    // Validate field is allowed
+    const allowedFields = [
+      "monthlyFee",
+      "maxChannels",
+      "maxProducts",
+      "maxCustomers",
+      "maxTeamMembers",
+      "messageCost",
+      "orderCost",
+      "pushCost",
+      "lowBalanceThreshold",
+      "trialDays",
+      "initialCredit",
+      "displayName",
+    ]
+
+    if (!allowedFields.includes(field)) {
+      throw new Error(`Field "${field}" is not allowed to be updated`)
+    }
+
+    const updated = await this.prisma.planConfiguration.update({
+      where: { planType: planType as any },
+      data: { [field]: value },
+    })
+
+    logger.info(
+      `[PlatformConfigService] Updated PlanConfiguration ${planType}.${field} = ${value}`
+    )
+
+    return {
+      id: updated.id,
+      planType: updated.planType,
+      [field]: field.includes("Cost") || field.includes("Fee") || field === "initialCredit" || field === "lowBalanceThreshold"
+        ? Number((updated as any)[field])
+        : (updated as any)[field],
+    }
   }
 }
 

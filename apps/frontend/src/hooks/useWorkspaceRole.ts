@@ -18,7 +18,8 @@ interface UseWorkspaceRoleResult {
  */
 export function useWorkspaceRole(workspaceId: string | null | undefined): UseWorkspaceRoleResult {
   const [roleData, setRoleData] = useState<WorkspaceRole | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  // Start as loading=true if we have a workspaceId to fetch
+  const [isLoading, setIsLoading] = useState(!!workspaceId)
   const [error, setError] = useState<Error | null>(null)
   const mountedRef = useRef(true)
 

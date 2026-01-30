@@ -485,7 +485,7 @@ For privacy inquiries, please contact our support team.`
             // Convert Decimal to number (Prisma returns Decimal type)
             const initialCredit = freeTrial?.initialCredit 
               ? Number(freeTrial.initialCredit) 
-              : 19.00 // Fallback to €19 if not found
+              : 22.00 // Fallback to €22 if not found
             
             if (initialCredit > 0 && createdBy) {
               // Feature 198: Update owner's credit balance (not workspace)

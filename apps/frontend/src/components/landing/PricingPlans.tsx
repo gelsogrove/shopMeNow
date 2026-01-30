@@ -27,7 +27,7 @@ interface PricingPlansProps {
 
 export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disableTrial = false }: PricingPlansProps) {
   const { t } = useLanguage()
-  const { prices, isLoading, error, getPriceWithOriginal } = usePlatformConfig()
+  const { prices, isLoading, error, getPriceWithOriginal, freeTrialCredit } = usePlatformConfig()
 
   const handleStartFreeTrial = () => {
     if (onStartFreeTrial) {
@@ -87,7 +87,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
       price: freePrice.current,
       originalPrice: freePrice.original,
       priceSuffix: "/14 days",
-      description: t(PLAN_CONFIGS.FREE_TRIAL.descriptionKey || "pricing.free.creditDesc"),
+      description: t(PLAN_CONFIGS.FREE_TRIAL.descriptionKey || "pricing.free.creditDesc").replace("${amount}", String(freeTrialCredit)),
       buttonText: t("pricing.button.start") + " Free Trial",
       buttonVariant: PLAN_CONFIGS.FREE_TRIAL.buttonVariant || "default",
       isPopular: PLAN_CONFIGS.FREE_TRIAL.isPopular,
