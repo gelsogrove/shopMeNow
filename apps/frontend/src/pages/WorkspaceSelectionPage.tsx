@@ -914,9 +914,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       const formData = new FormData()
       formData.append('logo', logoFile)
 
-      const response = await api.post(`/workspaces/${selectedWorkspaceForLogo}/logo`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const response = await api.post(`/workspaces/${selectedWorkspaceForLogo}/logo`, formData)
 
       logger.info('Logo upload response:', response.data)
 
@@ -927,9 +925,13 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       setLogoDialogOpen(false)
       setLogoFile(null)
       setSelectedWorkspaceForLogo(null)
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error uploading logo:', error)
-      toast.error('Failed to upload logo')
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message
+      toast.error(serverMessage || 'Failed to upload logo')
     } finally {
       setUploadingLogo(false)
     }

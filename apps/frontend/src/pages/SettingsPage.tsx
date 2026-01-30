@@ -320,8 +320,7 @@ export function SettingsPage() {
       const { api } = await import("@/services/api")
       const response = await api.post(
         `/workspaces/${currentWorkspace.id}/logo`,
-        formDataUpload,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        formDataUpload
       )
       
       if (response.data.logoUrl) {
@@ -334,7 +333,11 @@ export function SettingsPage() {
         })
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to upload logo")
+      const serverMessage =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message
+      toast.error(serverMessage || "Failed to upload logo")
     } finally {
       setIsLogoUploading(false)
     }

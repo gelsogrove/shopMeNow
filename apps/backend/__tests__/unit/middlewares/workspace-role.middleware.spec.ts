@@ -98,7 +98,8 @@ describe("Workspace Role Middleware", () => {
       expect(mockRes.status).toHaveBeenCalledWith(403)
       expect(mockRes.json).toHaveBeenCalledWith({
         error: "Forbidden",
-        message: "Only workspace owner can perform this action",
+        code: "SUPER_ADMIN_REQUIRED",
+        message: "Only the workspace owner (or SUPER_ADMIN) can perform this action. If you used 'Login as user', ensure that user is the workspace owner.",
       })
       expect(mockNext).not.toHaveBeenCalled()
     })

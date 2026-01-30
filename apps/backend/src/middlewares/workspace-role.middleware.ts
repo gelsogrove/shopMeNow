@@ -81,7 +81,9 @@ export const requireSuperAdmin = async (
       )
       res.status(403).json({
         error: "Forbidden",
-        message: "Only workspace owner can perform this action",
+        message:
+          "Only the workspace owner (or SUPER_ADMIN) can perform this action. If you used 'Login as user', ensure that user is the workspace owner.",
+        code: "SUPER_ADMIN_REQUIRED",
       })
       return
     }

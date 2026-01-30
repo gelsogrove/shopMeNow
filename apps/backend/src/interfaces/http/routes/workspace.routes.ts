@@ -29,8 +29,15 @@ export const workspaceRouter = (): Router => {
   router.post('/', asyncHandler(workspaceController.createWorkspace));
   
   // Upload workspace logo - ONLY SUPER_ADMIN (Owner)
-  const { uploadImage } = require('../middlewares/uploadMiddleware');
-  router.post('/:id/logo', validateWorkspaceOperation, requireSuperAdmin, uploadImage.single('logo'), asyncHandler(workspaceController.uploadWorkspaceLogo));
+  const { uploadImage, handleUploadError } = require('../middlewares/uploadMiddleware');
+  router.post(
+    '/:id/logo',
+    validateWorkspaceOperation,
+    requireSuperAdmin,
+    uploadImage.single('logo'),
+    handleUploadError,
+    asyncHandler(workspaceController.uploadWorkspaceLogo)
+  );
   
   // Update a workspace - ONLY SUPER_ADMIN (Owner)
   router.put('/:id', validateWorkspaceOperation, requireSuperAdmin, asyncHandler(workspaceController.updateWorkspace));
