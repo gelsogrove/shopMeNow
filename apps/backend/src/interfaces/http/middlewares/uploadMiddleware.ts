@@ -2,8 +2,8 @@
  * Image Upload Middleware
  *
  * Handles file upload with validation:
- * - Max size: 4MB
- * - Accepted formats: PNG, JPG, JPEG, GIF, WEBP
+ * - Max size: 10MB (sufficient for high-quality product images)
+ * - Accepted formats: PNG, JPG, JPEG, GIF, WEBP, SVG, BMP
  * - Storage: Automatically uses local (dev) or Cloudinary (production)
  * 
  * Files are temporarily stored with multer, then processed by StorageService
@@ -28,8 +28,8 @@ const ACCEPTED_MIME_TYPES = [
   "image/bmp",
 ]
 
-// Max file size: 4MB
-const MAX_FILE_SIZE = 4 * 1024 * 1024
+// Max file size: 10MB (increased from 4MB for product/service images)
+const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 // Configure multer to use temp directory
 // StorageService will handle final storage (local or Cloudinary)

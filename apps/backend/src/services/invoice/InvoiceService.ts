@@ -26,9 +26,10 @@ export interface InvoiceData {
 
 export class InvoiceService {
   /**
-   * Genera fattura PDF per ordine
+   * Genera fattura PDF per ordine (ON-DEMAND)
+   * Returns PDF Buffer directly, no storage
    */
-  async generateInvoice(orderId: string): Promise<string> {
+  async generateInvoicePdf(orderId: string): Promise<Buffer> {
     // 1. Recupera dati ordine
     const order = await prisma.orders.findUnique({
       where: { id: orderId },
@@ -76,30 +77,10 @@ export class InvoiceService {
       total
     };
 
-    // 4. Genera PDF
+    // 4. Genera e restituisce PDF Buffer (on-demand)
     const pdfBuffer = await this.createPDF(invoiceData);
-
-    // 5. Salva con Storage Service
-    const storage = storageService;
-    const file = await storage.upload(pdfBuffer, {
-      filename: `${order.orderCode}.pdf`,
-      folder: `invoices/${order.workspaceId}`,
-      contentType: 'application/pdf',
-      isPublic: false // Private, richiede signed URL
-    });
-
-    // 6. Aggiorna ordine con URL fattura
-    await prisma.orders.update({
-      where: { id: orderId },
-      data: {
-        invoiceUrl: file.url,
-        invoiceKey: file.key,
-        invoiceDate: new Date()
-      }
-    });
-
-    console.log(`✅ Invoice generated: ${file.key}`);
-    return file.url;
+    console.log(`✅ Invoice PDF generated on-demand for order: ${order.orderCode}`);
+    return pdfBuffer;
   }
 
   /**
@@ -297,7 +278,7 @@ export class InvoiceService {
   }
 
   /**
-   * Estrae key da URL
+   * Estrae key da URL (mantieni per retrocompatibilità logo)
    */
   private extractKeyFromUrl(url: string): string {
     // http://localhost:3001/uploads/workspaces/123/logo.png → workspaces/123/logo.png
@@ -311,48 +292,6 @@ export class InvoiceService {
       return matches ? matches[1] : url;
     }
     return url;
-  }
-
-  /**
-   * Get signed URL per scaricare fattura
-   */
-  async getInvoiceUrl(orderId: string, expiresIn: number = 3600): Promise<string> {
-    const order = await prisma.orders.findUnique({
-      where: { id: orderId },
-      select: { invoiceKey: true }
-    });
-
-    if (!order?.invoiceKey) {
-      throw new Error('Invoice not found');
-    }
-
-    const storage = storageService;
-    return storage.getUrl(order.invoiceKey, expiresIn);
-  }
-
-  /**
-   * Elimina fattura
-   */
-  async deleteInvoice(orderId: string): Promise<void> {
-    const order = await prisma.orders.findUnique({
-      where: { id: orderId },
-      select: { invoiceKey: true }
-    });
-
-    if (!order?.invoiceKey) {
-      return;
-    }
-
-    const storage = storageService;
-    await storage.delete(order.invoiceKey);
-
-    await prisma.orders.update({
-      where: { id: orderId },
-      data: {
-        invoiceUrl: null,
-        invoiceKey: null
-      }
-    });
   }
 }
 

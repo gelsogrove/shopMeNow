@@ -3617,7 +3617,7 @@ Can I help with anything else?"`,
     },
     {
       jobName: "unused-images-cleanup",
-      isActive: true,
+      isActive: isProduction, // ⚠️ ONLY active in production (cleanup Cloudinary)
       lastStatus: "NEVER_RUN",
     },
     {

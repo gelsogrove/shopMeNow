@@ -218,8 +218,8 @@ describe('LoginPage - Platform Admin Navigation', () => {
       const avatarButton = await screen.findByTestId('user-avatar-button')
       await userEvent.click(avatarButton)
 
-      // Check for Go to Workspace (My Workspaces)
-      const workspaceButton = await screen.findByText(/My Workspaces/i)
+      // Check for Go to Workspace (Your Channels)
+      const workspaceButton = await screen.findByText(/Your Channels/i)
       expect(workspaceButton).toBeInTheDocument()
     })
 
@@ -398,7 +398,7 @@ describe('LoginPage - Platform Admin Navigation', () => {
       const avatarButton = await screen.findByTestId('user-avatar-button')
       await userEvent.click(avatarButton)
 
-      expect(await screen.findByText(/My Workspaces/i)).toBeInTheDocument()
+      expect(await screen.findByText(/Your Channels/i)).toBeInTheDocument()
       // "Go to backoffice" is in the card, NOT the menu. 
       // The test seems to assume it's in the menu or checks existence in general.
       // If the old test checked for "Go to backoffice" *anywhere*, it would fail for normal users in the card too.

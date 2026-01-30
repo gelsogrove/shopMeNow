@@ -9,11 +9,13 @@ import { v2 as cloudinary } from 'cloudinary'
  * Runs daily at 23:05
  * Deletes orphaned images not referenced in the database
  * Covers: products, services, users, channels (logos)
- * Also cleans temp files and cancelled order invoices (local filesystem)
+ * Also cleans temp files (local filesystem)
  * 
  * ⚙️ BEHAVIOR:
  * - Production (CLOUDINARY_URL set): Deletes from Cloudinary
  * - Development (local): Deletes from uploads/ folder
+ * 
+ * NOTE: Invoices are now generated on-demand (no storage cleanup needed)
  */
 export async function unusedImagesCleanupJob(): Promise<void> {
   const uploadsDir = path.join(__dirname, '..', '..', '..', 'backend', 'uploads')
@@ -157,39 +159,6 @@ export async function unusedImagesCleanupJob(): Promise<void> {
     }
   } else {
     logger.info('🧹 [Temp Files] Skipped in Cloudinary mode')
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // 6. CANCELLED INVOICE CLEANUP (LOCAL ONLY)
-  // ═══════════════════════════════════════════════════════════════
-  if (!isProduction) {
-    const cancelledOrders = await prisma.orders.findMany({
-      where: {
-        status: 'CANCELLED',
-        invoiceKey: { not: null },
-      },
-      select: { id: true, orderCode: true, invoiceKey: true },
-    })
-
-    let deletedInvoices = 0
-    for (const order of cancelledOrders) {
-      if (!order.invoiceKey) continue
-      const invoicePath = path.join(uploadsDir, order.invoiceKey)
-      if (fs.existsSync(invoicePath)) {
-        fs.unlinkSync(invoicePath)
-      }
-      await prisma.orders.update({
-        where: { id: order.id },
-        data: { invoiceUrl: null, invoiceKey: null },
-      })
-      deletedInvoices++
-    }
-
-    if (deletedInvoices > 0) {
-      logger.info(`🧹 [Invoices] Deleted ${deletedInvoices} cancelled order invoices`)
-    }
-  } else {
-    logger.info('🧹 [Invoices] Skipped in Cloudinary mode')
   }
 
   // ═══════════════════════════════════════════════════════════════

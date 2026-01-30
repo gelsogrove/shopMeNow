@@ -581,8 +581,6 @@ export function LoginPage() {
       // 🔒 SECURITY: Check if 2FA is required
       if (response.data && response.data.requires2FA) {
         logger.info("🔐 User requires 2FA verification")
-        
-        toast.success("Credentials verified! Please enter 2FA code.")
 
         // Redirect to 2FA verification page (NO session/token yet!)
         navigate("/auth/verify-2fa", {
@@ -625,7 +623,6 @@ export function LoginPage() {
         // Andrea's requirement: Let admin choose between Workspace and Backoffice
         if (response.data.user.isPlatformAdmin) {
           logger.info("🔐 Platform Admin detected - staying on homepage for manual selection")
-          toast.success("Login successful! Choose Workspace or Backoffice from the menu.")
           
           // 🔄 Force state update to show avatar menu immediately
           setIsLoggedIn(true)
@@ -726,7 +723,6 @@ export function LoginPage() {
         }
       }
 
-      toast.success('Account created! Please setup 2FA.')
       logger.info('✅ [REGISTER] Success, navigating to 2FA setup')
       
       navigate('/auth/setup-2fa', {
@@ -786,12 +782,9 @@ export function LoginPage() {
         storage.setSessionId(sessionId)
         storage.setUser(user)
         
-        toast.success('Login successful!')
-        
         // 🔐 Platform Admin: Stay on homepage, show avatar menu with both options
         if (user.isPlatformAdmin) {
           logger.info('🔐 [GOOGLE OAUTH] Platform Admin detected - staying on homepage for manual selection')
-          toast.success('Choose Workspace or Backoffice from the menu.')
           
           // 🔄 Force state update to show avatar menu immediately
           setIsLoggedIn(true)
@@ -814,7 +807,6 @@ export function LoginPage() {
       storage.setUser(user)
       
       if (requiresSetup) {
-        toast.success('Welcome! Please setup 2FA.')
         logger.info('🔄 [GOOGLE OAUTH] Navigating to 2FA setup')
         navigate('/auth/setup-2fa', {
           state: {
@@ -827,7 +819,6 @@ export function LoginPage() {
           },
         })
       } else {
-        toast.success('Google login successful! Please enter 2FA code.')
         logger.info('🔄 [GOOGLE OAUTH] Navigating to 2FA verification')
         navigate('/auth/verify-2fa', {
           state: {
@@ -1189,6 +1180,7 @@ export function LoginPage() {
                         variant="ghost"
                         className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none hover:scale-105 transition-transform p-0"
                         aria-label={`${loggedInUser?.firstName || loggedInUser?.email || "User"} menu`}
+                        data-testid="user-avatar-button"
                       >
                         {loggedInUser?.profilePicture && !avatarImageError ? (
                           <img 

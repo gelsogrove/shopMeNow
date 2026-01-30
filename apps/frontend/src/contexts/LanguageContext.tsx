@@ -148,7 +148,7 @@ const translations = {
     "integration.crm.button": "Richiedi un preventivo",
     
     // Team Collaboration Section
-    "teamCollaboration.title": "Collaborazione in team per vendite complesse",
+    "teamCollaboration.title": "Collaborazione in team",
     "teamCollaboration.subtitle": "Per chi ha un team di vendita, condividi l'accesso al backoffice con i tuoi colleghi. Lo stesso agente AI risponde ai clienti su WhatsApp, mentre il team può gestire ordini, prodotti e clienti dalla stessa piattaforma. Coordinamento perfetto tra AI e team umano.",
     "teamCollaboration.button": "Inizia gratis",
     
@@ -749,7 +749,7 @@ const translations = {
     "integration.crm.button": "Request a quote",
     
     // Team Collaboration Section
-    "teamCollaboration.title": "Team collaboration for complex sales",
+    "teamCollaboration.title": "Team collaboration",
     "teamCollaboration.subtitle": "For sales teams, share backoffice access with your colleagues. The same AI agent responds to customers on WhatsApp, while the team can manage orders, products, and customers from the same platform. Perfect coordination between AI and human team.",
     "teamCollaboration.button": "Start free",
     
@@ -1234,7 +1234,7 @@ const translations = {
     "integration.crm.button": "Solicita un presupuesto",
     
     // Team Collaboration Section
-    "teamCollaboration.title": "Colaboración en equipo para ventas complejas",
+    "teamCollaboration.title": "Colaboración en equipo",
     "teamCollaboration.subtitle": "Para equipos de ventas, comparte el acceso al backoffice con tus colegas. El mismo agente IA responde a los clientes en WhatsApp, mientras el equipo puede gestionar pedidos, productos y clientes desde la misma plataforma. Coordinación perfecta entre IA y equipo humano.",
     "teamCollaboration.button": "Empieza gratis",
     
@@ -1681,7 +1681,7 @@ const translations = {
     "integration.crm.button": "Solicite um orçamento",
     
     // Team Collaboration Section
-    "teamCollaboration.title": "Colaboração em equipe para vendas complexas",
+    "teamCollaboration.title": "Colaboração em equipe",
     "teamCollaboration.subtitle": "Para equipes de vendas, compartilhe o acesso ao backoffice com seus colegas. O mesmo agente IA responde aos clientes no WhatsApp, enquanto a equipe pode gerenciar pedidos, produtos e clientes da mesma plataforma. Coordenação perfeita entre IA e equipe humana.",
     "teamCollaboration.button": "Comece grátis",
     
