@@ -420,10 +420,21 @@ SMTP_PASS=your-app-password
 
 ## 📚 Documentation
 
-- **PRD**: `docs/PRD.md` - Product Requirements Document
+- **PRD**: `docs/PRD.md` - Product Requirements Document (Updated January 2026)
 - **API**: Swagger documentation at `/api/docs`
-- **Architecture**: `docs/architecture.md`
+- **Features**: `docs/features/` - Detailed feature specifications
+- **Architecture**: `docs/architecture/` - System design documents
+- **Security**: `docs/security/` - Security audits and guidelines
 - **Scripts**: `scripts/README.md` - Deployment and maintenance scripts
+
+### Recent Changes (January 2026)
+
+- ✅ **Variable Replacement**: All prompt variables (`{{chatbotName}}`, `{{products}}`) now processed correctly
+- ✅ **Settings Redesign**: New unified UI with 7 sections + dynamic help panel
+- ✅ **E-commerce Filtering**: Variables adapt dynamically to e-commerce toggle state
+- ✅ **Code Cleanup**: Removed 10 unused scripts, archived obsolete documentation
+- ✅ **UI Language**: Backoffice now fully in English (removed Italian hardcoded text)
+- ✅ **Test Coverage**: 28 unit tests for variable replacement system
 
 ## 🤝 Contributing
 

@@ -723,9 +723,19 @@ export class WhatsAppWebhookController {
         // Get localized registration texts
         const registrationTexts = getRegistrationText(detectedLanguage)
 
-        // Build welcome message with registration link
-        const welcomeMessage =
-          workspace.welcomeMessage || "Welcome! How can I help you?"
+        // 🆕 Process variables in welcome message BEFORE using it
+        const { PromptVariableBuilder } = require("../../../application/services/prompt-variable-builder.service")
+        const { PromptProcessorService } = require("../../../services/prompt-processor.service")
+        
+        const variables = PromptVariableBuilder.build(customer, workspace, {})
+        const promptProcessor = new PromptProcessorService()
+        
+        const welcomeMessageTemplate = workspace.welcomeMessage || "Welcome! How can I help you?"
+        const welcomeMessage = promptProcessor.processWithVariables(
+          welcomeMessageTemplate,
+          variables
+        )
+        
         const rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
 
         // 🛡️ STEP 4: Pass welcome message through Safety & Translation Agent

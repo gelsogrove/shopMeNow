@@ -77,18 +77,31 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - **TESTS ARE THE BIBLE - TESTS DEFINE TRUTH**
 - **Tests define expected behavior. Code must follow tests, not the other way around.**
 - **Unit tests are the specification - they document what the system MUST do**
-- **DO NOT change tests without explicit approval from Andrea.**
+- **Tests are MORE IMPORTANT than documentation** - if there's a conflict between tests and docs, ASK Andrea
+- **DO NOT change test LOGIC without explicit approval from Andrea.**
+- **Mocks CAN be updated** if they don't work (e.g., wrong mock data, missing mock), but the test assertions/logic CANNOT change
 - If behavior must change, ask first, then update tests and docs together.
-- If a test fails, fix the implementation first. Only change tests if they are wrong and approved.
-- When tests are changed with approval, include the approval note in the PR description.
+- If a test fails, fix the implementation first. Only change test logic if it's wrong and approved.
+- When test logic is changed with approval, include the approval note in the PR description.
 - **Before ANY implementation**: Check if tests exist. Tests come FIRST.
 - **ALWAYS add comprehensive comments in tests explaining the WHAT and WHY**:
   - ✅ GOOD: `// SCENARIO: User selects Spanish in widget, but has Italian phone number`
   - ✅ GOOD: `// RULE: Explicit language WINS over phone prefix`
   - ❌ BAD: `it("should work", () => { ... })` - no context!
 - **Test comments are documentation** - they explain business logic to future developers
-- **Every test change = logic change** - treat test modifications as critical as code changes
+- **Every test logic change = business logic change** - treat test modifications as critical as code changes
 - **If implementation contradicts test**: Implementation is WRONG, not the test
+- **CONFLICT RESOLUTION**: If documentation says X but test expects Y → ASK Andrea which is correct
+
+### 7B. **NO Integration Tests** (🚨 ANDREA'S RULE)
+
+- **NEVER** create or run integration tests (`test:integration`)
+- **ONLY** unit tests are allowed (`test:unit`)
+- Integration tests are too slow and flaky - Andrea does NOT want them
+- **If code needs testing**: Write unit tests with proper mocks
+- **DO NOT** create files in `__tests__/integration/` directory
+- **DO NOT** suggest running `npm run test:integration`
+- Exception: Only if Andrea explicitly requests integration test for specific case
 
 ### 8. **WhatsApp Testing Policy**
 
@@ -289,6 +302,24 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - **IMPLEMENTATION**: `chat-engine.service.ts` STEP 0.55 resets state for TEXT input
 - **ANDREA'S WORDS**: "non devi harcodeare nulla nessun riconoscimento di frase"
 - See `.specify/memory/constitution.md` Principle XV for complete details
+
+### 15. **English-Only UI** (🚨 MANDATORY)
+
+- **ALL UI text MUST be in English** - no Italian, Spanish, or other languages in the codebase
+- **This includes**:
+  - ✅ Button labels, form labels, placeholders
+  - ✅ Toast messages (success, error, warning)
+  - ✅ Dialog titles and descriptions
+  - ✅ Validation error messages
+  - ✅ Help text and tooltips
+  - ✅ Code comments in components
+- **FORBIDDEN** (❌ VIOLATIONS):
+  - ❌ `toast.error("Salvataggio fallito")` → Must be `toast.error("Save failed")`
+  - ❌ `<Label>Nome Canale</Label>` → Must be `<Label>Channel Name</Label>`
+  - ❌ `placeholder="Inserisci..."` → Must be `placeholder="Enter..."`
+  - ❌ Italian comments in UI components
+- **RATIONALE**: The platform is international. User-facing data (products, categories) comes from database in the customer's language, but UI chrome must be English.
+- **EXCEPTION**: LLM-generated responses to customers are dynamic and multilingual
 
 ---
 

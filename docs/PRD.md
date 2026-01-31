@@ -920,6 +920,54 @@ Test cases cover:
 
 ---
 
+## Recent Updates (January 2026)
+
+### 1. Variable Replacement System
+
+**Feature**: All prompt variables (`{{chatbotName}}`, `{{products}}`, etc.) are now processed before sending to LLM or customers.
+
+**Implementation**:
+- `PromptProcessorService.processWithVariables()` handles replacement
+- `PromptVariableBuilder` constructs variables from customer + workspace data
+- E-commerce variables (`{{products}}`, `{{categories}}`, etc.) filtered when `sellsProductsAndServices=false`
+
+**Test Coverage**: 28 unit tests verify ALL variables are replaced correctly
+
+### 2. Settings Page Redesign
+
+**Feature**: Unified settings UI with 7 sections + dynamic help panel
+
+**Sections**:
+1. AI Personality (chatbot name, tone, identity)
+2. Business Config (name, currency, e-commerce toggle)
+3. WhatsApp Channel (API credentials, webhook)
+4. Website Widget (title, color, language)
+5. Widget Support (human escalation settings)
+6. Security (allowed links, custom rules)
+7. Subscription (billing management)
+
+**UX Improvements**:
+- Disabled states when toggles are OFF (WhatsApp, Widget, Human Support)
+- Dynamic help panel shows field-specific guidance
+- Variable list adapts to e-commerce toggle state (🛒 badges for e-commerce variables)
+- Sticky help panel aligned with form content
+
+### 3. E-commerce Variable Filtering
+
+**Feature**: Variables availability changes dynamically based on `Enable E-commerce` toggle
+
+**Behavior**:
+- When ON: All variables available (customer, workspace, e-commerce)
+- When OFF: E-commerce variables hidden from UI and replaced with empty string in prompts
+
+**Variables Affected**:
+- `{{products}}`, `{{categories}}`, `{{services}}`, `{{offers}}`
+- `{{lastOrderCode}}`, `{{cartContents}}`
+
+**Documentation**: `docs/features/ecommerce-variable-filtering.md`
+
+---
+
 ## Appendice
 
 ### A. Glossario

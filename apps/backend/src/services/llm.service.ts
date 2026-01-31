@@ -562,12 +562,27 @@ export class LLMService {
         throw new Error(`Workspace not found: ${workspaceId}`)
       }
 
-      // 2. Get welcome message from database (English)
-      const welcomeMessageEnglish =
+      // 2. Get welcome message from database (English - RAW with variables)
+      const welcomeMessageTemplate =
         await messageRepo.getWelcomeMessage(workspaceId)
-      if (!welcomeMessageEnglish) {
+      if (!welcomeMessageTemplate) {
         throw new Error("Welcome message not configured in database")
       }
+
+      // 🆕 2.5. Process variables in welcome message
+      const { PromptVariableBuilder } = require("../application/services/prompt-variable-builder.service")
+      const { PromptProcessorService } = require("./prompt-processor.service")
+      
+      const customer = await prisma.customers.findFirst({
+        where: { phone, workspaceId }
+      })
+      
+      const variables = PromptVariableBuilder.build(customer, workspace, {})
+      const promptProcessor = new PromptProcessorService()
+      const welcomeMessageEnglish = promptProcessor.processWithVariables(
+        welcomeMessageTemplate,
+        variables
+      )
 
       // 3. Detect customer language
       const {
@@ -1628,16 +1643,31 @@ export class LLMService {
   ): Promise<any> {
     const startTime = Date.now()
 
-    // 1. Get welcome message from database (English only)
-    const welcomeMessageEnglish = await messageRepo.getWelcomeMessage(
+    // 1. Get welcome message from database (English only - RAW with variables)
+    const welcomeMessageTemplate = await messageRepo.getWelcomeMessage(
       workspace.id
     )
 
-    if (!welcomeMessageEnglish) {
+    if (!welcomeMessageTemplate) {
       throw new Error(
         "Welcome message not configured in database - this should not happen"
       )
     }
+
+    // 🆕 1.5. Process variables in welcome message
+    const { PromptVariableBuilder } = require("../application/services/prompt-variable-builder.service")
+    const { PromptProcessorService } = require("./prompt-processor.service")
+    
+    const customer = await prisma.customers.findFirst({
+      where: { phone: llmRequest.phone, workspaceId: workspace.id }
+    })
+    
+    const variables = PromptVariableBuilder.build(customer, workspace, {})
+    const promptProcessor = new PromptProcessorService()
+    const welcomeMessageEnglish = promptProcessor.processWithVariables(
+      welcomeMessageTemplate,
+      variables
+    )
 
     // 2. Detect customer language
     const {

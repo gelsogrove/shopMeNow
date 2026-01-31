@@ -215,12 +215,14 @@ export interface PromptVariables {
 
   // ══════════════════════════════════════════════════════════════
   // DYNAMIC CONTENT (loaded separately, not from single DB query)
+  // E-COMMERCE ONLY: These variables are filtered when sellsProductsAndServices=false
   // ══════════════════════════════════════════════════════════════
 
   /** Lista prodotti formattata
    * Template: {{products}}
    * Source: MessageRepository.getActiveProducts()
    * WARNING: Can be 50k+ tokens - validate before using
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   products?: string
   /** 🆕 Lista prodotti raggruppati per categoria
@@ -230,6 +232,7 @@ export interface PromptVariables {
    * Example:
    * 🏷️ **Immobili Residenziali** (12 prodotti):
    *   • Appartamento Via Roma - €180k (42mq, 2loc, centro)
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   productsByCategory?: string
 
@@ -239,6 +242,7 @@ export interface PromptVariables {
    * Format: Detailed multi-line format per product
    * Example:
    * 📦 **Appartamento** ... 📋 Caratteristiche: ...
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   productsWithDetails?: string
 
@@ -246,6 +250,7 @@ export interface PromptVariables {
    * Template: {{featuredProducts}}
    * Source: PromptVariableBuilder.buildFeaturedProducts()
    * Format: Starred list of featured items
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   featuredProducts?: string
 
@@ -256,23 +261,28 @@ export interface PromptVariables {
    * Example:
    * 🔍 superficie: 42mq, 38mq, 120mq (+15 altri)
    * 🔍 locali: 2n., 3n., 4n.
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   productCharacteristics?: string
+  
   /** Lista categorie formattata
- * Template: {{categories}}
- * Source: MessageRepository.getActiveCategories()
- */
+   * Template: {{categories}}
+   * Source: MessageRepository.getActiveCategories()
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   */
   categories?: string
 
   /** Lista servizi formattata
    * Template: {{services}}
    * Source: MessageRepository.getActiveServices()
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   services?: string
 
   /** Offerte attive formattate
    * Template: {{offers}}
    * Source: MessageRepository.getActiveOffers()
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   offers?: string
 
@@ -284,12 +294,14 @@ export interface PromptVariables {
 
   // ══════════════════════════════════════════════════════════════
   // AGENT-SPECIFIC VARIABLES
+  // E-COMMERCE ONLY: Order/Cart variables filtered when sellsProductsAndServices=false
   // ══════════════════════════════════════════════════════════════
 
   /** Ultimo codice ordine del cliente
-   * Template: {{lastordercode}}
+   * Template: {{lastordercode}} or {{lastOrderCode}}
    * Source: orders.findFirst({ orderBy: createdAt: 'desc' })
    * Used by: OrderTrackingAgent
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   lastOrderCode?: string
 
@@ -297,6 +309,7 @@ export interface PromptVariables {
    * Template: {{cartContents}}
    * Source: CartService.getCartSummary()
    * Used by: CartManagementAgent
+   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
    */
   cartContents?: string
 
@@ -357,7 +370,7 @@ export const VARIABLE_ALIASES: Record<string, keyof PromptVariables> = {
 /**
  * Variabili richieste (non possono essere vuote)
  * 
- * Se una di queste è vuota, PromptVariableBuilder.validate() restituisce errore.
+ * If any of these is empty, PromptVariableBuilder.validate() returns error.
  */
 export const REQUIRED_VARIABLES: (keyof PromptVariables)[] = [
   'companyName',

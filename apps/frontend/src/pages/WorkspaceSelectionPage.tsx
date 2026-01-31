@@ -584,6 +584,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     loadWorkspaces()
   }, [])
 
+  // 🎯 Check if we need to open Change Plan dialog (from Settings page)
+  useEffect(() => {
+    const shouldOpenDialog = localStorage.getItem("openChangePlanDialog")
+    if (shouldOpenDialog === "true") {
+      setOpenChangePlanDialog(true)
+      localStorage.removeItem("openChangePlanDialog")
+    }
+  }, [])
+
   // 🔄 Reload workspaces when user returns to page (refresh channelStatus changes)
   useEffect(() => {
     const handleVisibilityChange = () => {

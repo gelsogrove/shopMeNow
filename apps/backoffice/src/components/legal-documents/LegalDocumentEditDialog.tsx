@@ -61,11 +61,11 @@ export function LegalDocumentEditDialog({
       // Legal documents are GLOBAL to eCHATBOT platform (no workspace)
       await api.put(`/legal-documents/${document.type}`, formData)
 
-      toast.success("Documento salvato con successo")
+      toast.success("Document saved successfully")
       onSave(formData)
       onClose()
     } catch (error) {
-      toast.error("Errore nel salvataggio del documento")
+      toast.error("Error saving document")
       console.error(error)
     } finally {
       setIsSaving(false)
@@ -76,9 +76,9 @@ export function LegalDocumentEditDialog({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Modifica: {document?.type?.replace(/_/g, " ")}</DialogTitle>
+          <DialogTitle>Edit: {document?.type?.replace(/_/g, " ")}</DialogTitle>
           <DialogDescription>
-            Modifica il contenuto in tutte le lingue supportate. Non puoi eliminare questo documento.
+            Edit content in all supported languages. You cannot delete this document.
           </DialogDescription>
         </DialogHeader>
 
@@ -127,10 +127,10 @@ export function LegalDocumentEditDialog({
 
         <div className="flex justify-end gap-2 pt-4">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Annulla
+            Cancel
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Salvataggio..." : "Salva Modifiche"}
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </DialogContent>

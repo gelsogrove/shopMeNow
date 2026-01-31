@@ -44,7 +44,7 @@ export function LawsDocumentsPage() {
         toast.error("Formato dati non valido dal server")
       }
     } catch (error) {
-      toast.error("Errore nel caricamento dei documenti legali")
+      toast.error("Error loading legal documents")
       console.error(error)
       setDocuments([]) // Reset to empty array on error
     } finally {
@@ -74,7 +74,7 @@ export function LawsDocumentsPage() {
           ⚠️ IMPORTANTE: Questi documenti descrivono i termini della PIATTAFORMA eCHATBOT, non dei workspace dei clienti
         </p>
         <p className="text-gray-500 text-sm mt-1">
-          Ogni documento è disponibile in 4 lingue e può essere modificato ma non eliminato.
+          Each document is available in 4 languages and can be edited but not deleted.
         </p>
       </div>
 
@@ -111,7 +111,7 @@ export function LawsDocumentsPage() {
                     disabled={isLoading}
                   >
                     <Edit className="h-4 w-4 mr-2" />
-                    Modifica
+                    Edit
                   </Button>
                 </div>
               </CardContent>

@@ -95,8 +95,12 @@ export class PromptProcessorService {
 
   /**
    * Replace all standard PromptVariables
+   * E-commerce variables ({{products}}, {{offers}}, {{categories}}, {{services}}, {{lastOrderCode}}, {{cartContents}})
+   * are only replaced if sellsProductsAndServices=true
    */
   private replaceStandardVariables(text: string, vars: PromptVariables): string {
+    const isEcommerceEnabled = vars.sellsProductsAndServices ?? true
+
     return text
       // Customer variables
       // 🚫 WIDGET FIX: Don't use 'Cliente' fallback for empty customerName
@@ -127,18 +131,18 @@ export class PromptProcessorService {
       .replace(/\{\{humanSupportInstructions\}\}/g, vars.humanSupportInstructions || '')
       .replace(/\{\{allowedExternalLinks\}\}/g, vars.allowedExternalLinks || '')
 
-      // Context variables
-      .replace(/\{\{lastOrderCode\}\}/g, vars.lastOrderCode || '')
-      .replace(/\{\{lastordercode\}\}/g, vars.lastOrderCode || '') // Alias (lowercase)
-      .replace(/\{\{cartContents\}\}/g, vars.cartContents || '')
+      // Context variables (E-COMMERCE ONLY)
+      .replace(/\{\{lastOrderCode\}\}/g, isEcommerceEnabled ? (vars.lastOrderCode || '') : '')
+      .replace(/\{\{lastordercode\}\}/g, isEcommerceEnabled ? (vars.lastOrderCode || '') : '') // Alias (lowercase)
+      .replace(/\{\{cartContents\}\}/g, isEcommerceEnabled ? (vars.cartContents || '') : '')
       .replace(/\{\{tokenDuration\}\}/g, vars.tokenDuration || '15 minutes')
       .replace(/\{\{TOKEN_DURATION\}\}/g, vars.tokenDuration || '15 minutes') // Alias
 
-      // Dynamic content
-      .replace(/\{\{products\}\}/g, vars.products || '')
-      .replace(/\{\{categories\}\}/g, vars.categories || '')
-      .replace(/\{\{services\}\}/g, vars.services || '')
-      .replace(/\{\{offers\}\}/g, vars.offers || '')
+      // Dynamic content (E-COMMERCE ONLY)
+      .replace(/\{\{products\}\}/g, isEcommerceEnabled ? (vars.products || '') : '')
+      .replace(/\{\{categories\}\}/g, isEcommerceEnabled ? (vars.categories || '') : '')
+      .replace(/\{\{services\}\}/g, isEcommerceEnabled ? (vars.services || '') : '')
+      .replace(/\{\{offers\}\}/g, isEcommerceEnabled ? (vars.offers || '') : '')
       .replace(/\{\{faqs\}\}/g, vars.faqs || '')
       .replace(/\{\{faq\}\}/g, vars.faqs || '') // Alias
   }
@@ -431,78 +435,107 @@ ${input}
       }
     }
 
+    // 🆕 E-commerce variables (only replaced if sellsProductsAndServices=true)
+    const isEcommerceEnabled = workspaceConfig?.sellsProductsAndServices ?? true
+
     if (processedPrompt.includes("{{products}}")) {
-      // Feature 123: Log token count for {{products}} variable
-      const productsTokenCount = this.estimateTokenCount(
-        dynamicContent.products || ""
-      )
-      logger.info(
-        `[ProductSearch] {{products}} token count: ${productsTokenCount}`
-      )
-
-      if (productsTokenCount > 50000) {
-        logger.warn(
-          `[ProductSearch] ⚠️ {{products}} exceeds 50k tokens (${productsTokenCount}). Consider filtering.`
+      if (isEcommerceEnabled) {
+        // Feature 123: Log token count for {{products}} variable
+        const productsTokenCount = this.estimateTokenCount(
+          dynamicContent.products || ""
         )
+        logger.info(
+          `[ProductSearch] {{products}} token count: ${productsTokenCount}`
+        )
+
+        if (productsTokenCount > 50000) {
+          logger.warn(
+            `[ProductSearch] ⚠️ {{products}} exceeds 50k tokens (${productsTokenCount}). Consider filtering.`
+          )
+        }
+
+        // 🚨 CRITICAL: If no products, tell LLM explicitly - DON'T let it invent from examples!
+        const productsContent = dynamicContent.products?.trim()
+          ? dynamicContent.products
+          : "⚠️ CATALOGO VUOTO - Non ci sono prodotti in questo workspace. Rispondi: 'Mi dispiace, al momento non abbiamo prodotti nel catalogo.'"
+
+        processedPrompt = processedPrompt.replace(
+          "{{products}}",
+          productsContent
+        )
+      } else {
+        // E-commerce disabled - remove variable or leave empty
+        processedPrompt = processedPrompt.replace("{{products}}", "")
+        logger.info("[ProductSearch] E-commerce disabled - {{products}} variable removed")
       }
-
-      // 🚨 CRITICAL: If no products, tell LLM explicitly - DON'T let it invent from examples!
-      const productsContent = dynamicContent.products?.trim()
-        ? dynamicContent.products
-        : "⚠️ CATALOGO VUOTO - Non ci sono prodotti in questo workspace. Rispondi: 'Mi dispiace, al momento non abbiamo prodotti nel catalogo.'"
-
-      processedPrompt = processedPrompt.replace(
-        "{{products}}",
-        productsContent
-      )
     }
 
     if (processedPrompt.includes("{{categories}}")) {
-      // 🚨 CRITICAL: If no categories, tell LLM explicitly
-      const categoriesContent = dynamicContent.categories?.trim()
-        ? dynamicContent.categories
-        : "⚠️ Non abbiamo categorie in questo workspace."
+      if (isEcommerceEnabled) {
+        // 🚨 CRITICAL: If no categories, tell LLM explicitly
+        const categoriesContent = dynamicContent.categories?.trim()
+          ? dynamicContent.categories
+          : "⚠️ Non abbiamo categorie in questo workspace."
 
-      processedPrompt = processedPrompt.replace(
-        "{{categories}}",
-        categoriesContent
-      )
+        processedPrompt = processedPrompt.replace(
+          "{{categories}}",
+          categoriesContent
+        )
+      } else {
+        processedPrompt = processedPrompt.replace("{{categories}}", "")
+        logger.info("[Categories] E-commerce disabled - {{categories}} variable removed")
+      }
     }
 
     if (processedPrompt.includes("{{services}}")) {
-      // 🚨 CRITICAL: If no services, tell LLM explicitly
-      const servicesContent = dynamicContent.services?.trim()
-        ? dynamicContent.services
-        : "⚠️ Non abbiamo servizi in questo workspace."
+      if (isEcommerceEnabled) {
+        // 🚨 CRITICAL: If no services, tell LLM explicitly
+        const servicesContent = dynamicContent.services?.trim()
+          ? dynamicContent.services
+          : "⚠️ Non abbiamo servizi in questo workspace."
 
-      processedPrompt = processedPrompt.replace(
-        "{{services}}",
-        servicesContent
-      )
+        processedPrompt = processedPrompt.replace(
+          "{{services}}",
+          servicesContent
+        )
+      } else {
+        processedPrompt = processedPrompt.replace("{{services}}", "")
+        logger.info("[Services] E-commerce disabled - {{services}} variable removed")
+      }
     }
 
     if (processedPrompt.includes("{{offers}}")) {
-      // 🚨 CRITICAL: If no offers, tell LLM explicitly
-      const offersContent = dynamicContent.offers?.trim()
-        ? dynamicContent.offers
-        : "⚠️ Non abbiamo offerte attive in questo momento."
+      if (isEcommerceEnabled) {
+        // 🚨 CRITICAL: If no offers, tell LLM explicitly
+        const offersContent = dynamicContent.offers?.trim()
+          ? dynamicContent.offers
+          : "⚠️ Non abbiamo offerte attive in questo momento."
 
-      processedPrompt = processedPrompt.replace(
-        "{{offers}}",
-        offersContent
-      )
+        processedPrompt = processedPrompt.replace(
+          "{{offers}}",
+          offersContent
+        )
+      } else {
+        processedPrompt = processedPrompt.replace("{{offers}}", "")
+        logger.info("[Offers] E-commerce disabled - {{offers}} variable removed")
+      }
     }
 
-    // Sostituzione {{lastOrder}} - FR-13 Repeat Order
+    // Sostituzione {{lastOrder}} - FR-13 Repeat Order (only if e-commerce enabled)
     if (processedPrompt.includes("{{lastOrder}}")) {
-      const lastOrderSummary = await this.getLastOrderVariable(
-        customerData.id,
-        workspaceId
-      )
-      processedPrompt = processedPrompt.replace(
-        /\{\{lastOrder\}\}/g,
-        lastOrderSummary
-      )
+      if (isEcommerceEnabled) {
+        const lastOrderSummary = await this.getLastOrderVariable(
+          customerData.id,
+          workspaceId
+        )
+        processedPrompt = processedPrompt.replace(
+          /\{\{lastOrder\}\}/g,
+          lastOrderSummary
+        )
+      } else {
+        processedPrompt = processedPrompt.replace(/\{\{lastOrder\}\}/g, "")
+        logger.info("[LastOrder] E-commerce disabled - {{lastOrder}} variable removed")
+      }
     }
 
     // 🆕 Feature 199: Channel Configuration Variables
