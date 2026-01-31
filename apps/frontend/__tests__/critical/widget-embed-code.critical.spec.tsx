@@ -95,36 +95,36 @@ describe('🚨 CRITICAL: Widget Embed Code Generation', () => {
     vi.clearAllMocks()
   })
 
-  it('🔴 MUST contain Embed Code section in SettingsPage.tsx', () => {
+  it('🔴 MUST contain Embed Code section in WebsiteWidgetSection.tsx', () => {
     // CRITICAL: This test verifies the source code contains the embed code section
-    // Reading the actual SettingsPage.tsx file to ensure code is not deleted
+    // Reading the actual WebsiteWidgetSection.tsx file to ensure code is not deleted
     
     const fs = require('fs')
     const path = require('path')
-    const settingsPagePath = path.resolve(__dirname, '../../src/pages/SettingsPage.tsx')
-    const settingsPageContent = fs.readFileSync(settingsPagePath, 'utf-8')
+    const widgetSectionPath = path.resolve(__dirname, '../../src/components/settings/sections/WebsiteWidgetSection.tsx')
+    const widgetSectionContent = fs.readFileSync(widgetSectionPath, 'utf-8')
 
     // ✅ MUST contain "Embed Code" label
-    expect(settingsPageContent).toContain('Embed Code')
+    expect(widgetSectionContent).toContain('Embed Code')
     
     // ✅ MUST contain window.eChatbotConfig
-    expect(settingsPageContent).toContain('window.eChatbotConfig')
+    expect(widgetSectionContent).toContain('window.eChatbotConfig')
     
     // ✅ MUST contain workspaceId configuration
-    expect(settingsPageContent).toContain('workspaceId:')
+    expect(widgetSectionContent).toContain('workspaceId:')
     
     // ✅ MUST contain widget.js script tag
-    expect(settingsPageContent).toContain('widget.js')
+    expect(widgetSectionContent).toContain('widget.js')
     
     // ✅ MUST contain Copy button for embed code
-    expect(settingsPageContent).toContain('Copy')
-    expect(settingsPageContent).toContain('navigator.clipboard.writeText')
+    expect(widgetSectionContent).toContain('Copy')
+    expect(widgetSectionContent).toContain('navigator.clipboard.writeText')
     
     // ✅ MUST include all widget configuration parameters
-    expect(settingsPageContent).toContain('title:')
-    expect(settingsPageContent).toContain('primaryColor:')
-    expect(settingsPageContent).toContain('icon:')
-    expect(settingsPageContent).toContain('language:')
+    expect(widgetSectionContent).toContain('title:')
+    expect(widgetSectionContent).toContain('primaryColor:')
+    expect(widgetSectionContent).toContain('icon:')
+    expect(widgetSectionContent).toContain('language:')
   })
 
   it('🔴 MUST generate complete widget embed code', () => {
@@ -132,39 +132,39 @@ describe('🚨 CRITICAL: Widget Embed Code Generation', () => {
     
     const fs = require('fs')
     const path = require('path')
-    const settingsPagePath = path.resolve(__dirname, '../../src/pages/SettingsPage.tsx')
-    const settingsPageContent = fs.readFileSync(settingsPagePath, 'utf-8')
+    const widgetSectionPath = path.resolve(__dirname, '../../src/components/settings/sections/WebsiteWidgetSection.tsx')
+    const widgetSectionContent = fs.readFileSync(widgetSectionPath, 'utf-8')
 
     // ✅ MUST have script tags
-    expect(settingsPageContent).toContain('<script>')
-    expect(settingsPageContent).toContain('</script>')
+    expect(widgetSectionContent).toContain('<script>')
+    expect(widgetSectionContent).toContain('</script>')
     
     // ✅ MUST have async attribute on widget.js
-    expect(settingsPageContent).toContain('async')
+    expect(widgetSectionContent).toContain('async')
     
-    // ✅ MUST use currentWorkspace?.id for workspaceId
-    expect(settingsPageContent).toContain('currentWorkspace?.id')
+    // ✅ MUST use workspaceId prop
+    expect(widgetSectionContent).toContain('workspaceId')
   })
 
   it('🔴 MUST use formData for widget configuration', () => {
-    // CRITICAL: Verify widget config comes from formData state
+    // CRITICAL: Verify widget config comes from formData props
     
     const fs = require('fs')
     const path = require('path')
-    const settingsPagePath = path.resolve(__dirname, '../../src/pages/SettingsPage.tsx')
-    const settingsPageContent = fs.readFileSync(settingsPagePath, 'utf-8')
+    const widgetSectionPath = path.resolve(__dirname, '../../src/components/settings/sections/WebsiteWidgetSection.tsx')
+    const widgetSectionContent = fs.readFileSync(widgetSectionPath, 'utf-8')
 
     // ✅ MUST use formData.widgetTitle
-    expect(settingsPageContent).toContain('formData.widgetTitle')
+    expect(widgetSectionContent).toContain('formData.widgetTitle')
     
     // ✅ MUST use formData.widgetPrimaryColor
-    expect(settingsPageContent).toContain('formData.widgetPrimaryColor')
+    expect(widgetSectionContent).toContain('formData.widgetPrimaryColor')
     
     // ✅ MUST use formData.widgetIcon
-    expect(settingsPageContent).toContain('formData.widgetIcon')
+    expect(widgetSectionContent).toContain('formData.widgetIcon')
     
     // ✅ MUST use formData.widgetLanguage
-    expect(settingsPageContent).toContain('formData.widgetLanguage')
+    expect(widgetSectionContent).toContain('formData.widgetLanguage')
   })
 
   it('🔴 MUST have fallback values for widget config', () => {
@@ -172,19 +172,19 @@ describe('🚨 CRITICAL: Widget Embed Code Generation', () => {
     
     const fs = require('fs')
     const path = require('path')
-    const settingsPagePath = path.resolve(__dirname, '../../src/pages/SettingsPage.tsx')
-    const settingsPageContent = fs.readFileSync(settingsPagePath, 'utf-8')
+    const widgetSectionPath = path.resolve(__dirname, '../../src/components/settings/sections/WebsiteWidgetSection.tsx')
+    const widgetSectionContent = fs.readFileSync(widgetSectionPath, 'utf-8')
 
     // ✅ MUST have fallback for title
-    expect(settingsPageContent).toContain("'Chat with us'")
+    expect(widgetSectionContent).toContain('"Chat with us"')
     
     // ✅ MUST have fallback for primaryColor
-    expect(settingsPageContent).toContain("'#22c55e'")
+    expect(widgetSectionContent).toContain('"#22c55e"')
     
     // ✅ MUST have fallback for icon
-    expect(settingsPageContent).toContain("'chat'")
+    expect(widgetSectionContent).toContain('"chat"')
     
     // ✅ MUST have fallback for language
-    expect(settingsPageContent).toContain("'it'")
+    expect(widgetSectionContent).toContain('"it"')
   })
 })

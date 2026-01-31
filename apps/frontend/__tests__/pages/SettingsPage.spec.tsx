@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
@@ -110,26 +110,62 @@ const waitForLoaded = async () => {
 
 const openSection = async (title: string) => {
   const user = userEvent.setup()
-  // Map old section names to new menu items AND their heading titles
+  // Map old section names to new dropdown menu items
   const menuConfig: Record<string, { menuLabel: string, heading: string }> = {
-    'Business Configuration': { menuLabel: 'General Settings', heading: 'Business Configuration' },
-    'General Settings': { menuLabel: 'General Settings', heading: 'Business Configuration' },
-    'Personality & Behavior': { menuLabel: 'AI Configuration', heading: 'AI Personality' },
-    'AI Personality': { menuLabel: 'AI Configuration', heading: 'AI Personality' },
-    'AI Configuration': { menuLabel: 'AI Configuration', heading: 'AI Personality' },
-    'Security & Access': { menuLabel: 'Security & Support', heading: 'Security & Support' },
-    'Support & Escalation': { menuLabel: 'Security & Support', heading: 'Security & Support' },
-    'Security & Support': { menuLabel: 'Security & Support', heading: 'Security & Support' },
-    'WhatsApp Configuration': { menuLabel: 'Channels', heading: 'Channels & Connections' },
-    'Channels & Connections': { menuLabel: 'Channels', heading: 'Channels & Connections' },
-    'Channels': { menuLabel: 'Channels', heading: 'Channels & Connections' },
+    'Business Configuration': { menuLabel: 'Business Config', heading: 'Business Configuration' },
+    'General Settings': { menuLabel: 'Business Config', heading: 'Business Configuration' },
+    'Personality & Behavior': { menuLabel: 'AI Personality', heading: 'AI Personality' },
+    'AI Personality': { menuLabel: 'AI Personality', heading: 'AI Personality' },
+    'AI Configuration': { menuLabel: 'AI Personality', heading: 'AI Personality' },
+    'Security & Access': { menuLabel: 'Security', heading: 'Security' },
+    'Support & Escalation': { menuLabel: 'Human Support', heading: 'Human Support' },
+    'Security & Support': { menuLabel: 'Security', heading: 'Security' },
+    'WhatsApp Configuration': { menuLabel: 'WhatsApp Channel', heading: 'WhatsApp Channel' },
+    'Channels & Connections': { menuLabel: 'WhatsApp Channel', heading: 'WhatsApp Channel' },
+    'Channels': { menuLabel: 'WhatsApp Channel', heading: 'WhatsApp Channel' },
   }
   const config = menuConfig[title] || { menuLabel: title, heading: title }
-  const button = screen.getByRole('button', { name: new RegExp(config.menuLabel, 'i') })
-  await user.click(button)
+  
+  // Find the dropdown button (Button with ChevronDown)
+  // It should contain the current section label (e.g., "Business Config")
+  const buttons = screen.getAllByRole('button')
+  const dropdownButton = buttons.find(btn => {
+    const hasChevron = btn.querySelector('svg.lucide-chevron-down')
+    return hasChevron
+  })
+  
+  if (!dropdownButton) {
+    throw new Error('Could not find settings dropdown button')
+  }
+  
+  // If the section is already active, no need to click
+  if (dropdownButton.textContent?.includes(config.menuLabel)) {
+    // Already on this section, just wait for heading
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: new RegExp(config.heading, 'i') })).toBeInTheDocument()
+    })
+    return
+  }
+  
+  // Click dropdown to open menu
+  await user.click(dropdownButton)
+  
+  // Wait for menu to open and find the menu item
+  await waitFor(() => {
+    const menuItems = screen.getAllByText(config.menuLabel)
+    const menuItem = menuItems.find(el => el.className.includes('font-medium'))
+    expect(menuItem).toBeInTheDocument()
+  })
+  
+  // Click the menu item (the one with font-medium class, not the button)
+  const menuItems = screen.getAllByText(config.menuLabel)
+  const menuItem = menuItems.find(el => el.className.includes('font-medium'))
+  await user.click(menuItem!)
+  
   // Wait for section heading to render
   await waitFor(() => {
-    expect(screen.getByRole('heading', { name: new RegExp(config.heading, 'i') })).toBeInTheDocument()
+    const heading = screen.getAllByRole('heading', { name: new RegExp(config.heading, 'i') })[0]
+    expect(heading).toBeInTheDocument()
   })
 }
 
@@ -222,10 +258,13 @@ describe('SettingsPage - Toggle Behaviors', () => {
     renderWithProviders(<SettingsPage />)
 
     await waitForLoaded()
-    // Default section is 'channels', Channel Active switch is the first one
-    const switches = screen.getAllByRole('switch')
-    const channelSwitch = switches[0] // First switch is Channel Active
-    expect(channelSwitch).toBeChecked()
+    
+    // Channel Active switch is in the header, find it by the "Active" or "Inactive" label
+    const channelStatusContainer = screen.getByText(/Active|Inactive/i).closest('div')
+    expect(channelStatusContainer).toBeInTheDocument()
+    
+    const channelSwitch = within(channelStatusContainer!).getByRole('switch')
+    expect(channelSwitch).toBeChecked() // Default is true
 
     await user.click(channelSwitch)
     await waitFor(() => {
@@ -249,7 +288,7 @@ describe('SettingsPage - Data Population', () => {
     await waitFor(() => {
       expect(screen.getByLabelText(/channel name/i)).toHaveValue('Test Channel')
     })
-    expect(screen.getByLabelText(/admin email/i)).toHaveValue('admin@test.com')
+    expect(screen.getByLabelText(/business email/i)).toHaveValue('admin@test.com')
   })
 
   it('should convert allowed external links array to comma-separated string', async () => {
