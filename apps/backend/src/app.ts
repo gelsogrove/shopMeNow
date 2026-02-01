@@ -221,11 +221,13 @@ app.use(
                 "https://www.google.com",
                 "https://www.gstatic.com",
                 "https://www.googletagmanager.com",
+                "https://cdn.jsdelivr.net", // Monaco Editor CDN
               ],
               styleSrc: [
                 "'self'",
                 "'unsafe-inline'",
                 "https://accounts.google.com",
+                "https://cdn.jsdelivr.net", // Monaco Editor styles
               ],
               imgSrc: ["'self'", "data:", "https:", "blob:"],
               connectSrc: [
