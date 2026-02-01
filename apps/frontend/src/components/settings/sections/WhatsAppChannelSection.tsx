@@ -95,8 +95,11 @@ export function WhatsAppChannelSection({
           ) : (
             <>
             <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="whatsappAppName">app name</Label>
+            <div
+              className="space-y-2"
+              onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
+            >
+              <Label htmlFor="whatsappAppName">AppName(meta)</Label>
               <Input
                 id="whatsappAppName"
                 value={formData.whatsappAppName}
@@ -107,13 +110,24 @@ export function WhatsAppChannelSection({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="whatsappApiKey">token</Label>
+              <Label htmlFor="whatsappApiKey">Access Token</Label>
               <Input
                 id="whatsappApiKey"
                 type="password"
                 value={formData.whatsappApiKey}
                 onChange={(e) => onFieldChange("whatsappApiKey", e.target.value)}
-                placeholder="Paste token"
+                placeholder="Paste access token"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappPhoneNumber">Tel:</Label>
+              <Input
+                id="whatsappPhoneNumber"
+                value={formData.whatsappPhoneNumber}
+                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
+                placeholder="+1234567890"
                 disabled={!canEdit}
               />
             </div>
@@ -130,7 +144,7 @@ export function WhatsAppChannelSection({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account</Label>
+              <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
               <Input
                 id="whatsappBusinessAccountId"
                 value={formData.whatsappBusinessAccountId}
@@ -141,7 +155,7 @@ export function WhatsAppChannelSection({
             </div>
 
             <div className="space-y-2">
-              <Label>webhook</Label>
+              <Label>Callback URL</Label>
               <div className="flex gap-2 items-center">
                 <code className="flex-1 rounded border bg-slate-50 px-2 py-2 text-xs font-mono overflow-x-auto">
                   {webhookDisplayUrl || "Not generated"}
@@ -169,37 +183,6 @@ export function WhatsAppChannelSection({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="whatsappAppSecret">App Secret (Meta App)</Label>
-              <Input
-                id="whatsappAppSecret"
-                type="password"
-                value={formData.whatsappAppSecret}
-                onChange={(e) => onFieldChange("whatsappAppSecret", e.target.value)}
-                placeholder="Enter App Secret"
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Used to verify webhook signature (per channel).
-              </p>
-            </div>
-
-            <div
-              className="space-y-2"
-              onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
-            >
-              <Label htmlFor="whatsappPhoneNumber">Phone Number (fallback)</Label>
-              <Input
-                id="whatsappPhoneNumber"
-                value={formData.whatsappPhoneNumber}
-                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
-                placeholder="+1234567890"
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Used only if Phone Number ID is missing.
-              </p>
-            </div>
             </div>
             </>
           )}
