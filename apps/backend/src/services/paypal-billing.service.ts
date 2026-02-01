@@ -184,8 +184,10 @@ export async function processPayment(
         throw new Error("Invoice already paid")
       }
 
-      if (inv.status !== "PENDING" && inv.status !== "FAILED") {
-        throw new Error(`Invoice status must be PENDING or FAILED, got: ${inv.status}`)
+      // Allow DRAFT, PENDING, or FAILED for manual payment
+      const validStatuses = ["DRAFT", "PENDING", "FAILED"]
+      if (!validStatuses.includes(inv.status)) {
+        throw new Error(`Invoice status must be DRAFT, PENDING, or FAILED, got: ${inv.status}`)
       }
 
       // Mark as processing to prevent concurrent attempts

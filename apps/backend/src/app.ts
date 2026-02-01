@@ -236,11 +236,13 @@ app.use(
                 "https://accounts.google.com",
                 "https://*.googleapis.com",
                 "https://*.gstatic.com",
+                "https://cdn.jsdelivr.net",
                 "wss://echatbot-production-5db591247cec.herokuapp.com",
                 "https://echatbot-production-5db591247cec.herokuapp.com",
               ],
-              fontSrc: ["'self'", "https://fonts.gstatic.com"],
+              fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
               objectSrc: ["'none'"],
+              workerSrc: ["'self'", "blob:"],
               frameSrc: [
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
@@ -250,6 +252,7 @@ app.use(
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
                 "https://www.google.com",
+                "blob:",
               ],
               frameAncestors: [
                 "'self'",

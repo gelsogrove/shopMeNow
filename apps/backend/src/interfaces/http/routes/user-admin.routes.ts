@@ -2355,9 +2355,10 @@ router.post(
       })
     } catch (error) {
       logger.error("[ADMIN] Error processing mock PayPal payment:", error)
+      const errorMessage = error instanceof Error ? error.message : "Failed to process payment"
       res.status(500).json({
         success: false,
-        error: "Failed to process payment",
+        error: errorMessage,
       })
     }
   }

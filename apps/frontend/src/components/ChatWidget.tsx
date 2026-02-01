@@ -552,7 +552,6 @@ export function ChatWidget({
               positionClasses[position]
             )}
             aria-label="Open chat"
-            title={`widget-icon:${resolvedIcon}`}
           >
           {displayLogoUrl ? (
             <img

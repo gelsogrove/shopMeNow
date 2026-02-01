@@ -1,5 +1,6 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { getFunctionsForAgentType } from "../../config/agent-function-mapping"
+import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import logger from "../../utils/logger"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { PromptValidationError } from "../../utils/PromptValidationError"
@@ -59,12 +60,37 @@ export class AgentService {
       }
       logger.info(`Found ${agents.length} agents for workspace ${workspaceId}`)
 
+      const hasMissingPrompt = agents.some(
+        (agent) => !agent.systemPrompt || agent.systemPrompt.trim() === ""
+      )
+
+      let defaultPromptsByType: Record<string, string> | null = null
+      if (hasMissingPrompt) {
+        const workspace = await this.prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { sellsProductsAndServices: true },
+        })
+        const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+        defaultPromptsByType = Object.fromEntries(
+          dynamicAgents(workspaceId, hasEcommerce).map((agent) => [
+            agent.type,
+            agent.systemPrompt,
+          ])
+        )
+      }
+
       // 🔄 MAPPING: Trasforma agentConfig per il frontend
-      const mappedAgents = agents.map((agent) => ({
+      const mappedAgents = agents.map((agent) => {
+        const fallbackPrompt =
+          !agent.systemPrompt || agent.systemPrompt.trim() === ""
+            ? defaultPromptsByType?.[agent.type] || ""
+            : agent.systemPrompt
+
+        return {
         id: agent.id,
         name: agent.name,
-        content: agent.systemPrompt, // Backward compatibility
-        systemPrompt: agent.systemPrompt, // Standard
+        content: fallbackPrompt, // Backward compatibility
+        systemPrompt: fallbackPrompt, // Standard
         workspaceId: agent.workspaceId,
         temperature: agent.temperature,
         model: agent.model,
@@ -76,7 +102,8 @@ export class AgentService {
         functions: getFunctionsForAgentType(agent.type), // ✅ FIX: Use "type" field
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
-      }))
+        }
+      })
 
       logger.info("🔄 MAPPED agents for frontend:", mappedAgents)
       return mappedAgents
