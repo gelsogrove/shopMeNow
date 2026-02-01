@@ -17,6 +17,7 @@ export interface Workspace {
   url?: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappAppName?: string
   // sensitive field
   whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
@@ -24,6 +25,7 @@ export interface Workspace {
   whatsappWebhookId?: string
   whatsappWebhookToken?: string
   whatsappWebhookUrl?: string
+  whatsappBusinessAccountId?: string
   adminEmail?: string
   debugMode?: boolean
   welcomeMessage?: string
@@ -86,9 +88,11 @@ export interface UpdateWorkspaceData {
   currency?: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappAppName?: string
   whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
+  whatsappBusinessAccountId?: string
   adminEmail?: string
   url?: string
   debugMode?: boolean

@@ -7,12 +7,14 @@ export interface WorkspaceProps {
   whatsappPhoneNumber?: string | null
   whatsappApiKey?: string | null
   whatsappApiToken?: string | null
+  whatsappAppName?: string | null
   whatsappAppSecret?: string | null
   whatsappPhoneNumberId?: string | null
   whatsappVerifyToken?: string | null
   whatsappWebhookId?: string | null
   whatsappWebhookToken?: string | null
   whatsappWebhookUrl?: string | null
+  whatsappBusinessAccountId?: string | null
   notificationEmail?: string | null
   webhookUrl?: string | null
   language: string
@@ -120,6 +122,10 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.whatsappApiToken
   }
 
+  get whatsappAppName(): string | null | undefined {
+    return this.props.whatsappAppName
+  }
+
   get whatsappAppSecret(): string | null | undefined {
     return this.props.whatsappAppSecret
   }
@@ -142,6 +148,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get whatsappWebhookUrl(): string | null | undefined {
     return this.props.whatsappWebhookUrl
+  }
+
+  get whatsappBusinessAccountId(): string | null | undefined {
+    return this.props.whatsappBusinessAccountId
   }
 
   get notificationEmail(): string | null | undefined {

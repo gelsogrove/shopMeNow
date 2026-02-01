@@ -119,6 +119,10 @@ export class WorkspaceDTO extends BaseDTO {
 
   @IsString()
   @IsOptional()
+  whatsappAppName?: string;
+
+  @IsString()
+  @IsOptional()
   whatsappPhoneNumberId?: string;
 
   @IsString()
@@ -128,6 +132,10 @@ export class WorkspaceDTO extends BaseDTO {
   @IsString()
   @IsOptional()
   whatsappWebhookUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappBusinessAccountId?: string;
 
   @IsString()
   @IsOptional()
@@ -211,6 +219,10 @@ export class CreateWorkspaceDTO {
 
   @IsString()
   @IsOptional()
+  whatsappAppName?: string;
+
+  @IsString()
+  @IsOptional()
   whatsappPhoneNumberId?: string;
 
   @IsString()
@@ -220,6 +232,10 @@ export class CreateWorkspaceDTO {
   @IsString()
   @IsOptional()
   whatsappWebhookUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappBusinessAccountId?: string;
 
   @IsBoolean()
   @IsOptional()
@@ -288,6 +304,10 @@ export class UpdateWorkspaceDTO {
 
   @IsString()
   @IsOptional()
+  whatsappAppName?: string;
+
+  @IsString()
+  @IsOptional()
   whatsappPhoneNumberId?: string;
 
   @IsString()
@@ -297,6 +317,10 @@ export class UpdateWorkspaceDTO {
   @IsString()
   @IsOptional()
   whatsappWebhookUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  whatsappBusinessAccountId?: string;
 
   @IsBoolean()
   @IsOptional()

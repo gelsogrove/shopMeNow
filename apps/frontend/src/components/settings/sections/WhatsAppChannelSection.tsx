@@ -16,9 +16,11 @@ interface WhatsAppChannelSectionProps {
     enableWhatsapp: boolean
     whatsappPhoneNumber: string
     whatsappApiKey: string
+    whatsappAppName: string
     whatsappAppSecret: string
     whatsappPhoneNumberId: string
     whatsappVerifyToken: string
+    whatsappBusinessAccountId: string
     whatsappWebhookId?: string
     whatsappWebhookUrl?: string
   }
@@ -41,7 +43,7 @@ export function WhatsAppChannelSection({
 }: WhatsAppChannelSectionProps) {
   const webhookDisplayUrl =
     formData.whatsappWebhookUrl ||
-    `${WEBHOOK_BASE.replace(/\/$/, "")}/api/whatsapp/webhook/${formData.whatsappWebhookId || ""}`
+    `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/webhook/${formData.whatsappWebhookId || ""}`
 
   const handleCopy = async (text?: string) => {
     if (!text) {
@@ -93,49 +95,31 @@ export function WhatsAppChannelSection({
           ) : (
             <>
             <div className="space-y-4">
-            <div
-              className="space-y-2"
-              onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
-            >
-              <Label htmlFor="whatsappPhoneNumber">Phone Number</Label>
+            <div className="space-y-2">
+              <Label htmlFor="whatsappAppName">app name</Label>
               <Input
-                id="whatsappPhoneNumber"
-                value={formData.whatsappPhoneNumber}
-                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
-                placeholder="+1234567890"
+                id="whatsappAppName"
+                value={formData.whatsappAppName}
+                onChange={(e) => onFieldChange("whatsappAppName", e.target.value)}
+                placeholder="Meta app name"
                 disabled={!canEdit}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="whatsappApiKey">API Key</Label>
+              <Label htmlFor="whatsappApiKey">token</Label>
               <Input
                 id="whatsappApiKey"
                 type="password"
                 value={formData.whatsappApiKey}
                 onChange={(e) => onFieldChange("whatsappApiKey", e.target.value)}
-                placeholder="Enter API key"
+                placeholder="Paste token"
                 disabled={!canEdit}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="whatsappAppSecret">App Secret</Label>
-              <Input
-                id="whatsappAppSecret"
-                type="password"
-                value={formData.whatsappAppSecret}
-                onChange={(e) => onFieldChange("whatsappAppSecret", e.target.value)}
-                placeholder="Enter App Secret"
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Used to verify webhook signature (per channel).
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
+              <Label htmlFor="whatsappPhoneNumberId">Phone number ID:</Label>
               <Input
                 id="whatsappPhoneNumberId"
                 value={formData.whatsappPhoneNumberId}
@@ -146,18 +130,18 @@ export function WhatsAppChannelSection({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="whatsappVerifyToken">Verify Token</Label>
+              <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account</Label>
               <Input
-                id="whatsappVerifyToken"
-                value={formData.whatsappVerifyToken}
-                onChange={(e) => onFieldChange("whatsappVerifyToken", e.target.value)}
-                placeholder="mySecureToken123"
+                id="whatsappBusinessAccountId"
+                value={formData.whatsappBusinessAccountId}
+                onChange={(e) => onFieldChange("whatsappBusinessAccountId", e.target.value)}
+                placeholder="123456789012345"
                 disabled={!canEdit}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Webhook URL (paste in Meta)</Label>
+              <Label>webhook</Label>
               <div className="flex gap-2 items-center">
                 <code className="flex-1 rounded border bg-slate-50 px-2 py-2 text-xs font-mono overflow-x-auto">
                   {webhookDisplayUrl || "Not generated"}
@@ -172,6 +156,49 @@ export function WhatsAppChannelSection({
                   Copy
                 </Button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappVerifyToken">Verify token</Label>
+              <Input
+                id="whatsappVerifyToken"
+                value={formData.whatsappVerifyToken}
+                onChange={(e) => onFieldChange("whatsappVerifyToken", e.target.value)}
+                placeholder="mySecureToken123"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappAppSecret">App Secret (Meta App)</Label>
+              <Input
+                id="whatsappAppSecret"
+                type="password"
+                value={formData.whatsappAppSecret}
+                onChange={(e) => onFieldChange("whatsappAppSecret", e.target.value)}
+                placeholder="Enter App Secret"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Used to verify webhook signature (per channel).
+              </p>
+            </div>
+
+            <div
+              className="space-y-2"
+              onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
+            >
+              <Label htmlFor="whatsappPhoneNumber">Phone Number (fallback)</Label>
+              <Input
+                id="whatsappPhoneNumber"
+                value={formData.whatsappPhoneNumber}
+                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
+                placeholder="+1234567890"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Used only if Phone Number ID is missing.
+              </p>
             </div>
             </div>
             </>

@@ -19,12 +19,14 @@ export interface Workspace {
   updatedAt: string
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappAppName?: string
   whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
   whatsappWebhookId?: string
   whatsappWebhookToken?: string
   whatsappWebhookUrl?: string
+  whatsappBusinessAccountId?: string
   adminEmail?: string
   url?: string
   debugMode?: boolean

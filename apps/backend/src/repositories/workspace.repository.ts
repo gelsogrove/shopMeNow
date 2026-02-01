@@ -25,6 +25,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         data.whatsappSettings?.apiKey ?? data.whatsappApiKey, // ✅ FIX: Use whatsappApiKey (new field name)
       whatsappApiToken:
         data.whatsappSettings?.apiKey ?? data.whatsappApiKey, // ✅ LEGACY: Keep for backward compatibility
+      whatsappAppName: data.whatsappSettings?.appName ?? null,
       whatsappPhoneNumberId: data.whatsappPhoneNumberId ?? null,
       whatsappVerifyToken:
         data.whatsappSettings?.webhookToken ?? data.whatsappVerifyToken ?? null,
@@ -35,6 +36,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         data.whatsappSettings?.webhookUrl ??
         data.whatsappWebhookUrl ??
         data.webhookUrl,
+      whatsappBusinessAccountId: data.whatsappSettings?.businessAccountId ?? null,
       webhookUrl: data.webhookUrl,
       notificationEmail: data.notificationEmail,
       language: data.language,
@@ -479,11 +481,23 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // If whatsappApiKey is sent directly, keep it as is (no transformation needed)
       // Prisma schema uses whatsappApiKey field
 
+      const normalizeWhatsAppField = (value?: string | null): string | undefined => {
+        if (value === undefined || value === null) return undefined
+        const trimmed = String(value).trim()
+        return trimmed.length > 0 ? trimmed : undefined
+      }
+
       // Handle adminEmail - should be saved in whatsappSettings, not workspace
       let adminEmail: string | undefined
       if (dbData.adminEmail !== undefined) {
         adminEmail = dbData.adminEmail
         delete dbData.adminEmail
+      }
+
+      let whatsappAppName: string | undefined
+      if (dbData.whatsappAppName !== undefined) {
+        whatsappAppName = normalizeWhatsAppField(dbData.whatsappAppName)
+        delete dbData.whatsappAppName
       }
 
       // Handle WhatsApp App Secret - stored in whatsappSettings
@@ -500,10 +514,10 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         whatsappVerifyToken = trimmedToken.length > 0 ? trimmedToken : undefined
       }
 
-      const normalizeWhatsAppField = (value?: string | null): string | undefined => {
-        if (value === undefined || value === null) return undefined
-        const trimmed = String(value).trim()
-        return trimmed.length > 0 ? trimmed : undefined
+      let whatsappBusinessAccountId: string | undefined
+      if (dbData.whatsappBusinessAccountId !== undefined) {
+        whatsappBusinessAccountId = normalizeWhatsAppField(dbData.whatsappBusinessAccountId)
+        delete dbData.whatsappBusinessAccountId
       }
 
       const incomingPhoneNumber = normalizeWhatsAppField(
@@ -580,10 +594,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // Prepare the exact data object for Prisma
       const shouldUpsertWhatsAppSettings =
         adminEmail !== undefined ||
+        whatsappAppName !== undefined ||
         whatsappAppSecret !== undefined ||
         whatsappVerifyToken !== undefined ||
         incomingPhoneNumber !== undefined ||
-        incomingApiKey !== undefined
+        incomingApiKey !== undefined ||
+        whatsappBusinessAccountId !== undefined
 
       const prismaUpdateData: any = {
         ...dbData,
@@ -598,8 +614,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
                 webhookToken:
                   whatsappVerifyToken || crypto.randomUUID(), // Generate or use provided token
                 ...(adminEmail !== undefined ? { adminEmail } : {}),
+                ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
                 ...(whatsappAppSecret !== undefined
                   ? { appSecret: whatsappAppSecret }
+                  : {}),
+                ...(whatsappBusinessAccountId !== undefined
+                  ? { businessAccountId: whatsappBusinessAccountId }
                   : {}),
               },
               update: {
@@ -608,11 +628,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
                   : {}),
                 ...(resolvedApiKey !== undefined ? { apiKey: resolvedApiKey } : {}),
                 ...(adminEmail !== undefined ? { adminEmail } : {}),
+                ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
                 ...(whatsappAppSecret !== undefined
                   ? { appSecret: whatsappAppSecret }
                   : {}),
                 ...(whatsappVerifyToken !== undefined
                   ? { webhookToken: whatsappVerifyToken }
+                  : {}),
+                ...(whatsappBusinessAccountId !== undefined
+                  ? { businessAccountId: whatsappBusinessAccountId }
                   : {}),
               },
             },
@@ -727,9 +751,11 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
               id: true,
               phoneNumber: true,
               apiKey: true,
+              appName: true,
               appSecret: true,
               webhookId: true,
               webhookToken: true,
+              businessAccountId: true,
               adminEmail: true,
             },
           },

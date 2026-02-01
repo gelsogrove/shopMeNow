@@ -94,9 +94,11 @@ interface FormData {
   enableWidget: boolean
   whatsappPhoneNumber: string
   whatsappApiKey: string
+  whatsappAppName: string
   whatsappAppSecret: string
   whatsappPhoneNumberId: string
   whatsappVerifyToken: string
+  whatsappBusinessAccountId: string
   whatsappWebhookId?: string
   whatsappWebhookUrl?: string
   widgetTitle: string
@@ -154,9 +156,11 @@ export function SettingsPage() {
     enableWidget: false,
     whatsappPhoneNumber: "",
     whatsappApiKey: "",
+    whatsappAppName: "",
     whatsappAppSecret: "",
     whatsappPhoneNumberId: "",
     whatsappVerifyToken: "",
+    whatsappBusinessAccountId: "",
     whatsappWebhookId: undefined,
     whatsappWebhookUrl: undefined,
     widgetTitle: "Chat with us",
@@ -195,10 +199,12 @@ export function SettingsPage() {
         enableWidget: currentWorkspace.enableWidget ?? false,
         whatsappPhoneNumber: currentWorkspace.whatsappPhoneNumber || "",
         whatsappApiKey: currentWorkspace.whatsappApiKey || "",
+        whatsappAppName: currentWorkspace.whatsappAppName || "",
         whatsappAppSecret: currentWorkspace.whatsappAppSecret || "",
         whatsappPhoneNumberId: currentWorkspace.whatsappPhoneNumberId || "",
         whatsappVerifyToken:
           currentWorkspace.whatsappVerifyToken || currentWorkspace.whatsappWebhookToken || "",
+        whatsappBusinessAccountId: currentWorkspace.whatsappBusinessAccountId || "",
         whatsappWebhookId: currentWorkspace.whatsappWebhookId,
         whatsappWebhookUrl: currentWorkspace.whatsappWebhookUrl,
         widgetTitle: currentWorkspace.widgetTitle || "Chat with us",
@@ -285,6 +291,12 @@ export function SettingsPage() {
 
       if (!updateData.whatsappAppSecret) {
         delete updateData.whatsappAppSecret
+      }
+      if (!updateData.whatsappAppName) {
+        delete updateData.whatsappAppName
+      }
+      if (!updateData.whatsappBusinessAccountId) {
+        delete updateData.whatsappBusinessAccountId
       }
 
       const updatedWorkspace = await updateWorkspace(currentWorkspace!.id, updateData)
@@ -423,9 +435,11 @@ export function SettingsPage() {
               enableWhatsapp: formData.enableWhatsapp,
               whatsappPhoneNumber: formData.whatsappPhoneNumber,
               whatsappApiKey: formData.whatsappApiKey,
+              whatsappAppName: formData.whatsappAppName,
               whatsappAppSecret: formData.whatsappAppSecret,
               whatsappPhoneNumberId: formData.whatsappPhoneNumberId,
               whatsappVerifyToken: formData.whatsappVerifyToken,
+              whatsappBusinessAccountId: formData.whatsappBusinessAccountId,
               whatsappWebhookId: formData.whatsappWebhookId,
               whatsappWebhookUrl: formData.whatsappWebhookUrl,
             }}

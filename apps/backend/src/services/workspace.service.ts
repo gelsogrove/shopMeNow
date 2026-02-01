@@ -10,9 +10,11 @@ interface CreateWorkspaceData {
   channelType?: 'WHATSAPP' | 'WIDGET' // 🆕 Channel type (default: WHATSAPP)
   whatsappPhoneNumber?: string // Required for WHATSAPP channels
   whatsappApiKey?: string
+  whatsappAppName?: string
   whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
+  whatsappBusinessAccountId?: string
   currency?: string
   language?: string
   messageLimit?: number
@@ -46,9 +48,11 @@ interface UpdateWorkspaceData {
   channelType?: 'WHATSAPP' | 'WIDGET' // 🆕 Channel type
   whatsappPhoneNumber?: string
   whatsappApiKey?: string
+  whatsappAppName?: string
   whatsappAppSecret?: string
   whatsappPhoneNumberId?: string
   whatsappVerifyToken?: string
+  whatsappBusinessAccountId?: string
   currency?: string
   language?: string
   messageLimit?: number
@@ -138,10 +142,12 @@ export const workspaceService = {
           select: {
             phoneNumber: true,
             apiKey: true,
+            appName: true,
             appSecret: true,
             webhookId: true,
             webhookToken: true,
             webhookUrl: true,
+            businessAccountId: true,
             adminEmail: true,
           },
         },
@@ -154,11 +160,13 @@ export const workspaceService = {
         ...workspace,
         whatsappPhoneNumber: settings?.phoneNumber ?? workspace.whatsappPhoneNumber,
         whatsappApiKey: settings?.apiKey ?? workspace.whatsappApiKey,
+        whatsappAppName: settings?.appName ?? null,
         whatsappAppSecret: settings?.appSecret ?? null,
         whatsappWebhookId: settings?.webhookId ?? null,
         whatsappWebhookToken: settings?.webhookToken ?? null,
         whatsappWebhookUrl: settings?.webhookUrl ?? workspace.webhookUrl ?? null,
         whatsappVerifyToken: settings?.webhookToken ?? workspace.whatsappVerifyToken ?? null,
+        whatsappBusinessAccountId: settings?.businessAccountId ?? null,
         adminEmail: settings?.adminEmail ?? null,
       }
     })
@@ -220,10 +228,12 @@ export const workspaceService = {
           select: {
             phoneNumber: true,
             apiKey: true,
+            appName: true,
             appSecret: true,
             webhookId: true,
             webhookToken: true,
             webhookUrl: true,
+            businessAccountId: true,
             adminEmail: true,
           },
         },
@@ -270,11 +280,13 @@ export const workspaceService = {
       ...workspace,
       whatsappPhoneNumber: workspace.whatsappSettings?.phoneNumber ?? workspace.whatsappPhoneNumber,
       whatsappApiKey: workspace.whatsappSettings?.apiKey ?? workspace.whatsappApiKey,
+      whatsappAppName: workspace.whatsappSettings?.appName ?? null,
       whatsappAppSecret: workspace.whatsappSettings?.appSecret ?? null,
       whatsappWebhookId: workspace.whatsappSettings?.webhookId ?? null,
       whatsappWebhookToken: workspace.whatsappSettings?.webhookToken ?? null,
       whatsappWebhookUrl: workspace.whatsappSettings?.webhookUrl ?? workspace.webhookUrl ?? null,
       whatsappVerifyToken: workspace.whatsappSettings?.webhookToken ?? workspace.whatsappVerifyToken ?? null,
+      whatsappBusinessAccountId: workspace.whatsappSettings?.businessAccountId ?? null,
       adminEmail: workspace.whatsappSettings?.adminEmail ?? null,
       agentConfigs,
     }
@@ -282,7 +294,7 @@ export const workspaceService = {
 
   async create(data: CreateWorkspaceData) {
     // Extract FAQs to handle separately (Prisma relation)
-    const { faqs, whatsappAppSecret, ...workspaceData } = data
+    const { faqs, whatsappAppSecret, whatsappAppName, ...workspaceData } = data
 
     // Enforce channel-specific flags
     const channelType = workspaceData.channelType || "WHATSAPP"
@@ -365,8 +377,10 @@ export const workspaceService = {
     const { 
       id: _id,  // Remove id if present (shouldn't update primary key)
       adminEmail, // Extract adminEmail separately (goes to WhatsappSettings)
+      whatsappAppName,
       whatsappAppSecret,
       whatsappVerifyToken,
+      whatsappBusinessAccountId,
       ...workspaceData 
     } = data as UpdateWorkspaceData & {
       id?: string  // Frontend might send id but we shouldn't update it
@@ -521,7 +535,7 @@ export const workspaceService = {
     logger.info("Updated workspace:", JSON.stringify(updatedWorkspace, null, 2))
 
     // Update adminEmail/appSecret in WhatsappSettings if provided
-    if (adminEmail !== undefined || whatsappAppSecret !== undefined || whatsappVerifyToken !== undefined) {
+    if (adminEmail !== undefined || whatsappAppName !== undefined || whatsappAppSecret !== undefined || whatsappVerifyToken !== undefined || whatsappBusinessAccountId !== undefined) {
       await prisma.whatsappSettings.upsert({
         where: {
           workspaceId: id,
@@ -533,12 +547,16 @@ export const workspaceService = {
           webhookId: `webhook-${id}`,
           webhookToken: whatsappVerifyToken || `token-${Date.now()}`,
           ...(adminEmail !== undefined ? { adminEmail } : {}),
+          ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
           ...(whatsappAppSecret !== undefined ? { appSecret: whatsappAppSecret } : {}),
+          ...(whatsappBusinessAccountId !== undefined ? { businessAccountId: whatsappBusinessAccountId } : {}),
         },
         update: {
           ...(adminEmail !== undefined ? { adminEmail } : {}),
+          ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
           ...(whatsappAppSecret !== undefined ? { appSecret: whatsappAppSecret } : {}),
           ...(whatsappVerifyToken !== undefined ? { webhookToken: whatsappVerifyToken } : {}),
+          ...(whatsappBusinessAccountId !== undefined ? { businessAccountId: whatsappBusinessAccountId } : {}),
         },
       })
     }
@@ -554,6 +572,8 @@ export const workspaceService = {
       whatsappWebhookId: whatsappSettings?.webhookId || null,
       whatsappWebhookToken: whatsappSettings?.webhookToken || null,
       whatsappAppSecret: whatsappSettings?.appSecret || null,
+      whatsappAppName: whatsappSettings?.appName || null,
+      whatsappBusinessAccountId: whatsappSettings?.businessAccountId || null,
     }
   },
 
