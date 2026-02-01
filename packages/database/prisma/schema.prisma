@@ -64,7 +64,9 @@ model Workspace {
   address                           String?     @db.Text // Physical address/location for "where are you?" questions
   chatbotName                       String?     @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
   businessType                      String?     @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
-  registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_PROFILE_WITH_TOKEN)
+  registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
+  requireManualApproval             Boolean     @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
+  approvalMessage                   String?     @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")
 
   // �🆕 Translation Settings (Feature: Configurable Translation Layer)
   translateProductNames  Boolean @default(false) // Translate product names to customer language (false = preserve original, e.g., "Pecorino Romano")
@@ -378,6 +380,7 @@ model Customers {
   updatedAt                     DateTime                @updatedAt
   deletedAt                     DateTime?
   isActive                      Boolean                 @default(false) // 🔒 Feature 174: Rule #4 - New customers are NOT registered by default
+  registrationStatus            RegistrationStatus      @default(NEW) // 🆕 Customer registration state: NEW (never registered), PENDING_APPROVAL (registered, awaiting admin), ACTIVE (approved)
   workspaceId                   String
   last_privacy_version_accepted String?
   privacy_accepted_at           DateTime?
@@ -1127,6 +1130,17 @@ enum MessageType {
   DOCUMENT
   LOCATION
   CONTACT
+}
+
+// 🆕 Customer Registration Status
+// Tracks the customer's registration journey:
+// - NEW: First contact, never completed registration form
+// - PENDING_APPROVAL: Completed registration, waiting for admin approval
+// - ACTIVE: Approved by admin, full access to features
+enum RegistrationStatus {
+  NEW              // Default: customer has never registered
+  PENDING_APPROVAL // Customer completed registration form, awaiting admin approval
+  ACTIVE           // Admin approved, customer has full access
 }
 
 enum ChannelType {

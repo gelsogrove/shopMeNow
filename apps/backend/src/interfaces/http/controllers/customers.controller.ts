@@ -672,4 +672,126 @@ export class CustomersController {
       next(error)
     }
   }
+
+  /**
+   * Approve a customer registration (set registrationStatus to ACTIVE)
+   * 
+   * Called when workspace has requireManualApproval=true and admin approves
+   * a customer in PENDING_APPROVAL status.
+   * 
+   * POST /api/workspaces/:workspaceId/customers/:id/approve
+   */
+  async approveCustomer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, workspaceId } = req.params
+
+      logger.info("✅ Approving customer registration:", { id, workspaceId })
+
+      // Get customer to verify current status
+      const customer = await prisma.customers.findFirst({
+        where: { id, workspaceId },
+        select: { 
+          id: true, 
+          name: true, 
+          phone: true, 
+          email: true,
+          registrationStatus: true,
+          isActive: true,
+        },
+      })
+
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" })
+      }
+
+      // Verify customer is in PENDING_APPROVAL status
+      if (customer.registrationStatus !== "PENDING_APPROVAL") {
+        return res.status(400).json({ 
+          message: `Customer is not pending approval. Current status: ${customer.registrationStatus || "NEW"}`,
+        })
+      }
+
+      // Get workspace settings for approval message
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { 
+          approvalMessage: true,
+          name: true,
+        },
+      })
+
+      // Update customer to ACTIVE status
+      const updatedCustomer = await prisma.customers.update({
+        where: { id },
+        data: {
+          isActive: true,
+          registrationStatus: "ACTIVE",
+        },
+      })
+
+      // Send approval message to customer via WhatsApp/Widget
+      const approvalMessage = workspace?.approvalMessage || 
+        "🎉 La tua registrazione è stata approvata! Ora puoi accedere a tutti i nostri prodotti e servizi. Come posso aiutarti?"
+
+      // Queue message for sending (async - don't block response)
+      this.sendApprovalMessage(updatedCustomer, workspaceId, approvalMessage).catch(error => {
+        logger.error("Error sending approval message:", error)
+      })
+
+      logger.info("Customer approved successfully:", { 
+        customerId: id, 
+        customerName: customer.name,
+      })
+
+      return res.status(200).json({
+        message: "Customer approved successfully",
+        customer: updatedCustomer,
+        approvalMessageSent: true,
+      })
+    } catch (error) {
+      logger.error("Error approving customer:", error)
+      next(error)
+    }
+  }
+
+  /**
+   * Send approval message to customer via WhatsApp queue
+   */
+  private async sendApprovalMessage(
+    customer: { id: string; phone: string | null; name: string | null },
+    workspaceId: string,
+    message: string
+  ): Promise<void> {
+    if (!customer.phone) {
+      logger.warn("Cannot send approval message - customer has no phone number:", customer.id)
+      return
+    }
+
+    try {
+      // Add message to WhatsApp queue
+      await prisma.whatsAppQueue.create({
+        data: {
+          workspaceId,
+          customerId: customer.id,
+          phoneNumber: customer.phone,
+          message,
+          status: "PENDING",
+          priority: 1, // High priority for approval messages
+          metadata: {
+            type: "APPROVAL_MESSAGE",
+            customerName: customer.name,
+            approvedAt: new Date().toISOString(),
+          },
+        },
+      })
+
+      logger.info("Approval message queued for customer:", {
+        customerId: customer.id,
+        phone: customer.phone,
+      })
+    } catch (error) {
+      logger.error("Failed to queue approval message:", error)
+      throw error
+    }
+  }
 }

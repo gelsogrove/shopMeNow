@@ -2,6 +2,7 @@ import { prisma } from "@echatbot/database"
 import { Request, Response } from "express"
 import messageSendingService from "../../../services/message-sending.service"
 import logger from "../../../utils/logger"
+import { markdownToWhatsApp } from "../../../utils/whatsapp-formatter"
 
 /**
  * WhatsApp Send Controller
@@ -143,9 +144,11 @@ export class WhatsAppSendController {
       // � Send via MessageSendingService
       // Admin manual send: NO security layer (admin è fidato)
       // Ma passa comunque dal service per centralizzazione e audit
+      const formattedMessage = markdownToWhatsApp(message)
+
       const sendResult = await messageSendingService.sendMessage({
         phoneNumber,
-        message, // Already in markdown format
+        message: formattedMessage, // Convert Markdown → WhatsApp format for delivery
         workspaceId,
         customerId,
         sendType: "ADMIN_MANUAL",

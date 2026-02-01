@@ -295,7 +295,8 @@ Sono qui per aiutarti 😊`,
       botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products! 🇮🇹",
       chatbotName: "Sofia",
       businessType: "food",
-      registrationPage: null, // Uses default /registration page. Set to custom URL if needed (e.g., "https://mystore.com/join-us")
+      registrationPage: "https://bellitalia.com/registrati", // Custom registration page URL for [LINK_REGISTRATION]
+      requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
       customAiRules: `# Communication Style
 
 - Keep sentences SHORT - avoid long text blocks
@@ -396,6 +397,7 @@ Need anything else?"`,
         chatbotName: "Marco",
         businessType: "food",
         registrationPage: null, // Uses default /registration page
+        requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
         customAiRules: `# Communication Style
 
 - Keep sentences SHORT - avoid long text blocks
@@ -891,6 +893,7 @@ Escalate IMMEDIATELY (call contactOperator) when customer:
       chatbotName: "Alex",
       businessType: "technology",
       registrationPage: null, // Uses default /registration page
+      requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
       customAiRules: `# Communication Style
 
 - Keep sentences SHORT - avoid long text blocks

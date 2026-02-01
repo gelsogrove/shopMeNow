@@ -28,6 +28,7 @@ interface BusinessConfigSectionProps {
     enableWidget: boolean
     address: string
     registrationPage: string
+    requireManualApproval: boolean
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -164,6 +165,27 @@ export function BusinessConfigSection({
                 disabled={!canEdit}
               />
               <p className="text-xs text-gray-500">Custom URL for customer registration. Used by chatbot when linking to registration.</p>
+            </div>
+
+            {/* Require Manual Approval */}
+            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("requireManualApproval")}>
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="requireManualApproval"
+                  checked={formData.requireManualApproval || false}
+                  onChange={(e) => onFieldChange("requireManualApproval", e.target.checked)}
+                  disabled={!canEdit}
+                  className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <Label htmlFor="requireManualApproval" className="cursor-pointer">
+                  Require Manual Approval for New Customers
+                </Label>
+              </div>
+              <p className="text-xs text-gray-500 ml-7">
+                When enabled, new customers will be in "Pending Approval" status after registration. 
+                An admin must manually approve them before they can access full features.
+              </p>
             </div>
 
             {/* Currency */}

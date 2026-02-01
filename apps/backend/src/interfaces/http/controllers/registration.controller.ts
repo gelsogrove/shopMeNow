@@ -154,11 +154,22 @@ export class RegistrationController {
         where: {
           id: workspace_id,
         },
+        select: {
+          id: true,
+          requireManualApproval: true,
+        },
       })
 
       if (!workspace) {
         return res.status(404).json({ error: "Workspace not found" })
       }
+
+      // Determine activation status based on workspace settings
+      // If requireManualApproval is true, customer goes to PENDING_APPROVAL
+      // Otherwise, customer is activated immediately
+      const shouldActivateImmediately = !workspace.requireManualApproval
+      const registrationStatus = shouldActivateImmediately ? "ACTIVE" : "PENDING_APPROVAL"
+      const isActive = shouldActivateImmediately
 
       // Check if customer exists by phone number
       const existingCustomer = await prisma.customers.findFirst({
@@ -189,7 +200,7 @@ export class RegistrationController {
       let customer
 
       if (existingCustomer) {
-        // Update existing customer and ACTIVATE them
+        // Update existing customer - activation depends on workspace settings
         customer = await prisma.customers.update({
           where: {
             id: existingCustomer.id,
@@ -206,7 +217,8 @@ export class RegistrationController {
             push_notifications_consent_at: push_notifications_consent
               ? new Date()
               : null,
-            isActive: true, // CRITICAL: Activate the customer after registration!
+            isActive, // Based on workspace.requireManualApproval
+            registrationStatus, // ACTIVE or PENDING_APPROVAL based on workspace settings
             isBlacklisted: false, // 🆕 Feature 174: User NOT blocked after registration (can chat freely)
             activeChatbot: true, // 🆕 Feature 174: Chatbot ENABLED after registration
           },
@@ -229,7 +241,8 @@ export class RegistrationController {
               push_notifications_consent_at: push_notifications_consent
                 ? new Date()
                 : null,
-              isActive: true,
+              isActive, // Based on workspace.requireManualApproval
+              registrationStatus, // ACTIVE or PENDING_APPROVAL based on workspace settings
               isBlacklisted: false, // 🆕 Feature 174: User NOT blocked after registration (can chat freely)
               activeChatbot: true, // 🆕 Feature 174: Chatbot ENABLED after registration
             },
@@ -320,22 +333,29 @@ export class RegistrationController {
       // Only send ONE message after registration to avoid spam
 
       // Send after-registration message asynchronously (uses workspace-specific settings)
-      this.registrationService
-        .sendAfterRegistrationMessage(customer.id)
-        .then((success) => {
-          if (success) {
-            logger.info(
-              `After-registration message sent successfully to customer ${customer.id}`
-            )
-          } else {
-            logger.error(
-              `Failed to send after-registration message to customer ${customer.id}`
-            )
-          }
-        })
-        .catch((error) => {
-          logger.error("Error sending after-registration message:", error)
-        })
+      // Only send if customer is fully activated (not pending approval)
+      if (isActive) {
+        this.registrationService
+          .sendAfterRegistrationMessage(customer.id)
+          .then((success) => {
+            if (success) {
+              logger.info(
+                `After-registration message sent successfully to customer ${customer.id}`
+              )
+            } else {
+              logger.error(
+                `Failed to send after-registration message to customer ${customer.id}`
+              )
+            }
+          })
+          .catch((error) => {
+            logger.error("Error sending after-registration message:", error)
+          })
+      } else {
+        logger.info(
+          `[REGISTRATION] Customer ${customer.id} is pending approval - skipping after-registration message`
+        )
+      }
 
       res.status(200).json({
         success: true,
@@ -343,8 +363,12 @@ export class RegistrationController {
           id: customer.id,
           name: customer.name,
           phone: customer.phone,
+          registrationStatus: registrationStatus,
         },
-        message: "Registration successful",
+        message: isActive 
+          ? "Registration successful" 
+          : "Registration submitted - awaiting admin approval",
+        requiresApproval: !isActive,
       })
     } catch (error) {
       logger.error("Error registering customer:", error)

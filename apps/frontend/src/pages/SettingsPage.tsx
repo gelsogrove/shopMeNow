@@ -115,6 +115,8 @@ interface FormData {
   humanSupportInstructions: string
   frustrationEscalationInstructions: string
   address: string
+  registrationPage: string
+  requireManualApproval: boolean
 }
 
 export function SettingsPage() {
@@ -217,6 +219,7 @@ export function SettingsPage() {
         frustrationEscalationInstructions: currentWorkspace.frustrationEscalationInstructions || "",
         address: currentWorkspace.address || "",
         registrationPage: currentWorkspace.registrationPage || "",
+        requireManualApproval: currentWorkspace.requireManualApproval || false,
       })
     }
   }, [currentWorkspace])
@@ -405,6 +408,7 @@ export function SettingsPage() {
               enableWidget: formData.enableWidget,
               address: formData.address,
               registrationPage: formData.registrationPage,
+              requireManualApproval: formData.requireManualApproval,
             }}
             errors={errors}
             canEdit={canEdit}

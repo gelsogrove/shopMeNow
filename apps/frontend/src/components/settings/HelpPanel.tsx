@@ -15,34 +15,28 @@ interface HelpPanelProps {
 // Available template variables for prompts and messages
 // CRITICAL: Variables differ by channel type
 const AVAILABLE_VARIABLES = [
-  // ══════════════════════════════════════════════════════════════
-  // ALWAYS AVAILABLE (both informational and ecommerce)
-  // ══════════════════════════════════════════════════════════════
-  { variable: "{{customerName}}", description: "Customer name", alwaysAvailable: true },
-  { variable: "{{customerEmail}}", description: "Customer email", alwaysAvailable: true },
-  { variable: "{{customerPhone}}", description: "Customer phone", alwaysAvailable: true },
-  { variable: "{{languageUser}}", description: "Customer language", alwaysAvailable: true },
-  { variable: "{{companyName}}", description: "Company name", alwaysAvailable: true },
-  { variable: "{{chatbotName}}", description: "Chatbot name", alwaysAvailable: true },
-  { variable: "{{address}}", description: "Company address", alwaysAvailable: true },
-  { variable: "{{websiteUrl}}", description: "Website URL", alwaysAvailable: true },
-  { variable: "{{supportEmail}}", description: "Support email", alwaysAvailable: true },
-  { variable: "{{agentName}}", description: "Sales agent name", alwaysAvailable: true },
-  { variable: "{{agentPhone}}", description: "Sales agent phone", alwaysAvailable: true },
-  { variable: "{{agentEmail}}", description: "Sales agent email", alwaysAvailable: true },
+  // Always available (both informational and ecommerce)
+  { variable: "{{customerName}}", alwaysAvailable: true },
+  { variable: "{{customerEmail}}", alwaysAvailable: true },
+  { variable: "{{customerPhone}}", alwaysAvailable: true },
+  { variable: "{{languageUser}}", alwaysAvailable: true },
+  { variable: "{{companyName}}", alwaysAvailable: true },
+  { variable: "{{chatbotName}}", alwaysAvailable: true },
+  { variable: "{{address}}", alwaysAvailable: true },
+  { variable: "{{websiteUrl}}", alwaysAvailable: true },
+  { variable: "{{supportEmail}}", alwaysAvailable: true },
+  { variable: "{{agentName}}", alwaysAvailable: true },
+  { variable: "{{agentPhone}}", alwaysAvailable: true },
+  { variable: "{{agentEmail}}", alwaysAvailable: true },
   
-  // ══════════════════════════════════════════════════════════════
-  // ECOMMERCE ONLY (sellsProductsAndServices=true)
-  // ══════════════════════════════════════════════════════════════
-  { variable: "{{categories}}", description: "Product categories (large)", ecommerceOnly: true },
-  { variable: "{{offers}}", description: "Active offers (large)", ecommerceOnly: true },
-  { variable: "{{cartContents}}", description: "Current cart items", ecommerceOnly: true },
-  { variable: "{{lastOrderCode}}", description: "Last order code", ecommerceOnly: true },
+  // Ecommerce only (sellsProductsAndServices=true)
+  { variable: "{{categories}}", ecommerceOnly: true },
+  { variable: "{{offers}}", ecommerceOnly: true },
+  { variable: "{{cartContents}}", ecommerceOnly: true },
+  { variable: "{{lastOrderCode}}", ecommerceOnly: true },
   
-  // ══════════════════════════════════════════════════════════════
-  // INFORMATIONAL ONLY (sellsProductsAndServices=false)
-  // ══════════════════════════════════════════════════════════════
-  { variable: "{{faqs}}", description: "Frequently Asked Questions (large)", informationalOnly: true },
+  // Informational only (sellsProductsAndServices=false)
+  { variable: "{{faqs}}", informationalOnly: true },
 ]
 
 export function HelpPanel({ title, description, examples, tips, showVariables, sellsProductsAndServices }: HelpPanelProps) {
@@ -99,32 +93,19 @@ export function HelpPanel({ title, description, examples, tips, showVariables, s
       {showVariables && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-3">
-            📝 Available Variables {!sellsProductsAndServices && <span className="text-amber-600">(E-commerce OFF)</span>}
+            📝 Available Variables
           </p>
-          <div className="grid grid-cols-1 gap-2">
-            {availableVariables.map(({ variable, description: desc, ecommerceOnly }) => (
-              <div key={variable} className="flex items-center gap-2 text-sm">
-                <code className="bg-blue-100 px-2 py-0.5 rounded text-blue-800 font-mono text-xs">
-                  {variable}
-                </code>
-                <span className="text-gray-600 text-xs flex-1">{desc}</span>
-                {ecommerceOnly && (
-                  <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
-                    🛒 E-COM
-                  </span>
-                )}
-              </div>
+          <div className="flex flex-wrap gap-2">
+            {availableVariables.map(({ variable }) => (
+              <code key={variable} className="bg-blue-100 px-2 py-1 rounded text-blue-800 font-mono text-xs">
+                {variable}
+              </code>
             ))}
           </div>
-          <div className="mt-3 pt-3 border-t border-blue-200 space-y-2">
+          <div className="mt-3 pt-3 border-t border-blue-200">
             <p className="text-xs text-blue-700">
               💡 Use these in Welcome Message, Custom Rules, and Bot Identity fields
             </p>
-            {sellsProductsAndServices && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-                ⚠️ <strong>E-commerce variables</strong> (marked with 🛒) require <strong>Enable E-commerce to be ON</strong>. If disabled later, these variables will become empty in prompts.
-              </p>
-            )}
           </div>
         </div>
       )}
@@ -230,6 +211,22 @@ export const HELP_CONTENT: Record<string, HelpPanelProps> = {
       "Use this if you have a custom registration flow",
       "Token is appended as ?token=xxx for authentication",
       "If URL already has query params, token is added with &token=xxx",
+    ],
+  },
+  requireManualApproval: {
+    title: "Require Manual Approval",
+    description:
+      "When enabled, new customers who complete registration will be placed in 'Pending Approval' status. " +
+      "An administrator must manually approve them before they gain full access to the system.",
+    examples: [
+      "Enabled: Customer registers → Status: PENDING_APPROVAL → Admin approves → Status: ACTIVE",
+      "Disabled (default): Customer registers → Status: ACTIVE (immediate access)",
+    ],
+    tips: [
+      "Use this for B2B scenarios where customer vetting is required",
+      "Pending customers will see 'awaiting approval' message instead of registration link",
+      "Admins can approve customers from the Customers page",
+      "Welcome messages are only sent after approval",
     ],
   },
   businessEmail: {

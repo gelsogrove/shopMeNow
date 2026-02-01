@@ -575,7 +575,7 @@ export function AgentFlowDiagram({
               ? "bg-green-100 text-green-700"
               : "bg-blue-100 text-blue-700"
           )}>
-            {sellsProductsAndServices ? "🛒 E-commerce Mode" : "ℹ️ Informational Mode"}
+            {sellsProductsAndServices ? "🛒 E-commerce Mode" : "ℹ️ Info-only mode"}
           </span>
           <Button
             variant="outline"
@@ -619,6 +619,9 @@ export function AgentFlowDiagram({
           onClick={() => handleAgentClick("ROUTER")}
           size="large"
         />
+        {!sellsProductsAndServices && (
+          <span className="sr-only">Router Agent</span>
+        )}
         
         <ConnectorArrow />
         
@@ -706,25 +709,31 @@ export function AgentFlowDiagram({
         <ConnectorArrow />
         
         {/* Conversation History */}
-        <AgentNode
-          agent={getAgent("CONVERSATION_HISTORY")}
-          metadata={AGENT_METADATA.CONVERSATION_HISTORY}
-          isEditable={true}
-          isActive={true}
-          onClick={() => handleAgentClick("CONVERSATION_HISTORY")}
-          size="normal"
-        />
+        <div className="flex flex-col items-center gap-1">
+          <AgentNode
+            agent={getAgent("CONVERSATION_HISTORY")}
+            metadata={AGENT_METADATA.CONVERSATION_HISTORY}
+            isEditable={true}
+            isActive={true}
+            onClick={() => handleAgentClick("CONVERSATION_HISTORY")}
+            size="normal"
+          />
+          <span className="text-xs text-amber-700">Humanization layer</span>
+        </div>
         
         <ConnectorArrow />
         
         {/* Safety + Translation (HARDCODED) */}
-        <AgentNode
-          metadata={AGENT_METADATA.TRANSLATION}
-          isEditable={false}
-          isActive={true}
-          onClick={() => handleAgentClick("TRANSLATION")}
-          size="normal"
-        />
+        <div className="flex flex-col items-center gap-1">
+          <AgentNode
+            metadata={AGENT_METADATA.TRANSLATION}
+            isEditable={false}
+            isActive={true}
+            onClick={() => handleAgentClick("TRANSLATION")}
+            size="normal"
+          />
+          <span className="text-xs text-amber-700">Hardcoded (Widget only)</span>
+        </div>
         
         <ConnectorArrow />
         
@@ -734,6 +743,14 @@ export function AgentFlowDiagram({
           <span className="font-medium">Response to Customer</span>
         </div>
         
+      </div>
+
+      {/* Legend */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600">
+        <span>Click to edit</span>
+        <span>Hardcoded (read-only)</span>
+        <span>E-commerce only</span>
+        <span>Widget only</span>
       </div>
 
       {/* Enterprise Message */}

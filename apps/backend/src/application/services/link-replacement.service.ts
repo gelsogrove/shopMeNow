@@ -386,16 +386,31 @@ export class LinkReplacementService {
         try {
           const customer = await prisma.customers.findFirst({
             where: { id: customerId, workspaceId },
-            select: { phone: true, isActive: true },
+            select: { phone: true, isActive: true, registrationStatus: true },
           })
 
-          if (customer?.isActive) {
-            // Registered users don't need registration links
+          // Use registrationStatus for 3-state logic:
+          // - ACTIVE: User is fully activated, remove registration link
+          // - PENDING_APPROVAL: User registered but awaiting admin approval
+          // - NEW (default): User never registered, show registration link
+          const status = customer?.registrationStatus || "NEW"
+
+          if (status === "ACTIVE" || customer?.isActive) {
+            // Registered and activated users don't need registration links
             replacedResponse = replacedResponse
               .replace(/\[([^\]]+)\]\(\[LINK_REGISTRATION\]\)/g, "$1")
               .replace(/\[([^\]]+)\]\(LINK_REGISTRATION\)/g, "$1")
               .replace(/\[LINK_REGISTRATION\]/g, "")
               .replace(/LINK_REGISTRATION/g, "")
+          } else if (status === "PENDING_APPROVAL") {
+            // User registered but waiting for admin approval
+            // Replace registration link token with pending message
+            const pendingMessage = "⏳ La tua registrazione è in attesa di approvazione. Ti contatteremo presto!"
+            replacedResponse = replacedResponse
+              .replace(/\[([^\]]+)\]\(\[LINK_REGISTRATION\]\)/g, pendingMessage)
+              .replace(/\[([^\]]+)\]\(LINK_REGISTRATION\)/g, pendingMessage)
+              .replace(/\[LINK_REGISTRATION\]/g, pendingMessage)
+              .replace(/LINK_REGISTRATION/g, pendingMessage)
           } else if (customer?.phone) {
             const tokenService = new TokenService()
             const token = await tokenService.createRegistrationToken(

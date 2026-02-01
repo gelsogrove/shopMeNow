@@ -45,6 +45,12 @@ export const customersRouter = (controller: CustomersController): Router => {
     controller.unblockCustomer.bind(controller)
   )
 
+  // 🆕 Approve customer registration (for requireManualApproval workspaces)
+  router.post(
+    "/:workspaceId/customers/:id/approve",
+    controller.approveCustomer.bind(controller)
+  )
+
   // Endpoint alternativo che supporta anche 'bloc' (senza 'k')
   router.post(
     "/:workspaceId/customers/:id/bloc",
@@ -121,6 +127,12 @@ export const workspaceCustomersRouter = (
   router.post(
     "/:workspaceId/customers/:id/unblock",
     controller.unblockCustomer.bind(controller)
+  )
+
+  // 🆕 Approve customer registration (for requireManualApproval workspaces)
+  router.post(
+    "/:workspaceId/customers/:id/approve",
+    controller.approveCustomer.bind(controller)
   )
 
   // Endpoint alternativo che supporta anche 'bloc' (senza 'k')

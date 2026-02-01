@@ -494,6 +494,27 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         whatsappVerifyToken = trimmedToken.length > 0 ? trimmedToken : undefined
       }
 
+      const normalizeWhatsAppField = (value?: string | null): string | undefined => {
+        if (value === undefined || value === null) return undefined
+        const trimmed = String(value).trim()
+        return trimmed.length > 0 ? trimmed : undefined
+      }
+
+      const incomingPhoneNumber = normalizeWhatsAppField(
+        dbData.whatsappPhoneNumber ?? data.whatsappPhoneNumber
+      )
+      const incomingApiKey = normalizeWhatsAppField(
+        dbData.whatsappApiKey ?? data.whatsappApiToken
+      )
+      const existingPhoneNumber = normalizeWhatsAppField(
+        existingWorkspace.whatsappSettings?.phoneNumber || existingWorkspace.whatsappPhoneNumber
+      )
+      const existingApiKey = normalizeWhatsAppField(
+        existingWorkspace.whatsappSettings?.apiKey || existingWorkspace.whatsappApiKey
+      )
+      const resolvedPhoneNumber = incomingPhoneNumber ?? existingPhoneNumber
+      const resolvedApiKey = incomingApiKey ?? existingApiKey
+
       // 🔥 REMOVE DEPRECATED FIELDS: whatsappWebhookId and whatsappWebhookToken
       // These fields only exist in WhatsappSettings, NOT in Workspace model
       if (dbData.whatsappWebhookId !== undefined) {
@@ -554,7 +575,9 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       const shouldUpsertWhatsAppSettings =
         adminEmail !== undefined ||
         whatsappAppSecret !== undefined ||
-        whatsappVerifyToken !== undefined
+        whatsappVerifyToken !== undefined ||
+        incomingPhoneNumber !== undefined ||
+        incomingApiKey !== undefined
 
       const prismaUpdateData: any = {
         ...dbData,
@@ -563,14 +586,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           whatsappSettings: {
             upsert: {
               create: {
-                phoneNumber:
-                  data.whatsappPhoneNumber ||
-                  dbData.whatsappPhoneNumber ||
-                  "placeholder",
-                apiKey:
-                  dbData.whatsappApiKey ||
-                  data.whatsappApiToken ||
-                  "placeholder",
+                phoneNumber: resolvedPhoneNumber || "placeholder",
+                apiKey: resolvedApiKey || "placeholder",
                 webhookId: crypto.randomUUID(), // Generate unique webhook ID
                 webhookToken:
                   whatsappVerifyToken || crypto.randomUUID(), // Generate or use provided token
@@ -580,9 +597,10 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
                   : {}),
               },
               update: {
-                phoneNumber:
-                  data.whatsappPhoneNumber || dbData.whatsappPhoneNumber,
-                apiKey: dbData.whatsappApiKey || data.whatsappApiToken,
+                ...(resolvedPhoneNumber !== undefined
+                  ? { phoneNumber: resolvedPhoneNumber }
+                  : {}),
+                ...(resolvedApiKey !== undefined ? { apiKey: resolvedApiKey } : {}),
                 ...(adminEmail !== undefined ? { adminEmail } : {}),
                 ...(whatsappAppSecret !== undefined
                   ? { appSecret: whatsappAppSecret }

@@ -444,4 +444,113 @@ describe("LinkReplacementService - Token Replacement", () => {
       // So we just verify token was removed (replacement happened)
     })
   })
+
+  describe("Registration Status - 3-State System", () => {
+    /**
+     * 🆕 Feature: 3-state registration system
+     * - NEW: Customer never registered → Show registration link
+     * - PENDING_APPROVAL: Registered but awaiting admin → Show pending message
+     * - ACTIVE: Fully activated → Remove registration link
+     */
+
+    it("should show registration link for NEW customers (registrationStatus=NEW)", async () => {
+      // SCENARIO: Customer with NEW status should see registration link
+      // RULE: Generate and show the [LINK_REGISTRATION] replacement
+      prismaMock.customers.findFirst.mockResolvedValue({
+        phone: "+393331234567",
+        isActive: false,
+        registrationStatus: "NEW",
+      })
+
+      const params: ReplaceLinkWithTokenParams = {
+        response: "Per iniziare: [LINK_REGISTRATION]",
+      }
+
+      const result = await service.replaceTokens(params, mockCustomerId, mockWorkspaceId)
+
+      expect(result.success).toBe(true)
+      expect(result.response).toContain("https://example.com/s/reg123")
+      expect(result.response).not.toContain("[LINK_REGISTRATION]")
+    })
+
+    it("should show pending message for PENDING_APPROVAL customers", async () => {
+      // SCENARIO: Customer registered but awaiting admin approval
+      // RULE: Replace [LINK_REGISTRATION] with pending approval message
+      prismaMock.customers.findFirst.mockResolvedValue({
+        phone: "+393331234567",
+        isActive: false,
+        registrationStatus: "PENDING_APPROVAL",
+      })
+
+      const params: ReplaceLinkWithTokenParams = {
+        response: "Per iniziare: [LINK_REGISTRATION]",
+      }
+
+      const result = await service.replaceTokens(params, mockCustomerId, mockWorkspaceId)
+
+      expect(result.success).toBe(true)
+      expect(result.response).toContain("attesa di approvazione")
+      expect(result.response).not.toContain("[LINK_REGISTRATION]")
+      expect(result.response).not.toContain("https://") // No link, just message
+    })
+
+    it("should remove registration link for ACTIVE customers (registrationStatus=ACTIVE)", async () => {
+      // SCENARIO: Customer with ACTIVE status (fully registered)
+      // RULE: Remove the registration link entirely
+      prismaMock.customers.findFirst.mockResolvedValue({
+        phone: "+393331234567",
+        isActive: true,
+        registrationStatus: "ACTIVE",
+      })
+
+      const params: ReplaceLinkWithTokenParams = {
+        response: "Per iniziare: [LINK_REGISTRATION]",
+      }
+
+      const result = await service.replaceTokens(params, mockCustomerId, mockWorkspaceId)
+
+      expect(result.success).toBe(true)
+      expect(result.response).not.toContain("[LINK_REGISTRATION]")
+      expect(result.response).not.toContain("https://example.com/s/reg123")
+    })
+
+    it("should handle legacy isActive=true without registrationStatus", async () => {
+      // SCENARIO: Backward compatibility - old customer with only isActive
+      // RULE: isActive=true should be treated as ACTIVE
+      prismaMock.customers.findFirst.mockResolvedValue({
+        phone: "+393331234567",
+        isActive: true,
+        registrationStatus: undefined, // Legacy customer without new field
+      })
+
+      const params: ReplaceLinkWithTokenParams = {
+        response: "Registrati: [LINK_REGISTRATION]",
+      }
+
+      const result = await service.replaceTokens(params, mockCustomerId, mockWorkspaceId)
+
+      expect(result.success).toBe(true)
+      expect(result.response).not.toContain("[LINK_REGISTRATION]")
+      // Should treat as ACTIVE due to isActive=true
+    })
+
+    it("should default to NEW when registrationStatus is undefined and isActive=false", async () => {
+      // SCENARIO: Customer without registrationStatus field and isActive=false
+      // RULE: Treat as NEW customer, show registration link
+      prismaMock.customers.findFirst.mockResolvedValue({
+        phone: "+393331234567",
+        isActive: false,
+        registrationStatus: undefined,
+      })
+
+      const params: ReplaceLinkWithTokenParams = {
+        response: "Registrati qui: [LINK_REGISTRATION]",
+      }
+
+      const result = await service.replaceTokens(params, mockCustomerId, mockWorkspaceId)
+
+      expect(result.success).toBe(true)
+      expect(result.response).toContain("https://example.com/s/reg123")
+    })
+  })
 })

@@ -25,6 +25,8 @@ import { useQuery } from "@tanstack/react-query"
 import {
   Ban,
   Bot,
+  CheckCircle,
+  Clock,
   MessageSquare,
   Pencil,
   Phone,
@@ -59,6 +61,9 @@ export interface InvoiceAddress {
   phone?: string
 }
 
+// Registration status enum (must match backend Prisma enum)
+export type RegistrationStatus = 'NEW' | 'PENDING_APPROVAL' | 'ACTIVE'
+
 export interface Client {
   id: string
   name: string
@@ -78,6 +83,7 @@ export interface Client {
   invoiceAddress?: InvoiceAddress
   isBlacklisted?: boolean
   isActive?: boolean // 🚨 CRITICAL: Campo per rilevare account activation (era 'enabled')
+  registrationStatus?: RegistrationStatus // Registration workflow status
   feedback?: {
     rating: number
     comment?: string
@@ -230,6 +236,7 @@ export default function ClientsPage(): JSX.Element {
         invoiceAddress: customer.invoiceAddress || undefined,
         isBlacklisted: customer.isBlacklisted || false,
         isActive: customer.isActive !== undefined ? customer.isActive : true, // 🚨 CRITICAL: Campo per rilevare account activation
+        registrationStatus: customer.registrationStatus || 'ACTIVE', // Default to ACTIVE for existing customers
         feedback:
           customer.feedbacks && customer.feedbacks.length > 0
             ? {
@@ -522,6 +529,22 @@ export default function ClientsPage(): JSX.Element {
     setShowDeleteDialog(true)
   }
 
+  // Handle approve client (PENDING_APPROVAL -> ACTIVE)
+  const handleApprove = async (client: Client) => {
+    if (!workspace?.id) return
+
+    try {
+      await api.post(
+        `/workspaces/${workspace.id}/customers/${client.id}/approve`
+      )
+      await refetchClients()
+      toast.success(`${client.name || 'Client'} approved successfully!`)
+    } catch (error: any) {
+      logger.error("Error approving client:", error)
+      toast.error(error.response?.data?.error || "Failed to approve client")
+    }
+  }
+
   // Handle confirm delete
   const handleConfirmDelete = async () => {
     if (!workspace?.id || !clientToDelete) return
@@ -721,7 +744,13 @@ export default function ClientsPage(): JSX.Element {
                         </div>
                       </div>
                       {/* Status badges */}
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 flex-wrap">
+                        {client.registrationStatus === 'PENDING_APPROVAL' && (
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Pending
+                          </span>
+                        )}
                         {client.isBlacklisted && (
                           <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 flex items-center gap-1">
                             <Ban className="h-3 w-3" />
@@ -765,6 +794,28 @@ export default function ClientsPage(): JSX.Element {
 
                     {/* Action buttons */}
                     <div className="flex items-center justify-end gap-1 pt-3 border-t border-gray-100">
+                      {/* Approve button - only for PENDING_APPROVAL clients */}
+                      {client.registrationStatus === 'PENDING_APPROVAL' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-green-50"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleApprove(client)
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Approve</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>

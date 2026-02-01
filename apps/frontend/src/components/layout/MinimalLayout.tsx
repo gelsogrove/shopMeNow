@@ -306,6 +306,10 @@ export function MinimalLayout() {
                         <HelpCircle className="mr-2 h-4 w-4 text-amber-500" />
                         <span>FAQ</span>
                       </DropdownMenuItem>
+                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/agents")}>
+                        <Bot className="mr-2 h-4 w-4 text-purple-500" />
+                        <span>Agents Configuration</span>
+                      </DropdownMenuItem>
                       {workspace?.sellsProductsAndServices && (
                         <>
                           <DropdownMenuSeparator />
