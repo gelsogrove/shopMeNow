@@ -774,14 +774,8 @@ export class CustomersController {
           workspaceId,
           customerId: customer.id,
           phoneNumber: customer.phone,
-          message,
+          messageContent: message,
           status: "PENDING",
-          priority: 1, // High priority for approval messages
-          metadata: {
-            type: "APPROVAL_MESSAGE",
-            customerName: customer.name,
-            approvedAt: new Date().toISOString(),
-          },
         },
       })
 

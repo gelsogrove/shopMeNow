@@ -420,7 +420,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
    */
   private buildPreservationRules(settings: TranslationSettings): string {
     const rules: string[] = []
-    const baseLanguageName = this.getLanguageName(settings.catalogBaseLanguage)
+    const baseLanguageName = getLanguageName(settings.catalogBaseLanguage)
 
     // Product names
     if (!settings.translateProductNames) {

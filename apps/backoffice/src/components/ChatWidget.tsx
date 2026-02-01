@@ -91,7 +91,8 @@ export function ChatWidget({
   const [isLoading, setIsLoading] = useState(false)
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [showBalloon, setShowBalloon] = useState(true) // 🎈 Always show balloon initially
+  const [showBalloon, setShowBalloon] = useState(false)
+  const [balloonDismissed, setBalloonDismissed] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Check if balloon was previously closed
@@ -99,6 +100,7 @@ export function ChatWidget({
     if (resolvedWorkspaceId) {
       const balloonClosed = localStorage.getItem(`echatbot-balloon-closed:${resolvedWorkspaceId}`)
       if (balloonClosed === 'true') {
+        setBalloonDismissed(true)
         setShowBalloon(false)
       }
     }
@@ -107,6 +109,7 @@ export function ChatWidget({
   // Close balloon permanently
   const closeBalloon = () => {
     setShowBalloon(false)
+    setBalloonDismissed(true)
     if (resolvedWorkspaceId) {
       localStorage.setItem(`echatbot-balloon-closed:${resolvedWorkspaceId}`, 'true')
     }
@@ -363,7 +366,7 @@ export function ChatWidget({
                 <button
                   onClick={closeBalloon}
                   className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-all"
-                  aria-label="Close"
+                  aria-label="Close tooltip"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -377,7 +380,7 @@ export function ChatWidget({
                     fontWeight: "500 !important"
                   }}
                 >
-                  👋 How can I help you today?
+                  {getTooltipText(language || "en")}
                 </p>
                 
                 {/* Triangolo che punta al cerchio */}
@@ -399,6 +402,14 @@ export function ChatWidget({
               setIsOpen(true)
               closeBalloon()
               onOpenChange?.(true)
+            }}
+            onMouseEnter={() => {
+              if (!balloonDismissed && !isOpen) {
+                setShowBalloon(true)
+              }
+            }}
+            onMouseLeave={() => {
+              setShowBalloon(false)
             }}
             className="rounded-full p-0 shadow-2xl group flex items-center justify-center transition-all duration-200 ease-out hover:scale-110 active:scale-95 focus:outline-none relative"
             style={{

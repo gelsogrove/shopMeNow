@@ -77,6 +77,14 @@ If a message includes a timestamp, messages older than **5 minutes** are rejecte
 
 ---
 
+## Configuration Source & Sync (whatsapp_settings ↔ workspace)
+- **Primary source**: `whatsapp_settings` (phoneNumber, apiKey, appSecret, webhookId, webhookToken, webhookUrl, adminEmail).
+- **Legacy columns**: `workspace.whatsappPhoneNumber` / `workspace.whatsappApiKey` (and `workspace.webhookUrl`) still exist for backward compatibility.
+- **Sync behavior**: backend update flow **upserts** `whatsapp_settings` and mirrors phone/apiKey back to `workspace` so older services keep working.
+- **Migration note**: if a workspace only has data in `whatsapp_settings`, open Settings and save once to sync legacy fields (or run a backfill).
+
+---
+
 ## Customer Name Capture
 If Meta includes `contacts[0].profile.name`, the system updates the customer name (only when missing or default "New Customer").
 
@@ -87,6 +95,7 @@ All outbound WhatsApp messages go through `MessageSendingService`:
 - Applies **security layer** when required
 - Enqueues to **WhatsApp Queue** (scheduler handles delivery)
 - Admin manual sends can **skip security layer** explicitly
+- Admin manual sends convert **Markdown → WhatsApp** formatting before enqueueing; DB stores the original markdown.
 
 ---
 

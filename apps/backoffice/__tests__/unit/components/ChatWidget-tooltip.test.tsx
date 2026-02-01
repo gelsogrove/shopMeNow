@@ -20,6 +20,10 @@ describe("ChatWidget Tooltip Feature", () => {
     debugMode: false,
   }
 
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   describe("Tooltip Display", () => {
     it("should show tooltip on button hover", async () => {
       render(<ChatWidget {...defaultProps} language="en" />)

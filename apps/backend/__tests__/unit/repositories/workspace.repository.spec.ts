@@ -73,4 +73,40 @@ describe("WorkspaceRepository", () => {
       })
     )
   })
+
+  it("should prefer whatsappSettings for WhatsApp credentials", async () => {
+    const settings = {
+      phoneNumber: "+1234567890",
+      apiKey: "settings-api-key",
+      appSecret: "settings-secret",
+      webhookId: "wh-id",
+      webhookToken: "wh-token",
+      webhookUrl: "https://example.com/webhook",
+      adminEmail: "admin@example.com",
+    }
+
+    const workspace = buildWorkspace({
+      id: "ws-1",
+      whatsappPhoneNumber: "+9999999999",
+      whatsappApiKey: "workspace-api-key",
+      webhookUrl: "https://legacy.example.com/webhook",
+      whatsappSettings: settings,
+      agentConfigs: [],
+    })
+
+    const mockPrisma = {
+      workspace: {
+        findUnique: jest.fn().mockResolvedValue(workspace),
+      },
+    } as unknown as PrismaClient
+
+    const repository = new WorkspaceRepository(mockPrisma)
+    const result = await repository.findById("ws-1")
+
+    expect(result?.whatsappPhoneNumber).toBe(settings.phoneNumber)
+    expect(result?.whatsappApiKey).toBe(settings.apiKey)
+    expect(result?.whatsappWebhookUrl).toBe(settings.webhookUrl)
+    expect(result?.whatsappVerifyToken).toBe(settings.webhookToken)
+    expect(result?.adminEmail).toBe(settings.adminEmail)
+  })
 })

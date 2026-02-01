@@ -22,7 +22,7 @@ import { AgentType, PrismaClient, Workspace } from "@echatbot/database"
 import logger from "../utils/logger"
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
-import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
+import { SafetyTranslationAgent, type SafetyResult } from "../application/agents/SafetyTranslationAgent"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
 
 export class InformationalWorkspaceStrategy implements RoutingStrategy {
@@ -117,7 +117,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
 
       // 🔒 STEP 2: Safety + Translation (ONLY for Widget)
       // 🔧 WhatsApp: Skip SafetyTranslationAgent - scheduler handles security + translation
-      let safetyResult = {
+      let safetyResult: SafetyResult = {
         safe: true,
         translatedText: linkReplacedResponse.response || agentResponse.output,
         tokensUsed: 0,

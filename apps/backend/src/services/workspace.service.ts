@@ -83,7 +83,7 @@ interface UpdateWorkspaceData {
 
 export const workspaceService = {
   async getAll() {
-    return prisma.workspace.findMany({
+    const workspaces = await prisma.workspace.findMany({
       where: {
         deletedAt: null,
       },
@@ -106,6 +106,7 @@ export const workspaceService = {
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
+        webhookUrl: true,
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199)
@@ -133,7 +134,33 @@ export const workspaceService = {
         translateCategoryNames: true,
         translateServiceNames: true,
         catalogBaseLanguage: true,
+        whatsappSettings: {
+          select: {
+            phoneNumber: true,
+            apiKey: true,
+            appSecret: true,
+            webhookId: true,
+            webhookToken: true,
+            webhookUrl: true,
+            adminEmail: true,
+          },
+        },
       },
+    })
+
+    return workspaces.map((workspace) => {
+      const settings = (workspace as any).whatsappSettings
+      return {
+        ...workspace,
+        whatsappPhoneNumber: settings?.phoneNumber ?? workspace.whatsappPhoneNumber,
+        whatsappApiKey: settings?.apiKey ?? workspace.whatsappApiKey,
+        whatsappAppSecret: settings?.appSecret ?? null,
+        whatsappWebhookId: settings?.webhookId ?? null,
+        whatsappWebhookToken: settings?.webhookToken ?? null,
+        whatsappWebhookUrl: settings?.webhookUrl ?? workspace.webhookUrl ?? null,
+        whatsappVerifyToken: settings?.webhookToken ?? workspace.whatsappVerifyToken ?? null,
+        adminEmail: settings?.adminEmail ?? null,
+      }
     })
   },
 
@@ -161,6 +188,7 @@ export const workspaceService = {
         wipMessage: true,
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
+        webhookUrl: true,
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199)
@@ -188,6 +216,17 @@ export const workspaceService = {
         translateCategoryNames: true,
         translateServiceNames: true,
         catalogBaseLanguage: true,
+        whatsappSettings: {
+          select: {
+            phoneNumber: true,
+            apiKey: true,
+            appSecret: true,
+            webhookId: true,
+            webhookToken: true,
+            webhookUrl: true,
+            adminEmail: true,
+          },
+        },
       },
     })
 
@@ -229,6 +268,14 @@ export const workspaceService = {
     // 3. Combina i risultati
     return {
       ...workspace,
+      whatsappPhoneNumber: workspace.whatsappSettings?.phoneNumber ?? workspace.whatsappPhoneNumber,
+      whatsappApiKey: workspace.whatsappSettings?.apiKey ?? workspace.whatsappApiKey,
+      whatsappAppSecret: workspace.whatsappSettings?.appSecret ?? null,
+      whatsappWebhookId: workspace.whatsappSettings?.webhookId ?? null,
+      whatsappWebhookToken: workspace.whatsappSettings?.webhookToken ?? null,
+      whatsappWebhookUrl: workspace.whatsappSettings?.webhookUrl ?? workspace.webhookUrl ?? null,
+      whatsappVerifyToken: workspace.whatsappSettings?.webhookToken ?? workspace.whatsappVerifyToken ?? null,
+      adminEmail: workspace.whatsappSettings?.adminEmail ?? null,
       agentConfigs,
     }
   },

@@ -19,16 +19,22 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       name: data.name,
       slug: data.slug,
       description: data.description,
-      whatsappPhoneNumber: data.whatsappPhoneNumber,
-      whatsappApiKey: data.whatsappApiKey, // ✅ FIX: Use whatsappApiKey (new field name)
-      whatsappApiToken: data.whatsappApiKey, // ✅ LEGACY: Keep for backward compatibility
+      whatsappPhoneNumber:
+        data.whatsappSettings?.phoneNumber ?? data.whatsappPhoneNumber,
+      whatsappApiKey:
+        data.whatsappSettings?.apiKey ?? data.whatsappApiKey, // ✅ FIX: Use whatsappApiKey (new field name)
+      whatsappApiToken:
+        data.whatsappSettings?.apiKey ?? data.whatsappApiKey, // ✅ LEGACY: Keep for backward compatibility
       whatsappPhoneNumberId: data.whatsappPhoneNumberId ?? null,
       whatsappVerifyToken:
         data.whatsappSettings?.webhookToken ?? data.whatsappVerifyToken ?? null,
       whatsappAppSecret: data.whatsappSettings?.appSecret ?? null,
       whatsappWebhookId: data.whatsappSettings?.webhookId ?? null,
       whatsappWebhookToken: data.whatsappSettings?.webhookToken ?? null,
-      whatsappWebhookUrl: data.whatsappWebhookUrl,
+      whatsappWebhookUrl:
+        data.whatsappSettings?.webhookUrl ??
+        data.whatsappWebhookUrl ??
+        data.webhookUrl,
       webhookUrl: data.webhookUrl,
       notificationEmail: data.notificationEmail,
       language: data.language,

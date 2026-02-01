@@ -52,7 +52,7 @@ describe('Translation Service', () => {
       const { TranslationService } = require('../src/services/translation.service')
       new TranslationService()
       
-      expect(mockLogger.info).toHaveBeenCalledWith('✅ [TRANSLATION] Service initialized')
+      expect(mockLogger.info).toHaveBeenCalledWith('✅ [TRANSLATION] Service initialized (shared prompt)')
     })
 
     it('should warn if API key is missing', () => {

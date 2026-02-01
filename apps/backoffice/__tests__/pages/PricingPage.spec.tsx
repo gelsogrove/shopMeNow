@@ -51,6 +51,10 @@ const mockConfig = {
 describe('PricingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    ;(api.getPlanConfigurations as Mock).mockResolvedValue({
+      success: true,
+      data: [],
+    })
   })
 
   describe('Loading State', () => {

@@ -146,6 +146,8 @@ export interface DebugStep {
     result?: any
     executionTimeMs?: number
     textContent?: string
+    skipped?: boolean
+    reason?: string
     translated?: boolean  // 🆕 For Translation Agent
   }
   duration?: number

@@ -43,7 +43,7 @@ import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAg
 import { OrderTrackingAgentLLM } from "../application/agents/OrderTrackingAgentLLM"
 import { ProductSearchAgentLLM } from "../application/agents/ProductSearchAgentLLM"
 import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
-import { SafetyTranslationAgent } from "../application/agents/SafetyTranslationAgent"
+import { SafetyTranslationAgent, type SafetyResult } from "../application/agents/SafetyTranslationAgent"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { ConversationHistoryLayer } from "../application/layers/ConversationHistoryLayer"
 import type { TechnicalResponseType, ActiveOffer, ConversationMessage } from "../application/layers/conversation-history-layer.types"
@@ -444,7 +444,7 @@ export class LLMRouterService {
 
         // Step 1: Translate with Safety & Translation Agent (ONLY for Widget)
         // 🔧 WhatsApp: Skip - scheduler handles security + translation
-        let safetyResult = {
+        let safetyResult: SafetyResult = {
           translatedText: params.message,
           safe: true,
           tokensUsed: 0,
@@ -602,8 +602,9 @@ export class LLMRouterService {
 
         // 🆕 Apply SafetyTranslationAgent to security message (ONLY for Widget)
         // 🔧 WhatsApp: Skip - scheduler handles security + translation
-        let securitySafetyResult = {
+        let securitySafetyResult: SafetyResult = {
           translatedText: securityCheck.message || "Security alert",
+          safe: true,
           tokensUsed: 0,
         }
         
@@ -741,8 +742,9 @@ export class LLMRouterService {
 
         // 🆕 Apply SafetyTranslationAgent to WIP message (ONLY for Widget)
         // 🔧 WhatsApp: Skip - scheduler handles security + translation
-        let wipSafetyResult = {
+        let wipSafetyResult: SafetyResult = {
           translatedText: wipMessage,
+          safe: true,
           tokensUsed: 0,
         }
         
@@ -1765,8 +1767,9 @@ export class LLMRouterService {
       // 🔧 Pass generic error message through Safety/Translation layer (ONLY for Widget)
       // 🔧 WhatsApp: Skip - scheduler handles security + translation
       const safetyTimestamp = new Date().toISOString()
-      let errorResponse = {
+      let errorResponse: SafetyResult = {
         translatedText: "System error - please try again",
+        safe: true,
         tokensUsed: 0,
         systemPrompt: undefined as string | undefined,
       }
@@ -3175,10 +3178,11 @@ export class LLMRouterService {
 
       // 🔒 STEP 2: Apply Safety & Translation Layer to response with links (ONLY for Widget)
       // 🔧 WhatsApp: Skip - scheduler handles security + translation
-      let safeResponse = {
+      let safeResponse: SafetyResult = {
         translatedText: responseWithLinks,
         safe: true,
         blockedReason: undefined as string | undefined,
+        tokensUsed: 0,
       }
       
       if (this.shouldApplySafetyTranslation(params.channel)) {
@@ -3473,8 +3477,10 @@ export class LLMRouterService {
 
       // Apply Safety & Translation (ONLY for Widget)
       // 🔧 WhatsApp: Skip - scheduler handles security + translation
-      let safeResponse = {
+      let safeResponse: SafetyResult = {
         translatedText: cartResponse.output,
+        safe: true,
+        tokensUsed: 0,
       }
       
       if (this.shouldApplySafetyTranslation(options.params.channel)) {
