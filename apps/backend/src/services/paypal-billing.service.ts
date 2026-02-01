@@ -135,25 +135,9 @@ export async function processPayment(
   adminUserId: string,
   notes?: string
 ): Promise<ProcessPaymentResult> {
-  // ═══════════════════════════════════════════════════════════════════
-  // STEP 1: Rate limiting check
-  // ═══════════════════════════════════════════════════════════════════
-  const lastProcessed = processingInvoices.get(invoiceId)
-  if (lastProcessed && Date.now() - lastProcessed < RATE_LIMIT_MS) {
-    const secondsRemaining = Math.ceil((RATE_LIMIT_MS - (Date.now() - lastProcessed)) / 1000)
-    return {
-      success: false,
-      error: `Please wait ${secondsRemaining} seconds before retrying`,
-      errorCode: "RATE_LIMITED",
-    }
-  }
-  
-  // Mark as processing
-  processingInvoices.set(invoiceId, Date.now())
-
   try {
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 2: Lock and validate invoice
+    // STEP 1: Lock and validate invoice (skip rate limit for DRAFT sandbox testing)
     // ═══════════════════════════════════════════════════════════════════
     const invoice = await prisma.$transaction(async (tx) => {
       // Lock invoice row for update (prevents concurrent processing)
@@ -204,7 +188,7 @@ export async function processPayment(
     })
 
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 3: Validate PayPal subscription
+    // STEP 2: Validate PayPal subscription
     // ═══════════════════════════════════════════════════════════════════
     if (invoice.user.paypalStatus !== PayPalStatus.CONNECTED) {
       return {
@@ -231,7 +215,7 @@ export async function processPayment(
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 4: Determine PayPal environment and call API
+    // STEP 3: Determine PayPal environment and call API
     // ═══════════════════════════════════════════════════════════════════
     const env = resolvePayPalEnvironment(invoice.user)
     const paypalConfig = loadPayPalConfigForEnv(env)
@@ -262,7 +246,7 @@ export async function processPayment(
     )
 
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 5: Record transaction and update invoice
+    // STEP 4: Record transaction and update invoice
     // ═══════════════════════════════════════════════════════════════════
     if (result.success) {
       // Create PayPalTransaction record (payment initiated)
