@@ -468,6 +468,8 @@ router.get(
           creditBalance: true,
           paymentFailureCount: true,
           lastPaymentFailedAt: true,
+          isPlatformAdmin: true,
+          isDeveloperUser: true,
         },
         orderBy: { createdAt: "asc" },
       })
@@ -490,6 +492,8 @@ router.get(
               creditBalance: Number(owner.creditBalance),
               paymentFailureCount: owner.paymentFailureCount ?? 0,
               lastPaymentFailedAt: owner.lastPaymentFailedAt ?? null,
+              isPlatformAdmin: owner.isPlatformAdmin ?? false,
+              isDeveloperUser: owner.isDeveloperUser ?? false,
             },
             invoice: {
               id: invoice.id,
@@ -1691,6 +1695,8 @@ router.get(
               creditBalance: true,
               paymentFailureCount: true,
               lastPaymentFailedAt: true,
+              isPlatformAdmin: true,
+              isDeveloperUser: true,
             },
           },
         },
@@ -1715,6 +1721,8 @@ router.get(
           creditBalance: Number(invoice.user?.creditBalance ?? 0),
           paymentFailureCount: invoice.user?.paymentFailureCount ?? 0,
           lastPaymentFailedAt: invoice.user?.lastPaymentFailedAt ?? null,
+          isPlatformAdmin: invoice.user?.isPlatformAdmin ?? false,
+          isDeveloperUser: invoice.user?.isDeveloperUser ?? false,
         },
         invoice: {
           id: updatedInvoice.id,
@@ -1787,6 +1795,8 @@ router.get(
               creditBalance: true,
               paymentFailureCount: true,
               lastPaymentFailedAt: true,
+              isPlatformAdmin: true,
+              isDeveloperUser: true,
             },
           },
         },
@@ -1811,6 +1821,8 @@ router.get(
             creditBalance: Number(invoice.user?.creditBalance ?? 0),
             paymentFailureCount: invoice.user?.paymentFailureCount ?? 0,
             lastPaymentFailedAt: invoice.user?.lastPaymentFailedAt ?? null,
+            isPlatformAdmin: invoice.user?.isPlatformAdmin ?? false,
+            isDeveloperUser: invoice.user?.isDeveloperUser ?? false,
           },
           invoice: {
             id: updatedInvoice.id,

@@ -26,6 +26,7 @@ export interface RoutingContext {
   conversationId?: string
   isSystemMessage?: boolean
   sessionId?: string
+  channel?: string // 🆕 'widget' | 'whatsapp' - determines SafetyTranslation behavior
 }
 
 /**

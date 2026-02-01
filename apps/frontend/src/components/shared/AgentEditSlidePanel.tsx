@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sheet"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
+import { HelpPanel } from "@/components/settings/HelpPanel"
 import { ChevronRight, Loader2, Save, Zap } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -83,6 +84,7 @@ interface AgentEditSlidePanelProps {
   onOpenChange: (open: boolean) => void
   onSave: (agent: Agent) => Promise<void>
   availableFunctions?: string[]
+  sellsProductsAndServices?: boolean // E-commerce toggle state - filters variables
 }
 
 export function AgentEditSlidePanel({
@@ -91,6 +93,7 @@ export function AgentEditSlidePanel({
   onOpenChange,
   onSave,
   availableFunctions = [],
+  sellsProductsAndServices = false,
 }: AgentEditSlidePanelProps) {
   const [formData, setFormData] = useState<Agent | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -281,6 +284,14 @@ export function AgentEditSlidePanel({
               </div>
             </div>
           )}
+
+          {/* Available Variables Section */}
+          <HelpPanel
+            title="Available Variables"
+            description={`Template variables you can use in ${formData.name} system prompt`}
+            showVariables={true}
+            sellsProductsAndServices={sellsProductsAndServices}
+          />
         </div>
 
         <SheetFooter className="gap-2">

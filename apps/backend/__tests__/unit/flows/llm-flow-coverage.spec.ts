@@ -290,31 +290,27 @@ describe("LLM Flow Coverage - Token Replacement Variations (Documentation)", () 
      * 
      * PURPOSE: Replace user-specific variables in CallingFunction responses
      * 
-     * VARIABLES:
-     * - {{nameUser}} or {{nome}} → Customer name
-     * - {{emailUser}} or {{email}} → Customer email
-     * - {{phoneUser}} or {{telefono}} → Customer phone
-     * - {{lastordercode}} → Last order code
+     * VARIABLES (English only - Italian variables removed):
+     * - {{nameUser}} → Customer name
      * - {{agentName}}, {{agentPhone}}, {{agentEmail}} → Workspace contact
+     * - {{adminEmail}} → Admin email
+     * - {{TOKEN_DURATION}} → Token expiration duration
      * 
      * CODE LOCATION:
-     * - apps/backend/src/application/chat-engine/chat-engine.service.ts:246-290
+     * - apps/backend/src/application/chat-engine/chat-engine.service.ts:277-400
      * - replaceUserVariables() private method
      * 
-     * REPLACEMENT PATTERN:
+     * NOTE: Old Italian variables ({{nome}}, {{email}}, {{telefono}}) are NO LONGER supported.
+     * Use English variables ({{customerName}}, {{customerEmail}}, {{customerPhone}}) in prompt templates instead.
      */
 
     const customerVariables = [
       "{{nameUser}}",
-      "{{nome}}",
-      "{{emailUser}}",
-      "{{email}}",
-      "{{phoneUser}}",
-      "{{telefono}}",
-      "{{lastordercode}}",
       "{{agentName}}",
       "{{agentPhone}}",
       "{{agentEmail}}",
+      "{{adminEmail}}",
+      "{{TOKEN_DURATION}}",
     ]
 
     customerVariables.forEach((variable) => {

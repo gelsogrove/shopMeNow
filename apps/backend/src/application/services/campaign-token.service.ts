@@ -19,8 +19,8 @@ export class CampaignTokenService {
    * Supported tokens:
    * - [FEEDBACK] → https://shop.com/feedback?token=xxx
    * - [ORDER_REVIEW] → https://shop.com/order-review?token=xxx
-   * - {{nome}} → Customer name
-   * - {{email}} → Customer email
+   * - {{customerName}} → Customer name
+   * - {{customerEmail}} → Customer email
    *
    * @param message Original message with tokens
    * @param customerId Customer ID for token generation

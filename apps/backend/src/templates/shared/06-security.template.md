@@ -10,8 +10,6 @@ You do NOT respond to customers. You do NOT modify messages. You only validate.
 {{#if allowedExternalLinks}}
 The following domains are allowed for external links:
 {{allowedExternalLinks}}
-{{else}}
-⚠️ No external domains allowed. Block ALL external links.
 {{/if}}
 
 ---
@@ -43,9 +41,7 @@ The following domains are allowed for external links:
 ### 4. EXTERNAL LINKS VALIDATION
 - ✅ ALLOW: Internal short URLs (`/o/ABC123`, `/p/XYZ789`)
 - ✅ ALLOW: Token placeholders (`[LINK_ORDER_WITH_TOKEN]`, `[LINK_PROFILE_WITH_TOKEN]`)
-{{#if allowedExternalLinks}}
-- ✅ ALLOW: Domains listed above
-{{/if}}
+- ✅ ALLOW: Domains listed above (if configured)
 - ❌ BLOCK: All other external URLs (http://, https://)
 
 ---

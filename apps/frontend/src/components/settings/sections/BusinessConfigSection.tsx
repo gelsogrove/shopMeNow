@@ -23,6 +23,11 @@ interface BusinessConfigSectionProps {
     url: string
     businessType: string
     currency: string
+    sellsProductsAndServices: boolean
+    enableWhatsapp: boolean
+    enableWidget: boolean
+    address: string
+    registrationPage: string
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -134,6 +139,33 @@ export function BusinessConfigSection({
               />
             </div>
 
+            {/* Physical Address */}
+            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("businessAddress")}>
+              <Label htmlFor="address">Physical Address</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => onFieldChange("address", e.target.value)}
+                placeholder="e.g. 123 Main Street, City, Country"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">Used when customers ask "Where are you located?"</p>
+            </div>
+
+            {/* Registration Page URL */}
+            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("registrationPage")}>
+              <Label htmlFor="registrationPage">Customer Registration Page</Label>
+              <Input
+                id="registrationPage"
+                type="url"
+                value={formData.registrationPage || ""}
+                onChange={(e) => onFieldChange("registrationPage", e.target.value)}
+                placeholder="https://mybusiness.com/register"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">Custom URL for customer registration. Used by chatbot when linking to registration.</p>
+            </div>
+
             {/* Currency */}
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
@@ -148,7 +180,7 @@ export function BusinessConfigSection({
                 <SelectContent>
                   {SUPPORTED_CURRENCIES.map((currency) => (
                     <SelectItem key={currency.code} value={currency.code}>
-                      {currency.symbol} {currency.code} - {currency.name}
+                      {currency.symbol} {currency.code} - {currency.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

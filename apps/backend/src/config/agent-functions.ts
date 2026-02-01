@@ -519,7 +519,9 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
       "Call this function when the user's query is COMPLETELY DIFFERENT from the previous conversation topic. " +
       "Examples: User was searching products, now asks about orders. User was managing cart, now asks FAQ. " +
       "This resets the conversation context so the Router can route to the correct specialist agent. " +
-      "DO NOT call if query is a follow-up to the same topic (e.g., 'show me red shoes' after 'show me shoes').",
+      "DO NOT call if query is a follow-up to the same topic (e.g., 'show me red shoes' after 'show me shoes'). " +
+      "NEVER call for greetings (ciao, hello, hi, hola) - greetings are NOT topic changes! " +
+      "NEVER call for language detection - just respond in the user's language.",
     parameters: {
       type: "object",
       properties: {

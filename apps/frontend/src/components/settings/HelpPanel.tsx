@@ -13,26 +13,53 @@ interface HelpPanelProps {
 }
 
 // Available template variables for prompts and messages
+// CRITICAL: Variables differ by channel type
 const AVAILABLE_VARIABLES = [
-  { variable: "{{nome}}", description: "Customer name", alwaysAvailable: true },
-  { variable: "{{email}}", description: "Customer email", alwaysAvailable: true },
-  { variable: "{{telefono}}", description: "Customer phone", alwaysAvailable: true },
-  { variable: "{{lingua}}", description: "Customer language", alwaysAvailable: true },
-  { variable: "{{nomeAzienda}}", description: "Company name", alwaysAvailable: true },
-  { variable: "{{whatsapp}}", description: "WhatsApp number", alwaysAvailable: true },
-  { variable: "{{products}}", description: "Product catalog", ecommerceOnly: true },
-  { variable: "{{categories}}", description: "Product categories", ecommerceOnly: true },
-  { variable: "{{offers}}", description: "Active offers", ecommerceOnly: true },
-  { variable: "{{services}}", description: "Available services", ecommerceOnly: true },
+  // ══════════════════════════════════════════════════════════════
+  // ALWAYS AVAILABLE (both informational and ecommerce)
+  // ══════════════════════════════════════════════════════════════
+  { variable: "{{customerName}}", description: "Customer name", alwaysAvailable: true },
+  { variable: "{{customerEmail}}", description: "Customer email", alwaysAvailable: true },
+  { variable: "{{customerPhone}}", description: "Customer phone", alwaysAvailable: true },
+  { variable: "{{languageUser}}", description: "Customer language", alwaysAvailable: true },
+  { variable: "{{companyName}}", description: "Company name", alwaysAvailable: true },
+  { variable: "{{chatbotName}}", description: "Chatbot name", alwaysAvailable: true },
+  { variable: "{{address}}", description: "Company address", alwaysAvailable: true },
+  { variable: "{{websiteUrl}}", description: "Website URL", alwaysAvailable: true },
+  { variable: "{{supportEmail}}", description: "Support email", alwaysAvailable: true },
+  { variable: "{{agentName}}", description: "Sales agent name", alwaysAvailable: true },
+  { variable: "{{agentPhone}}", description: "Sales agent phone", alwaysAvailable: true },
+  { variable: "{{agentEmail}}", description: "Sales agent email", alwaysAvailable: true },
+  
+  // ══════════════════════════════════════════════════════════════
+  // ECOMMERCE ONLY (sellsProductsAndServices=true)
+  // ══════════════════════════════════════════════════════════════
+  { variable: "{{categories}}", description: "Product categories (large)", ecommerceOnly: true },
+  { variable: "{{offers}}", description: "Active offers (large)", ecommerceOnly: true },
+  { variable: "{{cartContents}}", description: "Current cart items", ecommerceOnly: true },
   { variable: "{{lastOrderCode}}", description: "Last order code", ecommerceOnly: true },
-  { variable: "{{cartContents}}", description: "Cart items", ecommerceOnly: true },
+  
+  // ══════════════════════════════════════════════════════════════
+  // INFORMATIONAL ONLY (sellsProductsAndServices=false)
+  // ══════════════════════════════════════════════════════════════
+  { variable: "{{faqs}}", description: "Frequently Asked Questions (large)", informationalOnly: true },
 ]
 
 export function HelpPanel({ title, description, examples, tips, showVariables, sellsProductsAndServices }: HelpPanelProps) {
-  // Filter variables based on e-commerce toggle
-  const availableVariables = sellsProductsAndServices 
-    ? AVAILABLE_VARIABLES // Show all variables when e-commerce is ON
-    : AVAILABLE_VARIABLES.filter(v => !v.ecommerceOnly) // Hide e-commerce variables when OFF
+  // Filter variables based on channel type
+  const availableVariables = AVAILABLE_VARIABLES.filter(v => {
+    // Always show variables that are always available
+    if (v.alwaysAvailable) return true
+    
+    // Show ecommerce variables only if ecommerce is enabled
+    if (v.ecommerceOnly) return sellsProductsAndServices === true
+    
+    // Show informational variables only if ecommerce is disabled
+    if (v.informationalOnly) return sellsProductsAndServices === false
+    
+    return true
+  })
+
   return (
     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm space-y-4">
       <div>
@@ -188,6 +215,23 @@ export const HELP_CONTENT: Record<string, HelpPanelProps> = {
       "This affects AI suggestions and terminology",
     ],
   },
+  registrationPage: {
+    title: "Customer Registration Page",
+    description:
+      "Custom URL for customer registration. When the AI generates a [LINK_REGISTRATION] token, " +
+      "it will use this URL instead of the default /registration page. " +
+      "The token parameter will be automatically appended for secure access.",
+    examples: [
+      "https://mystore.com/join-us - External registration page",
+      "/custom-registration - Relative path on your domain",
+      "Leave empty to use default /registration page",
+    ],
+    tips: [
+      "Use this if you have a custom registration flow",
+      "Token is appended as ?token=xxx for authentication",
+      "If URL already has query params, token is added with &token=xxx",
+    ],
+  },
   businessEmail: {
     title: "Business Email",
     description:
@@ -278,7 +322,7 @@ export const HELP_CONTENT: Record<string, HelpPanelProps> = {
     tips: [
       "Be specific and clear in your instructions",
       "Test rules thoroughly before going live",
-      "Use variables like {{nome}} for personalization",
+      "Use variables like {{customerName}} for personalization",
     ],
   },
   welcomeMessage: {

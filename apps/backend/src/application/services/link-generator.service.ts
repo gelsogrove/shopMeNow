@@ -124,13 +124,40 @@ export class LinkGeneratorService {
 
   /**
    * Generate registration link with token
+   * Uses custom registrationPage URL if provided, otherwise falls back to default /registration path
+   * @param token - JWT registration token
+   * @param workspaceUrl - Base workspace URL (e.g., https://mystore.com)
+   * @param workspaceId - Workspace ID for short URL generation
+   * @param customRegistrationPage - Optional: Custom registration page URL from workspace.registrationPage
    */
   async generateRegistrationLink(
     token: string,
     workspaceUrl: string,
-    workspaceId: string
+    workspaceId: string,
+    customRegistrationPage?: string | null
   ): Promise<string> {
-    const originalUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
+    let originalUrl: string
+
+    if (customRegistrationPage && customRegistrationPage.trim() !== "") {
+      // Use custom registration page URL
+      // If it's a full URL (starts with http), use it directly with token appended
+      // If it's a relative path, append it to workspaceUrl
+      const customUrl = customRegistrationPage.trim()
+      if (customUrl.startsWith("http://") || customUrl.startsWith("https://")) {
+        // Full URL - append token as query parameter
+        const separator = customUrl.includes("?") ? "&" : "?"
+        originalUrl = `${customUrl}${separator}token=${token}`
+      } else {
+        // Relative path - combine with workspaceUrl
+        const basePath = customUrl.startsWith("/") ? customUrl : `/${customUrl}`
+        originalUrl = `${workspaceUrl.replace(/\/$/, "")}${basePath}?token=${token}`
+      }
+      logger.info(`📎 Using custom registration page: ${originalUrl}`)
+    } else {
+      // Default registration path
+      originalUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
+    }
+
     return this.generateShortLink(originalUrl, workspaceId, "registration")
   }
 

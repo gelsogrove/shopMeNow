@@ -30,6 +30,10 @@ jest.mock("../../../src/application/services/token.service", () => ({
 jest.mock("../../../src/services/workspace.service", () => ({
   workspaceService: {
     getWorkspaceURL: jest.fn().mockResolvedValue("https://example.com"),
+    getWorkspaceURLWithRegistration: jest.fn().mockResolvedValue({
+      url: "https://example.com",
+      registrationPage: null,
+    }),
   },
 }))
 

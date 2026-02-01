@@ -16,6 +16,7 @@
 
 import { PageLayout } from "@/components/layout/PageLayout"
 import { AgentEditSlidePanel } from "@/components/shared/AgentEditSlidePanel"
+import { AgentFlowDiagram } from "@/components/shared/AgentFlowDiagram"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { PromptEditorDialog } from "@/components/shared/PromptEditorDialog"
 import { Button } from "@/components/ui/button"
@@ -35,7 +36,6 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import {
-  exportAgentPrompts,
   getAgentConfigs,
   resetAgentPromptsToDefaults,
   updateAgentConfig,
@@ -156,7 +156,7 @@ export function AgentConfigurationPage() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [agentFunctions, setAgentFunctions] = useState<
     Record<string, string[]>
-  >({}) // ✅ Real functions from API
+  >({})  // ✅ Real functions from API // ✅ Real functions from API
   const [isLoading, setIsLoading] = useState(true)
   const [editingAgents, setEditingAgents] = useState<
     Record<string, AgentFormData>
@@ -171,7 +171,6 @@ export function AgentConfigurationPage() {
   // Reset confirmation dialog state
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
-  const [isExporting, setIsExporting] = useState(false)
   const [useDynamicTemplates, setUseDynamicTemplates] = useState(true) // 🆕 Default to dynamic templates
 
   // Redirect if no workspace
@@ -326,22 +325,6 @@ export function AgentConfigurationPage() {
     }
   }
 
-  // Handle export prompts
-  const handleExportPrompts = async () => {
-    if (!workspace?.id) return
-
-    try {
-      setIsExporting(true)
-      await exportAgentPrompts(workspace.id)
-      toast.success("Prompts exported successfully!")
-    } catch (error) {
-      logger.error("Failed to export prompts:", error)
-      toast.error("Failed to export prompts")
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   // Handle reset to defaults
   const handleResetToDefaults = async () => {
     if (!workspace?.id) return
@@ -429,196 +412,41 @@ export function AgentConfigurationPage() {
             }
             description="Configure your multi-agent LLM system"
           />
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPrompts}
-              disabled={isExporting}
-            >
-              {isExporting ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Export Prompts
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsResetDialogOpen(true)}
-            >
-              <RefreshCcw className="h-4 w-4 mr-2" />
-              Load Defaults
-            </Button>
-          </div>
         </div>
 
-        {agents.length === 0 ? (
-          <div className="flex justify-center items-center h-64">
-            <p className="text-gray-500">No agents found for this workspace.</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {agents
-              .filter((agent) => {
-                // 🔒 SECURITY: Hide Security Agent from UI - it's hardcoded for safety
-                const agentType = agent.agentType?.toLowerCase()
-                return agentType !== "security"
-              })
-              .map((agent) => {
-              const formData = editingAgents[agent.id]
-              if (!formData) return null
+        {/* 🎨 Agent Flow Diagram - Visual representation of multi-agent architecture */}
+        <AgentFlowDiagram 
+          sellsProductsAndServices={workspace?.sellsProductsAndServices === true}
+          agents={agents.map(agent => ({
+            id: agent.id,
+            name: agent.name,
+            type: agent.agentType || "router",
+            systemPrompt: agent.content || agent.systemPrompt || "",
+            temperature: agent.temperature || 0.7,
+            maxTokens: agent.maxTokens || 1000,
+            model: agent.model || "openai/gpt-4.1-mini",
+            isActive: agent.isActive ?? true,
+            order: agent.order || 0,
+            availableFunctions: agentFunctions[agent.id] || [],
+          }))}
+          workspaceId={workspace.id}
+          onSaveAgent={async (agentId, data) => {
+            const agent = agents.find(a => a.id === agentId)
+            if (!agent) return
+            
+            await handleSaveFromSlide({
+              ...agent,
+              systemPrompt: data.systemPrompt ?? agent.systemPrompt ?? agent.content ?? "",
+              temperature: data.temperature ?? agent.temperature ?? 0.7,
+              maxTokens: data.maxTokens ?? agent.maxTokens ?? 1000,
+            } as Agent)
+          }}
+          onResetToDefaults={handleResetToDefaults}
+          isLoading={isLoading}
+          className="mb-6"
+        />
 
-              // ✅ Get real available functions from database
-              const callFunctions = agentFunctions[agent.id] || []
-
-              // Normalize agent type to lowercase for display
-              const normalizedType = formData.agentType.toLowerCase()
-
-              // Agent hierarchy levels
-              const isRouter = normalizedType === "router"
-              const isSecurity = normalizedType === "security"
-              const isSafety = normalizedType === "safety_translation"
-              const isSummaryAgent = normalizedType === "summary_agent"
-
-              // Router (level 0), Specialists (level 1), Sub-agents (level 2), Security (level 99)
-              const isSpecialistAgent = !isRouter && !isSecurity && !isSafety && !isSummaryAgent
-              const indentClass = isSpecialistAgent ? "ml-8" : isSummaryAgent ? "ml-16" : ""
-
-              return (
-                <div
-                  key={agent.id}
-                  onClick={() => handleOpenEdit(agent)}
-                  className={`border rounded-lg bg-white shadow-sm ${indentClass} cursor-pointer hover:bg-gray-50 hover:border-green-300 transition-colors`}
-                >
-                  <div className="px-6 py-4">
-                    <div className="flex items-center justify-between w-full">
-                      {/* LEFT SIDE: Icon + Agent Info */}
-                      <div className="flex items-center gap-3 flex-1">
-                        {/* 🌳 Tree connector for Specialist agents and Summary sub-agent */}
-                        {isSpecialistAgent && (
-                          <div className="flex items-center text-gray-500">
-                            <div className="w-8 h-0.5 bg-gray-400"></div>
-                            <ChevronRight className="h-5 w-5 -ml-1" />
-                          </div>
-                        )}
-                        {/* 🌳 Double-indented connector for Summary Agent (sub-agent of Customer Support) */}
-                        {isSummaryAgent && (
-                          <div className="flex items-center text-gray-500">
-                            <div className="w-4 h-0.5 bg-gray-300"></div>
-                            <div className="w-8 h-0.5 bg-gray-400"></div>
-                            <ChevronRight className="h-5 w-5 -ml-1" />
-                          </div>
-                        )}
-                        {getAgentIcon(formData.icon, formData.agentType)}
-                        <div className="text-left">
-                          <h3
-                            className={`text-lg font-semibold ${getAgentColor(
-                              formData.agentType
-                            )}`}
-                          >
-                            {formData.name}
-                          </h3>
-                          <div className="flex items-center gap-3 text-sm">
-                            <span className="text-gray-500">
-                              Temp: {formData.temperature.toFixed(1)}
-                            </span>
-                            <span className="text-gray-300">•</span>
-                            <span className="text-gray-500">
-                              Max Tokens: {formData.maxTokens}
-                            </span>
-                            <span className="text-gray-300">•</span>
-                            <span
-                              className="max-w-[200px] truncate text-gray-500"
-                              title={formData.model}
-                            >
-                              {formData.model}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* CENTER: Functions count badge (details in edit panel) */}
-                      <div className="flex items-center gap-1.5 flex-wrap mx-4">
-                        {agent.agentType === "ROUTER" ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
-                            🔀 Routes to sub-agents
-                          </span>
-                        ) : callFunctions.length > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 border border-green-200 rounded-full text-xs font-medium text-green-700">
-                            ⚡ {callFunctions.length} function{callFunctions.length > 1 ? 's' : ''}
-                          </span>
-                        ) : agent.name === "safety_translation" ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-xs font-medium text-blue-700">
-                            🔀 Routes to sub-agents
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {/* RIGHT SIDE: View Prompt + Edit Buttons */}
-                      <div className="flex items-center gap-1">
-                        {/* View Prompt - Fullscreen editor */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenPromptEditor(agent)
-                          }}
-                          className="p-2 hover:bg-blue-50 rounded-md transition-colors"
-                          title="View & Edit Prompt (Fullscreen)"
-                        >
-                          <Eye className="h-4 w-4 text-blue-600" />
-                        </button>
-                        {/* Edit Agent - Slide panel */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenEdit(agent)
-                          }}
-                          className="p-2 hover:bg-gray-100 rounded-md transition-colors"
-                          title="Edit agent settings"
-                        >
-                          <Edit className="h-4 w-4 text-gray-600" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
-
-      {/* Slide Panel for Editing */}
-      {editingAgent && (
-        <AgentEditSlidePanel
-          agent={editingAgent}
-          open={isSlideOpen}
-          onOpenChange={(open) => {
-            setIsSlideOpen(open)
-            if (!open) setEditingAgent(null)
-          }}
-          onSave={handleSaveFromSlide}
-          availableFunctions={agentFunctions[editingAgent.id] || []}
-        />
-      )}
-
-      {/* Fullscreen Prompt Editor Dialog */}
-      {promptEditorAgent && (
-        <PromptEditorDialog
-          open={isPromptEditorOpen}
-          onOpenChange={(open) => {
-            setIsPromptEditorOpen(open)
-            if (!open) setPromptEditorAgent(null)
-          }}
-          agentName={promptEditorAgent.name}
-          agentType={promptEditorAgent.agentType}
-          initialPrompt={promptEditorAgent.content || promptEditorAgent.systemPrompt || ""}
-          onSave={handleSavePromptOnly}
-          readOnly={true}
-        />
-      )}
 
       {/* Reset Confirmation Dialog */}
       <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>

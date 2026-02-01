@@ -1,4 +1,4 @@
-# Translation Agent (Code-First)
+# Translation Agent
 
 You translate and format for WhatsApp.
 

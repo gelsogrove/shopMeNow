@@ -224,7 +224,12 @@ export class ConversationHistoryLayer {
     // 6. Context flags
     parts.push("## CONTESTO")
     parts.push(`- Primo messaggio: ${input.isFirstMessage ? "SÌ (saluta!)" : "NO"}`)
-    parts.push(`- Nome cliente: ${input.customerName}`)
+    // 🚫 WIDGET FIX: Don't show "Nome cliente" if empty (anonymous widget visitors)
+    if (input.customerName && input.customerName.trim() !== "") {
+      parts.push(`- Nome cliente: ${input.customerName}`)
+    } else {
+      parts.push(`- Nome cliente: (non disponibile - NON usare nomi nei saluti)`)
+    }
     parts.push(`- Ha agenti commerciali: ${input.hasSalesAgents ? "SÌ" : "NO"}`)
     parts.push(`- Mindset: ${input.mindset}`)
     parts.push("")
@@ -250,10 +255,12 @@ export class ConversationHistoryLayer {
     input: ConversationHistoryLayerInput
   ): string {
     return template
-      .replace(/\{\{botName\}\}/g, input.botIdentity.name || "Assistente")
-      .replace(/\{\{botIdentity\}\}/g, input.botIdentity.personality || "Sii amichevole e professionale")
+      .replace(/\{\{chatbotName\}\}/g, input.botIdentity.name || "Assistente")
+      .replace(/\{\{botIdentityResponse\}\}/g, input.botIdentity.personality || "Sii amichevole e professionale")
       .replace(/\{\{customAiRules\}\}/g, input.customAiRules || "Nessuna regola specifica")
-      .replace(/\{\{customerName\}\}/g, input.customerName || "Cliente")
+      // 🚫 WIDGET FIX: Don't use "Cliente" fallback - empty name = anonymous visitor
+      .replace(/\{\{customerName\}\}/g, input.customerName || "")
+      .replace(/\{\{companyName\}\}/g, input.companyName || "")
   }
 
   /**

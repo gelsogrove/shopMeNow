@@ -194,24 +194,14 @@ export async function contactOperator(
                   }
                 )
 
-                // Pass summary through Safety Translation Agent
-                const {
-                  SafetyTranslationAgent,
-                } = require("../../application/agents/SafetyTranslationAgent")
-                const safetyAgent = new SafetyTranslationAgent(prisma)
-
+                // 🔧 WhatsApp: Skip SafetyTranslationAgent - email summary doesn't need LLM translation
+                // contactOperator is WhatsApp-only feature (human operator request)
+                // The summary is internal (for operator) so no need for customer-facing translation
+                const finalSummary = summaryResult.summary
+                
                 logger.info(
-                  "🛡️ [contactOperator] Passing summary through Safety Translation Agent"
+                  "⏭️ [contactOperator] Skipping SafetyTranslation (internal summary for operator)"
                 )
-
-                const safetyResult = await safetyAgent.process({
-                  workspaceId: request.workspaceId,
-                  response: summaryResult.summary,
-                  targetLanguage: "it", // Summary already in Italian, just need safety check
-                  customerName: customer.name,
-                })
-
-                const finalSummary = safetyResult.translatedText || summaryResult.summary
                 
                 // If summary is empty, throw error to trigger fallback
                 if (!finalSummary || finalSummary.trim().length === 0) {
@@ -233,7 +223,7 @@ ${finalSummary}
                 generatedSummary = chatSummary
 
                 logger.info(
-                  "✅ [contactOperator] Summary processed and translated"
+                  "✅ [contactOperator] Summary processed successfully"
                 )
               } else {
                 throw new Error(

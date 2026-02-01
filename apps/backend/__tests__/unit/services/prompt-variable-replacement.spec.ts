@@ -760,6 +760,116 @@ describe('PromptProcessorService - Variable Replacement (COMPLETE)', () => {
       expect(result).toBe('Valid for: 24 hours')
       expect(result).not.toContain('{{tokenDuration}}')
     })
+
+    it('should replace {{supportEmail}}', () => {
+      const template = 'Contact: {{supportEmail}}'
+      const variables: PromptVariables = {
+        customerName: 'Mario',
+        customerPhone: '+39123456789',
+        customerEmail: 'mario@example.com',
+        customerDiscount: 0,
+        languageUser: 'ITALIANO',
+        pushNotificationsConsent: false,
+        companyName: 'Shop',
+        chatbotName: 'Sofia',
+        channelName: 'Shop',
+        workspaceUrl: 'https://shop.com',
+        toneOfVoice: 'friendly',
+        sellsProductsAndServices: true,
+        hasHumanSupport: true,
+        hasSalesAgents: false,
+        tokenDuration: '15 minutes',
+        supportEmail: 'support@shop.com',
+      }
+
+      const result = service.processWithVariables(template, variables)
+
+      expect(result).toBe('Contact: support@shop.com')
+      expect(result).not.toContain('{{supportEmail}}')
+    })
+
+    it('should replace {{websiteUrl}}', () => {
+      const template = 'Visit: {{websiteUrl}}'
+      const variables: PromptVariables = {
+        customerName: 'Mario',
+        customerPhone: '+39123456789',
+        customerEmail: 'mario@example.com',
+        customerDiscount: 0,
+        languageUser: 'ITALIANO',
+        pushNotificationsConsent: false,
+        companyName: 'Shop',
+        chatbotName: 'Sofia',
+        channelName: 'Shop',
+        workspaceUrl: 'https://shop.com',
+        websiteUrl: 'https://website.shop.com',
+        toneOfVoice: 'friendly',
+        sellsProductsAndServices: true,
+        hasHumanSupport: false,
+        hasSalesAgents: false,
+        tokenDuration: '15 minutes',
+      }
+
+      const result = service.processWithVariables(template, variables)
+
+      expect(result).toBe('Visit: https://website.shop.com')
+      expect(result).not.toContain('{{websiteUrl}}')
+    })
+
+    it('should replace {{frustrationEscalationInstructions}}', () => {
+      const template = 'Escalate when: {{frustrationEscalationInstructions}}'
+      const variables: PromptVariables = {
+        customerName: 'Mario',
+        customerPhone: '+39123456789',
+        customerEmail: 'mario@example.com',
+        customerDiscount: 0,
+        languageUser: 'ITALIANO',
+        pushNotificationsConsent: false,
+        companyName: 'Shop',
+        chatbotName: 'Sofia',
+        channelName: 'Shop',
+        workspaceUrl: 'https://shop.com',
+        toneOfVoice: 'friendly',
+        sellsProductsAndServices: true,
+        hasHumanSupport: true,
+        hasSalesAgents: false,
+        tokenDuration: '15 minutes',
+        frustrationEscalationInstructions: 'Customer uses ALL CAPS, asks for refund',
+      }
+
+      const result = service.processWithVariables(template, variables)
+
+      expect(result).toBe('Escalate when: Customer uses ALL CAPS, asks for refund')
+      expect(result).not.toContain('{{frustrationEscalationInstructions}}')
+    })
+
+    it('should replace {{operatorContactMethod}} and {{operatorWhatsappNumber}}', () => {
+      const template = 'Contact operator via {{operatorContactMethod}}: {{operatorWhatsappNumber}}'
+      const variables: PromptVariables = {
+        customerName: 'Mario',
+        customerPhone: '+39123456789',
+        customerEmail: 'mario@example.com',
+        customerDiscount: 0,
+        languageUser: 'ITALIANO',
+        pushNotificationsConsent: false,
+        companyName: 'Shop',
+        chatbotName: 'Sofia',
+        channelName: 'Shop',
+        workspaceUrl: 'https://shop.com',
+        toneOfVoice: 'friendly',
+        sellsProductsAndServices: true,
+        hasHumanSupport: true,
+        hasSalesAgents: false,
+        tokenDuration: '15 minutes',
+        operatorContactMethod: 'whatsapp',
+        operatorWhatsappNumber: '+39 333 1234567',
+      }
+
+      const result = service.processWithVariables(template, variables)
+
+      expect(result).toBe('Contact operator via whatsapp: +39 333 1234567')
+      expect(result).not.toContain('{{operatorContactMethod}}')
+      expect(result).not.toContain('{{operatorWhatsappNumber}}')
+    })
   })
 
   // ══════════════════════════════════════════════════════════════════════════

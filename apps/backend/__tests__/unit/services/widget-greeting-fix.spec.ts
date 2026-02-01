@@ -40,10 +40,10 @@ describe("Widget Greeting Fix", () => {
       expect(variables.customerName).toBe("") // Empty because widget channel
     })
 
-    it("should keep customerName for whatsapp channel even with Visitor prefix", () => {
+    it("should set customerName to empty for Visitor pattern on ANY channel", () => {
       const customer = {
         id: "visitor-123",
-        name: "Visitor abc123def456",
+        name: "Visitor abc123def456", // Anonymous visitor pattern
         email: null,
         phone: "+393331234567",
       }
@@ -54,13 +54,13 @@ describe("Widget Greeting Fix", () => {
       }
 
       const context = {
-        channel: "whatsapp", // WhatsApp channel (not widget)
+        channel: "whatsapp", // Even on WhatsApp, Visitor pattern = anonymous
       }
 
       const variables = PromptVariableBuilder.build(customer, workspace, undefined, context)
 
-      // WhatsApp keeps the name (even if it looks like a visitor name)
-      expect(variables.customerName).toBe("Visitor abc123def456")
+      // 🚫 Visitor pattern = empty name (no personalized greetings)
+      expect(variables.customerName).toBe("")
     })
 
     it("should use 'Cliente' as fallback when name is missing (non-widget)", () => {

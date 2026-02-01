@@ -54,8 +54,7 @@ interface WizardFormData {
   whatsappNumber: string // Only required if channelType === 'WHATSAPP'
   // Step 2: Business Type (E-commerce) - ONLY for WhatsApp
   sellsProductsAndServices: boolean
-  // Step 3: REMOVED - Sales Agents (Andrea: "non serve più")
-  // Step 4: Human Support
+  // Step 3: Human Support (was Step 4, renumbered after Sales Agents removal)
   hasHumanSupport: boolean
   humanSupportInstructions: string
   // Step 5: AUTO - email/phone from user profile (not in form)
@@ -70,7 +69,6 @@ interface WizardFormData {
 const WIZARD_STEPS = [
   { id: 1, title: "Channel Type", description: "WhatsApp or Web Widget?", icon: Smartphone },
   { id: 2, title: "E-commerce", description: "Sell products/services?", icon: Store },
-  // Step 3 (Sales Team) removed - Andrea: "non serve più il flag di salesAgent true o false"
   { id: 4, title: "Human Support", description: "Talk to an operator?", icon: Headphones },
   { id: 5, title: "Tone of Voice", description: "How should the bot communicate?", icon: MessageSquare },
   { id: 6, title: "Bot Identity", description: "How should the bot introduce itself?", icon: Bot },
@@ -98,7 +96,6 @@ const initialWizardData: WizardFormData = {
   channelType: 'WHATSAPP',
   whatsappNumber: "",
   sellsProductsAndServices: true,
-  // hasSalesAgents removed - Andrea: "non serve più"
   hasHumanSupport: true,
   humanSupportInstructions: "",
   toneOfVoice: 'friendly',
@@ -212,10 +209,8 @@ export function WorkspaceSelectionPage() {
 
   const getVisibleSteps = () => {
     // Step 2 (E-commerce) only visible if channelType === 'WHATSAPP' (Widget can't sell)
-    // Step 3 (Sales Agents) only visible if sellsProductsAndServices is true
     return WIZARD_STEPS.filter(step => {
       if (step.id === 2) return wizardData.channelType === 'WHATSAPP'
-      if (step.id === 3) return wizardData.sellsProductsAndServices
       return true
     })
   }
@@ -752,7 +747,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       
       // 🆕 Widget channels CANNOT sell products (Andrea's rule)
       const finalSellsProducts = wizardData.channelType === 'WIDGET' ? false : wizardData.sellsProductsAndServices
-      // hasSalesAgents removed - Andrea: "non serve più il flag"
       
       // 🆕 Auto-use email from logged user (from token)
       const allowedLinks = ["echatbot.ai", "paypal.com"]
@@ -766,7 +760,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         allowedExternalLinks: allowedLinks,
         // 🆕 Channel Configuration (Simplified Wizard)
         sellsProductsAndServices: finalSellsProducts,
-        // hasSalesAgents: removed - Andrea: "non serve più"
         hasHumanSupport: wizardData.hasHumanSupport,
         humanSupportInstructions: wizardData.hasHumanSupport 
           ? (wizardData.humanSupportInstructions || "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝")
@@ -1708,7 +1701,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           updateWizardData('channelType', 'WIDGET')
                           // Widget can only do support (no e-commerce)
                           updateWizardData('sellsProductsAndServices', false)
-                          updateWizardData('hasSalesAgents', false)
                           // Update FAQs for support-only
                           updateWizardData('faqs', getDefaultFAQs('WIDGET', false))
                         }}
@@ -1829,66 +1821,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             </p>
                           </div>
                           {!wizardData.sellsProductsAndServices && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 3: Sales Agents (only if selling products) */}
-                {wizardStep === 3 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Sales Team</h3>
-                      <p className="text-sm text-gray-500 mt-1">Do you have sales agents who handle customer requests?</p>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          wizardData.hasSalesAgents 
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => updateWizardData('hasSalesAgents', true)}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.hasSalesAgents ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Users className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">Yes, I have sales agents</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Enable agent assignment
-                            </p>
-                          </div>
-                          {wizardData.hasSalesAgents && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          !wizardData.hasSalesAgents 
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => updateWizardData('hasSalesAgents', false)}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${!wizardData.hasSalesAgents ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Bot className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">No, AI handles everything</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              The AI chatbot will manage all sales conversations
-                            </p>
-                          </div>
-                          {!wizardData.hasSalesAgents && (
                             <Check className="w-5 h-5 text-green-500" />
                           )}
                         </div>

@@ -108,11 +108,38 @@ export class TemplateLoaderService {
       // 2. Load template (cached)
       const template = this.loadTemplate(agentType, settings.sellsProductsAndServices)
 
-      // 3. Process conditionals (pure CPU, no I/O)
-      const rendered = this.templateEngine.process(template, {
-        ...settings,
+      // 3. Process conditionals ONLY - keep {{variables}} intact for later replacement
+      // 🔒 CRITICAL: Only pass boolean flags for {{#if}} conditionals
+      // Do NOT pass string values like companyName, chatbotName - these must remain as {{variables}}
+      const conditionalFlags = {
+        // Boolean flags for conditionals
+        sellsProductsAndServices: settings.sellsProductsAndServices,
+        hasHumanSupport: settings.hasHumanSupport,
+        hasSalesAgents: settings.hasSalesAgents,
+        hasAddress: settings.hasAddress,
+        // These determine if section should be included (truthy check for {{#if}})
+        // but the actual values are NOT replaced - they stay as {{variable}}
+        hasCustomAiRules: !!settings.customAiRules,
+        hasBotIdentityResponse: !!settings.botIdentityResponse,
+        hasChatbotName: !!settings.chatbotName,
+        hasAllowedExternalLinks: !!settings.allowedExternalLinks,
+        hasHumanSupportInstructions: !!settings.humanSupportInstructions,
+        hasFrustrationEscalationInstructions: !!settings.frustrationEscalationInstructions,
+        // 🆕 NEW: For template conditionals that use the variable name directly
+        customAiRules: !!settings.customAiRules, // truthy for {{#if customAiRules}}
+        botIdentityResponse: !!settings.botIdentityResponse, // truthy for {{#if botIdentityResponse}}
+        chatbotName: !!settings.chatbotName, // truthy for {{#if chatbotName}}
+        address: !!settings.address, // truthy for {{#if address}}
+        allowedExternalLinks: !!settings.allowedExternalLinks, // truthy for {{#if allowedExternalLinks}}
+        humanSupportInstructions: !!settings.humanSupportInstructions,
+        frustrationEscalationInstructions: !!settings.frustrationEscalationInstructions,
+        operatorContactMethod: !!settings.operatorContactMethod,
+        operatorWhatsappNumber: !!settings.operatorWhatsappNumber,
+        toneOfVoice: !!settings.toneOfVoice, // truthy for {{#if toneOfVoice}}
         ...extraConditionals,
-      })
+      }
+
+      const rendered = this.templateEngine.processConditionalsOnly(template, conditionalFlags)
 
       const elapsed = performance.now() - startTime
       logger.debug(`⚡ Template loaded in ${elapsed.toFixed(2)}ms`, { agentType, chars: rendered.length })

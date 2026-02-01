@@ -1324,6 +1324,7 @@ export function LoginPage() {
         </div>
       </header>
 
+      <main className="flex-1">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16 relative z-20">
         
         <div className="text-center mb-12 space-y-4 relative">
@@ -2498,6 +2499,7 @@ export function LoginPage() {
           </div>
         </div>
       </div>
+      </main>
 
       {/* Footer Semplificato */}
       <footer className="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">

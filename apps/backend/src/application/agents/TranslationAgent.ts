@@ -4,15 +4,19 @@
  * Translation layer that runs AFTER Security Agent validates content.
  * Translates all agent responses to customer's language.
  *
- * Uses TRANSLATION agent config from database (order: 99)
+ * 🆕 HARDCODED PROMPTS: Uses shared/translation-prompts.ts (no DB dependency)
  *
- * @architecture Clean Architecture - Uses AgentConfigRepository
+ * @architecture Clean Architecture - Shared prompt module
  * @critical ALWAYS call this AFTER Security Agent passes
  */
 
 import { PrismaClient, prisma } from "@echatbot/database"
 import axios from "axios"
-import { AgentConfigRepository } from "../../repositories/agent-config.repository"
+import {
+  buildTranslationOnlyPrompt,
+  TRANSLATION_LLM_SETTINGS,
+  getLanguageName,
+} from "@shared/translation-prompts"
 import logger from "../../utils/logger"
 
 export interface TranslationResult {
@@ -44,12 +48,12 @@ export interface TranslationSettings {
 }
 
 export class TranslationAgent {
-  private agentConfigRepo: AgentConfigRepository
   private openRouterApiKey: string
   private openRouterBaseUrl: string = "https://openrouter.ai/api/v1"
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(private prisma: PrismaClient) {
-    this.agentConfigRepo = new AgentConfigRepository(prisma)
+    // Prisma kept for API compatibility but no longer used for agent config
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -57,7 +61,7 @@ export class TranslationAgent {
         "⚠️ OPENROUTER_API_KEY not found - Translation layer will return message as-is"
       )
     } else {
-      logger.info("✅ TranslationAgent initialized with OpenRouter API key")
+      logger.info("✅ TranslationAgent initialized with OpenRouter API key (hardcoded prompt)")
     }
   }
 
@@ -71,7 +75,7 @@ export class TranslationAgent {
     const startTime = Date.now()
 
     // 🔍 DEBUG: Log exactly what language we received
-    logger.info(`🌍 [TranslationAgent] RECEIVED targetLanguage parameter`, {
+    logger.info(`🌍 [TranslationAgent] RECEIVED targetLanguage parameter (hardcoded prompt)`, {
       targetLanguage: options.targetLanguage,
       workspaceId: options.workspaceId,
       customerName: options.customerName,
@@ -83,51 +87,14 @@ export class TranslationAgent {
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
       
       // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
-      // The Translation Agent will translate EVERYTHING to the target language
-      // NOTE: Never skip translation - content from DB may be in any language
       logger.info(`🌍 [TranslationAgent] Normalized language`, {
         input: options.targetLanguage,
         normalized: normalizedLanguage,
         willTranslateTo: normalizedLanguage.toUpperCase()
       })
 
-      // 2. Load TRANSLATION agent config from database
-      const translationAgent = await this.agentConfigRepo.findByType(
-        options.workspaceId,
-        "TRANSLATION"
-      )
-
-      if (!translationAgent) {
-        logger.warn(
-          `⚠️ TRANSLATION agent not configured for workspace ${options.workspaceId}`
-        )
-        // Fallback: return message without translation
-        return {
-          translated: false,
-          originalLanguage: "it",
-          targetLanguage: options.targetLanguage,
-          message: options.message,
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        }
-      }
-
-      if (!translationAgent.isActive) {
-        logger.warn(
-          `⚠️ TRANSLATION agent is INACTIVE for workspace ${options.workspaceId}`
-        )
-        // Return message without translation if agent disabled
-        return {
-          translated: false,
-          originalLanguage: "it",
-          targetLanguage: options.targetLanguage,
-          message: options.message,
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        }
-      }
-
-      // 2.5 🆕 Load translation settings from workspace
+      // 🆕 NO DATABASE LOOKUP - Use hardcoded prompt from shared module
+      // Load workspace translation settings (product/category/service name translation rules)
       const translationSettings = await this.loadTranslationSettings(options.workspaceId)
       
       logger.info("🌍 TranslationAgent settings loaded", {
@@ -137,18 +104,15 @@ export class TranslationAgent {
         catalogBaseLanguage: translationSettings.catalogBaseLanguage,
       })
 
-      // 3. Build system prompt with dynamic customer info
-      const systemPrompt = this.buildSystemPrompt(
-        translationAgent.systemPrompt,
-        {
-          nameUser: options.customerName || "Customer",
-          languageUser: normalizedLanguage,
-          workspaceId: options.workspaceId,
-        }
-      )
+      // Build the hardcoded prompt with variables replaced
+      const systemPrompt = buildTranslationOnlyPrompt({
+        targetLanguage: normalizedLanguage,
+        customerName: options.customerName,
+        message: options.message,
+      })
 
-      // 4. Build user message with translation rules based on workspace settings
-      const targetLanguageName = this.getLanguageName(normalizedLanguage)
+      // Build preservation rules based on workspace settings
+      const targetLanguageName = getLanguageName(normalizedLanguage)
       const preservationRules = this.buildPreservationRules(translationSettings)
       
       const userMessage = `Translate this message to ${targetLanguageName}. The input may be in Italian, English, or mixed. Output must be 100% in ${targetLanguageName}.
@@ -167,10 +131,10 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         preservationRules,
       })
 
-      // 5. Call OpenRouter LLM
-      logger.info("🌍 Calling TranslationAgent LLM", {
+      // Call OpenRouter LLM with hardcoded settings
+      logger.info("🌍 Calling TranslationAgent LLM (hardcoded prompt)", {
         workspaceId: options.workspaceId,
-        model: translationAgent.model,
+        model: TRANSLATION_LLM_SETTINGS.model,
         targetLanguage: normalizedLanguage,
       })
 
@@ -182,7 +146,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
       }
 
       const buildRequest = (userContent: string) => ({
-        model: translationAgent.model,
+        model: TRANSLATION_LLM_SETTINGS.model,
         messages: [
           {
             role: "system",
@@ -193,8 +157,8 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
             content: userContent,
           },
         ],
-        temperature: translationAgent.temperature,
-        max_tokens: translationAgent.maxTokens,
+        temperature: TRANSLATION_LLM_SETTINGS.temperature,
+        max_tokens: TRANSLATION_LLM_SETTINGS.maxTokens,
         response_format: { type: "json_object" },
       })
 
@@ -265,7 +229,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         tokensUsed: totalTokens,
         executionTimeMs,
         systemPrompt: systemPrompt,
-        model: translationAgent.model,
+        model: TRANSLATION_LLM_SETTINGS.model,
       }
     } catch (error) {
       logger.error("❌ TranslationAgent error", error)
@@ -280,27 +244,6 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         executionTimeMs: Date.now() - startTime,
       }
     }
-  }
-
-  /**
-   * Build system prompt with template variable replacement
-   *
-   * @param basePrompt - Base prompt from database
-   * @param variables - Template variables for replacement
-   * @returns Processed system prompt
-   */
-  private buildSystemPrompt(
-    basePrompt: string,
-    variables: Record<string, string>
-  ): string {
-    let prompt = basePrompt
-
-    for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{${key}}}`, "g")
-      prompt = prompt.replace(regex, value)
-    }
-
-    return prompt
   }
 
   /**
@@ -342,24 +285,6 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
     }
 
     return mapping[normalized] || "en"
-  }
-
-  /**
-   * Get full language name from code
-   * 
-   * @param code - Language code (it, es, pt, en)
-   * @returns Full language name
-   */
-  private getLanguageName(code: string): string {
-    const names: Record<string, string> = {
-      it: "Italian",
-      es: "Spanish",
-      pt: "Portuguese",
-      en: "English",
-      fr: "French",
-      de: "German",
-    }
-    return names[code] || "English"
   }
 
   /**
@@ -422,19 +347,12 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
   }
 
   /**
-   * Health check - verify agent is configured
+   * Health check - TranslationAgent always available (hardcoded prompt)
+   * @deprecated No longer checks DB - always returns true if API key present
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async healthCheck(workspaceId: string): Promise<boolean> {
-    try {
-      const agent = await this.agentConfigRepo.findByType(
-        workspaceId,
-        "TRANSLATION"
-      )
-      return agent !== null && agent.isActive
-    } catch (error) {
-      logger.error("TranslationAgent health check failed", error)
-      return false
-    }
+    return !!this.openRouterApiKey
   }
 
   /**

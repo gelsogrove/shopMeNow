@@ -1,60 +1,65 @@
 /**
  * Safety & Translation Agent - Coverage Test
  *
- * DOCUMENTATION TEST: Verifica che ogni messaggio passa da Safety & Translation
+ * DOCUMENTATION TEST: Verifica che ogni messaggio Widget passa da Safety & Translation
  *
- * Questo test documenta che TUTTI i messaggi (welcome, operator, LLM responses)
- * passano attraverso SafetyTranslationAgent prima dell'invio.
+ * 🆕 IMPORTANT: SafetyTranslationAgent is now WIDGET-ONLY
+ * 
+ * - WIDGET: All messages pass through SafetyTranslationAgent (no scheduler processes widget)
+ * - WHATSAPP: Skip SafetyTranslationAgent - scheduler handles security + translation
+ * 
+ * This optimization prevents double LLM costs for WhatsApp messages
+ * (scheduler already does SecurityAgent + TranslationService)
  *
  * @author Andrea Gelso
  */
 
-describe("Safety & Translation Agent - Complete Coverage", () => {
-  it("should process welcome messages through Safety & Translation", () => {
+describe("Safety & Translation Agent - Widget-Only Coverage", () => {
+  it("should process Widget welcome messages through Safety & Translation", () => {
     /**
-     * EXPECTED BEHAVIOR:
+     * EXPECTED BEHAVIOR (WIDGET CHANNEL):
      *
-     * 1. Utente non registrato scrive messaggio
-     * 2. Sistema genera welcome message con link registrazione
+     * 1. Widget user sends first message
+     * 2. Sistema genera welcome message
      * 3. BEFORE sending, passa da SafetyTranslationAgent:
-     *    - Input: welcomeMessage + registrationLink
-     *    - targetLanguage: detected from phone prefix
-     *    - allowedLinks: [registrationLink]
+     *    - Input: welcomeMessage
+     *    - targetLanguage: customer language
      * 4. SafetyTranslationAgent verifica:
      *    - No contenuti offensivi/pericolosi
-     *    - Link sono whitelisted
      *    - Traduce se necessario
      * 5. Output: finalMessage (safe + translated)
      * 6. Salva debug step con tokensUsed
      *
-     * VERIFIED IN: whatsapp-webhook.controller.ts:370-450
+     * WHATSAPP: Welcome messages still use SafetyTranslationAgent
+     * because they have deliveryStatus='not_queued' (scheduler doesn't process them)
      *
      * CODE LOCATION:
-     * backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts
-     * Lines 370-450 (Safety & Translation for welcome message)
+     * backend/src/utils/welcome-message.handler.ts (uses TranslationAgent)
+     * backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts (uses SafetyTranslationAgent)
      */
 
     const expectedFlow = {
-      step1: "Generate welcome message with registration link",
-      step2: "Call SafetyTranslationAgent.process()",
-      step3: "Verify safe=true and no blockedReason",
-      step4: "Use translatedText as final message",
-      step5: "Save debug step with tokensUsed",
+      step1: "Generate welcome message",
+      step2: "Check channel type",
+      step3_widget: "Call SafetyTranslationAgent.process()",
+      step3_whatsapp: "Call SafetyTranslationAgent (not_queued messages only)",
+      step4: "Verify safe=true and no blockedReason",
+      step5: "Use translatedText as final message",
       step6: "Send finalMessage to customer",
     }
 
     const expectedDebugStep = {
       type: "safety",
-      agent: "Safety & Translation",
+      agent: "SafetyTranslationAgent",
       model: "openai/gpt-4o-mini",
       temperature: 0.2,
       input: {
-        originalMessage: "Welcome message with link",
+        originalMessage: "Welcome message",
         targetLanguage: "it",
         customerName: "New Customer",
       },
       output: {
-        translatedMessage: "Benvenuto! Link: https://...",
+        translatedMessage: "Benvenuto!",
         safe: true,
         blockedReason: null,
       },
@@ -65,224 +70,226 @@ describe("Safety & Translation Agent - Complete Coverage", () => {
 
     // Verify structure
     expect(expectedDebugStep.type).toBe("safety")
-    expect(expectedDebugStep.agent).toBe("Safety & Translation")
+    expect(expectedDebugStep.agent).toBe("SafetyTranslationAgent")
     expect(expectedDebugStep.output.safe).toBe(true)
 
-    console.log("✅ Welcome message Safety & Translation flow documented")
+    console.log("✅ Widget welcome message Safety & Translation flow documented")
   })
 
-  it("should process operator messages through Safety & Translation", () => {
+  it("should process operator messages through Safety & Translation (Widget only)", () => {
     /**
-     * EXPECTED BEHAVIOR:
+     * 🆕 UPDATED: Widget-only SafetyTranslationAgent
      *
-     * 1. Operatore scrive messaggio manuale (activeChatbot=false)
-     * 2. BEFORE saving to DB, passa da SafetyTranslationAgent:
-     *    - Input: operator message content
-     *    - targetLanguage: customer.language
-     *    - customerName: customer.name
-     *    - allowedLinks: [] (typically no tokens in operator messages)
-     * 3. SafetyTranslationAgent verifica:
-     *    - No contenuti offensivi (protegge reputazione business)
-     *    - Traduce se necessario
-     * 4. IF not safe: blocca messaggio con errore 400
-     * 5. IF safe: usa translatedText come finalMessage
-     * 6. Salva debug step e invia
+     * WIDGET CHANNEL BEHAVIOR:
+     * 1. Operator writes message
+     * 2. Message passes through SafetyTranslationAgent ✅
+     * 3. Safety checks + Translation applied
+     * 4. Sent to widget customer
      *
-     * VERIFIED IN: chat.controller.ts:390-450
+     * WHATSAPP CHANNEL BEHAVIOR:
+     * 1. Operator writes message
+     * 2. Message goes to queue
+     * 3. Scheduler handles security + translation ✅
+     * 4. SafetyTranslationAgent SKIPPED (no double cost)
+     *
+     * Why different?
+     * - WhatsApp: Scheduler processes all messages → already secure + translated
+     * - Widget: No scheduler → SafetyTranslationAgent is the only layer
      *
      * CODE LOCATION:
      * backend/src/interfaces/http/controllers/chat.controller.ts
-     * Lines 390-450 (Safety & Translation for operator messages)
      */
 
-    const expectedFlow = {
+    const widgetFlow = {
       step1: "Operator writes message",
-      step2: "Verify activeChatbot=false (else 400 error)",
-      step3: "Call SafetyTranslationAgent.process()",
-      step4_ifNotSafe: "Return 400 error with blockedReason",
-      step4_ifSafe: "Use translatedText as finalMessage",
-      step5: "Save to conversationMessage with debugInfo",
-      step6: "Add to WhatsApp queue",
+      step2: "chat.controller receives",
+      step3: "Channel check: widget → apply SafetyTranslationAgent ✅",
+      step4: "Safety checks applied",
+      step5: "Sent to customer",
     }
 
-    const expectedSafetyDebugStep = {
-      type: "safety",
-      agent: "Safety & Translation",
-      model: "openai/gpt-4o-mini",
-      temperature: 0.2,
-      input: {
-        originalMessage: "Operator message",
-        targetLanguage: "it",
-        customerName: "Customer Name",
-      },
-      output: {
-        translatedMessage: "Messaggio operatore",
-        safe: true,
-        blockedReason: null,
-      },
-      tokenUsage: {
-        totalTokens: 100,
-      },
+    const whatsappFlow = {
+      step1: "Operator writes message",
+      step2: "whatsapp-webhook.controller receives",
+      step3: "Channel check: whatsapp → SKIP SafetyTranslationAgent",
+      step4: "Add to WhatsApp queue",
+      step5: "Scheduler handles security + translation",
     }
 
-    // Verify blocking works
-    const blockedExample = {
-      safe: false,
-      blockedReason: "Contains offensive content",
-      translatedText: null,
-    }
+    // Widget: SafetyTranslationAgent applied
+    expect(widgetFlow.step3).toContain("apply SafetyTranslationAgent")
 
-    expect(expectedSafetyDebugStep.output.safe).toBe(true)
-    expect(blockedExample.safe).toBe(false)
+    // WhatsApp: SafetyTranslationAgent skipped
+    expect(whatsappFlow.step3).toContain("SKIP SafetyTranslationAgent")
 
-    console.log("✅ Operator message Safety & Translation flow documented")
+    console.log("✅ Operator message: Widget=SafetyTranslationAgent, WhatsApp=Scheduler")
   })
 
-  it("should process LLM responses through Safety & Translation", () => {
+  it("should process LLM responses through Safety & Translation (Widget only)", () => {
     /**
-     * EXPECTED BEHAVIOR:
+     * 🆕 UPDATED: Widget-only SafetyTranslationAgent
      *
-     * 1. LLM Router genera risposta (Product Search, Cart, etc.)
-     * 2. Agent response passa SEMPRE da SafetyTranslationAgent
+     * WIDGET CHANNEL:
+     * 1. LLM Router generates response (Product Search, Cart, etc.)
+     * 2. Agent response passes through SafetyTranslationAgent ✅
      * 3. Safety checks:
-     *    - No contenuti offensivi generati dall'LLM
-     *    - Link sono whitelisted (product links, order links)
-     *    - Traduce se necessario
-     * 4. Salva debug step in conversationMessage
-     * 5. Risposta finale sicura inviata al cliente
+     *    - No offensive content from LLM
+     *    - Links are whitelisted (product links, order links)
+     *    - Translate if needed
+     * 4. Save debug step in conversationMessage
+     * 5. Safe response sent to customer
      *
-     * VERIFIED IN: Ogni agent (ProductSearchAgent, CartAgent, etc.)
+     * WHATSAPP CHANNEL:
+     * 1. LLM Router generates response
+     * 2. SafetyTranslationAgent SKIPPED ❌
+     * 3. Response goes to queue
+     * 4. Scheduler applies security + translation
      *
-     * CODE PATTERN:
-     * - Ogni agent chiama SafetyTranslationAgent dopo generazione risposta
-     * - Pattern uniforme: response → safety → finalMessage
+     * CODE PATTERN (llm-router.service.ts):
+     * if (this.shouldApplySafetyTranslation(channel)) {
+     *   // Widget: apply SafetyTranslationAgent
+     * } else {
+     *   // WhatsApp: skip, scheduler handles
+     * }
      */
 
-    const expectedAgentFlow = {
+    const widgetAgentFlow = {
       step1: "Agent generates response (e.g., ProductSearchAgent)",
-      step2: "Call SafetyTranslationAgent.process()",
+      step2: "Channel check: widget → apply SafetyTranslationAgent ✅",
       step3: "Pass allowedLinks (product/order URLs)",
       step4: "Verify safe=true",
       step5: "Save debug step with tokensUsed",
       step6: "Return finalMessage to customer",
     }
 
-    const expectedSafetyStep = {
-      type: "safety",
-      agent: "Safety & Translation",
-      model: "openai/gpt-4o-mini",
-      temperature: 0.2,
-      input: {
-        originalMessage: "Ecco i prodotti trovati: ...",
-        targetLanguage: "it",
-        customerName: "Mario Rossi",
-        allowedLinks: [
-          "https://echatbot.ai/products/123",
-          "https://echatbot.ai/s/abc123",
-        ],
-      },
-      output: {
-        translatedMessage: "Here are the products: ...",
-        safe: true,
-        blockedReason: null,
-      },
-      tokenUsage: {
-        totalTokens: 200,
-      },
+    const whatsappAgentFlow = {
+      step1: "Agent generates response",
+      step2: "Channel check: whatsapp → SKIP SafetyTranslationAgent",
+      step3: "Add debugStep with 'Skipped'",
+      step4: "Return message (scheduler will process)",
     }
 
-    expect(expectedSafetyStep.output.safe).toBe(true)
-    expect(expectedSafetyStep.input.allowedLinks.length).toBeGreaterThan(0)
+    // Widget: SafetyTranslationAgent applied
+    expect(widgetAgentFlow.step2).toContain("apply SafetyTranslationAgent")
 
-    console.log("✅ LLM response Safety & Translation flow documented")
+    // WhatsApp: SafetyTranslationAgent skipped
+    expect(whatsappAgentFlow.step2).toContain("SKIP SafetyTranslationAgent")
+
+    console.log("✅ LLM response: Widget=SafetyTranslationAgent, WhatsApp=Scheduler")
   })
 
-  it("should verify Safety & Translation is MANDATORY for all message types", () => {
+  it("should verify Safety & Translation is MANDATORY for Widget, optional for WhatsApp", () => {
     /**
-     * CRITICAL REQUIREMENT:
+     * 🆕 UPDATED REQUIREMENT (Widget-only SafetyTranslationAgent):
      *
-     * NESSUN messaggio può essere inviato al cliente senza passare da SafetyTranslationAgent
+     * WIDGET CHANNEL: MUST pass through SafetyTranslationAgent
+     * - No scheduler processes widget messages
+     * - SafetyTranslationAgent is the ONLY security + translation layer
+     * 
+     * WHATSAPP CHANNEL: SKIP SafetyTranslationAgent
+     * - Scheduler handles security (SecurityAgentService) + translation (TranslationService)
+     * - Prevents double LLM costs
+     * - Exception: Welcome messages with deliveryStatus='not_queued' still use SafetyTranslationAgent
      *
-     * Questo garantisce:
-     * 1. Protezione reputazione business (no offensive content)
-     * 2. Link whitelisting (no malicious URLs)
-     * 3. Traduzione corretta in lingua cliente
-     * 4. Tracciamento token usage per billing
+     * This guarantees:
+     * 1. Widget: Full protection (SafetyTranslationAgent in backend)
+     * 2. WhatsApp: Full protection (SecurityAgent + TranslationService in scheduler)
+     * 3. No duplicate LLM calls (cost optimization)
      *
-     * Message types che DEVONO passare da Safety & Translation:
-     * - Welcome messages (new customers)
-     * - Operator messages (manual responses)
-     * - LLM responses (all agents)
-     * - WIP messages (maintenance mode)
-     * - System notifications (chatbot reactivated, etc.)
+     * Message types per channel:
+     * 
+     * WIDGET (SafetyTranslationAgent applied):
+     * - Welcome messages
+     * - LLM responses
+     * - All chat messages
+     * 
+     * WHATSAPP (SafetyTranslationAgent SKIPPED - scheduler handles):
+     * - LLM responses (scheduler does security + translation)
+     * - WIP messages (scheduler does security + translation)
+     * - Operator messages (scheduler does security + translation)
+     * 
+     * WHATSAPP EXCEPTION (SafetyTranslationAgent applied):
+     * - Welcome messages (deliveryStatus='not_queued' - scheduler doesn't see them)
      */
 
-    const mandatoryMessageTypes = [
-      "welcome_message",
-      "operator_message",
-      "llm_response",
-      "wip_message",
-      "system_notification",
-    ]
-
-    const safetyRequirement = {
-      policy: "ALL outbound messages MUST pass SafetyTranslationAgent",
-      exceptions: "NONE",
-      enforcement: "Code review + documentation tests",
+    const channelBehavior = {
+      widget: {
+        safetyTranslationApplied: true,
+        reason: "No scheduler processes widget messages",
+      },
+      whatsapp: {
+        safetyTranslationApplied: false,
+        reason: "Scheduler handles security + translation",
+        exception: "Welcome messages with deliveryStatus='not_queued'",
+      },
     }
 
-    expect(mandatoryMessageTypes.length).toBe(5)
-    expect(safetyRequirement.exceptions).toBe("NONE")
+    expect(channelBehavior.widget.safetyTranslationApplied).toBe(true)
+    expect(channelBehavior.whatsapp.safetyTranslationApplied).toBe(false)
 
     console.log(
-      "✅ Safety & Translation MANDATORY policy verified for all message types"
+      "✅ Safety & Translation policy: Widget=MANDATORY, WhatsApp=SCHEDULER"
     )
   })
 
-  it("should document token usage tracking for billing", () => {
+  it("should document token usage tracking and cost savings", () => {
     /**
-     * BILLING REQUIREMENT:
+     * BILLING OPTIMIZATION:
      *
-     * Safety & Translation Agent usa LLM (gpt-4o-mini) quindi consuma tokens
+     * Widget-only SafetyTranslationAgent = SIGNIFICANT COST SAVINGS
      *
-     * Token tracking:
+     * BEFORE (all channels):
+     * - Widget: SafetyTranslationAgent ~200 tokens
+     * - WhatsApp: SafetyTranslationAgent ~200 tokens + Scheduler ~200 tokens = 400 tokens (DOUBLE COST!)
+     *
+     * AFTER (Widget-only):
+     * - Widget: SafetyTranslationAgent ~200 tokens
+     * - WhatsApp: Scheduler ~200 tokens only (NO DUPLICATE)
+     *
+     * SAVINGS: 50% token reduction on WhatsApp messages!
+     *
+     * Token tracking (still applies for Widget):
      * 1. SafetyTranslationAgent ritorna tokensUsed
      * 2. Salvato in debug step
      * 3. Sommato al totale message cost
      * 4. Salvato in conversationMessage.debugInfo
      *
-     * CRITICAL: Ogni chiamata Safety = costo aggiuntivo
-     * - Welcome message: ~150 tokens
-     * - Operator message: ~100 tokens
-     * - LLM response: ~200 tokens
-     *
-     * Total message cost = LLM tokens + Safety tokens
+     * Token estimates per channel:
+     * - Widget welcome: ~150 tokens (SafetyTranslationAgent)
+     * - Widget LLM response: ~200 tokens (SafetyTranslationAgent)
+     * - WhatsApp: 0 tokens from SafetyTranslationAgent (scheduler handles)
      */
 
-    const exampleCosts = {
-      welcomeMessage: {
-        safetyTokens: 150,
-        totalTokens: 150, // Only safety (no LLM for welcome)
-        estimatedCost: 0.0001, // €0.0001 per token (example)
-      },
-      operatorMessage: {
-        safetyTokens: 100,
-        totalTokens: 100, // Only safety (no LLM for operator)
-        estimatedCost: 0.00007,
-      },
-      llmResponse: {
-        llmTokens: 500,
-        safetyTokens: 200,
-        totalTokens: 700, // LLM + Safety
-        estimatedCost: 0.0005,
+    const beforeOptimization = {
+      whatsappMessage: {
+        safetyAgentTokens: 200, // Backend SafetyTranslationAgent
+        schedulerTokens: 200, // Scheduler security + translation
+        totalTokens: 400, // DOUBLE COST!
       },
     }
 
-    expect(exampleCosts.llmResponse.totalTokens).toBe(
-      exampleCosts.llmResponse.llmTokens +
-        exampleCosts.llmResponse.safetyTokens
-    )
+    const afterOptimization = {
+      whatsappMessage: {
+        safetyAgentTokens: 0, // SKIPPED - scheduler handles
+        schedulerTokens: 200, // Scheduler security + translation
+        totalTokens: 200, // 50% SAVINGS!
+      },
+      widgetMessage: {
+        safetyAgentTokens: 200, // Widget still uses SafetyTranslationAgent
+        schedulerTokens: 0, // No scheduler for widget
+        totalTokens: 200,
+      },
+    }
 
-    console.log("✅ Safety & Translation token billing tracking documented")
+    const savings =
+      beforeOptimization.whatsappMessage.totalTokens -
+      afterOptimization.whatsappMessage.totalTokens
+
+    expect(afterOptimization.whatsappMessage.safetyAgentTokens).toBe(0)
+    expect(savings).toBe(200) // 50% savings per WhatsApp message
+
+    console.log(
+      "✅ Widget-only SafetyTranslationAgent: 50% token savings on WhatsApp!"
+    )
   })
 })

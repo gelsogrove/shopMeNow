@@ -402,12 +402,15 @@ export class LinkReplacementService {
               customer.phone,
               workspaceId
             )
-            const workspaceUrl = await workspaceService.getWorkspaceURL(workspaceId)
+            // Get workspace URL and custom registration page (if configured)
+            const { url: workspaceUrl, registrationPage } =
+              await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
             const registrationLink =
               await linkGeneratorService.generateRegistrationLink(
                 token,
                 workspaceUrl,
-                workspaceId
+                workspaceId,
+                registrationPage // Pass custom registration page if configured
               )
 
             replacedResponse = replacedResponse.replace(

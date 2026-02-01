@@ -9,7 +9,7 @@ import {
 import { WorkspaceRepositoryInterface } from "../../domain/repositories/workspace.repository.interface"
 import { WorkspaceRepository } from "../../repositories/workspace.repository"
 import logger from "../../utils/logger"
-import { defaultAgents } from "../../../prisma/data/defaultAgents"
+import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
 
 export class WorkspaceService {
@@ -358,8 +358,11 @@ For privacy inquiries, please contact our support team.`
       }
 
       // 3. 🆕 IMPORT ALL DEFAULT AGENTS (Feature: Import prompts on new workspace)
+      // Use dynamicAgents with correct template folder based on workspace type
       try {
-        const agents = defaultAgents(createdWorkspace.id)
+        const hasEcommerce = data.sellsProductsAndServices ?? true
+        const agents = dynamicAgents(createdWorkspace.id, hasEcommerce)
+        logger.info(`Loading ${hasEcommerce ? 'e-commerce' : 'informational'} templates for workspace ${createdWorkspace.id}`)
         for (const agent of agents) {
           await tx.agentConfig.create({
             data: {

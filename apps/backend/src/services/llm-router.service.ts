@@ -242,6 +242,29 @@ export class LLMRouterService {
   }
 
   /**
+   * 🆕 Check if SafetyTranslationAgent should be applied based on channel
+   * 
+   * - WIDGET: Apply SafetyTranslationAgent (no scheduler processes widget messages)
+   * - WHATSAPP: Skip SafetyTranslationAgent (scheduler already does security + translation)
+   * 
+   * @param channel - Channel type ('widget', 'whatsapp', etc.)
+   * @returns true if SafetyTranslationAgent should be applied
+   */
+  private shouldApplySafetyTranslation(channel?: string): boolean {
+    // Widget channel: MUST apply SafetyTranslation (no scheduler processes widget)
+    // WhatsApp/other: SKIP SafetyTranslation (scheduler handles security + translation)
+    const shouldApply = channel === 'widget'
+    
+    logger.debug("🔒 SafetyTranslation check", {
+      channel: channel || 'undefined',
+      shouldApply,
+      reason: shouldApply ? 'Widget channel - no scheduler' : 'WhatsApp/other - scheduler handles translation'
+    })
+    
+    return shouldApply
+  }
+
+  /**
    * 🆕 Feature 126: Check if customer is blocked (P1 - Security Layer)
    *
    * This is the HIGHEST priority check - runs BEFORE any LLM processing.
@@ -419,15 +442,25 @@ export class LLMRouterService {
           messageLength: params.message.length,
         })
 
-        // Step 1: Translate with Safety & Translation Agent
-        const safetyResult = await this.safetyAgent.process({
-          workspaceId: params.workspaceId,
-          response: params.message, // Message in Italian (base language)
-          targetLanguage,
-          customerName: params.customerName,
-        })
-
-        totalTokens += safetyResult.tokensUsed || 0
+        // Step 1: Translate with Safety & Translation Agent (ONLY for Widget)
+        // 🔧 WhatsApp: Skip - scheduler handles security + translation
+        let safetyResult = {
+          translatedText: params.message,
+          safe: true,
+          tokensUsed: 0,
+        }
+        
+        if (this.shouldApplySafetyTranslation(params.channel)) {
+          safetyResult = await this.safetyAgent.process({
+            workspaceId: params.workspaceId,
+            response: params.message, // Message in Italian (base language)
+            targetLanguage,
+            customerName: params.customerName,
+          })
+          totalTokens += safetyResult.tokensUsed || 0
+        } else {
+          logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
+        }
 
         logger.info(
           "✅ FAST-PATH STEP 1 SUCCESS: SafetyTranslationAgent completed"
@@ -567,13 +600,23 @@ export class LLMRouterService {
           content: params.message,
         })
 
-        // 🆕 Apply SafetyTranslationAgent to security message (TASK16: No bypasses)
-        const securitySafetyResult = await this.safetyAgent.process({
-          workspaceId: params.workspaceId,
-          response: securityCheck.message || "Security alert",
-          targetLanguage: params.customerLanguage || "it",
-          customerName: params.customerName,
-        })
+        // 🆕 Apply SafetyTranslationAgent to security message (ONLY for Widget)
+        // 🔧 WhatsApp: Skip - scheduler handles security + translation
+        let securitySafetyResult = {
+          translatedText: securityCheck.message || "Security alert",
+          tokensUsed: 0,
+        }
+        
+        if (this.shouldApplySafetyTranslation(params.channel)) {
+          securitySafetyResult = await this.safetyAgent.process({
+            workspaceId: params.workspaceId,
+            response: securityCheck.message || "Security alert",
+            targetLanguage: params.customerLanguage || "it",
+            customerName: params.customerName,
+          })
+        } else {
+          logger.info("⏭️ Skipping SafetyTranslation for security message (WhatsApp - scheduler handles it)")
+        }
 
         const translatedSecurityMessage = securitySafetyResult.translatedText
 
@@ -696,14 +739,23 @@ export class LLMRouterService {
           },
         ]
 
-        // 🆕 Apply SafetyTranslationAgent to WIP message (TASK16: No bypasses)
-        // Even WIP messages should be translated to customer's language
-        const wipSafetyResult = await this.safetyAgent.process({
-          workspaceId: params.workspaceId,
-          response: wipMessage,
-          targetLanguage: params.customerLanguage || "it",
-          customerName: params.customerName,
-        })
+        // 🆕 Apply SafetyTranslationAgent to WIP message (ONLY for Widget)
+        // 🔧 WhatsApp: Skip - scheduler handles security + translation
+        let wipSafetyResult = {
+          translatedText: wipMessage,
+          tokensUsed: 0,
+        }
+        
+        if (this.shouldApplySafetyTranslation(params.channel)) {
+          wipSafetyResult = await this.safetyAgent.process({
+            workspaceId: params.workspaceId,
+            response: wipMessage,
+            targetLanguage: params.customerLanguage || "it",
+            customerName: params.customerName,
+          })
+        } else {
+          logger.info("⏭️ Skipping SafetyTranslation for WIP message (WhatsApp - scheduler handles it)")
+        }
 
         const translatedWipMessage = wipSafetyResult.translatedText
 
@@ -1421,7 +1473,9 @@ export class LLMRouterService {
       const humanizedResult = await this.conversationHistoryLayer.process({
         workspaceId: params.workspaceId,
         customerId: params.customerId,
-        customerName: params.customerName || "Cliente",
+        // 🚫 WIDGET FIX: Use promptVariables.customerName (empty for widget channel)
+        // This prevents greeting with "Visitor xxx" in widget chat
+        customerName: promptVariables.customerName || "",
         conversationHistory: historyForLayer,
         currentQuestion: params.message,
         technicalResponse: {
@@ -1430,10 +1484,11 @@ export class LLMRouterService {
           optionsMapping: explicitOptionMapping || undefined,
         },
         botIdentity: {
-          name: workspace?.name || "Assistente",
+          name: workspace?.chatbotName || "Assistente",
           personality: workspace?.botIdentityResponse || null,
         },
         customAiRules: workspace?.customAiRules || null,
+        companyName: workspace?.name || "",
         activeOffers,
         faqs: workspaceFaqs, // 📚 Pass FAQs for context
         mindset: conversationMindset, // 🎯 Pass mindset (SALES/SUPPORT/NEUTRAL)
@@ -1707,14 +1762,25 @@ export class LLMRouterService {
         errorMessage: error instanceof Error ? error.message : String(error),
       })
 
-      // 🔧 Pass generic error message through Safety/Translation layer
+      // 🔧 Pass generic error message through Safety/Translation layer (ONLY for Widget)
+      // 🔧 WhatsApp: Skip - scheduler handles security + translation
       const safetyTimestamp = new Date().toISOString()
-      const errorResponse = await this.safetyAgent.process({
-        workspaceId: params.workspaceId,
-        response: "System error - please try again",
-        targetLanguage: params.customerLanguage,
-        customerName: params.customerName,
-      })
+      let errorResponse = {
+        translatedText: "System error - please try again",
+        tokensUsed: 0,
+        systemPrompt: undefined as string | undefined,
+      }
+      
+      if (this.shouldApplySafetyTranslation(params.channel)) {
+        errorResponse = await this.safetyAgent.process({
+          workspaceId: params.workspaceId,
+          response: "System error - please try again",
+          targetLanguage: params.customerLanguage,
+          customerName: params.customerName,
+        })
+      } else {
+        logger.info("⏭️ Skipping SafetyTranslation for error message (WhatsApp - scheduler handles it)")
+      }
 
       // 🔧 ADD SAFETY STEP TO DEBUG
       errorDebugSteps.push({
@@ -3107,13 +3173,24 @@ export class LLMRouterService {
         logger.warn("⚠️ Link replacement failed:", linkResult.error)
       }
 
-      // 🔒 STEP 2: Apply Safety & Translation Layer to response with links
-      const safeResponse = await this.safetyAgent.process({
-        workspaceId: params.workspaceId,
-        response: responseWithLinks, // ✅ Use response with replaced links
-        targetLanguage: params.customerLanguage || "it",
-        customerName: params.customerName,
-      })
+      // 🔒 STEP 2: Apply Safety & Translation Layer to response with links (ONLY for Widget)
+      // 🔧 WhatsApp: Skip - scheduler handles security + translation
+      let safeResponse = {
+        translatedText: responseWithLinks,
+        safe: true,
+        blockedReason: undefined as string | undefined,
+      }
+      
+      if (this.shouldApplySafetyTranslation(params.channel)) {
+        safeResponse = await this.safetyAgent.process({
+          workspaceId: params.workspaceId,
+          response: responseWithLinks, // ✅ Use response with replaced links
+          targetLanguage: params.customerLanguage || "it",
+          customerName: params.customerName,
+        })
+      } else {
+        logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
+      }
 
       if (!safeResponse.safe) {
         logger.warn("⚠️ Response blocked by safety layer", {
@@ -3394,13 +3471,22 @@ export class LLMRouterService {
         customerDiscount,
       })
 
-      // Apply Safety & Translation
-      const safeResponse = await this.safetyAgent.process({
-        workspaceId: options.params.workspaceId,
-        response: cartResponse.output,
-        targetLanguage: options.params.customerLanguage || "it",
-        customerName: options.params.customerName,
-      })
+      // Apply Safety & Translation (ONLY for Widget)
+      // 🔧 WhatsApp: Skip - scheduler handles security + translation
+      let safeResponse = {
+        translatedText: cartResponse.output,
+      }
+      
+      if (this.shouldApplySafetyTranslation(options.params.channel)) {
+        safeResponse = await this.safetyAgent.process({
+          workspaceId: options.params.workspaceId,
+          response: cartResponse.output,
+          targetLanguage: options.params.customerLanguage || "it",
+          customerName: options.params.customerName,
+        })
+      } else {
+        logger.info("⏭️ Skipping SafetyTranslation for cart handoff (WhatsApp - scheduler handles it)")
+      }
 
       const executionTimeMs = Date.now() - startTime
 

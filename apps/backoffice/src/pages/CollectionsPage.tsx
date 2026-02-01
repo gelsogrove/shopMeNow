@@ -47,6 +47,8 @@ interface OwnerInvoiceRow {
     creditBalance: number
     paymentFailureCount: number
     lastPaymentFailedAt: string | null
+    isPlatformAdmin?: boolean
+    isDeveloperUser?: boolean
   }
   invoice: {
     id: string
@@ -93,6 +95,18 @@ const getPeriodRange = (month: number, year: number) => {
 
 const formatDate = (date: Date) =>
   `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`
+
+/**
+ * Helper: Determine PayPal environment for an owner
+ * - isPlatformAdmin or isDeveloperUser → SANDBOX
+ * - Normal customer → LIVE
+ */
+const getPayPalEnvironment = (owner: OwnerInvoiceRow['owner']): 'sandbox' | 'live' => {
+  if (owner.isPlatformAdmin || owner.isDeveloperUser) {
+    return 'sandbox'
+  }
+  return 'live'
+}
 
 interface InvoicePreviewData {
   id: string
@@ -1204,11 +1218,19 @@ export function CollectionsPage() {
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Process Payment
                         </Button>
+                        <Badge
+                          variant={getPayPalEnvironment(row.owner) === 'sandbox' ? 'secondary' : 'destructive'}
+                          className={getPayPalEnvironment(row.owner) === 'sandbox' 
+                            ? 'text-xs bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                            : 'text-xs bg-red-100 text-red-800 border border-red-300'}
+                        >
+                          {getPayPalEnvironment(row.owner) === 'sandbox' ? '🧪 SANDBOX' : '🔴 LIVE'}
+                        </Badge>
                       </div>
                     )}
 
                     {isFailedView && (
-                      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
+                      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center">
                         <Input
                           placeholder="Admin notes..."
                           value={notesByInvoice[invoice.id] || ''}
@@ -1219,14 +1241,24 @@ export function CollectionsPage() {
                             }))
                           }
                         />
-                        <Button
-                          variant="outline"
-                          onClick={() => handleMockPayment(invoice.id)}
-                          disabled={isUpdatingRow}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Retry Payment
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => handleMockPayment(invoice.id)}
+                            disabled={isUpdatingRow}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Retry Payment
+                          </Button>
+                          <Badge
+                            variant={getPayPalEnvironment(row.owner) === 'sandbox' ? 'secondary' : 'destructive'}
+                            className={getPayPalEnvironment(row.owner) === 'sandbox' 
+                              ? 'text-xs bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                              : 'text-xs bg-red-100 text-red-800 border border-red-300'}
+                          >
+                            {getPayPalEnvironment(row.owner) === 'sandbox' ? '🧪 SANDBOX' : '🔴 LIVE'}
+                          </Badge>
+                        </div>
                         <Button
                           variant="outline"
                           onClick={() => handleSaveNotes(invoice.id, 'FAILED')}

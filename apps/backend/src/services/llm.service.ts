@@ -1527,42 +1527,31 @@ export class LLMService {
     )
     return welcomeMessage.replace(token, registrationLink)
   }
+  /**
+   * Generate registration link using centralized LinkGeneratorService
+   * Supports custom registrationPage URL from workspace settings
+   */
   private async generateRegistrationLink(
     phone: string,
     workspaceId: string
   ): Promise<string> {
-    // Crea un token di registrazione e restituisci il link completo
     const tokenService = new TokenService()
-    const messageRepo =
-      new (require("../repositories/message.repository").MessageRepository)()
     const token = await tokenService.createRegistrationToken(phone, workspaceId)
-    const workspaceUrl = await messageRepo.getWorkspaceUrl(workspaceId)
-    const registrationLink = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
 
-    // Create short URL for registration link
-    try {
-      const {
-        URLShortenerService,
-      } = require("../application/services/url-shortener.service")
-      const urlShortenerService = new URLShortenerService()
+    // Get workspace URL and custom registration page (if configured)
+    // Using require to avoid circular dependency
+    const { workspaceService: ws } = require("./workspace.service")
+    const { url: workspaceUrl, registrationPage } =
+      await ws.getWorkspaceURLWithRegistration(workspaceId)
 
-      const shortResult = await urlShortenerService.createShortUrl(
-        registrationLink,
-        workspaceId
-      )
-      const finalRegistrationLink = `${workspaceUrl.replace(/\/$/, "")}${shortResult.shortUrl}`
-
-      logger.info(
-        `📎 Created short registration link: ${finalRegistrationLink} → ${registrationLink}`
-      )
-      return finalRegistrationLink
-    } catch (shortError) {
-      logger.warn(
-        "⚠️ Failed to create short URL for registration, using long URL:",
-        shortError
-      )
-      return registrationLink
-    }
+    // Use centralized link generator service
+    const linkGeneratorService = new LinkGeneratorService()
+    return linkGeneratorService.generateRegistrationLink(
+      token,
+      workspaceUrl,
+      workspaceId,
+      registrationPage // Pass custom registration page if configured
+    )
   }
 
   /**

@@ -91,6 +91,7 @@ export interface ConversationHistoryLayerInput {
     personality: string | null
   }
   customAiRules: string | null
+  companyName: string
 
   // Contesto business
   activeOffers: ActiveOffer[]

@@ -264,6 +264,14 @@ export function Header() {
             >
               FAQ
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/agents")}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              Agents
+            </Button>
             {workspace?.sellsProductsAndServices !== false && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

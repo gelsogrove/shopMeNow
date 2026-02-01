@@ -1,16 +1,28 @@
 /**
  * TemplateEngineService - Process templates with variables and conditionals
  *
- * Single Responsibility: Replace {{variables}} and handle {{#if}} conditionals.
+ * Single Responsibility: Replace {{variables}} and handle conditionals.
  * Simple, fast, no external dependencies.
  *
  * Supports:
  * - {{variableName}} - Simple variable replacement
- * - {{#if condition}}...{{/if}} - Conditional blocks (NESTED SUPPORTED)
+ * - [[SECTION:variableName]]...[[/SECTION]] - Section blocks (NEW, PREFERRED)
+ *   → Entire section removed if variable is empty/undefined
+ *   → Use this for optional content with headers/labels
+ * - {{#if condition}}...{{/if}} - Conditional blocks (LEGACY, for boolean logic)
  * - {{#if condition}}...{{else}}...{{/if}} - If-else blocks (NESTED SUPPORTED)
  * - {{#unless condition}}...{{/unless}} - Inverse conditionals
  *
  * @architecture Part of PromptBuilder system
+ * 
+ * @example SECTION syntax (NEW - for optional string content)
+ * ```
+ * [[SECTION:botIdentityResponse]]
+ * ### About Us
+ * {{botIdentityResponse}}
+ * [[/SECTION]]
+ * ```
+ * If botIdentityResponse is empty, the entire section including "### About Us" is removed.
  */
 
 import logger from "../../../utils/logger"
@@ -21,14 +33,47 @@ export class TemplateEngineService {
   }
 
   /**
+   * Process ONLY conditionals ({{#if}}, {{#unless}}, [[SECTION]]) - DO NOT replace {{variables}}
+   * 
+   * Use this when loading templates for storage - variables should remain as placeholders.
+   * 
+   * @param template - Template string with conditionals
+   * @param conditionalFlags - Object with boolean flags for conditionals
+   * @returns Template with conditionals resolved, {{variables}} INTACT
+   */
+  processConditionalsOnly(template: string, conditionalFlags: Record<string, boolean>): string {
+    let result = template
+
+    // Step 0: Process [[SECTION:var]]...[[/SECTION]] blocks
+    result = this.processSectionBlocks(result, conditionalFlags)
+
+    // Step 1: Process {{#unless condition}}...{{/unless}} blocks
+    result = this.processUnlessBlocksIteratively(result, conditionalFlags)
+
+    // Step 2: Process {{#if}} blocks
+    result = this.processIfBlocksIteratively(result, conditionalFlags)
+
+    // DO NOT call replaceVariables() - leave {{variables}} intact!
+
+    // Step 3: Clean up extra blank lines
+    result = this.cleanupWhitespace(result)
+
+    return result
+  }
+
+  /**
    * Process a template with given variables
    *
-   * @param template - Template string with {{variables}} and {{#if}} blocks
+   * @param template - Template string with {{variables}}, [[SECTION]] and {{#if}} blocks
    * @param variables - Object with variable values
    * @returns Processed template with all replacements done
    */
   process(template: string, variables: Record<string, any>): string {
     let result = template
+
+    // Step 0: Process [[SECTION:var]]...[[/SECTION]] blocks FIRST (NEW, PREFERRED)
+    // This removes entire sections when the variable is empty
+    result = this.processSectionBlocks(result, variables)
 
     // Step 1: Process {{#unless condition}}...{{/unless}} blocks (iteratively for nesting)
     result = this.processUnlessBlocksIteratively(result, variables)
@@ -44,6 +89,42 @@ export class TemplateEngineService {
     result = this.cleanupWhitespace(result)
 
     return result
+  }
+
+  /**
+   * Process [[SECTION:variableName]]...[[/SECTION]] blocks
+   * 
+   * These blocks are COMPLETELY REMOVED if the variable is empty/undefined.
+   * Use this for optional content that includes headers, labels, or formatting.
+   * 
+   * @example
+   * [[SECTION:address]]
+   * ### Location
+   * {{address}}
+   * [[/SECTION]]
+   * 
+   * If address is empty, the entire block including "### Location" is removed.
+   */
+  private processSectionBlocks(template: string, variables: Record<string, any>): string {
+    // Match [[SECTION:variableName]]...[[/SECTION]] (supports multiline, nested content)
+    const sectionRegex = /\[\[SECTION:(\w+)\]\]([\s\S]*?)\[\[\/SECTION\]\]/g
+
+    return template.replace(sectionRegex, (match, varName, content) => {
+      const value = variables[varName]
+      
+      // Check if variable is empty/undefined/null/empty string
+      const isEmpty = value === undefined || value === null || value === '' || 
+                      (typeof value === 'string' && value.trim() === '')
+      
+      if (isEmpty) {
+        logger.debug(`[[SECTION:${varName}]] removed - variable is empty`)
+        return '' // Remove entire section
+      }
+      
+      // Variable has value - keep the content (variable will be replaced later)
+      logger.debug(`[[SECTION:${varName}]] kept - variable has value`)
+      return content.trim()
+    })
   }
 
   /**

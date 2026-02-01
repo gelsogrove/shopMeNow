@@ -549,4 +549,22 @@ export const workspaceService = {
     })
     return workspace?.url || "http://localhost:3000"
   },
+
+  /**
+   * Get workspace URL and registration page configuration
+   * @param workspaceId string
+   * @returns object with url and registrationPage
+   */
+  async getWorkspaceURLWithRegistration(
+    workspaceId: string
+  ): Promise<{ url: string; registrationPage: string | null }> {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { url: true, registrationPage: true },
+    })
+    return {
+      url: workspace?.url || "http://localhost:3000",
+      registrationPage: workspace?.registrationPage || null,
+    }
+  },
 }

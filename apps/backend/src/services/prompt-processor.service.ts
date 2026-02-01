@@ -125,11 +125,16 @@ export class PromptProcessorService {
       .replace(/\{\{address\}\}/g, vars.address || '')
       .replace(/\{\{channelName\}\}/g, vars.channelName || 'Shop')
       .replace(/\{\{workspaceUrl\}\}/g, vars.workspaceUrl || '')
+      .replace(/\{\{websiteUrl\}\}/g, vars.websiteUrl || vars.workspaceUrl || '') // 🆕 FIX: Template uses {{websiteUrl}}
       .replace(/\{\{url\}\}/g, vars.workspaceUrl || '') // Alias
       .replace(/\{\{website\}\}/g, vars.workspaceUrl || '') // ✅ Feature: Website scraping context
       .replace(/\{\{toneOfVoice\}\}/g, vars.toneOfVoice || 'friendly')
       .replace(/\{\{humanSupportInstructions\}\}/g, vars.humanSupportInstructions || '')
       .replace(/\{\{allowedExternalLinks\}\}/g, vars.allowedExternalLinks || '')
+      .replace(/\{\{supportEmail\}\}/g, vars.supportEmail || '') // 🆕 FIX: Template uses {{supportEmail}}
+      .replace(/\{\{frustrationEscalationInstructions\}\}/g, vars.frustrationEscalationInstructions || '') // 🆕 FIX
+      .replace(/\{\{operatorContactMethod\}\}/g, vars.operatorContactMethod || 'email') // 🆕 FIX
+      .replace(/\{\{operatorWhatsappNumber\}\}/g, vars.operatorWhatsappNumber || '') // 🆕 FIX
 
       // Context variables (E-COMMERCE ONLY)
       .replace(/\{\{lastOrderCode\}\}/g, isEcommerceEnabled ? (vars.lastOrderCode || '') : '')
@@ -711,7 +716,7 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
    * Use this method for BOTH prompts AND responses to avoid duplication.
    *
    * Handles:
-   * - Customer data: {{nameUser}}, {{email}}, {{phone}}, {{discountUser}}
+   * - Customer data: {{nameUser}}, {{customerEmail}}, {{customerPhone}}, {{discountUser}}
    * - Sales agent data: {{agentName}}, {{agentPhone}}, {{agentEmail}}
    * - Company data: {{companyName}}, {{channelName}}, {{languageUser}}
    * - Order data: {{lastordercode}}
@@ -727,7 +732,7 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
    *
    * @example
    * const input = "Hello {{nameUser}}, you have {{discountUser}}% discount! Contact {{agentName}}"
-   * const output = replaceCustomerVariables(input, { nome: "Mario", discountUser: 15, agentName: "Giovanni", ... })
+   * const output = replaceCustomerVariables(input, { customerName: "Mario", discountUser: 15, agentName: "Giovanni", ... })
    * // → "Hello Mario, you have 15% discount! Contact Giovanni"
    */
   public replaceCustomerVariables(

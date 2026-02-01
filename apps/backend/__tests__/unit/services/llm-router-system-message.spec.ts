@@ -32,7 +32,15 @@ describe("LLMRouterService - System message fast path", () => {
     jest.clearAllMocks()
   })
 
-  it("routes system messages through SafetyTranslationAgent and saves history", async () => {
+  it("routes Widget system messages through SafetyTranslationAgent and saves history", async () => {
+    /**
+     * 🆕 UPDATED: Widget-only SafetyTranslationAgent (2025-01)
+     * 
+     * System messages on WIDGET channel should pass through SafetyTranslationAgent.
+     * WhatsApp system messages SKIP SafetyTranslationAgent (scheduler handles).
+     * 
+     * This test verifies Widget channel behavior.
+     */
     const prismaMock: any = {
       workspace: {
         findUnique: jest.fn().mockResolvedValue({
@@ -64,6 +72,7 @@ describe("LLMRouterService - System message fast path", () => {
       customerLanguage: "es",
       customerName: "Juan",
       isSystemMessage: true,
+      channel: "widget", // Widget channel: SafetyTranslationAgent applied
     })
 
     expect(mockSafetyProcess).toHaveBeenCalledWith({

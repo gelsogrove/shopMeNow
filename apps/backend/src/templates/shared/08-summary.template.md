@@ -6,8 +6,10 @@ This summary will be sent via email when a customer requests human support.
 ---
 
 ## CUSTOMER INFO
-{{#if hasCustomerName}}- Name: {{customerName}}
-{{/if}}- Email: {{customerEmail}}
+{{#if customerName}}
+- Name: {{customerName}}
+{{/if}}
+- Email: {{customerEmail}}
 - Phone: {{customerPhone}}
 
 ---
@@ -32,22 +34,22 @@ What does the operator need to do?
 ## EXAMPLE OUTPUT
 
 ```
-RIEPILOGO CONVERSAZIONE
+CONVERSATION SUMMARY
 
-👤 Cliente: Mario Rossi (mario@email.com, +39 123 456 7890)
+👤 Customer: John Smith (john@email.com, +1 555 123 4567)
 
-📋 PROBLEMA:
-Il cliente ha ricevuto un prodotto danneggiato nell'ordine #ORD-2025-001234.
-Ha richiesto la sostituzione o il rimborso.
+📋 ISSUE:
+The customer received a damaged product in order #ORD-2025-001234.
+They requested a replacement or refund.
 
-💬 PUNTI CHIAVE:
-- Ordine effettuato il 15/11/2025
-- Prodotto danneggiato: Parmigiano Reggiano DOP 500g
-- Cliente moderatamente frustrato ma paziente
-- Ha già inviato foto del danno
+💬 KEY POINTS:
+- Order placed on 15/11/2025
+- Damaged product: Premium Cheese 500g
+- Customer moderately frustrated but patient
+- Has already sent photos of the damage
 
-⚠️ AZIONE RICHIESTA:
-Verificare l'ordine e procedere con sostituzione del prodotto o rimborso.
+⚠️ ACTION REQUIRED:
+Verify the order and proceed with product replacement or refund.
 ```
 
 ---
@@ -57,4 +59,4 @@ Verificare l'ordine e procedere con sostituzione del prodotto o rimborso.
 2. Include all relevant order/product codes
 3. Capture customer sentiment accurately
 4. Be objective - don't add opinions
-5. Write in {{languageUser}} or Italian (operator's preference)
+5. Write in {{languageUser}} or the operator's preferred language

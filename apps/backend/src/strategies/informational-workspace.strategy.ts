@@ -115,14 +115,25 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
         context.workspaceId
       )
 
-      // 🔒 STEP 2: Safety + Translation (to customer's language)
-      logger.debug("🔒 Translating informational response with SafetyTranslationAgent")
-      const safetyResult = await this.safetyAgent.process({
-        workspaceId: context.workspaceId,
-        response: linkReplacedResponse.response || agentResponse.output,
-        targetLanguage: customerData.language || "it",
-        customerName: customerData.name,
-      })
+      // 🔒 STEP 2: Safety + Translation (ONLY for Widget)
+      // 🔧 WhatsApp: Skip SafetyTranslationAgent - scheduler handles security + translation
+      let safetyResult = {
+        safe: true,
+        translatedText: linkReplacedResponse.response || agentResponse.output,
+        tokensUsed: 0,
+      }
+      
+      if (context.channel === 'widget') {
+        logger.debug("🔒 Translating informational response with SafetyTranslationAgent (Widget)")
+        safetyResult = await this.safetyAgent.process({
+          workspaceId: context.workspaceId,
+          response: linkReplacedResponse.response || agentResponse.output,
+          targetLanguage: customerData.language || "it",
+          customerName: customerData.name,
+        })
+      } else {
+        logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
+      }
 
       // Final response after filters
       const finalResponse =

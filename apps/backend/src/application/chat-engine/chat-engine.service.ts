@@ -5274,37 +5274,64 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     }
 
     try {
-      const safetyAgent = new SafetyTranslationAgent(this.prisma)
-      const safetyResult = await safetyAgent.process({
-        workspaceId: input.workspaceId,
-        response: finalMessage,
-        targetLanguage: customerLanguage,
-        customerName,
-      })
-
-      totalTokens += safetyResult.tokensUsed || 0
-
-      debugSteps.push({
-        type: "safety",
-        agent: "SafetyTranslationAgent",
-        timestamp: new Date().toISOString(),
-        input: {
-          userMessage: finalMessage,
+      // 🔧 Apply SafetyTranslationAgent ONLY for Widget channel
+      // WhatsApp: Skip - scheduler handles security + translation
+      if (input.channel === 'widget') {
+        const safetyAgent = new SafetyTranslationAgent(this.prisma)
+        const safetyResult = await safetyAgent.process({
+          workspaceId: input.workspaceId,
+          response: finalMessage,
           targetLanguage: customerLanguage,
-        },
-        output: {
-          textResponse: safetyResult.translatedText,
-          translated: true,
-        },
-        tokenUsage: {
-          promptTokens: 0,
-          completionTokens: safetyResult.tokensUsed || 0,
-          totalTokens: safetyResult.tokensUsed || 0,
-        },
-      })
+          customerName,
+        })
 
-      if (safetyResult.safe && safetyResult.translatedText) {
-        finalMessage = safetyResult.translatedText
+        totalTokens += safetyResult.tokensUsed || 0
+
+        debugSteps.push({
+          type: "safety",
+          agent: "SafetyTranslationAgent",
+          timestamp: new Date().toISOString(),
+          input: {
+            userMessage: finalMessage,
+            targetLanguage: customerLanguage,
+          },
+          output: {
+            textResponse: safetyResult.translatedText,
+            translated: true,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: safetyResult.tokensUsed || 0,
+            totalTokens: safetyResult.tokensUsed || 0,
+          },
+        })
+
+        if (safetyResult.safe && safetyResult.translatedText) {
+          finalMessage = safetyResult.translatedText
+        }
+      } else {
+        logger.info("⏭️ [ChatEngine] Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
+        
+        debugSteps.push({
+          type: "safety",
+          agent: "SafetyTranslationAgent (Skipped)",
+          timestamp: new Date().toISOString(),
+          input: {
+            userMessage: finalMessage,
+            targetLanguage: customerLanguage,
+          },
+          output: {
+            textResponse: finalMessage,
+            translated: false,
+            skipped: true,
+            reason: "WhatsApp channel - scheduler handles translation",
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          },
+        })
       }
     } catch (error) {
       logger.error("❌ [ChatEngine] Informational safety/translation failed", {

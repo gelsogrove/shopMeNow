@@ -705,20 +705,19 @@ export class WhatsAppWebhookController {
           undefined // customerId - not yet created (registration)
         )
 
-        const workspaceUrl = await workspaceService.getWorkspaceURL(workspaceId)
-        const registrationUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${registrationToken}`
+        // Get workspace URL and custom registration page (if configured)
+        const { url: workspaceUrl, registrationPage } =
+          await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
 
-        // Create short URL that expires in 24 hours
-        const expiresAt = new Date()
-        expiresAt.setHours(expiresAt.getHours() + 24)
-
-        const shortUrl = await urlShortenerService.createShortUrl(
-          registrationUrl,
+        // Use centralized link generator service for registration link
+        const { LinkGeneratorService } = require("../../../application/services/link-generator.service")
+        const linkGeneratorService = new LinkGeneratorService()
+        const registrationLink = await linkGeneratorService.generateRegistrationLink(
+          registrationToken,
+          workspaceUrl,
           workspaceId,
-          expiresAt
+          registrationPage // Pass custom registration page if configured
         )
-
-        const registrationLink = `${workspaceUrl.replace(/\/$/, "")}/s/${shortUrl.shortCode}`
 
         // Get localized registration texts
         const registrationTexts = getRegistrationText(detectedLanguage)
@@ -1286,29 +1285,12 @@ export class WhatsAppWebhookController {
 
           const wipMessage = workspace?.wipMessage || "Work in progress. Please contact us later."
           
-          let finalWipMessage = wipMessage
-          let safetyTokensUsed = 0
-
-          try {
-            const {
-              SafetyTranslationAgent,
-            } = require("../../../application/agents/SafetyTranslationAgent")
-            const safetyAgent = new SafetyTranslationAgent(prisma)
-
-            const safetyResult = await safetyAgent.process({
-              workspaceId: customer.workspaceId,
-              response: wipMessage,
-              targetLanguage: customer.language || "it",
-              customerName: customer.name || "Customer",
-            })
-
-            if (safetyResult.safe) {
-              finalWipMessage = safetyResult.translatedText || wipMessage
-              safetyTokensUsed = safetyResult.tokensUsed || 0
-            }
-          } catch (error) {
-            logger.error("[WEBHOOK] ❌ Safety agent error for WIP message", error)
-          }
+          // 🔧 WhatsApp: Skip SafetyTranslationAgent - scheduler handles security + translation
+          // The message goes to queue and scheduler will translate it
+          const finalWipMessage = wipMessage
+          const safetyTokensUsed = 0
+          
+          logger.info("[WEBHOOK] ⏭️ Skipping SafetyTranslation for WIP (WhatsApp - scheduler handles it)")
 
           // Save WIP message to history so operator can see customer tried to contact
           await prisma.conversationMessage.create({

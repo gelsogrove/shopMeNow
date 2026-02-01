@@ -28,6 +28,7 @@ import { IMG_BASE_URL } from "@/config"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { updateWorkspace, deleteWorkspace } from "@/services/workspaceApi"
+import { resetAgentPromptsToDefaults } from "@/services/agent-config-api"
 import { Switch } from "@/components/ui/switch"
 
 // Settings components
@@ -112,6 +113,8 @@ interface FormData {
   operatorContactMethod: "email" | "whatsapp"
   operatorWhatsappNumber: string
   humanSupportInstructions: string
+  frustrationEscalationInstructions: string
+  address: string
 }
 
 export function SettingsPage() {
@@ -129,6 +132,8 @@ export function SettingsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  const [showWorkspaceTypeChangeDialog, setShowWorkspaceTypeChangeDialog] = useState(false)
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null)
 
   const [formData, setFormData] = useState<FormData>({
     chatbotName: "Sofia",
@@ -164,6 +169,8 @@ export function SettingsPage() {
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
     humanSupportInstructions: "",
+    frustrationEscalationInstructions: "",
+    address: "",
   })
 
   // Load workspace data
@@ -207,6 +214,9 @@ export function SettingsPage() {
           (currentWorkspace.operatorContactMethod as "email" | "whatsapp") || "email",
         operatorWhatsappNumber: currentWorkspace.operatorWhatsappNumber || "",
         humanSupportInstructions: currentWorkspace.humanSupportInstructions || "",
+        frustrationEscalationInstructions: currentWorkspace.frustrationEscalationInstructions || "",
+        address: currentWorkspace.address || "",
+        registrationPage: currentWorkspace.registrationPage || "",
       })
     }
   }, [currentWorkspace])
@@ -249,8 +259,25 @@ export function SettingsPage() {
       return
     }
 
+    // Check if workspace type changed (sellsProductsAndServices)
+    const currentValue = currentWorkspace?.sellsProductsAndServices ?? true
+    const newValue = formData.sellsProductsAndServices
+    
+    if (currentValue !== newValue) {
+      // Store pending data and show confirmation dialog
+      setPendingFormData(formData)
+      setShowWorkspaceTypeChangeDialog(true)
+      return
+    }
+
+    // Normal save without workspace type change
+    await performSave(formData)
+  }
+
+  // Perform the actual save
+  const performSave = async (dataToSave: FormData) => {
     try {
-      const updateData: any = { ...formData }
+      const updateData: any = { ...dataToSave }
       delete updateData.logoUrl
 
       if (!updateData.whatsappAppSecret) {
@@ -269,6 +296,40 @@ export function SettingsPage() {
     } catch (error: any) {
       toast.error(error.message || "Save failed")
     }
+  }
+
+  // Handle workspace type change confirmation
+  const handleConfirmWorkspaceTypeChange = async () => {
+    if (!pendingFormData) return
+    
+    try {
+      // First save the workspace changes
+      await performSave(pendingFormData)
+      
+      // Then reset agent prompts to new template type
+      const newType = pendingFormData.sellsProductsAndServices ? "e-commerce" : "informational"
+      toast.info(`Resetting prompts to ${newType} templates...`)
+      
+      await resetAgentPromptsToDefaults(currentWorkspace!.id, true)
+      toast.success(`Agent prompts reset to ${newType} templates`)
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reset prompts")
+    } finally {
+      setShowWorkspaceTypeChangeDialog(false)
+      setPendingFormData(null)
+    }
+  }
+
+  const handleCancelWorkspaceTypeChange = () => {
+    // Revert the form data change
+    if (currentWorkspace) {
+      setFormData(prev => ({
+        ...prev,
+        sellsProductsAndServices: currentWorkspace.sellsProductsAndServices ?? true
+      }))
+    }
+    setShowWorkspaceTypeChangeDialog(false)
+    setPendingFormData(null)
   }
 
   // Delete workspace mutation
@@ -342,6 +403,8 @@ export function SettingsPage() {
               sellsProductsAndServices: formData.sellsProductsAndServices,
               enableWhatsapp: formData.enableWhatsapp,
               enableWidget: formData.enableWidget,
+              address: formData.address,
+              registrationPage: formData.registrationPage,
             }}
             errors={errors}
             canEdit={canEdit}
@@ -409,6 +472,7 @@ export function SettingsPage() {
               operatorWhatsappNumber: formData.operatorWhatsappNumber,
               operatorEmail: formData.adminEmail, // Use business email as default
               humanSupportInstructions: formData.humanSupportInstructions,
+              frustrationEscalationInstructions: formData.frustrationEscalationInstructions,
             }}
             errors={errors}
             canEdit={canEdit}
@@ -575,6 +639,58 @@ export function SettingsPage() {
                   Delete Workspace
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Workspace Type Change Confirmation Dialog */}
+      <Dialog
+        open={showWorkspaceTypeChangeDialog}
+        onOpenChange={(open) => {
+          if (!open) handleCancelWorkspaceTypeChange()
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-amber-600 flex items-center gap-2">
+              ⚠️ Workspace Type Change
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p>
+                You are changing the workspace type from{" "}
+                <strong>{currentWorkspace?.sellsProductsAndServices ? "E-commerce" : "Informational"}</strong> to{" "}
+                <strong>{pendingFormData?.sellsProductsAndServices ? "E-commerce" : "Informational"}</strong>.
+              </p>
+              <p className="text-red-600 font-medium">
+                ⚠️ This will RESET all agent prompts to the new template type!
+              </p>
+              <p>
+                Any custom prompts you have configured will be lost. We recommend backing up your current prompts before proceeding.
+              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                <strong>How to backup:</strong>
+                <ol className="list-decimal list-inside mt-1 space-y-1">
+                  <li>Go to Agent Configuration page</li>
+                  <li>Copy each agent's system prompt to a text file</li>
+                  <li>Return here to proceed with the change</li>
+                </ol>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelWorkspaceTypeChange}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmWorkspaceTypeChange}
+            >
+              Reset Prompts & Continue
             </Button>
           </DialogFooter>
         </DialogContent>

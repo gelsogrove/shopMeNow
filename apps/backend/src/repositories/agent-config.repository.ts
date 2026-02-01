@@ -314,4 +314,67 @@ export class AgentConfigRepository {
       throw error
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🆕 CACHED METHODS - Optional performance optimization
+  // These methods wrap existing ones with caching. Use when appropriate.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Find agent configuration by type WITH CACHING
+   * 
+   * Same as findByType() but with 5-minute cache.
+   * Use for high-frequency lookups where slight staleness is acceptable.
+   * 
+   * Cache is automatically invalidated after TTL expires.
+   * For immediate invalidation, call invalidateCache(workspaceId, type).
+   * 
+   * @param workspaceId - Workspace ID (security filter)
+   * @param type - Agent type (ROUTER, PRODUCT_SEARCH, etc.)
+   * @returns Agent configuration or null (from cache or database)
+   */
+  async findByTypeCached(
+    workspaceId: string,
+    type: AgentType
+  ): Promise<AgentConfig | null> {
+    const { agentConfigCache } = await import("../utils/cache")
+    const cacheKey = `${workspaceId}:${type}`
+
+    // Check cache first
+    const cached = agentConfigCache.get(cacheKey)
+    if (cached !== undefined) {
+      logger.debug(`🟢 AgentConfig cache HIT: ${type}`)
+      return cached as AgentConfig | null
+    }
+
+    // Cache miss - query database
+    logger.debug(`🔴 AgentConfig cache MISS: ${type}`)
+    const agent = await this.findByType(workspaceId, type)
+
+    // Store in cache (including null results to prevent repeated lookups)
+    agentConfigCache.set(cacheKey, agent)
+
+    return agent
+  }
+
+  /**
+   * Invalidate cache for specific agent type
+   * Call this after updating agent configuration
+   * 
+   * @param workspaceId - Workspace ID
+   * @param type - Optional agent type (if not provided, clears all for workspace)
+   */
+  async invalidateCache(workspaceId: string, type?: AgentType): Promise<void> {
+    const { agentConfigCache } = await import("../utils/cache")
+    
+    if (type) {
+      agentConfigCache.delete(`${workspaceId}:${type}`)
+      logger.debug(`🗑️ Cache invalidated: ${workspaceId}:${type}`)
+    } else {
+      // Clear all agent configs for this workspace
+      agentConfigCache.deletePattern(`${workspaceId}:`)
+      logger.debug(`🗑️ Cache invalidated: all agents for ${workspaceId}`)
+    }
+  }
 }
+

@@ -11,8 +11,9 @@
 eChatbot uses a **multi-agent architecture** with two distinct message processing flows:
 
 ### 1. Router Flow (`llm-router.service.ts`)
-- **Agents**: Router → Specialist Agents → SafetyTranslationAgent
-- **SafetyTranslationAgent** combines: safety validation + translation
+- **Agents**: Router → Specialist Agents → SafetyTranslationAgent (**Widget only**)
+- **SafetyTranslationAgent** combines: safety validation + translation (Widget channel only)
+- WhatsApp messages: SafetyTranslationAgent **skipped** (Scheduler handles security + translation)
 - Used for: complex routing, multiple agent coordination
 
 ### 2. ChatEngine Flow (`chat-engine.service.ts`) ⬅️ **NEW**
@@ -386,10 +387,21 @@ async routeMessage(input: RouteMessageInput): Promise<RouteMessageResult> {
 
 ### TranslationAgent vs SafetyTranslationAgent
 
-| Agent | Location | Purpose |
-|-------|----------|---------|
-| **TranslationAgent** | `chat-engine.service.ts` | Translation ONLY - converts Italian to customer language |
-| **SafetyTranslationAgent** | `llm-router.service.ts` | Safety + Translation combined for router-based flow |
+| Agent | Location | Purpose | Channel |
+|-------|----------|---------|---------|
+| **TranslationAgent** | `chat-engine.service.ts` | Translation ONLY - converts Italian to customer language | All channels |
+| **SafetyTranslationAgent** | `llm-router.service.ts` | Safety + Translation combined for router-based flow | **Widget only** |
+
+#### SafetyTranslationAgent - Widget Only (Updated 2025-01)
+
+**Important**: SafetyTranslationAgent is applied **only for Widget channel**. WhatsApp messages are processed by the **Scheduler** which has its own SecurityAgentService + TranslationService.
+
+| Channel | SafetyTranslationAgent | Security Layer |
+|---------|------------------------|----------------|
+| **Widget** | ✅ Applied | SafetyTranslationAgent in backend |
+| **WhatsApp** | ❌ Skipped | Scheduler (SecurityAgentService + TranslationService) |
+
+**Rationale**: Prevents double LLM costs - WhatsApp messages go through the scheduler queue which already performs security checks and translation.
 
 ### Debug Step in Message Flow Timeline
 

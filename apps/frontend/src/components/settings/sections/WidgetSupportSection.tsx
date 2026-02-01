@@ -1,6 +1,6 @@
 /**
  * WidgetSupportSection - Human Support & Escalation Configuration
- * Fields: hasHumanSupport, operatorContactMethod, operatorWhatsappNumber, operatorEmail, humanSupportInstructions
+ * Fields: hasHumanSupport, operatorContactMethod, operatorWhatsappNumber, operatorEmail, humanSupportInstructions, frustrationEscalationInstructions
  */
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -16,6 +16,7 @@ interface WidgetSupportSectionProps {
     operatorWhatsappNumber: string
     operatorEmail?: string // From Business Config or custom
     humanSupportInstructions: string
+    frustrationEscalationInstructions: string
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -176,6 +177,24 @@ export function WidgetSupportSection({
 - For orders over $1000"
                   disabled={!canEdit}
                   className="min-h-[120px]"
+                />
+              </div>
+
+              {/* Frustration Escalation Triggers */}
+              <div className="space-y-2 pt-4" onFocus={() => onFieldFocus?.("frustrationTriggers")}>
+                <Label htmlFor="frustrationEscalationInstructions">Frustration Triggers (Priority)</Label>
+                <p className="text-xs text-gray-500">When the customer shows frustration or panic, escalate immediately</p>
+                <Textarea
+                  id="frustrationEscalationInstructions"
+                  value={formData.frustrationEscalationInstructions}
+                  onChange={(e) => onFieldChange("frustrationEscalationInstructions", e.target.value)}
+                  placeholder="Examples:
+- Customer says 'I want to speak to a manager'
+- Customer uses angry words or ALL CAPS
+- Customer mentions legal action
+- Customer is upset about delivery issues"
+                  disabled={!canEdit}
+                  className="min-h-[100px]"
                 />
               </div>
             </>

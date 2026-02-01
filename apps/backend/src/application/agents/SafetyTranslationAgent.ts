@@ -1,21 +1,31 @@
 /**
  * SafetyTranslationAgent
  *
- * Final layer that ALWAYS processes responses before sending to customer.
+ * Final layer that processes responses before sending to customer.
+ *
+ * ⚠️ IMPORTANT: Widget-only (as of 2025-01)
+ * - Widget channel: SafetyTranslationAgent is applied (no scheduler)
+ * - WhatsApp channel: SKIPPED - Scheduler handles security + translation
+ *
+ * This optimization prevents double LLM costs for WhatsApp messages.
+ * See llm-router.service.ts:shouldApplySafetyTranslation() for channel check logic.
  *
  * Functions:
  * 1. **Safety Check**: Blocks PII, profanity, phishing, spam
  * 2. **Translation**: Translates response to customer's language (IT → target)
  *
- * Uses TRANSLATION agent config from database
+ * 🆕 HARDCODED PROMPTS: Uses shared/translation-prompts.ts (no DB dependency)
  *
- * @architecture Clean Architecture - Uses AgentConfigRepository
- * @critical ALWAYS call this before sending response to customer
+ * @architecture Clean Architecture - Shared prompt module
+ * @channel Widget only - WhatsApp uses Scheduler services
  */
 
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
-import { AgentConfigRepository } from "../../repositories/agent-config.repository"
+import {
+  buildSafetyTranslationPrompt,
+  TRANSLATION_LLM_SETTINGS,
+} from "@shared/translation-prompts"
 import logger from "../../utils/logger"
 
 export interface SafetyResult {
@@ -36,12 +46,12 @@ export interface ProcessOptions {
 }
 
 export class SafetyTranslationAgent {
-  private agentConfigRepo: AgentConfigRepository
   private openRouterApiKey: string
   private openRouterBaseUrl: string = "https://openrouter.ai/api/v1"
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(private prisma: PrismaClient) {
-    this.agentConfigRepo = new AgentConfigRepository(prisma)
+    // Prisma kept for API compatibility but no longer used for config
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -50,7 +60,7 @@ export class SafetyTranslationAgent {
       )
     } else {
       logger.info(
-        "✅ SafetyTranslationAgent initialized with OpenRouter API key"
+        "✅ SafetyTranslationAgent initialized with OpenRouter API key (hardcoded prompt)"
       )
     }
   }
@@ -66,91 +76,41 @@ export class SafetyTranslationAgent {
 
     try {
       // 🌍 DEBUG: Log incoming parameters
-      logger.info("🌍 SafetyTranslationAgent.process() called", {
+      logger.info("🌍 SafetyTranslationAgent.process() called (hardcoded prompt)", {
         workspaceId: options.workspaceId,
         targetLanguage: options.targetLanguage,
         responseLength: options.response.length,
         customerName: options.customerName,
       })
 
-      // 1. Load TRANSLATION agent config from database
-      const safetyAgent = await this.agentConfigRepo.findByType(
-        options.workspaceId,
-        "TRANSLATION"
-      )
-
-      // 🌍 DEBUG: Log agent lookup result
-      logger.info("🌍 TRANSLATION agent lookup result", {
-        found: !!safetyAgent,
-        isActive: safetyAgent?.isActive,
-        model: safetyAgent?.model,
-        workspaceId: options.workspaceId,
+      // 🆕 NO DATABASE LOOKUP - Use hardcoded prompt from shared module
+      // Build the full prompt with all variables replaced
+      const systemPrompt = buildSafetyTranslationPrompt({
+        targetLanguage: options.targetLanguage,
+        customerName: options.customerName,
+        allowedLinks: options.allowedLinks,
+        message: options.response,
       })
 
-      if (!safetyAgent) {
-        logger.warn(
-          `⚠️ TRANSLATION agent not configured for workspace ${options.workspaceId}`
-        )
-        // Fallback: return original text without safety check (NOT RECOMMENDED)
-        return {
-          safe: true,
-          translatedText: options.response,
-          blockedReason: undefined,
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        }
-      }
-
-      if (!safetyAgent.isActive) {
-        logger.warn(
-          `⚠️ TRANSLATION agent is INACTIVE for workspace ${options.workspaceId}`
-        )
-        // Return original if agent disabled
-        return {
-          safe: true,
-          translatedText: options.response,
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        }
-      }
-
-      // 2. Build system prompt with dynamic allowed links and customer name
-      const systemPrompt = this.buildSystemPrompt(
-        safetyAgent.systemPrompt,
-        options.allowedLinks || [],
-        options.customerName
-      )
-
-      // 3. Build user message with context
-      const userMessage = this.buildUserMessage(
-        options.response,
-        options.targetLanguage,
-        options.customerName
-      )
-
-      // 4. Call OpenRouter LLM
-      logger.info("🔒 Calling SafetyTranslationAgent LLM", {
+      // Call OpenRouter LLM with hardcoded settings
+      logger.info("🔒 Calling SafetyTranslationAgent LLM (hardcoded prompt)", {
         workspaceId: options.workspaceId,
-        model: safetyAgent.model,
+        model: TRANSLATION_LLM_SETTINGS.model,
         targetLanguage: options.targetLanguage,
       })
 
       const response = await axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
-          model: safetyAgent.model,
+          model: TRANSLATION_LLM_SETTINGS.model,
           messages: [
             {
-              role: "system",
-              content: systemPrompt,
-            },
-            {
               role: "user",
-              content: userMessage,
+              content: systemPrompt, // Full prompt with message included
             },
           ],
-          temperature: safetyAgent.temperature,
-          max_tokens: safetyAgent.maxTokens,
+          temperature: TRANSLATION_LLM_SETTINGS.temperature,
+          max_tokens: TRANSLATION_LLM_SETTINGS.maxTokens,
           response_format: { type: "json_object" }, // Force JSON response
         },
         {
@@ -241,62 +201,12 @@ export class SafetyTranslationAgent {
   }
 
   /**
-   * Build system prompt with allowed links injection
+   * Health check - SafetyTranslationAgent always available (hardcoded prompt)
+   * @deprecated No longer checks DB - always returns true if API key present
    */
-  private buildSystemPrompt(
-    basePrompt: string,
-    allowedLinks: string[],
-    customerName?: string
-  ): string {
-    // Replace {{ALLOWED_LINKS}} placeholder with workspace-specific links
-    const allowedLinksText =
-      allowedLinks.length > 0
-        ? allowedLinks.map((link) => `- ${link}`).join("\n")
-        : "- No allowed links configured for this workspace"
-
-    // Replace {{nameUser}} with actual customer name in examples
-    const withCustomerName = basePrompt.replace(
-      /\{\{nameUser\}\}/g,
-      customerName || "Cliente"
-    )
-
-    return withCustomerName.replace("{{ALLOWED_LINKS}}", allowedLinksText)
-  }
-
-  /**
-   * Build user message with context
-   */
-  private buildUserMessage(
-    response: string,
-    targetLanguage: string,
-    customerName?: string
-  ): string {
-    return `# Response to translate and check:
-${response}
-
-# Target language: ${targetLanguage}
-# Customer name: ${customerName || "Unknown"}
-
-Please:
-1. Check safety (PII, profanity, phishing, spam)
-2. Translate to ${targetLanguage} if needed
-3. Return JSON with: { "safe": true/false, "translatedText": "...", "blockedReason": "..." }`
-  }
-
-  /**
-   * Health check - verify agent is configured
-   */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async healthCheck(workspaceId: string): Promise<boolean> {
-    try {
-      const agent = await this.agentConfigRepo.findByType(
-        workspaceId,
-        "TRANSLATION"
-      )
-      return agent !== null && agent.isActive
-    } catch (error) {
-      logger.error("SafetyTranslationAgent health check failed", error)
-      return false
-    }
+    return !!this.openRouterApiKey
   }
 
   /**

@@ -4,6 +4,7 @@ import archiver from "archiver"
 import logger from "../../../utils/logger"
 import { defaultAgents } from "../../../../prisma/data/defaultAgents"
 import { dynamicAgents } from "../../../../prisma/data/dynamicAgents"
+import { TemplateLoaderService } from "../../../application/services/template-loader.service"
 
 /**
  * Agent Configuration Controller
@@ -209,54 +210,52 @@ export class AgentConfigController {
         where: { id: workspaceId },
         select: { sellsProductsAndServices: true },
       })
-      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+      const hasEcommerce = workspace?.sellsProductsAndServices === true
 
       // Choose which templates to load:
       // - useDynamicTemplates=true: Load from src/templates/ with {{#if}} conditionals
       // - useDynamicTemplates=false (default): Load from docs/prompts/ (legacy)
-      const templateSource = useDynamicTemplates ? "dynamic ({{#if}} templates)" : "legacy (docs/prompts)"
+      const templateSource = "latest .template.md files"
       const workspaceType = hasEcommerce ? "e-commerce" : "informational"
-      logger.info(`🔄 Resetting agent configs to ${templateSource} for ${workspaceType} workspace ${workspaceId}`)
+      logger.info(`🔄 Resetting agent configs from ${templateSource} for ${workspaceType} workspace ${workspaceId}`)
 
-      // Get agent configurations from appropriate source
-      const defaults = useDynamicTemplates 
-        ? dynamicAgents(workspaceId, hasEcommerce) 
-        : defaultAgents(workspaceId)
+      // Load templates directly from files (latest version)
+      const templateLoader = TemplateLoaderService.getInstance(this.prisma)
+      
+      // Get all existing agent configs to preserve metadata
+      const existingAgents = await this.prisma.agentConfig.findMany({
+        where: { workspaceId },
+      })
 
-      // Update each agent with default values
+      // Update each agent with fresh template content
       let resetCount = 0
-      for (const defaultAgent of defaults) {
+      for (const agent of existingAgents) {
         try {
-          await this.prisma.agentConfig.updateMany({
-            where: {
-              workspaceId,
-              type: defaultAgent.type,
-            },
+          // Load the latest template file for this agent type
+          const freshTemplate = await templateLoader.loadAndRenderTemplate(
+            agent.type,
+            workspaceId
+          )
+          
+          await this.prisma.agentConfig.update({
+            where: { id: agent.id },
             data: {
-              name: defaultAgent.name,
-              systemPrompt: defaultAgent.systemPrompt,
-              description: defaultAgent.description,
-              icon: defaultAgent.icon,
-              model: defaultAgent.model,
-              temperature: defaultAgent.temperature,
-              maxTokens: defaultAgent.maxTokens,
-              order: defaultAgent.order,
-              isActive: defaultAgent.isActive,
-              availableFunctions: defaultAgent.availableFunctions,
+              systemPrompt: freshTemplate, // Load from file, not from seed!
             },
           })
           resetCount++
+          logger.info(`✅ Reset ${agent.type} from template file`)
         } catch (updateError) {
-          logger.warn(`⚠️ Could not update agent ${defaultAgent.type}:`, updateError)
+          logger.warn(`⚠️ Could not update agent ${agent.type}:`, updateError)
         }
       }
 
-      logger.info(`✅ Reset ${resetCount} agent configs to ${templateSource} for workspace ${workspaceId}`)
+      logger.info(`✅ Reset ${resetCount} agent configs from ${templateSource} for workspace ${workspaceId}`)
 
       return res.status(200).json({
-        message: `Agent configurations reset to ${templateSource} successfully`,
+        message: `Agent configurations reset from latest template files successfully`,
         resetCount,
-        templateSource: useDynamicTemplates ? "dynamic" : "legacy",
+        templateSource: "latest .template.md files",
       })
     } catch (error) {
       logger.error("❌ Failed to reset agent configs:", error)

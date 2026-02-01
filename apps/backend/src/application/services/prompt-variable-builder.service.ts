@@ -62,6 +62,7 @@ interface WorkspaceInput {
   botIdentityResponse?: string | null
   hasHumanSupport?: boolean | null
   humanSupportInstructions?: string | null
+  frustrationEscalationInstructions?: string | null // 🆕 For {{frustrationEscalationInstructions}}
   operatorContactMethod?: string | null
   operatorWhatsappNumber?: string | null
   hasSalesAgents?: boolean | null
@@ -147,15 +148,18 @@ export class PromptVariableBuilder {
     context?: ContextInput,
     options?: BuildOptions
   ): PromptVariables {
+    // 🚫 WIDGET FIX: Detect anonymous visitor names
+    // Pattern: "Visitor" followed by random ID (e.g., "Visitor bia9dij0", "Visitor abc123")
+    const isAnonymousVisitor = customer?.name?.startsWith('Visitor ') || false
 
     // Start with defaults
     const variables: PromptVariables = {
       // Customer variables
-      // 🚫 WIDGET FIX: Remove name from greetings ONLY for widget channel
-      // Widget visitors are anonymous/temporary, so no personalized greetings
-      // WhatsApp customers keep their names regardless (even if they start with "Visitor")
-      customerName: context?.channel === 'widget'
-        ? '' // Widget: no name in greetings
+      // 🚫 WIDGET FIX: Remove name from greetings for:
+      // 1. Widget channel (anonymous by design)
+      // 2. Names starting with "Visitor " (anonymous visitor pattern)
+      customerName: (context?.channel === 'widget' || isAnonymousVisitor)
+        ? '' // No name in greetings for anonymous visitors
         : (customer?.name || VARIABLE_DEFAULTS.customerName!),
       customerPhone: customer?.phone || '',
       customerEmail: customer?.email || '',
@@ -182,6 +186,7 @@ export class PromptVariableBuilder {
       toneOfVoice: workspace?.toneOfVoice || VARIABLE_DEFAULTS.toneOfVoice!,
       hasHumanSupport: workspace?.hasHumanSupport ?? VARIABLE_DEFAULTS.hasHumanSupport!,
       humanSupportInstructions: workspace?.humanSupportInstructions || '',
+      frustrationEscalationInstructions: workspace?.frustrationEscalationInstructions || '', // 🆕 For custom escalation triggers
       hasSalesAgents: workspace?.hasSalesAgents ?? VARIABLE_DEFAULTS.hasSalesAgents!,
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? VARIABLE_DEFAULTS.sellsProductsAndServices!,
       allowedExternalLinks: workspace?.allowedExternalLinks?.join('\n') || '',

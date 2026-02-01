@@ -389,6 +389,7 @@ export class WelcomeMessageHandler {
 
   /**
    * Generate registration link for customer
+   * Uses centralized LinkGeneratorService with support for custom registrationPage
    */
   private async generateRegistrationLink(
     phone: string,
@@ -397,31 +398,28 @@ export class WelcomeMessageHandler {
     try {
       // Import services
       const { TokenService } = require("../application/services/token.service")
-      const { UrlShortenerService } = require("../application/services/url-shortener.service")
+      const { LinkGeneratorService } = require("../application/services/link-generator.service")
       const { workspaceService } = require("../services/workspace.service")
 
       // Create registration token
       const tokenService = new TokenService()
       const token = await tokenService.createRegistrationToken(phone, workspaceId)
 
-      // Get workspace base URL
-      const workspaceUrl = await workspaceService.getWorkspaceURL(workspaceId)
-      const registrationUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
+      // Get workspace URL and custom registration page (if configured)
+      const { url: workspaceUrl, registrationPage } =
+        await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
 
-      // Create short URL
-      try {
-        const urlShortenerService = new UrlShortenerService()
-        const shortResult = await urlShortenerService.createShortUrl(
-          registrationUrl,
-          workspaceId
-        )
-        const finalLink = `${workspaceUrl.replace(/\/$/, "")}/s/${shortResult.shortCode}`
-        logger.info(`📎 [WelcomeMessageHandler] Created short registration link: ${finalLink}`)
-        return finalLink
-      } catch (shortError) {
-        logger.warn("⚠️ [WelcomeMessageHandler] Failed to create short URL, using long URL:", shortError)
-        return registrationUrl
-      }
+      // Use centralized link generator service
+      const linkGeneratorService = new LinkGeneratorService()
+      const registrationLink = await linkGeneratorService.generateRegistrationLink(
+        token,
+        workspaceUrl,
+        workspaceId,
+        registrationPage // Pass custom registration page if configured
+      )
+
+      logger.info(`📎 [WelcomeMessageHandler] Created registration link: ${registrationLink}`)
+      return registrationLink
     } catch (error) {
       logger.error("❌ [WelcomeMessageHandler] Error generating registration link:", error)
       throw error
