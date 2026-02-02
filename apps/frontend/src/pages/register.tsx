@@ -2,15 +2,16 @@ import { GDPRDialog } from "@/components/ui/gdpr-dialog"
 import { logger } from "@/lib/logger"
 import { getPublicPageTexts } from "@/utils/publicPageTranslations"
 import { useEffect, useState } from "react"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useNavigate, useSearchParams, useParams } from "react-router-dom"
 import { useTokenValidation } from "../hooks/useTokenValidation"
 import { tokenApi } from "../services/tokenApi"
 
 const RegisterPage = () => {
   const [searchParams] = useSearchParams()
+  const { workspaceId: workspaceIdParam } = useParams<{ workspaceId?: string }>()
   const navigate = useNavigate()
   const phone = searchParams.get("phone") || ""
-  const workspaceId = searchParams.get("workspace") || ""
+  const workspaceId = searchParams.get("workspace") || workspaceIdParam || ""
   const token = searchParams.get("token") || ""
   const langParam = searchParams.get("lang") || "en"
 
@@ -102,35 +103,35 @@ const RegisterPage = () => {
 
   // 🔐 Enhanced token validation with workspace info
   useEffect(() => {
-    const fetchWorkspaceInfo = async () => {
-      if (tokenValid && workspaceId) {
-        try {
-          logger.info(
-            `[Register] Fetching workspace info for id: ${workspaceId}`
-          )
-          // TODO: This should be a token-based endpoint, not backoffice
-          const workspaceResponse = await tokenApi.get(
-            `/workspaces/${workspaceId}`
-          )
-          logger.info(
-            "[Register] Workspace API response:",
-            workspaceResponse.data
-          )
-          if (workspaceResponse.data?.name) {
-            setWorkspaceName(workspaceResponse.data.name)
-          }
-        } catch (error) {
-          logger.error("[Register] Error fetching workspace info:", error)
-          // Non-fatal error, continue with registration
+    const fetchWorkspaceInfo = async (resolvedWorkspaceId: string) => {
+      if (!resolvedWorkspaceId) return
+      try {
+        logger.info(
+          `[Register] Fetching workspace info for id: ${resolvedWorkspaceId}`
+        )
+        // TODO: This should be a token-based endpoint, not backoffice
+        const workspaceResponse = await tokenApi.get(
+          `/workspaces/${resolvedWorkspaceId}`
+        )
+        logger.info(
+          "[Register] Workspace API response:",
+          workspaceResponse.data
+        )
+        if (workspaceResponse.data?.name) {
+          setWorkspaceName(workspaceResponse.data.name)
         }
+      } catch (error) {
+        logger.error("[Register] Error fetching workspace info:", error)
+        // Non-fatal error, continue with registration
       }
     }
 
     if (tokenValid) {
+      const resolvedWorkspaceId = workspaceId || tokenData?.workspaceId || ""
       // Minimum 1000ms loading + wait for endpoint to finish
       const startTime = Date.now()
 
-      fetchWorkspaceInfo().finally(() => {
+      fetchWorkspaceInfo(resolvedWorkspaceId).finally(() => {
         const elapsedTime = Date.now() - startTime
         const remainingTime = Math.max(0, 1000 - elapsedTime)
 
@@ -140,7 +141,7 @@ const RegisterPage = () => {
         }, remainingTime)
       })
     }
-  }, [tokenValid, workspaceId])
+  }, [tokenValid, workspaceId, tokenData])
 
   // Handle form input changes
   const handleInputChange = (

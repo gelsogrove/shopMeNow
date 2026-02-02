@@ -161,10 +161,12 @@ export function BusinessConfigSection({
                 type="url"
                 value={formData.registrationPage || ""}
                 onChange={(e) => onFieldChange("registrationPage", e.target.value)}
-                placeholder="https://mybusiness.com/register"
+                placeholder="https://echatbot.ai/registration/{workspaceId}"
                 disabled={!canEdit}
               />
-              <p className="text-xs text-gray-500">Custom URL for customer registration. Used by chatbot when linking to registration.</p>
+              <p className="text-xs text-gray-500">
+                Custom URL for customer registration. Leave empty to use the default eChatbot registration page.
+              </p>
             </div>
 
             {/* Require Manual Approval */}

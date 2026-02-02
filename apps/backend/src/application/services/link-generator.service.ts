@@ -124,9 +124,9 @@ export class LinkGeneratorService {
 
   /**
    * Generate registration link with token
-   * Uses custom registrationPage URL if provided, otherwise falls back to default /registration path
+   * Uses custom registrationPage URL if provided, otherwise falls back to default /registration/:workspaceId path
    * @param token - JWT registration token
-   * @param workspaceUrl - Base workspace URL (e.g., https://mystore.com)
+   * @param workspaceUrl - Base workspace URL (legacy/custom use cases)
    * @param workspaceId - Workspace ID for short URL generation
    * @param customRegistrationPage - Optional: Custom registration page URL from workspace.registrationPage
    */
@@ -136,26 +136,34 @@ export class LinkGeneratorService {
     workspaceId: string,
     customRegistrationPage?: string | null
   ): Promise<string> {
+    const appBaseUrl = config.frontendUrl.replace(/\/$/, "")
     let originalUrl: string
 
     if (customRegistrationPage && customRegistrationPage.trim() !== "") {
       // Use custom registration page URL
-      // If it's a full URL (starts with http), use it directly with token appended
-      // If it's a relative path, append it to workspaceUrl
-      const customUrl = customRegistrationPage.trim()
+      // If it's a full URL (starts with http), use it directly
+      // If it's a relative path, append it to the app base URL
+      const customUrl = customRegistrationPage
+        .trim()
+        .replace(/\{workspaceId\}/g, workspaceId)
+
       if (customUrl.startsWith("http://") || customUrl.startsWith("https://")) {
-        // Full URL - append token as query parameter
-        const separator = customUrl.includes("?") ? "&" : "?"
-        originalUrl = `${customUrl}${separator}token=${token}`
+        originalUrl = customUrl
       } else {
-        // Relative path - combine with workspaceUrl
         const basePath = customUrl.startsWith("/") ? customUrl : `/${customUrl}`
-        originalUrl = `${workspaceUrl.replace(/\/$/, "")}${basePath}?token=${token}`
+        originalUrl = `${appBaseUrl}${basePath}`
       }
       logger.info(`📎 Using custom registration page: ${originalUrl}`)
     } else {
-      // Default registration path
-      originalUrl = `${workspaceUrl.replace(/\/$/, "")}/registration?token=${token}`
+      // Default registration path (hosted on eChatbot)
+      const safeWorkspaceId = encodeURIComponent(workspaceId)
+      originalUrl = `${appBaseUrl}/registration/${safeWorkspaceId}`
+    }
+
+    // Ensure token is attached once
+    if (!/[?&]token=/.test(originalUrl)) {
+      const separator = originalUrl.includes("?") ? "&" : "?"
+      originalUrl = `${originalUrl}${separator}token=${token}`
     }
 
     return this.generateShortLink(originalUrl, workspaceId, "registration")
