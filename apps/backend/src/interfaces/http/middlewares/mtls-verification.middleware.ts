@@ -63,6 +63,19 @@ export const verifyMetaWebhookCertificate = (
       return next()
     }
 
+    // 🎮 PLAYGROUND/WIDGET/INTERNAL: Skip mTLS for non-Meta sources
+    // Only Meta IPs (173.252.x.x, 31.13.x.x) require mTLS certificates
+    const clientIp = req.ip || req.headers["x-forwarded-for"] as string || ""
+    const isMetaIP = /^(173\.252\.|31\.13\.)/.test(clientIp)
+    
+    if (!isMetaIP) {
+      logger.info("[mTLS] 🎮 Non-Meta source - skipping certificate verification", {
+        clientIp,
+        url: req.originalUrl,
+      })
+      return next()
+    }
+
     // 🚨 Check if running behind reverse proxy (Heroku, Nginx, AWS ALB)
     // In production, we might receive cert info via headers instead of direct TLS
     const clientDN = 

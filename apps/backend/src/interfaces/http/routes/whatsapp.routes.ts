@@ -91,7 +91,7 @@ router.get("/webhook/:webhookId", webhookController.verifyWebhook.bind(webhookCo
  */
 router.post(
   "/webhook/:webhookId",
-  verifyMetaWebhookCertificate, // 🔒 mTLS certificate verification
+  verifyMetaWebhookCertificate, // 🔒 mTLS certificate verification (only Meta IPs)
   whatsappRateLimitMiddleware,
   webhookController.receiveMessage.bind(webhookController)
 )
@@ -127,7 +127,7 @@ router.post(
  */
 router.post(
   "/webhook",
-  verifyMetaWebhookCertificate, // 🔒 mTLS certificate verification
+  verifyMetaWebhookCertificate, // 🔒 mTLS certificate verification (only Meta IPs)
   whatsappRateLimitMiddleware,
   webhookController.receiveMessage.bind(webhookController)
 )
