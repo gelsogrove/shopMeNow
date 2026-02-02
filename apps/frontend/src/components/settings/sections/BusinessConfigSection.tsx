@@ -23,6 +23,7 @@ interface BusinessConfigSectionProps {
     url: string
     businessType: string
     currency: string
+    defaultLanguage: string
     sellsProductsAndServices: boolean
     enableWhatsapp: boolean
     enableWidget: boolean
@@ -209,6 +210,31 @@ export function BusinessConfigSection({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Default Language */}
+            <div className="space-y-2">
+              <Label htmlFor="defaultLanguage">Default Language</Label>
+              <Select
+                value={formData.defaultLanguage}
+                onValueChange={(value) => onFieldChange("defaultLanguage", value)}
+                disabled={!canEdit}
+              >
+                <SelectTrigger id="defaultLanguage">
+                  <SelectValue placeholder="Select default language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="it">🇮🇹 Italian</SelectItem>
+                  <SelectItem value="en">🇬🇧 English</SelectItem>
+                  <SelectItem value="es">🇪🇸 Spanish</SelectItem>
+                  <SelectItem value="pt">🇵🇹 Portuguese</SelectItem>
+                  <SelectItem value="fr">🇫🇷 French</SelectItem>
+                  <SelectItem value="de">🇩🇪 German</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Language used when customer language cannot be detected
+              </p>
             </div>
           </div>
         </CardContent>

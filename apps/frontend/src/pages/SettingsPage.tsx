@@ -86,6 +86,7 @@ interface FormData {
   url: string
   businessType: string
   currency: string
+  defaultLanguage: string
   sellsProductsAndServices: boolean
   // Channels
   channelStatus: boolean
@@ -150,6 +151,7 @@ export function SettingsPage() {
     url: "http://localhost:3000",
     businessType: "retail",
     currency: "USD",
+    defaultLanguage: "it",
     sellsProductsAndServices: true,
     channelStatus: true,
     debugMode: false,
@@ -196,6 +198,7 @@ export function SettingsPage() {
         url: currentWorkspace.url || "http://localhost:3000",
         businessType: currentWorkspace.businessType || "retail",
         currency: currentWorkspace.currency || "USD",
+        defaultLanguage: currentWorkspace.defaultLanguage || "it",
         sellsProductsAndServices: currentWorkspace.sellsProductsAndServices ?? true,
         channelStatus: currentWorkspace.channelStatus ?? true,
         debugMode: currentWorkspace.debugMode ?? false,
@@ -420,6 +423,7 @@ export function SettingsPage() {
               url: formData.url,
               businessType: formData.businessType,
               currency: formData.currency,
+              defaultLanguage: formData.defaultLanguage,
               sellsProductsAndServices: formData.sellsProductsAndServices,
               enableWhatsapp: formData.enableWhatsapp,
               enableWidget: formData.enableWidget,

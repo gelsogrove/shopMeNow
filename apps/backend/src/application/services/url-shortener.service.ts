@@ -1,5 +1,5 @@
 import { prisma } from "@echatbot/database"
-import { workspaceService } from "../../services/workspace.service"
+import { config } from "../../config"
 import logger from "../../utils/logger"
 
 // prisma imported
@@ -71,8 +71,8 @@ export class UrlShortenerService {
         },
       })
 
-      // Get workspace base URL
-      const baseUrl = await workspaceService.getWorkspaceURL(workspaceId)
+      // Use app base URL for short links (always served by backend)
+      const baseUrl = config.appUrl.replace(/\/$/, "")
       const shortUrl = `${baseUrl}/s/${shortCode}`
 
       logger.info(
