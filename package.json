@@ -51,6 +51,7 @@
     "test:unit": "npm run test:unit -w @echatbot/backend",
     "test:security": "npm run test:security -w @echatbot/backend",
     "test:coverage": "npm run test:coverage -w @echatbot/backend",
+    "publish": "./scripts/deploy-all-heroku.sh",
     "deploy:heroku": "./scripts/deploy-all-heroku.sh",
     "setup:heroku": "./scripts/heroku-setup.sh",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist"
