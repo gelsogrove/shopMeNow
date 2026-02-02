@@ -192,7 +192,7 @@ export function BusinessConfigSection({
             </div>
 
             {/* Currency */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="currency">Currency</Label>
               <Select
                 value={formData.currency}
@@ -213,7 +213,7 @@ export function BusinessConfigSection({
             </div>
 
             {/* Default Language */}
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="defaultLanguage">Default Language</Label>
               <Select
                 value={formData.defaultLanguage}
