@@ -121,13 +121,7 @@ export class SecurityCheckService {
 
     const oneMinuteAgo = new Date(Date.now() - windowMs)
 
-    const recentMessages = await prisma.whatsAppQueue.count({
-      where: {
-        workspaceId: context.workspaceId,
-        visitorId: context.visitorId,
-        createdAt: { gte: oneMinuteAgo },
-      },
-    })
+    const recentMessages = await this.countRecentMessages(context, oneMinuteAgo)
 
     if (recentMessages >= maxRequests) {
       return {
@@ -183,6 +177,32 @@ export class SecurityCheckService {
           step: "CONTENT_SAFETY",
           passed: false,
           reason: "SQL injection pattern detected",
+        }
+      }
+    }
+
+    // Prompt injection patterns (widget-only to avoid breaking WhatsApp flows)
+    if (context.channel === "widget") {
+      const promptInjectionPatterns = [
+        /ignore\s+(all|previous|above)\s+(instructions|rules|system|policy)/i,
+        /disregard\s+(all|previous|above)\s+(instructions|rules)/i,
+        /reveal\s+(the\s+)?(system|developer)\s+prompt/i,
+        /show\s+(me\s+)?(the\s+)?(system|developer)\s+prompt/i,
+        /print\s+(the\s+)?(system|developer)\s+prompt/i,
+        /\bdeveloper\s+mode\b/i,
+        /\bjailbreak\b/i,
+        /\bDAN\b/i,
+        /bypass\s+(safety|policy|guardrails)/i,
+        /ignore\s+your\s+(previous|system)\s+instructions/i,
+      ]
+
+      for (const pattern of promptInjectionPatterns) {
+        if (pattern.test(message)) {
+          return {
+            step: "CONTENT_SAFETY",
+            passed: false,
+            reason: "Prompt injection attempt detected",
+          }
         }
       }
     }
@@ -275,21 +295,13 @@ export class SecurityCheckService {
   private static async checkAntiSpam(
     context: SecurityCheckContext
   ): Promise<SecurityCheckResult> {
-    const { workspaceId, visitorId, message } = context
-
     // NOTE: Duplicate message check DISABLED - users may legitimately repeat messages
     // Only flood control remains active
 
     // Check for flood (5+ messages in 10 seconds)
     const tenSecondsAgo = new Date(Date.now() - 10 * 1000)
 
-    const recentMessages = await prisma.whatsAppQueue.count({
-      where: {
-        workspaceId,
-        visitorId,
-        createdAt: { gte: tenSecondsAgo },
-      },
-    })
+    const recentMessages = await this.countRecentMessages(context, tenSecondsAgo)
 
     if (recentMessages >= 5) {
       return {
@@ -304,5 +316,37 @@ export class SecurityCheckService {
       step: "ANTI_SPAM",
       passed: true,
     }
+  }
+
+  /**
+   * Count recent messages for rate limiting / anti-spam
+   * - Widget: use conversation messages (role=user) joined by customer.customId (visitorId)
+   * - WhatsApp: use WhatsApp queue entries (visitorId = phone)
+   */
+  private static async countRecentMessages(
+    context: SecurityCheckContext,
+    since: Date
+  ): Promise<number> {
+    if (context.channel === "widget") {
+      return prisma.conversationMessage.count({
+        where: {
+          workspaceId: context.workspaceId,
+          role: "user",
+          createdAt: { gte: since },
+          customer: {
+            customId: context.visitorId,
+          },
+        },
+      })
+    }
+
+    return prisma.whatsAppQueue.count({
+      where: {
+        workspaceId: context.workspaceId,
+        visitorId: context.visitorId,
+        channel: "whatsapp",
+        createdAt: { gte: since },
+      },
+    })
   }
 }

@@ -192,6 +192,17 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
     paypalStatus?.isPaymentConnected ?? paypalStatus?.paypalStatus === "CONNECTED"
   const requiresPayment = planType !== "FREE_TRIAL"
   const showPayPalWarning = requiresPayment && !paypalLoading && !isPaymentConnected
+  
+  // Calculate days left in trial
+  const getTrialDaysLeft = (): number | null => {
+    if (!billingOverview?.billing?.trialEndsAt) return null
+    const trialEndDate = new Date(billingOverview.billing.trialEndsAt)
+    const today = new Date()
+    const daysLeft = Math.ceil((trialEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.max(0, daysLeft)
+  }
+  
+  const trialDaysLeft = getTrialDaysLeft()
 
   return (
     <div className="space-y-6">
@@ -222,11 +233,18 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
                   {planInfo.icon}
                   <span className="font-semibold">{planInfo.label}</span>
                 </div>
-                {billingOverview?.billing?.trialEndsAt && (
-                  <span className="text-sm text-gray-500">
-                    Trial ends: {new Date(billingOverview.billing.trialEndsAt).toLocaleDateString()}
-                  </span>
-                )}
+                <div className="flex flex-col gap-1">
+                  {billingOverview?.billing?.trialEndsAt && (
+                    <>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {trialDaysLeft !== null ? `${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} left` : 'Trial active'}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        Ends: {new Date(billingOverview.billing.trialEndsAt).toLocaleDateString()}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
               <Button
                 variant="outline"

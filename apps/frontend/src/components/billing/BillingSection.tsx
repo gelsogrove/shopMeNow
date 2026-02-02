@@ -850,9 +850,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Taxes (22%):</span>
+                  <span className="text-muted-foreground">Taxes (21%):</span>
                   <span className="font-medium text-emerald-600">
-                    {formatUsd((planConfig.monthlyFee + (billing.totalRecharges || 0)) * 0.22)}
+                    {formatUsd((planConfig.monthlyFee + (billing.totalRecharges || 0)) * 0.21)}
                   </span>
                 </div>
                 {billing.planType !== "FREE_TRIAL" && (() => {

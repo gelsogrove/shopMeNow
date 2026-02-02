@@ -481,7 +481,7 @@ export function ChatWidget({
   }
   const borderColor = getBorderColor(resolvedPrimaryColor)
   
-  const embeddedButtonSizeClasses = isEmbedded ? "w-[66px] h-[66px]" : "w-[70px] h-[70px]"
+  const embeddedButtonSizeClasses = isEmbedded ? "w-[62px] h-[62px]" : "w-[66px] h-[66px]"
   const embeddedButtonShapeClasses = "rounded-full"
   const embeddedButtonRingClasses = isEmbedded
     ? "border-2 bg-transparent"

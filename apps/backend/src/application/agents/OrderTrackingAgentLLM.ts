@@ -219,7 +219,7 @@ export class OrderTrackingAgentLLM {
         },
         {
           role: "user" as const,
-          content: context.query,
+          content: PromptProcessorService.wrapUserInput(context.query),
         },
       ]
 

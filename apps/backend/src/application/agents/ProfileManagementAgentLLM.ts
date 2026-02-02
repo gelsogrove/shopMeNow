@@ -150,7 +150,10 @@ export class ProfileManagementAgentLLM {
       }
 
       // Add current user message
-      messages.push({ role: "user" as const, content: context.query })
+      messages.push({
+        role: "user" as const,
+        content: PromptProcessorService.wrapUserInput(context.query),
+      })
 
       const functionCalls: Array<{ function: string; arguments: any }> = []
       let iterations = 0

@@ -340,7 +340,7 @@ export class CartManagementAgentLLM {
       // Add current user query
       messages.push({
         role: "user" as const,
-        content: context.query,
+        content: PromptProcessorService.wrapUserInput(context.query),
       })
 
       // STEP 3: Define function calls for cart management

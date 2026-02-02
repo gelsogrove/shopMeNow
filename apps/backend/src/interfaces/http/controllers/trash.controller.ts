@@ -682,12 +682,14 @@ export class TrashController {
         logger.info(`✅ HARD DELETE SUCCESS: Workspace ${id} (${itemToDelete.name}) permanently deleted by ${adminEmail}`)
       } else if (entityType === "USER") {
         // Delete user and all owned workspaces (cascade)
+        
+        // First, find all workspaces owned by this user (OUTSIDE transaction for later logging)
+        const ownedWorkspacesForLogging = await this.prisma.workspace.findMany({
+          where: { ownerId: id },
+          select: { id: true },
+        })
+        
         await this.prisma.$transaction(async (tx) => {
-          // First, find all workspaces owned by this user
-          const ownedWorkspaces = await tx.workspace.findMany({
-            where: { ownerId: id },
-            select: { id: true },
-          })
 
           // ===== USER AUTH TABLES =====
           await tx.twoFactorResetToken.deleteMany({ where: { userId: id } })
@@ -696,7 +698,7 @@ export class TrashController {
           // Note: RegistrationToken is linked to Workspace, not User - deleted with workspace
 
           // Delete all data in each owned workspace
-          for (const workspace of ownedWorkspaces) {
+          for (const workspace of ownedWorkspacesForLogging) {
             const wsId = workspace.id
             
             // ===== LEAF TABLES FIRST =====
@@ -780,7 +782,7 @@ export class TrashController {
             await tx.userWorkspace.deleteMany({ where: { workspaceId: wsId } })
           }
 
-          // Delete all owned workspaces
+          // Hard-delete all owned workspaces
           await tx.workspace.deleteMany({ where: { ownerId: id } })
 
           // Delete user-workspace associations for this user (other workspaces)
@@ -789,10 +791,10 @@ export class TrashController {
           // Finally delete the user
           await tx.user.delete({ where: { id } })
 
-          deletedCount = 1 + ownedWorkspaces.length
+          deletedCount = 1 + ownedWorkspacesForLogging.length
         }, { timeout: 60000 })
         
-        logger.info(`✅ HARD DELETE SUCCESS: User ${id} (${itemToDelete.email}) and ${ownedWorkspaces.length} workspace(s) permanently deleted by ${adminEmail}`)
+        logger.info(`✅ HARD DELETE SUCCESS: User ${id} (${itemToDelete.email}) and ${ownedWorkspacesForLogging.length} workspace(s) permanently deleted by ${adminEmail}`)
       }
 
       res.status(200).json({

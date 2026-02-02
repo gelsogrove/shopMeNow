@@ -247,6 +247,9 @@ export default function ChannelsPage() {
                               Owner {ownerStatus.toLowerCase()}
                             </span>
                           )}
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                            {(channel as any).businessType === 'ecommerce' ? '🛒 E-commerce' : 'ℹ️ Info'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -360,6 +363,24 @@ export default function ChannelsPage() {
                     <p className="text-xs text-blue-900">
                       💡 <span className="font-medium">Test Mode:</span> Admin tests don't deduct credits.
                     </p>
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => handleLogoClick(channel)}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                    >
+                      Test Widget
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedWorkspace(channel)
+                        setSelectedWorkspaceId(channel.id)
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                    >
+                      Open in Playground
+                    </button>
                   </div>
                 </div>
               </div>

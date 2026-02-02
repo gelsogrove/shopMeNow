@@ -172,7 +172,7 @@ export class ProductContextAgentLLM {
 
       messages.push({
         role: "user",
-        content: input.question,
+        content: PromptProcessorService.wrapUserInput(input.question),
       })
 
       const response = await axios.post(

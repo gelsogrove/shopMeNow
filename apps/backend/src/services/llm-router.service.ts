@@ -1875,7 +1875,7 @@ export class LLMRouterService {
     let messages = [
       { role: "system" as const, content: routerAgent.systemPrompt },
       ...conversationHistory,
-      { role: "user" as const, content: userMessage },
+      { role: "user" as const, content: PromptProcessorService.wrapUserInput(userMessage) },
     ]
 
     let totalTokens = 0
