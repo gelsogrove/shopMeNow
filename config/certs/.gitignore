@@ -1,0 +1,5 @@
+# Ignore certificates - they will be in production env or loaded differently
+*.pem
+*.crt
+*.key
+*.zip

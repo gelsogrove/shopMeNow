@@ -4,6 +4,7 @@ import { WhatsAppWebhookController } from "../controllers/whatsapp-webhook.contr
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { whatsappRateLimitMiddleware } from "../middlewares/whatsapp-rate-limit.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import { verifyMetaWebhookCertificate } from "../middlewares/mtls-verification.middleware"
 
 /**
  * WhatsApp Routes
@@ -90,6 +91,7 @@ router.get("/webhook/:webhookId", webhookController.verifyWebhook.bind(webhookCo
  */
 router.post(
   "/webhook/:webhookId",
+  verifyMetaWebhookCertificate, // 🔒 mTLS certificate verification
   whatsappRateLimitMiddleware,
   webhookController.receiveMessage.bind(webhookController)
 )
@@ -125,6 +127,7 @@ router.post(
  */
 router.post(
   "/webhook",
+  verifyMetaWebhookCertificate, // 🔒 mTLS certificate verification
   whatsappRateLimitMiddleware,
   webhookController.receiveMessage.bind(webhookController)
 )
