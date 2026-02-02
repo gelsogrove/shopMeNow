@@ -5,6 +5,7 @@ import fs from "fs"
 import helmet from "helmet"
 import path from "path"
 
+import { config } from "./config"
 import { errorMiddleware } from "./interfaces/http/middlewares/error.middleware"
 import { authMiddleware } from "./interfaces/http/middlewares/auth.middleware"
 import { jsonFixMiddleware } from "./interfaces/http/middlewares/json-fix.middleware"
