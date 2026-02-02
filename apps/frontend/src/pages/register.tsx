@@ -103,47 +103,23 @@ const RegisterPage = () => {
     { code: "GBP", name: "British Pound (£)" },
   ]
 
-  // 🔐 Enhanced token validation with workspace info
+  // 🔐 Enhanced token validation - simplified without workspace fetch
   useEffect(() => {
-    const fetchWorkspaceInfo = async (resolvedWorkspaceId: string) => {
-      if (!resolvedWorkspaceId) return
-      try {
-        logger.info(
-          `[Register] Fetching workspace info for id: ${resolvedWorkspaceId}`
-        )
-        // TODO: This should be a token-based endpoint, not backoffice
-        const workspaceResponse = await tokenApi.get(
-          `/workspaces/${resolvedWorkspaceId}`
-        )
-        logger.info(
-          "[Register] Workspace API response:",
-          workspaceResponse.data
-        )
-        if (workspaceResponse.data?.name) {
-          setWorkspaceName(workspaceResponse.data.name)
-        }
-      } catch (error) {
-        logger.error("[Register] Error fetching workspace info:", error)
-        // Non-fatal error, continue with registration
-      }
-    }
-
     if (tokenValid) {
-      const resolvedWorkspaceId = workspaceId || tokenData?.workspaceId || ""
-      // Minimum 1000ms loading + wait for endpoint to finish
+      // Minimum 1000ms loading for better UX
       const startTime = Date.now()
-
-      fetchWorkspaceInfo(resolvedWorkspaceId).finally(() => {
+      
+      setTimeout(() => {
         const elapsedTime = Date.now() - startTime
         const remainingTime = Math.max(0, 1000 - elapsedTime)
-
+        
         setTimeout(() => {
           setLoading(false)
           setInitialLoading(false)
         }, remainingTime)
-      })
+      }, 0)
     }
-  }, [tokenValid, workspaceId, tokenData])
+  }, [tokenValid])
 
   // Stop initial loading if token is missing or invalid
   useEffect(() => {
