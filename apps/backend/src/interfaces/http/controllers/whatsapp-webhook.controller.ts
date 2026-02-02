@@ -513,6 +513,7 @@ export class WhatsAppWebhookController {
             id: true,
             name: true,
             welcomeMessage: true,
+            defaultLanguage: true, // 🌍 Language fallback
           },
         },
       } as const
@@ -700,7 +701,7 @@ export class WhatsAppWebhookController {
         const registrationToken = await secureTokenService.createToken(
           "registration",
           workspaceId,
-          { phoneNumber, language: detectedLanguage },
+          { phoneNumber, language: finalLanguage },
           "24h",
           undefined, // userId - not yet created
           phoneNumber,
@@ -851,7 +852,7 @@ export class WhatsAppWebhookController {
               workspaceId: workspaceId,
               name: contactName || "New Customer", // Temporary name
               email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)
-              language: detectedLanguage,
+              language: finalLanguage,
               isActive: false, // Mark as inactive until registration complete
             },
           })
@@ -909,7 +910,7 @@ export class WhatsAppWebhookController {
               debugInfo: JSON.stringify({
                 source: "whatsapp-webhook",
                 type: "welcome_new_user",
-                language: detectedLanguage,
+                language: finalLanguage,
                 registrationLink: registrationLink,
                 timestamp: new Date().toISOString(),
                 flow: ["welcome", "safety", "save", "whatsapp"],
@@ -1448,7 +1449,7 @@ export class WhatsAppWebhookController {
         customerId: customer.id,
         conversationId: chatSession.id,
         message: messageMarkdown,
-        customerLanguage: customer.language || workspace.defaultLanguage || "it", // 🌍 Priority: customer.language → workspace.defaultLanguage → "it"
+        customerLanguage: customer.language || customer.workspace?.defaultLanguage || "it", // 🌍 Priority: customer.language → workspace.defaultLanguage → "it"
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
         isPlayground, // 🧪 Pass playground flag
