@@ -10,6 +10,7 @@ import { IMG_BASE_URL } from "@/config"
 
 interface Channel {
   id: string
+  workspaceId?: string
   name: string
   description?: string
   url?: string
@@ -41,6 +42,8 @@ export default function ChannelsPage() {
   const [widgetLanguages, setWidgetLanguages] = useState<Record<string, string>>({})
   const [playgroundPhoneNumbers, setPlaygroundPhoneNumbers] = useState<Record<string, string>>({})
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<Record<string, string>>({})
+  const [widgetAutoOpen, setWidgetAutoOpen] = useState(false)
+  const apiUrl = import.meta.env.VITE_API_URL || undefined
 
   /**
    * Validate phone number prefix
@@ -150,9 +153,17 @@ export default function ChannelsPage() {
     }
   }, [selectedWorkspaceId])
 
-  const handleLogoClick = (channel: Channel) => {
+  const getWorkspaceId = (channel: Channel) => channel.id || channel.workspaceId || ""
+
+  const handleLogoClick = (channel: Channel, autoOpen = false) => {
+    const workspaceId = getWorkspaceId(channel)
+    if (!workspaceId) {
+      toast.error("Missing workspace ID for this channel. Please refresh.")
+      return
+    }
+    setWidgetAutoOpen(autoOpen)
     setSelectedWorkspace(channel)
-    setSelectedWorkspaceId(channel.id)
+    setSelectedWorkspaceId(workspaceId)
   }
 
   const handleLanguageChange = (workspaceId: string, value: string) => {
@@ -189,20 +200,22 @@ export default function ChannelsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {channels.map((channel) => {
+            const workspaceId = getWorkspaceId(channel)
             const isChannelActive = channel.channelStatus ?? channel.isActive ?? true
             const isDebugEnabled = channel.debugMode === true
             const ownerStatus = channel.owner?.status
 
             return (
-              <div key={channel.id} className="bg-white rounded-lg border p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div key={workspaceId || channel.name} className="bg-white rounded-lg border p-6 shadow-sm hover:shadow-md transition-shadow">
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => handleLogoClick(channel)}
+                          onClick={() => handleLogoClick(channel, true)}
                           className="flex-shrink-0 hover:scale-110 transition-transform cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 rounded-full"
                           title="Click to test widget"
+                          disabled={!workspaceId}
                         >
                           {channel.logoUrl ? (
                             <img 
@@ -367,17 +380,18 @@ export default function ChannelsPage() {
 
                   <div className="flex gap-2 pt-2">
                     <button
-                      onClick={() => handleLogoClick(channel)}
+                      onClick={() => handleLogoClick(channel, true)}
                       className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                      disabled={!workspaceId}
                     >
                       Test Widget
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedWorkspace(channel)
-                        setSelectedWorkspaceId(channel.id)
+                        handleLogoClick(channel, true)
                       }}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                      disabled={!workspaceId}
                     >
                       Open in Playground
                     </button>
@@ -392,6 +406,7 @@ export default function ChannelsPage() {
       {/* Chat Widget per testing */}
       {selectedWorkspaceId && widgetOpen && selectedWorkspace && (
         <ChatWidget
+          key={`${selectedWorkspaceId}-${widgetAutoOpen ? "open" : "closed"}`}
           workspaceId={selectedWorkspaceId}
           logoUrl={selectedWorkspace.logoUrl ? 
             (selectedWorkspace.logoUrl.startsWith('http') ? selectedWorkspace.logoUrl : `${IMG_BASE_URL}${selectedWorkspace.logoUrl}`) 
@@ -403,11 +418,14 @@ export default function ChannelsPage() {
           language={widgetLanguages[selectedWorkspaceId] || "it"}
           debugMode={selectedWorkspace.debugMode === true} // 🐛 Pass debug mode status
           isPlayground={true} // 🧪 PLAYGROUND: Never deduct credits
+          autoOpen={widgetAutoOpen}
+          apiUrl={apiUrl}
           onOpenChange={(isOpen) => {
             setWidgetOpen(isOpen)
             if (!isOpen) {
               setSelectedWorkspaceId(null)
               setSelectedWorkspace(null)
+              setWidgetAutoOpen(false)
             }
           }}
         />

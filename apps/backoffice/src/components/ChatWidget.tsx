@@ -41,6 +41,7 @@ interface ChatWidgetProps {
   language?: string
   debugMode?: boolean // 🐛 Debug mode indicator (red dot if true)
   isPlayground?: boolean // 🧪 Playground mode - disables billing (default: false)
+  autoOpen?: boolean // 🧪 Auto-open widget (playground convenience)
   apiUrl?: string
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
@@ -74,6 +75,7 @@ export function ChatWidget({
   language,
   debugMode = false, // 🐛 Debug mode flag
   isPlayground = false, // 🧪 Playground mode - no billing
+  autoOpen = false, // 🧪 Auto-open when requested
   apiUrl,
   onOpenChange,
   onConvert,
@@ -85,7 +87,7 @@ export function ChatWidget({
   
   console.log("✅ Resolved workspaceId:", resolvedWorkspaceId)
   
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(autoOpen)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -94,6 +96,13 @@ export function ChatWidget({
   const [showBalloon, setShowBalloon] = useState(false)
   const [balloonDismissed, setBalloonDismissed] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (autoOpen) {
+      setIsOpen(true)
+      onOpenChange?.(true)
+    }
+  }, [autoOpen, onOpenChange])
 
   // Check if balloon was previously closed
   useEffect(() => {
