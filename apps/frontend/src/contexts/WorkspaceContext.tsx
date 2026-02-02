@@ -76,6 +76,8 @@ export interface Workspace {
   // 🆕 Chatbot Identity & Context
   chatbotName?: string // Custom name for the chatbot (e.g., "Sofia", "Marco")
   businessType?: string // Business sector (e.g., "food", "fashion", "electronics")
+  registrationPage?: string
+  requireManualApproval?: boolean
 }
 
 interface WorkspaceContextType {

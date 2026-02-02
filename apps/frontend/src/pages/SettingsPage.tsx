@@ -179,6 +179,8 @@ export function SettingsPage() {
     humanSupportInstructions: "",
     frustrationEscalationInstructions: "",
     address: "",
+    registrationPage: "",
+    requireManualApproval: false,
   })
 
   // Load workspace data

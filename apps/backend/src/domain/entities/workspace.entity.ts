@@ -53,6 +53,8 @@ export interface WorkspaceProps {
   // 🆕 Prompt Builder fields (Dynamic Prompt System)
   address?: string | null
   customAiRules?: string | null
+  registrationPage?: string | null
+  requireManualApproval?: boolean
   // 🆕 Chatbot Personalization
   chatbotName?: string | null
   businessType?: string | null
@@ -278,6 +280,14 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get customAiRules(): string | null | undefined {
     return this.props.customAiRules
+  }
+
+  get registrationPage(): string | null | undefined {
+    return this.props.registrationPage
+  }
+
+  get requireManualApproval(): boolean | undefined {
+    return this.props.requireManualApproval
   }
 
   get chatbotName(): string | null | undefined {

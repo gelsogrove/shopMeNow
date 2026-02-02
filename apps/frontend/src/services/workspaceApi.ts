@@ -62,6 +62,8 @@ export interface Workspace {
   // 🆕 Chatbot Identity & Context
   chatbotName?: string // Custom name for the chatbot (e.g., "Sofia", "Marco")
   businessType?: string // Business sector (e.g., "food", "fashion", "electronics")
+  registrationPage?: string
+  requireManualApproval?: boolean
   // 🆕 Widget Configuration
   widgetTitle?: string
   widgetLanguage?: string
@@ -124,6 +126,8 @@ export interface UpdateWorkspaceData {
   // 🆕 Chatbot Identity & Context
   chatbotName?: string
   businessType?: string
+  registrationPage?: string
+  requireManualApproval?: boolean
   // 🆕 Widget Configuration
   widgetTitle?: string
   widgetLanguage?: string

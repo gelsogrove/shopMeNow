@@ -78,6 +78,8 @@ interface UpdateWorkspaceData {
   operatorWhatsappNumber?: string
   toneOfVoice?: string
   botIdentityResponse?: string
+  registrationPage?: string | null
+  requireManualApproval?: boolean
   // 🆕 Widget Configuration
   widgetTitle?: string
   widgetLanguage?: string
@@ -129,6 +131,8 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
+        registrationPage: true,
+        requireManualApproval: true,
         // 🆕 Widget Configuration
         widgetTitle: true,
         widgetLanguage: true,
@@ -216,6 +220,8 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
+        registrationPage: true,
+        requireManualApproval: true,
         // 🆕 Widget Configuration
         widgetTitle: true,
         widgetLanguage: true,
@@ -350,6 +356,8 @@ export const workspaceService = {
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
+        registrationPage: true,
+        requireManualApproval: true,
         enableWhatsapp: true,
         enableWidget: true,
         widgetTitle: true,
@@ -516,6 +524,8 @@ export const workspaceService = {
         botIdentityResponse: true,
         address: true,
         customAiRules: true,
+        registrationPage: true,
+        requireManualApproval: true,
         // 🆕 Widget Configuration
         widgetTitle: true,
         widgetLanguage: true,

@@ -211,6 +211,8 @@ For privacy inquiries, please contact our support team.`
       botIdentityResponse: w.botIdentityResponse ?? undefined,
       address: w.address ?? undefined,
       customAiRules: w.customAiRules ?? undefined,
+      registrationPage: w.registrationPage ?? undefined,
+      requireManualApproval: w.requireManualApproval ?? false,
       // 🆕 Logo
       logoUrl: w.logoUrl ?? undefined,
       // 🆕 Widget Configuration

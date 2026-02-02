@@ -72,6 +72,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       botIdentityResponse: data.botIdentityResponse || null,
       address: data.address || null,
       customAiRules: data.customAiRules || null,
+      registrationPage: data.registrationPage || null,
+      requireManualApproval: data.requireManualApproval ?? false,
       chatbotName: data.chatbotName || null,
       businessType: data.businessType || null,
       // 🆕 Logo
@@ -137,6 +139,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       botIdentityResponse: workspace.botIdentityResponse,
       address: workspace.address,
       customAiRules: workspace.customAiRules,
+      registrationPage: workspace.registrationPage,
+      requireManualApproval: workspace.requireManualApproval,
       chatbotName: workspace.chatbotName,
       businessType: workspace.businessType,
       // 🆕 Logo

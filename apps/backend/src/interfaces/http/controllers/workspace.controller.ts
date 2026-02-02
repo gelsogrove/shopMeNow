@@ -87,6 +87,8 @@ export class WorkspaceController {
         botIdentityResponse: workspace.botIdentityResponse,
         address: workspace.address,
         customAiRules: workspace.customAiRules,
+        registrationPage: workspace.registrationPage ?? null,
+        requireManualApproval: workspace.requireManualApproval ?? false,
         logoUrl: workspace.logoUrl,
         widgetTitle: workspace.widgetTitle ?? null,
         widgetLanguage: workspace.widgetLanguage ?? "it",
@@ -171,6 +173,8 @@ export class WorkspaceController {
           botIdentityResponse: workspace.botIdentityResponse,
           address: workspace.address,
           customAiRules: workspace.customAiRules,
+          registrationPage: workspace.registrationPage ?? null,
+          requireManualApproval: workspace.requireManualApproval ?? false,
           logoUrl: workspace.logoUrl,
           // 🆕 Chatbot Personalization
           chatbotName: workspace.chatbotName,
@@ -410,6 +414,8 @@ export class WorkspaceController {
         botIdentityResponse: workspace.botIdentityResponse,
         address: workspace.address,
         customAiRules: workspace.customAiRules,
+        registrationPage: workspace.registrationPage ?? null,
+        requireManualApproval: workspace.requireManualApproval ?? false,
         logoUrl: workspace.logoUrl,
         // 🆕 Chatbot Personalization
         chatbotName: workspace.chatbotName,
