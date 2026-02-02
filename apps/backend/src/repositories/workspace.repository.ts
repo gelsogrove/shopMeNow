@@ -745,6 +745,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           botIdentityResponse: true,
           customAiRules: true,
           address: true,
+          registrationPage: true,
+          requireManualApproval: true,
           chatbotName: true,
           businessType: true,
           translateProductNames: true,
