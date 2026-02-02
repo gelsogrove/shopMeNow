@@ -105,6 +105,7 @@ interface FormData {
   widgetPrimaryColor: string
   widgetLanguage: string
   widgetIcon: string
+  widgetUseChannelLogo: boolean
   // AI Config
   customAiRules: string
   welcomeMessage: string
@@ -167,6 +168,7 @@ export function SettingsPage() {
     widgetPrimaryColor: "#22c55e",
     widgetLanguage: "it",
     widgetIcon: "chat",
+    widgetUseChannelLogo: false,
     customAiRules: "",
     welcomeMessage: defaultWelcomeMessage,
     wipMessage: defaultWipMessage,
@@ -211,6 +213,7 @@ export function SettingsPage() {
         widgetPrimaryColor: currentWorkspace.widgetPrimaryColor || "#22c55e",
         widgetLanguage: currentWorkspace.widgetLanguage || "it",
         widgetIcon: currentWorkspace.widgetIcon || "chat",
+        widgetUseChannelLogo: currentWorkspace.widgetUseChannelLogo ?? false,
         customAiRules: currentWorkspace.customAiRules || "",
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
         wipMessage: currentWorkspace.wipMessage || defaultWipMessage,
@@ -458,6 +461,8 @@ export function SettingsPage() {
               widgetPrimaryColor: formData.widgetPrimaryColor,
               widgetLanguage: formData.widgetLanguage,
               widgetIcon: formData.widgetIcon,
+              widgetUseChannelLogo: formData.widgetUseChannelLogo,
+              logoUrl: formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined,
             }}
             workspaceId={currentWorkspace?.id || ""}
             errors={errors}
@@ -717,12 +722,14 @@ export function SettingsPage() {
       {/* Chat Widget (sempre visibile) */}
       {currentWorkspace && (
         <ChatWidget
-          key={`${formData.widgetTitle}-${formData.widgetPrimaryColor}-${formData.widgetIcon}-${formData.widgetLanguage}`}
+          key={`${formData.widgetTitle}-${formData.widgetPrimaryColor}-${formData.widgetIcon}-${formData.widgetLanguage}-${formData.widgetUseChannelLogo}`}
           workspaceId={currentWorkspace.id}
           title={formData.widgetTitle}
           primaryColor={formData.widgetPrimaryColor}
           icon={formData.widgetIcon}
           logoUrl={formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined}
+          useChannelLogo={formData.widgetUseChannelLogo}
+          useWindowConfig={false}
           language={formData.widgetLanguage}
         />
       )}

@@ -67,6 +67,7 @@ export interface Workspace {
   widgetLanguage?: string
   widgetPrimaryColor?: string
   widgetIcon?: string
+  widgetUseChannelLogo?: boolean
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

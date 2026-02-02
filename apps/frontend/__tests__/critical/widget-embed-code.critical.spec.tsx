@@ -125,6 +125,8 @@ describe('🚨 CRITICAL: Widget Embed Code Generation', () => {
     expect(widgetSectionContent).toContain('primaryColor:')
     expect(widgetSectionContent).toContain('icon:')
     expect(widgetSectionContent).toContain('language:')
+    expect(widgetSectionContent).toContain('useChannelLogo')
+    expect(widgetSectionContent).toContain('logoUrl')
   })
 
   it('🔴 MUST generate complete widget embed code', () => {
@@ -165,6 +167,9 @@ describe('🚨 CRITICAL: Widget Embed Code Generation', () => {
     
     // ✅ MUST use formData.widgetLanguage
     expect(widgetSectionContent).toContain('formData.widgetLanguage')
+    
+    // ✅ MUST use formData.widgetUseChannelLogo
+    expect(widgetSectionContent).toContain('formData.widgetUseChannelLogo')
   })
 
   it('🔴 MUST have fallback values for widget config', () => {

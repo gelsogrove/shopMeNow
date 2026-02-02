@@ -842,18 +842,23 @@ startxref
     permanentDeleteDate: Date
     adminEmail?: string
   }): Promise<boolean> {
-    try {
-      const formattedDate = data.permanentDeleteDate.toLocaleDateString("it-IT", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
+    // Retry logic: 3 attempts with exponential backoff
+    const maxRetries = 3
+    let lastError: any = null
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const formattedDate = data.permanentDeleteDate.toLocaleDateString("it-IT", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
 
-      const cascadeInfo = data.cascadeType === "OWNER_CASCADE"
-        ? `The workspace "${data.workspaceName || "N/A"}" and all associated data (customers, orders, messages) have been marked for deletion.`
-        : `Only your user account has been marked for deletion. The workspace remains active.`
+        const cascadeInfo = data.cascadeType === "OWNER_CASCADE"
+          ? `The workspace "${data.workspaceName || "N/A"}" and all associated data (customers, orders, messages) have been marked for deletion.`
+          : `Only your user account has been marked for deletion. The workspace remains active.`
 
-      const htmlContent = `
+        const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -900,22 +905,34 @@ startxref
 </body>
 </html>`
 
-      // Send to user
-      const mailOptions = {
-        from: `"eChatbot" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
-        to: data.userEmail,
-        cc: data.adminEmail || process.env.ADMIN_EMAIL, // CC admin
-        subject: "⚠️ Account Deletion Confirmation - eChatbot",
-        html: htmlContent,
-      }
+        // Send to user
+        const mailOptions = {
+          from: `"eChatbot" <${process.env.SMTP_FROM || "noreply@echatbot.ai"}>`,
+          to: data.userEmail,
+          cc: data.adminEmail || process.env.ADMIN_EMAIL, // CC admin
+          subject: "⚠️ Account Deletion Confirmation - eChatbot",
+          html: htmlContent,
+        }
 
-      await this.getTransporter().sendMail(mailOptions)
-      logger.info(`Unsubscribe notification sent to: ${data.userEmail} (cc: ${data.adminEmail || process.env.ADMIN_EMAIL})`)
-      return true
-    } catch (error) {
-      logger.error("Failed to send unsubscribe notification:", error)
-      return false
+        await this.getTransporter().sendMail(mailOptions)
+        logger.info(`✅ Unsubscribe notification sent successfully to: ${data.userEmail} (attempt ${attempt}/${maxRetries})`)
+        return true
+      } catch (error) {
+        lastError = error
+        logger.warn(`⚠️ Email attempt ${attempt}/${maxRetries} failed for ${data.userEmail}:`, error)
+        
+        // Exponential backoff: wait 2^attempt seconds before retry
+        if (attempt < maxRetries) {
+          const waitTime = Math.pow(2, attempt) * 1000 // 2s, 4s, 8s
+          logger.info(`Retrying email send in ${waitTime}ms...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+        }
+      }
     }
+    
+    // All retries failed
+    logger.error(`❌ Failed to send unsubscribe notification after ${maxRetries} attempts:`, lastError)
+    return false
   }
 
   /**

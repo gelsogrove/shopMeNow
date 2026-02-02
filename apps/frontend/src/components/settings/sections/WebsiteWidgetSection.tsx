@@ -33,6 +33,8 @@ interface WebsiteWidgetSectionProps {
     widgetPrimaryColor: string
     widgetLanguage: string
     widgetIcon: string
+    widgetUseChannelLogo: boolean
+    logoUrl?: string
   }
   workspaceId: string
   errors: Record<string, string>
@@ -65,14 +67,16 @@ export function WebsiteWidgetSection({
   onFieldFocus,
 }: WebsiteWidgetSectionProps) {
   const copyEmbedCode = () => {
-    const embedCode = `<!-- eChatbot Widget -->
+  const embedCode = `<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = {
     workspaceId: "${workspaceId}",
     title: "${formData.widgetTitle || "Chat with us"}",
     primaryColor: "${formData.widgetPrimaryColor || "#22c55e"}",
     icon: "${formData.widgetIcon || "chat"}",
-    language: "${formData.widgetLanguage || "it"}"
+    language: "${formData.widgetLanguage || "it"}",
+    useChannelLogo: ${formData.widgetUseChannelLogo ? "true" : "false"},
+    logoUrl: "${formData.widgetUseChannelLogo && formData.logoUrl ? formData.logoUrl : ""}"
   };
 </script>
 <script src="${window.location.origin}/widget.js" async></script>`
@@ -194,6 +198,17 @@ export function WebsiteWidgetSection({
                   ))}
                 </div>
               </div>
+              <div className="col-span-2 flex items-center justify-between rounded-lg border px-3 py-2">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-700">Usa logo canale</Label>
+                  <p className="text-xs text-gray-500">Se attivo mostra il logo del canale sul pulsante</p>
+                </div>
+                <Switch
+                  checked={formData.widgetUseChannelLogo}
+                  onCheckedChange={(checked) => onFieldChange("widgetUseChannelLogo", checked)}
+                  disabled={!canEdit}
+                />
+              </div>
             </div>
 
             {/* Embed Code */}
@@ -226,7 +241,9 @@ export function WebsiteWidgetSection({
     title: "${formData.widgetTitle || "Chat with us"}",
     primaryColor: "${formData.widgetPrimaryColor || "#22c55e"}",
     icon: "${formData.widgetIcon || "chat"}",
-    language: "${formData.widgetLanguage || "it"}"
+    language: "${formData.widgetLanguage || "it"}",
+    useChannelLogo: ${formData.widgetUseChannelLogo ? "true" : "false"},
+    logoUrl: "${formData.widgetUseChannelLogo && formData.logoUrl ? formData.logoUrl : ""}"
   };
 </script>
 <script src="${window.location.origin}/widget.js" async></script>`}

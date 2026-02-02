@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -33,6 +34,7 @@ export default function WidgetSettingsPage() {
   const [language, setLanguage] = useState<string>("it");
   const [primaryColor, setPrimaryColor] = useState<string>("#22c55e");
   const [icon, setIcon] = useState<string>("chat");
+  const [useChannelLogo, setUseChannelLogo] = useState<boolean>(false);
   const [copied, setCopied] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,6 +47,7 @@ export default function WidgetSettingsPage() {
       setLanguage((workspace as any).widgetLanguage || "it");
       setPrimaryColor((workspace as any).widgetPrimaryColor || "#22c55e");
       setIcon((workspace as any).widgetIcon || "chat");
+      setUseChannelLogo((workspace as any).widgetUseChannelLogo ?? false);
     }
   }, [workspace]);
 
@@ -58,7 +61,8 @@ export default function WidgetSettingsPage() {
       workspaceId: workspace?.id || "YOUR_WORKSPACE_ID",
       apiUrl,
       title,
-      logoUrl: logoUrl ? `${IMG_BASE_URL}${logoUrl}` : "",
+      logoUrl: useChannelLogo && logoUrl ? `${IMG_BASE_URL}${logoUrl}` : "",
+      useChannelLogo,
       icon,
       language,
       primaryColor,
@@ -170,6 +174,7 @@ export default function WidgetSettingsPage() {
         widgetLanguage: language,
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
+        widgetUseChannelLogo: useChannelLogo,
       });
       setCurrentWorkspace({
         ...workspace,
@@ -177,6 +182,7 @@ export default function WidgetSettingsPage() {
         widgetLanguage: language,
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
+        widgetUseChannelLogo: useChannelLogo,
       } as any);
       toast.success("Widget configuration saved!");
     } catch (error: any) {
@@ -293,6 +299,18 @@ export default function WidgetSettingsPage() {
                     ))}
                   </div>
                 </div>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm">Usa logo canale</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Se attivo, il pulsante mostra il logo del canale invece dell’icona
+                    </p>
+                  </div>
+                  <Switch
+                    checked={useChannelLogo}
+                    onCheckedChange={(checked) => setUseChannelLogo(checked === true)}
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="color">Primary Color</Label>
                   <div className="flex gap-2">
@@ -406,9 +424,11 @@ export default function WidgetSettingsPage() {
           workspaceId={workspace.id}
           title={title}
           logoUrl={logoUrl ? `${IMG_BASE_URL}${logoUrl}` : undefined}
+          useChannelLogo={useChannelLogo}
           icon={icon}
           primaryColor={primaryColor}
           language={language}
+          useWindowConfig={false}
           placeholder={translations[language]?.placeholder || "Type a message..."}
         />
       )}

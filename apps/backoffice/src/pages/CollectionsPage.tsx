@@ -64,6 +64,7 @@ interface OwnerInvoiceRow {
     adminNotes: string | null
     adminMarkedById: string | null
     adminMarkedAt: string | null
+    paymentRetryCount?: number
     creditNotes?: Array<{ id: string; amount: number; reason: string | null; createdAt: string }>
   }
 }
@@ -245,6 +246,16 @@ export function CollectionsPage() {
   const [rechargesModal, setRechargesModal] = useState<{ userId: string; ownerEmail: string } | null>(null)
   const [rechargesTransactions, setRechargesTransactions] = useState<any[]>([])
   const [rechargesLoading, setRechargesLoading] = useState(false)
+  const [cancelModal, setCancelModal] = useState<{ 
+    invoiceId: string
+    ownerEmail: string
+    periodMonth: number
+    periodYear: number
+    retryCount: number
+  } | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelBlockWorkspace, setCancelBlockWorkspace] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
   const previousDefaults = getPreviousMonthFromDate(new Date())
   const [historyMonth, setHistoryMonth] = useState<number | null>(previousDefaults.month)
   const [historyYear, setHistoryYear] = useState<number | null>(previousDefaults.year)
@@ -744,26 +755,51 @@ export function CollectionsPage() {
     setUpdating(null)
   }
 
-  const handleTrashFailed = async (invoiceId: string) => {
-    setUpdating(invoiceId)
-    const response = await api.users.updateInvoice(invoiceId, {
-      status: 'CANCELLED',
-      adminNotes: notesByInvoice[invoiceId] ?? '',
+  const handleCancelInvoice = async () => {
+    if (!cancelModal) return
+
+    setCancelLoading(true)
+    const response = await api.users.cancelInvoice(cancelModal.invoiceId, {
+      reason: cancelReason || undefined,
+      blockWorkspace: cancelBlockWorkspace,
     })
 
     if (!response.success || !response.data) {
-      setError(response.error || 'Failed to move invoice to trash')
-      setUpdating(null)
+      setError(response.error || 'Failed to cancel invoice')
+      setCancelLoading(false)
       return
     }
 
-    setFailedRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
+    // Remove from failed list
+    setFailedRows((prev) => prev.filter((row) => row.invoice.id !== cancelModal.invoiceId))
     setInvoicePreviews((prev) => {
       const next = { ...prev }
-      delete next[invoiceId]
+      delete next[cancelModal.invoiceId]
       return next
     })
-    setUpdating(null)
+
+    // Reset modal state
+    setCancelModal(null)
+    setCancelReason('')
+    setCancelBlockWorkspace(false)
+    setCancelLoading(false)
+
+    // Show success message
+    alert(`Invoice cancelled successfully${response.data.workspacesBlocked ? ' and workspace blocked' : ''}`)
+  }
+
+  const handleTrashFailed = async (invoiceId: string) => {
+    const targetRow = failedRows.find((row) => row.invoice.id === invoiceId)
+    if (!targetRow) return
+
+    // Open cancel modal instead of direct trash
+    setCancelModal({
+      invoiceId,
+      ownerEmail: targetRow.owner.email,
+      periodMonth: targetRow.invoice.periodMonth,
+      periodYear: targetRow.invoice.periodYear,
+      retryCount: targetRow.invoice.paymentRetryCount || 0,
+    })
   }
 
   const handleSaveNotes = async (invoiceId: string, status: string) => {
@@ -1074,6 +1110,11 @@ export function CollectionsPage() {
                             {row.owner.email}
                           </span>
                           {getStatusBadge(invoice.status)}
+                          {isFailedView && invoice.paymentRetryCount > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              {invoice.paymentRetryCount} {invoice.paymentRetryCount === 1 ? 'retry' : 'retries'}
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-sm text-gray-600">
                           {ownerName || '—'} · {row.owner.companyName || '—'} · {row.owner.planType}
@@ -1785,6 +1826,91 @@ export function CollectionsPage() {
               }}
             >
               Save Notes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Invoice Modal */}
+      <Dialog open={!!cancelModal} onOpenChange={(open) => !open && setCancelModal(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Cancel Invoice - User Won't Pay
+            </DialogTitle>
+            <DialogDescription className="text-base space-y-2 pt-2">
+              {cancelModal && (
+                <>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded p-3 space-y-1">
+                    <p><strong>Owner:</strong> {cancelModal.ownerEmail}</p>
+                    <p><strong>Period:</strong> {formatMonthYear(cancelModal.periodMonth, cancelModal.periodYear)}</p>
+                    <p><strong>Payment Attempts:</strong> <Badge variant="destructive">{cancelModal.retryCount} failed</Badge></p>
+                  </div>
+                  <p className="text-sm text-gray-600 pt-2">
+                    ⚠️ This action will remove the invoice from the "Fails" list and mark it as CANCELLED.
+                    The invoice will remain in the database for accounting purposes.
+                  </p>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason">Reason (optional)</Label>
+              <Textarea
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Why is this invoice being cancelled? (e.g., 'User closed account', 'Payment method expired')"
+                className="min-h-[100px]"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded">
+              <input
+                type="checkbox"
+                id="block-workspace"
+                checked={cancelBlockWorkspace}
+                onChange={(e) => setCancelBlockWorkspace(e.target.checked)}
+                className="h-4 w-4 text-red-600 rounded"
+              />
+              <Label htmlFor="block-workspace" className="text-sm font-normal cursor-pointer">
+                <span className="font-semibold text-red-700">Block all workspaces for this user</span>
+                <p className="text-xs text-gray-600 mt-1">
+                  If checked, all workspaces owned by this user will be disabled (channelStatus = false)
+                </p>
+              </Label>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelModal(null)
+                setCancelReason('')
+                setCancelBlockWorkspace(false)
+              }}
+              disabled={cancelLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelInvoice}
+              disabled={cancelLoading}
+            >
+              {cancelLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Cancel Invoice{cancelBlockWorkspace ? ' & Block User' : ''}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

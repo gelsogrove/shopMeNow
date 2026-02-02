@@ -92,6 +92,7 @@ export class WorkspaceController {
         widgetLanguage: workspace.widgetLanguage ?? "it",
         widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
         widgetIcon: workspace.widgetIcon ?? "chat",
+        widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
       }))
 
       return res.json(serializedWorkspaces)
@@ -181,6 +182,7 @@ export class WorkspaceController {
           widgetLanguage: workspace.widgetLanguage ?? "it",
           widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
           widgetIcon: workspace.widgetIcon ?? "chat",
+          widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
           // 🆕 Translation Settings
           translateProductNames: workspace.translateProductNames,
           translateCategoryNames: workspace.translateCategoryNames,
@@ -419,6 +421,7 @@ export class WorkspaceController {
         widgetLanguage: workspace.widgetLanguage ?? "it",
         widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
         widgetIcon: workspace.widgetIcon ?? "chat",
+        widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
         // 🆕 Translation Settings
         translateProductNames: workspace.translateProductNames,
         translateCategoryNames: workspace.translateCategoryNames,

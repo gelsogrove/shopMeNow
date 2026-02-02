@@ -2380,6 +2380,125 @@ router.post(
 
 /**
  * @swagger
+ * /api/users/admin/invoices/{invoiceId}/cancel:
+ *   post:
+ *     summary: Cancel invoice and optionally block workspace (admin)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               reason:
+ *                 type: string
+ *               blockWorkspace:
+ *                 type: boolean
+ *                 description: If true, disables all workspaces for this user
+ *     responses:
+ *       200:
+ *         description: Invoice cancelled successfully
+ */
+router.post(
+  "/admin/invoices/:invoiceId/cancel",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const { reason, blockWorkspace } = req.body as {
+        reason?: string
+        blockWorkspace?: boolean
+      }
+      const adminUser = (req as any).user
+
+      if (!adminUser?.id) {
+        res.status(401).json({ success: false, error: "Unauthorized" })
+        return
+      }
+
+      // Get invoice to find user
+      const invoice = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        select: { 
+          id: true, 
+          userId: true, 
+          status: true,
+          periodMonth: true,
+          periodYear: true,
+        },
+      })
+
+      if (!invoice) {
+        res.status(404).json({ success: false, error: "Invoice not found" })
+        return
+      }
+
+      if (invoice.status === "PAID") {
+        res.status(400).json({ 
+          success: false, 
+          error: "Cannot cancel paid invoice" 
+        })
+        return
+      }
+
+      // Cancel invoice
+      await prisma.monthlyInvoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: "CANCELLED",
+          adminNotes: reason || "Removed from fails list - user won't pay",
+          adminMarkedById: adminUser.id,
+          adminMarkedAt: new Date(),
+        },
+      })
+
+      // Optionally block all workspaces for this user
+      if (blockWorkspace) {
+        await prisma.workspace.updateMany({
+          where: { ownerId: invoice.userId },
+          data: { 
+            channelStatus: false,
+          },
+        })
+
+        logger.info(`[ADMIN] Blocked all workspaces for user ${invoice.userId} due to invoice ${invoiceId} cancellation`)
+      }
+
+      logger.info(`[ADMIN] Invoice ${invoiceId} cancelled by ${adminUser.email}`, {
+        reason,
+        blockWorkspace,
+        period: `${invoice.periodMonth}/${invoice.periodYear}`,
+      })
+
+      res.json({
+        success: true,
+        data: {
+          invoiceId,
+          status: "CANCELLED",
+          workspacesBlocked: blockWorkspace || false,
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error cancelling invoice:", error)
+      res.status(500).json({
+        success: false,
+        error: "Failed to cancel invoice",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
  * /api/users/admin/invoices/{invoiceId}/credit-notes:
  *   post:
  *     summary: Create credit note for an invoice (admin)

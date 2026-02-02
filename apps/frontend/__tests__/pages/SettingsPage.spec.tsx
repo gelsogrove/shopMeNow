@@ -345,40 +345,6 @@ describe('SettingsPage - Save Functionality', () => {
     })
   })
 
-  it.skip('should show success toast on successful save', async () => {
-    const user = userEvent.setup()
-    renderWithProviders(<SettingsPage />)
-
-    await waitForLoaded()
-    // Default section is Channels, Save button is visible
-    const saveButton = await screen.findByRole('button', { name: /save changes/i })
-    await user.click(saveButton)
-
-    // Wait for update to complete and toast to be called
-    await waitFor(() => {
-      expect(mockUpdateWorkspace).toHaveBeenCalled()
-      expect(toast.success).toHaveBeenCalledWith('Settings saved successfully')
-    }, { timeout: 10000 })
-  })
-
-  it.skip('should show error toast on save failure', async () => {
-    const user = userEvent.setup()
-    mockUpdateWorkspace.mockRejectedValue(new Error('Network error'))
-
-    renderWithProviders(<SettingsPage />)
-
-    await waitForLoaded()
-    // Default section is Channels
-    const saveButton = await screen.findByRole('button', { name: /save changes/i })
-    await user.click(saveButton)
-
-    // Wait for update to fail and error toast to be called
-    await waitFor(() => {
-      expect(mockUpdateWorkspace).toHaveBeenCalled()
-      expect(toast.error).toHaveBeenCalled()
-    }, { timeout: 10000 })
-  })
-
   it('should prevent save with validation errors', async () => {
     const user = userEvent.setup()
     renderWithProviders(<SettingsPage />)

@@ -206,6 +206,7 @@ export function ClientsPage() {
   } | null>(null)
   const [paypalLoading, setPaypalLoading] = useState(false)
   const [deletingUser, setDeletingUser] = useState(false)
+  const [deleteConfirmationChecked, setDeleteConfirmationChecked] = useState(false)
 
   useEffect(() => {
     loadUsers()
@@ -1410,6 +1411,27 @@ export function ClientsPage() {
               </p>
             </div>
             
+            {/* Final Confirmation Checkbox */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteConfirmationChecked}
+                  onChange={(e) => setDeleteConfirmationChecked(e.target.checked)}
+                  disabled={deletingUser}
+                  className="mt-1 h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">
+                    I understand this will soft-delete the user and all owned workspace data
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    By checking this box, I confirm I have read all warnings and understand the consequences.
+                  </p>
+                </div>
+              </label>
+            </div>
+            
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -1417,6 +1439,7 @@ export function ClientsPage() {
                 onClick={() => {
                   setDeleteUserModal(null)
                   setDeleteConfirmationText('')
+                  setDeleteConfirmationChecked(false)
                   setError(null)
                 }}
                 disabled={deletingUser}
@@ -1426,7 +1449,7 @@ export function ClientsPage() {
               <Button
                 className="flex-1 bg-red-500 hover:bg-red-600 text-white disabled:opacity-50"
                 onClick={handleDeleteUser}
-                disabled={deletingUser || deleteConfirmationText.toUpperCase() !== 'DELETE'}
+                disabled={deletingUser || deleteConfirmationText.toUpperCase() !== 'DELETE' || !deleteConfirmationChecked}
               >
                 {deletingUser ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

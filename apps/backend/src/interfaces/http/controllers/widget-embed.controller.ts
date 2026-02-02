@@ -67,10 +67,12 @@ export class WidgetEmbedController {
       select: {
         name: true,
         widgetTitle: true,
+        logoUrl: true,
         widgetLogoUrl: true,
         widgetLanguage: true,
         widgetPrimaryColor: true,
         widgetIcon: true,
+        widgetUseChannelLogo: true,
         sellsProductsAndServices: true,
       },
     })
@@ -83,7 +85,8 @@ export class WidgetEmbedController {
     }
 
     const title = workspace?.widgetTitle?.trim() || workspace?.name || "Chat with us 💬"
-    const logoUrl = workspace?.widgetLogoUrl?.trim() || ""
+    const useChannelLogo = workspace?.widgetUseChannelLogo === true
+    const logoUrl = useChannelLogo ? (workspace?.logoUrl?.trim() || "") : ""
     const language = workspace?.widgetLanguage || "it"
     const primaryColor = workspace?.widgetPrimaryColor || "#22c55e"
     const icon = (workspace?.widgetIcon || "chat").trim()
@@ -104,6 +107,7 @@ export class WidgetEmbedController {
       apiUrl: "${apiUrl}",
       title: "${title.replace(/"/g, '\\"')}",
       logoUrl: "${logoUrl.replace(/"/g, '\\"')}",
+      useChannelLogo: ${useChannelLogo},
       language: "${language}",
       primaryColor: "${primaryColor}",
       icon: "${icon.replace(/"/g, '\\"')}",

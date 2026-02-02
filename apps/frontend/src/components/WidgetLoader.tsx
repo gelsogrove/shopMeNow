@@ -88,14 +88,15 @@ export function WidgetLoader() {
           return
         }
 
-        // Inject window.eChatbotConfig with language from header dropdown
+        // Inject window.eChatbotConfig with widget config (fallback to header language)
         (window as any).eChatbotConfig = {
           workspaceId: config.workspaceId,
           apiUrl: apiBaseUrl,
           title: config.title,
-          language: language, // Use language from header dropdown
+          language: config.language || language,
           primaryColor: config.primaryColor,
           logoUrl: config.logoUrl,
+          useChannelLogo: config.useChannelLogo ?? false,
           icon: config.icon || workspace?.widgetIcon || "chat",
         }
 
@@ -104,7 +105,7 @@ export function WidgetLoader() {
 
         console.log("✅ Widget config injected:", {
           workspaceId: config.workspaceId,
-          language: language,
+          language: config.language || language,
           title: config.title,
           icon: config.icon || "chat",
           primaryColor: config.primaryColor,

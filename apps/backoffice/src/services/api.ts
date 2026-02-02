@@ -885,6 +885,23 @@ class BackofficeApi {
     },
 
     /**
+     * Cancel invoice and optionally block workspace
+     */
+    cancelInvoice: async (
+      invoiceId: string,
+      options?: { reason?: string; blockWorkspace?: boolean }
+    ): Promise<ApiResponse<{
+      invoiceId: string
+      status: string
+      workspacesBlocked: boolean
+    }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify(options || {}),
+      })
+    },
+
+    /**
      * Impersonate a user (login as user)
      * Returns a temporary token and sessionId to access the platform as that user
      */

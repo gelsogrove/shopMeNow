@@ -57,6 +57,7 @@ const mockWorkspace = {
   widgetLanguage: 'it',
   widgetPrimaryColor: '#22c55e',
   widgetIcon: 'chat',
+  widgetUseChannelLogo: false,
 }
 
 const renderWithProviders = (
@@ -116,6 +117,7 @@ describe('WidgetSettingsPage - Configuration Tests', () => {
         ...mockWorkspace,
         logoUrl: '/uploads/channels/admin-logo.png', // Different from widget
         widgetLogoUrl: '/uploads/users/customer-widget-logo.png',
+        widgetUseChannelLogo: true,
       }
 
       ;(api.get as any).mockResolvedValue({ data: workspace })
@@ -151,6 +153,7 @@ describe('WidgetSettingsPage - Configuration Tests', () => {
             widgetLanguage: 'it',
             widgetPrimaryColor: expect.any(String),
             widgetIcon: 'chat',
+            widgetUseChannelLogo: false,
           })
         )
       })
@@ -269,6 +272,7 @@ describe('WidgetSettingsPage - Configuration Tests', () => {
       const workspaceAfterRefresh = {
         ...mockWorkspace,
         logoUrl: savedLogoUrl,
+        widgetUseChannelLogo: true,
       }
 
       ;(api.get as any).mockResolvedValue({ data: workspaceAfterRefresh })
@@ -284,14 +288,19 @@ describe('WidgetSettingsPage - Configuration Tests', () => {
 
   describe('Embed Code Generation', () => {
     it('should generate embed code with logoUrl', async () => {
-      renderWithProviders(<WidgetSettingsPage />)
+      const workspaceWithLogo = {
+        ...mockWorkspace,
+        widgetUseChannelLogo: true,
+      }
+
+      renderWithProviders(<WidgetSettingsPage />, workspaceWithLogo)
 
       await waitFor(() => {
         const embedCode = screen.getByText(/window.eChatbotConfig/i)
         const codeText = embedCode.textContent || ''
 
         // Should contain logoUrl (single source of truth)
-        expect(codeText).toContain(mockWorkspace.logoUrl)
+        expect(codeText).toContain(workspaceWithLogo.logoUrl)
       })
     })
 
@@ -311,7 +320,12 @@ describe('WidgetSettingsPage - Configuration Tests', () => {
 
   describe('Live Preview', () => {
     it('should show logoUrl in preview header', async () => {
-      renderWithProviders(<WidgetSettingsPage />)
+      const workspaceWithLogo = {
+        ...mockWorkspace,
+        widgetUseChannelLogo: true,
+      }
+
+      renderWithProviders(<WidgetSettingsPage />, workspaceWithLogo)
 
       await waitFor(() => {
         const logoImg = screen.getByAltText('Chat')

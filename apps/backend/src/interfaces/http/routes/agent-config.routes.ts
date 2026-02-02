@@ -26,6 +26,21 @@ router.get(
 )
 
 /**
+ * @route PUT /api/workspaces/:workspaceId/agent-config/:agentId
+ * @description Update a single agent configuration (prompt/settings)
+ * @access Protected - Requires auth + workspace validation + OWNER ONLY
+ *
+ * SECURITY: Only workspace owner can update AI prompts.
+ */
+router.put(
+  "/workspaces/:workspaceId/agent-config/:agentId",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  requireOwner,
+  agentConfigController.updateAgentConfig.bind(agentConfigController)
+)
+
+/**
  * @route POST /api/workspaces/:workspaceId/agent-config/reset-to-defaults
  * @description Reset all agent prompts to default values
  * @access Protected - Requires auth + workspace validation + OWNER ONLY
@@ -57,4 +72,3 @@ router.get(
 )
 
 export default router
-

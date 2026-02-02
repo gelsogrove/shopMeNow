@@ -67,6 +67,7 @@ export interface Workspace {
   widgetLanguage?: string
   widgetPrimaryColor?: string
   widgetIcon?: string
+  widgetUseChannelLogo?: boolean
   widgetLogoUrl?: string
   widgetLogoKey?: string
 }
@@ -128,6 +129,7 @@ export interface UpdateWorkspaceData {
   widgetLanguage?: string
   widgetPrimaryColor?: string
   widgetIcon?: string
+  widgetUseChannelLogo?: boolean
 }
 
 const workspaceApi = {

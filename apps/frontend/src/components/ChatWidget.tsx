@@ -95,6 +95,8 @@ interface ChatWidgetProps {
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left"
   theme?: "light" | "dark"
   logoUrl?: string
+  useChannelLogo?: boolean
+  useWindowConfig?: boolean
   title?: string
   placeholder?: string
   primaryColor?: string
@@ -126,6 +128,8 @@ export function ChatWidget({
   position = "bottom-right",
   theme = "light",
   logoUrl,
+  useChannelLogo,
+  useWindowConfig = true,
   title = "Chat with us 💬",
   placeholder = "Type a message...",
   primaryColor = DEFAULT_PRIMARY_COLOR,
@@ -143,9 +147,9 @@ export function ChatWidget({
   // ⚠️ PRIORITY: Read from window.eChatbotConfig first (set by WidgetLoader)
   const [configVersion, setConfigVersion] = useState(0)
   const widgetConfig = useMemo(() => {
-    if (typeof window === "undefined") return null
+    if (!useWindowConfig || typeof window === "undefined") return null
     return (window as any).eChatbotConfig || null
-  }, [configVersion])
+  }, [configVersion, useWindowConfig])
 
   useEffect(() => {
     const cfg = typeof window !== "undefined" ? (window as any).eChatbotConfig : null
@@ -160,7 +164,7 @@ export function ChatWidget({
   // Fallback: poll window.eChatbotConfig for late injections (handles cases where events are missed)
   const lastConfigRef = useRef<string | null>(null)
   useEffect(() => {
-    if (typeof window === "undefined") return
+    if (!useWindowConfig || typeof window === "undefined") return
     const interval = setInterval(() => {
       try {
         const current = (window as any).eChatbotConfig || null
@@ -178,7 +182,7 @@ export function ChatWidget({
 
   // Re-render when WidgetLoader broadcasts config changes
   useEffect(() => {
-    if (typeof window === "undefined") return
+    if (!useWindowConfig || typeof window === "undefined") return
     const handler = () => setConfigVersion((v) => v + 1)
     window.addEventListener("echatbot-config-updated", handler)
     // Run once in case config is already present
@@ -189,13 +193,18 @@ export function ChatWidget({
   // Resolve workspaceId: window config > prop > fallback
   const resolvedWorkspaceId = widgetConfig?.workspaceId || workspaceId || (typeof localStorage !== "undefined" && localStorage.getItem("echatbot-workspace-id"))
   
-  // Resolve language: LanguageContext > window config > prop > "en"
-  const resolvedLanguage = headerLanguage || widgetConfig?.language || language || "en"
+  // Resolve language: window config > prop > header > "en"
+  const resolvedLanguage = widgetConfig?.language || language || headerLanguage || "en"
   
   // Resolve other props from window config
   const resolvedTitle = widgetConfig?.title || title
   const resolvedPrimaryColor = widgetConfig?.primaryColor || primaryColor
   const resolvedLogoUrl = widgetConfig?.logoUrl || logoUrl
+  const resolvedUseChannelLogoRaw = (widgetConfig as any)?.useChannelLogo
+  const resolvedUseChannelLogo =
+    resolvedUseChannelLogoRaw === true ||
+    resolvedUseChannelLogoRaw === "true" ||
+    useChannelLogo === true
   const resolvedIcon = widgetConfig?.icon || icon || "chat"
   const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
   
@@ -399,7 +408,11 @@ export function ChatWidget({
     `
     return `data:image/svg+xml,${encodeURIComponent(svg)}`
   })()
-  const shouldUseLogo = Boolean(resolvedLogoUrl && !resolvedLogoUrl.endsWith("/logo.png"))
+  const shouldUseLogo = Boolean(
+    resolvedUseChannelLogo &&
+      resolvedLogoUrl &&
+      !resolvedLogoUrl.endsWith("/logo.png")
+  )
   const displayLogoUrl = shouldUseLogo ? resolvedLogoUrl : null
 
   const renderIconGlyph = (value: string) => {

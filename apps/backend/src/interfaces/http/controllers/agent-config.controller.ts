@@ -2,9 +2,11 @@ import { PrismaClient, AgentType } from "@echatbot/database"
 import { Request, Response } from "express"
 import archiver from "archiver"
 import logger from "../../../utils/logger"
+import { agentService } from "../../../application/services/agent.service"
 import { defaultAgents } from "../../../../prisma/data/defaultAgents"
 import { dynamicAgents } from "../../../../prisma/data/dynamicAgents"
 import { TemplateLoaderService } from "../../../application/services/template-loader.service"
+import { PromptValidationError } from "../../../utils/PromptValidationError"
 
 /**
  * Agent Configuration Controller
@@ -144,6 +146,96 @@ export class AgentConfigController {
       logger.error("❌ Failed to get agent configs:", error)
       return res.status(500).json({
         error: "Failed to get agent configs",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * Update a single agent configuration
+   *
+   * @swagger
+   * /api/workspaces/{workspaceId}/agent-config/{agentId}:
+   *   put:
+   *     summary: Update agent configuration
+   *     description: Updates a specific agent's prompt and settings
+   *     tags: [Agent Configuration]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: path
+   *         name: agentId
+   *         required: true
+   *         schema:
+   *           type: string
+   *       - in: header
+   *         name: x-workspace-id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Agent updated successfully
+   *       400:
+   *         description: Invalid request
+   *       403:
+   *         description: Forbidden - only owner can update prompts
+   *       404:
+   *         description: Agent not found
+   *       422:
+   *         description: Prompt validation failed
+   */
+  async updateAgentConfig(req: Request, res: Response) {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const agentId = req.params.agentId
+      const userId = (req as any).user?.id
+
+      if (!workspaceId || !agentId) {
+        return res.status(400).json({
+          error: "Bad Request",
+          message: "workspaceId and agentId are required",
+        })
+      }
+
+      const updatedAgent = await agentService.updateAgentConfig(
+        agentId,
+        req.body || {},
+        workspaceId,
+        userId
+      )
+
+      if (!updatedAgent) {
+        return res.status(404).json({
+          error: "Not Found",
+          message: "Agent configuration not found",
+        })
+      }
+
+      return res.status(200).json(updatedAgent)
+    } catch (error) {
+      if (error instanceof PromptValidationError) {
+        return res.status(error.statusCode).json({
+          error: error.code,
+          message: error.message,
+        })
+      }
+
+      if (error instanceof Error && error.message.includes("Only admin")) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: error.message,
+        })
+      }
+
+      logger.error("❌ Failed to update agent config:", error)
+      return res.status(500).json({
+        error: "Failed to update agent config",
         message: error instanceof Error ? error.message : "Unknown error",
       })
     }
@@ -383,4 +475,3 @@ export class AgentConfigController {
     }
   }
 }
-

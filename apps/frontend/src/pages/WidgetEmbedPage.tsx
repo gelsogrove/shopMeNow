@@ -72,6 +72,9 @@ export function WidgetEmbedPage() {
       language:
         decodeParam(params.get("language")) ||
         (window as any)?.eChatbotConfig?.language,
+      useChannelLogo:
+        decodeParam(params.get("useChannelLogo")) ||
+        (window as any)?.eChatbotConfig?.useChannelLogo,
       apiUrl:
         decodeParam(params.get("apiUrl")) ||
         (window as any)?.eChatbotConfig?.apiUrl,
@@ -91,6 +94,8 @@ export function WidgetEmbedPage() {
         icon={config.icon}
         primaryColor={config.primaryColor}
         language={config.language}
+        useChannelLogo={config.useChannelLogo === true || config.useChannelLogo === "true"}
+        useWindowConfig={false}
         apiUrl={config.apiUrl}
         onOpenChange={(open) => {
           window.parent?.postMessage(

@@ -45,6 +45,7 @@ model Workspace {
   widgetPrimaryColor String? @default("#22c55e") // Primary color in hex format
   widgetTextColor    String? @default("#0f172a") // Text color for widget accents (links, labels)
   widgetIcon         String? @default("chat") // Icon for widget trigger button
+  widgetUseChannelLogo Boolean @default(false) // Use channel logo instead of icon in widget trigger
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
@@ -1376,8 +1377,8 @@ enum InvoiceStatus {
   DRAFT // Current month, still accumulating charges
   PENDING // Month ended, awaiting payment
   PAID // Successfully charged
-  FAILED // Payment failed
-  CANCELLED // Invoice cancelled (e.g., user deleted)
+  FAILED // Payment failed (can retry)
+  CANCELLED // Admin removed from fails list - user won't pay
 }
 
 enum PayPalStatus {
@@ -1415,6 +1416,7 @@ model MonthlyInvoice {
   status              InvoiceStatus @default(DRAFT)
   paidAt              DateTime?
   paypalTransactionId String?
+  paymentRetryCount   Int           @default(0) // Track payment retry attempts
   adminNotes          String?
   adminMarkedById     String?
   adminMarkedAt       DateTime?

@@ -83,6 +83,7 @@ interface UpdateWorkspaceData {
   widgetLanguage?: string
   widgetPrimaryColor?: string
   widgetIcon?: string
+  widgetUseChannelLogo?: boolean
 }
 
 export const workspaceService = {
@@ -133,6 +134,7 @@ export const workspaceService = {
         widgetLanguage: true,
         widgetPrimaryColor: true,
         widgetIcon: true,
+        widgetUseChannelLogo: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -219,6 +221,7 @@ export const workspaceService = {
         widgetLanguage: true,
         widgetPrimaryColor: true,
         widgetIcon: true,
+        widgetUseChannelLogo: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -353,6 +356,7 @@ export const workspaceService = {
         widgetLanguage: true,
         widgetPrimaryColor: true,
         widgetIcon: true,
+        widgetUseChannelLogo: true,
       },
     })
 
@@ -517,6 +521,7 @@ export const workspaceService = {
         widgetLanguage: true,
         widgetPrimaryColor: true,
         widgetIcon: true,
+        widgetUseChannelLogo: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,

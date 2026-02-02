@@ -165,6 +165,10 @@ export class WorkspaceDTO extends BaseDTO {
   @IsOptional()
   widgetIcon?: string;
 
+  @IsBoolean()
+  @IsOptional()
+  widgetUseChannelLogo?: boolean;
+
   @ValidateNested()
   @Type(() => WorkspaceContactDTO)
   @IsOptional()
@@ -268,6 +272,10 @@ export class CreateWorkspaceDTO {
   @IsString()
   @IsOptional()
   widgetIcon?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  widgetUseChannelLogo?: boolean;
 }
 
 /**
@@ -349,6 +357,10 @@ export class UpdateWorkspaceDTO {
   @IsString()
   @IsOptional()
   widgetIcon?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  widgetUseChannelLogo?: boolean;
  
   @IsString()
   @IsOptional()

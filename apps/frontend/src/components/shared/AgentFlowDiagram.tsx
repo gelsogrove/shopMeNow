@@ -469,11 +469,9 @@ export function AgentFlowDiagram({
         temperature: editedTemperature,
         maxTokens: editedMaxTokens,
       })
-      toast.success(`${selectedAgent.name} saved successfully!`)
       setSelectedAgent(null)
     } catch (error) {
       logger.error("Failed to save agent:", error)
-      toast.error("Failed to save agent")
     } finally {
       setIsSaving(false)
     }

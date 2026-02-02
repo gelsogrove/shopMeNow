@@ -83,6 +83,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetLanguage: data.widgetLanguage ?? "it",
       widgetPrimaryColor: data.widgetPrimaryColor ?? "#22c55e",
       widgetIcon: data.widgetIcon ?? "chat",
+      widgetUseChannelLogo: data.widgetUseChannelLogo ?? false,
       // 🆕 Translation Settings
       translateProductNames: data.translateProductNames ?? false,
       translateCategoryNames: data.translateCategoryNames ?? false,
@@ -147,6 +148,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetLanguage: workspace.widgetLanguage ?? "it",
       widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
       widgetIcon: workspace.widgetIcon ?? "chat",
+      widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
       // 🆕 Translation Settings
       translateProductNames: workspace.translateProductNames,
       translateCategoryNames: workspace.translateCategoryNames,
@@ -725,6 +727,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           widgetLanguage: true,
           widgetPrimaryColor: true,
           widgetIcon: true,
+          widgetUseChannelLogo: true,
           enableWhatsapp: true,
           enableWidget: true,
           sellsProductsAndServices: true,

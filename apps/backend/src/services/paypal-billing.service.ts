@@ -270,6 +270,7 @@ export async function processPayment(
           adminMarkedById: adminUserId,
           adminMarkedAt: new Date(),
           paypalTransactionId: transaction.id,
+          paymentRetryCount: 0, // Reset retry count on success
         },
       })
 
@@ -296,13 +297,18 @@ export async function processPayment(
         },
       })
 
+      // Increment retry count
+      const currentRetryCount = invoice.paymentRetryCount || 0
+
       await prisma.monthlyInvoice.update({
         where: { id: invoiceId },
         data: {
           status: "FAILED",
-          adminNotes: `Payment failed: ${result.error}`,
+          adminNotes: `Payment failed (attempt ${currentRetryCount + 1}): ${result.error}`,
           adminMarkedById: adminUserId,
           adminMarkedAt: new Date(),
+          paypalTransactionId: transaction.id, // ✅ Update to latest transaction
+          paymentRetryCount: currentRetryCount + 1,
         },
       })
 

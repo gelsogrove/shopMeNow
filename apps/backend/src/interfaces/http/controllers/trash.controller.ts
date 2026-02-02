@@ -456,11 +456,19 @@ export class TrashController {
   /**
    * POST /admin/trash/{id}/permanently-delete
    * Hard-delete soft-deleted item (requires confirmation text)
+   * 
+   * SECURITY:
+   * - Requires Platform Admin (isPlatformAdmin=true)
+   * - Verifies item is already soft-deleted (deletedAt !== null)
+   * - Logs admin action to audit trail
+   * - Requires exact confirmation text
    */
   async permanentlyDeleteItem(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params
       const { workspaceId, confirmationText = "", entityType = "CUSTOMER" } = req.body
+      const adminUserId = (req.user as any)?.id
+      const adminEmail = (req.user as any)?.email
 
       // Require exact confirmation text
       if (confirmationText !== "PERMANENTLY DELETE") {
@@ -470,6 +478,77 @@ export class TrashController {
         })
         return
       }
+
+      // SECURITY CHECK: Verify item is soft-deleted before hard-delete
+      let itemToDelete: any = null
+      
+      if (entityType === "CUSTOMER") {
+        itemToDelete = await this.prisma.customers.findUnique({
+          where: { id },
+          select: { id: true, deletedAt: true, name: true, email: true, workspaceId: true },
+        })
+        
+        if (!itemToDelete) {
+          res.status(404).json({ error: "Customer not found" })
+          return
+        }
+        
+        if (itemToDelete.deletedAt === null) {
+          logger.warn(`Admin ${adminEmail} attempted hard-delete of NON-deleted customer ${id}`)
+          res.status(400).json({
+            error: "Cannot hard-delete active item",
+            message: "Item must be soft-deleted first. Use soft-delete endpoint.",
+          })
+          return
+        }
+      } else if (entityType === "WORKSPACE") {
+        itemToDelete = await this.prisma.workspace.findUnique({
+          where: { id },
+          select: { id: true, deletedAt: true, name: true, ownerId: true },
+        })
+        
+        if (!itemToDelete) {
+          res.status(404).json({ error: "Workspace not found" })
+          return
+        }
+        
+        if (itemToDelete.deletedAt === null) {
+          logger.warn(`Admin ${adminEmail} attempted hard-delete of NON-deleted workspace ${id}`)
+          res.status(400).json({
+            error: "Cannot hard-delete active item",
+            message: "Item must be soft-deleted first. Use soft-delete endpoint.",
+          })
+          return
+        }
+      } else if (entityType === "USER") {
+        itemToDelete = await this.prisma.user.findUnique({
+          where: { id },
+          select: { id: true, deletedAt: true, email: true, firstName: true, lastName: true },
+        })
+        
+        if (!itemToDelete) {
+          res.status(404).json({ error: "User not found" })
+          return
+        }
+        
+        if (itemToDelete.deletedAt === null) {
+          logger.warn(`Admin ${adminEmail} attempted hard-delete of NON-deleted user ${id}`)
+          res.status(400).json({
+            error: "Cannot hard-delete active item",
+            message: "Item must be soft-deleted first. Use soft-delete endpoint.",
+          })
+          return
+        }
+      }
+
+      // Log critical action BEFORE deletion
+      logger.warn(`🚨 HARD DELETE INITIATED by admin ${adminEmail}`, {
+        adminId: adminUserId,
+        entityType,
+        entityId: id,
+        entityData: itemToDelete,
+        timestamp: new Date().toISOString(),
+      })
 
       // Hard-delete based on entity type
       let deletedCount = 0
@@ -488,18 +567,20 @@ export class TrashController {
           const customer = await tx.customers.delete({ where: { id } })
           deletedCount++
 
-          // Audit log
+          // Audit log with admin details
           await tx.softDeleteAuditLog.create({
             data: {
               workspaceId,
               entityType: "CUSTOMER_PERMANENTLY_DELETED",
               deletedIds: [id],
               deletedIdCount: deletedCount,
-              reason: "Admin permanently deleted via trash",
-              deletedByUserId: req.user?.id,
+              reason: `Platform Admin (${adminEmail}) permanently deleted customer ${itemToDelete.name || itemToDelete.email}`,
+              deletedByUserId: adminUserId,
             },
           })
         })
+        
+        logger.info(`✅ HARD DELETE SUCCESS: Customer ${id} permanently deleted by ${adminEmail}`)
       } else if (entityType === "WORKSPACE") {
         // Delete entire workspace and ALL related data
         await this.prisma.$transaction(async (tx) => {
@@ -597,6 +678,8 @@ export class TrashController {
           
           deletedCount = 1
         }, { timeout: 60000 })
+        
+        logger.info(`✅ HARD DELETE SUCCESS: Workspace ${id} (${itemToDelete.name}) permanently deleted by ${adminEmail}`)
       } else if (entityType === "USER") {
         // Delete user and all owned workspaces (cascade)
         await this.prisma.$transaction(async (tx) => {
@@ -708,6 +791,8 @@ export class TrashController {
 
           deletedCount = 1 + ownedWorkspaces.length
         }, { timeout: 60000 })
+        
+        logger.info(`✅ HARD DELETE SUCCESS: User ${id} (${itemToDelete.email}) and ${ownedWorkspaces.length} workspace(s) permanently deleted by ${adminEmail}`)
       }
 
       res.status(200).json({

@@ -186,21 +186,39 @@ export class AgentService {
         return null
       }
 
-      // 🔒 SECURITY CHECK: Verify user is admin if trying to update prompt/content
-      if (userId && (data.prompt !== undefined || data.content !== undefined)) {
-        const user = await this.prisma.user.findUnique({
-          where: { id: userId },
-          select: { role: true },
-        })
+      // 🔒 SECURITY CHECK: Verify user is admin/owner if trying to update prompt/content
+      if (
+        userId &&
+        (data.prompt !== undefined ||
+          data.content !== undefined ||
+          data.systemPrompt !== undefined)
+      ) {
+        const [user, workspace] = await Promise.all([
+          this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true, isPlatformAdmin: true },
+          }),
+          this.prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { ownerId: true },
+          }),
+        ])
 
-        if (!user || user.role !== "ADMIN") {
+        const isOwner = workspace?.ownerId === userId
+        const isAdminRole =
+          user?.role === "ADMIN" || user?.role === "OWNER"
+        const isPrivileged = Boolean(
+          isOwner || isAdminRole || user?.isPlatformAdmin
+        )
+
+        if (!isPrivileged) {
           logger.warn(
-            `🚨 SECURITY: Non-admin user ${userId} attempted to modify agent prompt`
+            `🚨 SECURITY: Non-admin/owner user ${userId} attempted to modify agent prompt`
           )
-          throw new Error("Only admin users can modify agent prompts")
+          throw new Error("Only admin/owner users can modify agent prompts")
         }
 
-        logger.info(`✅ Admin ${userId} authorized to update prompt`)
+        logger.info(`✅ Privileged user ${userId} authorized to update prompt`)
       }
 
       // Map frontend fields to database fields (frontend → backend)
@@ -252,6 +270,7 @@ export class AgentService {
         content: updatedAgent.systemPrompt, // Backward compatibility
         systemPrompt: updatedAgent.systemPrompt, // Standard
         maxTokens: updatedAgent.maxTokens, // ✅ STANDARD: camelCase
+        agentType: updatedAgent.type, // Legacy frontend compatibility
         name: updatedAgent.name || `Agent-${updatedAgent.workspaceId}`,
         createdAt: updatedAgent.createdAt?.toISOString(),
         updatedAt: updatedAgent.updatedAt?.toISOString(),

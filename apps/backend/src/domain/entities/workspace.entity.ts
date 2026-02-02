@@ -66,6 +66,7 @@ export interface WorkspaceProps {
   widgetLanguage?: string | null
   widgetPrimaryColor?: string | null
   widgetIcon?: string | null
+  widgetUseChannelLogo?: boolean | null
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -313,6 +314,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get widgetIcon(): string | null | undefined {
     return this.props.widgetIcon
+  }
+
+  get widgetUseChannelLogo(): boolean | null | undefined {
+    return this.props.widgetUseChannelLogo
   }
 
   // 🆕 Translation Settings getters
