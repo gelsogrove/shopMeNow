@@ -86,6 +86,8 @@ const RegisterPage = () => {
     error: "",
   })
 
+  const hasToken = token.trim().length > 0
+
   // Array of available languages
   const languages = [
     { code: "IT", name: "Italiano" },
@@ -142,6 +144,14 @@ const RegisterPage = () => {
       })
     }
   }, [tokenValid, workspaceId, tokenData])
+
+  // Stop initial loading if token is missing or invalid
+  useEffect(() => {
+    if (!hasToken || (!tokenValid && tokenError)) {
+      setLoading(false)
+      setInitialLoading(false)
+    }
+  }, [hasToken, tokenValid, tokenError])
 
   // Handle form input changes
   const handleInputChange = (

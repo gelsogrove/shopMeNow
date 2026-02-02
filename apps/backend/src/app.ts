@@ -183,6 +183,16 @@ if (process.env.NODE_ENV === "production") {
     }
     next()
   })
+
+  // 🔒 SECURITY: Force www subdomain (redirect echatbot.ai → www.echatbot.ai)
+  app.use((req, res, next) => {
+    const host = req.hostname.toLowerCase()
+    if (host === "echatbot.ai") {
+      logger.info(`Redirecting non-www to www: ${req.url}`, { ip: req.ip })
+      return res.redirect(301, `https://www.echatbot.ai${req.url}`)
+    }
+    next()
+  })
 }
 
 // Other middleware
@@ -774,6 +784,18 @@ logger.info("✅ Registered PayPal webhook handler at /api/v1/paypal/webhook (le
 
 // Versioned routes - API v1 is the only endpoint
 app.use("/api/v1", apiRouter)
+
+// 🔁 Legacy/compat redirect: /registration/:workspaceId → /registration?workspace=...
+// This keeps older frontend builds working while supporting the new path format.
+app.get("/registration/:workspaceId", (req, res) => {
+  const { workspaceId } = req.params
+  const query = new URLSearchParams(req.query as Record<string, string>)
+  query.set("workspace", workspaceId)
+  const queryString = query.toString()
+  const baseUrl = config.frontendUrl.replace(/\/$/, "")
+  const redirectTarget = `${baseUrl}/registration${queryString ? `?${queryString}` : ""}`
+  res.redirect(302, redirectTarget)
+})
 
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts

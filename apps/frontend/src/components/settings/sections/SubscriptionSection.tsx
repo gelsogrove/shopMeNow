@@ -249,10 +249,9 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
               <Button
                 variant="outline"
                 onClick={() => {
-                  // Navigate to home and open change plan dialog
-                  window.location.href = "/#billing-section"
-                  // Trigger the change plan dialog via localStorage flag
+                  // Navigate to workspace-selection and open change plan dialog
                   localStorage.setItem("openChangePlanDialog", "true")
+                  window.location.href = "/workspace-selection#billing-section"
                 }}
               >
                 Manage Plan
