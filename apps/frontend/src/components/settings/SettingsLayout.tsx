@@ -12,7 +12,7 @@ export function SettingsLayout({ children, helpPanel }: SettingsLayoutProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-6 items-start">
       {/* Form area - sinistra */}
-      <div className="space-y-6">{children}</div>
+      <div className="space-y-6 min-w-0">{children}</div>
 
       {/* Help panel - destra (aligned with card header, not section header) */}
       {helpPanel && (

@@ -22,6 +22,7 @@ model Workspace {
   updatedAt                 DateTime  @updatedAt
   deletedAt                 DateTime?
   currency                  String    @default("USD")
+  defaultLanguage           String    @default("it") // Default language for workspace (ISO 639-1: "it", "en", "es", "pt", "de", "fr")
   channelStatus             Boolean   @default(true) // true = channel active (queue enabled), false = channel disabled
   description               String?
   messageLimit              Int       @default(50)

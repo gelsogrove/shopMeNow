@@ -284,6 +284,7 @@ export class WidgetChatController {
           channelStatus: true,
           ownerId: true,
           language: true,
+          defaultLanguage: true, // 🌍 Business Configuration default language
           debugMode: true,
           wipMessage: true, // 🚧 For WIP mode response
           enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
@@ -472,7 +473,7 @@ export class WidgetChatController {
             email: `${visitorId}@visitor.local`,
             phone: phoneNumber || undefined, // 📱 Save phone if provided (playground scenario)
             isActive: false, // Anonymous users are NOT registered
-            language: requestedLanguage || workspace.language || "ENG",
+            language: requestedLanguage || workspace.defaultLanguage || workspace.language || "ENG", // 🌍 Use workspace.defaultLanguage
           },
         })
 
@@ -482,26 +483,19 @@ export class WidgetChatController {
           phone: phoneNumber || '(none)',
           language: customer.language,
         })
-      } else if (requestedLanguage && customer.language !== requestedLanguage) {
-        // Update language if changed (respects priority: explicit > phone > browser)
-        const oldLanguage = customer.language
-        const updateData: any = { language: requestedLanguage }
-        
-        // Update phone if provided and not set yet
-        if (phoneNumber && !customer.phone) {
-          updateData.phone = phoneNumber
-        }
-        
+      } else if (phoneNumber && !customer.phone) {
+        // 🌍 RULE: customer.language WINS - never update it from widget
+        // Only update phone if missing
         await prisma.customers.update({
           where: { id: customer.id },
-          data: updateData,
+          data: { phone: phoneNumber },
         })
-        customer = { ...customer, ...updateData }
-        logger.info("🌍 Updated customer", {
+        customer = { ...customer, phone: phoneNumber }
+        logger.info("📱 Updated customer phone (language preserved)", {
           customerId: customer.id,
-          oldLanguage,
-          newLanguage: requestedLanguage,
-          phoneUpdated: !!phoneNumber && !customer.phone,
+          customerLanguage: customer.language,
+          requestedLanguage: requestedLanguage || '(none)',
+          phoneUpdated: true,
         })
       } else {
         logger.info("👤 Using existing customer", {
@@ -553,7 +547,7 @@ export class WidgetChatController {
       const welcomeResult = await welcomeMessageHandler.handleWelcomeMessage({
         customerId: customer.id,
         workspaceId,
-        customerLanguage: normalizeLanguage(requestedLanguage || customer.language || workspace.language),
+        customerLanguage: normalizeLanguage(customer.language || workspace.defaultLanguage || workspace.language || "it"), // 🌍 customer.language WINS
         customerMessage: message,
         conversationId: chatSession.id,
         channel: "widget",
@@ -590,8 +584,8 @@ export class WidgetChatController {
         },
       })
 
-      // 🌍 DEBUG: Log language BEFORE calling LLM Router
-      const customerLanguage = requestedLanguage || customer.language || workspace.language || "ENG"
+      // 🌍 LANGUAGE PRIORITY: customer.language (WINS) → workspace.defaultLanguage → workspace.language → "it"
+      const customerLanguage = customer.language || workspace.defaultLanguage || workspace.language || "it"
       logger.info("🌍 Widget calling LLM Router with language", {
         requestedLanguage,
         customerLanguage,

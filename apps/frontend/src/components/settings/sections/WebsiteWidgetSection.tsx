@@ -200,8 +200,8 @@ export function WebsiteWidgetSection({
               </div>
               <div className="col-span-2 flex items-center justify-between rounded-lg border px-3 py-2">
                 <div>
-                  <Label className="text-xs font-semibold text-gray-700">Usa logo canale</Label>
-                  <p className="text-xs text-gray-500">Se attivo mostra il logo del canale sul pulsante</p>
+                  <Label className="text-xs font-semibold text-gray-700">Use channel logo</Label>
+                  <p className="text-xs text-gray-500">When enabled, the button shows the channel logo</p>
                 </div>
                 <Switch
                   checked={formData.widgetUseChannelLogo}
@@ -232,8 +232,8 @@ export function WebsiteWidgetSection({
                   Copy Code
                 </Button>
               </div>
-              <div className="relative">
-                <pre className="bg-slate-900 text-green-400 p-5 rounded-xl text-sm leading-relaxed overflow-x-auto border-2 border-slate-600 shadow-xl">
+              <div className="relative min-w-0">
+                <pre className="bg-slate-900 text-green-400 p-5 rounded-xl text-sm leading-relaxed overflow-x-auto border-2 border-slate-600 shadow-xl max-w-full">
                   {`<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = {

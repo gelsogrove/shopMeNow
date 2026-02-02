@@ -301,9 +301,9 @@ export default function WidgetSettingsPage() {
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <Label className="text-sm">Usa logo canale</Label>
+                    <Label className="text-sm">Use channel logo</Label>
                     <p className="text-xs text-muted-foreground">
-                      Se attivo, il pulsante mostra il logo del canale invece dell’icona
+                      When enabled, the button shows the channel logo instead of the icon
                     </p>
                   </div>
                   <Switch

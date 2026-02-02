@@ -659,6 +659,7 @@ export class WhatsAppWebhookController {
             id: true,
             name: true,
             welcomeMessage: true,
+            defaultLanguage: true, // 🌍 Business Configuration default language
             ownerId: true,
             owner: {
               select: { status: true }
@@ -682,11 +683,13 @@ export class WhatsAppWebhookController {
           return
         }
 
-      // Detect language from phone number
-        const detectedLanguage = detectLanguageFromPhonePrefix(phoneNumber)
-        logger.info("[WEBHOOK] 📱 Detected language from phone", {
+      // 🌍 LANGUAGE PRIORITY: customer.language (if exists) → phone prefix → workspace.defaultLanguage
+        const detectedLanguageFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
+        const finalLanguage = detectedLanguageFromPhone // For new customer, use phone prefix
+        logger.info("[WEBHOOK] 📱 Detected language from phone for NEW customer", {
           phoneNumber,
-          language: detectedLanguage,
+          detectedFromPhone: detectedLanguageFromPhone,
+          finalLanguage,
         })
 
         // Generate registration link with secure token
@@ -720,7 +723,7 @@ export class WhatsAppWebhookController {
         )
 
         // Get localized registration texts
-        const registrationTexts = getRegistrationText(detectedLanguage)
+        const registrationTexts = getRegistrationText(finalLanguage || workspace.defaultLanguage || "it")
 
         // 🆕 Process variables in welcome message BEFORE using it
         const { PromptVariableBuilder } = require("../../../application/services/prompt-variable-builder.service")
@@ -754,7 +757,7 @@ export class WhatsAppWebhookController {
             timestamp: new Date().toISOString(),
             input: {
               phoneNumber: phoneNumber,
-              language: detectedLanguage,
+              language: finalLanguage || workspace.defaultLanguage || "it",
             },
             output: {
               welcomeMessage: rawWelcomeMessage,
@@ -767,7 +770,7 @@ export class WhatsAppWebhookController {
           const safetyResult = await safetyAgent.process({
             workspaceId: workspaceId,
             response: rawWelcomeMessage,
-            targetLanguage: detectedLanguage,
+            targetLanguage: finalLanguage || workspace.defaultLanguage || "it", // 🌍 Use finalLanguage for translation
             customerName: "New Customer",
             allowedLinks: [registrationLink], // Allow registration link
           })
@@ -795,7 +798,7 @@ export class WhatsAppWebhookController {
             systemPrompt: safetyResult.systemPrompt || "Safety & Translation Agent",
             input: {
               originalMessage: rawWelcomeMessage,
-              targetLanguage: detectedLanguage,
+              targetLanguage: finalLanguage || workspace.defaultLanguage || "it",
               customerName: "New Customer",
             },
             output: {
@@ -971,7 +974,7 @@ export class WhatsAppWebhookController {
           "[WEBHOOK] ✅ Welcome message prepared and saved to chat history",
           {
             message: finalMessage,
-            language: detectedLanguage,
+            language: finalLanguage || workspace.defaultLanguage || "it",
             registrationLink,
             customerId: tempCustomer.id,
             sessionId: chatSession.id,
@@ -981,7 +984,7 @@ export class WhatsAppWebhookController {
         res.status(200).json({
           status: "new_user_welcomed",
           message: finalMessage,
-          language: detectedLanguage,
+          language: finalLanguage || workspace.defaultLanguage || "it",
           registrationLink,
           customerId: tempCustomer.id,
           sessionId: chatSession.id,
@@ -1445,7 +1448,7 @@ export class WhatsAppWebhookController {
         customerId: customer.id,
         conversationId: chatSession.id,
         message: messageMarkdown,
-        customerLanguage: customer.language || "it",
+        customerLanguage: customer.language || workspace.defaultLanguage || "it", // 🌍 Priority: customer.language → workspace.defaultLanguage → "it"
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
         isPlayground, // 🧪 Pass playground flag
