@@ -543,10 +543,17 @@ export class WidgetChatController {
       logger.info("✅ Chat session ready", { sessionId: chatSession?.id, customerId: customer.id })
 
       // 👋 Welcome message (first user message only)
+      // Normalize language code to 2-letter ISO format
+      const normalizeLanguage = (lang?: string): string => {
+        if (!lang) return "it"
+        const normalized = lang.toLowerCase().substring(0, 2)
+        return ["it", "en", "es", "pt", "fr", "de"].includes(normalized) ? normalized : "it"
+      }
+
       const welcomeResult = await welcomeMessageHandler.handleWelcomeMessage({
         customerId: customer.id,
         workspaceId,
-        customerLanguage: requestedLanguage || customer.language || workspace.language || "ENG",
+        customerLanguage: normalizeLanguage(requestedLanguage || customer.language || workspace.language),
         customerMessage: message,
         conversationId: chatSession.id,
         channel: "widget",

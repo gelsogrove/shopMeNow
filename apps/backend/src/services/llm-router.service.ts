@@ -1908,78 +1908,26 @@ export class LLMRouterService {
       logger.info("🔍 DEBUG - Messages sent to Router LLM:", {
         systemPromptPreview: messages[0]?.content?.substring(0, 500),
         conversationHistoryCount: messages.length - 2, // minus system and user
-            userMessagePreview: messages[messages.length - 1]?.content?.substring(0, 500) || "",
+        userMessagePreview: messages[messages.length - 1]?.content?.substring(0, 500) || "",
         userMessage: messages[messages.length - 1]?.content,
       })
-
-      // 🚨 IDENTITY QUESTION PRE-CHECK: Bypass LLM for "Who are you?" questions
-      // Pattern: "chi sei", "come ti chiami", "what's your name", "quién eres", "qual é seu nome"
-      // This prevents LLM from calling RESET_ACTIVE_AGENT function in loop
-      const identityPatterns = [
-        /\b(chi\s+sei|come\s+ti\s+chiami|qual\s+.*\s+nome|nome\s+tuo)\b/i, // IT
-        /\b(who\s+are\s+you|what.*your\s+name|your\s+name\s+is)\b/i, // EN
-        /\b(qui[eé]n\s+eres|c[oó]mo\s+te\s+llamas|cu[aá]l.*tu\s+nombre)\b/i, // ES
-        /\b(quem\s+[eé]\s+voc[eê]|qual.*seu\s+nome|seu\s+nome\s+[eé])\b/i, // PT
-      ]
-      
-      const userMessage = params.message.toLowerCase()
-      const isIdentityQuestion = identityPatterns.some(pattern => 
-        pattern.test(userMessage)
-      )
 
       let llmResponse: any
       let routerCallDuration = 0
       const routerCallTimestamp = new Date().toISOString()
 
-      if (iterations === 1 && isIdentityQuestion && workspace?.chatbotName) {
-        logger.info("🚨 IDENTITY QUESTION DETECTED - Bypassing LLM, forcing direct response", {
-          chatbotName: workspace.chatbotName,
-          companyName: workspace.name,
-          botIdentityResponse: workspace.botIdentityResponse?.substring(0, 50),
-        })
-
-        // Construct identity response based on customer language
-        let identityResponse = ""
-        const customerLang = (params.customerLanguage || "it").toLowerCase()
-        const chatbotName = workspace.chatbotName
-        const companyName = workspace.name || ""
-        const role = workspace.botIdentityResponse || ""
-
-        if (customerLang === "it") {
-          identityResponse = `Mi chiamo ${chatbotName}. ${role ? `Sono ${role}` : ""}`
-        } else if (customerLang === "en") {
-          identityResponse = `My name is ${chatbotName}. ${role ? `I am ${role}` : ""}`
-        } else if (customerLang.startsWith("es")) {
-          identityResponse = `Me llamo ${chatbotName}. ${role ? `Soy ${role}` : ""}`
-        } else if (customerLang === "pt") {
-          identityResponse = `Meu nome é ${chatbotName}. ${role ? `Sou ${role}` : ""}`
-        } else {
-          identityResponse = `Mi chiamo ${chatbotName}. ${role ? `Sono ${role}` : ""}`
-        }
-
-        // Create mock LLM response (direct text, no function call)
-        llmResponse = {
-          content: identityResponse.trim(),
-          tokensUsed: 50, // Approximate
-          function_call: undefined, // NO FUNCTION CALLING
-        }
-
-        logger.info("✅ Identity response constructed:", {
-          response: identityResponse,
-          language: customerLang,
-        })
-      } else {
-        // Normal LLM call
-        const routerCallStart = Date.now()
-        llmResponse = await this.callRouterLLM({
-          model: routerAgent.model,
-          messages,
-          temperature: routerAgent.temperature,
-          maxTokens: routerAgent.maxTokens,
-          sellsProductsAndServices, // 🆕 Dynamic function routing
-        })
-        routerCallDuration = Date.now() - routerCallStart
-      }
+      // Normal LLM call - let LLM handle ALL questions including identity questions
+      // ✅ LLM is intelligent enough to understand "chi sei?" in any language
+      // ✅ botIdentityResponse is in system prompt for bot to respond naturally
+      const routerCallStart = Date.now()
+      llmResponse = await this.callRouterLLM({
+        model: routerAgent.model,
+        messages,
+        temperature: routerAgent.temperature,
+        maxTokens: routerAgent.maxTokens,
+        sellsProductsAndServices, // 🆕 Dynamic function routing
+      })
+      routerCallDuration = Date.now() - routerCallStart
 
       totalTokens += llmResponse.tokensUsed
 

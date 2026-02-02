@@ -314,12 +314,60 @@ export class AgentConfigController {
       // Load templates directly from files (latest version)
       const templateLoader = TemplateLoaderService.getInstance(this.prisma)
       
-      // Get all existing agent configs to preserve metadata
+      // ✅ 1. IDENTIFY & CREATE MISSING AGENTS
+      // Get the full list of expected agents for this workspace type
+      const expectedAgents = dynamicAgents(workspaceId, hasEcommerce)
+      
+      // Get all existing agent configs
       const existingAgents = await this.prisma.agentConfig.findMany({
         where: { workspaceId },
       })
+      const existingTypes = new Set(existingAgents.map(a => a.type))
 
-      // Update each agent with fresh template content
+      // Create any missing agents (e.g., ROUTER might be missing in old workspaces)
+      let createdCount = 0
+      for (const expected of expectedAgents) {
+        if (!existingTypes.has(expected.type)) {
+          logger.info(`➕ Creating missing agent ${expected.type} for workspace ${workspaceId}`)
+          // Ensure prompt is loaded from template
+          const freshTemplate = await templateLoader.loadAndRenderTemplate(
+            expected.type,
+            workspaceId
+          )
+          
+          await this.prisma.agentConfig.create({
+            data: {
+              workspaceId,
+              name: expected.name,
+              type: expected.type,
+              description: expected.description,
+              icon: expected.icon,
+              systemPrompt: freshTemplate || expected.systemPrompt || "", 
+              model: expected.model,
+              temperature: expected.temperature,
+              maxTokens: expected.maxTokens,
+              order: expected.order,
+              isActive: expected.isActive,
+              availableFunctions: expected.availableFunctions,
+            },
+          })
+          createdCount++
+          
+          // Add to existingAgents list so it gets processed in the update loop (if needed) 
+          // or just consider it done. Actually, creation is enough.
+          // We won't add it to existingAgents to avoid double update in the loop below.
+        }
+      }
+      
+      if (createdCount > 0) {
+        logger.info(`✅ Created ${createdCount} missing agents`)
+      }
+
+      // ✅ 2. UPDATE EXISTING AGENTS
+      // Refresh list to include newly created ones if we want to return them? 
+      // For now, let's just update the ones that ruled existed before. 
+      // Actually, newly created ones already have fresh template, so no need to update them.
+      
       let resetCount = 0
       for (const agent of existingAgents) {
         try {
