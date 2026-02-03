@@ -15,11 +15,11 @@ import axios from "axios"
  * Features:
  * - NO sessionId header (uses token in URL)
  * - NO authentication cookies
- * - baseURL: /api/token
+ * - baseURL: /api/v1/token
  * - withCredentials: false
  */
 export const tokenApi = axios.create({
-  baseURL: "/api/token",
+  baseURL: "/api/v1/token",
   withCredentials: false, // No cookies for token endpoints
 })
 
