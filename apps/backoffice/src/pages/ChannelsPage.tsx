@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Bug, CheckCircle2, AlertCircle, X, Phone } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { workspaceApi } from "@/services/workspaceApi"
@@ -164,6 +165,7 @@ export default function ChannelsPage() {
     setWidgetAutoOpen(autoOpen)
     setSelectedWorkspace(channel)
     setSelectedWorkspaceId(workspaceId)
+    setWidgetOpen(true)
   }
 
   const handleLanguageChange = (workspaceId: string, value: string) => {
@@ -404,31 +406,48 @@ export default function ChannelsPage() {
       )}
 
       {/* Chat Widget per testing */}
-      {selectedWorkspaceId && widgetOpen && selectedWorkspace && (
-        <ChatWidget
-          key={`${selectedWorkspaceId}-${widgetAutoOpen ? "open" : "closed"}`}
-          workspaceId={selectedWorkspaceId}
-          logoUrl={selectedWorkspace.logoUrl ? 
-            (selectedWorkspace.logoUrl.startsWith('http') ? selectedWorkspace.logoUrl : `${IMG_BASE_URL}${selectedWorkspace.logoUrl}`) 
-            : undefined
-          }
-          title={selectedWorkspace.name}
-          position="bottom-right"
-          phoneNumber={playgroundPhoneNumbers[selectedWorkspaceId] || selectedWorkspace.whatsappPhoneNumber || "+39 999 1234567"} // 📱 Use custom or default
-          language={widgetLanguages[selectedWorkspaceId] || "it"}
-          debugMode={selectedWorkspace.debugMode === true} // 🐛 Pass debug mode status
-          isPlayground={true} // 🧪 PLAYGROUND: Never deduct credits
-          autoOpen={widgetAutoOpen}
-          apiUrl={apiUrl}
-          onOpenChange={(isOpen) => {
-            setWidgetOpen(isOpen)
-            if (!isOpen) {
+      {selectedWorkspaceId && selectedWorkspace && (
+        <Dialog
+          open={widgetOpen}
+          onOpenChange={(open) => {
+            setWidgetOpen(open)
+            if (!open) {
               setSelectedWorkspaceId(null)
               setSelectedWorkspace(null)
               setWidgetAutoOpen(false)
             }
           }}
-        />
+        >
+          <DialogContent className="max-w-[420px] p-0 overflow-hidden">
+            <div className="relative w-[380px] h-[620px]">
+              <ChatWidget
+                key={`${selectedWorkspaceId}-${widgetAutoOpen ? "open" : "closed"}`}
+                workspaceId={selectedWorkspaceId}
+                logoUrl={selectedWorkspace.logoUrl ? 
+                  (selectedWorkspace.logoUrl.startsWith('http') ? selectedWorkspace.logoUrl : `${IMG_BASE_URL}${selectedWorkspace.logoUrl}`) 
+                  : undefined
+                }
+                title={selectedWorkspace.name}
+                position="bottom-right"
+                phoneNumber={playgroundPhoneNumbers[selectedWorkspaceId] || selectedWorkspace.whatsappPhoneNumber || "+39 999 1234567"} // 📱 Use custom or default
+                language={widgetLanguages[selectedWorkspaceId] || "it"}
+                debugMode={selectedWorkspace.debugMode === true} // 🐛 Pass debug mode status
+                isPlayground={true} // 🧪 PLAYGROUND: Never deduct credits
+                autoOpen={widgetAutoOpen}
+                forceEmbedded={true}
+                apiUrl={apiUrl}
+                onOpenChange={(isOpen) => {
+                  if (!isOpen) {
+                    setWidgetOpen(false)
+                    setSelectedWorkspaceId(null)
+                    setSelectedWorkspace(null)
+                    setWidgetAutoOpen(false)
+                  }
+                }}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   )

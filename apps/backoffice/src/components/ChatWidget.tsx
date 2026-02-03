@@ -42,6 +42,7 @@ interface ChatWidgetProps {
   debugMode?: boolean // 🐛 Debug mode indicator (red dot if true)
   isPlayground?: boolean // 🧪 Playground mode - disables billing (default: false)
   autoOpen?: boolean // 🧪 Auto-open widget (playground convenience)
+  forceEmbedded?: boolean // 🔒 Force embedded layout (useful for modal previews)
   apiUrl?: string
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
@@ -76,6 +77,7 @@ export function ChatWidget({
   debugMode = false, // 🐛 Debug mode flag
   isPlayground = false, // 🧪 Playground mode - no billing
   autoOpen = false, // 🧪 Auto-open when requested
+  forceEmbedded = false,
   apiUrl,
   onOpenChange,
   onConvert,
@@ -323,7 +325,8 @@ export function ChatWidget({
     ;(window as any).eChatbotWidgetReact = widget
   }, [visitorId, messages])
 
-  const isEmbedded = typeof window !== "undefined" && window.self !== window.top
+  const isEmbedded =
+    forceEmbedded || (typeof window !== "undefined" && window.self !== window.top)
   const defaultLogoUrl =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%2322c55e'/%3E%3Ccircle cx='35' cy='40' r='6' fill='%23fff'/%3E%3Ccircle cx='65' cy='40' r='6' fill='%23fff'/%3E%3Cpath d='M30 60 Q50 75 70 60' stroke='%23fff' stroke-width='5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"
   const resolvedLogoUrl =
