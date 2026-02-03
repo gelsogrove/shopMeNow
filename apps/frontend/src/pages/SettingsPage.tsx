@@ -141,6 +141,13 @@ export function SettingsPage() {
   const [showWorkspaceTypeChangeDialog, setShowWorkspaceTypeChangeDialog] = useState(false)
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null)
 
+  const resolveLogoUrl = useCallback((value?: string) => {
+    if (!value) return undefined
+    if (/^https?:\/\//i.test(value)) return value
+    const path = value.startsWith("/") ? value : `/${value}`
+    return `${IMG_BASE_URL}${path}`
+  }, [])
+
   const [formData, setFormData] = useState<FormData>({
     chatbotName: "Sofia",
     botIdentityResponse: "",
@@ -493,7 +500,7 @@ export function SettingsPage() {
               widgetLanguage: formData.widgetLanguage,
               widgetIcon: formData.widgetIcon,
               widgetUseChannelLogo: formData.widgetUseChannelLogo,
-              logoUrl: formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined,
+              logoUrl: resolveLogoUrl(formData.logoUrl),
             }}
             workspaceId={currentWorkspace?.id || ""}
             errors={errors}
@@ -758,7 +765,7 @@ export function SettingsPage() {
           title={formData.widgetTitle}
           primaryColor={formData.widgetPrimaryColor}
           icon={formData.widgetIcon}
-          logoUrl={formData.logoUrl ? `${IMG_BASE_URL}${formData.logoUrl}` : undefined}
+          logoUrl={resolveLogoUrl(formData.logoUrl)}
           useChannelLogo={formData.widgetUseChannelLogo}
           useWindowConfig={false}
           language={formData.widgetLanguage}

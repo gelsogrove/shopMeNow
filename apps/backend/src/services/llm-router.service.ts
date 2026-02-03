@@ -827,15 +827,17 @@ export class LLMRouterService {
       if (isSimpleGreeting) {
         const executionTimeMs = Date.now() - startTime
         
-        // Greeting responses by language
-        const greetingResponses: Record<string, string> = {
-          it: "Ciao! 😊 Come posso aiutarti?",
-          en: "Hello! 😊 How can I help you?",
-          es: "¡Hola! 😊 ¿Cómo puedo ayudarte?",
-          pt: "Olá! 😊 Como posso ajudá-lo?",
-        }
+        // Use workspace welcome message (multilingual) or fallback to default
+        const welcomeMessages = (workspace?.welcomeMessage as any) || {}
+        const customerLang = params.customerLanguage?.toLowerCase() || 'it'
         
-        const greetingResponse = greetingResponses[params.customerLanguage?.toLowerCase() || 'it'] || greetingResponses.it
+        // Try: customer language → English → Italian → first available → hardcoded fallback
+        const greetingResponse = 
+          welcomeMessages[customerLang] || 
+          welcomeMessages.en || 
+          welcomeMessages.it || 
+          Object.values(welcomeMessages)[0] || 
+          (customerLang === 'it' ? "Ciao! 😊 Come posso aiutarti?" : "Hello! 😊 How can I help you?")
         
         logger.info("🤝 P3: Simple greeting detected - responding directly (no Router)", {
           message: trimmedMessage,

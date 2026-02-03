@@ -326,6 +326,20 @@ For privacy inquiries, please contact our support team.`
       data.botIdentityResponse = "I'm your digital assistant. I can help you find products, answer questions, and manage your orders!"
     }
 
+    // 🆕 SET PLAN TYPE AND TRIAL END DATE
+    // New workspaces default to FREE_TRIAL with 14-day trial period
+    if (!data.planType) {
+      data.planType = 'FREE_TRIAL'
+    }
+    
+    if (data.planType === 'FREE_TRIAL' && !data.trialEndsAt) {
+      const trialDays = 14 // Free trial duration in days
+      const trialEndsAt = new Date()
+      trialEndsAt.setDate(trialEndsAt.getDate() + trialDays)
+      data.trialEndsAt = trialEndsAt
+      logger.info(`✓ Set FREE_TRIAL plan with end date ${trialEndsAt.toISOString()} (${trialDays} days from now)`)
+    }
+
     // Create workspace entity
     const workspace = Workspace.create(data)
 

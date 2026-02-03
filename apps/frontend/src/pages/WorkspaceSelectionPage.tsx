@@ -753,6 +753,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       
       const workspaceConfig = {
         name: channelAlias,
+        planType: 'FREE_TRIAL', // 🆕 Explicit plan type for new workspaces (14-day trial)
         channelType: wizardData.channelType, // 🆕 WHATSAPP or WIDGET
         whatsappPhoneNumber: phoneNumber || undefined,
         language: "en",
