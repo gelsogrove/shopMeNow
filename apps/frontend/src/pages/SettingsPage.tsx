@@ -247,6 +247,31 @@ export function SettingsPage() {
     }
   }, [errors])
 
+  // Handle Debug Mode toggle - immediate save (like workspace selection)
+  const handleToggleDebugMode = useCallback(async (checked: boolean) => {
+    if (!currentWorkspace?.id) return
+    
+    try {
+      // Update immediately
+      const updatedWorkspace = await updateWorkspace(currentWorkspace.id, {
+        debugMode: checked,
+      })
+      
+      // Update context
+      setCurrentWorkspace(updatedWorkspace)
+      
+      // Update local form
+      setFormData((prev) => ({ ...prev, debugMode: checked }))
+      
+      toast.success(checked ? "Debug mode enabled" : "Debug mode disabled")
+    } catch (error) {
+      console.error("Error updating debug mode:", error)
+      toast.error("Failed to update debug mode")
+      // Revert on error
+      setFormData((prev) => ({ ...prev, debugMode: !checked }))
+    }
+  }, [currentWorkspace?.id, setCurrentWorkspace])
+
   // Handle field focus for help panel
   const handleFieldFocus = useCallback((fieldKey: string) => {
     setActiveHelpField(fieldKey)
@@ -550,7 +575,7 @@ export function SettingsPage() {
                 </span>
                 <Switch
                   checked={formData.debugMode}
-                  onCheckedChange={(checked) => handleFieldChange("debugMode", checked)}
+                  onCheckedChange={handleToggleDebugMode}
                   className="ml-1"
                 />
               </div>

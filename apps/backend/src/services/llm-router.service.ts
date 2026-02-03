@@ -818,6 +818,96 @@ export class LLMRouterService {
 
       // ✅ Priority checks passed - proceeding to normal LLM router flow
 
+      // 🤝 GREETING FAST-PATH (P3): Simple greetings bypass Router LLM
+      // WHY: tool_choice="required" forces Router to call RESET_ACTIVE_AGENT in loop → max iterations
+      // FIX: Detect common greetings and respond directly without LLM
+      const trimmedMessage = params.message.trim()
+      const isSimpleGreeting = /^(ciao|hello|hi|hola|olá|buongiorno|buonasera|hey|salve|buenas)!?$/i.test(trimmedMessage)
+      
+      if (isSimpleGreeting) {
+        const executionTimeMs = Date.now() - startTime
+        
+        // Greeting responses by language
+        const greetingResponses: Record<string, string> = {
+          it: "Ciao! 😊 Come posso aiutarti?",
+          en: "Hello! 😊 How can I help you?",
+          es: "¡Hola! 😊 ¿Cómo puedo ayudarte?",
+          pt: "Olá! 😊 Como posso ajudá-lo?",
+        }
+        
+        const greetingResponse = greetingResponses[params.customerLanguage?.toLowerCase() || 'it'] || greetingResponses.it
+        
+        logger.info("🤝 P3: Simple greeting detected - responding directly (no Router)", {
+          message: trimmedMessage,
+          language: params.customerLanguage,
+          executionTimeMs,
+        })
+        
+        // Build debug steps for greeting fast-path
+        const greetingDebugSteps: DebugStep[] = [
+          {
+            type: "router",
+            agent: "🤝 Greeting Fast-Path",
+            model: "N/A",
+            temperature: 0,
+            timestamp: new Date().toISOString(),
+            input: {
+              userMessage: params.message,
+            },
+            output: {
+              decision: "simple_greeting_detected",
+              message: "Responding directly without Router LLM",
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+          },
+        ]
+        
+        // Save user message (INBOUND)
+        await this.conversationManager.saveUserMessage({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: params.message,
+        })
+        
+        // Save greeting response (OUTBOUND)
+        await this.conversationManager.saveAssistantMessage({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          content: greetingResponse,
+          agentType: "ROUTER" as AgentType,
+          tokensUsed: 0,
+          debugInfo: {
+            steps: greetingDebugSteps,
+            totalTokens: 0,
+            totalCost: 0,
+            executionTimeMs,
+            timestamp: new Date().toISOString(),
+          },
+        })
+        
+        return {
+          response: greetingResponse,
+          agentUsed: "ROUTER" as AgentType,
+          confidence: 1.0,
+          tokensUsed: 0,
+          executionTimeMs,
+          wasFAQ: false,
+          debugInfo: {
+            steps: greetingDebugSteps,
+            totalTokens: 0,
+            totalCost: 0,
+            executionTimeMs,
+            timestamp: new Date().toISOString(),
+          },
+        }
+      }
+
       // ❌ REMOVED: FAQ Pre-check (lines 209-320)
       // WHY: FAQ check bypassed Router LLM → Router lost decision control
       // NEW APPROACH: Router LLM decides FIRST, then can delegate to FAQ agent if needed

@@ -158,10 +158,12 @@ export default function ChannelsPage() {
 
   const handleLogoClick = (channel: Channel, autoOpen = false) => {
     const workspaceId = getWorkspaceId(channel)
+    console.log("[Channels] Open widget", { workspaceId, channel })
     if (!workspaceId) {
       toast.error("Missing workspace ID for this channel. Please refresh.")
       return
     }
+    toast.info("Opening widget preview…")
     setWidgetAutoOpen(autoOpen)
     setSelectedWorkspace(channel)
     setSelectedWorkspaceId(workspaceId)
@@ -217,7 +219,6 @@ export default function ChannelsPage() {
                           onClick={() => handleLogoClick(channel, true)}
                           className="flex-shrink-0 hover:scale-110 transition-transform cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500 rounded-full"
                           title="Click to test widget"
-                          disabled={!workspaceId}
                         >
                           {channel.logoUrl ? (
                             <img 
@@ -384,7 +385,6 @@ export default function ChannelsPage() {
                     <button
                       onClick={() => handleLogoClick(channel, true)}
                       className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
-                      disabled={!workspaceId}
                     >
                       Test Widget
                     </button>
@@ -393,7 +393,6 @@ export default function ChannelsPage() {
                         handleLogoClick(channel, true)
                       }}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
-                      disabled={!workspaceId}
                     >
                       Open in Playground
                     </button>
