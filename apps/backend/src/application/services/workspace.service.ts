@@ -673,15 +673,26 @@ For privacy inquiries, please contact our support team.`
 
       const ownerPlan = owner?.planType || "FREE_TRIAL"
       if (ownerPlan === "FREE_TRIAL") {
-        const newEnableWhatsapp =
-          data.enableWhatsapp ?? existingWorkspace.enableWhatsapp ?? false
-        const newEnableWidget =
-          data.enableWidget ?? existingWorkspace.enableWidget ?? false
+        // 🚨 CRITICAL: Only check limits if user is CHANGING channel toggles
+        // Allow editing other settings (name, logo, etc.) without blocking
+        const isChangingWhatsapp = data.enableWhatsapp !== undefined && data.enableWhatsapp !== existingWorkspace.enableWhatsapp
+        const isChangingWidget = data.enableWidget !== undefined && data.enableWidget !== existingWorkspace.enableWidget
+        
+        // If NOT changing channel toggles, skip limit check (allow settings edit)
+        if (!isChangingWhatsapp && !isChangingWidget) {
+          logger.info(`✅ Allowing settings edit for FREE_TRIAL user (not changing channel toggles)`)
+          return this.repository.update(id, data)
+        }
+        
+        // User IS trying to change channel toggles - check limits
+        const newEnableWhatsapp = data.enableWhatsapp ?? existingWorkspace.enableWhatsapp ?? false
+        const newEnableWidget = data.enableWidget ?? existingWorkspace.enableWidget ?? false
 
         const resultingChannelCount =
           (newEnableWhatsapp ? 1 : 0) + (newEnableWidget ? 1 : 0)
 
         if (resultingChannelCount > 1) {
+          logger.warn(`❌ FREE_TRIAL user trying to enable both WhatsApp and Widget`)
           const err: any = new Error("CHANNEL_LIMIT_EXCEEDED")
           err.statusCode = 403
           throw err
@@ -698,6 +709,7 @@ For privacy inquiries, please contact our support team.`
           })
 
           if (otherActiveChannels >= 1) {
+            logger.warn(`❌ FREE_TRIAL user already has ${otherActiveChannels} active channel(s) - cannot enable another`)
             const err: any = new Error("CHANNEL_LIMIT_EXCEEDED")
             err.statusCode = 403
             throw err
