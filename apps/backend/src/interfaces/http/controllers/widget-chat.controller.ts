@@ -483,26 +483,41 @@ export class WidgetChatController {
           phone: phoneNumber || '(none)',
           language: customer.language,
         })
-      } else if (phoneNumber && !customer.phone) {
-        // 🌍 RULE: customer.language WINS - never update it from widget
-        // Only update phone if missing
-        await prisma.customers.update({
-          where: { id: customer.id },
-          data: { phone: phoneNumber },
-        })
-        customer = { ...customer, phone: phoneNumber }
-        logger.info("📱 Updated customer phone (language preserved)", {
-          customerId: customer.id,
-          customerLanguage: customer.language,
-          requestedLanguage: requestedLanguage || '(none)',
-          phoneUpdated: true,
-        })
       } else {
-        logger.info("👤 Using existing customer", {
-          customerId: customer.id,
-          visitorId,
-          language: customer.language,
-        })
+        // 🌍 Update customer language if widget explicitly requests different language
+        const updateData: any = {}
+        
+        if (phoneNumber && !customer.phone) {
+          updateData.phone = phoneNumber
+        }
+        
+        if (requestedLanguage && requestedLanguage !== customer.language) {
+          updateData.language = requestedLanguage
+          logger.info("🌍 Widget language changed - updating customer", {
+            customerId: customer.id,
+            oldLanguage: customer.language,
+            newLanguage: requestedLanguage,
+          })
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await prisma.customers.update({
+            where: { id: customer.id },
+            data: updateData,
+          })
+          customer = { ...customer, ...updateData }
+          logger.info("📝 Updated customer data", {
+            customerId: customer.id,
+            updates: Object.keys(updateData),
+            language: updateData.language || customer.language,
+          })
+        } else {
+          logger.info("👤 Using existing customer (no changes)", {
+            customerId: customer.id,
+            visitorId,
+            language: customer.language,
+          })
+        }
       }
 
       logger.info("✅ Customer ready", { customerId: customer.id, visitorId })
@@ -591,8 +606,11 @@ export class WidgetChatController {
         customerLanguage,
         customerStoredLanguage: customer.language,
         workspaceLanguage: workspace.language,
+        workspaceDefaultLanguage: workspace.defaultLanguage,
         workspaceId,
         customerId: customer.id,
+        explicitLanguageFromWidget: language,
+        normalizedExplicitLanguage: explicitLanguage,
       })
 
       const llmResult = await llmRouterService.routeMessage({

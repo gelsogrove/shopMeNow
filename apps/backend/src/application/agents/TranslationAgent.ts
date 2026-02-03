@@ -77,6 +77,7 @@ export class TranslationAgent {
     // 🔍 DEBUG: Log exactly what language we received
     logger.info(`🌍 [TranslationAgent] RECEIVED targetLanguage parameter (hardcoded prompt)`, {
       targetLanguage: options.targetLanguage,
+      targetLanguageType: typeof options.targetLanguage,
       workspaceId: options.workspaceId,
       customerName: options.customerName,
       messagePreview: options.message?.substring(0, 100),
@@ -89,8 +90,11 @@ export class TranslationAgent {
       // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
       logger.info(`🌍 [TranslationAgent] Normalized language`, {
         input: options.targetLanguage,
+        inputType: typeof options.targetLanguage,
         normalized: normalizedLanguage,
-        willTranslateTo: normalizedLanguage.toUpperCase()
+        normalizedType: typeof normalizedLanguage,
+        willTranslateTo: normalizedLanguage.toUpperCase(),
+        mappingResult: this.normalizeLanguage(options.targetLanguage)
       })
 
       // 🆕 NO DATABASE LOOKUP - Use hardcoded prompt from shared module
