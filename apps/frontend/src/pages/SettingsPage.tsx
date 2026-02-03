@@ -130,8 +130,18 @@ export function SettingsPage() {
   const { isOwner, isSuperAdmin } = useWorkspaceRole(currentWorkspace?.id || "")
   const canEdit = isOwner || isSuperAdmin
 
+  // 🆕 Load last opened section from localStorage
+  const getLastOpenedSection = (): SectionKey => {
+    try {
+      const saved = localStorage.getItem('settings-last-section')
+      return (saved as SectionKey) || 'business'
+    } catch {
+      return 'business'
+    }
+  }
+
   // State
-  const [activeSection, setActiveSection] = useState<SectionKey>("business")
+  const [activeSection, setActiveSection] = useState<SectionKey>(getLastOpenedSection())
   const [activeHelpField, setActiveHelpField] = useState<string>("businessName")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isDirty, setIsDirty] = useState(false)
@@ -287,6 +297,12 @@ export function SettingsPage() {
   // Handle section change - update help field to section default
   const handleSectionChange = useCallback((sectionKey: string) => {
     setActiveSection(sectionKey as SectionKey)
+    // 🆕 Save to localStorage for next visit
+    try {
+      localStorage.setItem('settings-last-section', sectionKey)
+    } catch (error) {
+      // Ignore localStorage errors
+    }
     // Update help to section's default field
     const defaultField = SECTION_DEFAULT_HELP[sectionKey as SectionKey]
     if (defaultField) {

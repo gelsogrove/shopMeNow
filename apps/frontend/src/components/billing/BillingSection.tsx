@@ -1637,7 +1637,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                               </TableRow>
                             )}
                         <TableRow>
-                          <TableCell className="font-medium">Taxes (21%)</TableCell>
+                          <TableCell className="font-medium">Taxes (22%)</TableCell>
                           <TableCell className="text-right font-medium text-emerald-600">
                             {invoice.taxAmount > 0 ? `+${formatUsd(invoice.taxAmount)}` : '—'}
                           </TableCell>
