@@ -3,4 +3,3 @@
 # For other apps, use: Procfile.scheduler, Procfile.backoffice
 
 web: node apps/backend/dist/src/index.js
-release: bash scripts/.heroku-release
