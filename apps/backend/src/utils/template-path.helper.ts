@@ -30,6 +30,26 @@ export const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT", "CONVE
 // Agents available ONLY for e-commerce workspaces
 export const ECOMMERCE_ONLY_AGENTS = ["PRODUCT_SEARCH", "ORDER_TRACKING", "CART_MANAGEMENT"]
 
+// All e-commerce agents (ecommerce folder + shared)
+export const ECOMMERCE_AGENTS = [
+  "ROUTER",
+  "PRODUCT_SEARCH",
+  "CART_MANAGEMENT",
+  "ORDER_TRACKING",
+  "CUSTOMER_SUPPORT",
+  "PROFILE_MANAGEMENT",
+  "PRODUCT_CONTEXT",
+  ...SHARED_AGENTS,
+]
+
+// All informational agents (informational folder + shared)
+export const INFORMATIONAL_AGENTS = [
+  "ROUTER",
+  "CUSTOMER_SUPPORT",
+  "PROFILE_MANAGEMENT",
+  ...SHARED_AGENTS,
+]
+
 /**
  * Get template subdirectory based on agent type and workspace config
  * 

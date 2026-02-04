@@ -323,6 +323,8 @@ export class PromptRenderService {
    * Check if an agent type is available for a workspace type
    */
   static isAgentAvailable(agentType: string, isEcommerce: boolean): boolean {
+    const { SHARED_AGENTS, ECOMMERCE_AGENTS, INFORMATIONAL_AGENTS } = require('../../utils/template-path.helper')
+    
     if (SHARED_AGENTS.includes(agentType)) {
       return true
     }

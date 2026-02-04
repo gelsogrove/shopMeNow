@@ -33,27 +33,7 @@ interface DynamicAgent {
   availableFunctions: string[] | null
 }
 
-// Agent types that are SHARED across all workspace types
-const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT", "CONVERSATION_HISTORY"]
-
-// Agent types available ONLY for e-commerce workspaces
-const ECOMMERCE_ONLY_AGENTS = ["PRODUCT_SEARCH", "ORDER_TRACKING"]
-
-// Map AgentType to template file
-const TEMPLATE_FILES: Record<string, string> = {
-  ROUTER: "01-router.template.md",
-  PRODUCT_SEARCH: "02-product-search.template.md",
-  ORDER_TRACKING: "03-order-tracking.template.md",
-  CUSTOMER_SUPPORT: "04-customer-support.template.md",
-  PROFILE_MANAGEMENT: "05-profile-management.template.md",
-  SECURITY: "06-security.template.md",
-  TRANSLATION: "07-translation.template.md",
-  SUMMARY_AGENT: "08-summary.template.md",
-  CONVERSATION_HISTORY: "09-conversation-history.template.md",
-}
-
-// Template file mapping - now imported from centralized helper
-// Shared agents list - now imported from centralized helper
+// Note: SHARED_AGENTS, ECOMMERCE_ONLY_AGENTS, TEMPLATE_FILES imported from template-path.helper
 
 /**
  * Load template from src/templates/ directory

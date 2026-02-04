@@ -1,4 +1,4 @@
-import { prisma, PrismaClient } from "@echatbot/database"
+import { prisma, PrismaClient, ChannelType } from "@echatbot/database"
 
 export interface ChecklistAction {
   path: string
@@ -16,7 +16,7 @@ export interface ChecklistItem {
 
 export interface WorkspaceChecklist {
   workspaceId: string
-  channelType: "WHATSAPP" | "WIDGET"
+  channelType: ChannelType
   sellsProductsAndServices: boolean
   completedCount: number
   totalCount: number
@@ -283,13 +283,10 @@ export class WorkspaceChecklistService {
         action: { path: "/products" },
       })
 
-      const salesAgentsComplete =
-        !workspace.hasSalesAgents || salesCount > 0
-
       this.addItem(items, {
         key: "sales-agents",
         label: "Sales Agent",
-        completed: salesAgentsComplete,
+        completed: salesCount > 0,
         action: { path: "/sales" },
       })
 
