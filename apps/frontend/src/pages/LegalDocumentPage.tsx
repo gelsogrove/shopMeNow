@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import DOMPurify from "dompurify"
 import { ArrowLeft } from "lucide-react"
-import { api } from "@/services/api"
+import { publicApi } from "@/services/publicApi"
 
 interface LegalDocument {
   type: string
@@ -55,7 +55,7 @@ export function LegalDocumentPage({ docType }: LegalDocumentPageProps) {
       
       // Legal documents are GLOBAL to eCHATBOT platform (not workspace-specific)
       // Note: api client already has baseURL="/api/v1", so we just need the path
-      const response = await api.get(
+      const response = await publicApi.get(
         `/legal-documents/${docType}?lang=${language}`
       )
 

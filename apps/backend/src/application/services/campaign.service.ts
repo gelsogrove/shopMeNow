@@ -13,6 +13,7 @@ export interface CreateCampaignData {
   frequency: CampaignFrequency
   targetType: CampaignTargetType
   customerIds?: string[]
+  targetTags?: string[]
   templateName?: string
   templateParams?: any
   isActive?: boolean
@@ -24,6 +25,7 @@ export interface UpdateCampaignData {
   frequency?: CampaignFrequency
   targetType?: CampaignTargetType
   customerIds?: string[]
+  targetTags?: string[]
   templateName?: string
   templateParams?: any
   isActive?: boolean
@@ -136,6 +138,7 @@ export class CampaignService {
           frequency: data.frequency,
           targetType: data.targetType,
           customerIds: data.customerIds || [],
+          targetTags: data.targetTags || [],
           templateName: data.templateName,
           templateParams: data.templateParams,
           isActive: data.isActive !== undefined ? data.isActive : true,
@@ -178,6 +181,9 @@ export class CampaignService {
           ...(data.targetType !== undefined && { targetType: data.targetType }),
           ...(data.customerIds !== undefined && {
             customerIds: data.customerIds,
+          }),
+          ...(data.targetTags !== undefined && {
+            targetTags: data.targetTags,
           }),
           ...(data.templateName !== undefined && {
             templateName: data.templateName,

@@ -73,6 +73,7 @@ export interface Client {
   phone: string
   language: string
   notes?: string
+  tags?: string[]
   shippingAddress: ShippingAddress
   workspaceId?: string
   createdAt?: string
@@ -225,6 +226,7 @@ export default function ClientsPage(): JSX.Element {
         phone: customer.phone || "",
         language: customer.language || "English",
         notes: customer.notes || "",
+        tags: customer.tags || [],
         shippingAddress: parseAddress(customer.address),
         workspaceId: customer.workspaceId,
         createdAt: customer.createdAt,
@@ -308,13 +310,20 @@ export default function ClientsPage(): JSX.Element {
   }, [clients, isLoadingClients, selectedClient])
 
   // Use isLoading and clients from useQuery for rendering and filtering
-  const filteredClients = clients.filter(
-    (client: Client) =>
-      client.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchValue.toLowerCase()) ||
-      client.company.toLowerCase().includes(searchValue.toLowerCase()) ||
-      client.phone.toLowerCase().includes(searchValue.toLowerCase())
-  )
+  const normalizedSearch = searchValue.toLowerCase()
+  const filteredClients = clients.filter((client: Client) => {
+    const matchesBasic =
+      client.name.toLowerCase().includes(normalizedSearch) ||
+      client.email.toLowerCase().includes(normalizedSearch) ||
+      client.company.toLowerCase().includes(normalizedSearch) ||
+      client.phone.toLowerCase().includes(normalizedSearch)
+
+    const matchesTags =
+      client.tags?.some((tag) => tag.toLowerCase().includes(normalizedSearch)) ||
+      false
+
+    return matchesBasic || matchesTags
+  })
 
   // Handle sheet submission for new client
   const handleCreateClient = async (customerData: any) => {
@@ -740,6 +749,23 @@ export default function ClientsPage(): JSX.Element {
                           </h3>
                           {client.company && (
                             <p className="text-xs text-gray-500">{client.company}</p>
+                          )}
+                          {client.tags && client.tags.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {client.tags.slice(0, 3).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 border border-slate-200"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                              {client.tags.length > 3 && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-600 border border-slate-200">
+                                  +{client.tags.length - 3}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

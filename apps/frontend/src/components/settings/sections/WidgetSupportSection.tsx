@@ -46,11 +46,11 @@ export function WidgetSupportSection({
 
       {/* Single Card with toggle in header */}
       <Card>
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white">
+        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white" data-focus-key="humanSupportToggle">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Users className="h-5 w-5 text-purple-600" />
-              Support Configuration
+              Enable Human Support
             </CardTitle>
             <Switch
               checked={formData.hasHumanSupport}
@@ -181,18 +181,17 @@ export function WidgetSupportSection({
               </div>
 
               {/* Frustration Escalation Triggers */}
-              <div className="space-y-2 pt-4" onFocus={() => onFieldFocus?.("frustrationTriggers")}>
+              <div
+                className="space-y-2 pt-4"
+                onFocus={() => onFieldFocus?.("frustrationTriggers")}
+                data-focus-key="frustrationTriggers"
+              >
                 <Label htmlFor="frustrationEscalationInstructions">Frustration Triggers (Priority)</Label>
                 <p className="text-xs text-gray-500">When the customer shows frustration or panic, escalate immediately</p>
                 <Textarea
                   id="frustrationEscalationInstructions"
                   value={formData.frustrationEscalationInstructions}
                   onChange={(e) => onFieldChange("frustrationEscalationInstructions", e.target.value)}
-                  placeholder="Examples:
-- Customer says 'I want to speak to a manager'
-- Customer uses angry words or ALL CAPS
-- Customer mentions legal action
-- Customer is upset about delivery issues"
                   disabled={!canEdit}
                   className="min-h-[100px]"
                 />

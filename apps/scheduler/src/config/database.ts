@@ -16,7 +16,7 @@ export async function connectDatabase(): Promise<void> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       // Actually test the connection with a real query
-      await prisma.$queryRaw`SELECT 1 as healthcheck`
+      await prisma.$queryRaw(Prisma.sql`SELECT 1 as healthcheck`)
       console.log('✅ Database connected')
       return
     } catch (error: any) {

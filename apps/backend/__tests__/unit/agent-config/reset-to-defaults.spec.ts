@@ -1,36 +1,16 @@
 import * as fs from "fs"
 import * as path from "path"
+import {
+  TEMPLATE_FILES,
+  SHARED_AGENTS,
+  getTemplateFolder,
+  getTemplateFilename,
+} from "../../../src/utils/template-path.helper"
 
 // Helper to load template files directly (without Prisma dependency)
 function loadTemplateFile(agentType: string, isEcommerce: boolean): string {
-  const TEMPLATE_FILES: Record<string, string> = {
-    ROUTER: "01-router.template.md",
-    PRODUCT_SEARCH: "02-product-search.template.md",
-    CART_MANAGEMENT: "03-cart-management.template.md",
-    ORDER_TRACKING: "03-order-tracking.template.md",
-    CUSTOMER_SUPPORT: "04-customer-support.template.md",
-    PROFILE_MANAGEMENT: "05-profile-management.template.md",
-    SECURITY: "06-security.template.md",
-    TRANSLATION: "07-translation.template.md",
-    SUMMARY_AGENT: "08-summary.template.md",
-    CONVERSATION_HISTORY: "09-conversation-history.template.md",
-  }
-  
-  const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT", "CONVERSATION_HISTORY"]
-  
-  const templateFile = TEMPLATE_FILES[agentType]
-  if (!templateFile) {
-    throw new Error(`Unknown agent type: ${agentType}`)
-  }
-  
-  let folder: string
-  if (SHARED_AGENTS.includes(agentType)) {
-    folder = "shared"
-  } else if (isEcommerce) {
-    folder = "ecommerce"
-  } else {
-    folder = "informational"
-  }
+  const templateFile = getTemplateFilename(agentType)
+  const folder = getTemplateFolder(agentType, isEcommerce)
   
   const templatePath = path.join(__dirname, "../../../src/templates", folder, templateFile)
   return fs.readFileSync(templatePath, "utf-8")

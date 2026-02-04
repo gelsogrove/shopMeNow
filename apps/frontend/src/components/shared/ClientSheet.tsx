@@ -110,6 +110,16 @@ function convertLanguageNameToCode(name: string): string {
   return languageMap[name] || name
 }
 
+function normalizeTagsInput(input?: string | string[] | null): string[] {
+  if (!input) return []
+  const raw = Array.isArray(input) ? input : input.split(",")
+  const cleaned = raw
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => tag.toLowerCase())
+  return Array.from(new Set(cleaned))
+}
+
 export function ClientSheet({
   client,
   open,
@@ -126,6 +136,7 @@ export function ClientSheet({
   const [language, setLanguage] = useState("")
   const [discount, setDiscount] = useState("")
   const [notes, setNotes] = useState("")
+  const [tagsInput, setTagsInput] = useState("")
   const [street, setStreet] = useState("")
   const [city, setCity] = useState("")
   const [zip, setZip] = useState("")
@@ -183,6 +194,7 @@ export function ClientSheet({
       setLanguage(languageName)
       setDiscount(fetchedClient.discount?.toString() || "0")
       setNotes(fetchedClient.notes || "")
+      setTagsInput((fetchedClient.tags || []).join(", "))
       // Always ensure addressData is a complete object with all fields as strings
       let addressData = {
         street: "",
@@ -266,6 +278,7 @@ export function ClientSheet({
       setLanguage(availableLanguages[0] || "")
       setDiscount("0")
       setNotes("")
+      setTagsInput("")
       setStreet("")
       setCity("")
       setZip("")
@@ -416,6 +429,7 @@ export function ClientSheet({
       language: convertLanguageNameToCode(language),
       discount: parseFloat(discount),
       notes,
+      tags: normalizeTagsInput(tagsInput),
       address: JSON.stringify({ street, city, zip, country }),
       push_notifications_consent: pushNotificationsConsent,
       isBlacklisted: isBlacklisted,
@@ -468,6 +482,7 @@ export function ClientSheet({
     : fetchedClient?.id
     ? "Edit Client"
     : "Add Client"
+  const parsedTags = normalizeTagsInput(tagsInput)
   const description = isViewMode
     ? "View client information"
     : fetchedClient?.id
@@ -896,6 +911,34 @@ export function ClientSheet({
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="tags" className="text-sm font-medium">
+                    Tags (comma separated)
+                  </Label>
+                  <Input
+                    id="tags"
+                    name="tags"
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                    placeholder="milano, roma, pasta"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Use tags to segment customers for intelligent push campaigns.
+                  </p>
+                  {parsedTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {parsedTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-700 border border-slate-200"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="notes" className="text-sm font-medium">
                     Notes
                   </Label>
@@ -968,6 +1011,12 @@ export function ClientSheet({
                       <dt className="font-medium">Phone:</dt>
                       <dd>{fetchedClient?.phone}</dd>
                     </div>
+                    {fetchedClient?.tags && fetchedClient.tags.length > 0 && (
+                      <div className="flex justify-between">
+                        <dt className="font-medium">Tags:</dt>
+                        <dd>{fetchedClient.tags.join(", ")}</dd>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <dt className="font-medium">Discount:</dt>
                       <dd>{fetchedClient?.discount ?? 0}%</dd>

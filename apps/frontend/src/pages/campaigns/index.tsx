@@ -319,7 +319,7 @@ export default function CampaignsPage() {
           {/* Content */}
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              AI-Powered Multilingual Campaigns
+              Push Intelligente • AI-Powered Multilingual Campaigns
               <Badge className="bg-purple-100 text-purple-700 border-purple-200">
                 Smart
               </Badge>
@@ -360,6 +360,21 @@ export default function CampaignsPage() {
                 <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇬🇧 EN</span>
                 <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇪🇸 ES</span>
                 <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇵🇹 PT</span>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2 text-xs text-gray-600">
+              <div>
+                <span className="font-semibold text-gray-700">IT:</span> Segmenta i clienti con i tag e invia messaggi mirati in automatico.
+              </div>
+              <div>
+                <span className="font-semibold text-gray-700">EN:</span> Segment customers by tags and send targeted messages automatically.
+              </div>
+              <div>
+                <span className="font-semibold text-gray-700">ES:</span> Segmenta clientes por etiquetas y envía mensajes dirigidos automáticamente.
+              </div>
+              <div>
+                <span className="font-semibold text-gray-700">PT:</span> Segmente clientes por tags e envie mensagens direcionadas automaticamente.
               </div>
             </div>
           </div>

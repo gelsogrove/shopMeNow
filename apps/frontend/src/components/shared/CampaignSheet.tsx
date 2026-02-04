@@ -26,6 +26,7 @@ interface Customer {
   isBlacklisted?: boolean
   push_notifications_consent?: boolean
   last_privacy_version_accepted?: string
+  tags?: string[]
 }
 
 interface Campaign {
@@ -62,8 +63,10 @@ export function CampaignSheet({
   const [sendAt, setSendAt] = useState<string>("")
   const [throttlePerSecond, setThrottlePerSecond] = useState<number | "">("")
   const [batchSize, setBatchSize] = useState<number | "">("")
-  const [recipientMode, setRecipientMode] = useState<"ALL" | "SELECTED">("ALL")
+  const [recipientMode, setRecipientMode] = useState<"ALL" | "SELECTED" | "TAGS">("ALL")
   const [customerIds, setCustomerIds] = useState<string[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState("")
 
   // Additional state
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -97,6 +100,8 @@ export function CampaignSheet({
       )
       setRecipientMode("ALL")
       setCustomerIds([])
+      setSelectedTags([])
+      setTagInput("")
     } else {
       // Reset form for new campaign
       setName("")
@@ -106,8 +111,52 @@ export function CampaignSheet({
       setBatchSize("")
       setRecipientMode("ALL")
       setCustomerIds([])
+      setSelectedTags([])
+      setTagInput("")
     }
   }, [campaign])
+
+  const normalizeTagsInput = (input?: string | string[] | null) => {
+    if (!input) return []
+    const raw = Array.isArray(input) ? input : input.split(",")
+    const cleaned = raw
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .map((tag) => tag.toLowerCase())
+    return Array.from(new Set(cleaned))
+  }
+
+  const availableTags = Array.from(
+    new Set(
+      customers.flatMap((customer) =>
+        (customer.tags || []).map((tag) => tag.toLowerCase())
+      )
+    )
+  ).sort()
+
+  const addTagsFromInput = () => {
+    const tagsToAdd = normalizeTagsInput(tagInput)
+    if (tagsToAdd.length === 0) return
+    setSelectedTags((prev) => Array.from(new Set([...prev, ...tagsToAdd])))
+    setTagInput("")
+  }
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
+
+  const taggedCustomerIds =
+    selectedTags.length === 0
+      ? []
+      : customers
+          .filter((customer) =>
+            (customer.tags || []).some((tag) =>
+              selectedTags.includes(tag.toLowerCase())
+            )
+          )
+          .map((customer) => customer.id)
 
   const loadCustomers = async () => {
     try {
@@ -166,8 +215,17 @@ export function CampaignSheet({
       return
     }
 
+    if (recipientMode === "TAGS" && selectedTags.length === 0) {
+      toast.error("Please select at least one tag")
+      return
+    }
+
     const selectedIds =
-      recipientMode === "ALL" ? customers.map((c) => c.id) : customerIds
+      recipientMode === "ALL"
+        ? customers.map((c) => c.id)
+        : recipientMode === "TAGS"
+          ? taggedCustomerIds
+          : customerIds
 
     if (selectedIds.length === 0) {
       toast.error("Please select at least one recipient")
@@ -193,6 +251,7 @@ export function CampaignSheet({
       batchSize: batchSize === "" ? undefined : Number(batchSize),
       recipients: {
         customerIds: selectedIds,
+        tags: recipientMode === "TAGS" ? selectedTags : undefined,
       },
     }
 
@@ -280,9 +339,7 @@ export function CampaignSheet({
                 <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{firstName}}"}</code>
                 <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{lastName}}"}</code>
                 <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{email}}"}</code>
-                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{phone}}"}</code>
                 <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{company}}"}</code>
-                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{workspace}}"}</code>
               </div>
               <p className="text-[11px] text-slate-600">
                 Variables are replaced per recipient. Missing data stay as placeholders.
@@ -355,8 +412,9 @@ export function CampaignSheet({
                   value="ALL"
                   checked={recipientMode === "ALL"}
                   onChange={(e) => {
-                    setRecipientMode(e.target.value as "ALL" | "SELECTED")
+                    setRecipientMode(e.target.value as "ALL" | "SELECTED" | "TAGS")
                     setCustomerIds([])
+                    setSelectedTags([])
                   }}
                   disabled={!isEditMode}
                   className="mt-1 w-4 h-4 text-green-600"
@@ -374,9 +432,10 @@ export function CampaignSheet({
                   type="radio"
                   value="SELECTED"
                   checked={recipientMode === "SELECTED"}
-                  onChange={(e) =>
-                    setRecipientMode(e.target.value as "ALL" | "SELECTED")
-                  }
+                  onChange={(e) => {
+                    setRecipientMode(e.target.value as "ALL" | "SELECTED" | "TAGS")
+                    setSelectedTags([])
+                  }}
                   disabled={!isEditMode}
                   className="mt-1 w-4 h-4 text-green-600"
                 />
@@ -384,6 +443,26 @@ export function CampaignSheet({
                   <span className="font-medium">Specific customers</span>
                   <p className="text-sm text-gray-500">
                     Manually select recipients
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  value="TAGS"
+                  checked={recipientMode === "TAGS"}
+                  onChange={(e) => {
+                    setRecipientMode(e.target.value as "ALL" | "SELECTED" | "TAGS")
+                    setCustomerIds([])
+                  }}
+                  disabled={!isEditMode}
+                  className="mt-1 w-4 h-4 text-green-600"
+                />
+                <div>
+                  <span className="font-medium">Customers by tags</span>
+                  <p className="text-sm text-gray-500">
+                    Send to customers matching selected tags
                   </p>
                 </div>
               </label>
@@ -431,9 +510,89 @@ export function CampaignSheet({
                 </p>
               </div>
             )}
+            {recipientMode === "TAGS" && (
+              <div className="mt-4 space-y-3">
+                <div className="space-y-2">
+                  <Label>Select Tags</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault()
+                          addTagsFromInput()
+                        }
+                      }}
+                      placeholder="milano, roma, pasta"
+                      disabled={!isEditMode}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addTagsFromInput}
+                      disabled={!isEditMode}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Tags are matched case-insensitively.
+                  </p>
+                </div>
+
+                {selectedTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTags.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700 border border-green-200 hover:bg-green-200"
+                        disabled={!isEditMode}
+                      >
+                        {tag} ✕
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {availableTags.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500">Available tags</p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleTag(tag)}
+                          className={`px-2 py-1 rounded-full text-xs border ${
+                            selectedTags.includes(tag)
+                              ? "bg-green-100 text-green-700 border-green-200"
+                              : "bg-white text-gray-700 border-gray-200"
+                          }`}
+                          disabled={!isEditMode}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-gray-600">
+                  {taggedCustomerIds.length} customer(s) match the selected tags
+                </p>
+              </div>
+            )}
             {recipientMode === "ALL" && (
               <p className="text-sm text-gray-600 mt-1">
                 All {customers.length} eligible customers will receive this campaign.
+              </p>
+            )}
+            {recipientMode === "TAGS" && selectedTags.length === 0 && (
+              <p className="text-sm text-gray-600 mt-1">
+                Select one or more tags to build your audience.
               </p>
             )}
           </div>

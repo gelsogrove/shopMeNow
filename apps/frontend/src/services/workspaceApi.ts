@@ -74,6 +74,30 @@ export interface Workspace {
   widgetLogoKey?: string
 }
 
+export interface ChecklistAction {
+  path: string
+  section?: string
+  focusKey?: string
+  action?: "paypal-connect"
+}
+
+export interface ChecklistItem {
+  key: string
+  label: string
+  completed: boolean
+  action?: ChecklistAction
+}
+
+export interface WorkspaceChecklist {
+  workspaceId: string
+  channelType: "WHATSAPP" | "WIDGET"
+  sellsProductsAndServices: boolean
+  completedCount: number
+  totalCount: number
+  percent: number
+  items: ChecklistItem[]
+}
+
 export interface CreateWorkspaceData {
   name: string
   whatsappPhoneNumber: string
@@ -151,6 +175,11 @@ const workspaceApi = {
   async getById(id: string): Promise<Workspace> {
     const response = await api.get(`/workspaces/${id}`)
     return response.data
+  },
+
+  async getChecklist(id: string): Promise<WorkspaceChecklist> {
+    const response = await api.get(`/workspaces/${id}/checklist`)
+    return response.data?.data ?? response.data
   },
 
   async create(data: CreateWorkspaceData): Promise<Workspace> {

@@ -32,6 +32,7 @@ export interface CustomerProps {
   language?: string
   currency?: string
   notes?: string
+  tags?: string[]
   serviceIds?: string[]
   isBlacklisted?: boolean
   isActive?: boolean
@@ -64,6 +65,7 @@ export class Customer {
   readonly language: string
   readonly currency: string
   readonly notes?: string
+  readonly tags: string[]
   readonly serviceIds: string[]
   readonly isBlacklisted: boolean
   readonly isActive: boolean
@@ -91,6 +93,7 @@ export class Customer {
     this.language = props.language || "ENG"
     this.currency = props.currency || "USD"
     this.notes = props.notes
+    this.tags = props.tags || []
     this.serviceIds = props.serviceIds || []
     this.isBlacklisted = props.isBlacklisted || false
     this.isActive = props.isActive !== undefined ? props.isActive : true

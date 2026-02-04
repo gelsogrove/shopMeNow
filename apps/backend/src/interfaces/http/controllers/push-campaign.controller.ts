@@ -67,12 +67,23 @@ export class PushCampaignController {
       if (!name) {
         return res.status(400).json({ error: "Name is required" })
       }
-      if (!recipients || (!recipients.customerIds && !recipients.phones)) {
+      const hasCustomerIds =
+        Array.isArray(recipients?.customerIds) && recipients.customerIds.length > 0
+      const hasPhones =
+        Array.isArray(recipients?.phones) && recipients.phones.length > 0
+      const hasTags =
+        Array.isArray(recipients?.tags)
+          ? recipients.tags.length > 0
+          : typeof recipients?.tags === "string"
+            ? recipients.tags.trim().length > 0
+            : false
+
+      if (!recipients || (!hasCustomerIds && !hasPhones && !hasTags)) {
         return res
           .status(400)
-          .json({ error: "At least one recipient list (customerIds or phones) is required" })
+          .json({ error: "At least one recipient list (customerIds, tags, or phones) is required" })
       }
-      if (recipients.phones && recipients.phones.length > 0) {
+      if (hasPhones) {
         return res
           .status(400)
           .json({ error: "Custom phone lists are not supported yet. Select existing customers." })

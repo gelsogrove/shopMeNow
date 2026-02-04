@@ -2,6 +2,13 @@ import { AgentType } from "@echatbot/database"
 import * as fs from "fs"
 import * as path from "path"
 import { getAgentFunctionNames } from "../../src/config/agent-functions.config"
+import {
+  TEMPLATE_FILES,
+  SHARED_AGENTS,
+  ECOMMERCE_ONLY_AGENTS,
+  getTemplateFolder,
+  getTemplateFilename,
+} from "../../src/utils/template-path.helper"
 
 /**
  * Load template-based agent configurations
@@ -45,29 +52,17 @@ const TEMPLATE_FILES: Record<string, string> = {
   CONVERSATION_HISTORY: "09-conversation-history.template.md",
 }
 
-/**
- * Determine which subdirectory to load template from
- */
-function getTemplateSubDir(agentType: string, hasEcommerce: boolean): string {
-  if (SHARED_AGENTS.includes(agentType)) return "shared"
-  if (ECOMMERCE_ONLY_AGENTS.includes(agentType)) return "ecommerce"
-  return hasEcommerce ? "ecommerce" : "informational"
-}
+// Template file mapping - now imported from centralized helper
+// Shared agents list - now imported from centralized helper
 
 /**
  * Load template from src/templates/ directory
- * Templates are organized by workspace type:
- *   - shared/     → Security, Translation, Summary
- *   - ecommerce/  → ProductSearch, OrderTracking, and e-commerce Router/Support
- *   - informational/ → Info-only Router/Support
+ * Uses centralized helper for path resolution
  */
 function loadTemplate(agentType: string, hasEcommerce: boolean = true): string {
-  const filename = TEMPLATE_FILES[agentType]
-  if (!filename) {
-    throw new Error(`No template defined for agent type: ${agentType}`)
-  }
+  const filename = getTemplateFilename(agentType)
+  const subDir = getTemplateFolder(agentType, hasEcommerce)
   
-  const subDir = getTemplateSubDir(agentType, hasEcommerce)
   const templatePath = path.join(__dirname, "../../src/templates", subDir, filename)
   
   try {

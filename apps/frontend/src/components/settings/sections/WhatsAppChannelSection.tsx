@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Smartphone, Copy } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Smartphone, Copy, AlertCircle } from "lucide-react"
 import { toast } from "@/lib/toast"
 
 interface WhatsAppChannelSectionProps {
@@ -24,6 +25,7 @@ interface WhatsAppChannelSectionProps {
     whatsappWebhookId?: string
     whatsappWebhookUrl?: string
   }
+  enableWidget?: boolean
   errors: Record<string, string>
   canEdit: boolean
   onFieldChange: (field: string, value: any) => void
@@ -36,6 +38,7 @@ const WEBHOOK_BASE =
 
 export function WhatsAppChannelSection({
   formData,
+  enableWidget,
   errors,
   canEdit,
   onFieldChange,
@@ -85,7 +88,17 @@ export function WhatsAppChannelSection({
             />
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
+          {/* ⚠️ Widget Warning */}
+          {enableWidget && (
+            <Alert className="border-blue-200 bg-blue-50">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-sm text-blue-700">
+                Web Widget is active. WhatsApp configuration is optional for informational workspaces.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {!formData.enableWhatsapp ? (
             <div className="text-center py-8 text-gray-500">
               <Smartphone className="h-12 w-12 mx-auto mb-3 text-gray-300" />
@@ -98,6 +111,7 @@ export function WhatsAppChannelSection({
             <div
               className="space-y-2"
               onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
+              data-focus-key="whatsappAccess"
             >
               <Label htmlFor="whatsappAppName">AppName(meta)</Label>
               <Input
@@ -121,27 +135,32 @@ export function WhatsAppChannelSection({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="whatsappPhoneNumber">Tel:</Label>
-              <Input
-                id="whatsappPhoneNumber"
-                value={formData.whatsappPhoneNumber}
-                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
-                placeholder="+1234567890"
-                disabled={!canEdit}
-              />
-            </div>
+            {/* Phone Number - Visible only when WhatsApp is enabled */}
+            {formData.enableWhatsapp && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappPhoneNumber">Tel:</Label>
+                  <Input
+                    id="whatsappPhoneNumber"
+                    value={formData.whatsappPhoneNumber}
+                    onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
+                    placeholder="+1234567890"
+                    disabled={!canEdit}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="whatsappPhoneNumberId">Phone number ID:</Label>
-              <Input
-                id="whatsappPhoneNumberId"
-                value={formData.whatsappPhoneNumberId}
-                onChange={(e) => onFieldChange("whatsappPhoneNumberId", e.target.value)}
-                placeholder="123456789012345"
-                disabled={!canEdit}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappPhoneNumberId">Phone number ID:</Label>
+                  <Input
+                    id="whatsappPhoneNumberId"
+                    value={formData.whatsappPhoneNumberId}
+                    onChange={(e) => onFieldChange("whatsappPhoneNumberId", e.target.value)}
+                    placeholder="123456789012345"
+                    disabled={!canEdit}
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>

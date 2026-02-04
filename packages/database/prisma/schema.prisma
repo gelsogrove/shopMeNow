@@ -376,6 +376,7 @@ model Customers {
   language                      String?                 @default("it") // 🌍 Default to Italian (base language) - detects from phone prefix
   currency                      String?                 @default("USD")
   notes                         String?
+  tags                          String[]                @default([])
   serviceIds                    String[]                @default([])
   isBlacklisted                 Boolean                 @default(false)
   createdAt                     DateTime                @default(now())
@@ -1531,6 +1532,7 @@ enum CampaignFrequency {
 enum CampaignTargetType {
   ALL // Tutti i customer attivi del workspace
   SELECTED // Solo customer IDs specificati
+  TAGS // Solo customer che matchano i tag
 }
 
 // 🔔 Push Campaigns (v2)
@@ -1573,6 +1575,7 @@ model Campaign {
   // Destinatari
   targetType  CampaignTargetType @default(ALL)
   customerIds String[]           @default([]) // Array di customer IDs se targetType = SELECTED
+  targetTags  String[]           @default([]) // Tag dei customer se targetType = TAGS
 
   // Template WhatsApp (opzionale, per uso futuro con Meta Business API)
   templateName   String? // Nome template Meta (es: "feedback_request_v1")
@@ -1644,6 +1647,7 @@ model PushCampaign {
   templateId         String?
   templateLocale     String?
   bodyPreview        String?                   @db.Text
+  targetTags         String[]                  @default([])
   mediaUrl           String?
   expectedRecipients Int                       @default(0)
   actualSent         Int                       @default(0)

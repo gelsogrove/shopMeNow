@@ -292,13 +292,31 @@ For privacy inquiries, please contact our support team.`
     if (data.toneOfVoice === undefined) data.toneOfVoice = "FRIENDLY"
     if (data.operatorContactMethod === undefined) data.operatorContactMethod = "EMAIL"
 
+    // 🚨 CRITICAL: Widget + E-commerce Validation (Andrea's Rule)
+    // Widget visitors use temporary visitorId (24h localStorage expiry) 
+    // → cannot guarantee cart/order persistence → e-commerce impossible
+    // See: .specify/widget-ecommerce-restriction/spec.md
+    
     // Enforce channel-specific flags
     const channelType = data.channelType || "WHATSAPP"
-    if (channelType === "WIDGET") {
+    if (channelType === "WIDGET" || data.enableWidget === true) {
+      // Widget channel = support/info only, no e-commerce
+      if (data.sellsProductsAndServices === true) {
+        logger.warn(`❌ Attempted to create widget workspace with e-commerce enabled`)
+        const err: any = new Error(
+          "Widget channel cannot be enabled for e-commerce workspaces. " +
+          "E-commerce requires WhatsApp for persistent customer identification."
+        )
+        err.statusCode = 400
+        err.code = "VALIDATION_ERROR"
+        err.field = "enableWidget"
+        throw err
+      }
+      
       data.enableWidget = true
       data.enableWhatsapp = false
-      data.sellsProductsAndServices = false
-      data.hasSalesAgents = false
+      data.sellsProductsAndServices = false  // Force false for widget
+      data.hasSalesAgents = false            // No sales agents for widget
       data.whatsappPhoneNumber = null
     } else {
       data.enableWhatsapp = true
@@ -616,6 +634,49 @@ For privacy inquiries, please contact our support team.`
       logger.info(`🤖 chatbotName in update data: "${data.chatbotName}"`)
     }
 
+    // 🚨 CRITICAL: Widget + E-commerce Validation (Andrea's Rule)
+    // Widget visitors use temporary visitorId (24h localStorage expiry) 
+    // → cannot guarantee cart/order persistence → e-commerce impossible
+    // See: .specify/widget-ecommerce-restriction/spec.md
+    
+    // Load current workspace to check state
+    const currentWorkspace = await this.prisma.workspace.findUnique({
+      where: { id },
+      select: {
+        enableWidget: true,
+        enableWhatsapp: true,
+        sellsProductsAndServices: true,
+        ownerId: true,
+        deletedAt: true,
+      },
+    })
+    
+    if (!currentWorkspace) {
+      throw new Error(`Workspace not found: ${id}`)
+    }
+    
+    // Calculate resulting state
+    const willEnableWidget = data.enableWidget ?? currentWorkspace.enableWidget ?? false
+    const willSellProducts = data.sellsProductsAndServices ?? currentWorkspace.sellsProductsAndServices ?? false
+    
+    // Validate: Widget + E-commerce is forbidden
+    if (willEnableWidget && willSellProducts) {
+      logger.warn(`❌ Attempted to enable widget on e-commerce workspace (or vice versa)`)
+      const err: any = new Error(
+        willEnableWidget && data.enableWidget !== undefined
+          ? "Cannot enable widget for e-commerce workspaces. Disable e-commerce features first."
+          : "Cannot enable e-commerce for widget workspaces. Disable widget first, then switch to WhatsApp."
+      )
+      err.statusCode = 400
+      err.code = "VALIDATION_ERROR"
+      err.field = data.enableWidget !== undefined ? "enableWidget" : "sellsProductsAndServices"
+      err.currentState = {
+        enableWidget: currentWorkspace.enableWidget,
+        sellsProductsAndServices: currentWorkspace.sellsProductsAndServices
+      }
+      throw err
+    }
+
     // 🆕 Feature 199: Auto-toggle e-commerce agents based on sellsProductsAndServices
     const ecommerceAgentTypes = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
     
@@ -655,19 +716,11 @@ For privacy inquiries, please contact our support team.`
     }
 
     // 🛑 FREE PLAN GUARD: max 1 channel (WhatsApp OR Widget) for FREE_TRIAL owners
-    const existingWorkspace = await this.prisma.workspace.findUnique({
-      where: { id },
-      select: {
-        ownerId: true,
-        enableWhatsapp: true,
-        enableWidget: true,
-        deletedAt: true,
-      },
-    })
+    // Note: currentWorkspace already loaded above for widget validation
 
-    if (existingWorkspace?.ownerId) {
+    if (currentWorkspace?.ownerId) {
       const owner = await this.prisma.user.findUnique({
-        where: { id: existingWorkspace.ownerId },
+        where: { id: currentWorkspace.ownerId },
         select: { planType: true },
       })
 
@@ -675,8 +728,8 @@ For privacy inquiries, please contact our support team.`
       if (ownerPlan === "FREE_TRIAL") {
         // 🚨 CRITICAL: Only check limits if user is CHANGING channel toggles
         // Allow editing other settings (name, logo, etc.) without blocking
-        const isChangingWhatsapp = data.enableWhatsapp !== undefined && data.enableWhatsapp !== existingWorkspace.enableWhatsapp
-        const isChangingWidget = data.enableWidget !== undefined && data.enableWidget !== existingWorkspace.enableWidget
+        const isChangingWhatsapp = data.enableWhatsapp !== undefined && data.enableWhatsapp !== currentWorkspace.enableWhatsapp
+        const isChangingWidget = data.enableWidget !== undefined && data.enableWidget !== currentWorkspace.enableWidget
         
         // If NOT changing channel toggles, skip limit check (allow settings edit)
         if (!isChangingWhatsapp && !isChangingWidget) {
@@ -685,8 +738,8 @@ For privacy inquiries, please contact our support team.`
         }
         
         // User IS trying to change channel toggles - check limits
-        const newEnableWhatsapp = data.enableWhatsapp ?? existingWorkspace.enableWhatsapp ?? false
-        const newEnableWidget = data.enableWidget ?? existingWorkspace.enableWidget ?? false
+        const newEnableWhatsapp = data.enableWhatsapp ?? currentWorkspace.enableWhatsapp ?? false
+        const newEnableWidget = data.enableWidget ?? currentWorkspace.enableWidget ?? false
 
         const resultingChannelCount =
           (newEnableWhatsapp ? 1 : 0) + (newEnableWidget ? 1 : 0)
@@ -701,7 +754,7 @@ For privacy inquiries, please contact our support team.`
         if (resultingChannelCount === 1) {
           const otherActiveChannels = await this.prisma.workspace.count({
             where: {
-              ownerId: existingWorkspace.ownerId,
+              ownerId: currentWorkspace.ownerId,
               deletedAt: null,
               id: { not: id },
               OR: [{ enableWhatsapp: true }, { enableWidget: true }],

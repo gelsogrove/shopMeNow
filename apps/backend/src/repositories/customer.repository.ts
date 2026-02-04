@@ -24,6 +24,7 @@ export class CustomerRepository implements ICustomerRepository {
       language: customerData.language,
       currency: customerData.currency,
       notes: customerData.notes,
+      tags: customerData.tags,
       serviceIds: customerData.serviceIds,
       isBlacklisted: customerData.isBlacklisted,
       isActive: customerData.isActive,
@@ -180,6 +181,7 @@ export class CustomerRepository implements ICustomerRepository {
         language: data.language,
         currency: data.currency,
         notes: data.notes,
+        tags: data.tags || [],
         serviceIds: data.serviceIds || [],
         isBlacklisted: data.isBlacklisted || false,
         isActive: data.isActive !== undefined ? data.isActive : true,
@@ -269,6 +271,7 @@ export class CustomerRepository implements ICustomerRepository {
       if (data.language !== undefined) updateData.language = data.language
       if (data.currency !== undefined) updateData.currency = data.currency
       if (data.notes !== undefined) updateData.notes = data.notes
+      if (data.tags !== undefined) updateData.tags = data.tags
       if (data.serviceIds !== undefined) updateData.serviceIds = data.serviceIds
       if (data.isBlacklisted !== undefined)
         updateData.isBlacklisted = data.isBlacklisted

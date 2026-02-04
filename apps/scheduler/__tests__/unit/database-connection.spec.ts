@@ -17,7 +17,13 @@ jest.mock('@echatbot/database', () => ({
     $queryRaw: mockQueryRaw,
     $disconnect: mockDisconnect,
   },
-  Prisma: {},
+  Prisma: {
+    // Minimal Prisma.sql tag mock for $queryRaw(Prisma.sql`...`)
+    sql: (strings: TemplateStringsArray, ...values: any[]) => ({
+      strings,
+      values,
+    }),
+  },
   PlanType: {},
   CampaignFrequency: {},
   SubscriptionStatus: {},

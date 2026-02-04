@@ -8,6 +8,7 @@ export interface CreatePushCampaignInput {
   templateLocale?: string
   bodyPreview?: string
   mediaUrl?: string
+  targetTags?: string[]
   sendAt?: Date | null
   costPerMessage?: Prisma.Decimal | number
   throttlePerSecond?: number
@@ -45,6 +46,7 @@ export class PushCampaignRepository {
         templateLocale: data.templateLocale,
         bodyPreview: data.bodyPreview,
         mediaUrl: data.mediaUrl,
+        targetTags: data.targetTags ?? [],
         sendAt: data.sendAt,
         costPerMessage: data.costPerMessage,
         throttlePerSecond: data.throttlePerSecond,
@@ -88,6 +90,7 @@ export class PushCampaignRepository {
         actualSent: true,
         actualFailed: true,
         actualSkipped: true,
+        targetTags: true,
         billingStatus: true,
         costPerMessage: true,
         createdAt: true,

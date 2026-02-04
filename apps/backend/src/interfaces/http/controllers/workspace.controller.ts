@@ -1,6 +1,7 @@
 import { PayPalStatus, prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
+import { WorkspaceChecklistService } from "../../../application/services/workspace-checklist.service"
 import { WorkspaceService } from "../../../application/services/workspace.service"
 import { workspaceMemberService } from "../../../application/services/workspace-member.service"
 import logger from "../../../utils/logger"
@@ -12,10 +13,12 @@ import fs from "fs/promises"
 export class WorkspaceController {
   private workspaceService: WorkspaceService
   private billingService: SubscriptionBillingService
+  private checklistService: WorkspaceChecklistService
 
   constructor() {
     this.workspaceService = new WorkspaceService()
     this.billingService = new SubscriptionBillingService(prisma)
+    this.checklistService = new WorkspaceChecklistService()
   }
 
   /**
@@ -211,6 +214,31 @@ export class WorkspaceController {
         `Error in workspace controller for ID ${req.params.id}:`,
         error
       )
+      return next(error)
+    }
+  }
+
+  /**
+   * Get configuration checklist for a workspace
+   */
+  getWorkspaceChecklist = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params
+      if (!id) {
+        return res.status(400).json({ error: "Workspace ID is required" })
+      }
+
+      const checklist = await this.checklistService.getChecklist(id)
+      return res.json({ success: true, data: checklist })
+    } catch (error) {
+      if (error instanceof Error && error.message === "Workspace not found") {
+        return res.status(404).json({ error: "Workspace not found" })
+      }
+      logger.error("Error getting workspace checklist:", error)
       return next(error)
     }
   }

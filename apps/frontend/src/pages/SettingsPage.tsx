@@ -7,7 +7,7 @@
  * - Save per sezione
  * - Smart dirty detection
  */
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
@@ -310,6 +310,38 @@ export function SettingsPage() {
     }
   }, [])
 
+  const pendingFocusRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const focusKey = localStorage.getItem("settings-focus-key")
+      if (focusKey) {
+        pendingFocusRef.current = focusKey
+        localStorage.removeItem("settings-focus-key")
+      }
+    } catch (error) {
+      // Ignore localStorage errors
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!pendingFocusRef.current) return
+    const focusKey = pendingFocusRef.current
+    const timer = window.setTimeout(() => {
+      const target = document.querySelector(`[data-focus-key="${focusKey}"]`) as HTMLElement | null
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" })
+        const focusable = target.querySelector(
+          "input, textarea, select, button, [tabindex]:not([tabindex='-1'])"
+        ) as HTMLElement | null
+        focusable?.focus()
+      }
+      pendingFocusRef.current = null
+    }, 150)
+
+    return () => window.clearTimeout(timer)
+  }, [activeSection])
+
   // Save handler
   const handleSave = async () => {
     const newErrors: Record<string, string> = {}
@@ -336,11 +368,15 @@ export function SettingsPage() {
     }
 
     // Normal save without workspace type change
-    await performSave(formData)
+    try {
+      await performSave(formData)
+    } catch {
+      // performSave already shows the error toast
+    }
   }
 
   // Perform the actual save
-  const performSave = async (dataToSave: FormData) => {
+  const performSave = async (dataToSave: FormData, options?: { suppressToast?: boolean }) => {
     try {
       const updateData: any = { ...dataToSave }
       delete updateData.logoUrl
@@ -355,6 +391,16 @@ export function SettingsPage() {
         delete updateData.whatsappBusinessAccountId
       }
 
+      // Avoid triggering channel limit checks when channel toggles are unchanged
+      if (currentWorkspace) {
+        if (updateData.enableWhatsapp === currentWorkspace.enableWhatsapp) {
+          delete updateData.enableWhatsapp
+        }
+        if (updateData.enableWidget === currentWorkspace.enableWidget) {
+          delete updateData.enableWidget
+        }
+      }
+
       const updatedWorkspace = await updateWorkspace(currentWorkspace!.id, updateData)
 
       setCurrentWorkspace({
@@ -363,9 +409,12 @@ export function SettingsPage() {
       })
 
       setIsDirty(false)
-      toast.success("Settings saved successfully")
+      if (!options?.suppressToast) {
+        toast.success("Settings saved successfully")
+      }
     } catch (error: any) {
       toast.error(error.message || "Save failed")
+      throw error
     }
   }
 
@@ -375,14 +424,12 @@ export function SettingsPage() {
     
     try {
       // First save the workspace changes
-      await performSave(pendingFormData)
+      await performSave(pendingFormData, { suppressToast: true })
       
       // Then reset agent prompts to new template type
       const newType = pendingFormData.sellsProductsAndServices ? "e-commerce" : "informational"
-      toast.info(`Resetting prompts to ${newType} templates...`)
-      
       await resetAgentPromptsToDefaults(currentWorkspace!.id, true)
-      toast.success(`Agent prompts reset to ${newType} templates`)
+      toast.success(`Settings saved and prompts updated to ${newType} templates`)
     } catch (error: any) {
       toast.error(error.message || "Failed to reset prompts")
     } finally {
@@ -500,6 +547,7 @@ export function SettingsPage() {
               whatsappWebhookId: formData.whatsappWebhookId,
               whatsappWebhookUrl: formData.whatsappWebhookUrl,
             }}
+            enableWidget={formData.enableWidget}
             errors={errors}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
@@ -521,6 +569,7 @@ export function SettingsPage() {
             workspaceId={currentWorkspace?.id || ""}
             errors={errors}
             canEdit={canEdit}
+            sellsProductsAndServices={formData.sellsProductsAndServices}
             onFieldChange={handleFieldChange}
             onFieldFocus={handleFieldFocus}
           />
@@ -606,7 +655,8 @@ export function SettingsPage() {
 
             {/* Channel Status Toggle */}
             {canEdit && (
-              <div 
+              <div
+                data-focus-key="channelStatus"
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                   formData.channelStatus 
                     ? "bg-green-50 border-green-200" 

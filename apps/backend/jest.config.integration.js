@@ -5,6 +5,10 @@ module.exports = {
   coverageProvider: "v8",
   moduleDirectories: ["node_modules"],
   moduleFileExtensions: ["js", "jsx", "ts", "tsx", "json", "node"],
+  moduleNameMapper: {
+    "^@shared/(.*)$": "<rootDir>/../../shared/$1",
+    "^@echatbot/database$": "<rootDir>/../../packages/database/dist/index.js",
+  },
   preset: "ts-jest",
   transform: {
     "^.+\\.(ts|tsx)$": [

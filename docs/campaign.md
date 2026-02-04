@@ -19,6 +19,7 @@ Goal: enable promotional WhatsApp campaigns at $1 per attempted send, immediate 
   - `channel` (enum: whatsapp for now)
   - `sendAt` (nullable), `createdByUserId`, `createdAt/updatedAt`
   - `templateId`, `templateLocale`, `bodyPreview`, `mediaUrl` (optional)
+  - `targetTags` (string[]) – optional tag list used for recipient selection
   - `expectedRecipients`, `actualSent`, `actualFailed`
   - `costPerMessage` (decimal, default 1.00 USD), `billingStatus` (PENDING, BILLED, FAILED)
   - `throttlePerSecond` (int), `batchSize` (int), `lastError`
@@ -29,12 +30,15 @@ Goal: enable promotional WhatsApp campaigns at $1 per attempted send, immediate 
   - `errorCode`, `errorMessage`, `sentAt`, `messageId` (WA)
   - `priceCharged` (decimal)
   - `isBlacklisted`, `isBlocked`, `isFake`, `optOutAt` (for auditing why skipped)
+- `customers`
+  - `tags` (string[]) – comma-separated in UI, normalized to lowercase in DB
 - Optional `campaign_jobs` if we need cursor tracking; otherwise reuse queue with payload `{ campaignId, cursor }`.
 
 Indexes: campaigns by (workspaceId, status), recipients by (campaignId, status), unique (campaignId, phone) to avoid duplicates.
 
 ## API (backend)
 - `POST /campaigns` – create draft, validate template and workspace credit estimate.
+- `POST /push-campaigns` – create campaign; `recipients.tags` supports tag-based targeting.
 - `POST /campaigns/:id/schedule` – set sendAt, generate recipients, compute estimated cost.
 - `POST /campaigns/:id/run-now` – start immediately.
 - `POST /campaigns/:id/pause`, `/resume`, `/cancel`.

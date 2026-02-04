@@ -63,7 +63,11 @@ export function AIPersonalitySection({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">{/* Chatbot Name */}
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("botName")}>
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("botName")}
+            data-focus-key="botName"
+          >
             <Label htmlFor="chatbotName">Assistant Name</Label>
             <Input
               id="chatbotName"
@@ -79,7 +83,11 @@ export function AIPersonalitySection({
           </div>
 
           {/* Tone of Voice */}
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("toneOfVoice")}>
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("toneOfVoice")}
+            data-focus-key="toneOfVoice"
+          >
             <Label>Tone of Voice</Label>
             <div className="grid grid-cols-2 gap-2">
               {TONE_OPTIONS.map(({ value, icon: Icon, label }) => (
@@ -137,7 +145,11 @@ export function AIPersonalitySection({
           </div>
 
           {/* Bot Identity Response */}
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("botDescription")}>
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("botDescription")}
+            data-focus-key="botDescription"
+          >
             <Label htmlFor="botIdentityResponse">Bot Identity</Label>
             <div className="border rounded-md overflow-hidden">
               <Editor
@@ -166,7 +178,11 @@ export function AIPersonalitySection({
           {/* Divider */}
           <div className="border-t pt-6" />
           {/* Welcome Message */}
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("welcomeMessage")}>
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("welcomeMessage")}
+            data-focus-key="welcomeMessage"
+          >
             <Label htmlFor="welcomeMessage">Welcome Message</Label>
             <div className="border rounded-md overflow-hidden">
               <Editor
@@ -242,7 +258,11 @@ export function AIPersonalitySection({
           </div>
 
           {/* Maintenance Message */}
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("maintenanceMessage")}>
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("maintenanceMessage")}
+            data-focus-key="maintenanceMessage"
+          >
             <Label htmlFor="wipMessage">Maintenance Message</Label>
             <div className="border rounded-md overflow-hidden">
               <Editor

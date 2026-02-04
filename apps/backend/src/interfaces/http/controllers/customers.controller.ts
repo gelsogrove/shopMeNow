@@ -4,6 +4,7 @@ import { BillingService } from "../../../application/services/billing.service"
 import { CustomerService } from "../../../application/services/customer.service"
 import { pushMessagingService } from "../../../services/push-messaging.service"
 import { websocketService } from "../../../services/websocket.service"
+import { normalizeTags } from "../../../utils/tag-normalizer"
 import logger from "../../../utils/logger"
 
 // prisma imported
@@ -66,6 +67,7 @@ export class CustomersController {
         discount,
         language,
         notes,
+        tags,
         serviceIds,
         isActive,
         last_privacy_version_accepted,
@@ -87,6 +89,7 @@ export class CustomersController {
         discount,
         language,
         notes,
+        tags: normalizeTags(tags),
         serviceIds,
         workspaceId,
         isActive: isActive !== undefined ? isActive : true,
@@ -149,6 +152,7 @@ export class CustomersController {
         discount,
         language,
         notes,
+        tags,
         serviceIds,
         last_privacy_version_accepted,
         push_notifications_consent,
@@ -223,6 +227,7 @@ export class CustomersController {
       if (discount !== undefined) customerData.discount = discount
       if (language !== undefined) customerData.language = language
       if (notes !== undefined) customerData.notes = notes
+      if (tags !== undefined) customerData.tags = normalizeTags(tags)
       if (serviceIds !== undefined) customerData.serviceIds = serviceIds
       if (last_privacy_version_accepted !== undefined) {
         customerData.last_privacy_version_accepted =

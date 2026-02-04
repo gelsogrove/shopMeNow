@@ -105,25 +105,44 @@ export class SubscriptionBillingRepository {
     })
     const totalRecharges = Number(rechargeSum._sum.amount || 0)
 
+    // 🛠️ Backfill missing trialEndsAt for FREE_TRIAL owners
+    let effectiveTrialEndsAt = user.trialEndsAt
+    if (user.planType === "FREE_TRIAL" && !effectiveTrialEndsAt) {
+      const planConfig = await this.prisma.planConfiguration.findUnique({
+        where: { planType: "FREE_TRIAL" },
+        select: { trialDays: true },
+      })
+      const trialDays = planConfig?.trialDays ?? 14
+      if (trialDays > 0) {
+        effectiveTrialEndsAt = new Date(user.planStartedAt)
+        effectiveTrialEndsAt.setDate(effectiveTrialEndsAt.getDate() + trialDays)
+        // Persist once so future reads are consistent
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { trialEndsAt: effectiveTrialEndsAt },
+        })
+      }
+    }
+
     const isTrialExpired =
       user.planType === "FREE_TRIAL" &&
-      user.trialEndsAt !== null &&
-      user.trialEndsAt < now
+      effectiveTrialEndsAt !== null &&
+      effectiveTrialEndsAt < now
 
     let daysUntilTrialExpires: number | null = null
     if (
       user.planType === "FREE_TRIAL" &&
-      user.trialEndsAt &&
+      effectiveTrialEndsAt &&
       !isTrialExpired
     ) {
-      const diffTime = user.trialEndsAt.getTime() - now.getTime()
+      const diffTime = effectiveTrialEndsAt.getTime() - now.getTime()
       daysUntilTrialExpires = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     }
 
     return {
       planType: user.planType,
       creditBalance,
-      trialEndsAt: user.trialEndsAt,
+      trialEndsAt: effectiveTrialEndsAt,
       planStartedAt: user.planStartedAt,
       nextBillingDate: user.nextBillingDate,
       isTrialExpired,

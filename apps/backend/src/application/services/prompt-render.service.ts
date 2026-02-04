@@ -15,38 +15,12 @@ import { PrismaClient } from "@echatbot/database"
 import { TemplateEngineService } from "./prompt-builder/template-engine.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
-
-// Template file mapping by agent type
-const TEMPLATE_FILES: Record<string, string> = {
-  ROUTER: "01-router.template.md",
-  PRODUCT_SEARCH: "02-product-search.template.md",
-  ORDER_TRACKING: "03-order-tracking.template.md",
-  CART_MANAGEMENT: "03-order-tracking.template.md", // Uses order tracking template for cart context
-  CUSTOMER_SUPPORT: "04-customer-support.template.md",
-  PROFILE_MANAGEMENT: "05-profile-management.template.md",
-  SECURITY: "06-security.template.md",
-  TRANSLATION: "07-translation.template.md",
-  SUMMARY_AGENT: "08-summary.template.md",
-}
-
-// Agents available per workspace type
-const ECOMMERCE_AGENTS = [
-  "ROUTER",
-  "PRODUCT_SEARCH", 
-  "ORDER_TRACKING",
-  "CART_MANAGEMENT",
-  "CUSTOMER_SUPPORT",
-  "PROFILE_MANAGEMENT",
-]
-
-const INFORMATIONAL_AGENTS = [
-  "ROUTER",
-  "CUSTOMER_SUPPORT",
-  "PROFILE_MANAGEMENT",
-]
-
-// Shared agents (always loaded from root templates)
-const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT"]
+import {
+  TEMPLATE_FILES,
+  SHARED_AGENTS,
+  getTemplateFolder,
+  getTemplateFilename,
+} from "../../utils/template-path.helper"
 
 // Template cache (invalidated on server restart)
 const templateCache = new Map<string, string>()
@@ -114,21 +88,8 @@ export class PromptRenderService {
    * Load template from file system (with caching)
    */
   private async loadTemplate(agentType: string, isEcommerce: boolean): Promise<string> {
-    const templateFile = TEMPLATE_FILES[agentType]
-    if (!templateFile) {
-      throw new Error(`Unknown agent type: ${agentType}`)
-    }
-
-    // Determine folder based on agent type and workspace type
-    let folder: string
-    if (SHARED_AGENTS.includes(agentType)) {
-      // Shared agents use root templates folder
-      folder = ""
-    } else if (isEcommerce) {
-      folder = "ecommerce"
-    } else {
-      folder = "informational"
-    }
+    const templateFile = getTemplateFilename(agentType)
+    const folder = getTemplateFolder(agentType, isEcommerce)
 
     const cacheKey = `${folder}/${templateFile}`
 
@@ -138,9 +99,7 @@ export class PromptRenderService {
     }
 
     // Load from file
-    const templatePath = folder 
-      ? path.join(__dirname, "..", "..", "templates", folder, templateFile)
-      : path.join(__dirname, "..", "..", "templates", templateFile)
+    const templatePath = path.join(__dirname, "..", "..", "templates", folder, templateFile)
 
     try {
       const content = fs.readFileSync(templatePath, "utf-8")

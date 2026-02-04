@@ -12,9 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Store } from "lucide-react"
+import { Store, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
+import { Switch } from "@/components/ui/switch"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface BusinessConfigSectionProps {
   formData: {
@@ -192,7 +194,7 @@ export function BusinessConfigSection({
             </div>
 
             {/* Currency */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 md:col-span-2" data-focus-key="defaultLanguage">
               <Label htmlFor="currency">Currency</Label>
               <Select
                 value={formData.currency}
@@ -235,6 +237,48 @@ export function BusinessConfigSection({
               <p className="text-xs text-gray-500">
                 Language used when customer language cannot be detected
               </p>
+            </div>
+
+            {/* E-commerce Toggle */}
+            <div className="space-y-2 md:col-span-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium text-gray-900">
+                    Sell Products & Services
+                  </Label>
+                  <p className="text-xs text-gray-500">
+                    Enable e-commerce features: product catalog, shopping cart, orders
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.sellsProductsAndServices}
+                  onCheckedChange={(checked) => {
+                    onFieldChange("sellsProductsAndServices", checked)
+                    // Automatically set enableWidget based on sellsProductsAndServices
+                    // TRUE (ecommerce) → widget FALSE
+                    // FALSE (info) → widget TRUE
+                    onFieldChange("enableWidget", !checked)
+                  }}
+                  disabled={!canEdit}
+                />
+              </div>
+
+              {/* Info based on sellsProductsAndServices */}
+              {formData.sellsProductsAndServices ? (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 mt-2">
+                  <p className="text-sm text-amber-800 font-medium">⚠️ Widget not available</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    E-commerce workspaces cannot use Web Widget. Use WhatsApp for product sales.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mt-2">
+                  <p className="text-sm text-blue-800 font-medium">✓ Web Widget available</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Your workspace is configured for support/informational features only
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

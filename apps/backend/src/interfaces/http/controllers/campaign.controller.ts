@@ -1,6 +1,7 @@
 import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { CampaignService } from "../../../application/services/campaign.service"
+import { normalizeTags } from "../../../utils/tag-normalizer"
 import logger from "../../../utils/logger"
 
 // prisma imported
@@ -64,6 +65,7 @@ export class CampaignController {
         frequency,
         targetType,
         customerIds,
+        targetTags,
         templateName,
         templateParams,
         isActive,
@@ -90,6 +92,17 @@ export class CampaignController {
         })
       }
 
+      if (targetType === "TAGS") {
+        const normalizedTags = normalizeTags(targetTags)
+        if (normalizedTags.length === 0) {
+          return res.status(400).json({
+            error: "Tag mancanti",
+            message:
+              "Se selezioni 'Tag', devi fornire almeno un tag",
+          })
+        }
+      }
+
       const campaign = await this.campaignService.create({
         workspaceId,
         name,
@@ -97,6 +110,7 @@ export class CampaignController {
         frequency,
         targetType,
         customerIds: customerIds || [],
+        targetTags: normalizeTags(targetTags),
         templateName,
         templateParams,
         isActive,
@@ -124,6 +138,7 @@ export class CampaignController {
         frequency,
         targetType,
         customerIds,
+        targetTags,
         templateName,
         templateParams,
         isActive,
@@ -135,6 +150,7 @@ export class CampaignController {
         frequency,
         targetType,
         customerIds,
+        targetTags: targetTags !== undefined ? normalizeTags(targetTags) : undefined,
         templateName,
         templateParams,
         isActive,

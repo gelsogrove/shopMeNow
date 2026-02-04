@@ -20,6 +20,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Progress } from "@/components/ui/progress"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { BillingSection } from "@/components/billing/BillingSection"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
@@ -32,7 +40,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { getPayPalConnectUrl, getPayPalStatus, disconnectPayPal, getPayPalConfig, type PayPalStatusResponse, type PayPalConfigResponse } from "@/services/paypalApi"
-import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -40,6 +48,7 @@ import {
   getWorkspaces,
   updateWorkspace,
   workspaceApi,
+  type WorkspaceChecklist,
 } from "@/services/workspaceApi"
 import { getUnreadCount } from "@/services/supportApi"
 
@@ -149,6 +158,12 @@ export function WorkspaceSelectionPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [hasLoadedWorkspaces, setHasLoadedWorkspaces] = useState(false)
   const [hasAutoOpenedWizard, setHasAutoOpenedWizard] = useState(false)
+  const [checklists, setChecklists] = useState<Record<string, WorkspaceChecklist>>({})
+  const [checklistLoading, setChecklistLoading] = useState<Record<string, boolean>>({})
+  const [checklistOpen, setChecklistOpen] = useState(false)
+  const [selectedChecklist, setSelectedChecklist] = useState<WorkspaceChecklist | null>(null)
+  const [selectedChecklistWorkspaceId, setSelectedChecklistWorkspaceId] = useState<string | null>(null)
+  const [checklistError, setChecklistError] = useState<string | null>(null)
   
   // Support tickets unread count
   const [supportUnreadCount, setSupportUnreadCount] = useState(0)
@@ -682,6 +697,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       
       setWorkspaces(sortedWorkspaces)
       setBadgeStats(statsData)
+      void loadChecklists(sortedWorkspaces)
       
       logger.info("📊 Badge stats loaded:", statsData)
       
@@ -721,6 +737,98 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     e.stopPropagation()
     storage.setWorkspace(workspace)
     window.location.href = "/settings"
+  }
+
+  const loadChecklists = async (workspaceList: Workspace[]) => {
+    const pending = workspaceList.filter(
+      (workspace) => !checklists[workspace.id] && !checklistLoading[workspace.id]
+    )
+    if (pending.length === 0) return
+
+    setChecklistLoading((prev) => {
+      const next = { ...prev }
+      pending.forEach((workspace) => {
+        next[workspace.id] = true
+      })
+      return next
+    })
+
+    await Promise.all(
+      pending.map(async (workspace) => {
+        try {
+          const checklist = await workspaceApi.getChecklist(workspace.id)
+          setChecklists((prev) => ({ ...prev, [workspace.id]: checklist }))
+        } catch (error) {
+          logger.error("❌ [WorkspaceSelectionPage] Failed to load checklist:", error)
+        } finally {
+          setChecklistLoading((prev) => ({ ...prev, [workspace.id]: false }))
+        }
+      })
+    )
+  }
+
+  const handleOpenChecklist = (workspace: Workspace, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const existing = checklists[workspace.id]
+    if (existing) {
+      setSelectedChecklist(existing)
+      setSelectedChecklistWorkspaceId(workspace.id)
+      setChecklistError(null)
+      setChecklistOpen(true)
+      return
+    }
+
+    setChecklistOpen(true)
+    setSelectedChecklist(null)
+    setSelectedChecklistWorkspaceId(workspace.id)
+    setChecklistError(null)
+    setChecklistLoading((prev) => ({ ...prev, [workspace.id]: true }))
+    workspaceApi
+      .getChecklist(workspace.id)
+      .then((checklist) => {
+        setChecklists((prev) => ({ ...prev, [workspace.id]: checklist }))
+        setSelectedChecklist(checklist)
+      })
+      .catch((error) => {
+        logger.error("❌ [WorkspaceSelectionPage] Failed to load checklist:", error)
+        setChecklistError("Checklist not available yet. Try again.")
+      })
+      .finally(() => {
+        setChecklistLoading((prev) => ({ ...prev, [workspace.id]: false }))
+      })
+  }
+
+  const handleChecklistAction = (item: { action?: { path: string; section?: string; focusKey?: string; action?: string } }) => {
+    if (!item.action) return
+    const workspace = selectedChecklist
+      ? workspaces.find((w) => w.id === selectedChecklist.workspaceId)
+      : null
+    if (workspace) {
+      storage.setWorkspace(workspace)
+    }
+    if (item.action.section) {
+      try {
+        localStorage.setItem("settings-last-section", item.action.section)
+      } catch (error) {
+        // Ignore localStorage errors
+      }
+    }
+    if (item.action.focusKey) {
+      try {
+        localStorage.setItem("settings-focus-key", item.action.focusKey)
+      } catch (error) {
+        // Ignore localStorage errors
+      }
+    }
+    if (item.action.action) {
+      try {
+        localStorage.setItem("settings-action", item.action.action)
+      } catch (error) {
+        // Ignore localStorage errors
+      }
+    }
+    setChecklistOpen(false)
+    navigate(item.action.path)
   }
 
   // Gestisce la creazione di un nuovo workspace (from wizard)
@@ -1134,7 +1242,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           <Card className="max-w-6xl mx-auto">
             <CardHeader className="text-center pb-2">
               <div className="mx-auto p-4 bg-green-100 rounded-full w-fit mb-4">
-                <Smartphone className="h-10 w-10 text-green-600" />
+                <MessageCircle className="h-10 w-10 text-green-600" />
               </div>
               <CardTitle className="text-2xl text-gray-900">
                 Welcome to eChatbot! 🎉
@@ -1317,228 +1425,206 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Lista dei workspace esistenti */}
-              {workspaces.map((workspace) => (
-                <div
-                  key={workspace.id}
-                  className={`rounded-xl border-2 overflow-hidden cursor-pointer transition-all flex flex-col min-h-[370px] ${
-                    justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
-                  } ${
-                    workspace.channelStatus
-                      ? "bg-white border-green-200 hover:shadow-lg hover:border-green-400"
-                      : "bg-gray-50 border-gray-300 opacity-75"
-                  }`}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    handleSelectWorkspace(workspace)
-                  }}
-                >
-                  {/* Logo Header Area */}
+              {workspaces.map((workspace) => {
+                const checklist = checklists[workspace.id]
+                const isChecklistLoading = checklistLoading[workspace.id]
+                return (
+                  <div
+                    key={workspace.id}
+                    className={`rounded-xl border overflow-hidden cursor-pointer transition-all flex flex-col min-h-[200px] ${
+                      justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
+                    } ${
+                      workspace.channelStatus
+                        ? "bg-white border-gray-200 hover:shadow-lg hover:border-gray-300"
+                        : "bg-gray-50 border-gray-300 opacity-75"
+                    }`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleSelectWorkspace(workspace)
+                    }}
+                  >
+                  {/* 🎨 REDESIGNED: Colored Header Bar */}
                   <div 
-                    className={`relative h-40 flex items-center justify-center ${
-                      workspace.channelStatus ? "bg-gradient-to-br from-green-50 to-green-100" : "bg-gray-100"
+                    className={`relative px-4 py-3 flex items-center justify-between ${
+                      workspace.sellsProductsAndServices 
+                        ? "bg-gradient-to-r from-green-500 to-green-600" 
+                        : "bg-gradient-to-r from-slate-500 to-slate-600"
                     }`}
                   >
-                    <div className="relative group">
-                      {workspace.logoUrl ? (
-                        <img
-                          src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
-                          alt={workspace.name}
-                          className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-xl"
-                        />
-                      ) : (
-                        <div className={`h-24 w-24 rounded-full flex items-center justify-center text-white font-bold text-4xl shadow-xl ${
-                          workspace.channelStatus ? "bg-green-500" : "bg-gray-400"
-                        }`}>
-                          {workspace.name.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      {/* Edit button - appears on hover */}
-                      {isSuperAdmin && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openLogoDialog(workspace.id)
-                          }}
-                          className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full bg-white border-2 border-gray-200 shadow-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-green-50 hover:border-green-300"
-                        >
-                          <Pencil className="h-4 w-4 text-gray-600" />
-                        </button>
-                      )}
-                    </div>
-                    {/* Top Right Controls */}
-                    <div className="absolute top-2 right-2 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => handleOpenSettings(workspace, e)}
-                        className="h-8 w-8 rounded-full bg-white/90 border border-gray-200 text-gray-600 shadow-sm flex items-center justify-center transition-colors hover:bg-white hover:text-gray-900"
-                        aria-label="Open settings"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </button>
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${
-                        workspace.sellsProductsAndServices 
-                          ? "text-green-700 bg-white/90 border border-green-200" 
-                          : "text-gray-600 bg-white/90 border border-gray-200"
-                      }`}>
-                        <Store className="h-3 w-3" />
-                        {workspace.sellsProductsAndServices ? "E-commerce" : "Info"}
-                      </span>
-                    </div>
-                    {/* Disabled Badge - Top Left */}
+                    {/* Left: Type Badge */}
+                    <span className="text-white text-sm font-semibold flex items-center gap-2">
+                      <Store className="h-4 w-4" />
+                      {workspace.sellsProductsAndServices ? "E-commerce" : "Info Channel"}
+                    </span>
+                    
+                    {/* Right: Settings Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleOpenSettings(workspace, e)}
+                      className="h-8 w-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors"
+                      aria-label="Open settings"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+                    
+                    {/* Disabled Badge */}
                     {!workspace.channelStatus && (
-                      <div className="absolute top-2 left-2">
-                        <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                          Disabled
-                        </span>
-                      </div>
+                      <span className="absolute -bottom-3 left-4 text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">
+                        Disabled
+                      </span>
                     )}
                   </div>
                   
-                  {/* Content Area - Use flex column with flex-1 to push controls to bottom */}
-                  <div className="p-4 flex flex-col flex-1 min-h-0">
-                    {/* Top Content - grows to fill space */}
-                    <div className="space-y-3 flex-1">
-                    {/* Channel Name */}
-                    <h3 className="text-lg font-semibold text-gray-900 truncate text-center">
-                      {workspace.name}
-                    </h3>
-                    
-                    {/* WhatsApp Number */}
-                    {workspace.whatsappPhoneNumber && (
-                      <div
-                        className={`flex items-center justify-center gap-2 text-sm ${
-                          workspace.channelStatus ? "text-green-600" : "text-gray-400"
-                        }`}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                        </svg>
-                        <span className="truncate">{workspace.whatsappPhoneNumber}</span>
-                      </div>
-                    )}
-                  
-                    {/* 📊 Badge Stats Row - Fixed height to prevent layout shift */}
-                    <div className="min-h-[48px] flex items-center justify-center">
-                    {badgeStats[workspace.id] && (
-                      <div className="flex items-center justify-center gap-2 pt-3 border-t border-gray-100">
-                        <TooltipProvider delayDuration={100}>
-                          {/* Pending Orders Badge */}
-                          {badgeStats[workspace.id].pendingOrders > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
-                                  <ShoppingCart className="h-3 w-3" />
-                                  <span>{badgeStats[workspace.id].pendingOrders}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Pending orders awaiting processing</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          
-                          {/* Needs Intervention Badge */}
-                          {badgeStats[workspace.id].needsIntervention > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium animate-pulse cursor-help">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  <span>{badgeStats[workspace.id].needsIntervention}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Customers requesting human assistance</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          
-                          {/* Blocked Users Badge */}
-                          {badgeStats[workspace.id].blockedUsers > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
-                                  <Ban className="h-3 w-3" />
-                                  <span>{badgeStats[workspace.id].blockedUsers}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Blocked/blacklisted customers</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                          
-                          {/* New Customers Badge (last 24h) */}
-                          {badgeStats[workspace.id].newCustomers > 0 && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
-                                  <UserPlus className="h-3 w-3" />
-                                  <span>{badgeStats[workspace.id].newCustomers}</span>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>New customers in the last 24 hours</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </TooltipProvider>
-                      </div>
-                    )}
-                    </div>
-                    </div>
-
-                    {/* 🔧 Debug Mode Control - Pushed to bottom */}
-                    <div className="flex items-center justify-center pt-3 border-t border-gray-100">
-                      <TooltipProvider delayDuration={100}>
-                        {/* Debug Mode Toggle - OWNER ONLY - Controls EVERYTHING */}
-                        {isSuperAdmin && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) =>
-                                handleToggleDebugMode(
-                                  workspace.id,
-                                  Boolean(workspace.debugMode),
-                                  e
-                                )
-                              }
-                              disabled={isRoleLoading || debugSavingId === workspace.id}
-                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                workspace.debugMode
-                                  ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                              } disabled:opacity-50 disabled:cursor-not-allowed`}
-                            >
-                              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                              </svg>
-                              <span>Debug Mode</span>
-                              <div className={`w-7 h-4 rounded-full transition-colors ${
-                                workspace.debugMode ? "bg-yellow-500" : "bg-gray-300"
-                              } relative`}>
-                                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${
-                                  workspace.debugMode ? "translate-x-3.5" : "translate-x-0.5"
-                                }`} />
-                              </div>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-                            <p className="text-xs text-slate-700">
-                              {workspace.debugMode
-                                ? "Debug mode is enabled. Click to review or disable."
-                                : "Production mode. Click to enable debug mode."}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
+                  {/* Content Area */}
+                  <div className="p-4 flex flex-col flex-1">
+                    {/* Top Content - grows to push bottom row down */}
+                    <div className="flex-1 space-y-3">
+                      {/* Logo + Name Row */}
+                      <div className="flex items-center gap-3">
+                      {/* Small Logo */}
+                      <div className="relative group flex-shrink-0">
+                        {workspace.logoUrl ? (
+                          <img
+                            src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
+                            alt={workspace.name}
+                            className="h-14 w-14 rounded-full object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className={`h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-xl ${
+                            workspace.channelStatus ? "bg-green-500" : "bg-gray-400"
+                          }`}>
+                            {workspace.name.charAt(0).toUpperCase()}
+                          </div>
                         )}
-                      </TooltipProvider>
+                        {/* Edit button - appears on hover */}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openLogoDialog(workspace.id)
+                            }}
+                            className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-green-50"
+                          >
+                            <Pencil className="h-3 w-3 text-gray-600" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Name + WhatsApp */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-gray-900 truncate">
+                          {workspace.name}
+                        </h3>
+                        {workspace.whatsappPhoneNumber && workspace.sellsProductsAndServices && (
+                          <div className="flex items-center gap-1.5 text-sm text-green-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                            </svg>
+                            <span className="truncate">{workspace.whatsappPhoneNumber}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* 📊 Badge Stats Row - Prominent */}
+                    {badgeStats[workspace.id] && (
+                      Object.values(badgeStats[workspace.id]).some(v => v > 0) ? (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <TooltipProvider delayDuration={100}>
+                            {/* Pending Orders */}
+                            {badgeStats[workspace.id].pendingOrders > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
+                                    <ShoppingCart className="h-3 w-3" />
+                                    <span>{badgeStats[workspace.id].pendingOrders}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Pending orders</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                            
+                            {/* Needs Intervention */}
+                            {badgeStats[workspace.id].needsIntervention > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium animate-pulse cursor-help">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    <span>{badgeStats[workspace.id].needsIntervention}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Needs human assistance</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                            
+                            {/* Blocked Users */}
+                            {badgeStats[workspace.id].blockedUsers > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
+                                    <Ban className="h-3 w-3" />
+                                    <span>{badgeStats[workspace.id].blockedUsers}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Blocked customers</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                            
+                            {/* New Customers */}
+                            {badgeStats[workspace.id].newCustomers > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium cursor-help">
+                                    <UserPlus className="h-3 w-3" />
+                                    <span>{badgeStats[workspace.id].newCustomers}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent><p>New customers (24h)</p></TooltipContent>
+                              </Tooltip>
+                            )}
+                          </TooltipProvider>
+                        </div>
+                      ) : null
+                    )}
+                    </div>
+                    
+                    {/* Bottom Row: Checklist + Debug - ALWAYS at bottom */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-3">
+                      {/* Checklist - Clickable entire area */}
+                      <div
+                        onClick={(e) => handleOpenChecklist(workspace, e)}
+                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                      >
+                        <ListTodo className="h-4 w-4" />
+                        <span>
+                          {checklist 
+                            ? `${checklist.completedCount}/${checklist.totalCount}` 
+                            : isChecklistLoading ? "..." : "Checklist"
+                          }
+                        </span>
+                        {checklist && checklist.percent === 100 && (
+                          <span className="text-green-500">✓</span>
+                        )}
+                      </div>
+                      
+                      {/* Debug Mode Toggle - ON/OFF Style */}
+                      {isSuperAdmin && (
+                        <button
+                          onClick={(e) => handleToggleDebugMode(workspace.id, Boolean(workspace.debugMode), e)}
+                          disabled={isRoleLoading || debugSavingId === workspace.id}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            workspace.debugMode
+                              ? "bg-green-500 text-white shadow-sm"
+                              : "bg-gray-300 text-gray-600"
+                          } disabled:opacity-50 hover:scale-105`}
+                        >
+                          <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                            workspace.debugMode ? "translate-x-0" : "-translate-x-0.5"
+                          }`}></div>
+                          <span>{workspace.debugMode ? "ON" : "OFF"}</span>
+                        </button>
+                      )}
                     </div>
                     
                     {justCreatedId === workspace.id && (
@@ -1549,8 +1635,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -1677,8 +1764,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         }}
                       >
                         <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WHATSAPP' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Smartphone className="w-6 h-6" />
+                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WHATSAPP' ? 'bg-[#25D366] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <MessageCircle className="w-6 h-6" />
                           </div>
                           <div className="flex-1">
                             <h4 className="font-semibold text-gray-900">WhatsApp Channel</h4>
@@ -1695,7 +1782,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <div 
                         className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
                           wizardData.channelType === 'WIDGET' 
-                            ? 'border-green-500 bg-green-50' 
+                            ? 'border-blue-500 bg-blue-50' 
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => {
@@ -1707,8 +1794,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         }}
                       >
                         <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WIDGET' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <MessageSquare className="w-6 h-6" />
+                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WIDGET' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Globe className="w-6 h-6" />
                           </div>
                           <div className="flex-1">
                             <h4 className="font-semibold text-gray-900">Web Widget</h4>
@@ -1717,11 +1804,28 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             </p>
                           </div>
                           {wizardData.channelType === 'WIDGET' && (
-                            <Check className="w-5 h-5 text-green-500" />
+                            <Check className="w-5 h-5 text-blue-600" />
                           )}
                         </div>
                       </div>
                     </div>
+
+                    {/* 🚨 Widget Info Alert - Andrea's "No Surprises" requirement */}
+                    {wizardData.channelType === 'WIDGET' && (
+                      <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
+                        <div className="flex gap-3">
+                          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-blue-800 font-medium">Support Channel Only</p>
+                            <p className="text-sm text-blue-700 mt-1">
+                              Widget channels are for customer support and information only. 
+                              E-commerce features (product catalog, cart, orders) require WhatsApp 
+                              for persistent customer identification.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Channel Name (always required) */}
                     <div>
@@ -1739,7 +1843,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <p className="text-xs text-gray-500 mt-1">This name will identify your channel</p>
                     </div>
 
-                    {/* WhatsApp Number (only if WhatsApp selected) */}
+                    {/* WhatsApp Number (ONLY for WhatsApp, hidden for Widget) */}
                     {wizardData.channelType === 'WHATSAPP' && (
                       <div>
                         <Label htmlFor="wizard-whatsapp" className="text-sm font-medium">
@@ -2457,6 +2561,83 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           </div>
         </div>
       )}
+
+      <Sheet open={checklistOpen} onOpenChange={setChecklistOpen}>
+        <SheetContent side="right" className="w-[420px] sm:max-w-[420px]">
+          <SheetHeader className="border-b border-gray-200 pb-3">
+            <SheetTitle>Channel Setup Checklist</SheetTitle>
+            <SheetDescription>
+              {selectedChecklist
+                ? `${selectedChecklist.completedCount}/${selectedChecklist.totalCount} completed • ${selectedChecklist.percent}%`
+                : "Loading checklist..."}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 space-y-4">
+            {selectedChecklist ? (
+              <>
+                <div className="space-y-2">
+                  <Progress value={selectedChecklist.percent} className="h-2" />
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>
+                      {selectedChecklist.sellsProductsAndServices ? "E-commerce channel" : "Info channel"}
+                    </span>
+                    <span>{selectedChecklist.channelType}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {selectedChecklist.items.map((item) => (
+                    <div
+                      key={item.key}
+                      onClick={() => item.action && handleChecklistAction(item)}
+                      className={`flex items-center gap-2 py-2 px-2 rounded-lg transition-colors ${
+                        item.action ? "cursor-pointer hover:bg-gray-50" : ""
+                      }`}
+                    >
+                      {/* Simple Checkbox */}
+                      <div
+                        className={`flex h-5 w-5 items-center justify-center rounded border-2 flex-shrink-0 ${
+                          item.completed
+                            ? "bg-emerald-500 border-emerald-500"
+                            : "border-gray-300 bg-white"
+                        }`}
+                      >
+                        {item.completed && <Check className="h-3.5 w-3.5 text-white stroke-[3]" />}
+                      </div>
+                      
+                      {/* Label */}
+                      <p className={`text-sm flex-1 ${
+                        item.completed 
+                          ? "text-gray-500 line-through" 
+                          : "text-gray-900"
+                      }`}>
+                        {item.label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : checklistError ? (
+              <div className="space-y-3 text-sm text-gray-600">
+                <p>{checklistError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const workspace = workspaces.find((w) => w.id === selectedChecklistWorkspaceId)
+                    if (workspace) {
+                      handleOpenChecklist(workspace, { stopPropagation: () => {} } as any)
+                    }
+                  }}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">Loading checklist...</div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
 
       {/* Footer - Fixed at bottom */}

@@ -2,6 +2,7 @@ import { AgentType } from "@echatbot/database"
 import * as fs from "fs"
 import * as path from "path"
 import { getAgentFunctionNames } from "../../src/config/agent-functions.config"
+import { getTemplateFolder } from "../../src/utils/template-path.helper"
 
 interface DefaultAgent {
   name: string
@@ -20,14 +21,12 @@ interface DefaultAgent {
 /**
  * Load prompt from markdown file
  * @param filename - Name of the markdown file in docs/prompts/ or templates/
- * @param subdir - Optional subdirectory (e.g., 'shared' for templates/shared/)
+ * @param useSharedTemplate - If true, loads from src/templates/shared/
  * @returns Prompt content as string
  */
-function loadPrompt(filename: string, subdir?: string): string {
-  // Default: docs/prompts/
-  // With subdir "shared": src/templates/shared/
+function loadPrompt(filename: string, useSharedTemplate: boolean = false): string {
   let promptPath: string
-  if (subdir === "shared") {
+  if (useSharedTemplate) {
     promptPath = path.join(__dirname, "../../src/templates/shared", filename)
   } else {
     promptPath = path.join(__dirname, "../../../../docs/prompts", filename)
@@ -198,7 +197,7 @@ export const defaultAgents = (
     icon: "MessageCircle",
     description:
       "Humanization layer: transforms technical responses into natural, contextual messages with greetings, offers suggestions, and personality",
-    systemPrompt: loadPrompt("09-conversation-history.template.md", "shared"),
+    systemPrompt: loadPrompt("09-conversation-history.template.md", true), // true = useSharedTemplate
     model: "openai/gpt-4o-mini",
     temperature: 0.7, // Higher for creativity and natural language
     maxTokens: 500,

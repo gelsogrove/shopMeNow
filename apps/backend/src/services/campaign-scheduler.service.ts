@@ -4,6 +4,7 @@ import { CampaignTokenService } from "../application/services/campaign-token.ser
 import { CampaignService } from "../application/services/campaign.service"
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
 import logger from "../utils/logger"
+import { normalizeTags } from "../utils/tag-normalizer"
 import messageSendingService from "./message-sending.service"
 
 /**
@@ -161,6 +162,28 @@ export class CampaignScheduler {
       return await this.prisma.customers.findMany({
         where: {
           workspaceId: campaign.workspaceId,
+          isActive: true,
+          isBlacklisted: false,
+          push_notifications_consent: true,
+          last_privacy_version_accepted: { not: null },
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          language: true,
+        },
+      })
+    } else if (campaign.targetType === "TAGS") {
+      const targetTags = normalizeTags(campaign.targetTags)
+      if (targetTags.length === 0) {
+        return []
+      }
+      return await this.prisma.customers.findMany({
+        where: {
+          workspaceId: campaign.workspaceId,
+          tags: { hasSome: targetTags },
           isActive: true,
           isBlacklisted: false,
           push_notifications_consent: true,

@@ -6,6 +6,7 @@ import {
 } from "@echatbot/database"
 import { PushCampaignRepository } from "../../repositories/push-campaign.repository"
 import { platformConfigService } from "../../services/platform-config.service"
+import { normalizeTags } from "../../utils/tag-normalizer"
 import logger from "../../utils/logger"
 
 export interface CreatePushCampaignDTO {
@@ -20,6 +21,7 @@ export interface CreatePushCampaignDTO {
   recipients: {
     customerIds?: string[]
     phones?: string[]
+    tags?: string[] | string
   }
   throttlePerSecond?: number
   batchSize?: number
@@ -80,7 +82,24 @@ export class PushCampaignService {
       optOutAt?: Date | null
     }> = []
 
-    const customerIds = input.recipients.customerIds || []
+    const customerIdSet = new Set<string>(input.recipients.customerIds || [])
+    const targetTags = normalizeTags(input.recipients.tags)
+
+    if (targetTags.length > 0) {
+      const taggedCustomers = await this.prisma.customers.findMany({
+        where: {
+          workspaceId: input.workspaceId,
+          tags: { hasSome: targetTags },
+        },
+        select: { id: true },
+      })
+
+      for (const customer of taggedCustomers) {
+        customerIdSet.add(customer.id)
+      }
+    }
+
+    const customerIds = Array.from(customerIdSet)
     if (customerIds.length > 0) {
       const customers = await this.prisma.customers.findMany({
         where: {
@@ -171,6 +190,7 @@ export class PushCampaignService {
         templateLocale: input.templateLocale,
         bodyPreview: input.bodyPreview,
         mediaUrl: input.mediaUrl,
+        targetTags: targetTags,
         sendAt: sendAt,
         costPerMessage: new Prisma.Decimal(costPerMessage),
         throttlePerSecond,

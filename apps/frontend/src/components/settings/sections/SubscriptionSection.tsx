@@ -3,7 +3,7 @@
  * Shows the current subscription plan and PayPal connection status
  * Same PayPal UX as WorkspaceSelectionPage
  */
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -69,6 +69,7 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
   const [paypalConnectModalOpen, setPaypalConnectModalOpen] = useState(false)
   const [paypalDisconnectModalOpen, setPaypalDisconnectModalOpen] = useState(false)
   const [disconnectConfirmText, setDisconnectConfirmText] = useState("")
+  const autoConnectRef = useRef(false)
 
   // Load billing overview
   const loadBillingOverview = useCallback(async () => {
@@ -113,6 +114,25 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
     loadPayPalStatus()
     loadPayPalConfig()
   }, [loadBillingOverview, loadPayPalStatus, loadPayPalConfig])
+
+  useEffect(() => {
+    if (autoConnectRef.current) return
+    if (paypalLoading) return
+    try {
+      const action = localStorage.getItem("settings-action")
+      if (action === "paypal-connect") {
+        autoConnectRef.current = true
+        localStorage.removeItem("settings-action")
+        if (paypalConfig && !paypalConfig.configured) {
+          toast.error("PayPal is not configured. Add sandbox/live credentials first.")
+          return
+        }
+        confirmPayPalConnect()
+      }
+    } catch (error) {
+      // Ignore localStorage errors
+    }
+  }, [paypalLoading, paypalConfig])
 
   // PayPal handlers - same as WorkspaceSelectionPage
   const handlePayPalConnect = async () => {
@@ -314,6 +334,7 @@ export function SubscriptionSection({ onFieldFocus }: SubscriptionSectionProps) 
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={handlePayPalConnect}
                   disabled={paypalConnecting || paypalConfig?.configured === false}
+                  data-focus-key="paypalConnect"
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
                   {paypalConnecting ? "Connecting..." : "Connect"}

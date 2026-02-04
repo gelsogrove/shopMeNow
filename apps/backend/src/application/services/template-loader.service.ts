@@ -20,23 +20,15 @@ import * as path from "path"
 import { PrismaClient } from "@echatbot/database"
 import { TemplateEngineService } from "./prompt-builder/template-engine.service"
 import logger from "../../utils/logger"
+import {
+  TEMPLATE_FILES,
+  SHARED_AGENTS,
+  getTemplateFolder,
+  getTemplateFilename,
+} from "../../utils/template-path.helper"
 
-// Template file mapping by agent type
-const TEMPLATE_FILES: Record<string, string> = {
-  ROUTER: "01-router.template.md",
-  PRODUCT_SEARCH: "02-product-search.template.md",
-  CART_MANAGEMENT: "03-cart-management.template.md", // Dedicated template with {{products}}
-  ORDER_TRACKING: "03-order-tracking.template.md",
-  CUSTOMER_SUPPORT: "04-customer-support.template.md",
-  PROFILE_MANAGEMENT: "05-profile-management.template.md",
-  SECURITY: "06-security.template.md",
-  TRANSLATION: "07-translation.template.md",
-  SUMMARY_AGENT: "08-summary.template.md",
-  PRODUCT_CONTEXT: "09-product-context.template.md",
-}
-
-// Shared agents (always from root templates)
-const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT"]
+// Template file mapping - now imported from centralized helper
+// Shared agents list - now imported from centralized helper
 
 // Template cache - lives for entire server lifetime
 const templateCache = new Map<string, string>()
@@ -155,20 +147,8 @@ export class TemplateLoaderService {
    * Load template from file (cached in memory - DISABLED IN DEVELOPMENT)
    */
   private loadTemplate(agentType: string, isEcommerce: boolean): string {
-    const templateFile = TEMPLATE_FILES[agentType]
-    if (!templateFile) {
-      throw new Error(`Unknown agent type: ${agentType}`)
-    }
-
-    // Determine folder
-    let folder: string
-    if (SHARED_AGENTS.includes(agentType)) {
-      folder = "" // Root templates
-    } else if (isEcommerce) {
-      folder = "ecommerce"
-    } else {
-      folder = "informational"
-    }
+    const templateFile = getTemplateFilename(agentType)
+    const folder = getTemplateFolder(agentType, isEcommerce)
 
     const cacheKey = `${folder}/${templateFile}`
 
@@ -181,9 +161,7 @@ export class TemplateLoaderService {
     }
 
     // Load from disk
-    const templatePath = folder
-      ? path.join(__dirname, "..", "..", "templates", folder, templateFile)
-      : path.join(__dirname, "..", "..", "templates", templateFile)
+    const templatePath = path.join(__dirname, "..", "..", "templates", folder, templateFile)
 
     try {
       const content = fs.readFileSync(templatePath, "utf-8")

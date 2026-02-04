@@ -18,6 +18,8 @@ export const workspaceRouter = (): Router => {
   // Get badge stats for all user's workspaces (unread messages, pending orders, etc.)
   // MUST be before /:id to avoid matching "badge-stats" as an ID
   router.get('/badge-stats', asyncHandler(workspaceController.getWorkspaceBadgeStats));
+  // Get workspace configuration checklist
+  router.get('/:id/checklist', validateWorkspaceOperation, asyncHandler(workspaceController.getWorkspaceChecklist));
   
   // Get all workspaces
   router.get('/', asyncHandler(workspaceController.getAllWorkspaces));
