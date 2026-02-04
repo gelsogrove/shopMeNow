@@ -15,7 +15,6 @@ import { SecurityCheckService } from "../../../application/services/security-che
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { WorkspaceAccessService } from "../../../application/services/workspace-access.service"
-import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
 import { detectLanguageFromHeader } from "../../../utils/email-templates"
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import {
@@ -24,7 +23,6 @@ import {
 } from "../schemas/widget.schemas"
 
 const llmRouterService = new LLMRouterService(prisma)
-const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
 
 export class WidgetChatController {
   private normalizeLanguage(raw?: string | null): string | null {
@@ -551,35 +549,7 @@ export class WidgetChatController {
       }
       logger.info("✅ Chat session ready", { sessionId: chatSession?.id, customerId: customer.id })
 
-      // 👋 Welcome message (first user message only)
-      // Normalize language code to 2-letter ISO format
-      const normalizeLanguage = (lang?: string): string => {
-        if (!lang) return "it"
-        const normalized = lang.toLowerCase().substring(0, 2)
-        return ["it", "en", "es", "pt", "fr", "de"].includes(normalized) ? normalized : "it"
-      }
-
-      const welcomeResult = await welcomeMessageHandler.handleWelcomeMessage({
-        customerId: customer.id,
-        workspaceId,
-        customerLanguage: normalizeLanguage(customer.language || workspace.defaultLanguage || workspace.language || "it"), // 🌍 customer.language WINS
-        customerMessage: message,
-        conversationId: chatSession.id,
-        channel: "widget",
-      })
-
-      if (welcomeResult.isWelcomeMessage) {
-        // No queue for widget: respond immediately
-        return res.status(200).json({
-          success: true,
-          messageId: `widget-${visitorId}-${Date.now()}`,
-          sessionId: chatSession.id,
-          response: welcomeResult.welcomeText || "Welcome!",
-          status: "ready",
-        })
-      }
-
-      // 🤖 Process message through LLM BEFORE saving to queue
+      // 🤖 Process message through LLM (no hardcoded welcome logic - LLM handles greetings)
       logger.info("🤖 Processing widget message through LLM", {
         workspaceId,
         visitorId,

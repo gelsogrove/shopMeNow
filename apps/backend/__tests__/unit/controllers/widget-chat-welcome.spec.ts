@@ -1,6 +1,5 @@
 import { WidgetChatController } from "../../../src/interfaces/http/controllers/widget-chat.controller"
 import { prisma, AgentType } from "@echatbot/database"
-import { WelcomeMessageHandler } from "../../../src/utils/welcome-message.handler"
 import { SecurityCheckService } from "../../../src/application/services/security-check.service"
 
 jest.mock("@echatbot/database", () => {
@@ -42,12 +41,8 @@ jest.mock("../../../src/services/llm-router.service", () => ({
   })),
 }))
 
-describe("WidgetChatController - welcome flow", () => {
+describe("WidgetChatController - LLM direct flow (no welcome handler)", () => {
   const controller = new WidgetChatController()
-  const mockHandleWelcome = jest.spyOn(
-    WelcomeMessageHandler.prototype,
-    "handleWelcomeMessage"
-  )
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -89,12 +84,9 @@ describe("WidgetChatController - welcome flow", () => {
     })
     ;(prisma.conversationMessage.count as jest.Mock).mockResolvedValue(0)
     ;(prisma.conversationMessage.create as jest.Mock).mockResolvedValue({})
-    mockHandleWelcome.mockResolvedValue({
-      isWelcomeMessage: false,
-    })
   })
 
-  it("skips welcome for widget channel and proceeds to LLM", async () => {
+  it("processes all messages directly through LLM (greetings handled by AI)", async () => {
     const req: any = {
       params: { workspaceId: "ws-1" },
       body: {
@@ -113,13 +105,7 @@ describe("WidgetChatController - welcome flow", () => {
 
     await controller.sendMessage(req, res)
 
-    expect(mockHandleWelcome).toHaveBeenCalledWith(
-      expect.objectContaining({
-        customerId: "cust-1",
-        workspaceId: "ws-1",
-        channel: "widget",
-      })
-    )
+    // Should NOT call WelcomeMessageHandler anymore - LLM handles everything
     expect(res.status).toHaveBeenCalledWith(200)
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
