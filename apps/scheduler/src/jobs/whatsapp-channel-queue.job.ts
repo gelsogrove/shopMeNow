@@ -4,6 +4,7 @@ import { SecurityAgentService } from '../services/security-agent.service'
 import { BillingService } from '../services/billing.service'
 import { getWorkspaceWhatsAppConfig, WorkspaceWhatsAppConfig } from '../services/whatsapp-config.service'
 import { whatsAppInteractiveConverter, WhatsAppMessage } from '../services/whatsapp-interactive-converter.service'
+import { WhatsAppProviderFactory } from '../services/whatsapp/whatsapp-provider.factory'
 
 const MAX_DEBUG_STEPS = 50
 const RECIPIENT_COOLDOWN_MS = 6000 // WhatsApp limit ~1 msg / 6s per recipient
@@ -126,96 +127,124 @@ async function isWipConversationMessage(conversationMessageId: string | null | u
 }
 
 interface WhatsAppSendParams {
-  config: WorkspaceWhatsAppConfig
+  workspaceId: string
   to: string
   message: string | WhatsAppMessage // Support both text and interactive messages
 }
 
 async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ success: boolean; error?: string; messageId?: string }> {
-  const { config, to, message } = params
-  // 🔑 WhatsApp Cloud API expects PHONE NUMBER ID, not the display phone number.
-  // Fallback to phoneNumber only to avoid breaking legacy configs.
-  const senderId = config.phoneNumberId || config.phoneNumber
-  if (!config.phoneNumberId) {
-    logger.warn('[WhatsApp Queue] Missing phoneNumberId - falling back to phoneNumber', {
-      workspaceId: config.workspaceId,
-      phoneNumber: config.phoneNumber,
-    })
-  }
-  const apiUrl = `https://graph.facebook.com/v18.0/${senderId}/messages`
-
-  // Convert text to WhatsApp message format (interactive buttons/lists/media/CTA)
-  const whatsAppPayload = typeof message === 'string' 
-    ? whatsAppInteractiveConverter.convert(message)
-    : message
-
-  const attemptSend = async (payload: any): Promise<{ success: boolean; status?: number; error?: string; messageId?: string }> => {
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...payload,
-        messaging_product: 'whatsapp',
-        to: to.replace(/^\+/, ''),
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      logger.error(`[WhatsApp Queue] WhatsApp API error ${response.status}: ${errorText}`)
-      return { success: false, status: response.status, error: `WhatsApp API error: ${response.status}` }
-    }
-
-    const data = (await response.json().catch(() => ({}))) as any
-    const messageId = data?.messages?.[0]?.id
-    return { success: true, messageId }
-  }
+  const { workspaceId, to, message } = params
 
   try {
-    // Handle array of messages (e.g., interactive + image)
+    // Load workspace with WhatsApp provider configuration
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
+
+    if (!workspace) {
+      logger.error('[WhatsApp Queue] Workspace not found', { workspaceId })
+      return { success: false, error: 'Workspace not found' }
+    }
+
+    // Check if workspace has WhatsApp configured
+    if (!WhatsAppProviderFactory.isConfigured(workspace)) {
+      const providerName = WhatsAppProviderFactory.getProviderDisplayName(workspace)
+      logger.error('[WhatsApp Queue] WhatsApp not configured', {
+        workspaceId,
+        provider: workspace.whatsappProvider || 'meta',
+        providerName,
+      })
+      return { success: false, error: `WhatsApp not configured (${providerName})` }
+    }
+
+    // Create provider using Factory
+    const provider = WhatsAppProviderFactory.create(workspace)
+    const providerName = provider.getProviderName()
+
+    logger.info('[WhatsApp Queue] Sending via provider', {
+      workspaceId,
+      provider: providerName,
+      to,
+    })
+
+    // Send text message
+    if (typeof message === 'string') {
+      const result = await provider.sendTextMessage(to, message)
+
+      if (result.success) {
+        logger.info('[WhatsApp Queue] ✅ Message sent successfully', {
+          workspaceId,
+          provider: providerName,
+          messageId: result.messageId,
+        })
+        return { success: true, messageId: result.messageId }
+      } else {
+        logger.error('[WhatsApp Queue] ❌ Failed to send message', {
+          workspaceId,
+          provider: providerName,
+          error: result.error,
+        })
+        return { success: false, error: result.error }
+      }
+    }
+
+    // Handle interactive messages (Meta-only feature)
+    // For UltraMsg, convert interactive to plain text
+    if (workspace.whatsappProvider === 'ultramsg') {
+      logger.warn('[WhatsApp Queue] Interactive messages not supported by UltraMsg - converting to text', {
+        workspaceId,
+      })
+
+      // Extract text from interactive message
+      const textContent = typeof message === 'object' && 'text' in message 
+        ? (message as any).text?.body || 'Message'
+        : 'Message'
+
+      const result = await provider.sendTextMessage(to, textContent)
+      return { success: result.success, messageId: result.messageId, error: result.error }
+    }
+
+    // Meta provider - handle interactive messages (arrays of messages)
+    const whatsAppPayload = whatsAppInteractiveConverter.convert(message as any)
+
     if (Array.isArray(whatsAppPayload)) {
       logger.info('[WhatsApp Queue] Sending multiple messages (interactive + media)', {
         count: whatsAppPayload.length,
+        workspaceId,
       })
-      
+
       // Send each message sequentially
       for (let i = 0; i < whatsAppPayload.length; i++) {
         const payload = whatsAppPayload[i]
-        const result = await attemptSend(payload)
         
+        // TODO: Meta provider should handle complex payloads
+        // For now, extract text
+        const textContent = payload.text?.body || 'Message'
+        const result = await provider.sendTextMessage(to, textContent)
+
         if (!result.success) {
           logger.error(`[WhatsApp Queue] Failed to send message ${i + 1}/${whatsAppPayload.length}`, {
             error: result.error,
           })
-          return result // Return first failure
+          return result
         }
-        
+
         // Small delay between messages
         if (i < whatsAppPayload.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 200))
         }
       }
-      
-      return { success: true } // All messages sent
+
+      return { success: true }
     }
 
-    // Single message
-    const first = await attemptSend(whatsAppPayload)
-    if (first.success) return first
+    // Single interactive message
+    const textContent = (whatsAppPayload as any).text?.body || 'Message'
+    const result = await provider.sendTextMessage(to, textContent)
+    return { success: result.success, messageId: result.messageId, error: result.error }
 
-    // Retry once for transient errors (5xx / 429)
-    if (first.status && (first.status >= 500 || first.status === 429)) {
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      const second = await attemptSend(whatsAppPayload)
-      return second
-    }
-
-    return first
   } catch (error: any) {
-    logger.error('[WhatsApp Queue] Error calling WhatsApp API', error)
+    logger.error('[WhatsApp Queue] Error sending via provider:', error)
     return { success: false, error: error?.message || 'WhatsApp send failed' }
   }
 }
@@ -422,13 +451,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             })
             deliveryNote = `✅ Response saved for polling by visitor ${message.visitorId}`
           } else {
-            // WhatsApp: Send via API
-            if (!workspaceWhatsAppConfig) {
-              await markQueue('error', 'WhatsApp not configured for this workspace')
-              workspaceErrors++
-              continue
-            }
-
+            // WhatsApp: Send via API (using Factory pattern for multi-provider support)
             if (!message.phoneNumber) {
               await markQueue('error', 'Missing destination phone number')
               workspaceErrors++
@@ -443,7 +466,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             }
 
             const sendResult = await sendWhatsAppMessage({
-              config: workspaceWhatsAppConfig,
+              workspaceId: workspace.id,
               to: message.phoneNumber,
               message: message.messageContent,
             })

@@ -697,4 +697,141 @@ export class WorkspaceController {
       return next(error)
     }
   }
+
+  /**
+   * Update WhatsApp provider configuration
+   * POST /api/v1/workspaces/:id/whatsapp-config
+   */
+  updateWhatsAppConfig = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params
+      const {
+        whatsappProvider,
+        metaPhoneNumberId,
+        metaAccessToken,
+        webhookVerifyToken,
+        ultraMsgInstanceId,
+        ultraMsgToken
+      } = req.body
+
+      logger.info(`[WhatsApp Config] Updating configuration for workspace ${id}`, {
+        provider: whatsappProvider,
+        hasMetaPhoneNumberId: !!metaPhoneNumberId,
+        hasMetaAccessToken: !!metaAccessToken,
+        hasWebhookVerifyToken: !!webhookVerifyToken,
+        hasUltraMsgInstanceId: !!ultraMsgInstanceId,
+        hasUltraMsgToken: !!ultraMsgToken,
+      })
+
+      // Validate provider
+      if (!whatsappProvider || !['meta', 'ultramsg'].includes(whatsappProvider)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid provider. Must be "meta" or "ultramsg"',
+        })
+      }
+
+      // Validate Meta configuration
+      if (whatsappProvider === 'meta') {
+        if (!metaPhoneNumberId || !metaAccessToken) {
+          return res.status(400).json({
+            success: false,
+            message: 'Meta provider requires metaPhoneNumberId and metaAccessToken',
+          })
+        }
+      }
+
+      // Validate UltraMsg configuration
+      if (whatsappProvider === 'ultramsg') {
+        if (!ultraMsgInstanceId || !ultraMsgToken) {
+          return res.status(400).json({
+            success: false,
+            message: 'UltraMsg provider requires ultraMsgInstanceId and ultraMsgToken',
+          })
+        }
+      }
+
+      // Update workspace with new configuration
+      const workspace = await this.workspaceService.update(id, {
+        whatsappProvider,
+        metaPhoneNumberId: whatsappProvider === 'meta' ? metaPhoneNumberId : null,
+        metaAccessToken: whatsappProvider === 'meta' ? metaAccessToken : null,
+        webhookVerifyToken: whatsappProvider === 'meta' ? webhookVerifyToken : null,
+        ultraMsgInstanceId: whatsappProvider === 'ultramsg' ? ultraMsgInstanceId : null,
+        ultraMsgToken: whatsappProvider === 'ultramsg' ? ultraMsgToken : null,
+      })
+
+      if (!workspace) {
+        return res.status(404).json({
+          success: false,
+          message: 'Workspace not found',
+        })
+      }
+
+      const ws = workspace as any
+
+      logger.info(`[WhatsApp Config] ✅ Configuration updated for workspace ${id}`, {
+        provider: ws.whatsappProvider,
+      })
+
+      return res.json({
+        success: true,
+        message: 'WhatsApp configuration updated successfully',
+        data: {
+          whatsappProvider: ws.whatsappProvider,
+          webhookUrl: whatsappProvider === 'meta' 
+            ? `https://www.echatbot.ai/api/v1/whatsapp/webhook/${id}`
+            : `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${id}`,
+        },
+      })
+    } catch (error) {
+      logger.error('[WhatsApp Config] Error updating configuration:', error)
+      return next(error)
+    }
+  }
+
+  /**
+   * Get WhatsApp provider configuration
+   * GET /api/v1/workspaces/:id/whatsapp-config
+   */
+  getWhatsAppConfig = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params
+
+      const workspace = await prisma.workspace.findUnique({
+        where: { id },
+      }) as any
+
+      if (!workspace) {
+        return res.status(404).json({
+          success: false,
+          message: 'Workspace not found',
+        })
+      }
+
+      logger.info(`[WhatsApp Config] Retrieved configuration for workspace ${id}`, {
+        provider: (workspace as any).whatsappProvider || 'not-configured',
+      })
+
+      const ws = workspace as any
+
+      return res.json({
+        success: true,
+        data: {
+          whatsappProvider: ws.whatsappProvider || 'meta',
+          metaPhoneNumberId: ws.metaPhoneNumberId || '',
+          metaAccessToken: ws.metaAccessToken || '',
+          webhookVerifyToken: ws.webhookVerifyToken || '',
+          ultraMsgInstanceId: ws.ultraMsgInstanceId || '',
+          ultraMsgToken: ws.ultraMsgToken || '',
+          webhookUrl: ws.whatsappProvider === 'ultramsg'
+            ? `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${id}`
+            : `https://www.echatbot.ai/api/v1/whatsapp/webhook/${id}`,
+        },
+      })
+    } catch (error) {
+      logger.error('[WhatsApp Config] Error fetching configuration:', error)
+      return next(error)
+    }
+  }
 }

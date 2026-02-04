@@ -27,11 +27,13 @@ import {
   Settings,
   BarChart3,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  MessageSquare
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { api } from '@/services/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { workspaceApi } from '@/services/workspaceApi'
 
 interface EmbedCodeResponse {
   success: boolean
@@ -58,10 +60,20 @@ export function WidgetSettingsPage() {
   const [stats, setStats] = useState<WidgetStats | null>(null)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  
+  // WhatsApp Provider Configuration
+  const [whatsappProvider, setWhatsappProvider] = useState<'meta' | 'ultramsg'>('meta')
+  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState('')
+  const [metaAccessToken, setMetaAccessToken] = useState('')
+  const [webhookVerifyToken, setWebhookVerifyToken] = useState('')
+  const [ultraMsgInstanceId, setUltraMsgInstanceId] = useState('')
+  const [ultraMsgToken, setUltraMsgToken] = useState('')
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false)
 
   // Fetch embed code on mount
   useEffect(() => {
     fetchEmbedCode()
+    fetchWhatsAppConfig()
   }, [workspaceId])
 
   async function fetchEmbedCode() {
@@ -85,6 +97,56 @@ export function WidgetSettingsPage() {
       setError('Failed to load widget settings. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function fetchWhatsAppConfig() {
+    if (!workspaceId) return
+
+    try {
+      const response = await workspaceApi.getWhatsAppConfig(workspaceId)
+      
+      if (response.success && response.data) {
+        setWhatsappProvider(response.data.whatsappProvider || 'meta')
+        setMetaPhoneNumberId(response.data.metaPhoneNumberId || '')
+        setMetaAccessToken(response.data.metaAccessToken || '')
+        setWebhookVerifyToken(response.data.webhookVerifyToken || '')
+        setUltraMsgInstanceId(response.data.ultraMsgInstanceId || '')
+        setUltraMsgToken(response.data.ultraMsgToken || '')
+      }
+    } catch (err) {
+      console.error('Error fetching WhatsApp config:', err)
+      // Don't show error toast - just use defaults
+    }
+  }
+
+  async function saveWhatsAppConfig() {
+    if (!workspaceId) return
+
+    try {
+      setSavingWhatsApp(true)
+      
+      const config = {
+        whatsappProvider,
+        metaPhoneNumberId: whatsappProvider === 'meta' ? metaPhoneNumberId : undefined,
+        metaAccessToken: whatsappProvider === 'meta' ? metaAccessToken : undefined,
+        webhookVerifyToken: whatsappProvider === 'meta' ? webhookVerifyToken : undefined,
+        ultraMsgInstanceId: whatsappProvider === 'ultramsg' ? ultraMsgInstanceId : undefined,
+        ultraMsgToken: whatsappProvider === 'ultramsg' ? ultraMsgToken : undefined,
+      }
+
+      const response = await workspaceApi.updateWhatsAppConfig(workspaceId, config)
+
+      if (response.success) {
+        toast.success('WhatsApp configuration saved successfully!')
+      } else {
+        toast.error(response.message || 'Failed to save configuration')
+      }
+    } catch (err) {
+      console.error('Error saving WhatsApp config:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to save configuration')
+    } finally {
+      setSavingWhatsApp(false)
     }
   }
 
@@ -151,7 +213,7 @@ export function WidgetSettingsPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="embed" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="embed" className="flex items-center gap-2">
             <Code2 className="h-4 w-4" />
             <span className="hidden sm:inline">Embed Code</span>
@@ -159,6 +221,10 @@ export function WidgetSettingsPage() {
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Settings</span>
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            <span className="hidden sm:inline">WhatsApp</span>
           </TabsTrigger>
           <TabsTrigger value="stats" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -309,6 +375,188 @@ export function WidgetSettingsPage() {
                     Coming soon: Choose widget position
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* WhatsApp Configuration Tab */}
+        <TabsContent value="whatsapp" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>WhatsApp Provider Configuration</CardTitle>
+              <CardDescription>
+                Configure your WhatsApp messaging provider (Meta Business API or UltraMsg)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Provider Selector */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Select Provider</Label>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setWhatsappProvider('meta')}
+                    className={`flex-1 p-4 border-2 rounded-lg transition-all ${
+                      whatsappProvider === 'meta'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-semibold text-gray-900">Meta Business API</div>
+                      <div className="text-sm text-gray-600 mt-1">Official WhatsApp Business Platform</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setWhatsappProvider('ultramsg')}
+                    className={`flex-1 p-4 border-2 rounded-lg transition-all ${
+                      whatsappProvider === 'ultramsg'
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-semibold text-gray-900">UltraMsg</div>
+                      <div className="text-sm text-gray-600 mt-1">Simple WhatsApp API (no Meta verification)</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Meta Configuration Form */}
+              {whatsappProvider === 'meta' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-blue-50/50">
+                  <h3 className="font-semibold text-gray-900">Meta Business API Settings</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="metaPhoneNumberId">Phone Number ID</Label>
+                    <Input
+                      id="metaPhoneNumberId"
+                      type="text"
+                      placeholder="1234567890"
+                      value={metaPhoneNumberId}
+                      onChange={(e) => setMetaPhoneNumberId(e.target.value)}
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-600">
+                      Found in Meta Business Manager → WhatsApp → API Setup
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="metaAccessToken">Access Token</Label>
+                    <Input
+                      id="metaAccessToken"
+                      type="password"
+                      placeholder="EAAxxxxxxxx..."
+                      value={metaAccessToken}
+                      onChange={(e) => setMetaAccessToken(e.target.value)}
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-600">
+                      Permanent access token from Meta Business Manager
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="webhookVerifyToken">Webhook Verify Token</Label>
+                    <Input
+                      id="webhookVerifyToken"
+                      type="text"
+                      placeholder="my-verify-token"
+                      value={webhookVerifyToken}
+                      onChange={(e) => setWebhookVerifyToken(e.target.value)}
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-600">
+                      Custom token for webhook verification (set in Meta webhook config)
+                    </p>
+                  </div>
+
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      <strong>Webhook URL:</strong>{' '}
+                      <code className="bg-white px-2 py-1 rounded">
+                        https://www.echatbot.ai/api/v1/whatsapp/webhook/{workspaceId || '{workspaceId}'}
+                      </code>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              {/* UltraMsg Configuration Form */}
+              {whatsappProvider === 'ultramsg' && (
+                <div className="space-y-4 p-4 border rounded-lg bg-green-50/50">
+                  <h3 className="font-semibold text-gray-900">UltraMsg API Settings</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="ultraMsgInstanceId">Instance ID</Label>
+                    <Input
+                      id="ultraMsgInstanceId"
+                      type="text"
+                      placeholder="instance12345"
+                      value={ultraMsgInstanceId}
+                      onChange={(e) => setUltraMsgInstanceId(e.target.value)}
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-600">
+                      Your UltraMsg instance ID from dashboard
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ultraMsgToken">API Token</Label>
+                    <Input
+                      id="ultraMsgToken"
+                      type="password"
+                      placeholder="xxxxxxxxxxxxxxxx"
+                      value={ultraMsgToken}
+                      onChange={(e) => setUltraMsgToken(e.target.value)}
+                      className="bg-white"
+                    />
+                    <p className="text-xs text-gray-600">
+                      API token from UltraMsg dashboard
+                    </p>
+                  </div>
+
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      <strong>Webhook URL:</strong>{' '}
+                      <code className="bg-white px-2 py-1 rounded">
+                        https://www.echatbot.ai/api/v1/whatsapp/ultramsg/{workspaceId || '{workspaceId}'}
+                      </code>
+                      <br />
+                      <span className="mt-2 block">
+                        Configure this URL in your UltraMsg dashboard under Webhooks
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+
+                  <Alert>
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-xs text-green-800">
+                      <strong>✨ No Meta Verification Required!</strong> UltraMsg works with regular WhatsApp numbers without business verification.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-4 border-t">
+                <Button
+                  onClick={saveWhatsAppConfig}
+                  disabled={savingWhatsApp}
+                  className="flex items-center gap-2"
+                >
+                  {savingWhatsApp ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Save Configuration
+                </Button>
               </div>
             </CardContent>
           </Card>

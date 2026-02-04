@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { WhatsAppSendController } from "../controllers/whatsapp-send.controller"
 import { WhatsAppWebhookController } from "../controllers/whatsapp-webhook.controller"
+import { ultraMsgWebhookController } from "../controllers/ultramsg-webhook.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { whatsappRateLimitMiddleware } from "../middlewares/whatsapp-rate-limit.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
@@ -11,11 +12,13 @@ import { verifyMetaWebhookCertificate } from "../middlewares/mtls-verification.m
  *
  * Endpoints:
  * - GET  /api/whatsapp/webhook/:webhookId       → Meta verification (no auth)
- * - POST /api/whatsapp/webhook/:webhookId       → Receive messages (no auth, HMAC signature)
- * - POST /api/whatsapp/send          → Send messages (auth required)
+ * - POST /api/whatsapp/webhook/:webhookId       → Receive messages from Meta (no auth, HMAC signature)
+ * - POST /api/whatsapp/ultramsg/:workspaceId    → Receive messages from UltraMsg (no auth)
+ * - POST /api/whatsapp/send                     → Send messages (auth required)
  *
  * Security:
- * - Webhook endpoints: HMAC signature verification + rate limiting
+ * - Meta webhook: HMAC signature verification + mTLS + rate limiting
+ * - UltraMsg webhook: Rate limiting only (no signature verification)
  * - Send endpoint: JWT auth + workspace validation + rate limiting
  */
 
@@ -196,6 +199,57 @@ router.post(
   workspaceValidationMiddleware,
   whatsappRateLimitMiddleware,
   sendController.sendMessage.bind(sendController)
+)
+
+/**
+ * @swagger
+ * /api/whatsapp/ultramsg/{workspaceId}:
+ *   post:
+ *     summary: UltraMsg webhook endpoint
+ *     description: Receives messages from UltraMsg and processes them through the LLM router
+ *     tags: [WhatsApp]
+ *     security: []  # No JWT auth
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The workspace ID configured in UltraMsg
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               from:
+ *                 type: string
+ *                 description: Sender phone number
+ *               to:
+ *                 type: string
+ *                 description: Receiver phone number
+ *               body:
+ *                 type: string
+ *                 description: Message text
+ *               type:
+ *                 type: string
+ *                 description: Message type (chat, image, etc.)
+ *               id:
+ *                 type: string
+ *                 description: Message ID from UltraMsg
+ *     responses:
+ *       200:
+ *         description: Message received and processed
+ *       400:
+ *         description: Invalid request
+ *       404:
+ *         description: Workspace not found
+ */
+router.post(
+  "/ultramsg/:workspaceId",
+  whatsappRateLimitMiddleware,
+  ultraMsgWebhookController.handleWebhook.bind(ultraMsgWebhookController)
 )
 
 export default router

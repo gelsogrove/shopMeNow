@@ -44,6 +44,10 @@ export const workspaceRouter = (): Router => {
   // Update a workspace - ONLY SUPER_ADMIN (Owner)
   router.put('/:id', validateWorkspaceOperation, requireSuperAdmin, asyncHandler(workspaceController.updateWorkspace));
   
+  // WhatsApp provider configuration - ONLY SUPER_ADMIN (Owner)
+  router.get('/:id/whatsapp-config', validateWorkspaceOperation, asyncHandler(workspaceController.getWhatsAppConfig));
+  router.post('/:id/whatsapp-config', validateWorkspaceOperation, requireSuperAdmin, asyncHandler(workspaceController.updateWhatsAppConfig));
+  
   // Delete a workspace - ONLY SUPER_ADMIN (Owner) (additional protection in controller)
   router.delete('/:id', validateWorkspaceOperation, requireSuperAdmin, asyncHandler(workspaceController.deleteWorkspace));
   

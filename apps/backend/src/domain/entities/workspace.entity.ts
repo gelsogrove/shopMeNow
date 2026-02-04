@@ -15,6 +15,13 @@ export interface WorkspaceProps {
   whatsappWebhookToken?: string | null
   whatsappWebhookUrl?: string | null
   whatsappBusinessAccountId?: string | null
+  // 🆕 Multi-Provider WhatsApp Support
+  whatsappProvider?: string | null // "meta" | "ultramsg"
+  metaPhoneNumberId?: string | null
+  metaAccessToken?: string | null
+  webhookVerifyToken?: string | null
+  ultraMsgInstanceId?: string | null
+  ultraMsgToken?: string | null
   notificationEmail?: string | null
   webhookUrl?: string | null
   language: string
