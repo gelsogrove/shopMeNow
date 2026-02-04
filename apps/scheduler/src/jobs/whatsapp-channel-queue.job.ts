@@ -215,7 +215,7 @@ async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ succes
 
       // Send each message sequentially
       for (let i = 0; i < whatsAppPayload.length; i++) {
-        const payload = whatsAppPayload[i]
+        const payload = whatsAppPayload[i] as any
         
         // TODO: Meta provider should handle complex payloads
         // For now, extract text
