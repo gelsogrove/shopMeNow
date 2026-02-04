@@ -92,7 +92,6 @@ export class WidgetEmbedController {
     const icon = (workspace?.widgetIcon || "chat").trim()
 
     const widgetUrl = process.env.WIDGET_URL || `${process.env.API_URL}/widget.js`
-    const apiUrl = process.env.API_URL || "http://localhost:3001/api/v1"
     
     // Add cache-busting version to widget.js
     const widgetVersion = Date.now()
@@ -104,7 +103,6 @@ export class WidgetEmbedController {
     // Widget Configuration
     window.eChatbotConfig = {
       workspaceId: "${workspaceId}",
-      apiUrl: "${apiUrl}",
       title: "${title.replace(/"/g, '\\"')}",
       logoUrl: "${logoUrl.replace(/"/g, '\\"')}",
       useChannelLogo: ${useChannelLogo},

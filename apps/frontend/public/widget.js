@@ -23,17 +23,30 @@
   // CONFIGURATION & CONSTANTS
   // ============================================================================
 
-  // Auto-detect API URL based on environment
+  // Auto-detect API URL based on widget.js script source
   const getDefaultApiUrl = () => {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname
       if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:3001/api/v1'
       }
-      // Production or other environments
-      return `${window.location.protocol}//${hostname}/api/v1`
+      
+      // Get widget.js source URL to determine API URL
+      const scripts = document.getElementsByTagName("script")
+      for (let i = 0; i < scripts.length; i++) {
+        const src = scripts[i].getAttribute("src") || ""
+        if (src.includes("widget.js")) {
+          try {
+            const widgetUrl = new URL(src, window.location.href)
+            return `${widgetUrl.protocol}//${widgetUrl.host}/api/v1`
+          } catch (e) {
+            // Fallback to echatbot.ai if parsing fails
+            return 'https://www.echatbot.ai/api/v1'
+          }
+        }
+      }
     }
-    return 'https://api.echatbot.ai/api/v1'
+    return 'https://www.echatbot.ai/api/v1'
   }
 
   const DEFAULT_API_URL = getDefaultApiUrl()
