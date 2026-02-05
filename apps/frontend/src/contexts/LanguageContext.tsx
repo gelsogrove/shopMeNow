@@ -146,6 +146,10 @@ const translations = {
     "integration.crm.title": "Integrazione CRM personalizzata",
     "integration.crm.subtitle": "Connetti il tuo chatbot al tuo CRM e ai dati esterni con accesso API sicuro. Sincronizza i profili dei clienti, recupera lo storico degli ordini e attiva flussi di lavoro basati su eventi in tempo reale. Integrati con le API del tuo spedizioniere per offrire tracking in tempo reale e sapere sempre dove si trova il tuo carico. Ogni risposta è basata sui tuoi dati.",
     "integration.crm.button": "Richiedi un preventivo",
+
+    "pushAi.badge": "Smart Push AI",
+    "pushAi.title": "Push intelligente con AI",
+    "pushAi.subtitle": "L’AI incrocia le esigenze del cliente con le offerte disponibili e decide cosa inviare e quando, con messaggi mirati su WhatsApp. Inoltre considera cronologia, momento migliore e livello di interesse per evitare spam e aumentare le conversioni.",
     
     // Team Collaboration Section
     "teamCollaboration.title": "Collaborazione in team",
@@ -748,6 +752,10 @@ const translations = {
     "integration.crm.title": "Custom CRM integration",
     "integration.crm.subtitle": "Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles, pull order history, and trigger workflows based on real-time events. Integrate with your carrier's API to offer real-time tracking and always know where your shipment is. Every reply is grounded in your data.",
     "integration.crm.button": "Request a quote",
+
+    "pushAi.badge": "AI Smart Push",
+    "pushAi.title": "AI‑driven Smart Push",
+    "pushAi.subtitle": "The AI matches customer needs with relevant offers and decides what to send and when, delivering targeted WhatsApp messages. It also learns from past interactions, prioritizes timing, and reduces noise so every message feels personal and useful.",
     
     // Team Collaboration Section
     "teamCollaboration.title": "Team collaboration",
@@ -1234,6 +1242,10 @@ const translations = {
     "integration.crm.title": "Integración CRM personalizada",
     "integration.crm.subtitle": "Conecta tu chatbot a tu CRM y datos externos con acceso API seguro. Sincroniza perfiles de clientes, obtén historial de pedidos y activa flujos de trabajo basados en eventos en tiempo real. Intégrate con la API de tu transportista para ofrecer seguimiento en tiempo real y saber siempre dónde está tu envío. Cada respuesta está fundamentada en tus datos.",
     "integration.crm.button": "Solicita un presupuesto",
+
+    "pushAi.badge": "Push Inteligente IA",
+    "pushAi.title": "Push inteligente con IA",
+    "pushAi.subtitle": "La IA cruza las necesidades del cliente con ofertas relevantes y decide qué enviar y cuándo, con mensajes dirigidos por WhatsApp. Además considera el historial, el mejor momento y el nivel de interés para evitar spam y mejorar conversiones.",
     
     // Team Collaboration Section
     "teamCollaboration.title": "Colaboración en equipo",
@@ -1682,6 +1694,10 @@ const translations = {
     "integration.crm.title": "Integração CRM personalizada",
     "integration.crm.subtitle": "Conecte seu chatbot ao seu CRM e dados externos com acesso API seguro. Sincronize perfis de clientes, obtenha histórico de pedidos e acione fluxos de trabalho baseados em eventos em tempo real. Integre com a API da sua transportadora para oferecer rastreamento em tempo real e sempre saber onde está sua remessa. Cada resposta é fundamentada em seus dados.",
     "integration.crm.button": "Solicite um orçamento",
+
+    "pushAi.badge": "Smart Push IA",
+    "pushAi.title": "Push inteligente com IA",
+    "pushAi.subtitle": "A IA cruza as necessidades do cliente com ofertas relevantes e decide o que enviar e quando, com mensagens direcionadas no WhatsApp. Além disso, considera o histórico, o melhor momento e o nível de interesse para evitar spam e aumentar conversões.",
     
     // Team Collaboration Section
     "teamCollaboration.title": "Colaboração em equipe",

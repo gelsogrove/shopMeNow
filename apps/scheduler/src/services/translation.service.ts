@@ -2,7 +2,7 @@ import {
   SAFETY_TRANSLATION_PROMPT,
   getLanguageName,
   TRANSLATION_LLM_SETTINGS,
-} from '@shared/translation-prompts'
+} from '../../../../shared/translation-prompts'
 import logger from '../utils/logger'
 
 /**

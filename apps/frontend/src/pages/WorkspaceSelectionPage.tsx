@@ -40,7 +40,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { getPayPalConnectUrl, getPayPalStatus, disconnectPayPal, getPayPalConfig, type PayPalStatusResponse, type PayPalConfigResponse } from "@/services/paypalApi"
-import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -184,6 +184,7 @@ export function WorkspaceSelectionPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [debugSavingId, setDebugSavingId] = useState<string | null>(null)
+  const [activeSavingId, setActiveSavingId] = useState<string | null>(null)
 
   // ============================================================================
   // WIZARD HELPERS
@@ -951,14 +952,19 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
 
 
-  const handleToggleStatus = async (id: string) => {
+  const handleToggleStatus = async (
+    id: string,
+    currentValue: boolean,
+    e?: React.MouseEvent
+  ) => {
+    e?.stopPropagation()
+    setActiveSavingId(id)
     try {
-      setIsLoading(true)
       const workspace = workspaces.find((w) => w.id === id)
       if (workspace) {
         const updatedWorkspace = await updateWorkspace(id, {
           id,
-          channelStatus: !workspace.channelStatus,
+          channelStatus: !currentValue,
         })
         const updatedWorkspaces = workspaces.map((w) =>
           w.id === id ? updatedWorkspace : w
@@ -967,8 +973,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       }
     } catch (error) {
       setErrorMessage("Failed to toggle workspace status")
+      toast.error("Failed to update active status")
     } finally {
-      setIsLoading(false)
+      setActiveSavingId(null)
     }
   }
 
@@ -1428,13 +1435,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               {workspaces.map((workspace) => {
                 const checklist = checklists[workspace.id]
                 const isChecklistLoading = checklistLoading[workspace.id]
+                const channelActive = workspace.channelStatus ?? true
+                const debugModeEnabled = Boolean(workspace.debugMode)
                 return (
                   <div
                     key={workspace.id}
                     className={`rounded-xl border overflow-hidden cursor-pointer transition-all flex flex-col min-h-[200px] ${
                       justCreatedId === workspace.id ? "ring-2 ring-green-500" : ""
                     } ${
-                      workspace.channelStatus
+                      channelActive
                         ? "bg-white border-gray-200 hover:shadow-lg hover:border-gray-300"
                         : "bg-gray-50 border-gray-300 opacity-75"
                     }`}
@@ -1469,7 +1478,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </button>
                     
                     {/* Disabled Badge */}
-                    {!workspace.channelStatus && (
+                    {!channelActive && (
                       <span className="absolute -bottom-3 left-4 text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-200">
                         Disabled
                       </span>
@@ -1492,7 +1501,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           />
                         ) : (
                           <div className={`h-14 w-14 rounded-full flex items-center justify-center text-white font-bold text-xl ${
-                            workspace.channelStatus ? "bg-green-500" : "bg-gray-400"
+                            channelActive ? "bg-green-500" : "bg-gray-400"
                           }`}>
                             {workspace.name.charAt(0).toUpperCase()}
                           </div>
@@ -1589,7 +1598,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     )}
                     </div>
                     
-                    {/* Bottom Row: Checklist + Debug - ALWAYS at bottom */}
+                    {/* Bottom Row: Checklist + Toggles - ALWAYS at bottom */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-3">
                       {/* Checklist - Clickable entire area */}
                       <div
@@ -1608,22 +1617,60 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         )}
                       </div>
                       
-                      {/* Debug Mode Toggle - ON/OFF Style */}
+                      {/* Debug + Active Toggles */}
                       {isSuperAdmin && (
-                        <button
-                          onClick={(e) => handleToggleDebugMode(workspace.id, Boolean(workspace.debugMode), e)}
-                          disabled={isRoleLoading || debugSavingId === workspace.id}
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                            workspace.debugMode
-                              ? "bg-green-500 text-white shadow-sm"
-                              : "bg-gray-300 text-gray-600"
-                          } disabled:opacity-50 hover:scale-105`}
-                        >
-                          <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                            workspace.debugMode ? "translate-x-0" : "-translate-x-0.5"
-                          }`}></div>
-                          <span>{workspace.debugMode ? "ON" : "OFF"}</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleDebugMode(workspace.id, debugModeEnabled, e)}
+                            disabled={isRoleLoading || debugSavingId === workspace.id}
+                            aria-pressed={debugModeEnabled}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
+                              debugModeEnabled
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                : "border-gray-200 bg-gray-100 text-gray-600"
+                            } disabled:opacity-50`}
+                          >
+                            <span>Debug</span>
+                            <span
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                debugModeEnabled ? "bg-emerald-500" : "bg-gray-300"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                                  debugModeEnabled ? "translate-x-4" : "translate-x-1"
+                                }`}
+                              />
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleStatus(workspace.id, channelActive, e)}
+                            disabled={isRoleLoading || activeSavingId === workspace.id}
+                            aria-pressed={channelActive}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
+                              channelActive
+                                ? "border-green-200 bg-green-50 text-green-700"
+                                : "border-gray-200 bg-gray-100 text-gray-600"
+                            } disabled:opacity-50`}
+                          >
+                            <Power className="h-3.5 w-3.5" />
+                            <span>Active</span>
+                            <span
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                channelActive ? "bg-green-500" : "bg-gray-300"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                                  channelActive ? "translate-x-4" : "translate-x-1"
+                                }`}
+                              />
+                            </span>
+                          </button>
+                        </div>
                       )}
                     </div>
                     

@@ -30,7 +30,6 @@ import {
   MapPin,
   Phone,
   Bot,
-  Megaphone,
   Headphones,
   Loader2,
   Eye,
@@ -105,6 +104,27 @@ const getPlanPriorityValue = (planType?: string | null) => {
   const normalized = planType as PlanType
   return PLAN_PRIORITY[normalized] ?? -1
 }
+
+type HomeSideImageProps = {
+  align?: "left" | "right"
+  hideOnMobile?: boolean
+}
+
+const HomeSideImage = ({ align = "left", hideOnMobile = false }: HomeSideImageProps) => (
+  <div
+    className={`flex flex-col items-center ${align === "left" ? "lg:items-start" : "lg:items-end"} ${hideOnMobile ? "hidden lg:flex" : ""}`}
+  >
+    <div className="relative">
+      <div className="w-44 h-44 sm:w-52 sm:h-52 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white">
+        <img
+          src="/human.png"
+          alt="Human support"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    </div>
+  </div>
+)
 
 export function LoginPage() {
   const { t, language, setLanguage } = useLanguage()
@@ -1981,6 +2001,44 @@ export function LoginPage() {
       {/* FAQ Section */}
       <HomeFAQ />
 
+      {/* AI Push Section */}
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+              <div className="grid grid-cols-1 lg:grid-cols-[220px,1fr,220px] gap-10 items-start">
+                <HomeSideImage align="left" />
+
+                <div className="space-y-6 text-center lg:text-left">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <span>🚀</span>
+                      {t("pushAi.badge")}
+                    </div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                      {t("pushAi.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                      {t("pushAi.subtitle")}
+                    </p>
+                  </div>
+                </div>
+
+                <HomeSideImage align="right" hideOnMobile />
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
       {/* Contact Section (Demo highlight) */}
       <div id="demo" className="py-20 bg-gradient-to-b from-slate-50 to-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -2001,24 +2059,10 @@ export function LoginPage() {
                 </div>
               )}
               
-              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
-                {/* Left: Image with badge */}
-                <div className="flex flex-col items-center lg:items-start gap-4">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl">
-                      <img
-                        src="/demo.png"
-                        alt="Demo Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
-                      Live
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Right: Content */}
+              <div className="grid grid-cols-1 lg:grid-cols-[220px,1fr,220px] gap-10 items-start">
+                <HomeSideImage align="left" />
+
+                {/* Content */}
                 <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
@@ -2051,6 +2095,8 @@ export function LoginPage() {
                     </Button>
                   </div>
                 </div>
+
+                <HomeSideImage align="right" hideOnMobile />
               </div>
             </div>
           </motion.div>
@@ -2070,18 +2116,8 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
 
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
-                <div className="flex flex-col items-center lg:items-start gap-4">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-amber-100 transition-all duration-300">
-                      <img
-                        src="/human.png"
-                        alt="Human-in-the-loop support"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-[220px,1fr,220px] gap-10 items-start">
+                <HomeSideImage align="left" />
 
                 <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
@@ -2097,6 +2133,8 @@ export function LoginPage() {
                     </p>
                   </div>
                 </div>
+
+                <HomeSideImage align="right" hideOnMobile />
               </div>
             </div>
           </motion.div>
@@ -2180,8 +2218,10 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-3xl rotate-0 sm:-rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:-rotate-2 transition-transform duration-500"></div>
             
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
-                {/* Left: Content */}
+              <div className="grid grid-cols-1 lg:grid-cols-[220px,1fr,220px] gap-10 items-start">
+                <HomeSideImage align="left" />
+
+                {/* Content */}
                 <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
@@ -2197,18 +2237,7 @@ export function LoginPage() {
                   </div>
                 </div>
 
-                {/* Right: Image with effects */}
-                <div className="flex flex-col items-center lg:items-end">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300">
-                      <img
-                        src="/human.png"
-                        alt="Team collaboration"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <HomeSideImage align="right" hideOnMobile />
               </div>
             </div>
           </motion.div>
@@ -2229,21 +2258,10 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
-                {/* Left: Image with security badge */}
-                <div className="flex flex-col items-center lg:items-start gap-4">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-teal-100 transition-all duration-300">
-                      <img
-                        src="/privacy.png"
-                        alt="Privacy by design"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    </div>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 lg:grid-cols-[220px,1fr,220px] gap-10 items-start">
+                <HomeSideImage align="left" />
                 
-                {/* Right: Content */}
+                {/* Content */}
                 <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
@@ -2269,6 +2287,8 @@ export function LoginPage() {
                     </Button>
                   </div>
                 </div>
+
+                <HomeSideImage align="right" hideOnMobile />
               </div>
             </div>
           </motion.div>
