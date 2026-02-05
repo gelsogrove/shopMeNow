@@ -43,6 +43,18 @@ export interface WhatsAppProvider {
   ): Promise<WhatsAppSendMessageResult>
 
   /**
+   * Send interactive message (Meta Business API only)
+   * Optional - not all providers support interactive payloads
+   */
+  sendInteractiveMessage?(
+    to: string,
+    message: {
+      type: "interactive"
+      interactive: Record<string, unknown>
+    }
+  ): Promise<WhatsAppSendMessageResult>
+
+  /**
    * Get provider name for logging/debugging
    */
   getProviderName(): string

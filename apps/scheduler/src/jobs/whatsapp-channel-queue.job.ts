@@ -5,6 +5,7 @@ import { BillingService } from '../services/billing.service'
 import { getWorkspaceWhatsAppConfig, WorkspaceWhatsAppConfig } from '../services/whatsapp-config.service'
 import { whatsAppInteractiveConverter, WhatsAppMessage } from '../services/whatsapp-interactive-converter.service'
 import { WhatsAppProviderFactory } from '../services/whatsapp/whatsapp-provider.factory'
+import { formatForWhatsApp } from '../utils/whatsapp-formatter'
 
 const MAX_DEBUG_STEPS = 50
 const RECIPIENT_COOLDOWN_MS = 6000 // WhatsApp limit ~1 msg / 6s per recipient
@@ -126,6 +127,119 @@ async function isWipConversationMessage(conversationMessageId: string | null | u
   }
 }
 
+function buildNumberedList(items: string[]): string {
+  if (!items.length) return ""
+  return items.map((item, index) => `${index + 1}. ${item}`).join("\n")
+}
+
+function extractInteractiveFallbackText(message: WhatsAppMessage): string {
+  if (message.type !== "interactive") return ""
+
+  const bodyText = (message as any)?.interactive?.body?.text || ""
+  const interactiveType = (message as any)?.interactive?.type
+
+  if (interactiveType === "button") {
+    const buttons =
+      (message as any)?.interactive?.action?.buttons
+        ?.map((button: any) => button?.reply?.title)
+        ?.filter(Boolean) || []
+    const listText = buildNumberedList(buttons)
+    return [bodyText, listText].filter(Boolean).join("\n").trim()
+  }
+
+  if (interactiveType === "list") {
+    const sections = (message as any)?.interactive?.action?.sections || []
+    const rows = sections.flatMap((section: any) =>
+      (section?.rows || []).map((row: any) => row?.title).filter(Boolean)
+    )
+    const listText = buildNumberedList(rows)
+    return [bodyText, listText].filter(Boolean).join("\n").trim()
+  }
+
+  if (interactiveType === "cta_url") {
+    const url = (message as any)?.interactive?.action?.parameters?.url
+    return [bodyText, url].filter(Boolean).join("\n").trim()
+  }
+
+  return bodyText
+}
+
+function extractPlainTextFromMessage(message: WhatsAppMessage): string {
+  if (!message) return ""
+
+  if (message.type === "text") {
+    return (message as any)?.text?.body || ""
+  }
+
+  if (message.type === "image") {
+    const caption = (message as any)?.image?.caption
+    const link = (message as any)?.image?.link
+    return caption || link || ""
+  }
+
+  if (message.type === "interactive") {
+    return extractInteractiveFallbackText(message)
+  }
+
+  return ""
+}
+
+async function sendMetaPayload({
+  provider,
+  to,
+  payload,
+  fallbackText,
+  workspaceId,
+}: {
+  provider: any
+  to: string
+  payload: WhatsAppMessage | WhatsAppMessage[]
+  fallbackText: string
+  workspaceId: string
+}): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  const sendSingle = async (message: WhatsAppMessage) => {
+    if (message.type === "text") {
+      return provider.sendTextMessage(to, (message as any)?.text?.body || "")
+    }
+
+    if (message.type === "image") {
+      const image = (message as any)?.image
+      return provider.sendMediaMessage(to, image?.link, image?.caption, "image")
+    }
+
+    if (message.type === "interactive") {
+      if (typeof provider.sendInteractiveMessage === "function") {
+        return provider.sendInteractiveMessage(to, message as any)
+      }
+
+      const fallback = fallbackText || extractInteractiveFallbackText(message)
+      logger.warn("[WhatsApp Queue] Meta interactive message fallback to text", {
+        workspaceId,
+      })
+      return provider.sendTextMessage(to, fallback || "Message")
+    }
+
+    return provider.sendTextMessage(to, fallbackText || "Message")
+  }
+
+  if (Array.isArray(payload)) {
+    for (let i = 0; i < payload.length; i++) {
+      const result = await sendSingle(payload[i] as WhatsAppMessage)
+      if (!result.success) {
+        return result
+      }
+
+      if (i < payload.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      }
+    }
+
+    return { success: true }
+  }
+
+  return await sendSingle(payload)
+}
+
 interface WhatsAppSendParams {
   workspaceId: string
   to: string
@@ -167,81 +281,63 @@ async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ succes
       to,
     })
 
-    // Send text message
-    if (typeof message === 'string') {
-      const result = await provider.sendTextMessage(to, message)
+    const providerKey = workspace.whatsappProvider || "meta"
+    const baseText =
+      typeof message === "string"
+        ? message
+        : extractPlainTextFromMessage(message as WhatsAppMessage)
+    const formattedText = formatForWhatsApp(baseText)
+
+    // UltraMsg: always send plain text (no interactive conversion)
+    if (providerKey === "ultramsg") {
+      const result = await provider.sendTextMessage(to, formattedText)
 
       if (result.success) {
-        logger.info('[WhatsApp Queue] ✅ Message sent successfully', {
+        logger.info("[WhatsApp Queue] ✅ Message sent successfully", {
           workspaceId,
           provider: providerName,
           messageId: result.messageId,
         })
         return { success: true, messageId: result.messageId }
-      } else {
-        logger.error('[WhatsApp Queue] ❌ Failed to send message', {
-          workspaceId,
-          provider: providerName,
-          error: result.error,
-        })
-        return { success: false, error: result.error }
-      }
-    }
-
-    // Handle interactive messages (Meta-only feature)
-    // For UltraMsg, convert interactive to plain text
-    if (workspace.whatsappProvider === 'ultramsg') {
-      logger.warn('[WhatsApp Queue] Interactive messages not supported by UltraMsg - converting to text', {
-        workspaceId,
-      })
-
-      // Extract text from interactive message
-      const textContent = typeof message === 'object' && 'text' in message 
-        ? (message as any).text?.body || 'Message'
-        : 'Message'
-
-      const result = await provider.sendTextMessage(to, textContent)
-      return { success: result.success, messageId: result.messageId, error: result.error }
-    }
-
-    // Meta provider - handle interactive messages (arrays of messages)
-    const whatsAppPayload = whatsAppInteractiveConverter.convert(message as any)
-
-    if (Array.isArray(whatsAppPayload)) {
-      logger.info('[WhatsApp Queue] Sending multiple messages (interactive + media)', {
-        count: whatsAppPayload.length,
-        workspaceId,
-      })
-
-      // Send each message sequentially
-      for (let i = 0; i < whatsAppPayload.length; i++) {
-        const payload = whatsAppPayload[i] as any
-        
-        // TODO: Meta provider should handle complex payloads
-        // For now, extract text
-        const textContent = payload.text?.body || 'Message'
-        const result = await provider.sendTextMessage(to, textContent)
-
-        if (!result.success) {
-          logger.error(`[WhatsApp Queue] Failed to send message ${i + 1}/${whatsAppPayload.length}`, {
-            error: result.error,
-          })
-          return result
-        }
-
-        // Small delay between messages
-        if (i < whatsAppPayload.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 200))
-        }
       }
 
-      return { success: true }
+      logger.error("[WhatsApp Queue] ❌ Failed to send message", {
+        workspaceId,
+        provider: providerName,
+        error: result.error,
+      })
+      return { success: false, error: result.error }
     }
 
-    // Single interactive message
-    const textContent = (whatsAppPayload as any).text?.body || 'Message'
-    const result = await provider.sendTextMessage(to, textContent)
-    return { success: result.success, messageId: result.messageId, error: result.error }
+    // Meta provider: enable interactive conversion
+    const whatsAppPayload =
+      typeof message === "string"
+        ? whatsAppInteractiveConverter.convert(formattedText)
+        : (message as WhatsAppMessage)
+
+    const result = await sendMetaPayload({
+      provider,
+      to,
+      payload: whatsAppPayload,
+      fallbackText: formattedText,
+      workspaceId,
+    })
+
+    if (result.success) {
+      logger.info("[WhatsApp Queue] ✅ Message sent successfully", {
+        workspaceId,
+        provider: providerName,
+        messageId: result.messageId,
+      })
+      return { success: true, messageId: result.messageId }
+    }
+
+    logger.error("[WhatsApp Queue] ❌ Failed to send message", {
+      workspaceId,
+      provider: providerName,
+      error: result.error,
+    })
+    return { success: false, error: result.error }
 
   } catch (error: any) {
     logger.error('[WhatsApp Queue] Error sending via provider:', error)

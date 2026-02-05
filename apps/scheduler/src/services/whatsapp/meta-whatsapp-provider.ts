@@ -163,6 +163,65 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
   }
 
   /**
+   * Send interactive message via Meta Business API
+   */
+  async sendInteractiveMessage(
+    to: string,
+    message: { type: 'interactive'; interactive: Record<string, unknown> }
+  ): Promise<WhatsAppSendMessageResult> {
+    try {
+      const formattedPhone = to.replace(/[\s+]/g, '')
+
+      const url = `${this.baseUrl}/${this.config.phoneNumberId}/messages`
+
+      logger.info('📤 Meta: Sending interactive message', {
+        to: formattedPhone,
+        interactiveType: (message as any)?.interactive?.type,
+      })
+
+      const response = await axios.post(
+        url,
+        {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: formattedPhone,
+          type: 'interactive',
+          interactive: message.interactive,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.config.accessToken}`,
+          },
+          timeout: 30000,
+        }
+      )
+
+      logger.info('✅ Meta: Interactive message sent successfully', {
+        to: formattedPhone,
+        messageId: response.data.messages?.[0]?.id,
+      })
+
+      return {
+        messageId: response.data.messages?.[0]?.id || `meta-${Date.now()}`,
+        success: true,
+      }
+    } catch (error: any) {
+      logger.error('❌ Meta: Failed to send interactive message', {
+        to,
+        error: error.message,
+        response: error.response?.data,
+      })
+
+      return {
+        messageId: '',
+        success: false,
+        error: error.response?.data?.error?.message || error.message,
+      }
+    }
+  }
+
+  /**
    * Send template message (Meta Business API only)
    */
   async sendTemplateMessage(
