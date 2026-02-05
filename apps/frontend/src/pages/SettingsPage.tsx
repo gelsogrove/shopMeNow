@@ -102,6 +102,9 @@ interface FormData {
   whatsappBusinessAccountId: string
   whatsappWebhookId?: string
   whatsappWebhookUrl?: string
+  whatsappProvider?: string
+  ultraMsgInstanceId?: string
+  ultraMsgToken?: string
   widgetTitle: string
   widgetPrimaryColor: string
   widgetLanguage: string
@@ -183,6 +186,9 @@ export function SettingsPage() {
     whatsappBusinessAccountId: "",
     whatsappWebhookId: undefined,
     whatsappWebhookUrl: undefined,
+    whatsappProvider: "meta",
+    ultraMsgInstanceId: "",
+    ultraMsgToken: "",
     widgetTitle: "Chat with us",
     widgetPrimaryColor: "#22c55e",
     widgetLanguage: "it",
@@ -231,6 +237,9 @@ export function SettingsPage() {
         whatsappBusinessAccountId: currentWorkspace.whatsappBusinessAccountId || "",
         whatsappWebhookId: currentWorkspace.whatsappWebhookId,
         whatsappWebhookUrl: currentWorkspace.whatsappWebhookUrl,
+        whatsappProvider: currentWorkspace.whatsappProvider || "meta",
+        ultraMsgInstanceId: currentWorkspace.ultraMsgInstanceId || "",
+        ultraMsgToken: currentWorkspace.ultraMsgToken || "",
         widgetTitle: currentWorkspace.widgetTitle || "Chat with us",
         widgetPrimaryColor: currentWorkspace.widgetPrimaryColor || "#22c55e",
         widgetLanguage: currentWorkspace.widgetLanguage || "it",

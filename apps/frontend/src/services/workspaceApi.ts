@@ -26,6 +26,9 @@ export interface Workspace {
   whatsappWebhookToken?: string
   whatsappWebhookUrl?: string
   whatsappBusinessAccountId?: string
+  whatsappProvider?: string
+  ultraMsgInstanceId?: string
+  ultraMsgToken?: string
   adminEmail?: string
   debugMode?: boolean
   welcomeMessage?: string

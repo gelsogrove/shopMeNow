@@ -24,6 +24,9 @@ interface WhatsAppChannelSectionProps {
     whatsappBusinessAccountId: string
     whatsappWebhookId?: string
     whatsappWebhookUrl?: string
+    whatsappProvider?: string
+    ultraMsgInstanceId?: string
+    ultraMsgToken?: string
   }
   enableWidget?: boolean
   errors: Record<string, string>
@@ -44,9 +47,17 @@ export function WhatsAppChannelSection({
   onFieldChange,
   onFieldFocus,
 }: WhatsAppChannelSectionProps) {
-  const webhookDisplayUrl =
+  const currentProvider = formData.whatsappProvider || "meta"
+  
+  const metaWebhookUrl =
     formData.whatsappWebhookUrl ||
     `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/webhook/${formData.whatsappWebhookId || ""}`
+  
+  const ultraMsgWebhookUrl = formData.whatsappWebhookId
+    ? `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/ultramsg/${formData.whatsappWebhookId}`
+    : ""
+
+  const webhookDisplayUrl = currentProvider === "ultramsg" ? ultraMsgWebhookUrl : metaWebhookUrl
 
   const handleCopy = async (text?: string) => {
     if (!text) {
@@ -108,36 +119,69 @@ export function WhatsAppChannelSection({
           ) : (
             <>
             <div className="space-y-4">
-            <div
-              className="space-y-2"
-              onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
-              data-focus-key="whatsappAccess"
-            >
-              <Label htmlFor="whatsappAppName">AppName(meta)</Label>
-              <Input
-                id="whatsappAppName"
-                value={formData.whatsappAppName}
-                onChange={(e) => onFieldChange("whatsappAppName", e.target.value)}
-                placeholder="Meta app name"
-                disabled={!canEdit}
-              />
+            {/* Provider Selection */}
+            <div className="space-y-3">
+              <Label>WhatsApp Provider</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => onFieldChange("whatsappProvider", "meta")}
+                  disabled={!canEdit}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    currentProvider === "meta"
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className="font-semibold">Meta Business API</div>
+                  <div className="text-xs text-gray-500 mt-1">Official WhatsApp API</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onFieldChange("whatsappProvider", "ultramsg")}
+                  disabled={!canEdit}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    currentProvider === "ultramsg"
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className="font-semibold">UltraMsg</div>
+                  <div className="text-xs text-gray-500 mt-1">Alternative provider</div>
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="whatsappApiKey">Access Token</Label>
-              <Input
-                id="whatsappApiKey"
-                type="password"
-                value={formData.whatsappApiKey}
-                onChange={(e) => onFieldChange("whatsappApiKey", e.target.value)}
-                placeholder="Paste access token"
-                disabled={!canEdit}
-              />
-            </div>
-
-            {/* Phone Number - Visible only when WhatsApp is enabled */}
-            {formData.enableWhatsapp && (
+            {/* Meta Provider Fields */}
+            {currentProvider === "meta" && (
               <>
+                <div
+                  className="space-y-2"
+                  onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
+                  data-focus-key="whatsappAccess"
+                >
+                  <Label htmlFor="whatsappAppName">AppName(meta)</Label>
+                  <Input
+                    id="whatsappAppName"
+                    value={formData.whatsappAppName}
+                    onChange={(e) => onFieldChange("whatsappAppName", e.target.value)}
+                    placeholder="Meta app name"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappApiKey">Access Token</Label>
+                  <Input
+                    id="whatsappApiKey"
+                    type="password"
+                    value={formData.whatsappApiKey}
+                    onChange={(e) => onFieldChange("whatsappApiKey", e.target.value)}
+                    placeholder="Paste access token"
+                    disabled={!canEdit}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="whatsappPhoneNumber">Tel:</Label>
                   <Input
@@ -159,20 +203,60 @@ export function WhatsAppChannelSection({
                     disabled={!canEdit}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
+                  <Input
+                    id="whatsappBusinessAccountId"
+                    value={formData.whatsappBusinessAccountId}
+                    onChange={(e) => onFieldChange("whatsappBusinessAccountId", e.target.value)}
+                    placeholder="123456789012345"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappVerifyToken">Verify token</Label>
+                  <Input
+                    id="whatsappVerifyToken"
+                    value={formData.whatsappVerifyToken}
+                    onChange={(e) => onFieldChange("whatsappVerifyToken", e.target.value)}
+                    placeholder="mySecureToken123"
+                    disabled={!canEdit}
+                  />
+                </div>
               </>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="whatsappBusinessAccountId">WhatsApp Business Account ID</Label>
-              <Input
-                id="whatsappBusinessAccountId"
-                value={formData.whatsappBusinessAccountId}
-                onChange={(e) => onFieldChange("whatsappBusinessAccountId", e.target.value)}
-                placeholder="123456789012345"
-                disabled={!canEdit}
-              />
-            </div>
+            {/* UltraMsg Provider Fields */}
+            {currentProvider === "ultramsg" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="ultraMsgInstanceId">Instance ID</Label>
+                  <Input
+                    id="ultraMsgInstanceId"
+                    value={formData.ultraMsgInstanceId || ""}
+                    onChange={(e) => onFieldChange("ultraMsgInstanceId", e.target.value)}
+                    placeholder="instance12345"
+                    disabled={!canEdit}
+                  />
+                </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="ultraMsgToken">API Token</Label>
+                  <Input
+                    id="ultraMsgToken"
+                    type="password"
+                    value={formData.ultraMsgToken || ""}
+                    onChange={(e) => onFieldChange("ultraMsgToken", e.target.value)}
+                    placeholder="Paste UltraMsg API token"
+                    disabled={!canEdit}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Webhook URL - Common for both providers */}
             <div className="space-y-2">
               <Label>Callback URL</Label>
               <div className="flex gap-2 items-center">
@@ -189,17 +273,6 @@ export function WhatsAppChannelSection({
                   Copy
                 </Button>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="whatsappVerifyToken">Verify token</Label>
-              <Input
-                id="whatsappVerifyToken"
-                value={formData.whatsappVerifyToken}
-                onChange={(e) => onFieldChange("whatsappVerifyToken", e.target.value)}
-                placeholder="mySecureToken123"
-                disabled={!canEdit}
-              />
             </div>
 
             </div>
