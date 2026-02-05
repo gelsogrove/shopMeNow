@@ -178,7 +178,6 @@ For privacy inquiries, please contact our support team.`
       whatsappAppSecret: (w as any).whatsappSettings?.appSecret ?? null,
       whatsappPhoneNumberId: (w as any).whatsappPhoneNumberId ?? undefined,
       whatsappVerifyToken: (w as any).whatsappVerifyToken ?? undefined,
-      whatsappWebhookId: (w as any).whatsappSettings?.webhookId ?? null,
       whatsappWebhookToken: (w as any).whatsappSettings?.webhookToken ?? null,
       whatsappBusinessAccountId: (w as any).whatsappSettings?.businessAccountId ?? null,
       webhookUrl: w.webhookUrl ?? undefined,

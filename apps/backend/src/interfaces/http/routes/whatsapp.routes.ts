@@ -13,7 +13,7 @@ import { verifyMetaWebhookCertificate } from "../middlewares/mtls-verification.m
  * Endpoints:
  * - GET  /api/whatsapp/webhook/:webhookId       → Meta verification (no auth)
  * - POST /api/whatsapp/webhook/:webhookId       → Receive messages from Meta (no auth, HMAC signature)
- * - POST /api/whatsapp/ultramsg/:workspaceId    → Receive messages from UltraMsg (no auth)
+ * - POST /api/whatsapp/ultramsg/:webhookId      → Receive messages from UltraMsg (no auth)
  * - POST /api/whatsapp/send                     → Send messages (auth required)
  *
  * Security:
@@ -203,7 +203,7 @@ router.post(
 
 /**
  * @swagger
- * /api/whatsapp/ultramsg/{workspaceId}:
+ * /api/whatsapp/ultramsg/{webhookId}:
  *   post:
  *     summary: UltraMsg webhook endpoint
  *     description: Receives messages from UltraMsg and processes them through the LLM router
@@ -211,11 +211,11 @@ router.post(
  *     security: []  # No JWT auth
  *     parameters:
  *       - in: path
- *         name: workspaceId
+ *         name: webhookId
  *         required: true
  *         schema:
  *           type: string
- *         description: The workspace ID configured in UltraMsg
+ *         description: The webhook ID (UUID) configured in UltraMsg
  *     requestBody:
  *       required: true
  *       content:
@@ -247,7 +247,7 @@ router.post(
  *         description: Workspace not found
  */
 router.post(
-  "/ultramsg/:workspaceId",
+  "/ultramsg/:webhookId",
   whatsappRateLimitMiddleware,
   ultraMsgWebhookController.handleWebhook.bind(ultraMsgWebhookController)
 )

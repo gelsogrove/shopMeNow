@@ -30,7 +30,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       whatsappVerifyToken:
         data.whatsappSettings?.webhookToken ?? data.whatsappVerifyToken ?? null,
       whatsappAppSecret: data.whatsappSettings?.appSecret ?? null,
-      whatsappWebhookId: data.whatsappSettings?.webhookId ?? null,
       whatsappWebhookToken: data.whatsappSettings?.webhookToken ?? null,
       whatsappWebhookUrl:
         data.whatsappSettings?.webhookUrl ??

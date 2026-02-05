@@ -115,7 +115,6 @@ const getCurrentWorkspace: RequestHandler = async (req, res): Promise<void> => {
       ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
       ultraMsgToken: workspace.ultraMsgToken ?? null,
       webhookUrl: workspace.webhookUrl,
-      whatsappWebhookId: workspace.whatsappWebhookId ?? null,
       whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
       whatsappWebhookUrl: workspace.whatsappWebhookUrl ?? null,
       notificationEmail: workspace.notificationEmail,

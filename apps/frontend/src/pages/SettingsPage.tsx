@@ -421,9 +421,28 @@ export function SettingsPage() {
 
       const updatedWorkspace = await updateWorkspace(currentWorkspace!.id, updateData)
 
+      console.log("🐞 [SettingsPage] BEFORE UPDATE:", {
+        provider: currentWorkspace!.whatsappProvider,
+        ultraMsgInstanceId: currentWorkspace!.ultraMsgInstanceId,
+      })
+      console.log("🐞 [SettingsPage] UPDATE DATA SENT:", {
+        provider: updateData.whatsappProvider,
+        ultraMsgInstanceId: updateData.ultraMsgInstanceId,
+      })
+      console.log("🐞 [SettingsPage] RESPONSE RECEIVED:", {
+        provider: updatedWorkspace.whatsappProvider,
+        ultraMsgInstanceId: updatedWorkspace.ultraMsgInstanceId,
+        allFields: Object.keys(updatedWorkspace),
+      })
+
       setCurrentWorkspace({
         ...currentWorkspace!,
         ...updatedWorkspace,
+      })
+      
+      console.log("🐞 [SettingsPage] AFTER MERGE:", {
+        provider: {...currentWorkspace!, ...updatedWorkspace}.whatsappProvider,
+        ultraMsgInstanceId: {...currentWorkspace!, ...updatedWorkspace}.ultraMsgInstanceId,
       })
 
       setIsDirty(false)

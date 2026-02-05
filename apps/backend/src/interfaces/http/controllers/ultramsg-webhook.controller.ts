@@ -4,7 +4,7 @@
  * Handles incoming webhooks from UltraMsg
  * Normalizes messages to internal format and processes them
  * 
- * Webhook URL format: POST /api/v1/whatsapp/ultramsg/:workspaceId
+ * Webhook URL format: POST /api/v1/whatsapp/ultramsg/:webhookId
  * 
  * UltraMsg webhook payload format:
  * {
@@ -56,7 +56,7 @@ const customerMessageLocks = new Map<string, Promise<void>>()
 export class UltraMsgWebhookController {
   /**
    * Handle incoming webhook from UltraMsg
-   * POST /api/v1/whatsapp/ultramsg/:workspaceId
+   * POST /api/v1/whatsapp/ultramsg/:webhookId
    * 
    * FLOW (IDENTICAL TO META):
    * 1. Extract phone for locking
@@ -64,7 +64,7 @@ export class UltraMsgWebhookController {
    * 3. Process message with lock held
    */
   async handleWebhook(req: Request, res: Response): Promise<Response> {
-    const { workspaceId } = req.params
+    const { webhookId } = req.params
 
     // 🔒 STEP 0: Extract phone number FIRST for locking (before any processing)
     let phoneNumberForLock: string | undefined
@@ -115,11 +115,12 @@ export class UltraMsgWebhookController {
    * THIS IS THE CORE LOGIC - COPIED EXACTLY FROM META WEBHOOK
    */
   private async _handleWebhookLocked(req: Request, res: Response): Promise<Response> {
-    const { workspaceId } = req.params
+    const { webhookId } = req.params
     const { id, from, to, body, type, timestamp } = req.body
+    let workspaceId: string | undefined  // Declare at function scope
 
     logger.info('📥 UltraMsg Webhook received', {
-      workspaceId,
+      webhookId,
       messageId: id,
       from,
       type,
@@ -127,30 +128,44 @@ export class UltraMsgWebhookController {
     })
 
     try {
-      // 1. Validate workspace exists and uses UltraMsg
-      const workspace = await prisma.workspace.findFirst({
-        where: {
-          id: workspaceId,
-          deletedAt: null,
-        },
+      // 1. Find workspace via webhookId (same pattern as Meta)
+      const settings = await prisma.whatsappSettings.findUnique({
+        where: { webhookId },
         select: {
-          id: true,
-          name: true,
-          welcomeMessage: true,
-          defaultLanguage: true,
-          channelStatus: true,
-          debugMode: true,
-          wipMessage: true,
-          ownerId: true,
-          owner: {
-            select: { status: true }
+          workspaceId: true,
+          workspace: {
+            select: {
+              id: true,
+              name: true,
+              welcomeMessage: true,
+              defaultLanguage: true,
+              channelStatus: true,
+              debugMode: true,
+              wipMessage: true,
+              whatsappProvider: true,
+              ultraMsgInstanceId: true,
+              ultraMsgToken: true,
+              ownerId: true,
+              owner: {
+                select: { status: true }
+              }
+            }
           }
         }
-      }) as any
+      })
+
+      if (!settings || !settings.workspace) {
+        logger.error('[ULTRAMSG] ❌ Webhook not found', { webhookId })
+        return res.status(404).json({ error: 'Webhook not found' })
+      }
+
+      const workspace = settings.workspace as any
+      workspaceId = workspace.id  // Extract workspaceId from workspace
 
       if (!workspace || workspace.whatsappProvider !== 'ultramsg') {
         logger.warn('⚠️ UltraMsg Webhook: Workspace not found or not using UltraMsg', {
-          workspaceId,
+          webhookId,
+          workspaceId: workspace?.id,
           provider: workspace?.whatsappProvider,
         })
         return res.status(404).json({

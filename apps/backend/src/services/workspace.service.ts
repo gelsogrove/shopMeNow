@@ -498,6 +498,14 @@ export const workspaceService = {
         description: true,
         whatsappPhoneNumber: true,
         whatsappApiKey: true,
+        whatsappPhoneNumberId: true,
+        whatsappVerifyToken: true,
+        webhookUrl: true,  // 🆕 Webhook URL
+        whatsappProvider: true, // 🆕 Multi-provider support
+        metaPhoneNumberId: true, // 🆕 Meta provider
+        metaAccessToken: true, // 🆕 Meta provider  
+        ultraMsgInstanceId: true, // 🆕 UltraMsg provider
+        ultraMsgToken: true, // 🆕 UltraMsg provider
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
@@ -507,7 +515,6 @@ export const workspaceService = {
         channelStatus: true,
         debugMode: true, // 🐞 Debug mode toggle
         wipMessage: true,
-        // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
         allowedExternalLinks: true, // 🛡️ Security

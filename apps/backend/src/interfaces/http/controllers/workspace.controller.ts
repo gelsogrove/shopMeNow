@@ -57,7 +57,6 @@ export class WorkspaceController {
         whatsappBusinessAccountId: workspace.whatsappBusinessAccountId,
         whatsappVerifyToken: workspace.whatsappVerifyToken,
         webhookUrl: workspace.webhookUrl,
-        whatsappWebhookId: workspace.whatsappWebhookId ?? null,
         whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
@@ -147,7 +146,6 @@ export class WorkspaceController {
           whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
           whatsappVerifyToken: workspace.whatsappVerifyToken,
           webhookUrl: workspace.webhookUrl,
-          whatsappWebhookId: workspace.whatsappWebhookId ?? null,
           whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
           whatsappBusinessAccountId: workspace.whatsappBusinessAccountId ?? null,
           whatsappProvider: workspace.whatsappProvider ?? "meta",
@@ -375,6 +373,12 @@ export class WorkspaceController {
         )}`
       )
 
+      // 🔍 LOG SPECIFICO per whatsappProvider (UltraMsg)
+      logger.info("=== WHATSAPP PROVIDER DEBUG ===")
+      logger.info("whatsappProvider:", workspaceData.whatsappProvider || "NOT SET")
+      logger.info("ultraMsgInstanceId:", workspaceData.ultraMsgInstanceId || "NOT SET")
+      logger.info("ultraMsgToken:", workspaceData.ultraMsgToken ? "***SET***" : "NOT SET")
+      
       // 🔍 LOG SPECIFICO per whatsappApiKey
       logger.info("=== WHATSAPP API KEY DEBUG ===")
       logger.info(
@@ -400,6 +404,12 @@ export class WorkspaceController {
       logger.info("operatorContactMethod nel body:", workspaceData.operatorContactMethod)
 
       const workspace = await this.workspaceService.update(id, workspaceData)
+      
+      // 🐞 DEBUG: Log what service returned
+      logger.info("=== SERVICE RESPONSE DEBUG ===")
+      logger.info("whatsappProvider returned:", workspace?.whatsappProvider || "NOT IN RESPONSE")
+      logger.info("ultraMsgInstanceId returned:", workspace?.ultraMsgInstanceId || "NOT IN RESPONSE")
+      logger.info("ultraMsgToken returned:", workspace?.ultraMsgToken ? "***SET***" : "NOT IN RESPONSE")
 
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" })
@@ -785,14 +795,22 @@ export class WorkspaceController {
         provider: ws.whatsappProvider,
       })
 
+      // Get webhookId from whatsappSettings
+      const settings = await prisma.whatsappSettings.findUnique({
+        where: { workspaceId: id },
+        select: { webhookId: true }
+      })
+
+      const webhookId = settings?.webhookId || id
+
       return res.json({
         success: true,
         message: 'WhatsApp configuration updated successfully',
         data: {
           whatsappProvider: ws.whatsappProvider,
           webhookUrl: whatsappProvider === 'meta' 
-            ? `https://www.echatbot.ai/api/v1/whatsapp/webhook/${id}`
-            : `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${id}`,
+            ? `https://www.echatbot.ai/api/v1/whatsapp/webhook/${webhookId}`
+            : `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${webhookId}`,
         },
       })
     } catch (error) {
@@ -825,6 +843,14 @@ export class WorkspaceController {
       })
 
       const ws = workspace as any
+      
+      // Get webhookId from whatsappSettings
+      const settings = await prisma.whatsappSettings.findUnique({
+        where: { workspaceId: id },
+        select: { webhookId: true }
+      })
+
+      const webhookId = settings?.webhookId || id
 
       return res.json({
         success: true,
@@ -836,8 +862,8 @@ export class WorkspaceController {
           ultraMsgInstanceId: ws.ultraMsgInstanceId || '',
           ultraMsgToken: ws.ultraMsgToken || '',
           webhookUrl: ws.whatsappProvider === 'ultramsg'
-            ? `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${id}`
-            : `https://www.echatbot.ai/api/v1/whatsapp/webhook/${id}`,
+            ? `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${webhookId}`
+            : `https://www.echatbot.ai/api/v1/whatsapp/webhook/${webhookId}`,
         },
       })
     } catch (error) {
