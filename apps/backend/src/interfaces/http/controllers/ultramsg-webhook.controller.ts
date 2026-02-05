@@ -6,14 +6,18 @@
  * 
  * Webhook URL format: POST /api/v1/whatsapp/ultramsg/:webhookId
  * 
- * UltraMsg webhook payload format (VERIFIED):
+ * UltraMsg webhook payload format (VERIFIED - nested structure):
  * {
- *   "id": "ABCD1234",
- *   "from": "393331234567",
- *   "to": "393991234567",
- *   "body": "Ciao, questo è un test!",
- *   "type": "text",
- *   "timestamp": "167XXXXXXX"
+ *   "event_type": "message_received",
+ *   "instanceId": "161048",
+ *   "data": {
+ *     "id": "false_104462211358855@lid_AC2AED...",
+ *     "from": "34654728753@c.us",
+ *     "to": "34602119358@c.us",
+ *     "body": "Ciao",
+ *     "type": "chat",
+ *     "timestamp": 1770313487
+ *   }
  * }
  * 
  * FLOW (IDENTICAL TO META WEBHOOK):
@@ -70,9 +74,14 @@ export class UltraMsgWebhookController {
     let phoneNumberForLock: string | undefined
     
     try {
-      const { from } = req.body
-      if (from) {
-        phoneNumberForLock = from.startsWith('+') ? from.trim() : `+${from.trim()}`
+      // UltraMsg sends phone in format: "34654728753@c.us" - we need to clean it
+      const payload = req.body.data || req.body
+      const rawFrom = payload.from || req.body.from
+      
+      if (rawFrom) {
+        // Remove WhatsApp suffix (@c.us, @g.us, @s.whatsapp.net, etc.)
+        const cleanPhone = rawFrom.replace(/@.*$/, '').trim()
+        phoneNumberForLock = cleanPhone.startsWith('+') ? cleanPhone : `+${cleanPhone}`
       }
     } catch (error) {
       logger.error('[ULTRAMSG] ❌ Failed to extract phone for locking', error)
@@ -128,7 +137,9 @@ export class UltraMsgWebhookController {
       contentType: req.headers['content-type']
     })
 
-    const { id, from, to, body, type, timestamp } = req.body
+    // UltraMsg sends data in nested structure: { event_type, data: { id, from, body, ... } }
+    const payload = req.body.data || req.body
+    const { id, from, to, body, type, timestamp } = payload
 
     logger.info('📥 UltraMsg Webhook received', {
       webhookId,
@@ -136,6 +147,7 @@ export class UltraMsgWebhookController {
       from,
       type,
       bodyLength: body?.length || 0,
+      hasNestedData: !!req.body.data,
     })
 
     try {
@@ -195,7 +207,9 @@ export class UltraMsgWebhookController {
       }
 
       // 2. 📞 Normalize phone number with variants (EXACTLY like Meta)
-      const phoneVariants = buildPhoneVariants(from)
+      // UltraMsg sends phone as "34654728753@c.us" - remove WhatsApp suffix
+      const cleanFrom = from.replace(/@.*$/, '').trim()
+      const phoneVariants = buildPhoneVariants(cleanFrom)
       const phoneNumber = phoneVariants[0]
       const messageText = body || ''
 
@@ -211,6 +225,7 @@ export class UltraMsgWebhookController {
 
       logger.info('[ULTRAMSG] 📞 Phone normalized', {
         rawPhone: from,
+        cleanPhone: cleanFrom,
         normalizedPhone: phoneNumber,
         variants: phoneVariants.length,
       })
