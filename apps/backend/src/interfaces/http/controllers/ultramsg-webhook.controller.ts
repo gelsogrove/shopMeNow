@@ -6,14 +6,14 @@
  * 
  * Webhook URL format: POST /api/v1/whatsapp/ultramsg/:webhookId
  * 
- * UltraMsg webhook payload format:
+ * UltraMsg webhook payload format (VERIFIED):
  * {
- *   "id": "msg_id",
- *   "from": "393123456789",
- *   "to": "instance_id",
- *   "body": "message text",
- *   "type": "chat" | "image" | "video" | "document",
- *   "timestamp": 1234567890
+ *   "id": "ABCD1234",
+ *   "from": "393331234567",
+ *   "to": "393991234567",
+ *   "body": "Ciao, questo è un test!",
+ *   "type": "text",
+ *   "timestamp": "167XXXXXXX"
  * }
  * 
  * FLOW (IDENTICAL TO META WEBHOOK):
@@ -116,8 +116,19 @@ export class UltraMsgWebhookController {
    */
   private async _handleWebhookLocked(req: Request, res: Response): Promise<Response> {
     const { webhookId } = req.params
-    const { id, from, to, body, type, timestamp } = req.body
     let workspaceId: string | undefined  // Declare at function scope
+
+    // 🔍 DEBUG: Log RAW payload to understand UltraMsg format
+    logger.info('🔍 [ULTRAMSG DEBUG] RAW WEBHOOK PAYLOAD', {
+      headers: req.headers,
+      params: req.params,
+      query: req.query,
+      body: req.body,
+      bodyKeys: Object.keys(req.body || {}),
+      contentType: req.headers['content-type']
+    })
+
+    const { id, from, to, body, type, timestamp } = req.body
 
     logger.info('📥 UltraMsg Webhook received', {
       webhookId,
