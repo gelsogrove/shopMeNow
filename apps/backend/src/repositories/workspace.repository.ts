@@ -45,6 +45,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       webhookVerifyToken: data.webhookVerifyToken ?? data.whatsappVerifyToken ?? null,
       ultraMsgInstanceId: data.ultraMsgInstanceId ?? null,
       ultraMsgToken: data.ultraMsgToken ?? null,
+      ultraMsgApiUrl: data.ultraMsgApiUrl ?? null,
       webhookUrl: data.webhookUrl,
       notificationEmail: data.notificationEmail,
       language: data.language,
@@ -125,6 +126,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       webhookVerifyToken: workspace.webhookVerifyToken ?? workspace.whatsappVerifyToken ?? null,
       ultraMsgInstanceId: workspace.ultraMsgInstanceId,
       ultraMsgToken: workspace.ultraMsgToken,
+      ultraMsgApiUrl: workspace.ultraMsgApiUrl,
       notificationEmail: workspace.notificationEmail,
       language: workspace.language,
       currency: workspace.currency,
@@ -566,6 +568,9 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       if (dbData.ultraMsgToken !== undefined) {
         dbData.ultraMsgToken = normalizeOptional(dbData.ultraMsgToken) ?? null
       }
+      if (dbData.ultraMsgApiUrl !== undefined) {
+        dbData.ultraMsgApiUrl = normalizeOptional(dbData.ultraMsgApiUrl) ?? null
+      }
 
       const incomingPhoneNumber = normalizeWhatsAppField(
         dbData.whatsappPhoneNumber ?? data.whatsappPhoneNumber
@@ -751,6 +756,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           webhookVerifyToken: true,
           ultraMsgInstanceId: true,
           ultraMsgToken: true,
+          ultraMsgApiUrl: true,
           notificationEmail: true,
           language: true,
           currency: true,

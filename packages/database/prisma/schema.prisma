@@ -71,6 +71,7 @@ model Workspace {
   // UltraMsg fields
   ultraMsgInstanceId    String? // UltraMsg Instance ID
   ultraMsgToken         String? // UltraMsg API Token
+  ultraMsgApiUrl        String? // UltraMsg API Base URL (from UltraMsg dashboard)
   botIdentityResponse               String?     @db.Text // Response when customer asks "Who are you?"
   customAiRules                     String?     @db.Text // Custom AI rules/instructions that override default behavior
   address                           String?     @db.Text // Physical address/location for "where are you?" questions

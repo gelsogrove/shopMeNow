@@ -163,6 +163,10 @@ export class WorkspaceDTO extends BaseDTO {
 
   @IsString()
   @IsOptional()
+  ultraMsgApiUrl?: string;
+
+  @IsString()
+  @IsOptional()
   url?: string;
 
   @IsBoolean()

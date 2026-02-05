@@ -209,9 +209,11 @@ export class UltraMsgWebhookController {
       }
 
       // 2. 📞 Normalize phone number with variants (EXACTLY like Meta)
-      // UltraMsg sends phone as "34654728753@c.us" - remove WhatsApp suffix
+      // UltraMsg sends phone as "34654728753@c.us" - remove WhatsApp suffix and ensure + prefix
       const cleanFrom = from.replace(/@.*$/, '').trim()
-      const phoneVariants = buildPhoneVariants(cleanFrom)
+      // 🔧 FIX: Add + prefix if missing (UltraMsg strips it)
+      const phoneWithPrefix = cleanFrom.startsWith('+') ? cleanFrom : `+${cleanFrom}`
+      const phoneVariants = buildPhoneVariants(phoneWithPrefix)
       const phoneNumber = phoneVariants[0]
       const messageText = body || ''
 

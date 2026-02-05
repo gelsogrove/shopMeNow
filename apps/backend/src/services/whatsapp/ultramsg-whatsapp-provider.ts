@@ -18,15 +18,24 @@ import {
 export interface UltraMsgConfig {
   instanceId: string
   token: string
+  apiUrl?: string
 }
 
 export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
-  private readonly baseUrl = 'https://api.ultramsg.com'
+  private readonly defaultBaseUrl = 'https://api.ultramsg.com'
 
   constructor(private config: UltraMsgConfig) {
     if (!config.instanceId || !config.token) {
       throw new Error('UltraMsg: instanceId and token are required')
     }
+  }
+
+  private buildEndpoint(path: string): string {
+    const rawBase = (this.config.apiUrl || this.defaultBaseUrl).trim()
+    const base = rawBase.replace(/\/$/, '')
+    const instanceId = this.config.instanceId.replace(/^\//, '')
+    const baseWithInstance = base.endsWith(`/${instanceId}`) ? base : `${base}/${instanceId}`
+    return `${baseWithInstance}/${path}`
   }
 
   getProviderName(): string {
@@ -53,7 +62,7 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
         priority: '1', // Send immediately
       })
 
-      const url = `${this.baseUrl}/${this.config.instanceId}/messages/chat`
+      const url = this.buildEndpoint('messages/chat')
 
       logger.info('📤 UltraMsg: Sending text message', {
         to: formattedPhone,
@@ -120,7 +129,7 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
         priority: '1',
       })
 
-      const url = `${this.baseUrl}/${this.config.instanceId}/${endpoint}`
+      const url = this.buildEndpoint(endpoint)
 
       logger.info('📤 UltraMsg: Sending media message', {
         to: formattedPhone,

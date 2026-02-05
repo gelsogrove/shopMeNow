@@ -30,6 +30,7 @@ export interface Workspace {
   whatsappProvider?: string
   ultraMsgInstanceId?: string
   ultraMsgToken?: string
+  ultraMsgApiUrl?: string
   adminEmail?: string
   url?: string
   debugMode?: boolean

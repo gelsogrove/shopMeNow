@@ -44,11 +44,13 @@ export class WhatsAppProviderFactory {
       logger.info('✅ WhatsAppProviderFactory: Creating UltraMsg provider', {
         workspaceId: workspace.id,
         instanceId: workspace.ultraMsgInstanceId,
+        hasApiUrl: !!workspace.ultraMsgApiUrl,
       })
 
       return new UltraMsgWhatsAppProvider({
         instanceId: workspace.ultraMsgInstanceId,
         token: workspace.ultraMsgToken,
+        apiUrl: workspace.ultraMsgApiUrl,
       })
     }
 

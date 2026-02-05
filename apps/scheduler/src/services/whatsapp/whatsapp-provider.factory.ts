@@ -41,14 +41,17 @@ export class WhatsAppProviderFactory {
         throw new Error(error)
       }
 
+      const ultraMsgApiUrl = (workspace as any).ultraMsgApiUrl
       logger.info('✅ WhatsAppProviderFactory: Creating UltraMsg provider', {
         workspaceId: workspace.id,
         instanceId: workspace.ultraMsgInstanceId,
+        hasApiUrl: !!ultraMsgApiUrl,
       })
 
       return new UltraMsgWhatsAppProvider({
         instanceId: workspace.ultraMsgInstanceId,
         token: workspace.ultraMsgToken,
+        apiUrl: ultraMsgApiUrl,
       })
     }
 

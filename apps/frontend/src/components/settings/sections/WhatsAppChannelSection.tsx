@@ -27,6 +27,7 @@ interface WhatsAppChannelSectionProps {
     whatsappProvider?: string
     ultraMsgInstanceId?: string
     ultraMsgToken?: string
+    ultraMsgApiUrl?: string
   }
   enableWidget?: boolean
   errors: Record<string, string>
@@ -243,6 +244,17 @@ export function WhatsAppChannelSection({
             {/* UltraMsg Provider Fields */}
             {currentProvider === "ultramsg" && (
               <>
+                <div className="space-y-2">
+                  <Label htmlFor="ultraMsgApiUrl">API URL</Label>
+                  <Input
+                    id="ultraMsgApiUrl"
+                    value={formData.ultraMsgApiUrl || ""}
+                    onChange={(e) => onFieldChange("ultraMsgApiUrl", e.target.value)}
+                    placeholder="https://api.ultramsg.com/instance12345/"
+                    disabled={!canEdit}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="ultraMsgInstanceId">Instance ID</Label>
                   <Input

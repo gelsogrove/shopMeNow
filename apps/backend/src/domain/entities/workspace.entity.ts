@@ -21,6 +21,7 @@ export interface WorkspaceProps {
   webhookVerifyToken?: string | null
   ultraMsgInstanceId?: string | null
   ultraMsgToken?: string | null
+  ultraMsgApiUrl?: string | null
   notificationEmail?: string | null
   webhookUrl?: string | null
   language: string
@@ -185,6 +186,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get ultraMsgToken(): string | null | undefined {
     return this.props.ultraMsgToken
+  }
+
+  get ultraMsgApiUrl(): string | null | undefined {
+    return this.props.ultraMsgApiUrl
   }
 
   get webhookVerifyToken(): string | null | undefined {

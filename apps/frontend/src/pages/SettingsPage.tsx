@@ -105,6 +105,7 @@ interface FormData {
   whatsappProvider?: string
   ultraMsgInstanceId?: string
   ultraMsgToken?: string
+  ultraMsgApiUrl?: string
   widgetTitle: string
   widgetPrimaryColor: string
   widgetLanguage: string
@@ -189,6 +190,7 @@ export function SettingsPage() {
     whatsappProvider: "meta",
     ultraMsgInstanceId: "",
     ultraMsgToken: "",
+    ultraMsgApiUrl: "",
     widgetTitle: "Chat with us",
     widgetPrimaryColor: "#22c55e",
     widgetLanguage: "it",
@@ -240,6 +242,7 @@ export function SettingsPage() {
         whatsappProvider: currentWorkspace.whatsappProvider || "meta",
         ultraMsgInstanceId: currentWorkspace.ultraMsgInstanceId || "",
         ultraMsgToken: currentWorkspace.ultraMsgToken || "",
+        ultraMsgApiUrl: currentWorkspace.ultraMsgApiUrl || "",
         widgetTitle: currentWorkspace.widgetTitle || "Chat with us",
         widgetPrimaryColor: currentWorkspace.widgetPrimaryColor || "#22c55e",
         widgetLanguage: currentWorkspace.widgetLanguage || "it",
@@ -407,6 +410,7 @@ export function SettingsPage() {
       if (dataToSave.whatsappProvider === "ultramsg") {
         updateData.ultraMsgInstanceId = dataToSave.ultraMsgInstanceId
         updateData.ultraMsgToken = dataToSave.ultraMsgToken
+        updateData.ultraMsgApiUrl = dataToSave.ultraMsgApiUrl
       }
 
       // Avoid triggering channel limit checks when channel toggles are unchanged
@@ -586,6 +590,7 @@ export function SettingsPage() {
               whatsappProvider: formData.whatsappProvider,
               ultraMsgInstanceId: formData.ultraMsgInstanceId,
               ultraMsgToken: formData.ultraMsgToken,
+              ultraMsgApiUrl: formData.ultraMsgApiUrl,
             }}
             enableWidget={formData.enableWidget}
             errors={errors}

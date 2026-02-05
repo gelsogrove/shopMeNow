@@ -506,6 +506,7 @@ export const workspaceService = {
         metaAccessToken: true, // 🆕 Meta provider  
         ultraMsgInstanceId: true, // 🆕 UltraMsg provider
         ultraMsgToken: true, // 🆕 UltraMsg provider
+        ultraMsgApiUrl: true, // 🆕 UltraMsg API URL
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
