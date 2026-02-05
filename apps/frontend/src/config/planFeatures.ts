@@ -327,7 +327,7 @@ export function getFeatureDisplayText(
     case FEATURE_KEYS.INTEGRATIONS:
       return t ? translate("pricing.features.integration") : "Integration with own CRM (quote required)"
     case FEATURE_KEYS.DEDICATED_SERVER:
-      return "Dedicated server"
+      return t ? translate("pricing.features.dedicatedServer") : "On-premise server"
     default:
       return key
   }
