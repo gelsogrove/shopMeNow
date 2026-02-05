@@ -403,14 +403,22 @@ export function SettingsPage() {
         delete updateData.whatsappBusinessAccountId
       }
 
-      // Always persist WhatsApp provider + UltraMsg credentials if present
+      // 🛡️ CRITICAL: Always remove provider-specific fields from base spread
+      // to prevent empty strings from overwriting real DB values
+      delete updateData.ultraMsgInstanceId
+      delete updateData.ultraMsgToken
+      delete updateData.ultraMsgApiUrl
+
+      // Always persist WhatsApp provider if present
       if (dataToSave.whatsappProvider) {
         updateData.whatsappProvider = dataToSave.whatsappProvider
       }
+
+      // Only send UltraMsg fields when provider is ultramsg AND values are non-empty
       if (dataToSave.whatsappProvider === "ultramsg") {
-        updateData.ultraMsgInstanceId = dataToSave.ultraMsgInstanceId
-        updateData.ultraMsgToken = dataToSave.ultraMsgToken
-        updateData.ultraMsgApiUrl = dataToSave.ultraMsgApiUrl
+        if (dataToSave.ultraMsgInstanceId) updateData.ultraMsgInstanceId = dataToSave.ultraMsgInstanceId
+        if (dataToSave.ultraMsgToken) updateData.ultraMsgToken = dataToSave.ultraMsgToken
+        if (dataToSave.ultraMsgApiUrl) updateData.ultraMsgApiUrl = dataToSave.ultraMsgApiUrl
       }
 
       // Avoid triggering channel limit checks when channel toggles are unchanged

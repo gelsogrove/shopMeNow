@@ -482,11 +482,17 @@ export const workspaceService = {
       }
     }
 
+    // 🛡️ CRITICAL: Strip empty strings to prevent overwriting real DB values with blanks
+    // When frontend sends all form fields, empty strings would wipe existing data
+    const sanitizedData = Object.fromEntries(
+      Object.entries(workspaceData).filter(([_, value]) => value !== "")
+    )
+
     // Update workspace data
     const updatedWorkspace = await prisma.workspace.update({
       where: { id },
       data: {
-        ...workspaceData,
+        ...sanitizedData,
         slug: workspaceData.name
           ? workspaceData.name.toLowerCase().replace(/\s+/g, "-")
           : undefined,
