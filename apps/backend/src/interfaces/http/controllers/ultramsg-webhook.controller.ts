@@ -148,6 +148,8 @@ export class UltraMsgWebhookController {
       type,
       bodyLength: body?.length || 0,
       hasNestedData: !!req.body.data,
+      extractedBody: body,  // DEBUG: See what we extracted
+      payloadKeys: Object.keys(payload || {}),  // DEBUG: See available keys
     })
 
     try {
