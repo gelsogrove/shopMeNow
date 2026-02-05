@@ -583,7 +583,6 @@ export class SubscriptionBillingRepository {
           deletedAt: null,
           isBlacklisted: false,
           isActive: true, // 🔧 Count ONLY registered active customers
-          registrationStatus: 'ACTIVE', // 🔧 Exclude NEW and PENDING_APPROVAL
           NOT: [
             { phone: SubscriptionBillingRepository.PLAYGROUND_PHONE },
             { email: SubscriptionBillingRepository.PLAYGROUND_EMAIL },
@@ -636,7 +635,6 @@ export class SubscriptionBillingRepository {
             deletedAt: null,
             isBlacklisted: false,
             isActive: true, // 🔧 Count ONLY registered active customers
-            registrationStatus: 'ACTIVE', // 🔧 Exclude NEW and PENDING_APPROVAL
             NOT: [
               { phone: SubscriptionBillingRepository.PLAYGROUND_PHONE },
               { email: SubscriptionBillingRepository.PLAYGROUND_EMAIL },
