@@ -98,6 +98,10 @@ export class WorkspaceController {
         widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
         widgetIcon: workspace.widgetIcon ?? "chat",
         widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
+        // 🆕 Multi-Provider WhatsApp Support
+        whatsappProvider: workspace.whatsappProvider ?? "meta",
+        ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
+        ultraMsgToken: workspace.ultraMsgToken ?? null,
       }))
 
       return res.json(serializedWorkspaces)
@@ -146,6 +150,9 @@ export class WorkspaceController {
           whatsappWebhookId: workspace.whatsappWebhookId ?? null,
           whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
           whatsappBusinessAccountId: workspace.whatsappBusinessAccountId ?? null,
+          whatsappProvider: workspace.whatsappProvider ?? "meta",
+          ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
+          ultraMsgToken: workspace.ultraMsgToken ?? null,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
           language: workspace.language,
@@ -411,6 +418,10 @@ export class WorkspaceController {
         whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
         whatsappVerifyToken: workspace.whatsappVerifyToken,
         webhookUrl: workspace.webhookUrl,
+        whatsappBusinessAccountId: workspace.whatsappBusinessAccountId ?? null,
+        whatsappProvider: workspace.whatsappProvider ?? "meta",
+        ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
+        ultraMsgToken: workspace.ultraMsgToken ?? null,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail,
         language: workspace.language,

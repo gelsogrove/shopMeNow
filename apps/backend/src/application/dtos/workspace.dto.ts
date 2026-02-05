@@ -139,6 +139,30 @@ export class WorkspaceDTO extends BaseDTO {
 
   @IsString()
   @IsOptional()
+  whatsappProvider?: string;
+
+  @IsString()
+  @IsOptional()
+  metaPhoneNumberId?: string;
+
+  @IsString()
+  @IsOptional()
+  metaAccessToken?: string;
+
+  @IsString()
+  @IsOptional()
+  webhookVerifyToken?: string;
+
+  @IsString()
+  @IsOptional()
+  ultraMsgInstanceId?: string;
+
+  @IsString()
+  @IsOptional()
+  ultraMsgToken?: string;
+
+  @IsString()
+  @IsOptional()
   url?: string;
 
   @IsBoolean()

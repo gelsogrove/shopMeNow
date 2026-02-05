@@ -37,6 +37,15 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         data.whatsappWebhookUrl ??
         data.webhookUrl,
       whatsappBusinessAccountId: data.whatsappSettings?.businessAccountId ?? null,
+      // 🆕 Multi-Provider WhatsApp Support
+      whatsappProvider:
+        data.whatsappProvider ??
+        (data.ultraMsgInstanceId || data.ultraMsgToken ? "ultramsg" : "meta"),
+      metaPhoneNumberId: data.metaPhoneNumberId ?? data.whatsappPhoneNumberId ?? null,
+      metaAccessToken: data.metaAccessToken ?? data.whatsappApiKey ?? null,
+      webhookVerifyToken: data.webhookVerifyToken ?? data.whatsappVerifyToken ?? null,
+      ultraMsgInstanceId: data.ultraMsgInstanceId ?? null,
+      ultraMsgToken: data.ultraMsgToken ?? null,
       webhookUrl: data.webhookUrl,
       notificationEmail: data.notificationEmail,
       language: data.language,
@@ -109,6 +118,14 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       whatsappVerifyToken: workspace.whatsappVerifyToken,
       whatsappWebhookUrl: workspace.whatsappWebhookUrl,
       webhookUrl: workspace.webhookUrl,
+      // 🆕 Multi-Provider WhatsApp Support
+      whatsappProvider: workspace.whatsappProvider,
+      metaPhoneNumberId:
+        workspace.metaPhoneNumberId ?? workspace.whatsappPhoneNumberId ?? null,
+      metaAccessToken: workspace.metaAccessToken ?? workspace.whatsappApiKey ?? null,
+      webhookVerifyToken: workspace.webhookVerifyToken ?? workspace.whatsappVerifyToken ?? null,
+      ultraMsgInstanceId: workspace.ultraMsgInstanceId,
+      ultraMsgToken: workspace.ultraMsgToken,
       notificationEmail: workspace.notificationEmail,
       language: workspace.language,
       currency: workspace.currency,
@@ -526,6 +543,31 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         delete dbData.whatsappBusinessAccountId
       }
 
+      const normalizeOptional = (value?: string | null): string | undefined => {
+        if (value === undefined || value === null) return undefined
+        const trimmed = String(value).trim()
+        return trimmed.length > 0 ? trimmed : undefined
+      }
+
+      // Map Meta provider fields (fallback from legacy WhatsApp fields)
+      if (dbData.metaPhoneNumberId === undefined && dbData.whatsappPhoneNumberId !== undefined) {
+        dbData.metaPhoneNumberId = normalizeOptional(dbData.whatsappPhoneNumberId)
+      }
+      if (dbData.metaAccessToken === undefined && dbData.whatsappApiKey !== undefined) {
+        dbData.metaAccessToken = normalizeOptional(dbData.whatsappApiKey)
+      }
+      if (dbData.webhookVerifyToken === undefined && dbData.whatsappVerifyToken !== undefined) {
+        dbData.webhookVerifyToken = normalizeOptional(dbData.whatsappVerifyToken)
+      }
+
+      // Normalize UltraMsg credentials if present
+      if (dbData.ultraMsgInstanceId !== undefined) {
+        dbData.ultraMsgInstanceId = normalizeOptional(dbData.ultraMsgInstanceId) ?? null
+      }
+      if (dbData.ultraMsgToken !== undefined) {
+        dbData.ultraMsgToken = normalizeOptional(dbData.ultraMsgToken) ?? null
+      }
+
       const incomingPhoneNumber = normalizeWhatsAppField(
         dbData.whatsappPhoneNumber ?? data.whatsappPhoneNumber
       )
@@ -704,6 +746,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           whatsappPhoneNumberId: true,
           whatsappVerifyToken: true,
           webhookUrl: true,
+          whatsappProvider: true,
+          metaPhoneNumberId: true,
+          metaAccessToken: true,
+          webhookVerifyToken: true,
+          ultraMsgInstanceId: true,
+          ultraMsgToken: true,
           notificationEmail: true,
           language: true,
           currency: true,

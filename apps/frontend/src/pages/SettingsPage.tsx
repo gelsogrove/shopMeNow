@@ -400,6 +400,15 @@ export function SettingsPage() {
         delete updateData.whatsappBusinessAccountId
       }
 
+      // Always persist WhatsApp provider + UltraMsg credentials if present
+      if (dataToSave.whatsappProvider) {
+        updateData.whatsappProvider = dataToSave.whatsappProvider
+      }
+      if (dataToSave.whatsappProvider === "ultramsg") {
+        updateData.ultraMsgInstanceId = dataToSave.ultraMsgInstanceId
+        updateData.ultraMsgToken = dataToSave.ultraMsgToken
+      }
+
       // Avoid triggering channel limit checks when channel toggles are unchanged
       if (currentWorkspace) {
         if (updateData.enableWhatsapp === currentWorkspace.enableWhatsapp) {
@@ -555,6 +564,9 @@ export function SettingsPage() {
               whatsappBusinessAccountId: formData.whatsappBusinessAccountId,
               whatsappWebhookId: formData.whatsappWebhookId,
               whatsappWebhookUrl: formData.whatsappWebhookUrl,
+              whatsappProvider: formData.whatsappProvider,
+              ultraMsgInstanceId: formData.ultraMsgInstanceId,
+              ultraMsgToken: formData.ultraMsgToken,
             }}
             enableWidget={formData.enableWidget}
             errors={errors}
