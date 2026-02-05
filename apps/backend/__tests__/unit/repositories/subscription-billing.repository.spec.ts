@@ -37,13 +37,17 @@ describe("SubscriptionBillingRepository", () => {
         workspaceId: { in: ["ws-1"] },
         deletedAt: null,
         isBlacklisted: false,
+        isActive: true, // 🔧 Count ONLY registered active customers
+        registrationStatus: 'ACTIVE', // 🔧 Exclude NEW and PENDING_APPROVAL
         NOT: [
           { phone: "+39 999 1234567" },
           { email: "playground@test.echatbot.local" },
         ],
       },
     })
-    expect("isActive" in customersArgs.where).toBe(false)
+    // ✅ Verify that isActive and registrationStatus filters are present
+    expect("isActive" in customersArgs.where).toBe(true)
+    expect("registrationStatus" in customersArgs.where).toBe(true)
   })
 
   it("counts customers/leads excluding deleted or blacklisted records (workspace usage fallback)", async () => {
@@ -62,12 +66,16 @@ describe("SubscriptionBillingRepository", () => {
         workspaceId: "ws-1",
         deletedAt: null,
         isBlacklisted: false,
+        isActive: true, // 🔧 Count ONLY registered active customers
+        registrationStatus: 'ACTIVE', // 🔧 Exclude NEW and PENDING_APPROVAL
         NOT: [
           { phone: "+39 999 1234567" },
           { email: "playground@test.echatbot.local" },
         ],
       },
     })
-    expect("isActive" in customersArgs.where).toBe(false)
+    // ✅ Verify that isActive and registrationStatus filters are present
+    expect("isActive" in customersArgs.where).toBe(true)
+    expect("registrationStatus" in customersArgs.where).toBe(true)
   })
 })
