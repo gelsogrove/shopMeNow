@@ -43,6 +43,14 @@ export class WorkspaceController {
       // WORKSPACE ISOLATION: Fetch ONLY workspaces this user has access to
       const workspaces = await this.workspaceService.getByUserId(userId)
 
+      // Fetch webhookIds for all workspaces
+      const workspaceIds = workspaces.map(w => w.id)
+      const whatsappSettings = await prisma.whatsappSettings.findMany({
+        where: { workspaceId: { in: workspaceIds } },
+        select: { workspaceId: true, webhookId: true }
+      })
+      const webhookIdMap = new Map(whatsappSettings.map(s => [s.workspaceId, s.webhookId]))
+
       // Serialize workspaces to plain objects with all properties
       const serializedWorkspaces = workspaces.map((workspace) => ({
         id: workspace.id,
@@ -101,6 +109,8 @@ export class WorkspaceController {
         whatsappProvider: workspace.whatsappProvider ?? "meta",
         ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
         ultraMsgToken: workspace.ultraMsgToken ?? null,
+        // 🆕 Webhook ID for URL generation
+        whatsappWebhookId: webhookIdMap.get(workspace.id) ?? workspace.id,
       }))
 
       return res.json(serializedWorkspaces)
