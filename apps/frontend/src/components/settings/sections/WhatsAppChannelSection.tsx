@@ -151,24 +151,36 @@ export function WhatsAppChannelSection({
               </div>
             </div>
 
+            {/* Shared Fields (Meta + UltraMsg) */}
+            <div
+              className="space-y-2"
+              onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
+              data-focus-key="whatsappAccess"
+            >
+              <Label htmlFor="whatsappAppName">AppName (Meta)</Label>
+              <Input
+                id="whatsappAppName"
+                value={formData.whatsappAppName}
+                onChange={(e) => onFieldChange("whatsappAppName", e.target.value)}
+                placeholder="Meta app name"
+                disabled={!canEdit}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="whatsappPhoneNumber">Tel:</Label>
+              <Input
+                id="whatsappPhoneNumber"
+                value={formData.whatsappPhoneNumber}
+                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
+                placeholder="+1234567890"
+                disabled={!canEdit}
+              />
+            </div>
+
             {/* Meta Provider Fields */}
             {currentProvider === "meta" && (
               <>
-                <div
-                  className="space-y-2"
-                  onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
-                  data-focus-key="whatsappAccess"
-                >
-                  <Label htmlFor="whatsappAppName">AppName(meta)</Label>
-                  <Input
-                    id="whatsappAppName"
-                    value={formData.whatsappAppName}
-                    onChange={(e) => onFieldChange("whatsappAppName", e.target.value)}
-                    placeholder="Meta app name"
-                    disabled={!canEdit}
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="whatsappApiKey">Access Token</Label>
                   <Input
@@ -177,17 +189,6 @@ export function WhatsAppChannelSection({
                     value={formData.whatsappApiKey}
                     onChange={(e) => onFieldChange("whatsappApiKey", e.target.value)}
                     placeholder="Paste access token"
-                    disabled={!canEdit}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="whatsappPhoneNumber">Tel:</Label>
-                  <Input
-                    id="whatsappPhoneNumber"
-                    value={formData.whatsappPhoneNumber}
-                    onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
-                    placeholder="+1234567890"
                     disabled={!canEdit}
                   />
                 </div>
