@@ -91,6 +91,14 @@ const authMiddlewareAsync = async (
       return next()
     }
 
+    // 🔓 PUBLIC ROUTES: Skip authentication for UltraMsg webhooks (rate-limited instead)
+    if (req.path.includes("/whatsapp/ultramsg/")) {
+      logger.debug(
+        "🔓 Skipping auth for UltraMsg webhook (public endpoint, rate-limited)"
+      )
+      return next()
+    }
+
     // 🔓 PUBLIC ROUTES: Skip authentication for widget routes (rate-limited instead)
     if (req.path.includes("/widget/")) {
       logger.debug(
