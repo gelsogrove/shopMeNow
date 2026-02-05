@@ -1,4 +1,5 @@
 import { prisma } from '@echatbot/database'
+import axios from 'axios'
 import { whatsappChannelQueueJob, clearRecipientThrottleCache } from '../../../src/jobs/whatsapp-channel-queue.job'
 import { getWorkspaceWhatsAppConfig } from '../../../src/services/whatsapp-config.service'
 import { SecurityAgentService } from '../../../src/services/security-agent.service'
@@ -7,6 +8,7 @@ import { BillingService } from '../../../src/services/billing.service'
 jest.mock('../../../src/services/whatsapp-config.service', () => ({
   getWorkspaceWhatsAppConfig: jest.fn(),
 }))
+jest.mock('axios')
 
 describe('whatsappChannelQueueJob - WhatsApp send', () => {
   const mockedGetConfig = getWorkspaceWhatsAppConfig as jest.MockedFunction<typeof getWorkspaceWhatsAppConfig>
@@ -16,6 +18,10 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
   let workspaceModel: any
   let queueModel: any
   let conversationModel: any
+  const setWorkspace = (workspace: any) => {
+    workspaceModel.findMany.mockResolvedValue([workspace])
+    workspaceModel.findUnique.mockResolvedValue(workspace)
+  }
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -23,10 +29,9 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     securitySpy = jest.spyOn(SecurityAgentService.prototype, 'validateMessage').mockResolvedValue({ isSafe: true })
     billingSpy = jest.spyOn(BillingService.prototype, 'deductMessageCredit').mockResolvedValue({ success: true })
     jest.spyOn(BillingService.prototype, 'hasOwnerCredit').mockResolvedValue(true)
-    ;(global as any).fetch = jest.fn()
     clearRecipientThrottleCache()
 
-    workspaceModel = { findMany: jest.fn() }
+    workspaceModel = { findMany: jest.fn(), findUnique: jest.fn() }
     queueModel = { findMany: jest.fn(), update: jest.fn() }
     conversationModel = { findUnique: jest.fn(), update: jest.fn() }
     ;(prisma as any).workspace = workspaceModel
@@ -46,9 +51,17 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
       apiKey: 'token',
     })
 
-    workspaceModel.findMany.mockResolvedValue([
-      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
-    ])
+    setWorkspace({ 
+      id: 'w1', 
+      name: 'W', 
+      whatsappApiKey: 'token', 
+      whatsappPhoneNumber: '19999999999', 
+      channelStatus: true, 
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token'
+    })
 
     queueModel.findMany.mockResolvedValue([
       {
@@ -64,15 +77,13 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     ])
 
     queueModel.update.mockResolvedValue({})
-
-    ;(global as any).fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ messages: [{ id: 'wa-123' }] }),
+    ;(axios.post as jest.Mock).mockResolvedValue({
+      data: { messages: [{ id: 'wa-123' }] },
     })
 
     await whatsappChannelQueueJob()
 
-    expect(fetch).toHaveBeenCalled()
+    expect(axios.post).toHaveBeenCalled()
     expect(queueModel.update).toHaveBeenCalled()
     const sentCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'sent')
     expect(sentCall?.[0].data.status).toBe('sent')
@@ -87,9 +98,17 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
       apiKey: 'token',
     })
 
-    workspaceModel.findMany.mockResolvedValue([
-      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
-    ])
+    setWorkspace({ 
+      id: 'w1', 
+      name: 'W', 
+      whatsappApiKey: 'token', 
+      whatsappPhoneNumber: '19999999999', 
+      channelStatus: true, 
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '123456789012345',
+      metaAccessToken: 'token'
+    })
 
     queueModel.findMany.mockResolvedValue([
       {
@@ -106,15 +125,14 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
 
     queueModel.update.mockResolvedValue({})
 
-    ;(global as any).fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ messages: [{ id: 'wa-123' }] }),
+    ;(axios.post as jest.Mock).mockResolvedValue({
+      data: { messages: [{ id: 'wa-123' }] },
     })
 
     await whatsappChannelQueueJob()
 
-    const [url] = (fetch as jest.Mock).mock.calls[0]
-    expect(url).toContain('/v18.0/123456789012345/messages')
+    const [url] = (axios.post as jest.Mock).mock.calls[0]
+    expect(url).toContain('/v21.0/123456789012345/messages')
   })
 
   it('falls back to phoneNumber when phoneNumberId is missing', async () => {
@@ -124,9 +142,17 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
       apiKey: 'token',
     })
 
-    workspaceModel.findMany.mockResolvedValue([
-      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
-    ])
+    setWorkspace({ 
+      id: 'w1', 
+      name: 'W', 
+      whatsappApiKey: 'token', 
+      whatsappPhoneNumber: '19999999999', 
+      channelStatus: true, 
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token'
+    })
 
     queueModel.findMany.mockResolvedValue([
       {
@@ -143,15 +169,14 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
 
     queueModel.update.mockResolvedValue({})
 
-    ;(global as any).fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ messages: [{ id: 'wa-123' }] }),
+    ;(axios.post as jest.Mock).mockResolvedValue({
+      data: { messages: [{ id: 'wa-123' }] },
     })
 
     await whatsappChannelQueueJob()
 
-    const [url] = (fetch as jest.Mock).mock.calls[0]
-    expect(url).toContain('/v18.0/19999999999/messages')
+    const [url] = (axios.post as jest.Mock).mock.calls[0]
+    expect(url).toContain('/v21.0/19999999999/messages')
   })
 
   it('marks queue as error when credit or subscription is missing', async () => {
@@ -163,9 +188,17 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
       apiKey: 'token',
     })
 
-    workspaceModel.findMany.mockResolvedValue([
-      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
-    ])
+    setWorkspace({ 
+      id: 'w1', 
+      name: 'W', 
+      whatsappApiKey: 'token', 
+      whatsappPhoneNumber: '19999999999', 
+      channelStatus: true, 
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token'
+    })
 
     queueModel.findMany.mockResolvedValue([
       {
@@ -196,9 +229,17 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
       apiKey: 'token',
     })
 
-    workspaceModel.findMany.mockResolvedValue([
-      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: true, debugMode: false },
-    ])
+    setWorkspace({ 
+      id: 'w1', 
+      name: 'W', 
+      whatsappApiKey: 'token', 
+      whatsappPhoneNumber: '19999999999', 
+      channelStatus: true, 
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token'
+    })
 
     queueModel.findMany.mockResolvedValue([
       {
@@ -215,10 +256,9 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
 
     queueModel.update.mockResolvedValue({})
 
-    ;(global as any).fetch = jest.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      text: async () => 'error',
+    ;(axios.post as jest.Mock).mockRejectedValue({
+      message: 'Request failed with status code 500',
+      response: { data: { error: { message: 'error' } } },
     })
 
     await whatsappChannelQueueJob()
@@ -235,9 +275,17 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
       apiKey: 'token',
     })
 
-    workspaceModel.findMany.mockResolvedValue([
-      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: false, debugMode: false },
-    ])
+    setWorkspace({ 
+      id: 'w1', 
+      name: 'W', 
+      whatsappApiKey: 'token', 
+      whatsappPhoneNumber: '19999999999', 
+      channelStatus: false, 
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token'
+    })
 
     queueModel.findMany.mockResolvedValue([
       {
@@ -258,9 +306,8 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     conversationModel.update.mockResolvedValue({})
     queueModel.update.mockResolvedValue({})
 
-    ;(global as any).fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ messages: [{ id: 'wa-456' }] }),
+    ;(axios.post as jest.Mock).mockResolvedValue({
+      data: { messages: [{ id: 'wa-456' }] },
     })
 
     await whatsappChannelQueueJob()
@@ -277,9 +324,17 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
       apiKey: 'token',
     })
 
-    workspaceModel.findMany.mockResolvedValue([
-      { id: 'w1', name: 'W', whatsappApiKey: 'token', whatsappPhoneNumber: '19999999999', channelStatus: false, debugMode: false },
-    ])
+    setWorkspace({ 
+      id: 'w1', 
+      name: 'W', 
+      whatsappApiKey: 'token', 
+      whatsappPhoneNumber: '19999999999', 
+      channelStatus: false, 
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token'
+    })
 
     queueModel.findMany.mockResolvedValue([
       {
@@ -302,6 +357,6 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
 
     expect(queueModel.update).not.toHaveBeenCalled()
     expect(billingSpy).not.toHaveBeenCalled()
-    expect((global as any).fetch).not.toHaveBeenCalled()
+    expect(axios.post).not.toHaveBeenCalled()
   })
 })

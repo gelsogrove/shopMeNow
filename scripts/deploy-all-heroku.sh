@@ -53,15 +53,17 @@ echo "🚀 Step 7/8: Deploy echatbot-scheduler (Worker)..."
 git push heroku-scheduler main
 
 echo ""
-echo "🗄️  Step 8/8: Post-deploy - Applying migrations on Heroku production database..."
+echo "🗄️  Step 8/9: Post-deploy - Applying migrations on Heroku production database..."
 heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app
+heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-scheduler
 
 echo ""
-echo "🔄 Regenerating Prisma client on Heroku..."
+echo "🔄 Regenerating Prisma client on Heroku (app + scheduler)..."
 heroku run "cd packages/database && npx prisma generate" -a echatbot-app
+heroku run "cd packages/database && npx prisma generate" -a echatbot-scheduler
 
 echo ""
-echo "♻️  Restarting app to reload cache..."
+echo "♻️  Step 9/9: Restarting app to reload cache..."
 heroku restart -a echatbot-app
 
 echo ""

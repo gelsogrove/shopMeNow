@@ -15,18 +15,106 @@
  *   "type": "chat" | "image" | "video" | "document",
  *   "timestamp": 1234567890
  * }
+ * 
+ * FLOW (IDENTICAL TO META WEBHOOK):
+ * 1. 🔒 Customer-level locking (prevent race conditions)
+ * 2. 🚦 Rate limiting (customer + workspace)
+ * 3. 📞 Phone normalization (variants)
+ * 4. 🔍 Customer lookup/create
+ * 5. 🔁 Deduplication (prevent double processing)
+ * 6. 💰 Billing checks (trial, credit, limits)
+ * 7. 🚫 Workspace access checks
+ * 8. 💾 Save user message FIRST
+ * 9. 🔒 Security LLM
+ * 10. 🤖 Chat Engine
+ * 11. 📤 Queue delivery
  */
 
 import { Request, Response } from 'express'
 import { prisma } from '@echatbot/database'
+import { SecurityCheckService } from '../../../application/services/security-check.service'
+import { getChatEngine } from '../../../application/chat-engine'
+import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from '../../../middlewares/rateLimiter'
+import { platformConfigService } from '../../../services/platform-config.service'
 import logger from '../../../utils/logger'
+import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
+import { buildPhoneVariants } from '../../../utils/phone'
+
+const MINUTE_MS = 60_000
+const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
+  capacity: limitPerMin + burst,
+  refillPerMs: limitPerMin / MINUTE_MS,
+})
+
+/**
+ * 🔒 CONCURRENCY CONTROL: Customer-level message processing locks
+ * Prevents race conditions when customer sends multiple messages rapidly
+ * See Constitution Principle VI: Chat Isolation & Concurrency Safety
+ */
+const customerMessageLocks = new Map<string, Promise<void>>()
 
 export class UltraMsgWebhookController {
   /**
    * Handle incoming webhook from UltraMsg
    * POST /api/v1/whatsapp/ultramsg/:workspaceId
+   * 
+   * FLOW (IDENTICAL TO META):
+   * 1. Extract phone for locking
+   * 2. Acquire customer-level lock
+   * 3. Process message with lock held
    */
   async handleWebhook(req: Request, res: Response): Promise<Response> {
+    const { workspaceId } = req.params
+
+    // 🔒 STEP 0: Extract phone number FIRST for locking (before any processing)
+    let phoneNumberForLock: string | undefined
+    
+    try {
+      const { from } = req.body
+      if (from) {
+        phoneNumberForLock = from.startsWith('+') ? from.trim() : `+${from.trim()}`
+      }
+    } catch (error) {
+      logger.error('[ULTRAMSG] ❌ Failed to extract phone for locking', error)
+    }
+    
+    // 🔒 STEP 1: ACQUIRE CUSTOMER LOCK (prevents concurrent message processing)
+    if (phoneNumberForLock) {
+      const lockKey = `customer:${phoneNumberForLock}`
+      
+      // Wait for any existing lock to release
+      while (customerMessageLocks.has(lockKey)) {
+        logger.info('[ULTRAMSG] ⏳ Waiting for customer lock', { phone: phoneNumberForLock })
+        await customerMessageLocks.get(lockKey)
+      }
+      
+      // Create new lock
+      let releaseLock: () => void
+      const lockPromise = new Promise<void>((resolve) => { 
+        releaseLock = resolve 
+      })
+      customerMessageLocks.set(lockKey, lockPromise)
+      
+      try {
+        // Process message with lock held
+        return await this._handleWebhookLocked(req, res)
+      } finally {
+        // Always release lock
+        customerMessageLocks.delete(lockKey)
+        releaseLock!()
+        logger.info('[ULTRAMSG] 🔓 Released customer lock', { phone: phoneNumberForLock })
+      }
+    } else {
+      // No phone number - process without lock
+      return await this._handleWebhookLocked(req, res)
+    }
+  }
+  
+  /**
+   * Internal method - processes message with lock held
+   * THIS IS THE CORE LOGIC - COPIED EXACTLY FROM META WEBHOOK
+   */
+  private async _handleWebhookLocked(req: Request, res: Response): Promise<Response> {
     const { workspaceId } = req.params
     const { id, from, to, body, type, timestamp } = req.body
 
@@ -45,49 +133,645 @@ export class UltraMsgWebhookController {
           id: workspaceId,
           deletedAt: null,
         },
+        select: {
+          id: true,
+          name: true,
+          welcomeMessage: true,
+          defaultLanguage: true,
+          channelStatus: true,
+          debugMode: true,
+          wipMessage: true,
+          ownerId: true,
+          owner: {
+            select: { status: true }
+          }
+        }
       }) as any
 
-      if (!workspace) {
+      if (!workspace || workspace.whatsappProvider !== 'ultramsg') {
         logger.warn('⚠️ UltraMsg Webhook: Workspace not found or not using UltraMsg', {
           workspaceId,
+          provider: workspace?.whatsappProvider,
         })
         return res.status(404).json({
           error: 'Workspace not found or not configured for UltraMsg',
         })
       }
 
-      // 2. Normalize phone number (add + prefix if missing)
-      const phoneNumber = from.startsWith('+') ? from : `+${from}`
+      // Owner inactive or channel disabled
+      if (workspace.owner?.status === 'INACTIVE' || workspace.channelStatus === false) {
+        logger.warn('[ULTRAMSG] 🚫 Channel disabled or owner inactive', {
+          workspaceId,
+          channelStatus: workspace.channelStatus,
+          ownerStatus: workspace.owner?.status,
+        })
+        return res.status(200).json({ success: true, message: 'Channel disabled' })
+      }
 
-      // 3. Determine message type
-      const messageType = type === 'image' || type === 'video' || type === 'document' 
-        ? type 
-        : 'text'
+      // 2. 📞 Normalize phone number with variants (EXACTLY like Meta)
+      const phoneVariants = buildPhoneVariants(from)
+      const phoneNumber = phoneVariants[0]
+      const messageText = body || ''
 
-      // 4. Save webhook event for audit
-      await prisma.whatsappWebhookEvent.create({
+      if (!messageText || messageText.trim() === '') {
+        logger.warn('[ULTRAMSG] ⚠️ No message text - ignoring', { workspaceId })
+        return res.status(200).json({ status: 'ignored', reason: 'no text' })
+      }
+
+      if (!phoneNumber) {
+        logger.error('[ULTRAMSG] ❌ Missing phone number', { workspaceId })
+        return res.status(400).json({ error: 'missing_phone_number' })
+      }
+
+      logger.info('[ULTRAMSG] 📞 Phone normalized', {
+        rawPhone: from,
+        normalizedPhone: phoneNumber,
+        variants: phoneVariants.length,
+      })
+
+      // 3. 🔁 Deduplication - prevent double processing (EXACTLY like Meta)
+      if (id) {
+        try {
+          const prismaAny = prisma as any
+          await prismaAny.whatsappWebhookEvent.create({
+            data: {
+              workspaceId,
+              externalMessageId: id, // UNIQUE constraint
+              channel: 'whatsapp',
+            },
+          })
+        } catch (error: any) {
+          if (error?.code === 'P2002') {
+            logger.info('[ULTRAMSG] 🔁 Duplicate message ignored', {
+              workspaceId,
+              messageId: id,
+            })
+            return res.status(200).json({
+              status: 'duplicate',
+              messageId: id,
+            })
+          }
+          throw error
+        }
+      }
+
+      // 4. 🔍 Find customer (with variants - EXACTLY like Meta)
+      const customerSelect = {
+        id: true,
+        phone: true,
+        name: true,
+        email: true,
+        language: true,
+        workspaceId: true,
+        isActive: true,
+        isBlacklisted: true,
+        activeChatbot: true,
+        discount: true,
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            welcomeMessage: true,
+            defaultLanguage: true,
+          },
+        },
+      } as const
+
+      let customer = await prisma.customers.findFirst({
+        where: {
+          workspaceId,
+          OR: phoneVariants.map((v) => ({ phone: v })),
+        },
+        select: customerSelect,
+      }) as any
+
+      if (customer) {
+        logger.info('[ULTRAMSG] ✅ Customer found by phone match', {
+          customerId: customer.id,
+          phone: customer.phone,
+        })
+
+        if (customer.isBlacklisted) {
+          logger.warn('[ULTRAMSG] 🚫 Blocked customer - returning 410', {
+            customerId: customer.id,
+          })
+          return res.status(410).json({
+            status: 'blocked',
+            message: 'Customer is blocked',
+          })
+        }
+      }
+
+      // 5. Handle NEW customer (EXACTLY like Meta - with billing checks)
+      if (!customer) {
+        logger.info('[ULTRAMSG] 🆕 New customer detected - NOT IMPLEMENTED YET', {
+          phoneNumber,
+          workspaceId,
+        })
+
+        // TODO: Implement welcome message flow for UltraMsg
+        // For now, create customer without welcome message
+        
+        // 💰 BILLING CHECK: Verify credit and plan limits BEFORE creating customer
+        const { SubscriptionBillingService } = await import(
+          '../../../application/services/subscription-billing.service'
+        )
+        const billingService = new SubscriptionBillingService(prisma)
+
+        // Check trial validity
+        const trialStatus = await billingService.isTrialValid(workspaceId)
+        if (trialStatus.isTrialPlan && !trialStatus.isValid) {
+          logger.warn('[ULTRAMSG] 💰 Trial expired - SILENT BLOCK for new user', {
+            workspaceId,
+            phoneNumber,
+          })
+          return res.status(402).json({
+            status: 'billing_error',
+            code: 'TRIAL_EXPIRED',
+            message: 'Trial period has expired. Please upgrade your plan.',
+          })
+        }
+
+        // Check credit balance
+        const messageCost = await billingService.getOperationCost(workspaceId, 'message')
+        const creditCheck = await billingService.checkCredit(workspaceId, messageCost)
+
+        if (!creditCheck.hasSufficientCredit) {
+          logger.warn('[ULTRAMSG] 💰 Insufficient credit - SILENT BLOCK for new user', {
+            workspaceId,
+            phoneNumber,
+          })
+          return res.status(402).json({
+            status: 'billing_error',
+            code: 'INSUFFICIENT_CREDIT',
+            message: 'Insufficient credit. Please recharge your account.',
+          })
+        }
+
+        // Check customer limit
+        const customerLimitCheck = await billingService.checkPlanLimits(workspaceId, 'customers')
+        if (!customerLimitCheck.withinLimits) {
+          logger.warn('[ULTRAMSG] 📊 Customer limit reached - SILENT BLOCK', {
+            workspaceId,
+            phoneNumber,
+          })
+          return res.status(403).json({
+            status: 'limit_reached',
+            code: 'CUSTOMER_LIMIT_REACHED',
+            message: `Customer limit reached. Please upgrade your plan.`,
+          })
+        }
+
+        // Create customer
+        const phoneForStorage = phoneVariants.find((v) => v.startsWith('+')) || phoneVariants[0] || phoneNumber
+        
+        customer = await prisma.customers.create({
+          data: {
+            workspace: {
+              connect: { id: workspaceId },
+            },
+            phone: phoneForStorage,
+            email: `${phoneForStorage.replace(/[^0-9]/g, '')}@whatsapp.ultramsg.temp`,
+            name: 'New Customer',
+            language: workspace.defaultLanguage || 'it',
+            isActive: false, // Mark inactive until registration
+          },
+          select: customerSelect,
+        }) as any
+
+        logger.info('[ULTRAMSG] ✅ New customer created', {
+          customerId: customer.id,
+          phone: customer.phone,
+        })
+      }
+
+      // 6. 🚦 Rate limiting (EXACTLY like Meta)
+      const [
+        customerPerMin,
+        customerBurst,
+        workspacePerMin,
+        workspaceBurst,
+      ] = await Promise.all([
+        platformConfigService.getLimit('WHATSAPP_RATE_LIMIT_CUSTOMER_PER_MIN'),
+        platformConfigService.getLimit('WHATSAPP_RATE_LIMIT_CUSTOMER_BURST'),
+        platformConfigService.getLimit('WHATSAPP_RATE_LIMIT_WORKSPACE_PER_MIN'),
+        platformConfigService.getLimit('WHATSAPP_RATE_LIMIT_WORKSPACE_BURST'),
+      ])
+
+      // Customer rate limit
+      const customerRateLimitKey = `customer:${customer.id}`
+      const customerLimiterConfig = buildTokenBucketConfig(customerPerMin, customerBurst)
+      if (!whatsappMessageRateLimiter.isAllowed(customerRateLimitKey, customerLimiterConfig)) {
+        const timeToReset = whatsappMessageRateLimiter.getTimeToReset(
+          customerRateLimitKey,
+          customerLimiterConfig
+        )
+        logger.warn('[ULTRAMSG] 🚫 Rate limit exceeded for customer', {
+          customerId: customer.id,
+          timeToResetMs: timeToReset,
+        })
+        return res.status(200).json({
+          status: 'rate_limited',
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: 'Too many messages. Please wait before sending more.',
+          retryAfterMs: timeToReset,
+        })
+      }
+
+      // Workspace rate limit
+      const workspaceRateLimitKey = `workspace:${workspaceId}`
+      const workspaceLimiterConfig = buildTokenBucketConfig(workspacePerMin, workspaceBurst)
+      if (!whatsappWorkspaceRateLimiter.isAllowed(workspaceRateLimitKey, workspaceLimiterConfig)) {
+        const timeToReset = whatsappWorkspaceRateLimiter.getTimeToReset(
+          workspaceRateLimitKey,
+          workspaceLimiterConfig
+        )
+        logger.warn('[ULTRAMSG] 🚫 Rate limit exceeded for workspace', {
+          workspaceId,
+          timeToResetMs: timeToReset,
+        })
+        return res.status(200).json({
+          status: 'rate_limited',
+          code: 'WORKSPACE_RATE_LIMIT_EXCEEDED',
+          message: 'Too many messages in this channel. Please wait.',
+          retryAfterMs: timeToReset,
+        })
+      }
+
+      // 7. 🔒 Check workspace access (EXACTLY like Meta)
+      const { WorkspaceAccessService } = await import(
+        '../../../application/services/workspace-access.service'
+      )
+      const workspaceAccessService = new WorkspaceAccessService(prisma)
+      
+      const accessResult = await workspaceAccessService.canProcessMessages(
+        workspaceId,
+        false // Check channelStatus
+      )
+
+      if (!accessResult.canProcess) {
+        // 🚧 CHANNEL_DISABLED → Send WIP message
+        if (accessResult.blockReason === 'CHANNEL_DISABLED') {
+          logger.info('[ULTRAMSG] 🚧 Debug mode (WIP) - sending maintenance message', {
+            workspaceId,
+            customerId: customer.id,
+          })
+          
+          // Get or create chat session
+          let chatSession = await prisma.chatSession.findFirst({
+            where: {
+              customerId: customer.id,
+              status: 'active',
+            },
+          })
+
+          if (!chatSession) {
+            chatSession = await prisma.chatSession.create({
+              data: {
+                customerId: customer.id,
+                workspaceId,
+                status: 'active',
+              },
+            })
+          }
+
+          const wipMessage = workspace.wipMessage || 'Work in progress. Please contact us later.'
+          
+          // Save user message + WIP message
+          await prisma.conversationMessage.create({
+            data: {
+              workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: 'user',
+              content: whatsAppToMarkdown(messageText),
+              agentType: 'NONE',
+              tokensUsed: 0,
+              debugInfo: JSON.stringify({
+                channelDisabled: true,
+                reason: 'workspace.debugMode = true (WIP mode)',
+                source: 'ultramsg-webhook',
+              }),
+            },
+          })
+
+          const assistantMessage = await prisma.conversationMessage.create({
+            data: {
+              workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: 'assistant',
+              content: wipMessage,
+              agentType: 'ROUTER',
+              tokensUsed: 0,
+              deliveryStatus: 'pending',
+              debugInfo: JSON.stringify({
+                channelDisabled: true,
+                reason: 'workspace.debugMode = true (WIP mode)',
+                source: 'ultramsg-webhook',
+              }),
+            },
+          })
+
+          // Queue WIP message
+          try {
+            const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
+            const queueService = new WhatsAppQueueService(prisma)
+            await queueService.enqueue({
+              workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              messageContent: wipMessage,
+              conversationMessageId: assistantMessage.id,
+            })
+          } catch (error) {
+            logger.error('[ULTRAMSG] ❌ Failed to enqueue WIP message', { error })
+          }
+          
+          return res.status(200).json({
+            status: 'channel_disabled',
+            code: 'CHANNEL_DISABLED',
+            message: 'Channel is in maintenance mode.',
+            wipMessage,
+          })
+        }
+        
+        // Silent block for billing issues
+        logger.warn('[ULTRAMSG] 🚫 Workspace blocked - SILENT BLOCK', {
+          workspaceId,
+          customerId: customer.id,
+          blockReason: accessResult.blockReason,
+        })
+
+        return res.status(402).json({
+          status: 'workspace_blocked',
+          code: accessResult.blockReason,
+          message: accessResult.message,
+        })
+      }
+
+      // 8. 💰 Additional billing check for existing customers (EXACTLY like Meta)
+      const { SubscriptionBillingService: BillingService2 } = await import(
+        '../../../application/services/subscription-billing.service'
+      )
+      const billingService2 = new BillingService2(prisma)
+
+      const trialStatus2 = await billingService2.isTrialValid(workspaceId)
+      if (trialStatus2.isTrialPlan && !trialStatus2.isValid) {
+        logger.warn('[ULTRAMSG] 💰 Trial expired - SILENT BLOCK', {
+          workspaceId,
+          customerId: customer.id,
+        })
+        return res.status(402).json({
+          status: 'billing_error',
+          code: 'TRIAL_EXPIRED',
+          message: 'Trial period has expired.',
+        })
+      }
+
+      const messageCost2 = await billingService2.getOperationCost(workspaceId, 'message')
+      const creditCheck2 = await billingService2.checkCredit(workspaceId, messageCost2)
+
+      if (!creditCheck2.hasSufficientCredit) {
+        logger.warn('[ULTRAMSG] 💰 Insufficient credit - SILENT BLOCK', {
+          workspaceId,
+          customerId: customer.id,
+        })
+        return res.status(200).json({
+          status: 'billing_error',
+          code: 'INSUFFICIENT_CREDIT',
+          message: 'Insufficient credit.',
+        })
+      }
+
+      // 9. 💾 Get or create active chat session
+      let chatSession = await prisma.chatSession.findFirst({
+        where: {
+          customerId: customer.id,
+          status: 'active',
+        },
+      })
+
+      if (!chatSession) {
+        logger.info('[ULTRAMSG] Creating new chat session', {
+          customerId: customer.id,
+        })
+        chatSession = await prisma.chatSession.create({
+          data: {
+            customerId: customer.id,
+            workspaceId,
+            status: 'active',
+            context: {
+              createdBy: 'ultramsg-webhook',
+              phoneNumber,
+            },
+          },
+        })
+      }
+
+      // 10. Convert message to markdown
+      const messageMarkdown = whatsAppToMarkdown(messageText)
+
+      // 11. 🔒 CRITICAL: If chatbot is disabled, ONLY save message (EXACTLY like Meta)
+      if (customer && !customer.activeChatbot) {
+        logger.info('[ULTRAMSG] 🚫 Chatbot disabled - saving message without LLM', {
+          customerId: customer.id,
+        })
+
+        await prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: 'user',
+            content: messageMarkdown,
+            agentType: 'NONE',
+            tokensUsed: 0,
+            debugInfo: JSON.stringify({
+              chatbotDisabled: true,
+              reason: 'activeChatbot = false',
+              source: 'ultramsg-webhook',
+            }),
+          },
+        })
+
+        return res.status(200).json({
+          status: 'message_saved',
+          message: 'Message saved (chatbot disabled)',
+          chatbotDisabled: true,
+          sessionId: chatSession.id,
+        })
+      }
+
+      // 12. 💾 SAVE USER MESSAGE **FIRST** (CRITICAL - EXACTLY like Meta)
+      // This must happen BEFORE Security LLM so message appears in history
+      await prisma.conversationMessage.create({
         data: {
           workspaceId,
-          payload: req.body as any,
-          processedAt: new Date(),
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          role: 'user',
+          content: messageMarkdown,
+          agentType: 'CUSTOMER',
+          tokensUsed: 0,
+          deliveryStatus: 'delivered', // User messages are always delivered
+          debugInfo: JSON.stringify({
+            source: 'ultramsg-webhook',
+            timestamp: new Date().toISOString(),
+          }),
         },
-      } as any)
+      })
 
-      // 5. Process message (same processor as Meta)
-      // This will trigger the LLM pipeline
-      // Note: The actual message processing is handled by the WhatsApp message processor
-      // which is called from the whatsapp-webhook.controller
-      // For now, we just acknowledge receipt
-      
+      logger.info('[ULTRAMSG] 💾 User message saved to history', {
+        customerId: customer.id,
+        conversationId: chatSession.id,
+      })
+
+      // 13. 🔒 SECURITY CHECK (same as Meta)
+      logger.info('[ULTRAMSG] 🔍 Starting security validation', {
+        customerId: customer.id,
+        workspaceId,
+      })
+
+      let securityResults
+      try {
+        securityResults = await SecurityCheckService.validateMessage({
+          workspaceId,
+          visitorId: phoneNumber,
+          message: messageMarkdown,
+          channel: 'whatsapp',
+        })
+        logger.info('[ULTRAMSG] ✅ Security validation completed', { 
+          resultsCount: securityResults.length,
+          customerId: customer.id,
+        })
+      } catch (securityError) {
+        logger.error('[ULTRAMSG] ❌ Security validation error', {
+          error: securityError instanceof Error ? securityError.message : String(securityError),
+          customerId: customer.id,
+        })
+        
+        return res.status(500).json({
+          status: 'security_check_error',
+          message: 'Failed to validate message security',
+        })
+      }
+
+      // Check if any security step failed
+      const failedStep = securityResults.find((result) => !result.passed)
+      if (failedStep) {
+        logger.warn('[ULTRAMSG] 🚨 Security check failed - message blocked', {
+          customerId: customer.id,
+          step: failedStep.step,
+          reason: failedStep.reason,
+        })
+
+        // Update the user message with security blocked flag
+        // (message already saved above)
+
+        return res.status(429).json({
+          status: 'security_blocked',
+          code: failedStep.step,
+          message: failedStep.reason || 'Security check failed',
+        })
+      }
+
+      logger.info('[ULTRAMSG] ✅ Security validation passed', { customerId: customer.id })
+
+      // 14. 🤖 CHAT ENGINE (same as Meta)
+      logger.info('[ULTRAMSG] 🎯 Calling ChatEngineService', {
+        customerId: customer.id,
+        conversationId: chatSession.id,
+        messageLength: messageMarkdown.length,
+      })
+
+      const chatEngine = getChatEngine(prisma)
+      const routerResult = await chatEngine.routeMessage({
+        workspaceId,
+        customerId: customer.id,
+        conversationId: chatSession.id,
+        message: messageMarkdown,
+        customerLanguage: customer.language || workspace.defaultLanguage || 'it',
+        customerName: customer.name,
+        customerDiscount: customer.discount || 0,
+        isPlayground: false,
+        channel: 'whatsapp',
+      })
+
+      logger.info('[ULTRAMSG] ✅ ChatEngineService completed', {
+        agentUsed: routerResult.agentUsed,
+        tokensUsed: routerResult.tokensUsed,
+        responseLength: routerResult.response?.length ?? 0,
+      })
+
+      // 🚫 Check if customer is blocked
+      if (routerResult.isBlocked) {
+        logger.warn('[ULTRAMSG] 🚫 Customer blocked - returning 410 Gone', {
+          customerId: customer.id,
+        })
+
+        return res.status(410).json({
+          status: 'blocked',
+          message: 'Customer is blocked',
+        })
+      }
+
+      // 15. 📤 QUEUE DELIVERY (same as Meta)
+      logger.info('[ULTRAMSG] 📤 Saving response to WhatsApp queue', {
+        customerId: customer.id,
+        workspaceId,
+        responseLength: routerResult.response.length,
+      })
+
+      try {
+        const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
+        const queueService = new WhatsAppQueueService(prisma)
+        
+        // Find the assistant message created by ChatEngine
+        const assistantMessage = await prisma.conversationMessage.findFirst({
+          where: {
+            conversationId: chatSession.id,
+            role: 'assistant',
+            content: routerResult.response,
+          },
+          orderBy: { createdAt: 'desc' },
+        })
+
+        await queueService.enqueue({
+          workspaceId,
+          customerId: customer.id,
+          phoneNumber: customer.phone,
+          messageContent: routerResult.response,
+          conversationMessageId: assistantMessage?.id,
+          isPlayground: false,
+        })
+
+        logger.info('[ULTRAMSG] ✅ Response queued for WhatsApp delivery', {
+          customerId: customer.id,
+        })
+      } catch (queueError) {
+        logger.error('[ULTRAMSG] ❌ Failed to enqueue WhatsApp response', {
+          error: queueError,
+          customerId: customer.id,
+        })
+      }
+
       logger.info('✅ UltraMsg Webhook processed successfully', {
         workspaceId,
         phoneNumber,
-        messageType,
         messageId: id,
       })
 
       // Return 200 OK to UltraMsg
-      return res.status(200).json({ success: true })
+      return res.status(200).json({ 
+        success: true,
+        status: 'processed',
+        data: {
+          message: routerResult.response,
+          sessionId: chatSession.id,
+          customerId: customer.id,
+        },
+      })
 
     } catch (error: any) {
       logger.error('❌ UltraMsg Webhook processing failed', {
@@ -97,7 +781,6 @@ export class UltraMsgWebhookController {
       })
 
       // Still return 200 to prevent UltraMsg from retrying
-      // Log the error for debugging
       return res.status(200).json({ 
         success: false, 
         error: 'Internal processing error' 

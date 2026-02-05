@@ -35,9 +35,8 @@ interface WhatsAppChannelSectionProps {
   onFieldFocus?: (fieldKey: string) => void
 }
 
-const WEBHOOK_BASE =
-  import.meta.env.VITE_PUBLIC_WEBHOOK_BASE ||
-  (typeof window !== "undefined" ? window.location.origin : "https://echatbot.ai")
+// ALWAYS use production domain for webhook URLs
+const WEBHOOK_BASE = "https://www.echatbot.ai"
 
 export function WhatsAppChannelSection({
   formData,

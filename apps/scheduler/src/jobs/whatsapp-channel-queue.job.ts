@@ -139,7 +139,7 @@ async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ succes
     // Load workspace with WhatsApp provider configuration
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-    })
+    }) as any // TODO: Remove cast after Prisma types refresh
 
     if (!workspace) {
       logger.error('[WhatsApp Queue] Workspace not found', { workspaceId })
