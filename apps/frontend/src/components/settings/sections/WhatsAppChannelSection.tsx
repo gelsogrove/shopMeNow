@@ -151,24 +151,13 @@ export function WhatsAppChannelSection({
               </div>
             </div>
 
-            {/* Shared Fields (Meta + UltraMsg) */}
+            {/* Shared Field: Phone Number */}
             <div
               className="space-y-2"
               onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
               data-focus-key="whatsappAccess"
             >
-              <Label htmlFor="whatsappAppName">AppName (Meta)</Label>
-              <Input
-                id="whatsappAppName"
-                value={formData.whatsappAppName}
-                onChange={(e) => onFieldChange("whatsappAppName", e.target.value)}
-                placeholder="Meta app name"
-                disabled={!canEdit}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="whatsappPhoneNumber">Tel:</Label>
+              <Label htmlFor="whatsappPhoneNumber">Phone Number</Label>
               <Input
                 id="whatsappPhoneNumber"
                 value={formData.whatsappPhoneNumber}
@@ -182,6 +171,29 @@ export function WhatsAppChannelSection({
             {currentProvider === "meta" && (
               <>
                 <div className="space-y-2">
+                  <Label htmlFor="whatsappAppName">App Name</Label>
+                  <Input
+                    id="whatsappAppName"
+                    value={formData.whatsappAppName}
+                    onChange={(e) => onFieldChange("whatsappAppName", e.target.value)}
+                    placeholder="Meta app name"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappAppSecret">App Secret</Label>
+                  <Input
+                    id="whatsappAppSecret"
+                    type="password"
+                    value={formData.whatsappAppSecret}
+                    onChange={(e) => onFieldChange("whatsappAppSecret", e.target.value)}
+                    placeholder="Meta app secret"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="whatsappApiKey">Access Token</Label>
                   <Input
                     id="whatsappApiKey"
@@ -194,7 +206,7 @@ export function WhatsAppChannelSection({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsappPhoneNumberId">Phone number ID:</Label>
+                  <Label htmlFor="whatsappPhoneNumberId">Phone Number ID</Label>
                   <Input
                     id="whatsappPhoneNumberId"
                     value={formData.whatsappPhoneNumberId}
@@ -216,7 +228,7 @@ export function WhatsAppChannelSection({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsappVerifyToken">Verify token</Label>
+                  <Label htmlFor="whatsappVerifyToken">Verify Token</Label>
                   <Input
                     id="whatsappVerifyToken"
                     value={formData.whatsappVerifyToken}

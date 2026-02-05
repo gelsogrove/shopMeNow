@@ -3,4 +3,4 @@
 # NO web dyno - only worker for cron tasks
 # NO release command - migrations are handled by echatbot-app only
 
-worker: node apps/scheduler/dist/index.js
+worker: node apps/scheduler/dist/apps/scheduler/src/index.js
