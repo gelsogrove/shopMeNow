@@ -11,6 +11,7 @@
   },
   "scripts": {
     "build": "tsc -p ./tsconfig.json && cp -r src/generated dist/src/",
+    "postinstall": "prisma generate",
     "generate": "prisma generate",
     "migrate:dev": "if [ \"$NODE_ENV\" = \"production\" ] && [ \"$ALLOW_DESTRUCTIVE_OPERATIONS\" != \"true\" ]; then echo '❌ Cannot run migrate:dev in production! Use ALLOW_DESTRUCTIVE_OPERATIONS=true to override' && exit 1; fi && prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
