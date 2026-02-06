@@ -28,6 +28,23 @@ const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
 const customerMessageLocks = new Map<string, Promise<void>>()
 
 /**
+ * 🌍 Language Detection Helper
+ * Detects language from phone prefix (e.g., +39 → it, +34 → es)
+ */
+const detectLanguageFromPhonePrefix = (phone: string): string => {
+  const cleanPhone = phone.replace(/[\s\-()]/g, "")
+  const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
+  if (!prefixMatch) return "en"
+  
+  const prefix = prefixMatch[1]
+  const langMap: Record<string, string> = {
+    "+39": "it", "+34": "es", "+351": "pt", "+33": "fr", "+49": "de",
+    "+1": "en", "+44": "en", "+91": "en"
+  }
+  return langMap[prefix] || "en"
+}
+
+/**
  * WhatsApp Webhook Controller
  *
  * Single Responsibility: Handle INBOUND messages from WhatsApp
@@ -1469,19 +1486,6 @@ export class WhatsAppWebhookController {
       
       // 🌍 Language detection with normalization
       // ALWAYS normalize customer.language to 2-letter code (es, it, en, pt, fr, de)
-      const detectLanguageFromPhonePrefix = (phone: string): string => {
-        const cleanPhone = phone.replace(/[\s\-()]/g, "")
-        const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
-        if (!prefixMatch) return "en"
-        
-        const prefix = prefixMatch[1]
-        const langMap: Record<string, string> = {
-          "+39": "it", "+34": "es", "+351": "pt", "+33": "fr", "+49": "de",
-          "+1": "en", "+44": "en", "+91": "en"
-        }
-        return langMap[prefix] || "en"
-      }
-      
       const normalizeLanguage = (lang: string | null): string => {
         if (!lang) return ""
         const lower = lang.toLowerCase().trim()
