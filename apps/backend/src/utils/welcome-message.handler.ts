@@ -76,11 +76,17 @@ export class WelcomeMessageHandler {
       }
 
       // Count previous USER messages from this customer in this workspace (scoped by channel when provided)
+      // 🚨 CRITICAL FIX: Exclude REGISTRATION_FLOW messages from count
+      // Registration flow messages are system messages sent before user is fully registered
+      // We want to send welcome message on first REAL conversational message after registration
       const previousMessageCount = await this.prisma.conversationMessage.count({
         where: {
           customerId: input.customerId,
           workspaceId: input.workspaceId,
           role: "user", // Only count user messages
+          agentType: {
+            not: "REGISTRATION_FLOW", // 🚫 Exclude registration flow messages
+          },
           ...conversationFilter,
         },
       })

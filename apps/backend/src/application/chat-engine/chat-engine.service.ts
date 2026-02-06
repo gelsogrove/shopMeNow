@@ -5735,13 +5735,14 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     debugInfo?: any
   ): Promise<{ assistantMessageId?: string }> {
     try {
-      // Save user message
-      await this.conversationManager.saveUserMessage({
-        workspaceId,
-        customerId,
-        conversationId,
-        content: userMessage,
-      })
+      // ❌ DON'T save user message here - already saved by LLMRouterService
+      // Saving here would create duplicate user messages in conversation history
+      // await this.conversationManager.saveUserMessage({
+      //   workspaceId,
+      //   customerId,
+      //   conversationId,
+      //   content: userMessage,
+      // })
       
       // 🆕 Create minimal debugInfo if not provided (for FAST-PATH responses)
       const finalDebugInfo = debugInfo || {

@@ -257,6 +257,7 @@ export const getLanguages = async (): Promise<Language[]> => {
 // Export individual functions for backward compatibility
 export const getCurrentWorkspace = workspaceApi.getCurrent
 export const getWorkspaces = workspaceApi.getAll
+export const getWorkspaceById = workspaceApi.getById
 export const createWorkspace = workspaceApi.create
 export const updateWorkspace = workspaceApi.update
 export const deleteWorkspace = workspaceApi.delete

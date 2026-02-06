@@ -27,7 +27,7 @@ import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
-import { updateWorkspace, deleteWorkspace } from "@/services/workspaceApi"
+import { updateWorkspace, deleteWorkspace, getWorkspaceById } from "@/services/workspaceApi"
 import { resetAgentPromptsToDefaults } from "@/services/agent-config-api"
 import { Switch } from "@/components/ui/switch"
 
@@ -154,6 +154,9 @@ export function SettingsPage() {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [showWorkspaceTypeChangeDialog, setShowWorkspaceTypeChangeDialog] = useState(false)
   const [pendingFormData, setPendingFormData] = useState<FormData | null>(null)
+  const isDirtyRef = useRef(false)
+  const lastWorkspaceIdRef = useRef<string | null>(null)
+  const hydratedWorkspaceIdsRef = useRef<Set<string>>(new Set())
 
   const resolveLogoUrl = useCallback((value?: string) => {
     if (!value) return undefined
@@ -161,6 +164,10 @@ export function SettingsPage() {
     const path = value.startsWith("/") ? value : `/${value}`
     return `${IMG_BASE_URL}${path}`
   }, [])
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty
+  }, [isDirty])
 
   const [formData, setFormData] = useState<FormData>({
     chatbotName: "Sofia",
@@ -213,6 +220,21 @@ export function SettingsPage() {
   // Load workspace data
   useEffect(() => {
     if (currentWorkspace) {
+      const workspaceId = currentWorkspace.id
+      const previousId = lastWorkspaceIdRef.current
+      const workspaceChanged = !!previousId && previousId !== workspaceId
+
+      if (workspaceChanged) {
+        setIsDirty(false)
+        isDirtyRef.current = false
+      }
+
+      lastWorkspaceIdRef.current = workspaceId
+
+      if (isDirtyRef.current && !workspaceChanged) {
+        return
+      }
+
       setFormData({
         chatbotName: currentWorkspace.chatbotName || "Sofia",
         botIdentityResponse: currentWorkspace.botIdentityResponse || "",
@@ -266,6 +288,33 @@ export function SettingsPage() {
       })
     }
   }, [currentWorkspace])
+
+  useEffect(() => {
+    const workspaceId = currentWorkspace?.id
+    if (!workspaceId) return
+    if (hydratedWorkspaceIdsRef.current.has(workspaceId)) return
+
+    hydratedWorkspaceIdsRef.current.add(workspaceId)
+    let cancelled = false
+
+    const hydrateWorkspace = async () => {
+      try {
+        const freshWorkspace = await getWorkspaceById(workspaceId)
+        if (cancelled) return
+        if (!freshWorkspace) return
+        // Update context with full data; form will re-hydrate only if not dirty.
+        setCurrentWorkspace(freshWorkspace)
+      } catch (error) {
+        console.error("Failed to hydrate workspace settings:", error)
+      }
+    }
+
+    hydrateWorkspace()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentWorkspace?.id, setCurrentWorkspace])
 
   // Handle field change
   const handleFieldChange = useCallback((field: string, value: any) => {

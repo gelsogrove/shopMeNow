@@ -96,8 +96,9 @@ export async function contactOperator(
           name: true,
           operatorContactMethod: true,
           operatorWhatsappNumber: true,
+          operatorEmail: true, // 📧 Email operatore per notifiche
           hasHumanSupport: true,
-          humanSupportInstructions: true,
+          frustrationEscalationInstructions: true, // 🆕 Andrea: Use this instead of humanSupportInstructions
           whatsappSettings: {
             select: { adminEmail: true },
           },
@@ -286,48 +287,22 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
             adminEmail: workspace?.whatsappSettings?.adminEmail || "NOT SET",
           })
 
-          if (workspace?.whatsappSettings?.adminEmail) {
+          // 📧 EMAIL NOTIFICATION (if method = "email" or operatorEmail is set)
+          if (workspace?.operatorContactMethod === "email" || workspace?.operatorEmail) {
             // Import EmailService
             const {
               EmailService,
             } = require("../../application/services/email.service")
             const emailService = new EmailService()
 
-            // PRIORITY LOGIC (Andrea's spec - same as WhatsApp):
-            // 1. If customer has salesId → send to agent's email
-            // 2. Otherwise → send to admin user email
-            
-            let targetEmail: string | null = null
-            let targetName = "Operatore"
+            // 🎯 Andrea's spec: Use workspace.operatorEmail directly
+            const targetEmail = workspace.operatorEmail || workspace.whatsappSettings?.adminEmail
+            const targetName = "Operatore"
 
-            if (customer.salesId && customer.sales?.email) {
-              // ✅ Customer has assigned agent → send to agent
-              targetEmail = customer.sales.email
-              targetName = `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
-              logger.info("✅ [contactOperator] Sending email to assigned agent:", {
-                agentName: targetName,
-                agentEmail: targetEmail,
-              })
-            } else {
-              // ❌ No agent → send to admin
-              const adminUser = await prisma.user.findFirst({
-                where: {
-                  role: "ADMIN",
-                  workspaces: {
-                    some: { workspaceId: request.workspaceId },
-                  },
-                },
-              })
-
-              if (adminUser?.email) {
-                targetEmail = adminUser.email
-                logger.info("✅ [contactOperator] Sending email to admin:", {
-                  adminEmail: targetEmail,
-                })
-              } else {
-                logger.warn("⚠️ [contactOperator] No agent or admin user found for workspace:", request.workspaceId)
-              }
-            }
+            logger.info("✅ [contactOperator] Sending email to operator:", {
+              operatorEmail: targetEmail,
+              fromWorkspaceEmail: workspace.whatsappSettings?.adminEmail,
+            })
 
             if (targetEmail) {
               try {
@@ -460,22 +435,31 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
 
       await prisma.$disconnect()
 
-      // 📝 Build response message with variable replacement
-      let responseMessage = workspace?.humanSupportInstructions || 
-        "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝"
+      // 📝 Build response message with variable replacement (Andrea's spec)
+      // Use frustrationEscalationInstructions if available, otherwise default message
+      let responseMessage = workspace?.frustrationEscalationInstructions || 
+        "Hello {{nameUser}}, I'm connecting you with our support team. They will contact you as soon as possible. We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝"
 
-      // Replace variables
+      // 🔧 Replace {{nameUser}} variable (Andrea's requirement)
+      responseMessage = responseMessage.replace(/\{\{nameUser\}\}/g, customer.name)
+      
+      // 🔧 Replace other common variables if present
       const agentName = customer.sales 
         ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim() 
         : "Support Team"
       const agentPhone = customer.sales?.phone || workspace?.operatorWhatsappNumber || "N/A"
-      const agentEmail = customer.sales?.email || workspace?.whatsappSettings?.adminEmail || "N/A"
+      const agentEmail = customer.sales?.email || workspace?.operatorEmail || workspace?.whatsappSettings?.adminEmail || "N/A"
 
       responseMessage = responseMessage
-        .replace(/\{\{nameUser\}\}/g, customer.name)
         .replace(/\{\{agentName\}\}/g, agentName)
         .replace(/\{\{agentPhone\}\}/g, agentPhone)
         .replace(/\{\{agentEmail\}\}/g, agentEmail)
+      
+      logger.info("✅ [contactOperator] Response message prepared:", {
+        hasCustomInstructions: !!workspace?.frustrationEscalationInstructions,
+        customerName: customer.name,
+        replacedNameUser: responseMessage.includes(customer.name),
+      })
 
       return {
         success: true,

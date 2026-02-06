@@ -212,6 +212,7 @@ For privacy inquiries, please contact our support team.`
       hasSalesAgents: w.hasSalesAgents,
       hasHumanSupport: w.hasHumanSupport,
       humanSupportInstructions: w.humanSupportInstructions ?? undefined,
+      frustrationEscalationInstructions: w.frustrationEscalationInstructions ?? undefined,
       operatorContactMethod: w.operatorContactMethod ?? undefined,
       operatorEmail: (w as any).operatorEmail ?? undefined,
       operatorWhatsappNumber: w.operatorWhatsappNumber ?? undefined,

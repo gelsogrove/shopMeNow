@@ -17,6 +17,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Copy,
   Download,
@@ -28,7 +30,8 @@ import {
   BarChart3,
   Loader2,
   RefreshCw,
-  MessageSquare
+  MessageSquare,
+  HeadphonesIcon
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { api } from '@/services/api'
@@ -69,11 +72,20 @@ export function WidgetSettingsPage() {
   const [ultraMsgInstanceId, setUltraMsgInstanceId] = useState('')
   const [ultraMsgToken, setUltraMsgToken] = useState('')
   const [savingWhatsApp, setSavingWhatsApp] = useState(false)
+  
+  // Support Settings
+  const [hasHumanSupport, setHasHumanSupport] = useState(false)
+  const [frustrationEscalationInstructions, setFrustrationEscalationInstructions] = useState('')
+  const [operatorContactMethod, setOperatorContactMethod] = useState<'email' | 'whatsapp'>('email')
+  const [operatorEmail, setOperatorEmail] = useState('')
+  const [operatorWhatsappNumber, setOperatorWhatsappNumber] = useState('')
+  const [savingSupport, setSavingSupport] = useState(false)
 
   // Fetch embed code on mount
   useEffect(() => {
     fetchEmbedCode()
     fetchWhatsAppConfig()
+    fetchSupportSettings()
   }, [workspaceId])
 
   async function fetchEmbedCode() {
@@ -120,6 +132,23 @@ export function WidgetSettingsPage() {
     }
   }
 
+  async function fetchSupportSettings() {
+    if (!workspaceId) return
+
+    try {
+      const workspace = await workspaceApi.getWorkspace(workspaceId)
+      
+      setHasHumanSupport(workspace.hasHumanSupport ?? false)
+      setFrustrationEscalationInstructions(workspace.frustrationEscalationInstructions || '')
+      setOperatorContactMethod((workspace.operatorContactMethod as 'email' | 'whatsapp') || 'email')
+      setOperatorEmail(workspace.operatorEmail || '')
+      setOperatorWhatsappNumber(workspace.operatorWhatsappNumber || '')
+    } catch (err) {
+      console.error('Error fetching support settings:', err)
+      // Don't show error toast - just use defaults
+    }
+  }
+
   async function saveWhatsAppConfig() {
     if (!workspaceId) return
 
@@ -147,6 +176,30 @@ export function WidgetSettingsPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to save configuration')
     } finally {
       setSavingWhatsApp(false)
+    }
+  }
+
+  async function saveSupportSettings() {
+    if (!workspaceId) return
+
+    try {
+      setSavingSupport(true)
+      
+      const updateData = {
+        hasHumanSupport,
+        frustrationEscalationInstructions,
+        operatorContactMethod,
+        operatorEmail,
+        operatorWhatsappNumber,
+      }
+
+      await workspaceApi.updateWorkspace(workspaceId, updateData)
+      toast.success('Support settings saved successfully!')
+    } catch (err) {
+      console.error('Error saving support settings:', err)
+      toast.error(err instanceof Error ? err.message : 'Failed to save support settings')
+    } finally {
+      setSavingSupport(false)
     }
   }
 
@@ -213,7 +266,7 @@ export function WidgetSettingsPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="embed" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+        <TabsList className="grid w-full max-w-3xl grid-cols-5">
           <TabsTrigger value="embed" className="flex items-center gap-2">
             <Code2 className="h-4 w-4" />
             <span className="hidden sm:inline">Embed Code</span>
@@ -221,6 +274,10 @@ export function WidgetSettingsPage() {
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Settings</span>
+          </TabsTrigger>
+          <TabsTrigger value="support" className="flex items-center gap-2">
+            <HeadphonesIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Support</span>
           </TabsTrigger>
           <TabsTrigger value="whatsapp" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
@@ -375,6 +432,160 @@ export function WidgetSettingsPage() {
                     Coming soon: Choose widget position
                   </p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Support Tab */}
+        <TabsContent value="support" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Human Support & Escalation</CardTitle>
+              <CardDescription>
+                Configure when and how the chatbot should escalate conversations to a human operator
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Enable Human Support Toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-semibold">Enable Human Support</Label>
+                  <p className="text-sm text-gray-600">
+                    Allow chatbot to escalate to human operator when needed
+                  </p>
+                </div>
+                <button
+                  onClick={() => setHasHumanSupport(!hasHumanSupport)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    hasHumanSupport ? 'bg-green-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      hasHumanSupport ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {hasHumanSupport && (
+                <>
+                  {/* Notification Method Selector */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold">Notification Method</Label>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => setOperatorContactMethod('email')}
+                        className={`flex-1 p-4 border-2 rounded-lg transition-all ${
+                          operatorContactMethod === 'email'
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className="font-semibold text-gray-900">📧 Email</div>
+                          <div className="text-sm text-gray-600 mt-1">Send notification to operator email</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setOperatorContactMethod('whatsapp')}
+                        className={`flex-1 p-4 border-2 rounded-lg transition-all ${
+                          operatorContactMethod === 'whatsapp'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className="font-semibold text-gray-900">📱 WhatsApp</div>
+                          <div className="text-sm text-gray-600 mt-1">Send notification to operator WhatsApp</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Operator Email (shown when email method selected) */}
+                  {operatorContactMethod === 'email' && (
+                    <div className="space-y-2 p-4 border rounded-lg bg-blue-50/50">
+                      <Label htmlFor="operatorEmail">Operator Email Address</Label>
+                      <Input
+                        id="operatorEmail"
+                        type="email"
+                        placeholder="support@example.com"
+                        value={operatorEmail}
+                        onChange={(e) => setOperatorEmail(e.target.value)}
+                        className="bg-white"
+                      />
+                      <p className="text-xs text-gray-600">
+                        Email address to notify when escalation happens
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Operator WhatsApp Number (shown when whatsapp method selected) */}
+                  {operatorContactMethod === 'whatsapp' && (
+                    <div className="space-y-2 p-4 border rounded-lg bg-green-50/50">
+                      <Label htmlFor="operatorWhatsapp">Operator WhatsApp Number</Label>
+                      <Input
+                        id="operatorWhatsapp"
+                        type="text"
+                        placeholder="+34654728753"
+                        value={operatorWhatsappNumber}
+                        onChange={(e) => setOperatorWhatsappNumber(e.target.value)}
+                        className="bg-white"
+                      />
+                      <p className="text-xs text-gray-600">
+                        WhatsApp number to notify when escalation happens (include country code, e.g., +34654728753)
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Escalation Instructions */}
+                  <div className="space-y-2">
+                    <Label htmlFor="escalationInstructions">When to Escalate to Human</Label>
+                    <Textarea
+                      id="escalationInstructions"
+                      placeholder="Example:\n- when customer asks to speak with operator\n- when customer expresses frustration\n- when customer says 'nothing works'\n- when customer is angry or upset"
+                      value={frustrationEscalationInstructions}
+                      onChange={(e) => setFrustrationEscalationInstructions(e.target.value)}
+                      rows={8}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-600">
+                      List the situations when the chatbot should call contactOperator() and escalate to a human. One trigger per line.
+                    </p>
+                  </div>
+
+                  <Alert>
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-sm">
+                      <strong>How it works:</strong> When any of these triggers are detected, the chatbot will automatically:
+                      <ol className="list-decimal list-inside mt-2 space-y-1">
+                        <li>Call the contactOperator() function</li>
+                        <li>Disable the chatbot for this customer</li>
+                        <li>Replace {{'{'}nameUser{'}'}} with customer name in response</li>
+                        <li>Send {operatorContactMethod === 'email' ? 'email' : 'WhatsApp'} notification to operator ({operatorContactMethod === 'email' ? operatorEmail || 'not set' : operatorWhatsappNumber || 'not set'})</li>
+                        <li>Create a support ticket with conversation summary</li>
+                      </ol>
+                    </AlertDescription>
+                  </Alert>
+                </>
+              )}
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-4 border-t">
+                <Button
+                  onClick={saveSupportSettings}
+                  disabled={savingSupport}
+                  className="flex items-center gap-2"
+                >
+                  {savingSupport ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Save Support Settings
+                </Button>
               </div>
             </CardContent>
           </Card>
