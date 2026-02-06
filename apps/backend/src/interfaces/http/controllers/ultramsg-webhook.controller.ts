@@ -43,6 +43,7 @@ import { platformConfigService } from '../../../services/platform-config.service
 import logger from '../../../utils/logger'
 import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
+import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -480,7 +481,34 @@ export class UltraMsgWebhookController {
             })
           }
 
-          const wipMessage = workspace.wipMessage || 'Work in progress. Please contact us later.'
+          const rawWipMessage = workspace.wipMessage || 'Work in progress. Please contact us later.'
+          
+          // 🌍 TRANSLATE WIP message to customer's language
+          // Language priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
+          const customerLang = customer.language 
+            || detectLanguageFromPhonePrefix(customer.phone) 
+            || workspace.defaultLanguage 
+            || 'it'
+          
+          let wipMessage = rawWipMessage
+          
+          try {
+            const { SafetyTranslationAgent } = require('../../../application/agents/SafetyTranslationAgent')
+            const safetyAgent = new SafetyTranslationAgent(prisma)
+            const safetyResult = await safetyAgent.process({
+              text: rawWipMessage,
+              targetLanguage: customerLang,
+              workspaceId,
+            })
+            wipMessage = safetyResult.translatedText || rawWipMessage
+            logger.info('[ULTRAMSG] 🌍 WIP message translated', {
+              language: customerLang,
+            })
+          } catch (translationError) {
+            logger.warn('[ULTRAMSG] ⚠️ WIP translation failed, using raw message', {
+              error: translationError,
+            })
+          }
           
           // Save user message + WIP message
           await prisma.conversationMessage.create({
@@ -736,7 +764,7 @@ export class UltraMsgWebhookController {
         customerId: customer.id,
         conversationId: chatSession.id,
         message: messageMarkdown,
-        customerLanguage: customer.language || workspace.defaultLanguage || 'it',
+        customerLanguage: customer.language || detectLanguageFromPhonePrefix(customer.phone) || workspace.defaultLanguage || 'it', // 🌍 Priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
         customerName: customer.name,
         customerDiscount: customer.discount || 0,
         isPlayground: false,

@@ -1270,6 +1270,7 @@ export class WhatsAppWebhookController {
             where: { id: customer.workspaceId },
             select: { 
               wipMessage: true,
+              defaultLanguage: true, // 🌍 For language fallback
               ownerId: true,
               owner: {
                 select: { status: true }
@@ -1287,14 +1288,38 @@ export class WhatsAppWebhookController {
             return
           }
 
-          const wipMessage = workspace?.wipMessage || "Work in progress. Please contact us later."
+          const rawWipMessage = workspace?.wipMessage || "Work in progress. Please contact us later."
           
-          // 🔧 WhatsApp: Skip SafetyTranslationAgent - scheduler handles security + translation
-          // The message goes to queue and scheduler will translate it
-          const finalWipMessage = wipMessage
-          const safetyTokensUsed = 0
+          // 🌍 TRANSLATE WIP message to customer's language
+          // Language priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
+          const customerLang = customer.language 
+            || detectLanguageFromPhonePrefix(customer.phone) 
+            || workspace?.defaultLanguage 
+            || "it"
           
-          logger.info("[WEBHOOK] ⏭️ Skipping SafetyTranslation for WIP (WhatsApp - scheduler handles it)")
+          let finalWipMessage = rawWipMessage
+          let safetyTokensUsed = 0
+          
+          try {
+            const { SafetyTranslationAgent } = require("../../../application/agents/SafetyTranslationAgent")
+            const safetyAgent = new SafetyTranslationAgent(prisma)
+            const safetyResult = await safetyAgent.process({
+              text: rawWipMessage,
+              targetLanguage: customerLang,
+              workspaceId: customer.workspaceId,
+            })
+            finalWipMessage = safetyResult.translatedText || rawWipMessage
+            safetyTokensUsed = safetyResult.tokensUsed || 0
+            logger.info("[WEBHOOK] 🌍 WIP message translated", {
+              from: rawWipMessage.substring(0, 50),
+              to: finalWipMessage.substring(0, 50),
+              language: customerLang,
+            })
+          } catch (translationError) {
+            logger.warn("[WEBHOOK] ⚠️ WIP translation failed, using raw message", {
+              error: translationError,
+            })
+          }
 
           // Save WIP message to history so operator can see customer tried to contact
           await prisma.conversationMessage.create({
@@ -1449,7 +1474,7 @@ export class WhatsAppWebhookController {
         customerId: customer.id,
         conversationId: chatSession.id,
         message: messageMarkdown,
-        customerLanguage: customer.language || customer.workspace?.defaultLanguage || "it", // 🌍 Priority: customer.language → workspace.defaultLanguage → "it"
+        customerLanguage: customer.language || detectLanguageFromPhonePrefix(customer.phone) || customer.workspace?.defaultLanguage || "it", // 🌍 Priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
         isPlayground, // 🧪 Pass playground flag

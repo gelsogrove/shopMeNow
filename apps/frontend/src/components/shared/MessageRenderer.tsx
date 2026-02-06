@@ -88,6 +88,21 @@ export function MessageRenderer({
       const malformedImgPattern = /(https?:\/\/[^\s"]+)"(\s*alt="[^"]*"\s*\/>)/g
       fixedText = text.replace(malformedImgPattern, '<img src="$1"$2')
     }
+
+    // Normalize Markdown links for chat rendering to avoid showing raw [text](url)
+    // Example: [https://wa.me/123](https://wa.me/123) -> https://wa.me/123
+    // Example: [Demo](https://example.com) -> Demo: https://example.com
+    fixedText = fixedText.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      (_match, label: string, url: string) => {
+        const cleanLabel = label.trim()
+        const cleanUrl = url.trim()
+        if (!cleanLabel || cleanLabel === cleanUrl) {
+          return cleanUrl
+        }
+        return `${cleanLabel}: ${cleanUrl}`
+      }
+    )
     
     // Check if this is a product detail message (has img tag)
     const imgMatch = fixedText.match(/<img\s+src="([^"]+)"\s*alt="([^"]*)"\s*\/>/)

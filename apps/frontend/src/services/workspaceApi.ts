@@ -34,6 +34,7 @@ export interface Workspace {
   debugMode?: boolean
   welcomeMessage?: string
   wipMessage?: string
+  defaultLanguage?: string // 🌍 ISO-2 default language for customers
   createdAt: string
   updatedAt: string
   planType?: string | null
@@ -133,6 +134,7 @@ export interface UpdateWorkspaceData {
   debugMode?: boolean
   welcomeMessage?: string
   wipMessage?: string
+  defaultLanguage?: string // 🌍 ISO-2 default language for customers
   allowedExternalLinks?: string
   // 🆕 Feature 199: Channel Configuration
   enableWhatsapp?: boolean

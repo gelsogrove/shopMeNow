@@ -36,6 +36,7 @@ export interface Workspace {
   debugMode?: boolean
   currency?: string
   language?: string
+  defaultLanguage?: string // 🌍 ISO-2 default language for customers
   welcomeMessage?: string
   wipMessage?: string
   afterRegistrationMessages?: any

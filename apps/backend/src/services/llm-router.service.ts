@@ -704,12 +704,20 @@ export class LLMRouterService {
       if (isChannelDisabled) {
         const executionTimeMs = Date.now() - startTime
 
-        // Get WIP message from workspace settings (already loaded)
-        const wipMessages = (workspace?.wipMessage as any) || {}
-        const wipMessage =
-          wipMessages[params.customerLanguage?.toLowerCase() || "en"] ||
-          wipMessages.en ||
-          "Work in progress. Please contact us later."
+        // Get WIP message from workspace settings
+        // wipMessage can be either a JSON object with language keys { en: "...", it: "..." }
+        // or a plain string. Handle both formats gracefully.
+        const rawWip = workspace?.wipMessage
+        let wipMessage: string
+        if (rawWip && typeof rawWip === "object") {
+          // JSON object with language keys
+          const lang = params.customerLanguage?.toLowerCase() || "en"
+          wipMessage = (rawWip as any)[lang] || (rawWip as any).en || "Work in progress. Please contact us later."
+        } else if (typeof rawWip === "string" && rawWip.trim()) {
+          wipMessage = rawWip
+        } else {
+          wipMessage = "Work in progress. Please contact us later."
+        }
 
         logger.info("🚧 P2: Sending WIP message (chatbot disabled)", {
           workspaceId: params.workspaceId,

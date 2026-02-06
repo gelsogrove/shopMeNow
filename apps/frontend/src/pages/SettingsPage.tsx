@@ -223,7 +223,7 @@ export function SettingsPage() {
         url: currentWorkspace.url || "http://localhost:3000",
         businessType: currentWorkspace.businessType || "retail",
         currency: currentWorkspace.currency || "USD",
-        defaultLanguage: currentWorkspace.defaultLanguage || "it",
+        defaultLanguage: currentWorkspace.defaultLanguage || "it", // ✅ Fix: API now returns defaultLanguage directly
         sellsProductsAndServices: currentWorkspace.sellsProductsAndServices ?? true,
         channelStatus: currentWorkspace.channelStatus ?? true,
         debugMode: currentWorkspace.debugMode ?? false,
@@ -413,6 +413,9 @@ export function SettingsPage() {
       if (dataToSave.whatsappProvider) {
         updateData.whatsappProvider = dataToSave.whatsappProvider
       }
+
+      // ✅ Fix: Send defaultLanguage directly to backend (field now exists in API)
+      // Keep defaultLanguage as-is in updateData, no remapping needed
 
       // Only send UltraMsg fields when provider is ultramsg AND values are non-empty
       if (dataToSave.whatsappProvider === "ultramsg") {

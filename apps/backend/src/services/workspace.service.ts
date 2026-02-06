@@ -114,6 +114,7 @@ export const workspaceService = {
         deletedAt: true,
         currency: true,
         language: true,
+        defaultLanguage: true, // 🌍 ISO-2 default language
         messageLimit: true,
         channelStatus: true,
         wipMessage: true,
@@ -208,6 +209,7 @@ export const workspaceService = {
         deletedAt: true,
         currency: true,
         language: true,
+        defaultLanguage: true, // 🌍 ISO-2 default language
         messageLimit: true,
         channelStatus: true,
         debugMode: true, // 🐞 Debug mode toggle
@@ -361,6 +363,7 @@ export const workspaceService = {
         deletedAt: true,
         currency: true,
         language: true,
+        defaultLanguage: true, // 🌍 ISO-2 default language
         messageLimit: true,
         channelStatus: true,
         debugMode: true, // 🐞 Debug mode toggle
@@ -530,6 +533,7 @@ export const workspaceService = {
         deletedAt: true,
         currency: true,
         language: true,
+        defaultLanguage: true, // 🌍 ISO-2 default language
         messageLimit: true,
         channelStatus: true,
         debugMode: true, // 🐞 Debug mode toggle

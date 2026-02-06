@@ -223,7 +223,7 @@ export class ConversationHistoryLayer {
 
     // 6. Context flags
     parts.push("## CONTESTO")
-    parts.push(`- Primo messaggio: ${input.isFirstMessage ? "SÌ (saluta!)" : "NO"}`)
+    parts.push(`- Primo messaggio: ${input.isFirstMessage ? "SÌ (vai dritto al punto)" : "NO"}`)
     // 🚫 WIDGET FIX: Don't show "Nome cliente" if empty (anonymous widget visitors)
     if (input.customerName && input.customerName.trim() !== "") {
       parts.push(`- Nome cliente: ${input.customerName}`)
