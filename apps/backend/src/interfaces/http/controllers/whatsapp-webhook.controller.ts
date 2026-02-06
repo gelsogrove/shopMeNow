@@ -8,10 +8,7 @@ import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../
 // 🆕 Chat Engine - Main conversation processor
 import { ChatEngineService, getChatEngine } from "../../../application/chat-engine"
 import { workspaceService } from "../../../services/workspace.service"
-import {
-  detectLanguageFromPhonePrefix,
-  getRegistrationText,
-} from "../../../utils/language-detector"
+import { getRegistrationText } from "../../../utils/language-detector"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { buildPhoneVariants } from "../../../utils/phone"
