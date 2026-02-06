@@ -257,7 +257,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
    * @returns Normalized language code
    */
   private normalizeLanguage(language: string): string {
-    const normalized = language?.toLowerCase?.() || "en"
+    const normalized = language?.trim?.().toLowerCase?.().split(/[-_]/)[0] || "en"
 
     // Map common language codes
     const mapping: Record<string, string> = {

@@ -1385,7 +1385,7 @@ export class ChatEngineService {
    * This is critical to avoid translating Italian to Italian when DB has "ITA"
    */
   private normalizeLanguageCode(language: string): string {
-    const normalized = language?.toLowerCase?.() || "it"
+    const normalized = language?.trim?.().toLowerCase?.().split(/[-_]/)[0] || "it"
     
     const mapping: Record<string, string> = {
       // Italian
@@ -5291,7 +5291,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
         debugSteps.push({
           type: "safety",
-          agent: "SafetyTranslationAgent",
+          agent: "Widget Security Layer",
           timestamp: new Date().toISOString(),
           input: {
             userMessage: finalMessage,
@@ -5313,27 +5313,6 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         }
       } else {
         logger.info("⏭️ [ChatEngine] Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
-        
-        debugSteps.push({
-          type: "safety",
-          agent: "SafetyTranslationAgent (Skipped)",
-          timestamp: new Date().toISOString(),
-          input: {
-            userMessage: finalMessage,
-            targetLanguage: customerLanguage,
-          },
-          output: {
-            textResponse: finalMessage,
-            translated: false,
-            skipped: true,
-            reason: "WhatsApp channel - scheduler handles translation",
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-          },
-        })
       }
     } catch (error) {
       logger.error("❌ [ChatEngine] Informational safety/translation failed", {

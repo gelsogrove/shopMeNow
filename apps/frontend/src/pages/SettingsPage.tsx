@@ -239,7 +239,7 @@ export function SettingsPage() {
         whatsappBusinessAccountId: currentWorkspace.whatsappBusinessAccountId || "",
         whatsappWebhookId: currentWorkspace.whatsappWebhookId,
         whatsappWebhookUrl: currentWorkspace.whatsappWebhookUrl,
-        whatsappProvider: currentWorkspace.whatsappProvider || "meta",
+        whatsappProvider: currentWorkspace.whatsappProvider || (currentWorkspace.ultraMsgInstanceId ? "ultramsg" : "meta"),
         ultraMsgInstanceId: currentWorkspace.ultraMsgInstanceId || "",
         ultraMsgToken: currentWorkspace.ultraMsgToken || "",
         ultraMsgApiUrl: currentWorkspace.ultraMsgApiUrl || "",
