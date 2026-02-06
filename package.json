@@ -54,6 +54,11 @@
     "publish": "./scripts/deploy-all-heroku.sh",
     "deploy:heroku": "./scripts/deploy-all-heroku.sh",
     "setup:heroku": "./scripts/heroku-setup.sh",
+    "log:heroku": "heroku logs --tail --app echatbot-app",
+    "log:heroku:app": "heroku logs --tail --app echatbot-app",
+    "log:heroku:webhook": "heroku logs --tail --app echatbot-app | grep -iE 'webhook|whatsapp|📱|incoming.*message|ultramsg'",
+    "log:heroku:scheduler": "heroku logs --tail --app echatbot-scheduler",
+    "log:heroku:backoffice": "heroku logs --tail --app echatbot-backoffice",
     "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist"
   },
   "author": "Andrea Gelso",
