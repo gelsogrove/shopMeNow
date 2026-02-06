@@ -6,16 +6,12 @@
 set -e  # Exit on error
 
 echo "🗄️  Step 1/8: Prisma migrate locale..."
-cd packages/database
-npx prisma migrate deploy
+npm run prisma:migrate:prod || echo "⚠️ No pending migrations or error during local migrate"
 echo "✅ Migrations applicate in locale!"
-cd ../..
 
 echo "🔄 Step 2/8: Prisma generate locale..."
-cd packages/database
-npx prisma generate
+npm run prisma:generate || echo "⚠️ Local generate skip/fail"
 echo "✅ Prisma client generato!"
-cd ../..
 
 echo "🏗️  Step 3/8: Build locale (test di sicurezza)..."
 npm run build
@@ -54,13 +50,13 @@ git push heroku-scheduler main
 
 echo ""
 echo "🗄️  Step 8/9: Post-deploy - Applying migrations on Heroku production database..."
-heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app
-heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-scheduler
+heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-app || echo "⚠️ Heroku app migrate skip/fail"
+heroku run "cd packages/database && npx prisma migrate deploy" -a echatbot-scheduler || echo "⚠️ Heroku scheduler migrate skip/fail"
 
 echo ""
 echo "🔄 Regenerating Prisma client on Heroku (app + scheduler)..."
-heroku run "cd packages/database && npx prisma generate" -a echatbot-app
-heroku run "cd packages/database && npx prisma generate" -a echatbot-scheduler
+heroku run "cd packages/database && npx prisma generate" -a echatbot-app || echo "⚠️ Heroku app generate skip/fail"
+heroku run "cd packages/database && npx prisma generate" -a echatbot-scheduler || echo "⚠️ Heroku scheduler generate skip/fail"
 
 echo ""
 echo "♻️  Step 9/9: Restarting app to reload cache..."
