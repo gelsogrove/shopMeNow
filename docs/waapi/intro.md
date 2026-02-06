@@ -1,108 +1,70 @@
 # WaAPI Provider Integration
 
-## 0. Executive Summary (What We Are Doing)
-We are adding **WaAPI** as the **default WhatsApp provider** for onboarding while keeping **Meta** and **UltraMsg** available in Settings. The feature is not just a provider toggle: it introduces a full **instance lifecycle** (create → QR → ready → disconnect → delete → reconnect) and a **CRITICAL** safety flow for provider switching that irreversibly deletes the WaAPI instance.
+## Scope
+Add WaAPI as the default WhatsApp provider for onboarding while keeping existing providers available in settings. The critical flows are:
+- New channel onboarding with QR scan.
+- Settings provider switch with irreversible instance deletion on WaAPI.
+- Full channel CRUD in the UI with mandatory phone number.
+- Webhook processing for QR and status updates.
 
-This integration affects **DB**, **Backend**, **Frontend**, and **Scheduler**. The most critical UX is **Settings** and **New Channel Onboarding**.
+## What We Touch
+- Database: provider fields, WaAPI instance metadata, status, phone number, webhook configuration.
+- Backend: WaAPI client, webhook handler, instance lifecycle, provider switch safety.
+- Frontend: onboarding flow, settings switch modal, channel CRUD, QR rendering.
+- Scheduler: reconciliation of instance status and stale QR cleanup.
 
-## 1. Business Goal
-- Remove third‑party subscription friction for end‑users.
-- Make onboarding fast: user scans QR on your site.
-- Allow safe provider switching without data loss (chat history stays, instance is deleted).
+## Provider Notes
+- WaAPI exposes endpoints for instance lifecycle and QR webhook events. See docs:
+  - API Token: https://waapi.readme.io/reference/api-token
+  - Retrieve instance: https://waapi.readme.io/reference/retrieve-instance
+  - Update instance: https://waapi.readme.io/reference/update-instance
+  - Delete instance: https://waapi.readme.io/reference/delete-instance
+  - QR event webhook: https://waapi.readme.io/reference/qr-event
+  - Create channel: https://waapi.readme.io/reference/create-channel
 
-## 2. User Flows (High Level)
-### 2.1 New Channel Onboarding (Default = WaAPI)
-1. User selects WhatsApp onboarding (WaAPI preselected).
-2. User enters **mandatory** phone number.
-3. System creates a WaAPI **instance** and configures webhook.
-4. User sees QR; scans via WhatsApp.
-5. Status becomes `authenticated` → `ready`.
+## Instance vs Channel (WaAPI)
+- Instance: a WhatsApp session connected via QR. This is what we need for onboarding and messaging.
+- Channel: a separate WhatsApp Channels entity created by a connected instance. Not required for our onboarding flow.
 
-### 2.2 Settings: Switch Provider (Critical)
-1. User attempts to switch away from WaAPI.
-2. CRITICAL modal appears (type `CONFIRM`).
-3. Confirm → delete WaAPI instance → switch provider.
-4. Failure → provider unchanged and user sees error.
+## Critical Behavior
+- Provider switch away from WaAPI must show a CRITICAL confirmation modal with text input `CONFIRM`.
+- Confirmed switch must trigger WaAPI instance deletion. This is irreversible.
+- Tests must cover the destructive flow and must be green before release.
 
-### 2.3 Settings: Disconnect & Reconnect
-- Disconnect deletes instance and marks channel inactive.
-- Reconnect starts a fresh onboarding (new instance + new QR).
+## Data Fields (Draft, validate against docs)
+We should align with WaAPI responses. Based on current docs, we expect:
+- `provider` (enum)
+- `provider_instance_id` (string)
+- `instance_status` (string)
+- `wa_number` (string, required)
+- `wa_name` (string)
+- `webhook_url` (string)
+- `webhook_events` (string array)
+- `qr_code_data` (string, base64 data URL; short-lived)
+- `is_active` (boolean)
 
-### 2.4 Delete Channel (Hard Delete)
-- Delete channel removes DB record and deletes WaAPI instance.
-- Channel can later be recreated via onboarding.
+Notes:
+- WaAPI uses a global API token (Bearer). Do not store per-instance tokens unless WaAPI returns one explicitly.
+- `qr_code_data` should be treated as ephemeral and not stored long-term.
 
-## 3. What We Must Implement (By Layer)
-### 3.1 Database
-- Store WaAPI instance metadata (id, status, phone, webhook settings).
-- QR data cached short‑term.
-- Default provider set to WaAPI for new onboarding.
-
-### 3.2 Backend
-- WaAPI client wrapper (create, retrieve, update, delete).
-- Instance lifecycle orchestration.
-- Webhook receiver for `qr`, `authenticated`, `ready`, `disconnected`, `auth_failure`.
-- Destructive provider switch flow with guardrails.
-
-### 3.3 Frontend
-- Onboarding UI with QR render, status live updates.
-- Settings UI for switching provider with CRITICAL confirmation.
-- Channel CRUD (create/update/delete/reconnect).
-
-### 3.4 Scheduler
-- Status reconciliation job.
-- QR TTL cleanup.
-
-## 4. Instance vs Channel (WaAPI)
-- **Instance**: QR‑connected WhatsApp session (what we need to send/receive messages).
-- **Channel**: WhatsApp Channels entity (not required for our onboarding).
-
-## 5. Settings Fields (UI)
-Fields to show and edit:
-- `provider` (waapi | meta | ultramsg)
-- `waapiInstanceId`
-- `waapiInstanceStatus`
-- `waapiPhoneNumber` (required)
-- `waapiPhoneName` (optional)
-- `waapiWebhookUrl`
-- `waapiWebhookEvents`
-- `waapiIsActive`
-
-Do **not** store per-instance tokens; WaAPI uses a global API token.
-
-## 6. Critical Risks & Guardrails
-- **Provider switch is destructive** → must be guarded by typed `CONFIRM`.
-- If WaAPI delete fails → provider must NOT switch.
-- QR must be short‑lived; do not store long‑term.
-- Webhook events can be retried → must be idempotent.
-
-## 6.1 Security Requirements (Global)
-- Validate webhook source (signature/header if provided).
-- Enforce instance-to-workspace mapping for all webhook events.
-- Mask sensitive data in logs (QR base64, phone numbers).
-- Apply rate limiting to webhook endpoints.
-
-## 6.2 Provider Isolation (Meta / UltraMsg / WaAPI)
-- Each provider has its **own** webhook endpoint and handler.
-- Provider-specific secrets and tokens are isolated and never shared.
-- UI must never mix provider fields; switching providers clears fields of the previous provider.
-
-## 7. Acceptance Criteria (Global)
-1. WaAPI default in onboarding; other providers still available in settings.
-2. Onboarding requires phone number, shows QR, and reaches `ready`.
-3. Switching provider from WaAPI requires `CONFIRM` and deletes instance.
+## Acceptance Criteria (Global)
+1. WaAPI is default in onboarding, other providers still selectable in settings.
+2. New channel onboarding shows QR and succeeds when instance is ready.
+3. Settings provider switch requires `CONFIRM` and deletes WaAPI instance on success.
 4. Deleting a channel hard deletes the WaAPI instance.
-5. Webhooks update status and QR reliably.
-6. Build and tests pass.
-7. Documentation updated.
+5. Webhooks update QR/status reliably and are idempotent.
+6. Tests and build pass; documentation is updated.
 
-## 8. Task Index
-See `/Users/gelso/workspace/shopME/docs/waapi/index.md` for the execution order and task map.
 
-## 9. References
-- API Token: https://waapi.readme.io/reference/api-token
-- Retrieve instance: https://waapi.readme.io/reference/retrieve-instance
-- Update instance: https://waapi.readme.io/reference/update-instance
-- Delete instance: https://waapi.readme.io/reference/delete-instance
-- QR event webhook: https://waapi.readme.io/reference/qr-event
-- Create channel: https://waapi.readme.io/reference/create-channel
+
+IMPORTANT
+code must be cleaned, please use service or share component with parameters for avoiding dulication of the code, naming is important ! clen code is important
+remove dead code , avoid file too long split in utils helpers, service.compoenent
+
+- remember that the uint test is our bible when you need to change the funcionality ask to the user
+if you just need to change the mock go ahead without ask
+
+- rember the flow user can connect easly and can manage eastly his channel this is the challenge!!!
+
+- before start we need to save the userID session of our subscription because we need to pay first
+
