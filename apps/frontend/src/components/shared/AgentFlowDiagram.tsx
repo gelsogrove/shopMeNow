@@ -240,7 +240,7 @@ const AGENT_METADATA: Record<string, {
     whenUsed: "Final step - translates response and validates safety",
     example: "Italian response → Translated to Spanish for customer",
     widgetOnly: true,
-    isHardcoded: true,
+    isHardcoded: false,
     availableFunctions: [],
   },
   SECURITY: {

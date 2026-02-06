@@ -14,9 +14,10 @@
  * 1. **Safety Check**: Blocks PII, profanity, phishing, spam
  * 2. **Translation**: Translates response to customer's language (IT → target)
  *
- * 🆕 HARDCODED PROMPTS: Uses shared/translation-prompts.ts (no DB dependency)
+ * 🆕 DATABASE-DRIVEN PROMPTS: Uses agentConfig.systemPrompt from database
+ * Falls back to shared/translation-prompts.ts if not found
  *
- * @architecture Clean Architecture - Shared prompt module
+ * @architecture Clean Architecture - Database-driven configuration
  * @channel Widget only - WhatsApp uses Scheduler services
  */
 
@@ -49,10 +50,7 @@ export class SafetyTranslationAgent {
   private openRouterApiKey: string
   private openRouterBaseUrl: string = "https://openrouter.ai/api/v1"
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(private prisma: PrismaClient) {
-    // Prisma kept for API compatibility but no longer used for config
-
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
       logger.warn(
@@ -60,7 +58,7 @@ export class SafetyTranslationAgent {
       )
     } else {
       logger.info(
-        "✅ SafetyTranslationAgent initialized with OpenRouter API key (hardcoded prompt)"
+        "✅ SafetyTranslationAgent initialized with OpenRouter API key (database-driven prompt)"
       )
     }
   }
@@ -76,41 +74,90 @@ export class SafetyTranslationAgent {
 
     try {
       // 🌍 DEBUG: Log incoming parameters
-      logger.info("🌍 SafetyTranslationAgent.process() called (hardcoded prompt)", {
+      logger.info("🌍 SafetyTranslationAgent.process() called", {
         workspaceId: options.workspaceId,
         targetLanguage: options.targetLanguage,
         responseLength: options.response.length,
         customerName: options.customerName,
       })
 
-      // 🆕 NO DATABASE LOOKUP - Use hardcoded prompt from shared module
-      // Build the full prompt with all variables replaced
-      const systemPrompt = buildSafetyTranslationPrompt({
-        targetLanguage: options.targetLanguage,
-        customerName: options.customerName,
-        allowedLinks: options.allowedLinks,
-        message: options.response,
-      })
+      // 🆕 LOAD FROM DATABASE - Try to get custom prompt from agentConfig
+      let systemPromptTemplate: string | null = null
+      let agentConfig: any = null
 
-      // Call OpenRouter LLM with hardcoded settings
-      logger.info("🔒 Calling SafetyTranslationAgent LLM (hardcoded prompt)", {
+      try {
+        agentConfig = await this.prisma.agentConfig.findFirst({
+          where: {
+            workspaceId: options.workspaceId,
+            type: "TRANSLATION",
+            isActive: true,
+          },
+        })
+
+        if (agentConfig?.systemPrompt) {
+          systemPromptTemplate = agentConfig.systemPrompt
+          logger.info("✅ Using custom TRANSLATION prompt from database", {
+            workspaceId: options.workspaceId,
+            promptLength: systemPromptTemplate.length,
+          })
+        }
+      } catch (dbError) {
+        logger.warn("⚠️ Failed to load TRANSLATION agentConfig from database, using fallback", {
+          error: dbError,
+        })
+      }
+
+      // Fallback to hardcoded prompt if not found in database
+      if (!systemPromptTemplate) {
+        logger.info("📝 Using fallback hardcoded TRANSLATION prompt", {
+          workspaceId: options.workspaceId,
+        })
+        systemPromptTemplate = buildSafetyTranslationPrompt({
+          targetLanguage: options.targetLanguage,
+          customerName: options.customerName,
+          allowedLinks: options.allowedLinks,
+          message: options.response,
+        })
+      } else {
+        // Replace variables in custom prompt
+        const languageName = options.targetLanguage.toUpperCase()
+        const customerName = options.customerName || "Cliente"
+        const allowedLinksText = options.allowedLinks?.length
+          ? options.allowedLinks.map((link) => `- ${link}`).join("\n")
+          : "- https://echatbot.ai/*\n- https://shopmenow.it/*\n- https://wa.me/*"
+
+        systemPromptTemplate = systemPromptTemplate
+          .replace(/{TARGET_LANGUAGE}/g, languageName)
+          .replace(/{CUSTOMER_NAME}/g, customerName)
+          .replace("{ALLOWED_LINKS}", allowedLinksText)
+          .replace("{MESSAGE}", options.response)
+      }
+
+      // Use LLM settings from database if available, otherwise fallback
+      const model = agentConfig?.model || TRANSLATION_LLM_SETTINGS.model
+      const temperature = agentConfig?.temperature ?? TRANSLATION_LLM_SETTINGS.temperature
+      const maxTokens = agentConfig?.maxTokens || TRANSLATION_LLM_SETTINGS.maxTokens
+
+      // Call OpenRouter LLM
+      logger.info("🔒 Calling SafetyTranslationAgent LLM", {
         workspaceId: options.workspaceId,
-        model: TRANSLATION_LLM_SETTINGS.model,
+        model,
         targetLanguage: options.targetLanguage,
+        usingCustomPrompt: !!agentConfig?.systemPrompt,
       })
 
       const response = await axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
-          model: TRANSLATION_LLM_SETTINGS.model,
+          model,
           messages: [
             {
               role: "user",
-              content: systemPrompt, // Full prompt with message included
+              content: systemPromptTemplate, // Full prompt with message included
             },
           ],
-          temperature: TRANSLATION_LLM_SETTINGS.temperature,
-          max_tokens: TRANSLATION_LLM_SETTINGS.maxTokens,
+          temperature,
+          max_tokens: maxTokens,
           response_format: { type: "json_object" }, // Force JSON response
         },
         {

@@ -28,6 +28,7 @@ import { offers } from "./data/offers"
 import { platformConfigData } from "./data/platformConfig"
 import { pricingConfigData } from "./data/pricingConfig"
 import { products } from "./data/products"
+import { TRANSLATION_PROMPT } from "./data/agent-templates/translation"
 import { services } from "./data/services"
 import { workspaceSettings } from "./data/workspaceSettings"
 
@@ -699,6 +700,7 @@ Would you like details about something specific?"`,
 
   // Create agent configs for e-commerce workspace (ALL agents including PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
   // ✅ NOTE: systemPrompt is NOT stored in DB - loaded from template files at runtime
+  // ⚠️  EXCEPTION: TRANSLATION agent prompt IS stored in DB for customization
   const ecommerceAgents = defaultAgents(ecommerceWorkspace.id)
   for (const config of ecommerceAgents) {
     await prisma.agentConfig.create({
@@ -708,7 +710,7 @@ Would you like details about something specific?"`,
         type: config.type,
         description: config.description,
         icon: config.icon,
-        systemPrompt: "", // ✅ Empty - loaded from files at runtime
+        systemPrompt: config.type === "TRANSLATION" ? TRANSLATION_PROMPT : "", // ✅ TRANSLATION uses DB prompt, others load from files
         model: config.model,
         temperature: config.temperature,
         maxTokens: config.maxTokens,
@@ -741,6 +743,7 @@ Would you like details about something specific?"`,
 
   // Create agent configs for informational workspace (EXCLUDES PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
   // ✅ NOTE: systemPrompt is NOT stored in DB - loaded from template files at runtime
+  // ⚠️  EXCEPTION: TRANSLATION agent prompt IS stored in DB for customization
   const ECOMMERCE_ONLY_TYPES = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
   const infoAgents = defaultAgents(infoWorkspace.id).filter(
     (agent) => !ECOMMERCE_ONLY_TYPES.includes(agent.type)
@@ -753,7 +756,7 @@ Would you like details about something specific?"`,
         type: config.type,
         description: config.description,
         icon: config.icon,
-        systemPrompt: "", // ✅ Empty - loaded from files at runtime
+        systemPrompt: config.type === "TRANSLATION" ? TRANSLATION_PROMPT : "", // ✅ TRANSLATION uses DB prompt, others load from files
         model: config.model,
         temperature: config.temperature,
         maxTokens: config.maxTokens,
@@ -1036,7 +1039,7 @@ Can I help with anything else?"`,
         type: config.type,
         description: config.description,
         icon: config.icon,
-        systemPrompt: "",
+        systemPrompt: config.type === "TRANSLATION" ? TRANSLATION_PROMPT : "", // ✅ TRANSLATION uses DB prompt, others load from files
         model: config.model,
         temperature: config.temperature,
         maxTokens: config.maxTokens,

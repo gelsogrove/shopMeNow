@@ -157,9 +157,23 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // 🆕 TRANSLATION AGENT REMOVED - Now hardcoded in shared/translation-prompts.ts
-  // This saves DB space and ensures consistent translation across all workspaces
+  // TRANSLATION AGENT (order: 7) - Safety + Translation layer
   // ====================================================================
+  {
+    workspaceId,
+    name: "Safety + Translation",
+    type: "TRANSLATION" as AgentType,
+    icon: "Globe",
+    description:
+      "Final layer: translates response to customer's language (IT/EN/ES/PT), blocks profanity and spam, validates external links",
+
+    model: "openai/gpt-4o-mini",
+    temperature: 0.3, // Low temperature for consistent translations
+    maxTokens: 1000,
+    order: 7,
+    isActive: true,
+    availableFunctions: null, // No function calls - pure translation + safety
+  },
 
   // ====================================================================
   // CONVERSATION HISTORY LAYER (order: 8) - Humanization layer
