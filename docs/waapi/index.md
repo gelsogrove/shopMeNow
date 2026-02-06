@@ -1,16 +1,36 @@
-# WaAPI Implementation Spec
+# WaAPI Work Index
 
-1. [Database Schema](001-database-schema.md)
-2. [Frontend Settings](002-frontend-settings.md)
-3. [Backend Service](003-backend-service.md)
-4. [Scheduler](004-scheduler.md)
-5. [Webhook Handling](005-webhook-handling.md)
-6. [Message Processing](006-message-processing.md)
-7. [Outbound Messaging](007-outbound-messaging.md)
-8. [Factory Pattern](008-factory-pattern.md)
-9. [Subscription Gate](009-subscription-gate.md)
-10. [Queue Cleanup](010-queue-cleanup.md)
-11. [Security Headers](011-security-headers.md)
-12. [Error Handling](012-error-handling.md)
-13. [Testing Strategy](013-testing-strategy.md)
-14. [Deployment Guide](014-deployment-guide.md)
+## Execution Order (Recommended)
+1. **DB**: add WaAPI fields + indexes
+2. **BE**: WaAPI client + webhook handler + lifecycle + delete-on-switch
+3. **FE**: onboarding QR + settings switch + CRUD + provider isolation
+4. **Scheduler**: status reconciliation + QR TTL cleanup
+
+## Task Map (By Epic)
+### 0001-DB
+- 001-schema.md
+- 002-migrations.md
+
+### 0002-FE
+- 001-provider-default.md
+- 002-onboarding-qr.md
+- 003-settings-switch-provider.md
+- 004-channel-crud.md
+- 005-provider-isolation.md
+
+### 0003-BE
+- 001-waapi-client.md
+- 002-webhook-handler.md
+- 003-instance-lifecycle.md
+- 004-delete-instance-on-switch.md
+- 005-inbound-messages.md
+- 006-provider-isolation.md
+
+### 0004-schedule
+- 001-reconcile-status.md
+- 002-qr-retention.md
+
+## Dependencies
+- FE onboarding depends on BE webhook + instance lifecycle.
+- Settings switch depends on BE delete instance flow.
+- Scheduler jobs depend on BE retrieve instance support.
