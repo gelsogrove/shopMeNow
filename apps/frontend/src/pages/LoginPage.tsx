@@ -1958,6 +1958,52 @@ export function LoginPage() {
         </div>
       </motion.section>
 
+      {/* Smart Push AI Section */}
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-green-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
+                <div className="flex flex-col items-center lg:items-start gap-4">
+                  <div className="relative">
+                    <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-emerald-100 transition-all duration-300">
+                      <img
+                        src="/push.png"
+                        alt="Smart AI push messaging"
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6 text-center lg:text-left">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <Megaphone className="h-4 w-4" />
+                      {t("pushAi.badge")}
+                    </div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                      {t("pushAi.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                      {t("pushAi.subtitle")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
       {/* Pricing Section */}
       <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
         <PricingPlans
@@ -2042,10 +2088,20 @@ export function LoginPage() {
                         if (isDemoDisabled) {
                           setWipFeature('demo')
                           setShowWIPModal(true)
+                          return
                         }
+                        window.open("https://wa.me/34602119358", "_blank", "noopener,noreferrer")
                       }}
                     >
                       <span className="flex items-center gap-3">
+                        <svg
+                          aria-hidden="true"
+                          className="h-5 w-5"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
+                        </svg>
                         <span>{t("demo.button")}</span>
                       </span>
                     </Button>
@@ -2070,19 +2126,7 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
 
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
-                <div className="flex flex-col items-center lg:items-start gap-4">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-amber-100 transition-all duration-300">
-                      <img
-                        src="/human.png"
-                        alt="Human-in-the-loop support"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
                 <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
@@ -2095,6 +2139,18 @@ export function LoginPage() {
                     <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("humanLoop.subtitle")}
                     </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center lg:items-end gap-4">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-amber-100 transition-all duration-300">
+                      <img
+                        src="/human.png"
+                        alt="Human-in-the-loop support"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
