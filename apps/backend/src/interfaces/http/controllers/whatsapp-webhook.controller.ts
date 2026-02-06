@@ -1469,12 +1469,55 @@ export class WhatsAppWebhookController {
       })
 
       const chatEngine = getChatEngine(prisma)
+      
+      // 🌍 Language detection with normalization
+      // ALWAYS normalize customer.language to 2-letter code (es, it, en, pt, fr, de)
+      const detectLanguageFromPhonePrefix = (phone: string): string => {
+        const cleanPhone = phone.replace(/[\s\-()]/g, "")
+        const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
+        if (!prefixMatch) return "en"
+        
+        const prefix = prefixMatch[1]
+        const langMap: Record<string, string> = {
+          "+39": "it", "+34": "es", "+351": "pt", "+33": "fr", "+49": "de",
+          "+1": "en", "+44": "en", "+91": "en"
+        }
+        return langMap[prefix] || "en"
+      }
+      
+      const normalizeLanguage = (lang: string | null): string => {
+        if (!lang) return ""
+        const lower = lang.toLowerCase().trim()
+        // Map common variants to 2-letter codes
+        const map: Record<string, string> = {
+          "español": "es", "spanish": "es", "esp": "es", "es": "es",
+          "italiano": "it", "italian": "it", "ita": "it", "it": "it",
+          "english": "en", "inglés": "en", "eng": "en", "en": "en",
+          "português": "pt", "portuguese": "pt", "por": "pt", "pt": "pt",
+          "français": "fr", "french": "fr", "fra": "fr", "fr": "fr",
+          "deutsch": "de", "german": "de", "deu": "de", "de": "de"
+        }
+        return map[lower] || ""
+      }
+      
+      const normalizedCustomerLang = normalizeLanguage(customer.language)
+      const detectedLang = detectLanguageFromPhonePrefix(customer.phone)
+      const customerLanguage = normalizedCustomerLang || detectedLang || customer.workspace?.defaultLanguage || "it"
+      
+      logger.info("🌍 [ULTRAMSG] Language resolution", {
+        customerLanguageRaw: customer.language,
+        normalizedCustomerLang,
+        detectedFromPhone: detectedLang,
+        finalLanguage: customerLanguage,
+        phone: customer.phone
+      })
+      
       const routerResult = await chatEngine.routeMessage({
         workspaceId: customer.workspaceId,
         customerId: customer.id,
         conversationId: chatSession.id,
         message: messageMarkdown,
-        customerLanguage: customer.language || detectLanguageFromPhonePrefix(customer.phone) || customer.workspace?.defaultLanguage || "it", // 🌍 Priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
+        customerLanguage, // 🌍 Normalized language
         customerName: customer.name,
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
         isPlayground, // 🧪 Pass playground flag
