@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Smartphone, Copy, AlertCircle } from "lucide-react"
 import { toast } from "@/lib/toast"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 
 interface WhatsAppChannelSectionProps {
   formData: {
@@ -47,14 +48,18 @@ export function WhatsAppChannelSection({
   onFieldChange,
   onFieldFocus,
 }: WhatsAppChannelSectionProps) {
+  const { currentWorkspace } = useWorkspace()
   const currentProvider = formData.whatsappProvider || "meta"
+  
+  // 🔧 FIX: Use workspace.id as fallback if whatsappWebhookId is not set
+  const webhookId = formData.whatsappWebhookId || currentWorkspace?.id || ""
   
   const metaWebhookUrl =
     formData.whatsappWebhookUrl ||
-    `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/webhook/${formData.whatsappWebhookId || ""}`
+    `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/webhook/${webhookId}`
   
-  const ultraMsgWebhookUrl = formData.whatsappWebhookId
-    ? `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/ultramsg/${formData.whatsappWebhookId}`
+  const ultraMsgWebhookUrl = webhookId
+    ? `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/ultramsg/${webhookId}`
     : ""
 
   const webhookDisplayUrl = currentProvider === "ultramsg" ? ultraMsgWebhookUrl : metaWebhookUrl

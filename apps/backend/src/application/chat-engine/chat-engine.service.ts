@@ -138,10 +138,12 @@ export interface DebugStep {
     functionResult?: any
     textContent?: string
     targetLanguage?: string  // 🆕 For Translation Agent
+    customerLanguage?: string  // 🆕 For Info Agent
   }
   output?: {
     decision?: string
     functionCall?: { name: string; arguments: any } | string
+    functionCalls?: any[]  // 🆕 For Info Agent multiple function calls
     textResponse?: string
     result?: any
     executionTimeMs?: number
@@ -151,6 +153,7 @@ export interface DebugStep {
     translated?: boolean  // 🆕 For Translation Agent
   }
   duration?: number
+  executionTimeMs?: number  // 🆕 Alternative to duration
 }
 
 // ================================================================================

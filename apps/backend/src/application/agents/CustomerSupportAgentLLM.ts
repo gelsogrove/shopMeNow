@@ -670,7 +670,15 @@ export class CustomerSupportAgentLLM {
     includeProfileFunctions?: boolean
     includeContactOperator?: boolean
   }) {
-    const functions = [
+    const functions: Array<{
+      name: string
+      description: string
+      parameters: {
+        type: string
+        properties: Record<string, { type: string; description?: string; enum?: string[] }>
+        required: string[]
+      }
+    }> = [
       {
         name: "searchFAQ",
         description: "Search FAQ database for answers to customer questions",

@@ -230,7 +230,7 @@ export class SafetyTranslationAgent {
         blockedReason,
         tokensUsed,
         executionTimeMs,
-        systemPrompt, // ✅ Add processed system prompt for debugging
+        systemPrompt: systemPromptTemplate, // ✅ Add processed system prompt for debugging
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
