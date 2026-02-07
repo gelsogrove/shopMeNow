@@ -471,7 +471,7 @@ export class WidgetChatController {
             email: `${visitorId}@visitor.local`,
             phone: phoneNumber || undefined, // 📱 Save phone if provided (playground scenario)
             isActive: false, // Anonymous users are NOT registered
-            language: requestedLanguage || workspace.defaultLanguage || workspace.language || "ENG", // 🌍 Use workspace.defaultLanguage
+            language: requestedLanguage || workspace.defaultLanguage, // 🌍 workspace.defaultLanguage NOT nullable - set during channel registration
           },
         })
 
@@ -569,8 +569,8 @@ export class WidgetChatController {
         },
       })
 
-      // 🌍 LANGUAGE PRIORITY: customer.language (WINS) → workspace.defaultLanguage → workspace.language → "it"
-      const customerLanguage = customer.language || workspace.defaultLanguage || workspace.language || "it"
+      // 🌍 LANGUAGE PRIORITY: customer.language (WINS) → workspace.defaultLanguage (NOT nullable)
+      const customerLanguage = customer.language || workspace.defaultLanguage
       logger.info("🌍 Widget calling LLM Router with language", {
         requestedLanguage,
         customerLanguage,

@@ -585,15 +585,14 @@ export class LLMService {
       )
 
       // 3. Detect customer language
-      // 🆕 PRIORITY ORDER: 1) customer.language, 2) phone prefix, 3) workspace.defaultLanguage
+      // 🆕 PRIORITY ORDER: 1) customer.language, 2) phone prefix (only IT/ES/PT), 3) workspace.defaultLanguage
       const {
         detectLanguageFromPhonePrefix,
       } = require("../utils/language-detector")
       const detectedLanguage = 
         customer?.language || 
         detectLanguageFromPhonePrefix(phone) || 
-        workspace.defaultLanguage || 
-        'en' // Final fallback
+        workspace.defaultLanguage // NOT nullable - set during channel registration
 
       // 4. Translate through Safety & Translation layer (MANDATORY)
       const welcomeMessageTranslated = await this.translateSystemMessage(
@@ -1664,15 +1663,14 @@ export class LLMService {
     )
 
     // 2. Detect customer language
-    // 🆕 PRIORITY ORDER: 1) customer.language, 2) phone prefix, 3) workspace.defaultLanguage
+    // 🆕 PRIORITY ORDER: 1) customer.language, 2) phone prefix (only IT/ES/PT), 3) workspace.defaultLanguage
     const {
       detectLanguageFromPhonePrefix,
     } = require("../utils/language-detector")
     const detectedLanguage = 
       customer?.language || 
       detectLanguageFromPhonePrefix(llmRequest.phone) || 
-      workspace.defaultLanguage || 
-      'en' // Final fallback
+      workspace.defaultLanguage // NOT nullable - set during channel registration
 
     logger.info(
       `🌐 NewUser: Detected language ${detectedLanguage} for phone ${llmRequest.phone} ` +

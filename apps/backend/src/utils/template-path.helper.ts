@@ -44,10 +44,7 @@ export const ECOMMERCE_AGENTS = [
 
 // All informational agents (informational folder + shared)
 export const INFORMATIONAL_AGENTS = [
-  "ROUTER",
   "CUSTOMER_SUPPORT",
-  "PROFILE_MANAGEMENT",
-  ...SHARED_AGENTS,
 ]
 
 /**

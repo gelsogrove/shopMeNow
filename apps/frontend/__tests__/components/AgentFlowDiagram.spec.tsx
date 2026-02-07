@@ -3,7 +3,7 @@
  *
  * SCENARIO: Visual flow diagram for multi-agent architecture configuration.
  * This component displays agent hierarchy, allows prompt editing, and handles
- * hardcoded agents (Safety+Translation) as read-only.
+ * hardcoded agents (Widget Security Layer) as read-only.
  *
  * KEY BEHAVIORS TESTED:
  * 1. E-commerce agents filtered based on workspace type
@@ -157,10 +157,11 @@ describe("AgentFlowDiagram", () => {
       expect(screen.queryByText("Cart Management")).not.toBeInTheDocument()
       expect(screen.queryByText("Order Tracking")).not.toBeInTheDocument()
 
-      // Non-e-commerce agents should still be visible
-      expect(screen.getByText("Router Agent")).toBeInTheDocument()
-      expect(screen.getByText("Customer Support")).toBeInTheDocument()
-      expect(screen.getByText("Profile Management")).toBeInTheDocument()
+      // Informational flow should show a single Info Agent
+      expect(screen.getAllByText("Info Agent").length).toBeGreaterThan(0)
+      expect(screen.queryByText("Router Agent")).not.toBeInTheDocument()
+      expect(screen.queryByText("Customer Support")).not.toBeInTheDocument()
+      expect(screen.queryByText("Profile Management")).not.toBeInTheDocument()
     })
 
     /**
@@ -205,12 +206,12 @@ describe("AgentFlowDiagram", () => {
     })
   })
 
-  describe("Hardcoded Agents (Safety + Translation)", () => {
+  describe("Hardcoded Agents (Widget Security Layer)", () => {
     /**
      * RULE: Safety+Translation agent is ALWAYS shown but is marked as "hardcoded".
      * It uses prompts from shared/translation-prompts.ts, not from database.
      */
-    it("should display Safety + Translation agent as hardcoded", () => {
+    it("should display Widget Security Layer agent as hardcoded", () => {
       render(
         <AgentFlowDiagram
           sellsProductsAndServices={true}
@@ -221,8 +222,8 @@ describe("AgentFlowDiagram", () => {
         />
       )
 
-      // Safety + Translation agent should be visible
-      expect(screen.getByText("Safety + Translation")).toBeInTheDocument()
+      // Widget Security Layer agent should be visible
+      expect(screen.getByText("Widget Security Layer")).toBeInTheDocument()
       // Should show "Hardcoded" label
       expect(screen.getByText(/Hardcoded \(Widget only\)/)).toBeInTheDocument()
     })
@@ -242,8 +243,8 @@ describe("AgentFlowDiagram", () => {
         />
       )
 
-      // Find and click the Safety + Translation agent
-      const safetyAgent = screen.getByText("Safety + Translation")
+      // Find and click the Widget Security Layer agent
+      const safetyAgent = screen.getByText("Widget Security Layer")
       fireEvent.click(safetyAgent)
 
       // Wait for help dialog to appear

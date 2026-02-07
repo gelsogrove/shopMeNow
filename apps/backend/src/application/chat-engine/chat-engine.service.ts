@@ -1414,7 +1414,8 @@ export class ChatEngineService {
    * 
    * This wrapper ensures:
    * 1. CONCURRENCY SAFETY: Only ONE message per customer processed at a time
-   * 2. TRANSLATION: ALL responses pass through Translation Layer
+   * 2. TRANSLATION: Non-widget responses pass through Translation Layer
+   *    (Widget uses Widget Security Layer for translation + safety)
    * 
    * Flow:
    *   0. Acquire customer lock (wait if another message is processing)
@@ -1484,23 +1485,84 @@ export class ChatEngineService {
       // STEP 1: Process message through business logic pipeline
       const result = await this.processMessageInternal(input)
     
-      // STEP 2: Apply Translation Layer (SINGLE translation point)
       const debugSteps = result.debugInfo?.steps || []
       const rawTargetLanguage = input.customerLanguage || "it"
-    
-      // Normalize language code (handles ITA, ENG, PRT, SPA, etc.)
       const normalizedLanguage = this.normalizeLanguageCode(rawTargetLanguage)
+      const isWidgetChannel = input.channel === "widget"
+
+      let finalMessage = result.message
+      let translationTokens = 0
+      let safetyTokens = 0
+
+      // STEP 2: Apply Translation Layer (SINGLE translation point for non-widget)
+      if (!isWidgetChannel) {
+        const translationResult = await this.applyTranslation(
+          result.message,
+          input.workspaceId,
+          normalizedLanguage, // Pass normalized code (pt, en, es, it)
+          debugSteps,
+          input.customerName
+        )
+
+        translationTokens = translationResult.tokensUsed || 0
+        finalMessage = translationResult.message
+      } else {
+        logger.info("⏭️ [ChatEngine] Skipping translation (Widget uses Widget Security Layer)")
+      }
+
+      // STEP 2.5: Widget Security Layer (translation + safety) for widget only
+      if (isWidgetChannel) {
+        const hasWidgetSafetyStep = debugSteps.some(
+          (step) =>
+            step.type === "safety" &&
+            (step.agent || "").includes("Widget Security Layer")
+        )
+
+        if (!hasWidgetSafetyStep) {
+          try {
+            const safetyAgent = new SafetyTranslationAgent(this.prisma)
+            const safetyResult = await safetyAgent.process({
+              workspaceId: input.workspaceId,
+              response: finalMessage,
+              targetLanguage: normalizedLanguage,
+              customerName: input.customerName,
+            })
+
+            safetyTokens = safetyResult.tokensUsed || 0
+
+            debugSteps.push({
+              type: "safety",
+              agent: "Widget Security Layer",
+              timestamp: new Date().toISOString(),
+              input: {
+                userMessage: finalMessage,
+                targetLanguage: normalizedLanguage,
+              },
+              output: {
+                textResponse: safetyResult.translatedText,
+                translated: true,
+              },
+              tokenUsage: {
+                promptTokens: 0,
+                completionTokens: safetyTokens,
+                totalTokens: safetyTokens,
+              },
+            })
+
+            if (safetyResult.safe && safetyResult.translatedText) {
+              finalMessage = safetyResult.translatedText
+            }
+          } catch (error) {
+            logger.error("❌ [ChatEngine] Widget SafetyTranslation failed", {
+              workspaceId: input.workspaceId,
+              customerId: input.customerId,
+              error: error instanceof Error ? error.message : String(error),
+            })
+          }
+        }
+      }
     
-      // Always apply translation layer (even for Italian - ensures consistent flow)
-      const translationResult = await this.applyTranslation(
-        result.message,
-        input.workspaceId,
-        normalizedLanguage,  // Pass normalized code (pt, en, es, it) 
-        debugSteps,
-        input.customerName
-      )
-    
-      // 🌍 STEP 2B: Update the saved message with translated version
+      // 🌍 STEP 2B: Update the saved message with final version
       // Use the message ID saved from processMessageInternal
       const messageIdToUpdate = (result as any)._assistantMessageId
     
@@ -1512,25 +1574,29 @@ export class ChatEngineService {
             hasId: !!messageIdToUpdate,
           })
         
-          // Build updated debugInfo with translation step
-          const updatedDebugInfo = result.debugInfo ? {
-            ...result.debugInfo,
-            steps: debugSteps, // Now includes translation step
-            totalTokens: (result.debugInfo.totalTokens || 0) + translationResult.tokensUsed,
-          } : undefined
-        
+          const totalExtraTokens = translationTokens + safetyTokens
+
+          // Build updated debugInfo with translation + safety tokens (if any)
+          const updatedDebugInfo = result.debugInfo
+            ? {
+                ...result.debugInfo,
+                steps: debugSteps,
+                totalTokens: (result.debugInfo.totalTokens || 0) + totalExtraTokens,
+              }
+            : undefined
+
           await this.prisma.conversationMessage.update({
             where: { id: messageIdToUpdate },
-            data: { 
-              content: translationResult.message,
+            data: {
+              content: finalMessage,
               debugInfo: updatedDebugInfo ? JSON.stringify(updatedDebugInfo) : undefined,
-            }
+            },
           })
         
-          logger.info("🌍 [ChatEngine] ✅ Updated saved message with translation", {
+          logger.info("🌍 [ChatEngine] ✅ Updated saved message with final output", {
             messageId: messageIdToUpdate,
             targetLanguage: normalizedLanguage,
-            newContentLength: translationResult.message.length,
+            newContentLength: finalMessage.length,
             debugStepsCount: debugSteps.length,
           })
         } catch (error: any) {
@@ -1552,16 +1618,23 @@ export class ChatEngineService {
       // Remove the internal _assistantMessageId before returning
       const { _assistantMessageId, ...cleanResult } = result as any
     
+      const totalTokens = cleanResult.tokensUsed + translationTokens + safetyTokens
+
       return {
         ...cleanResult,
-        message: translationResult.message,
-        response: translationResult.message,
-        tokensUsed: cleanResult.tokensUsed + translationResult.tokensUsed,
-        debugInfo: cleanResult.debugInfo ? {
-          ...cleanResult.debugInfo,
-          steps: debugSteps,
-          totalTokens: (cleanResult.debugInfo.totalTokens || 0) + translationResult.tokensUsed,
-        } : undefined,
+        message: finalMessage,
+        response: finalMessage,
+        tokensUsed: totalTokens,
+        debugInfo: cleanResult.debugInfo
+          ? {
+              ...cleanResult.debugInfo,
+              steps: debugSteps,
+              totalTokens:
+                (cleanResult.debugInfo.totalTokens || 0) +
+                translationTokens +
+                safetyTokens,
+            }
+          : undefined,
       }
     } finally {
       // 🔓 ALWAYS release lock, even on error
@@ -5200,19 +5273,6 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     const customerLanguage =
       input.customerLanguage || customer?.language || "it"
 
-    debugSteps.push({
-      type: "router",
-      agent: "📚 Informational Workspace",
-      timestamp: new Date().toISOString(),
-      input: {
-        userMessage: input.message,
-      },
-      output: {
-        decision: "route_to_customer_support",
-        textResponse: "sellsProductsAndServices=false",
-      },
-    })
-
     let agentResponse = {
       success: false,
       output: "",
@@ -5264,20 +5324,31 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         : "Al momento il supporto umano non è disponibile."
       finalMessage = `${fallbackIdentity} Come posso aiutarti? ${fallbackSupport}`
 
-      debugSteps.push({
-        type: "router",
-        agent: "📚 Informational Workspace",
-        timestamp: new Date().toISOString(),
-        output: {
-          decision: "customer_support_failed_fallback",
-          textResponse: "CustomerSupportAgentLLM failed or empty response",
-        },
-      })
     }
+
+    debugSteps.push({
+      type: "sub_agent",
+      agent: "Info Agent",
+      timestamp: new Date().toISOString(),
+      input: {
+        userMessage: input.message,
+        customerLanguage,
+      },
+      output: {
+        textResponse: finalMessage,
+        functionCalls: agentResponse.functionCalls || [],
+      },
+      tokenUsage: {
+        promptTokens: 0,
+        completionTokens: agentResponse.tokensUsed || 0,
+        totalTokens: agentResponse.tokensUsed || 0,
+      },
+      executionTimeMs: agentResponse.executionTimeMs || 0,
+    })
 
     try {
       // 🔧 Apply SafetyTranslationAgent ONLY for Widget channel
-      // WhatsApp: Skip - scheduler handles security + translation
+      // WhatsApp: Skip - scheduler handles safety (translation already applied before queue)
       if (input.channel === 'widget') {
         const safetyAgent = new SafetyTranslationAgent(this.prisma)
         const safetyResult = await safetyAgent.process({
@@ -5312,7 +5383,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           finalMessage = safetyResult.translatedText
         }
       } else {
-        logger.info("⏭️ [ChatEngine] Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
+        logger.info("⏭️ [ChatEngine] Skipping SafetyTranslation (WhatsApp - scheduler handles safety)")
       }
     } catch (error) {
       logger.error("❌ [ChatEngine] Informational safety/translation failed", {

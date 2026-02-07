@@ -206,11 +206,11 @@ async function checkCustomerBlacklist(
  * @returns Language code (it, es, pt, en)
  */
 function detectLanguageFromPhonePrefix(phoneNumber: string): string {
-  // Supported country prefixes with their corresponding languages:
+  // 🚨 ONLY supported prefixes: IT, ES, PT (Andrea's rule)
+  // For unrecognized prefixes → return "" → caller uses workspace.defaultLanguage
   // +39 = Italy (Italian)
   // +34 = Spain (Spanish)
   // +351 = Portugal (Portuguese)
-  // All others = Default to English
 
   if (phoneNumber.startsWith("+39")) {
     return "it" // Italian
@@ -219,7 +219,7 @@ function detectLanguageFromPhonePrefix(phoneNumber: string): string {
   } else if (phoneNumber.startsWith("+351")) {
     return "pt" // Portuguese
   }
-  return "en" // Default to English for all other prefixes
+  return "" // Unrecognized → caller uses workspace.defaultLanguage
 }
 
 /**

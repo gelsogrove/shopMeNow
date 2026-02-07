@@ -186,7 +186,7 @@ const AGENT_METADATA: Record<string, {
     details: "Answers FAQs, handles complaints, and escalates to human operators when the customer is frustrated or needs human help.",
     whenUsed: "Customer needs help, has questions, or wants to speak with a human",
     example: '"I have a problem with my order" → Provides support or escalates',
-    availableFunctions: ["contactSupport"],
+    availableFunctions: ["contactOperator"],
   },
   SUMMARY_AGENT: {
     name: "Summary Agent",
@@ -229,18 +229,18 @@ const AGENT_METADATA: Record<string, {
     availableFunctions: [],
   },
   TRANSLATION: {
-    name: "Safety + Translation",
+    name: "Widget Security Layer",
     icon: Globe,
     color: "teal",
     gradientFrom: "from-teal-500",
     gradientTo: "to-teal-600",
     borderColor: "border-teal-400",
-    description: "Translates and validates safety",
-    details: "Translates responses to customer's language (IT/EN/ES/PT), blocks profanity and spam, validates external links. This is the final layer before sending.",
-    whenUsed: "Final step - translates response and validates safety",
-    example: "Italian response → Translated to Spanish for customer",
+    description: "Validates safety and translates for widget users",
+    details: "Applies security checks, blocks unsafe content, and translates responses to the customer's language. This layer is applied only for widget messages.",
+    whenUsed: "Final widget-only step before sending",
+    example: "Italian response → Translated to Spanish for widget customer",
     widgetOnly: true,
-    isHardcoded: false,
+    isHardcoded: true,
     availableFunctions: [],
   },
   SECURITY: {
@@ -257,6 +257,16 @@ const AGENT_METADATA: Record<string, {
     isHardcoded: true,
     availableFunctions: ["sendAlertEmail"],
   },
+}
+
+const INFO_AGENT_METADATA = {
+  ...AGENT_METADATA.CUSTOMER_SUPPORT,
+  name: "Info Agent",
+  description: "Answers FAQs and informational requests",
+  details: "Single agent for informational channels. Handles FAQ and knowledge requests and can call functions for human support or profile updates.",
+  whenUsed: "Every message in informational channels",
+  example: '"What are your hours?" → Answers from FAQ or knowledge',
+  availableFunctions: ["contactOperator", "getProfileLink", "handlePushNotifications"],
 }
 
 // Agent Node Component
@@ -403,9 +413,16 @@ export function AgentFlowDiagram({
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
 
-  // Get display name for agent - "Info Agent" for ROUTER in informational mode
+  const getResolvedMeta = (type: string) => {
+    if (!sellsProductsAndServices && type === "CUSTOMER_SUPPORT") {
+      return INFO_AGENT_METADATA
+    }
+    return AGENT_METADATA[type]
+  }
+
+  // Get display name for agent - "Info Agent" for informational channels
   const getAgentDisplayName = (type: string, meta: typeof AGENT_METADATA[keyof typeof AGENT_METADATA]): string => {
-    if (type === "ROUTER" && !sellsProductsAndServices) {
+    if (!sellsProductsAndServices && type === "CUSTOMER_SUPPORT") {
       return "Info Agent"
     }
     return meta.name
@@ -426,16 +443,17 @@ export function AgentFlowDiagram({
     // Must exist in database
     if (!agentExists(type)) return false
     
-    const meta = AGENT_METADATA[type]
+    const meta = getResolvedMeta(type)
     if (!meta) return false
     if (meta.ecommerceOnly && !sellsProductsAndServices) return false
+    if (!sellsProductsAndServices && (type === "ROUTER" || type === "PROFILE_MANAGEMENT")) return false
     if (type === "SECURITY") return false // Always hidden
     return true
   }
 
   // Handle agent click - only if agent exists in database
   const handleAgentClick = (type: string) => {
-    const meta = AGENT_METADATA[type]
+    const meta = getResolvedMeta(type)
     if (!meta) return
     
     // If hardcoded, show help instead of edit
@@ -501,7 +519,9 @@ export function AgentFlowDiagram({
         workspaceType: sellsProductsAndServices ? "ecommerce" : "informational",
         agents: agents.map(agent => ({
           type: agent.type,
-          name: agent.name,
+          name: !sellsProductsAndServices && agent.type.toUpperCase() === "CUSTOMER_SUPPORT"
+            ? "Info Agent"
+            : agent.name,
           systemPrompt: agent.systemPrompt,
           temperature: agent.temperature,
           maxTokens: agent.maxTokens,
@@ -534,8 +554,8 @@ export function AgentFlowDiagram({
     )
   }
 
-  const selectedMeta = selectedAgent ? AGENT_METADATA[selectedAgent.type.toUpperCase()] : null
-  const helpMeta = helpAgent ? AGENT_METADATA[helpAgent] : null
+  const selectedMeta = selectedAgent ? getResolvedMeta(selectedAgent.type.toUpperCase()) : null
+  const helpMeta = helpAgent ? getResolvedMeta(helpAgent) : null
   
   // Filter available functions based on workspace type (ecommerce vs informational)
   const ecommerceFunctions = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
@@ -607,121 +627,133 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
         
-        {/* ROUTER - Shows as "Info Agent" in informational mode */}
+        {/* Root Agent */}
         <AgentNode
-          agent={getAgent("ROUTER")}
-          metadata={AGENT_METADATA.ROUTER}
-          displayName={sellsProductsAndServices ? "Router Agent" : "Info Agent"}
+          agent={getAgent(sellsProductsAndServices ? "ROUTER" : "CUSTOMER_SUPPORT")}
+          metadata={getResolvedMeta(sellsProductsAndServices ? "ROUTER" : "CUSTOMER_SUPPORT")}
+          displayName={
+            sellsProductsAndServices
+              ? "Router Agent"
+              : getAgentDisplayName("CUSTOMER_SUPPORT", INFO_AGENT_METADATA)
+          }
           isEditable={true}
           isActive={true}
-          onClick={() => handleAgentClick("ROUTER")}
+          onClick={() => handleAgentClick(sellsProductsAndServices ? "ROUTER" : "CUSTOMER_SUPPORT")}
           size="large"
         />
         {!sellsProductsAndServices && (
-          <span className="sr-only">Router Agent</span>
+          <span className="sr-only">Info Agent</span>
         )}
         
         <ConnectorArrow />
         
-        {/* Specialists Branch */}
-        <div className="relative w-full max-w-5xl">
-          {/* Horizontal line */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-          
-          {/* Agent boxes - ALL ON SAME ROW - Only show agents that exist in database */}
-          <div className="flex items-start justify-center gap-2 pt-6">
-            {/* E-commerce Agents - only if they exist */}
-            {sellsProductsAndServices && agentExists("PRODUCT_SEARCH") && (
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                <AgentNode
-                  agent={getAgent("PRODUCT_SEARCH")}
-                  metadata={AGENT_METADATA.PRODUCT_SEARCH}
-                  isEditable={true}
-                  isActive={shouldShowAgent("PRODUCT_SEARCH")}
-                  onClick={() => handleAgentClick("PRODUCT_SEARCH")}
-                  size="small"
-                />
+        {/* Specialists Branch (E-commerce only) */}
+        {sellsProductsAndServices && (
+          <>
+            <div className="relative w-full max-w-5xl">
+              {/* Horizontal line */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+              
+              {/* Agent boxes - ALL ON SAME ROW - Only show agents that exist in database */}
+              <div className="flex items-start justify-center gap-2 pt-6">
+                {/* E-commerce Agents - only if they exist */}
+                {agentExists("PRODUCT_SEARCH") && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                    <AgentNode
+                      agent={getAgent("PRODUCT_SEARCH")}
+                      metadata={AGENT_METADATA.PRODUCT_SEARCH}
+                      isEditable={true}
+                      isActive={shouldShowAgent("PRODUCT_SEARCH")}
+                      onClick={() => handleAgentClick("PRODUCT_SEARCH")}
+                      size="small"
+                    />
+                  </div>
+                )}
+                
+                {agentExists("CART_MANAGEMENT") && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                    <AgentNode
+                      agent={getAgent("CART_MANAGEMENT")}
+                      metadata={AGENT_METADATA.CART_MANAGEMENT}
+                      isEditable={true}
+                      isActive={shouldShowAgent("CART_MANAGEMENT")}
+                      onClick={() => handleAgentClick("CART_MANAGEMENT")}
+                      size="small"
+                    />
+                  </div>
+                )}
+                
+                {agentExists("ORDER_TRACKING") && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                    <AgentNode
+                      agent={getAgent("ORDER_TRACKING")}
+                      metadata={AGENT_METADATA.ORDER_TRACKING}
+                      isEditable={true}
+                      isActive={shouldShowAgent("ORDER_TRACKING")}
+                      onClick={() => handleAgentClick("ORDER_TRACKING")}
+                      size="small"
+                    />
+                  </div>
+                )}
+                
+                {/* Customer Support */}
+                <div className="flex flex-col items-center">
+                  <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                  <AgentNode
+                    agent={getAgent("CUSTOMER_SUPPORT")}
+                    metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
+                    isEditable={true}
+                    isActive={true}
+                    onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
+                    size="small"
+                  />
+                </div>
+                
+                {/* Profile Management */}
+                <div className="flex flex-col items-center">
+                  <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                  <AgentNode
+                    agent={getAgent("PROFILE_MANAGEMENT")}
+                    metadata={AGENT_METADATA.PROFILE_MANAGEMENT}
+                    isEditable={true}
+                    isActive={true}
+                    onClick={() => handleAgentClick("PROFILE_MANAGEMENT")}
+                    size="small"
+                  />
+                </div>
               </div>
-            )}
-            
-            {sellsProductsAndServices && agentExists("CART_MANAGEMENT") && (
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                <AgentNode
-                  agent={getAgent("CART_MANAGEMENT")}
-                  metadata={AGENT_METADATA.CART_MANAGEMENT}
-                  isEditable={true}
-                  isActive={shouldShowAgent("CART_MANAGEMENT")}
-                  onClick={() => handleAgentClick("CART_MANAGEMENT")}
-                  size="small"
-                />
-              </div>
-            )}
-            
-            {sellsProductsAndServices && agentExists("ORDER_TRACKING") && (
-              <div className="flex flex-col items-center">
-                <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                <AgentNode
-                  agent={getAgent("ORDER_TRACKING")}
-                  metadata={AGENT_METADATA.ORDER_TRACKING}
-                  isEditable={true}
-                  isActive={shouldShowAgent("ORDER_TRACKING")}
-                  onClick={() => handleAgentClick("ORDER_TRACKING")}
-                  size="small"
-                />
-              </div>
-            )}
-            
-            {/* Customer Support */}
-            <div className="flex flex-col items-center">
-              <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-              <AgentNode
-                agent={getAgent("CUSTOMER_SUPPORT")}
-                metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
-                isEditable={true}
-                isActive={true}
-                onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
-                size="small"
-              />
             </div>
             
-            {/* Profile Management */}
-            <div className="flex flex-col items-center">
-              <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+            {/* Merge line */}
+            <div className="w-[60%] max-w-md h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent mt-6" />
+            
+            <ConnectorArrow />
+          </>
+        )}
+        
+        {/* Conversation History (E-commerce only) */}
+        {sellsProductsAndServices && (
+          <>
+            <div className="flex flex-col items-center gap-1">
               <AgentNode
-                agent={getAgent("PROFILE_MANAGEMENT")}
-                metadata={AGENT_METADATA.PROFILE_MANAGEMENT}
+                agent={getAgent("CONVERSATION_HISTORY")}
+                metadata={AGENT_METADATA.CONVERSATION_HISTORY}
                 isEditable={true}
                 isActive={true}
-                onClick={() => handleAgentClick("PROFILE_MANAGEMENT")}
-                size="small"
+                onClick={() => handleAgentClick("CONVERSATION_HISTORY")}
+                size="normal"
               />
+              <span className="text-xs text-amber-700">Humanization layer</span>
             </div>
-          </div>
-        </div>
+
+            <ConnectorArrow />
+          </>
+        )}
         
-        {/* Merge line */}
-        <div className="w-[60%] max-w-md h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent mt-6" />
-        
-        <ConnectorArrow />
-        
-        {/* Conversation History */}
-        <div className="flex flex-col items-center gap-1">
-          <AgentNode
-            agent={getAgent("CONVERSATION_HISTORY")}
-            metadata={AGENT_METADATA.CONVERSATION_HISTORY}
-            isEditable={true}
-            isActive={true}
-            onClick={() => handleAgentClick("CONVERSATION_HISTORY")}
-            size="normal"
-          />
-          <span className="text-xs text-amber-700">Humanization layer</span>
-        </div>
-        
-        <ConnectorArrow />
-        
-        {/* Safety + Translation (HARDCODED) */}
+        {/* Widget Security Layer (HARDCODED) */}
         <div className="flex flex-col items-center gap-1">
           <AgentNode
             metadata={AGENT_METADATA.TRANSLATION}

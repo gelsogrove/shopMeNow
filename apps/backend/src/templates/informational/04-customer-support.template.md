@@ -79,6 +79,13 @@ Handle all issues yourself:
 
 ---
 
+## 👤 PROFILE & NOTIFICATIONS (CALL FUNCTIONS)
+
+- **Profile updates** (email, phone, address, name): call `getProfileLink()` and share the secure link.
+- **Promotional notifications**: if the customer explicitly asks to enable/disable offers, call `handlePushNotifications(value)` only after clear confirmation.
+
+---
+
 {{#if faqs}}
 ## 📚 FREQUENTLY ASKED QUESTIONS
 
@@ -109,5 +116,4 @@ Use these FAQs to answer customer questions directly:
 7. Do NOT format final response (Translation Agent handles it)
 
 ---
-
 

@@ -9,16 +9,15 @@ export interface RegistrationText {
   validity: string
 }
 
+// 🚨 ONLY supported prefixes: IT, ES, PT (Andrea's rule)
+// For unrecognized prefixes → return "" → caller uses workspace.defaultLanguage
 const PHONE_PREFIX_TO_LANGUAGE: Record<string, string> = {
   "+39": "it", // Italy
   "+34": "es", // Spain
   "+351": "pt", // Portugal
-  "+1": "en", // USA/Canada
-  "+44": "en", // UK
-  "+33": "fr", // France
-  "+49": "de", // Germany
 }
 
+// 🚨 ONLY IT, ES, PT - other languages handled by LLM translation layer
 const REGISTRATION_TEXTS: Record<string, RegistrationText> = {
   it: {
     link: "Completa la tua registrazione",
@@ -32,24 +31,13 @@ const REGISTRATION_TEXTS: Record<string, RegistrationText> = {
     link: "Complete seu cadastro",
     validity: "Link válido por 24 horas",
   },
-  en: {
-    link: "Complete your registration",
-    validity: "Link valid for 24 hours",
-  },
-  fr: {
-    link: "Complétez votre inscription",
-    validity: "Lien valable 24 heures",
-  },
-  de: {
-    link: "Vervollständigen Sie Ihre Registrierung",
-    validity: "Link 24 Stunden gültig",
-  },
 }
 
 /**
  * Detect language from phone number prefix
  * @param phone Phone number with country code (e.g., +390212345678)
- * @returns Language code (it, es, pt, en, etc.) - defaults to "en"
+ * @returns Language code (it, es, pt) or empty string if unrecognized
+ * NOTE: If empty string returned, caller MUST use workspace.defaultLanguage as fallback
  */
 export function detectLanguageFromPhonePrefix(phone: string): string {
   // Clean phone number (remove spaces, dashes, etc.)
@@ -58,7 +46,7 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
   // Extract prefix (first 1-4 digits after +)
   const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
   if (!prefixMatch) {
-    return "en" // Default to English
+    return "" // No prefix found → caller uses workspace.defaultLanguage
   }
 
   const prefix = prefixMatch[1]
@@ -77,7 +65,7 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
     }
   }
 
-  return "en" // Default fallback
+  return "" // Unrecognized prefix → caller uses workspace.defaultLanguage
 }
 
 /**
@@ -87,7 +75,7 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
  */
 export function getRegistrationText(language: string): RegistrationText {
   return (
-    REGISTRATION_TEXTS[language] || REGISTRATION_TEXTS["en"] // Default to English
+    REGISTRATION_TEXTS[language] || REGISTRATION_TEXTS["it"] // Default to Italian (base language)
   )
 }
 
@@ -101,9 +89,6 @@ export function getLanguageName(languageCode: string): string {
     it: "Italiano",
     es: "Español",
     pt: "Português",
-    en: "English",
-    fr: "Français",
-    de: "Deutsch",
   }
-  return languageNames[languageCode] || "English"
+  return languageNames[languageCode] || "Italiano" // Default to Italian (base language)
 }

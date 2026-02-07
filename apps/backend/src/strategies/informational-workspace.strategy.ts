@@ -48,7 +48,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
   async route(context: RoutingContext, workspace: Workspace): Promise<RoutingResult> {
     const startTime = Date.now()
 
-    logger.info("📚 InformationalWorkspaceStrategy - Routing to CUSTOMER_SUPPORT", {
+    logger.info("📚 InformationalWorkspaceStrategy - Routing to Info Agent", {
       workspaceId: context.workspaceId,
       customerId: context.customerId,
       message: context.message.substring(0, 50) + "...",
@@ -101,7 +101,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
 
       const executionTime = Date.now() - startTime
 
-      logger.info("✅ InformationalWorkspaceStrategy - CUSTOMER_SUPPORT completed", {
+      logger.info("✅ InformationalWorkspaceStrategy - Info Agent completed", {
         workspaceId: context.workspaceId,
         tokensUsed: agentResponse.tokensUsed || 0,
         executionTimeMs: executionTime,
@@ -116,7 +116,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
       )
 
       // 🔒 STEP 2: Safety + Translation (ONLY for Widget)
-      // 🔧 WhatsApp: Skip SafetyTranslationAgent - scheduler handles security + translation
+      // 🔧 WhatsApp: Skip SafetyTranslationAgent - scheduler handles safety (translation already applied before queue)
       let safetyResult: SafetyResult = {
         safe: true,
         translatedText: linkReplacedResponse.response || agentResponse.output,
@@ -132,7 +132,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
           customerName: customerData.name,
         })
       } else {
-        logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
+        logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles safety)")
       }
 
       // Final response after filters
@@ -144,28 +144,8 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
       // Build debug steps for timeline
       const debugSteps: any[] = [
         {
-          type: "router",
-          agent: "Router (Informational Workspace)",
-          model: "N/A",
-          temperature: 0,
-          timestamp: new Date().toISOString(),
-          input: {
-            userMessage: context.message,
-            workspaceType: "informational",
-          },
-          output: {
-            decision: "CUSTOMER_SUPPORT",
-            message: "Informational workspace → Always route to FAQ/Support",
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-          },
-        },
-        {
-          type: "customer_support",
-          agent: "Customer Support Agent",
+          type: "sub_agent",
+          agent: "Info Agent",
           model: "gpt-4o-mini",
           temperature: 0.7,
           timestamp: new Date().toISOString(),
@@ -174,7 +154,6 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
             customerLanguage: context.customerLanguage || "it",
           },
           output: {
-            decision: "support_assistance_provided",
             message: agentResponse.output,
             functionCalls: agentResponse.functionCalls || [],
           },
@@ -183,6 +162,27 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
           containsTokens: false,
         },
       ]
+
+      if (context.channel === "widget") {
+        debugSteps.push({
+          type: "safety",
+          agent: "Widget Security Layer",
+          timestamp: new Date().toISOString(),
+          input: {
+            textContent: linkReplacedResponse.response || agentResponse.output,
+            targetLanguage: customerData.language || "it",
+          },
+          output: {
+            textResponse: finalResponse,
+            translated: true,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: safetyResult.tokensUsed || 0,
+            totalTokens: safetyResult.tokensUsed || 0,
+          },
+        })
+      }
 
       return {
         response: finalResponse, // ✅ NOW with Safety + LinkReplacement + Translation

@@ -79,10 +79,24 @@ export const dynamicAgents = (
     availableFunctions: any
   }
 > => {
-  // Base agents available for ALL workspaces
-  const baseAgents = [
-    // ROUTER AGENT (order: 0)
-    {
+  const isInformational = !hasEcommerce
+  const customerSupportFunctions = getAgentFunctionNames("CUSTOMER_SUPPORT") || []
+  const profileFunctions = getAgentFunctionNames("PROFILE_MANAGEMENT") || []
+  const infoAgentFunctions = Array.from(
+    new Set([...customerSupportFunctions, ...profileFunctions])
+  )
+
+  // Base agents available for ALL workspaces (with conditional info-only tweaks)
+  const baseAgents: Array<
+    Omit<DynamicAgent, "availableFunctions"> & {
+      workspaceId: string
+      availableFunctions: any
+    }
+  > = []
+
+  // ROUTER AGENT (order: 0) - Only for e-commerce / multi-agent routing
+  if (hasEcommerce) {
+    baseAgents.push({
       workspaceId,
       name: "Router Agent",
       type: "ROUTER" as AgentType,
@@ -95,42 +109,46 @@ export const dynamicAgents = (
       order: 0,
       isActive: true,
       availableFunctions: getAgentFunctionNames("ROUTER"),
-    },
+    })
+  }
 
-    // CUSTOMER SUPPORT AGENT (order: 4)
-    {
-      workspaceId,
-      name: "Customer Support Agent",
-      type: "CUSTOMER_SUPPORT" as AgentType,
-      icon: "Headset",
-      description: "Customer support with conditional human escalation",
-      systemPrompt: loadTemplate("CUSTOMER_SUPPORT", hasEcommerce),
-      model: "openai/gpt-4o-mini",
-      temperature: 0.3,
-      maxTokens: 2048,
-      order: 4,
-      isActive: true,
-      availableFunctions: getAgentFunctionNames("CUSTOMER_SUPPORT"),
-    },
+  // CUSTOMER SUPPORT / INFO AGENT
+  baseAgents.push({
+    workspaceId,
+    name: isInformational ? "Info Agent" : "Customer Support Agent",
+    type: "CUSTOMER_SUPPORT" as AgentType,
+    icon: "Headset",
+    description: isInformational
+      ? "Answers FAQs and informational requests with optional escalation"
+      : "Customer support with conditional human escalation",
+    systemPrompt: loadTemplate("CUSTOMER_SUPPORT", hasEcommerce),
+    model: "openai/gpt-4o-mini",
+    temperature: 0.3,
+    maxTokens: 2048,
+    order: isInformational ? 0 : 4,
+    isActive: true,
+    availableFunctions: isInformational ? infoAgentFunctions : customerSupportFunctions,
+  })
 
-    // SUMMARY AGENT (order: 5) - Shared
-    {
-      workspaceId,
-      name: "Summary Agent",
-      type: "SUMMARY_AGENT" as AgentType,
-      icon: "FileText",
-      description: "Conversation summary for operator emails",
-      systemPrompt: loadTemplate("SUMMARY_AGENT", hasEcommerce),
-      model: "openai/gpt-4o-mini",
-      temperature: 0.2,
-      maxTokens: 500,
-      order: 5,
-      isActive: true,
-      availableFunctions: getAgentFunctionNames("SUMMARY_AGENT"),
-    },
+  // SUMMARY AGENT (order: 5) - Shared
+  baseAgents.push({
+    workspaceId,
+    name: "Summary Agent",
+    type: "SUMMARY_AGENT" as AgentType,
+    icon: "FileText",
+    description: "Conversation summary for operator emails",
+    systemPrompt: loadTemplate("SUMMARY_AGENT", hasEcommerce),
+    model: "openai/gpt-4o-mini",
+    temperature: 0.2,
+    maxTokens: 500,
+    order: 5,
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("SUMMARY_AGENT"),
+  })
 
-    // PROFILE MANAGEMENT AGENT (order: 6)
-    {
+  // PROFILE MANAGEMENT AGENT (order: 6) - Only for e-commerce flow
+  if (hasEcommerce) {
+    baseAgents.push({
       workspaceId,
       name: "Profile Management Agent",
       type: "PROFILE_MANAGEMENT" as AgentType,
@@ -142,58 +160,58 @@ export const dynamicAgents = (
       maxTokens: 500,
       order: 6,
       isActive: true,
-      availableFunctions: getAgentFunctionNames("PROFILE_MANAGEMENT"),
-    },
+      availableFunctions: profileFunctions,
+    })
+  }
 
-    // FORMAT AND TRANSLATION AGENT (order: 7) - Shared
-    {
-      workspaceId,
-      name: "Format and Translation Agent",
-      type: "TRANSLATION" as AgentType,
-      icon: "Globe",
-      description: "Format for WhatsApp and translate to customer language",
-      systemPrompt: loadTemplate("TRANSLATION", hasEcommerce),
-      model: "openai/gpt-4o-mini",
-      temperature: 0.1,
-      maxTokens: 1024,
-      order: 7,
-      isActive: true,
-      availableFunctions: getAgentFunctionNames("TRANSLATION"),
-    },
+  // FORMAT AND TRANSLATION AGENT (order: 7) - Shared
+  baseAgents.push({
+    workspaceId,
+    name: "Format and Translation Agent",
+    type: "TRANSLATION" as AgentType,
+    icon: "Globe",
+    description: "Format for WhatsApp and translate to customer language",
+    systemPrompt: loadTemplate("TRANSLATION", hasEcommerce),
+    model: "openai/gpt-4o-mini",
+    temperature: 0.1,
+    maxTokens: 1024,
+    order: 7,
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("TRANSLATION"),
+  })
 
-    // CONVERSATION HISTORY LAYER (order: 8) - Shared
-    // Umanizza le risposte tecniche, aggiunge contesto, saluti, offerte
-    {
-      workspaceId,
-      name: "Conversation History Layer",
-      type: "CONVERSATION_HISTORY" as AgentType,
-      icon: "MessageCircle",
-      description: "Umanizza risposte con contesto, saluti, offerte",
-      systemPrompt: loadTemplate("CONVERSATION_HISTORY", hasEcommerce),
-      model: "openai/gpt-4o-mini",
-      temperature: 0.7, // Più creativo per umanizzare
-      maxTokens: 500,
-      order: 8, // Dopo agent funzionali, prima di Security
-      isActive: true,
-      availableFunctions: null, // Non chiama funzioni
-    },
+  // CONVERSATION HISTORY LAYER (order: 8) - Shared
+  // Umanizza le risposte tecniche, aggiunge contesto, saluti, offerte
+  baseAgents.push({
+    workspaceId,
+    name: "Conversation History Layer",
+    type: "CONVERSATION_HISTORY" as AgentType,
+    icon: "MessageCircle",
+    description: "Umanizza risposte con contesto, saluti, offerte",
+    systemPrompt: loadTemplate("CONVERSATION_HISTORY", hasEcommerce),
+    model: "openai/gpt-4o-mini",
+    temperature: 0.7, // Più creativo per umanizzare
+    maxTokens: 500,
+    order: 8, // Dopo agent funzionali, prima di Security
+    isActive: true,
+    availableFunctions: null, // Non chiama funzioni
+  })
 
-    // SECURITY AGENT (order: 99) - Shared
-    {
-      workspaceId,
-      name: "Security Agent",
-      type: "SECURITY" as AgentType,
-      icon: "Shield",
-      description: "Security validation with conditional external links",
-      systemPrompt: loadTemplate("SECURITY", hasEcommerce),
-      model: "openai/gpt-4o-mini",
-      temperature: 0,
-      maxTokens: 500,
-      order: 99,
-      isActive: true,
-      availableFunctions: getAgentFunctionNames("SECURITY"),
-    },
-  ]
+  // SECURITY AGENT (order: 99) - Shared
+  baseAgents.push({
+    workspaceId,
+    name: "Security Agent",
+    type: "SECURITY" as AgentType,
+    icon: "Shield",
+    description: "Security validation with conditional external links",
+    systemPrompt: loadTemplate("SECURITY", hasEcommerce),
+    model: "openai/gpt-4o-mini",
+    temperature: 0,
+    maxTokens: 500,
+    order: 99,
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("SECURITY"),
+  })
 
   // E-commerce only agents
   const ecommerceAgents = hasEcommerce ? [

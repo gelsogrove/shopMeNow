@@ -273,7 +273,11 @@ export class CustomerSupportAgentLLM {
       ]
 
       // STEP 3: Define function calls for customer support
-      const functions = this.getCustomerSupportFunctions()
+      const isInformational = workspace?.sellsProductsAndServices === false
+      const functions = this.getCustomerSupportFunctions({
+        includeProfileFunctions: isInformational,
+        includeContactOperator: workspace?.hasHumanSupport !== false,
+      })
 
       // STEP 4: Call LLM (OpenRouter)
       const llmResponse = await this.callLLM({
@@ -513,6 +517,81 @@ export class CustomerSupportAgentLLM {
               "Support ticket created successfully. Our team will contact you soon.",
           }
 
+        case "contactOperator": {
+          const customer = await this.prisma.customers.findUnique({
+            where: { id: context.customerId },
+            select: { phone: true },
+          })
+
+          const phoneNumber =
+            customer?.phone || context.customerData?.phone || ""
+
+          if (!phoneNumber) {
+            return {
+              success: false,
+              error: "Customer phone number is missing",
+            }
+          }
+
+          const { contactOperator } = require("../../domain/calling-functions/contactOperator")
+
+          const contactResult = await contactOperator({
+            phoneNumber,
+            workspaceId: context.workspaceId,
+            customerId: context.customerId,
+            reason: args?.reason || "Customer requested operator assistance",
+          })
+
+          return {
+            success: contactResult.success,
+            message: contactResult.message,
+            timestamp: contactResult.timestamp,
+            ticketId: contactResult.ticketId,
+            summaryAgentExecuted: contactResult.summaryAgentExecuted,
+            summaryEmailSent: contactResult.summaryEmailSent,
+            generatedSummary: contactResult.generatedSummary,
+            conversationMessages: contactResult.conversationMessages,
+          }
+        }
+
+        case "getProfileLink": {
+          const { CallingFunctionsService } = require("../../services/calling-functions.service")
+          const callingFunctions = new CallingFunctionsService()
+
+          const result = await callingFunctions.getProfileLink({
+            customerId: context.customerId,
+            workspaceId: context.workspaceId,
+          })
+
+          return {
+            success: result.success,
+            linkUrl: result.linkUrl,
+            link: result.linkUrl,
+            token: result.token,
+            expiresAt: result.expiresAt,
+            message: result.success
+              ? "Profile link generated"
+              : "Failed to generate profile link",
+          }
+        }
+
+        case "handlePushNotifications": {
+          const { manageNotifications } = require("../../domain/calling-functions/manageNotifications")
+
+          const action = args?.value ? "SUBSCRIBE" : "UNSUBSCRIBE"
+          const result = await manageNotifications({
+            action,
+            customerId: context.customerId,
+            workspaceId: context.workspaceId,
+          })
+
+          return {
+            success: result.success,
+            message: result.message,
+            currentStatus: result.currentStatus,
+          }
+        }
+
         case "contactSupport":
           // Get sales agent info from customer
           const customer = await this.prisma.customers.findUnique({
@@ -587,8 +666,11 @@ export class CustomerSupportAgentLLM {
   /**
    * Get function definitions for customer support
    */
-  private getCustomerSupportFunctions() {
-    return [
+  private getCustomerSupportFunctions(options?: {
+    includeProfileFunctions?: boolean
+    includeContactOperator?: boolean
+  }) {
+    const functions = [
       {
         name: "searchFAQ",
         description: "Search FAQ database for answers to customer questions",
@@ -642,15 +724,57 @@ export class CustomerSupportAgentLLM {
           required: ["subject", "description"],
         },
       },
-      {
-        name: "contactSupport",
-        description: "Get sales agent contact information for this customer",
+    ]
+
+    if (options?.includeContactOperator ?? true) {
+      functions.push({
+        name: "contactOperator",
+        description:
+          "Escalate to a human operator when the customer asks for human support or is frustrated.",
         parameters: {
           type: "object",
-          properties: {},
+          properties: {
+            reason: {
+              type: "string",
+              description: "Optional short reason for escalation.",
+            },
+          },
           required: [],
         },
-      },
-    ]
+      })
+    }
+
+    if (options?.includeProfileFunctions) {
+      functions.push(
+        {
+          name: "getProfileLink",
+          description:
+            "Generate a secure profile link for customers who want to update personal data (email, phone, address, name).",
+          parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+          },
+        },
+        {
+          name: "handlePushNotifications",
+          description:
+            "Enable/disable promotional push notifications. Use only after explicit customer confirmation.",
+          parameters: {
+            type: "object",
+            properties: {
+              value: {
+                type: "boolean",
+                description:
+                  "true = subscribe, false = unsubscribe promotional notifications.",
+              },
+            },
+            required: ["value"],
+          },
+        }
+      )
+    }
+
+    return functions
   }
 }

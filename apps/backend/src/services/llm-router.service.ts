@@ -245,20 +245,20 @@ export class LLMRouterService {
    * 🆕 Check if SafetyTranslationAgent should be applied based on channel
    * 
    * - WIDGET: Apply SafetyTranslationAgent (no scheduler processes widget messages)
-   * - WHATSAPP: Skip SafetyTranslationAgent (scheduler already does security + translation)
+   * - WHATSAPP: Skip SafetyTranslationAgent (scheduler handles safety; translation already applied before queue)
    * 
    * @param channel - Channel type ('widget', 'whatsapp', etc.)
    * @returns true if SafetyTranslationAgent should be applied
    */
   private shouldApplySafetyTranslation(channel?: string): boolean {
     // Widget channel: MUST apply SafetyTranslation (no scheduler processes widget)
-    // WhatsApp/other: SKIP SafetyTranslation (scheduler handles security + translation)
+    // WhatsApp/other: SKIP SafetyTranslation (scheduler handles safety; translation already applied before queue)
     const shouldApply = channel === 'widget'
     
     logger.debug("🔒 SafetyTranslation check", {
       channel: channel || 'undefined',
       shouldApply,
-      reason: shouldApply ? 'Widget channel - no scheduler' : 'WhatsApp/other - scheduler handles translation'
+      reason: shouldApply ? 'Widget channel - no scheduler' : 'WhatsApp/other - scheduler handles safety'
     })
     
     return shouldApply
@@ -471,24 +471,26 @@ export class LLMRouterService {
           tokensUsed: safetyResult.tokensUsed,
         })
 
-        debugSteps.push({
-          type: "safety",
-          agent: "SafetyTranslationAgent",
-          timestamp: new Date().toISOString(),
-          input: {
-            textToValidate: params.message,
-          },
-          output: {
-            translatedText: safetyResult.translatedText,
+        if (this.shouldApplySafetyTranslation(params.channel)) {
+          debugSteps.push({
+            type: "safety",
+            agent: "Widget Security Layer",
+            timestamp: new Date().toISOString(),
+            input: {
+              textToValidate: params.message,
+            },
+            output: {
+              translatedText: safetyResult.translatedText,
+              safe: safetyResult.safe,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: safetyResult.tokensUsed || 0,
+              totalTokens: safetyResult.tokensUsed || 0,
+            },
             safe: safetyResult.safe,
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: safetyResult.tokensUsed || 0,
-            totalTokens: safetyResult.tokensUsed || 0,
-          },
-          safe: safetyResult.safe,
-        })
+          })
+        }
 
         logger.info(
           "📍 FAST-PATH STEP 2: Saving assistant message to conversation history"
@@ -622,26 +624,28 @@ export class LLMRouterService {
         const translatedSecurityMessage = securitySafetyResult.translatedText
 
         // 🔍 Add safety/translation step to timeline
-        securityDebugSteps.push({
-          type: "safety",
-          agent: "SafetyTranslationAgent",
-          model: "openai/gpt-4o-mini",
-          temperature: 0.2,
-          timestamp: new Date().toISOString(),
-          input: {
-            textToValidate: securityCheck.message || "Security alert",
-            targetLanguage: params.customerLanguage || "it",
-          },
-          output: {
-            translatedText: translatedSecurityMessage,
-            safe: true,
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: securitySafetyResult.tokensUsed || 0,
-            totalTokens: securitySafetyResult.tokensUsed || 0,
-          },
-        })
+        if (this.shouldApplySafetyTranslation(params.channel)) {
+          securityDebugSteps.push({
+            type: "safety",
+            agent: "Widget Security Layer",
+            model: "openai/gpt-4o-mini",
+            temperature: 0.2,
+            timestamp: new Date().toISOString(),
+            input: {
+              textToValidate: securityCheck.message || "Security alert",
+              targetLanguage: params.customerLanguage || "it",
+            },
+            output: {
+              translatedText: translatedSecurityMessage,
+              safe: true,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: securitySafetyResult.tokensUsed || 0,
+              totalTokens: securitySafetyResult.tokensUsed || 0,
+            },
+          })
+        }
 
         // Save generic security warning (OUTBOUND) with translated message and debugInfo
         await this.conversationManager.saveAssistantMessage({
@@ -770,26 +774,28 @@ export class LLMRouterService {
         const translatedWipMessage = wipSafetyResult.translatedText
 
         // 🔍 Add safety/translation step to timeline
-        wipDebugSteps.push({
-          type: "safety",
-          agent: "SafetyTranslationAgent",
-          model: "openai/gpt-4o-mini",
-          temperature: 0.2,
-          timestamp: new Date().toISOString(),
-          input: {
-            textToValidate: wipMessage,
-            targetLanguage: params.customerLanguage || "it",
-          },
-          output: {
-            translatedText: translatedWipMessage,
-            safe: true,
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: wipSafetyResult.tokensUsed || 0,
-            totalTokens: wipSafetyResult.tokensUsed || 0,
-          },
-        })
+        if (this.shouldApplySafetyTranslation(params.channel)) {
+          wipDebugSteps.push({
+            type: "safety",
+            agent: "Widget Security Layer",
+            model: "openai/gpt-4o-mini",
+            temperature: 0.2,
+            timestamp: new Date().toISOString(),
+            input: {
+              textToValidate: wipMessage,
+              targetLanguage: params.customerLanguage || "it",
+            },
+            output: {
+              translatedText: translatedWipMessage,
+              safe: true,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: wipSafetyResult.tokensUsed || 0,
+              totalTokens: wipSafetyResult.tokensUsed || 0,
+            },
+          })
+        }
 
         // Save user message (INBOUND)
         await this.conversationManager.saveUserMessage({

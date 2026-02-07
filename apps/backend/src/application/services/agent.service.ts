@@ -34,6 +34,20 @@ export class AgentService {
         return []
       }
 
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { sellsProductsAndServices: true },
+      })
+      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+      const isInformational = !hasEcommerce
+      const infoHiddenTypes = new Set([
+        "ROUTER",
+        "PROFILE_MANAGEMENT",
+        "PRODUCT_SEARCH",
+        "CART_MANAGEMENT",
+        "ORDER_TRACKING",
+      ])
+
       let agents = []
       try {
         agents = await this.prisma.agentConfig.findMany({
@@ -60,17 +74,16 @@ export class AgentService {
       }
       logger.info(`Found ${agents.length} agents for workspace ${workspaceId}`)
 
+      const filteredAgents = isInformational
+        ? agents.filter((agent) => !infoHiddenTypes.has(agent.type))
+        : agents
+
       const hasMissingPrompt = agents.some(
         (agent) => !agent.systemPrompt || agent.systemPrompt.trim() === ""
       )
 
       let defaultPromptsByType: Record<string, string> | null = null
       if (hasMissingPrompt) {
-        const workspace = await this.prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { sellsProductsAndServices: true },
-        })
-        const hasEcommerce = workspace?.sellsProductsAndServices ?? true
         defaultPromptsByType = Object.fromEntries(
           dynamicAgents(workspaceId, hasEcommerce).map((agent) => [
             agent.type,
@@ -80,26 +93,39 @@ export class AgentService {
       }
 
       // 🔄 MAPPING: Trasforma agentConfig per il frontend
-      const mappedAgents = agents.map((agent) => {
+      const mappedAgents = filteredAgents.map((agent) => {
         const fallbackPrompt =
           !agent.systemPrompt || agent.systemPrompt.trim() === ""
             ? defaultPromptsByType?.[agent.type] || ""
             : agent.systemPrompt
 
+        let functions = getFunctionsForAgentType(agent.type) || []
+        if (isInformational && agent.type === "CUSTOMER_SUPPORT") {
+          const profileFunctions = getFunctionsForAgentType("PROFILE_MANAGEMENT") || []
+          functions = Array.from(new Set([...functions, ...profileFunctions]))
+        }
+
+        const name =
+          isInformational && agent.type === "CUSTOMER_SUPPORT"
+            ? "Info Agent"
+            : agent.name
+        const order =
+          isInformational && agent.type === "CUSTOMER_SUPPORT" ? 0 : agent.order
+
         return {
         id: agent.id,
-        name: agent.name,
+        name,
         content: fallbackPrompt, // Backward compatibility
         systemPrompt: fallbackPrompt, // Standard
         workspaceId: agent.workspaceId,
         temperature: agent.temperature,
         model: agent.model,
         maxTokens: agent.maxTokens, // ✅ STANDARD: camelCase
-        order: agent.order,
+        order,
         agentType: agent.type, // ✅ FIX: Database field is "type" not "agentType"
         isActive: agent.isActive,
         icon: agent.icon, // 🎨 Icon name from database
-        functions: getFunctionsForAgentType(agent.type), // ✅ FIX: Use "type" field
+        functions, // ✅ FIX: Use "type" field
         createdAt: agent.createdAt,
         updatedAt: agent.updatedAt,
         }

@@ -379,7 +379,7 @@ export class UltraMsgWebhookController {
             phone: phoneForStorage,
             email: `${phoneForStorage.replace(/[^0-9]/g, '')}@whatsapp.ultramsg.temp`,
             name: 'New Customer',
-            language: workspace.defaultLanguage || 'it',
+            language: workspace.defaultLanguage, // NOT nullable - set during channel registration
             isActive: false, // Mark inactive until registration
           },
           select: customerSelect,
@@ -484,11 +484,10 @@ export class UltraMsgWebhookController {
           const rawWipMessage = workspace.wipMessage || 'Work in progress. Please contact us later.'
           
           // 🌍 TRANSLATE WIP message to customer's language
-          // Language priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
+          // Language priority: customer.language → phone prefix (only IT/ES/PT) → workspace.defaultLanguage
           const customerLang = customer.language 
             || detectLanguageFromPhonePrefix(customer.phone) 
-            || workspace.defaultLanguage 
-            || 'it'
+            || workspace.defaultLanguage // NOT nullable - set during channel registration
           
           let wipMessage = rawWipMessage
           
@@ -764,7 +763,7 @@ export class UltraMsgWebhookController {
         customerId: customer.id,
         conversationId: chatSession.id,
         message: messageMarkdown,
-        customerLanguage: customer.language || detectLanguageFromPhonePrefix(customer.phone) || workspace.defaultLanguage || 'it', // 🌍 Priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
+        customerLanguage: customer.language || detectLanguageFromPhonePrefix(customer.phone) || workspace.defaultLanguage, // 🌍 Priority: customer.language → phone prefix (IT/ES/PT) → workspace.defaultLanguage (NOT nullable)
         customerName: customer.name,
         customerDiscount: customer.discount || 0,
         isPlayground: false,

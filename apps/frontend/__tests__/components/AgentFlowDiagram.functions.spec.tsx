@@ -72,10 +72,9 @@ describe("AgentFlowDiagram - Function Filtering", () => {
 
   describe("Agent-specific functions", () => {
     it("should not filter Customer Support functions (they are NOT ecommerce-only)", () => {
-      // SCENARIO: Customer Support Agent has only contactSupport
-      // RULE: contactSupport is available in BOTH modes (ecommerce and informational)
-      // NOTE: createTicket was removed - Customer Support only escalates via contactSupport
-      const supportFunctions = ["contactSupport"]
+      // SCENARIO: Customer Support Agent has only contactOperator
+      // RULE: contactOperator is available in BOTH modes (ecommerce and informational)
+      const supportFunctions = ["contactOperator"]
       
       const ecommerceFiltered = getFilteredFunctions(supportFunctions, true)
       const informationalFiltered = getFilteredFunctions(supportFunctions, false)

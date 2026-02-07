@@ -31,17 +31,18 @@ const customerMessageLocks = new Map<string, Promise<void>>()
  * 🌍 Language Detection Helper
  * Detects language from phone prefix (e.g., +39 → it, +34 → es)
  */
+// 🚨 ONLY supported prefixes: IT, ES, PT (Andrea's rule)
+// For unrecognized prefixes → return "" → caller uses workspace.defaultLanguage
 const detectLanguageFromPhonePrefix = (phone: string): string => {
   const cleanPhone = phone.replace(/[\s\-()]/g, "")
   const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
-  if (!prefixMatch) return "en"
+  if (!prefixMatch) return ""
   
   const prefix = prefixMatch[1]
   const langMap: Record<string, string> = {
-    "+39": "it", "+34": "es", "+351": "pt", "+33": "fr", "+49": "de",
-    "+1": "en", "+44": "en", "+91": "en"
+    "+39": "it", "+34": "es", "+351": "pt",
   }
-  return langMap[prefix] || "en"
+  return langMap[prefix] || "" // Unrecognized → caller uses workspace.defaultLanguage
 }
 
 /**
@@ -698,9 +699,9 @@ export class WhatsAppWebhookController {
           return
         }
 
-      // 🌍 LANGUAGE PRIORITY: customer.language (if exists) → phone prefix → workspace.defaultLanguage
+      // 🌍 LANGUAGE PRIORITY: customer.language → phone prefix (only IT/ES/PT) → workspace.defaultLanguage
         const detectedLanguageFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
-        const finalLanguage = detectedLanguageFromPhone // For new customer, use phone prefix
+        const finalLanguage = detectedLanguageFromPhone || workspace.defaultLanguage // workspace.defaultLanguage NOT nullable
         logger.info("[WEBHOOK] 📱 Detected language from phone for NEW customer", {
           phoneNumber,
           detectedFromPhone: detectedLanguageFromPhone,
@@ -738,7 +739,7 @@ export class WhatsAppWebhookController {
         )
 
         // Get localized registration texts
-        const registrationTexts = getRegistrationText(finalLanguage || workspace.defaultLanguage || "it")
+        const registrationTexts = getRegistrationText(finalLanguage)
 
         // 🆕 Process variables in welcome message BEFORE using it
         const { PromptVariableBuilder } = require("../../../application/services/prompt-variable-builder.service")
@@ -772,7 +773,7 @@ export class WhatsAppWebhookController {
             timestamp: new Date().toISOString(),
             input: {
               phoneNumber: phoneNumber,
-              language: finalLanguage || workspace.defaultLanguage || "it",
+              language: finalLanguage,
             },
             output: {
               welcomeMessage: rawWelcomeMessage,
@@ -785,7 +786,7 @@ export class WhatsAppWebhookController {
           const safetyResult = await safetyAgent.process({
             workspaceId: workspaceId,
             response: rawWelcomeMessage,
-            targetLanguage: finalLanguage || workspace.defaultLanguage || "it", // 🌍 Use finalLanguage for translation
+            targetLanguage: finalLanguage, // 🌍 Already resolved: phonePrefix || workspace.defaultLanguage
             customerName: "New Customer",
             allowedLinks: [registrationLink], // Allow registration link
           })
@@ -813,7 +814,7 @@ export class WhatsAppWebhookController {
             systemPrompt: safetyResult.systemPrompt || "Safety & Translation Agent",
             input: {
               originalMessage: rawWelcomeMessage,
-              targetLanguage: finalLanguage || workspace.defaultLanguage || "it",
+              targetLanguage: finalLanguage,
               customerName: "New Customer",
             },
             output: {
@@ -989,7 +990,7 @@ export class WhatsAppWebhookController {
           "[WEBHOOK] ✅ Welcome message prepared and saved to chat history",
           {
             message: finalMessage,
-            language: finalLanguage || workspace.defaultLanguage || "it",
+            language: finalLanguage,
             registrationLink,
             customerId: tempCustomer.id,
             sessionId: chatSession.id,
@@ -999,7 +1000,7 @@ export class WhatsAppWebhookController {
         res.status(200).json({
           status: "new_user_welcomed",
           message: finalMessage,
-          language: finalLanguage || workspace.defaultLanguage || "it",
+          language: finalLanguage,
           registrationLink,
           customerId: tempCustomer.id,
           sessionId: chatSession.id,
@@ -1305,11 +1306,10 @@ export class WhatsAppWebhookController {
           const rawWipMessage = workspace?.wipMessage || "Work in progress. Please contact us later."
           
           // 🌍 TRANSLATE WIP message to customer's language
-          // Language priority: customer.language → phone prefix → workspace.defaultLanguage → "it"
+          // Language priority: customer.language → phone prefix (only IT/ES/PT) → workspace.defaultLanguage
           const customerLang = customer.language 
             || detectLanguageFromPhonePrefix(customer.phone) 
-            || workspace?.defaultLanguage 
-            || "it"
+            || workspace.defaultLanguage // NOT nullable - set during channel registration
           
           let finalWipMessage = rawWipMessage
           let safetyTokensUsed = 0
@@ -1503,7 +1503,7 @@ export class WhatsAppWebhookController {
       
       const normalizedCustomerLang = normalizeLanguage(customer.language)
       const detectedLang = detectLanguageFromPhonePrefix(customer.phone)
-      const customerLanguage = normalizedCustomerLang || detectedLang || customer.workspace?.defaultLanguage || "it"
+      const customerLanguage = normalizedCustomerLang || detectedLang || customer.workspace?.defaultLanguage // NOT nullable
       
       logger.info("🌍 [ULTRAMSG] Language resolution", {
         customerLanguageRaw: customer.language,

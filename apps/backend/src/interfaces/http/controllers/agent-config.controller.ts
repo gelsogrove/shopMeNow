@@ -7,6 +7,7 @@ import { defaultAgents } from "../../../../prisma/data/defaultAgents"
 import { dynamicAgents } from "../../../../prisma/data/dynamicAgents"
 import { TemplateLoaderService } from "../../../application/services/template-loader.service"
 import { PromptValidationError } from "../../../utils/PromptValidationError"
+import { getAgentFunctionNames } from "../../../config/agent-functions.config"
 
 /**
  * Agent Configuration Controller
@@ -105,16 +106,19 @@ export class AgentConfigController {
         select: { sellsProductsAndServices: true },
       })
       const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+      const isInformational = !hasEcommerce
 
       // E-commerce only agent types - hide these for info-only workspaces
       const ecommerceOnlyTypes: AgentType[] = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
+      const infoOnlyHiddenTypes: AgentType[] = ["ROUTER", "PROFILE_MANAGEMENT"]
+      const excludedTypes = hasEcommerce ? [] : [...ecommerceOnlyTypes, ...infoOnlyHiddenTypes]
 
       // Fetch all agents for workspace, ordered by order field
       const agents = await this.prisma.agentConfig.findMany({
         where: {
           workspaceId,
           // Filter out e-commerce agents for info-only workspaces
-          ...(hasEcommerce ? {} : { type: { notIn: ecommerceOnlyTypes } }),
+          ...(excludedTypes.length > 0 ? { type: { notIn: excludedTypes } } : {}),
         },
         orderBy: {
           order: "asc",
@@ -135,12 +139,34 @@ export class AgentConfigController {
         },
       })
 
+      const infoAgentFunctions = isInformational
+        ? Array.from(
+            new Set([
+              ...(getAgentFunctionNames("CUSTOMER_SUPPORT") || []),
+              ...(getAgentFunctionNames("PROFILE_MANAGEMENT") || []),
+            ])
+          )
+        : null
+
+      const mappedAgents = agents.map((agent) => {
+        if (isInformational && agent.type === "CUSTOMER_SUPPORT") {
+          return {
+            ...agent,
+            name: "Info Agent",
+            description: "Answers FAQs and informational requests",
+            order: 0,
+            availableFunctions: infoAgentFunctions,
+          }
+        }
+        return agent
+      })
+
       logger.info(
         `✅ Agent configs retrieved for workspace ${workspaceId}: ${agents.length} agents (hasEcommerce: ${hasEcommerce})`
       )
 
       return res.status(200).json({
-        agents,
+        agents: mappedAgents,
       })
     } catch (error) {
       logger.error("❌ Failed to get agent configs:", error)
@@ -458,9 +484,22 @@ export class AgentConfigController {
 
       logger.info(`📦 Exporting agent prompts for workspace ${workspaceId}`)
 
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { name: true, slug: true, sellsProductsAndServices: true },
+      })
+      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+      const isInformational = !hasEcommerce
+      const ecommerceOnlyTypes: AgentType[] = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
+      const infoOnlyHiddenTypes: AgentType[] = ["ROUTER", "PROFILE_MANAGEMENT"]
+      const excludedTypes = hasEcommerce ? [] : [...ecommerceOnlyTypes, ...infoOnlyHiddenTypes]
+
       // Fetch all agents for workspace
       const agents = await this.prisma.agentConfig.findMany({
-        where: { workspaceId },
+        where: {
+          workspaceId,
+          ...(excludedTypes.length > 0 ? { type: { notIn: excludedTypes } } : {}),
+        },
         orderBy: { order: "asc" },
         select: {
           name: true,
@@ -475,12 +514,6 @@ export class AgentConfigController {
           message: "No agent configurations found for this workspace",
         })
       }
-
-      // Get workspace name for the filename
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { name: true, slug: true },
-      })
 
       const workspaceName = workspace?.slug || workspace?.name || workspaceId
       const sanitizedName = workspaceName.toLowerCase().replace(/[^a-z0-9]/g, "-")
@@ -502,10 +535,14 @@ export class AgentConfigController {
       // Add each agent's prompt as a .md file
       for (const agent of agents) {
         const filename = `${agent.type.toLowerCase()}-agent.md`
-        const content = agent.systemPrompt || `# ${agent.name}\n\nNo prompt configured.`
+        const displayName =
+          isInformational && agent.type === "CUSTOMER_SUPPORT"
+            ? "Info Agent"
+            : agent.name
+        const content = agent.systemPrompt || `# ${displayName}\n\nNo prompt configured.`
         
         // Add file header with metadata
-        const fullContent = `# ${agent.name}\n\n<!-- Agent Type: ${agent.type} -->\n<!-- Exported: ${new Date().toISOString()} -->\n\n${content}`
+        const fullContent = `# ${displayName}\n\n<!-- Agent Type: ${agent.type} -->\n<!-- Exported: ${new Date().toISOString()} -->\n\n${content}`
         
         archive.append(fullContent, { name: filename })
       }

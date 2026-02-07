@@ -88,6 +88,8 @@ export default function MessageFlowDialog({
     if (type === "user" || agent === "Customer") return "#6B7280" // Gray
     if (type === "operator_message") return "#3B82F6" // Blue for operator
     if (type === "router") return "#9333EA" // Purple
+    if (agent?.includes("Info Agent")) return "#9333EA" // Purple for Info Agent
+    if (agent?.includes("Widget Security Layer")) return "#14B8A6" // Teal for widget security
     if (agent?.includes("Translation")) return "#14B8A6" // Teal for Translation
     if (type === "safety") return "#DC2626" // Red
     if (agent === "Security Check") return "#DC2626" // Red for security check
@@ -121,7 +123,13 @@ export default function MessageFlowDialog({
     if (type === "router" || agent?.includes("Router"))
       return <GitBranch className="w-5 h-5" />
 
+    // Info Agent
+    if (agent?.includes("Info Agent"))
+      return <GitBranch className="w-5 h-5" />
+
     // Translation Agent - Globe icon
+    if (agent?.includes("Widget Security Layer"))
+      return <Shield className="w-5 h-5" />
     if (agent?.includes("Translation"))
       return <Globe className="w-5 h-5" />
 
@@ -238,8 +246,17 @@ export default function MessageFlowDialog({
     }
   }
 
+  const shouldHideStep = (step: DebugStep): boolean => {
+    const agentName = step.agent || ""
+    if (agentName.includes("Conversation History")) return true
+    if (agentName.includes("Skipped")) return true
+    if ((step as any).skipped === true) return true
+    if ((step as any).type === "humanization") return true
+    return false
+  }
+
   // 🆕 ORGANIZZA TUTTI GLI STEP IN ORDINE CRONOLOGICO
-  const allSteps = debugInfo?.steps || []
+  const allSteps = (debugInfo?.steps || []).filter((step) => !shouldHideStep(step))
 
   // Router steps: TUTTE le iterazioni (iteration 1 delega, iteration 2 riceve risposta)
   const routerSteps = allSteps.filter(

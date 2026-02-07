@@ -94,26 +94,32 @@ describe("Widget Language Detection Priority (THE BIBLE)", () => {
       expect(finalLanguage).toBe("pt") // Portuguese from +351
     })
 
-    it("should detect English from +1 prefix (USA/Canada)", () => {
-      // SCENARIO: North American customer
+    it("should return empty string for +1 prefix (USA/Canada) → uses workspace.defaultLanguage", () => {
+      // SCENARIO: North American customer - prefix NOT in IT/ES/PT list
+      // RULE: Unrecognized prefix returns "" → caller uses workspace.defaultLanguage
       const explicitLang = undefined
       const phoneNumber = "+1 555 1234567"
+      const workspaceDefaultLanguage = "it" // Example workspace default
       const detectedFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
       
-      const finalLanguage = explicitLang || detectedFromPhone
+      const finalLanguage = explicitLang || detectedFromPhone || workspaceDefaultLanguage
       
-      expect(finalLanguage).toBe("en") // English from +1
+      expect(detectedFromPhone).toBe("") // +1 not supported → returns ""
+      expect(finalLanguage).toBe("it") // Falls back to workspace.defaultLanguage
     })
 
-    it("should detect English from +44 prefix (UK)", () => {
-      // SCENARIO: British customer
+    it("should return empty string for +44 prefix (UK) → uses workspace.defaultLanguage", () => {
+      // SCENARIO: British customer - prefix NOT in IT/ES/PT list
+      // RULE: Unrecognized prefix returns "" → caller uses workspace.defaultLanguage
       const explicitLang = undefined
       const phoneNumber = "+44 20 12345678"
+      const workspaceDefaultLanguage = "es" // Example workspace default
       const detectedFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
       
-      const finalLanguage = explicitLang || detectedFromPhone
+      const finalLanguage = explicitLang || detectedFromPhone || workspaceDefaultLanguage
       
-      expect(finalLanguage).toBe("en") // English from +44
+      expect(detectedFromPhone).toBe("") // +44 not supported → returns ""
+      expect(finalLanguage).toBe("es") // Falls back to workspace.defaultLanguage
     })
   })
 
@@ -212,13 +218,14 @@ describe("Widget Language Detection Priority (THE BIBLE)", () => {
   })
 
   describe("Edge Cases & Error Handling", () => {
-    it("should handle malformed phone number gracefully", () => {
+    it("should handle malformed phone number gracefully → returns empty string", () => {
       const explicitLang = undefined
       const phoneNumber = "invalid-phone"
       const detectedFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
       
-      // detectLanguageFromPhonePrefix returns "en" for invalid phones
-      expect(detectedFromPhone).toBe("en")
+      // detectLanguageFromPhonePrefix returns "" for invalid/unrecognized phones
+      // Caller uses workspace.defaultLanguage as fallback
+      expect(detectedFromPhone).toBe("")
     })
 
     it("should ignore empty string as explicit language", () => {
