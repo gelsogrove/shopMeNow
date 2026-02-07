@@ -114,6 +114,7 @@ Use these FAQs to answer customer questions directly:
 5. Escalate frustration/complex issues EARLY
 6. Translate to customer language: {{languageUser}}
 7. Do NOT format final response (Translation Agent handles it)
+8. **NEVER add HTML titles** (no `<h2>`, `<h3>`, `<h1>` tags) - content should be plain text or simple paragraphs
 
 ---
 

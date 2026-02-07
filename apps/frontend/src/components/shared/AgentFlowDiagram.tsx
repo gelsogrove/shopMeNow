@@ -5,7 +5,7 @@
  * - Beautiful visual flow diagram showing agent hierarchy
  * - Click on agent to edit prompt (slide panel)
  * - Help icon for each agent with explanation
- * - Hardcoded agents shown but not editable (Safety+Translation)
+ * - Hardcoded agents shown but not editable
  * - Reset to defaults button
  * - E-commerce agents filtered based on workspace type
  * 
@@ -240,7 +240,6 @@ const AGENT_METADATA: Record<string, {
     whenUsed: "Final widget-only step before sending",
     example: "Italian response → Translated to Spanish for widget customer",
     widgetOnly: true,
-    isHardcoded: true,
     availableFunctions: [],
   },
   SECURITY: {
@@ -753,16 +752,17 @@ export function AgentFlowDiagram({
           </>
         )}
         
-        {/* Widget Security Layer (HARDCODED) */}
+        {/* Widget Security Layer */}
         <div className="flex flex-col items-center gap-1">
           <AgentNode
+            agent={getAgent("TRANSLATION")}
             metadata={AGENT_METADATA.TRANSLATION}
-            isEditable={false}
+            isEditable={true}
             isActive={true}
             onClick={() => handleAgentClick("TRANSLATION")}
             size="normal"
           />
-          <span className="text-xs text-amber-700">Hardcoded (Widget only)</span>
+          <span className="text-xs text-amber-700">Widget only</span>
         </div>
         
         <ConnectorArrow />
@@ -778,7 +778,6 @@ export function AgentFlowDiagram({
       {/* Legend */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600">
         <span>Click to edit</span>
-        <span>Hardcoded (read-only)</span>
         <span>E-commerce only</span>
         <span>Widget only</span>
       </div>

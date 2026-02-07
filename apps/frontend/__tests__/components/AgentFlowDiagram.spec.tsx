@@ -7,7 +7,7 @@
  *
  * KEY BEHAVIORS TESTED:
  * 1. E-commerce agents filtered based on workspace type
- * 2. Hardcoded agents shown but not editable (opens help dialog instead)
+ * 2. Widget Security Layer is editable per workspace
  * 3. Click on editable agent opens Sheet for editing
  * 4. Reset to defaults functionality
  * 5. Save agent changes through callback
@@ -206,12 +206,11 @@ describe("AgentFlowDiagram", () => {
     })
   })
 
-  describe("Hardcoded Agents (Widget Security Layer)", () => {
+  describe("Widget Security Layer", () => {
     /**
-     * RULE: Safety+Translation agent is ALWAYS shown but is marked as "hardcoded".
-     * It uses prompts from shared/translation-prompts.ts, not from database.
+     * RULE: Widget Security Layer should be visible and editable per workspace.
      */
-    it("should display Widget Security Layer agent as hardcoded", () => {
+    it("should open edit Sheet when clicking Widget Security Layer", async () => {
       render(
         <AgentFlowDiagram
           sellsProductsAndServices={true}
@@ -222,41 +221,14 @@ describe("AgentFlowDiagram", () => {
         />
       )
 
-      // Widget Security Layer agent should be visible
-      expect(screen.getByText("Widget Security Layer")).toBeInTheDocument()
-      // Should show "Hardcoded" label
-      expect(screen.getByText(/Hardcoded \(Widget only\)/)).toBeInTheDocument()
-    })
-
-    /**
-     * RULE: Clicking on a hardcoded agent should open HELP dialog,
-     * NOT the edit Sheet. Users cannot modify hardcoded prompts.
-     */
-    it("should open help dialog when clicking on hardcoded agent", async () => {
-      render(
-        <AgentFlowDiagram
-          sellsProductsAndServices={true}
-          agents={mockAgents}
-          workspaceId="workspace-1"
-          onSaveAgent={mockSaveAgent}
-          onResetToDefaults={mockResetToDefaults}
-        />
-      )
-
-      // Find and click the Widget Security Layer agent
       const safetyAgent = screen.getByText("Widget Security Layer")
       fireEvent.click(safetyAgent)
 
-      // Wait for help dialog to appear
       await waitFor(() => {
-        expect(screen.getByText("This agent is hardcoded")).toBeInTheDocument()
+        expect(screen.getByText("System Prompt")).toBeInTheDocument()
       })
 
-      // Save button should NOT be present (it's a help dialog, not edit)
-      expect(screen.queryByText("Save Changes")).not.toBeInTheDocument()
-
-      // "Got it" button should be present
-      expect(screen.getByText("Got it")).toBeInTheDocument()
+      expect(screen.getByText("Save Changes")).toBeInTheDocument()
     })
   })
 
@@ -491,7 +463,6 @@ describe("AgentFlowDiagram", () => {
       )
 
       expect(screen.getByText("Click to edit")).toBeInTheDocument()
-      expect(screen.getByText("Hardcoded (read-only)")).toBeInTheDocument()
       expect(screen.getByText("E-commerce only")).toBeInTheDocument()
       expect(screen.getByText("Widget only")).toBeInTheDocument()
     })
@@ -546,13 +517,13 @@ describe("AgentFlowDiagram - Agent Metadata", () => {
   })
 
   /**
-   * RULE: Hardcoded agents (TRANSLATION, SECURITY) should be marked with isHardcoded=true.
+   * RULE: Security agent remains hardcoded (hidden in UI).
    */
   it("should mark hardcoded agents correctly", () => {
-    const hardcodedAgents = ["TRANSLATION", "SECURITY"]
+    const hardcodedAgents = ["SECURITY"]
     // This test verifies the business logic is correct
     // Actual implementation uses AGENT_METADATA.isHardcoded
-    expect(hardcodedAgents.length).toBe(2)
+    expect(hardcodedAgents.length).toBe(1)
   })
 
   /**
