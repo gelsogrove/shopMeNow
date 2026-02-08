@@ -229,17 +229,31 @@ const AGENT_METADATA: Record<string, {
     availableFunctions: [],
   },
   TRANSLATION: {
-    name: "Widget Security Layer",
+    name: "Translation Layer",
     icon: Globe,
     color: "teal",
     gradientFrom: "from-teal-500",
     gradientTo: "to-teal-600",
     borderColor: "border-teal-400",
-    description: "Validates safety and translates for widget users",
-    details: "Applies security checks, blocks unsafe content, and translates responses to the customer's language. This layer is applied only for widget messages.",
-    whenUsed: "Final widget-only step before sending",
-    example: "Italian response → Translated to Spanish for widget customer",
+    description: "Translates responses to the customer language",
+    details: "Translates responses to the customer's language while preserving formatting, links, and technical terms.",
+    whenUsed: "Applied before final delivery",
+    example: "Italian response → Translated to Spanish",
+    availableFunctions: [],
+  },
+  WIDGET_SECURITY: {
+    name: "Widget Security Layer",
+    icon: Lock,
+    color: "teal",
+    gradientFrom: "from-teal-500",
+    gradientTo: "to-teal-600",
+    borderColor: "border-teal-400",
+    description: "Validates safety for widget users",
+    details: "Applies security checks and blocks unsafe content. This layer is applied only for widget messages.",
+    whenUsed: "Widget-only step before sending",
+    example: "Blocks unsafe content for widget customers",
     widgetOnly: true,
+    isHardcoded: true,
     availableFunctions: [],
   },
   SECURITY: {
@@ -752,7 +766,7 @@ export function AgentFlowDiagram({
           </>
         )}
         
-        {/* Widget Security Layer */}
+        {/* Translation Layer */}
         <div className="flex flex-col items-center gap-1">
           <AgentNode
             agent={getAgent("TRANSLATION")}
@@ -760,6 +774,19 @@ export function AgentFlowDiagram({
             isEditable={true}
             isActive={true}
             onClick={() => handleAgentClick("TRANSLATION")}
+            size="normal"
+          />
+        </div>
+
+        <ConnectorArrow />
+
+        {/* Widget Security Layer (Widget only) */}
+        <div className="flex flex-col items-center gap-1">
+          <AgentNode
+            metadata={AGENT_METADATA.WIDGET_SECURITY}
+            isEditable={false}
+            isActive={true}
+            onClick={() => handleAgentClick("WIDGET_SECURITY")}
             size="normal"
           />
           <span className="text-xs text-amber-700">Widget only</span>

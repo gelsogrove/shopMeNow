@@ -7,7 +7,7 @@
  *
  * KEY BEHAVIORS TESTED:
  * 1. E-commerce agents filtered based on workspace type
- * 2. Widget Security Layer is editable per workspace
+ * 2. Translation Layer is editable per workspace
  * 3. Click on editable agent opens Sheet for editing
  * 4. Reset to defaults functionality
  * 5. Save agent changes through callback
@@ -206,11 +206,35 @@ describe("AgentFlowDiagram", () => {
     })
   })
 
-  describe("Widget Security Layer", () => {
+  describe("Translation + Widget Security Layers", () => {
     /**
-     * RULE: Widget Security Layer should be visible and editable per workspace.
+     * RULE: Translation Layer should be editable.
      */
-    it("should open edit Sheet when clicking Widget Security Layer", async () => {
+    it("should open edit Sheet when clicking Translation Layer", async () => {
+      render(
+        <AgentFlowDiagram
+          sellsProductsAndServices={true}
+          agents={mockAgents}
+          workspaceId="workspace-1"
+          onSaveAgent={mockSaveAgent}
+          onResetToDefaults={mockResetToDefaults}
+        />
+      )
+
+      const translationAgent = screen.getByText("Translation Layer")
+      fireEvent.click(translationAgent)
+
+      await waitFor(() => {
+        expect(screen.getByText("System Prompt")).toBeInTheDocument()
+      })
+
+      expect(screen.getByText("Save Changes")).toBeInTheDocument()
+    })
+
+    /**
+     * RULE: Widget Security Layer is hardcoded (help dialog).
+     */
+    it("should open help dialog when clicking Widget Security Layer", async () => {
       render(
         <AgentFlowDiagram
           sellsProductsAndServices={true}
@@ -225,10 +249,11 @@ describe("AgentFlowDiagram", () => {
       fireEvent.click(safetyAgent)
 
       await waitFor(() => {
-        expect(screen.getByText("System Prompt")).toBeInTheDocument()
+        expect(screen.getByText("This agent is hardcoded")).toBeInTheDocument()
       })
 
-      expect(screen.getByText("Save Changes")).toBeInTheDocument()
+      expect(screen.queryByText("Save Changes")).not.toBeInTheDocument()
+      expect(screen.getByText("Got it")).toBeInTheDocument()
     })
   })
 
