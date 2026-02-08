@@ -15,7 +15,7 @@ describe("WhatsApp Webhook - WIP (debugMode) Flow", () => {
      * 1. Customer scrive un messaggio WhatsApp
      * 2. Backend riceve il messaggio in whatsapp-webhook.controller.ts
      * 3. WorkspaceAccessService ritorna blockReason=CHANNEL_DISABLED (debugMode=true)
-     * 4. Sistema costruisce WIP message (workspace.wipMessage + SafetyTranslationAgent)
+     * 4. Sistema costruisce WIP message (workspace.wipMessage + Translation Layer)
      * 5. Salva messaggio utente (role: user, agentType: NONE)
      * 6. Salva messaggio WIP (role: assistant, agentType: ROUTER, deliveryStatus: pending)
      * 7. Enqueue WIP in WhatsApp queue
@@ -32,14 +32,14 @@ describe("WhatsApp Webhook - WIP (debugMode) Flow", () => {
 
     const expectedFlow = {
       step3: "WorkspaceAccessService returns CHANNEL_DISABLED (debugMode)",
-      step4: "Build WIP message with SafetyTranslationAgent",
+      step4: "Build WIP message with Translation Layer",
       step5: "Save user message (agentType=NONE)",
       step6: "Save WIP assistant message (agentType=ROUTER, deliveryStatus=pending)",
       step7: "Enqueue WIP message",
       step8: "Return 200 with wipMessage",
     }
 
-    expect(expectedFlow.step4).toBe("Build WIP message with SafetyTranslationAgent")
+    expect(expectedFlow.step4).toBe("Build WIP message with Translation Layer")
     expect(expectedFlow.step6).toBe("Save WIP assistant message (agentType=ROUTER, deliveryStatus=pending)")
     expect(expectedFlow.step7).toBe("Enqueue WIP message")
     expect(expectedFlow.step8).toBe("Return 200 with wipMessage")

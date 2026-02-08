@@ -13,9 +13,9 @@
 
 import { prisma, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
-import translationSecurityService from "./translation-security.service"
 import { WhatsAppQueueService } from "./whatsapp-queue.service"
 import { config } from "../config"
+import { TranslationAgent } from "../application/agents/TranslationAgent"
 
 // Tipi di invio messaggi
 export type SendType =
@@ -57,9 +57,11 @@ export interface SendMessageResult {
  */
 export class MessageSendingService {
   private whatsappQueueService: WhatsAppQueueService
+  private translationAgent: TranslationAgent
 
   constructor(private prisma: PrismaClient) {
     this.whatsappQueueService = new WhatsAppQueueService(prisma)
+    this.translationAgent = new TranslationAgent(prisma)
   }
 
   /**
@@ -81,64 +83,31 @@ export class MessageSendingService {
     })
 
     try {
-      // 1. Determine if security layer is needed
-      const needsSecurity = this.needsSecurityCheck(
-        options.sendType,
-        options.skipSecurityLayer
-      )
-
       let finalMessage = options.message
       let securityChecked = false
-      let blocked = false
-      let blockReason: string | undefined
 
-      // 2. Apply security layer if needed
-      if (needsSecurity) {
-        logger.info("🔒 [MESSAGE-SEND] Applying security layer", {
-          sendType: options.sendType,
+      // 1. Translation Layer (ALWAYS before enqueue)
+      try {
+        const translationResult = await this.translationAgent.process({
+          workspaceId: options.workspaceId,
+          message: options.message,
+          targetLanguage: options.userLanguage || "it",
+          customerName: options.metadata?.customerName,
+          customerId: options.customerId,
+          channel: "whatsapp",
         })
 
-        const securityResult = await this.applySecurityLayer(
-          options.message,
-          options.userLanguage || "it",
-          options.workspaceId
-        )
-
-        securityChecked = true
-
-        if (securityResult.blocked) {
-          blocked = true
-          blockReason = securityResult.reason
-
-          logger.warn("🚨 [MESSAGE-SEND] Security layer BLOCKED message", {
-            sendType: options.sendType,
-            reason: securityResult.reason,
-            phoneNumber: options.phoneNumber,
-            customerId: options.customerId,
-          })
-
-          // Return blocked result WITHOUT sending to WhatsApp
-          return {
-            success: false,
-            error: `Message blocked by security layer: ${securityResult.reason}`,
-            blocked: true,
-            blockReason: securityResult.reason,
-            securityChecked: true,
-          }
-        }
-
-        finalMessage = securityResult.translatedText
-        logger.info("✅ [MESSAGE-SEND] Security layer passed", {
+        finalMessage = translationResult.message || options.message
+        logger.info("✅ [MESSAGE-SEND] Translation layer applied", {
           originalLength: options.message.length,
           finalLength: finalMessage.length,
         })
-      } else {
-        logger.info("⏭️ [MESSAGE-SEND] Skipping security layer", {
-          sendType: options.sendType,
-          reason: options.skipSecurityLayer
-            ? "Explicitly skipped"
-            : "Not required for this send type",
-        })
+      } catch (translationError) {
+        logger.warn(
+          "[MESSAGE-SEND] ⚠️ Translation failed, using original message",
+          translationError
+        )
+        finalMessage = options.message
       }
 
       // 3. Save to database BEFORE sending to WhatsApp (for better audit trail)
@@ -232,102 +201,6 @@ export class MessageSendingService {
   }
 
   /**
-   * Determina se il security layer è necessario
-   *
-   * @param sendType Tipo di invio
-   * @param skipExplicit Flag esplicito per saltare security
-   * @returns true se security layer necessario
-   */
-  private needsSecurityCheck(
-    sendType: SendType,
-    skipExplicit?: boolean
-  ): boolean {
-    // Se esplicitamente saltato dall'utente, rispetta la scelta
-    if (skipExplicit === true) {
-      return false
-    }
-
-    // Matrice decisionale basata su sendType
-    switch (sendType) {
-      case "CHATBOT":
-        // ✅ LLM può generare contenuto inappropriato
-        return true
-
-      case "CAMPAIGN":
-        // ✅ Token replacement da DB può contenere dati malevoli
-        return true
-
-      case "SCHEDULER":
-        // ✅ Contenuto automatico, serve controllo
-        return true
-
-      case "ADMIN_MANUAL":
-        // ❌ Admin è fidato (ma può esplicitamente richiedere check)
-        return false
-
-      case "SYSTEM":
-        // ❌ Notifiche hardcoded, nessun input esterno
-        return false
-
-      default:
-        // 🚨 Safe default: in caso di dubbio, applica security
-        logger.warn(
-          "⚠️ [MESSAGE-SEND] Unknown sendType, applying security by default",
-          {
-            sendType,
-          }
-        )
-        return true
-    }
-  }
-
-  /**
-   * Applica il security layer al messaggio
-   */
-  private async applySecurityLayer(
-    message: string,
-    language: "it" | "es" | "pt" | "en",
-    workspaceId: string
-  ) {
-    // Get workspace with agentConfigs to use same LLM model as agent
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        url: true,
-        agentConfigs: {
-          select: {
-            model: true,
-          },
-          take: 1, // Get first (primary) agent config
-        },
-      },
-    })
-
-    const workspaceUrl = workspace?.url || ""
-
-    const allowedLinks = this.buildAllowedLinks(workspaceUrl)
-
-    // 🔧 Get LLM config from Agent Settings (same model/provider as agent)
-    const { getLLMConfig } = await import("../config/llm.config")
-    const agentModel = workspace?.agentConfigs?.[0]?.model
-    const llmConfig = getLLMConfig(agentModel)
-
-    logger.info("🔒 [MESSAGE-SEND] Security layer using agent model", {
-      agentModel,
-      provider: "OpenRouter (cloud)",
-    })
-
-    return await translationSecurityService.processResponse(
-      message,
-      language,
-      allowedLinks,
-      llmConfig.model, // Use same model as agent
-      llmConfig.baseURL, // Use same baseURL as agent
-      llmConfig.apiKey // Use same API key as agent
-    )
-  }
-
-  /**
    * Salva il messaggio nel database con audit trail
    * @returns messageId del messaggio salvato
    */
@@ -411,60 +284,13 @@ export class MessageSendingService {
     try {
       // Check database connection
       await this.prisma.$queryRaw`SELECT 1`
-
-      // Check translation service
-      const isHealthy = await translationSecurityService.healthCheck()
-
-      return isHealthy
+      return true
     } catch (error) {
       logger.error("❌ [MESSAGE-SEND] Health check failed", error)
       return false
     }
   }
 
-  private buildAllowedLinks(workspaceUrl?: string | null): string[] {
-    const links = new Set<string>()
-
-    const addIfValid = (value?: string | null) => {
-      if (!value) return
-      const trimmed = value.trim()
-      if (!trimmed) return
-      links.add(trimmed)
-    }
-
-    const addBaseVariants = (base?: string | null) => {
-      if (!base) return
-      const normalized = base.trim().replace(/\/+$/, "")
-      if (!normalized) return
-      addIfValid(normalized)
-      addIfValid(`${normalized}/`)
-      addIfValid(`${normalized}/uploads`)
-      addIfValid(`${normalized}/uploads/`)
-      addIfValid(`${normalized}/assets`)
-      addIfValid(`${normalized}/assets/`)
-    }
-
-    if (workspaceUrl) {
-      const normalizedWorkspace = workspaceUrl.trim().replace(/\/+$/, "")
-      addIfValid(normalizedWorkspace)
-      addIfValid(`${normalizedWorkspace}/s`)
-      addIfValid(`${normalizedWorkspace}/s/`)
-      addIfValid(`${normalizedWorkspace}/orders-public`)
-      addIfValid(`${normalizedWorkspace}/checkout-public`)
-      addIfValid(`${normalizedWorkspace}/api`)
-      addIfValid(`${normalizedWorkspace}/api/`)
-      // Add uploads path for product images
-      addIfValid(`${normalizedWorkspace}/uploads`)
-      addIfValid(`${normalizedWorkspace}/uploads/`)
-    }
-
-    addBaseVariants(config.frontendUrl)
-    addBaseVariants(config.appUrl)
-
-    addIfValid("https://wa.me/")
-
-    return Array.from(links)
-  }
 }
 
 // Export singleton instance

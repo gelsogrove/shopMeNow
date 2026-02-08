@@ -136,7 +136,7 @@ describe('Welcome Message Language Selection (Integration)', () => {
       expect(result.debugInfo.detectedLanguage).toBe('en') // ✅ English used
       
       // Message should contain English welcome (not Italian "Benvenuto")
-      // Note: Actual translation depends on SafetyTranslationAgent
+      // Note: Actual translation depends on Translation Layer
       expect(result.message).toBeTruthy()
       console.log(`✅ SCENARIO 1 PASSED: English used for +39 customer with language="en"`)
     })
@@ -280,7 +280,7 @@ describe('Welcome Message Language Selection (Integration)', () => {
   })
 
   describe('SCENARIO 4: Verify Translation Layer Integration', () => {
-    it('should pass through SafetyTranslationAgent with correct language', async () => {
+    it('should pass through Translation Layer with correct language', async () => {
       // GIVEN: Customer with explicit language
       const customer = await prisma.customers.create({
         data: {
@@ -309,7 +309,7 @@ describe('Welcome Message Language Selection (Integration)', () => {
       expect(result.message).toContain('http')
       expect(result.message).toContain('/s/') // Short URL pattern
       
-      console.log(`✅ TRANSLATION LAYER VERIFIED: SafetyTranslationAgent processed message correctly`)
+      console.log(`✅ TRANSLATION LAYER VERIFIED: Translation Layer processed message correctly`)
     })
   })
 })

@@ -15,7 +15,7 @@ export enum SystemNotificationType {
 
 /**
  * Notification message templates (Italian base language)
- * Will be translated by SafetyTranslationAgent to customer's language
+ * Will be translated by Translation Layer to customer's language
  */
 const NOTIFICATION_TEMPLATES: Record<
   SystemNotificationType,

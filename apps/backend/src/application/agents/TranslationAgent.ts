@@ -1,13 +1,15 @@
 /**
  * TranslationAgent
  *
- * Translation layer that runs AFTER Security Agent validates content.
+ * Translation layer that runs BEFORE Security Agent for widget,
+ * and before queue for WhatsApp (security handled in scheduler).
  * Translates all agent responses to customer's language.
  *
- * 🆕 HARDCODED PROMPTS: Uses shared/translation-prompts.ts (no DB dependency)
+ * 🆕 DATABASE-DRIVEN PROMPTS: Uses agentConfig.systemPrompt when available
+ * Falls back to shared/translation-prompts.ts if not found
  *
  * @architecture Clean Architecture - Shared prompt module
- * @critical ALWAYS call this AFTER Security Agent passes
+ * @critical ALWAYS call this BEFORE Security Agent for widget flow
  */
 
 import { PrismaClient, prisma } from "@echatbot/database"
@@ -16,8 +18,11 @@ import {
   buildTranslationOnlyPrompt,
   TRANSLATION_LLM_SETTINGS,
   getLanguageName,
+  DEFAULT_ALLOWED_DOMAINS,
 } from "@shared/translation-prompts"
 import logger from "../../utils/logger"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
+import { PromptVariableBuilder } from "../services/prompt-variable-builder.service"
 
 export interface TranslationResult {
   translated: boolean
@@ -35,6 +40,8 @@ export interface ProcessOptions {
   message: string
   targetLanguage: string
   customerName?: string
+  customerId?: string
+  channel?: string
 }
 
 /**
@@ -50,18 +57,20 @@ export interface TranslationSettings {
 export class TranslationAgent {
   private openRouterApiKey: string
   private openRouterBaseUrl: string = "https://openrouter.ai/api/v1"
+  private promptProcessor: PromptProcessorService
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(private prisma: PrismaClient) {
     // Prisma kept for API compatibility but no longer used for agent config
 
+    this.promptProcessor = new PromptProcessorService()
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
       logger.warn(
         "⚠️ OPENROUTER_API_KEY not found - Translation layer will return message as-is"
       )
     } else {
-      logger.info("✅ TranslationAgent initialized with OpenRouter API key (hardcoded prompt)")
+      logger.info("✅ TranslationAgent initialized with OpenRouter API key")
     }
   }
 
@@ -75,7 +84,7 @@ export class TranslationAgent {
     const startTime = Date.now()
 
     // 🔍 DEBUG: Log exactly what language we received
-    logger.info(`🌍 [TranslationAgent] RECEIVED targetLanguage parameter (hardcoded prompt)`, {
+    logger.info(`🌍 [TranslationAgent] RECEIVED targetLanguage parameter`, {
       targetLanguage: options.targetLanguage,
       targetLanguageType: typeof options.targetLanguage,
       workspaceId: options.workspaceId,
@@ -97,7 +106,6 @@ export class TranslationAgent {
         mappingResult: this.normalizeLanguage(options.targetLanguage)
       })
 
-      // 🆕 NO DATABASE LOOKUP - Use hardcoded prompt from shared module
       // Load workspace translation settings (product/category/service name translation rules)
       const translationSettings = await this.loadTranslationSettings(options.workspaceId)
       
@@ -108,12 +116,49 @@ export class TranslationAgent {
         catalogBaseLanguage: translationSettings.catalogBaseLanguage,
       })
 
-      // Build the hardcoded prompt with variables replaced
-      const systemPrompt = buildTranslationOnlyPrompt({
-        targetLanguage: normalizedLanguage,
-        customerName: options.customerName,
-        message: options.message,
-      })
+      // 🆕 Load TRANSLATION agent config (database-driven prompt)
+      let agentConfig: any = null
+      let systemPrompt = ""
+      let usingCustomPrompt = false
+
+      try {
+        agentConfig = await this.prisma.agentConfig.findFirst({
+          where: {
+            workspaceId: options.workspaceId,
+            type: "TRANSLATION",
+            isActive: true,
+          },
+        })
+
+        if (agentConfig?.systemPrompt) {
+          systemPrompt = await this.buildCustomPrompt(
+            agentConfig.systemPrompt,
+            options,
+            normalizedLanguage
+          )
+          usingCustomPrompt = true
+          logger.info("✅ Using custom TRANSLATION prompt from database", {
+            workspaceId: options.workspaceId,
+            promptLength: systemPrompt.length,
+          })
+        }
+      } catch (dbError) {
+        logger.warn("⚠️ Failed to load TRANSLATION agentConfig from database, using fallback", {
+          error: dbError,
+        })
+      }
+
+      // Fallback to hardcoded prompt if not found in database
+      if (!systemPrompt) {
+        logger.info("📝 Using fallback hardcoded TRANSLATION prompt", {
+          workspaceId: options.workspaceId,
+        })
+        systemPrompt = buildTranslationOnlyPrompt({
+          targetLanguage: normalizedLanguage,
+          customerName: options.customerName,
+          message: options.message,
+        })
+      }
 
       // Build preservation rules based on workspace settings
       const targetLanguageName = getLanguageName(normalizedLanguage)
@@ -135,11 +180,17 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         preservationRules,
       })
 
-      // Call OpenRouter LLM with hardcoded settings
-      logger.info("🌍 Calling TranslationAgent LLM (hardcoded prompt)", {
+      // Use LLM settings from database if available, otherwise fallback
+      const model = agentConfig?.model || TRANSLATION_LLM_SETTINGS.model
+      const temperature = agentConfig?.temperature ?? TRANSLATION_LLM_SETTINGS.temperature
+      const maxTokens = agentConfig?.maxTokens || TRANSLATION_LLM_SETTINGS.maxTokens
+
+      // Call OpenRouter LLM with dynamic settings
+      logger.info("🌍 Calling TranslationAgent LLM", {
         workspaceId: options.workspaceId,
-        model: TRANSLATION_LLM_SETTINGS.model,
+        model,
         targetLanguage: normalizedLanguage,
+        usingCustomPrompt,
       })
 
       const headers = {
@@ -150,7 +201,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
       }
 
       const buildRequest = (userContent: string) => ({
-        model: TRANSLATION_LLM_SETTINGS.model,
+        model,
         messages: [
           {
             role: "system",
@@ -161,8 +212,8 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
             content: userContent,
           },
         ],
-        temperature: TRANSLATION_LLM_SETTINGS.temperature,
-        max_tokens: TRANSLATION_LLM_SETTINGS.maxTokens,
+        temperature,
+        max_tokens: maxTokens,
         response_format: { type: "json_object" },
       })
 
@@ -233,7 +284,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         tokensUsed: totalTokens,
         executionTimeMs,
         systemPrompt: systemPrompt,
-        model: TRANSLATION_LLM_SETTINGS.model,
+        model,
       }
     } catch (error) {
       logger.error("❌ TranslationAgent error", error)
@@ -351,7 +402,125 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
   }
 
   /**
-   * Health check - TranslationAgent always available (hardcoded prompt)
+   * Build custom system prompt from DB template with variables replaced
+   */
+  private async buildCustomPrompt(
+    template: string,
+    options: ProcessOptions,
+    normalizedLanguage: string
+  ): Promise<string> {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: options.workspaceId },
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          language: true,
+          toneOfVoice: true,
+          botIdentityResponse: true,
+          hasHumanSupport: true,
+          humanSupportInstructions: true,
+          frustrationEscalationInstructions: true,
+          operatorContactMethod: true,
+          operatorWhatsappNumber: true,
+          hasSalesAgents: true,
+          notificationEmail: true,
+          allowedExternalLinks: true,
+          sellsProductsAndServices: true,
+          address: true,
+          customAiRules: true,
+          chatbotName: true,
+          businessType: true,
+          websiteUrl: true,
+        },
+      })
+
+      const customerInput = {
+        id: options.customerId || "anonymous",
+        name: options.customerName || null,
+        language: normalizedLanguage,
+      }
+
+      const variables = PromptVariableBuilder.build(
+        customerInput as any,
+        (workspace as any) || null,
+        undefined,
+        {
+          channel: options.channel,
+        }
+      )
+
+      // Force languageUser to target language (override workspace default)
+      variables.languageUser = this.getLanguageDisplayName(normalizedLanguage)
+
+      let processed = this.promptProcessor.processWithVariables(template, variables)
+
+      processed = this.applyLegacyPromptReplacements(
+        processed,
+        options,
+        normalizedLanguage,
+        workspace?.allowedExternalLinks || []
+      )
+
+      return processed
+    } catch (error) {
+      logger.warn("⚠️ Failed to process custom TRANSLATION prompt, using raw template", {
+        error,
+      })
+      return template
+    }
+  }
+
+  /**
+   * Apply legacy {VAR} replacements for compatibility with older prompts
+   */
+  private applyLegacyPromptReplacements(
+    prompt: string,
+    options: ProcessOptions,
+    normalizedLanguage: string,
+    allowedLinks: string[]
+  ): string {
+    const languageName = getLanguageName(normalizedLanguage)
+    const customerName = options.customerName || "Cliente"
+    const allowedLinksText = allowedLinks?.length
+      ? allowedLinks.map((link) => `- ${link}`).join("\n")
+      : DEFAULT_ALLOWED_DOMAINS.map((d) => `- https://${d}/*`).join("\n")
+
+    return prompt
+      .replace(/\{TARGET_LANGUAGE\}/g, languageName)
+      .replace(/\{\{TARGET_LANGUAGE\}\}/g, languageName)
+      .replace(/\{CUSTOMER_NAME\}/g, customerName)
+      .replace(/\{\{CUSTOMER_NAME\}\}/g, customerName)
+      .replace(/\{MESSAGE\}/g, options.message)
+      .replace(/\{\{MESSAGE\}\}/g, options.message)
+      .replace(/\{ALLOWED_LINKS\}/g, allowedLinksText)
+      .replace(/\{\{ALLOWED_LINKS\}\}/g, allowedLinksText)
+  }
+
+  /**
+   * Map language code to display name used in prompts
+   */
+  private getLanguageDisplayName(langCode: string): string {
+    const languageMap: Record<string, string> = {
+      it: "ITALIANO",
+      en: "ENGLISH",
+      es: "ESPAÑOL",
+      pt: "PORTUGUÊS",
+      italian: "ITALIANO",
+      italiano: "ITALIANO",
+      english: "ENGLISH",
+      spanish: "ESPAÑOL",
+      español: "ESPAÑOL",
+      portuguese: "PORTUGUÊS",
+      português: "PORTUGUÊS",
+    }
+
+    return languageMap[langCode?.toLowerCase?.() || "it"] || "ITALIANO"
+  }
+
+  /**
+   * Health check - TranslationAgent always available (fallback prompt)
    * @deprecated No longer checks DB - always returns true if API key present
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -108,8 +108,8 @@ describe("LLM Flow Coverage - Translation Wrapper (Documentation)", () => {
      */
 
     const expectedTranslationStep = {
-      type: "sub_agent",
-      agent: "🌍 Translation Agent",
+      type: "safety",
+      agent: "Translation Layer",
       model: "gpt-4o-mini",
       timestamp: expect.any(String),
       tokenUsage: {
@@ -123,16 +123,15 @@ describe("LLM Flow Coverage - Translation Wrapper (Documentation)", () => {
         targetLanguage: "pt", // or "en", "es"
       },
       output: {
-        textResponse: expect.any(String),
-        translated: true,
+        translatedText: expect.any(String),
+        decision: "translated",
         executionTimeMs: expect.any(Number),
       },
       duration: expect.any(Number),
     }
 
     expect(expectedTranslationStep.agent).toContain("Translation")
-    expect(expectedTranslationStep.type).toBe("sub_agent")
-    expect(expectedTranslationStep.output.translated).toBe(true)
+    expect(expectedTranslationStep.type).toBe("safety")
   })
 
   it("should document Italian customer no-translation pattern", () => {
@@ -153,15 +152,15 @@ describe("LLM Flow Coverage - Translation Wrapper (Documentation)", () => {
      */
 
     const expectedNoTranslationStep = {
-      type: "sub_agent",
-      agent: "🌍 Translation Agent",
+      type: "safety",
+      agent: "Translation Layer",
       model: "gpt-4o-mini",
       output: {
-        translated: false, // No translation needed
+        decision: "passthrough", // No translation needed
       },
     }
 
-    expect(expectedNoTranslationStep.output.translated).toBe(false)
+    expect(expectedNoTranslationStep.output.decision).toBe("passthrough")
   })
 })
 
@@ -385,7 +384,7 @@ describe("LLM Flow Coverage - Timeline Debug Tracking (Documentation)", () => {
         // Step 3: Specialist
         { type: "sub_agent", agent: "Product Search Agent" },
         // Step 4: Translation
-        { type: "sub_agent", agent: "🌍 Translation Agent", translated: true },
+        { type: "safety", agent: "Translation Layer", decision: "translated" },
         // Step 5: Function calls (if any)
         { type: "function_call", functionName: "addToCart" },
       ],
@@ -399,4 +398,3 @@ describe("LLM Flow Coverage - Timeline Debug Tracking (Documentation)", () => {
     expect(completeDebugInfo.totalTokens).toBeDefined()
   })
 })
-

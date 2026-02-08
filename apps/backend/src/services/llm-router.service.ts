@@ -10,7 +10,7 @@
  *    - CartManagementAgentLLM: Cart operations
  *    - OrderTrackingAgentLLM: Order tracking/history
  *    - CustomerSupportAgentLLM: FAQ/support tickets
- * 3. SafetyTranslationAgent → Validates and translates to customer language
+ * 3. Translation Layer → Translates to customer language
  * 4. LinkReplacementService → Replaces [LINK_xxx] tokens with real URLs
  *
  * Flow:
@@ -20,7 +20,7 @@
  * 4. Router delegates → Specialist Agent (with OWN LLM + prompt from DB)
  * 5. Specialist Agent returns English response with [LINK_xxx] tokens
  * 6. Router processes specialist response
- * 7. Final response → SafetyTranslationAgent (translation + safety check)
+ * 7. Final response → Translation Layer (always) + Widget Security Layer (widget only)
  * 8. LinkReplacementService → Replace tokens with secure URLs
  * 9. Save all messages to conversation_messages
  *
@@ -33,7 +33,7 @@
  * @architecture Clean Architecture with Dependency Injection
  * @critical NEVER call LLMService - it's the old monolithic system
  * @critical ALWAYS use Specialist Agents with their OWN LLM
- * @critical ALWAYS pass final response through SafetyTranslationAgent
+ * @critical ALWAYS pass final response through Translation Layer
  */
 
 import { AgentType, PrismaClient } from "@echatbot/database"
@@ -43,8 +43,8 @@ import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAg
 import { OrderTrackingAgentLLM } from "../application/agents/OrderTrackingAgentLLM"
 import { ProductSearchAgentLLM } from "../application/agents/ProductSearchAgentLLM"
 import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
-import { SafetyTranslationAgent, type SafetyResult } from "../application/agents/SafetyTranslationAgent"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
+import { SecurityAgent, type SecurityResult } from "../application/agents/SecurityAgent"
 import { ConversationHistoryLayer } from "../application/layers/ConversationHistoryLayer"
 import type { TechnicalResponseType, ActiveOffer, ConversationMessage } from "../application/layers/conversation-history-layer.types"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
@@ -207,7 +207,7 @@ export class LLMRouterService {
   private promptProcessor: PromptProcessorService // 🆕 Feature 124: Customer variables replacement
   private promptBuilder: PromptBuilderService // 🆕 Dynamic prompt generation from templates
   private templateLoader: TemplateLoaderService // 🆕 Load templates from files
-  private safetyAgent: SafetyTranslationAgent // Used for specific flows (welcome, queue)
+  private securityAgent: SecurityAgent // Widget-only security layer
   private translationAgent: TranslationAgent // Main translation layer (IT → target language)
   private conversationHistoryLayer: ConversationHistoryLayer // 🆕 Humanization layer (saluti, contesto, offerte)
   private systemContextService: SystemContextService // 🆕 System Context for hidden SKU mappings
@@ -222,7 +222,7 @@ export class LLMRouterService {
     this.loggerService = new AgentLoggerService(prisma)
     this.conversationManager = new ConversationManager(prisma, 10) // 10 minutes window
     this.functionExecutor = new FunctionExecutor(prisma)
-    this.safetyAgent = new SafetyTranslationAgent(prisma)
+    this.securityAgent = new SecurityAgent(prisma)
     this.translationAgent = new TranslationAgent(prisma) // 🆕 Feature 181: Translation layer in routing
     this.conversationHistoryLayer = new ConversationHistoryLayer(prisma) // 🆕 Humanization layer
     this.linkReplacementService = new LinkReplacementService()
@@ -242,25 +242,22 @@ export class LLMRouterService {
   }
 
   /**
-   * 🆕 Check if SafetyTranslationAgent should be applied based on channel
-   * 
-   * - WIDGET: Apply SafetyTranslationAgent (no scheduler processes widget messages)
-   * - WHATSAPP: Skip SafetyTranslationAgent (scheduler handles safety; translation already applied before queue)
-   * 
-   * @param channel - Channel type ('widget', 'whatsapp', etc.)
-   * @returns true if SafetyTranslationAgent should be applied
+   * Check if Widget Security Layer should be applied based on channel
+   *
+   * - WIDGET: Apply SecurityAgent after Translation
+   * - WHATSAPP: Skip (scheduler handles security before send)
    */
-  private shouldApplySafetyTranslation(channel?: string): boolean {
-    // Widget channel: MUST apply SafetyTranslation (no scheduler processes widget)
-    // WhatsApp/other: SKIP SafetyTranslation (scheduler handles safety; translation already applied before queue)
-    const shouldApply = channel === 'widget'
-    
-    logger.debug("🔒 SafetyTranslation check", {
-      channel: channel || 'undefined',
+  private shouldApplyWidgetSecurity(channel?: string): boolean {
+    const shouldApply = channel === "widget"
+
+    logger.debug("🔒 Widget Security check", {
+      channel: channel || "undefined",
       shouldApply,
-      reason: shouldApply ? 'Widget channel - no scheduler' : 'WhatsApp/other - scheduler handles safety'
+      reason: shouldApply
+        ? "Widget channel - no scheduler"
+        : "WhatsApp/other - scheduler handles safety",
     })
-    
+
     return shouldApply
   }
 
@@ -400,7 +397,7 @@ export class LLMRouterService {
         logger.info(
           "🚀 SYSTEM MESSAGE FAST-PATH: Skipping Router/SubLLM, going direct to Safety+Translation"
         )
-        logger.info("📍 FAST-PATH STEP 1: Calling SafetyTranslationAgent")
+        logger.info("📍 FAST-PATH STEP 1: Applying Translation Layer")
         logger.info("📍 FAST-PATH STEP 1 INPUT:", {
           workspaceId: params.workspaceId,
           message: params.message,
@@ -433,63 +430,86 @@ export class LLMRouterService {
           },
         })
 
-        // 🌍 DEBUG: Log language parameter BEFORE calling SafetyAgent
         const targetLanguage = params.customerLanguage || "it"
-        logger.info("🌍 LLM Router calling SafetyTranslationAgent", {
+        logger.info("🌍 Applying Translation Layer", {
           customerLanguage: params.customerLanguage,
           targetLanguage,
           workspaceId: params.workspaceId,
           messageLength: params.message.length,
         })
 
-        // Step 1: Translate with Safety & Translation Agent (ONLY for Widget)
-        // 🔧 WhatsApp: Skip - scheduler handles security + translation
-        let safetyResult: SafetyResult = {
-          translatedText: params.message,
-          safe: true,
-          tokensUsed: 0,
-        }
-        
-        if (this.shouldApplySafetyTranslation(params.channel)) {
-          safetyResult = await this.safetyAgent.process({
-            workspaceId: params.workspaceId,
-            response: params.message, // Message in Italian (base language)
-            targetLanguage,
-            customerName: params.customerName,
-          })
-          totalTokens += safetyResult.tokensUsed || 0
-        } else {
-          logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
-        }
-
-        logger.info(
-          "✅ FAST-PATH STEP 1 SUCCESS: SafetyTranslationAgent completed"
-        )
-        logger.info("📊 FAST-PATH STEP 1 OUTPUT:", {
-          translatedText: safetyResult.translatedText,
-          safe: safetyResult.safe,
-          tokensUsed: safetyResult.tokensUsed,
+        const translationResult = await this.translationAgent.process({
+          workspaceId: params.workspaceId,
+          message: params.message,
+          targetLanguage,
+          customerName: params.customerName,
+          customerId: params.customerId,
+          channel: params.channel,
         })
 
-        if (this.shouldApplySafetyTranslation(params.channel)) {
+        totalTokens += translationResult.tokensUsed || 0
+
+        let finalMessage = translationResult.message
+
+        debugSteps.push({
+          type: "safety",
+          agent: "Translation Layer",
+          timestamp: new Date().toISOString(),
+          systemPrompt: translationResult.systemPrompt,
+          input: {
+            previousResponse: params.message,
+            targetLanguage,
+          },
+          output: {
+            translatedText: translationResult.message,
+            decision: translationResult.translated ? "translated" : "passthrough",
+            executionTimeMs: translationResult.executionTimeMs,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: translationResult.tokensUsed || 0,
+            totalTokens: translationResult.tokensUsed || 0,
+          },
+        })
+
+        let securityResult: SecurityResult | null = null
+
+        if (this.shouldApplyWidgetSecurity(params.channel)) {
+          const securityInput = finalMessage
+          securityResult = await this.securityAgent.process({
+            workspaceId: params.workspaceId,
+            message: securityInput,
+            customerName: params.customerName,
+            customerId: params.customerId,
+          })
+
+          totalTokens += securityResult.tokensUsed || 0
+          finalMessage = securityResult.message || securityInput
+
           debugSteps.push({
             type: "safety",
             agent: "Widget Security Layer",
             timestamp: new Date().toISOString(),
+            systemPrompt: securityResult.systemPrompt,
             input: {
-              textToValidate: params.message,
+              textToValidate: securityInput,
             },
             output: {
-              translatedText: safetyResult.translatedText,
-              safe: safetyResult.safe,
+              translatedText: finalMessage,
+              safe: securityResult.safe,
+              decision: securityResult.safe ? "approved" : "blocked",
             },
             tokenUsage: {
               promptTokens: 0,
-              completionTokens: safetyResult.tokensUsed || 0,
-              totalTokens: safetyResult.tokensUsed || 0,
+              completionTokens: securityResult.tokensUsed || 0,
+              totalTokens: securityResult.tokensUsed || 0,
             },
-            safe: safetyResult.safe,
+            safe: securityResult.safe,
+            blocked: !securityResult.safe,
+            blockedReason: securityResult.blockedReason,
           })
+        } else {
+          logger.info("⏭️ Skipping Widget Security (WhatsApp - scheduler handles it)")
         }
 
         logger.info(
@@ -499,7 +519,7 @@ export class LLMRouterService {
           workspaceId: params.workspaceId,
           customerId: params.customerId,
           conversationId: params.conversationId,
-          content: safetyResult.translatedText,
+          content: finalMessage,
           agentType: "SYSTEM_NOTIFICATION",
           tokensUsed: totalTokens,
         })
@@ -509,7 +529,7 @@ export class LLMRouterService {
           workspaceId: params.workspaceId,
           customerId: params.customerId,
           conversationId: params.conversationId,
-          content: safetyResult.translatedText,
+          content: finalMessage,
           agentType: "SYSTEM_NOTIFICATION" as AgentType,
           tokensUsed: totalTokens,
           debugInfo: {
@@ -536,7 +556,7 @@ export class LLMRouterService {
         )
 
         return {
-          response: safetyResult.translatedText,
+          response: finalMessage,
           agentUsed: "SYSTEM_NOTIFICATION" as AgentType,
           confidence: 1.0,
           tokensUsed: totalTokens,
@@ -602,49 +622,80 @@ export class LLMRouterService {
           content: params.message,
         })
 
-        // 🆕 Apply SafetyTranslationAgent to security message (ONLY for Widget)
-        // 🔧 WhatsApp: Skip - scheduler handles security + translation
-        let securitySafetyResult: SafetyResult = {
-          translatedText: securityCheck.message || "Security alert",
-          safe: true,
-          tokensUsed: 0,
-        }
-        
-        if (this.shouldApplySafetyTranslation(params.channel)) {
-          securitySafetyResult = await this.safetyAgent.process({
-            workspaceId: params.workspaceId,
-            response: securityCheck.message || "Security alert",
+        const securityMessage = securityCheck.message || "Security alert"
+
+        const securityTranslationResult = await this.translationAgent.process({
+          workspaceId: params.workspaceId,
+          message: securityMessage,
+          targetLanguage: params.customerLanguage || "it",
+          customerName: params.customerName,
+          customerId: params.customerId,
+          channel: params.channel,
+        })
+
+        let translatedSecurityMessage = securityTranslationResult.message
+        let securityTokensUsed = securityTranslationResult.tokensUsed || 0
+
+        securityDebugSteps.push({
+          type: "safety",
+          agent: "Translation Layer",
+          model: securityTranslationResult.model || "openai/gpt-4o-mini",
+          temperature: 0.1,
+          timestamp: new Date().toISOString(),
+          systemPrompt: securityTranslationResult.systemPrompt,
+          input: {
+            previousResponse: securityMessage,
             targetLanguage: params.customerLanguage || "it",
+          },
+          output: {
+            translatedText: translatedSecurityMessage,
+            decision: securityTranslationResult.translated ? "translated" : "passthrough",
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: securityTranslationResult.tokensUsed || 0,
+            totalTokens: securityTranslationResult.tokensUsed || 0,
+          },
+        })
+
+        if (this.shouldApplyWidgetSecurity(params.channel)) {
+          const securityInput = translatedSecurityMessage
+          const widgetSecurityResult = await this.securityAgent.process({
+            workspaceId: params.workspaceId,
+            message: securityInput,
             customerName: params.customerName,
+            customerId: params.customerId,
           })
-        } else {
-          logger.info("⏭️ Skipping SafetyTranslation for security message (WhatsApp - scheduler handles it)")
-        }
 
-        const translatedSecurityMessage = securitySafetyResult.translatedText
+          translatedSecurityMessage = widgetSecurityResult.message || securityInput
+          securityTokensUsed += widgetSecurityResult.tokensUsed || 0
 
-        // 🔍 Add safety/translation step to timeline
-        if (this.shouldApplySafetyTranslation(params.channel)) {
           securityDebugSteps.push({
             type: "safety",
             agent: "Widget Security Layer",
             model: "openai/gpt-4o-mini",
             temperature: 0.2,
             timestamp: new Date().toISOString(),
+            systemPrompt: widgetSecurityResult.systemPrompt,
             input: {
-              textToValidate: securityCheck.message || "Security alert",
-              targetLanguage: params.customerLanguage || "it",
+              textToValidate: securityInput,
             },
             output: {
               translatedText: translatedSecurityMessage,
-              safe: true,
+              safe: widgetSecurityResult.safe,
+              decision: widgetSecurityResult.safe ? "approved" : "blocked",
             },
             tokenUsage: {
               promptTokens: 0,
-              completionTokens: securitySafetyResult.tokensUsed || 0,
-              totalTokens: securitySafetyResult.tokensUsed || 0,
+              completionTokens: widgetSecurityResult.tokensUsed || 0,
+              totalTokens: widgetSecurityResult.tokensUsed || 0,
             },
+            safe: widgetSecurityResult.safe,
+            blocked: !widgetSecurityResult.safe,
+            blockedReason: widgetSecurityResult.blockedReason,
           })
+        } else {
+          logger.info("⏭️ Skipping Widget Security for security message (WhatsApp - scheduler handles it)")
         }
 
         // Save generic security warning (OUTBOUND) with translated message and debugInfo
@@ -656,7 +707,7 @@ export class LLMRouterService {
           agentType: "ROUTER" as AgentType,
           debugInfo: {
             steps: securityDebugSteps,
-            totalTokens: securitySafetyResult.tokensUsed || 0,
+            totalTokens: securityTokensUsed,
             totalCost: 0,
             executionTimeMs,
             timestamp: new Date().toISOString(),
@@ -668,7 +719,7 @@ export class LLMRouterService {
           response: translatedSecurityMessage,
           agentUsed: "ROUTER" as AgentType,
           confidence: 1.0,
-          tokensUsed: securitySafetyResult.tokensUsed || 0,
+          tokensUsed: securityTokensUsed,
           executionTimeMs,
           wasFAQ: false,
           isBlocked: false,
@@ -730,6 +781,8 @@ export class LLMRouterService {
         })
 
         // 🔍 Build debug steps for WIP message flow
+        // NOTE: WIP messages are already multi-language (selected from wipMessage JSON by language key)
+        // NO LLM calls needed — zero tokens, zero cost, fast execution
         const wipDebugSteps: DebugStep[] = [
           {
             type: "router",
@@ -742,7 +795,7 @@ export class LLMRouterService {
             },
             output: {
               decision: "chatbot_disabled",
-              message: "Sending WIP message",
+              textResponse: wipMessage,
             },
             tokenUsage: {
               promptTokens: 0,
@@ -752,51 +805,6 @@ export class LLMRouterService {
           },
         ]
 
-        // 🆕 Apply SafetyTranslationAgent to WIP message (ONLY for Widget)
-        // 🔧 WhatsApp: Skip - scheduler handles security + translation
-        let wipSafetyResult: SafetyResult = {
-          translatedText: wipMessage,
-          safe: true,
-          tokensUsed: 0,
-        }
-        
-        if (this.shouldApplySafetyTranslation(params.channel)) {
-          wipSafetyResult = await this.safetyAgent.process({
-            workspaceId: params.workspaceId,
-            response: wipMessage,
-            targetLanguage: params.customerLanguage || "it",
-            customerName: params.customerName,
-          })
-        } else {
-          logger.info("⏭️ Skipping SafetyTranslation for WIP message (WhatsApp - scheduler handles it)")
-        }
-
-        const translatedWipMessage = wipSafetyResult.translatedText
-
-        // 🔍 Add safety/translation step to timeline
-        if (this.shouldApplySafetyTranslation(params.channel)) {
-          wipDebugSteps.push({
-            type: "safety",
-            agent: "Widget Security Layer",
-            model: "openai/gpt-4o-mini",
-            temperature: 0.2,
-            timestamp: new Date().toISOString(),
-            input: {
-              textToValidate: wipMessage,
-              targetLanguage: params.customerLanguage || "it",
-            },
-            output: {
-              translatedText: translatedWipMessage,
-              safe: true,
-            },
-            tokenUsage: {
-              promptTokens: 0,
-              completionTokens: wipSafetyResult.tokensUsed || 0,
-              totalTokens: wipSafetyResult.tokensUsed || 0,
-            },
-          })
-        }
-
         // Save user message (INBOUND)
         await this.conversationManager.saveUserMessage({
           workspaceId: params.workspaceId,
@@ -805,15 +813,15 @@ export class LLMRouterService {
           content: params.message,
         })
 
-        // Save WIP response (OUTBOUND) with translated message and debugInfo
+        // Save WIP response (OUTBOUND) — no translation needed (already in customer's language)
         await this.conversationManager.saveAssistantMessage({
           workspaceId: params.workspaceId,
           customerId: params.customerId,
           conversationId: params.conversationId,
-          content: translatedWipMessage,
+          content: wipMessage,
           debugInfo: {
             steps: wipDebugSteps,
-            totalTokens: wipSafetyResult.tokensUsed || 0,
+            totalTokens: 0,
             totalCost: 0,
             executionTimeMs,
             timestamp: new Date().toISOString(),
@@ -821,10 +829,10 @@ export class LLMRouterService {
         })
 
         return {
-          response: translatedWipMessage,
+          response: wipMessage,
           agentUsed: "ROUTER" as AgentType,
           confidence: 1.0,
-          tokensUsed: wipSafetyResult.tokensUsed || 0,
+          tokensUsed: 0,
           executionTimeMs,
           wasFAQ: false,
         }
@@ -1198,7 +1206,7 @@ export class LLMRouterService {
         result.response.includes("[LINK_") ||
         result.response.includes("_TOKEN]")
 
-      // STEP 4: Replace tokens BEFORE Safety & Translation
+      // STEP 4: Replace tokens BEFORE Translation
       // This ensures Safety agent receives actual URLs, not tokens
       logger.info("Step 4: Replacing tokens in response (BEFORE Safety)")
       const linkReplacementTimestamp = new Date().toISOString()
@@ -1543,13 +1551,15 @@ export class LLMRouterService {
         },
       })
 
-      // STEP 5: Apply Translation Layer (🆕 Feature 181: Security moved to WhatsApp Queue only)
+      // STEP 5: Apply Translation Layer (always)
       logger.info("Step 5: Applying Translation Layer")
       const translationResult = await this.translationAgent.process({
         workspaceId: params.workspaceId,
         message: messageForTranslation,
         targetLanguage: params.customerLanguage || "it",
         customerName: params.customerName,
+        customerId: params.customerId,
+        channel: params.channel,
       })
 
       const finalResponse = translationResult.message
@@ -1561,7 +1571,7 @@ export class LLMRouterService {
       const translationTimestamp = new Date().toISOString()
       debugInfo.steps.push({
         type: "safety", // Use safety type for translation (post-processing)
-        agent: "Translation Agent",
+        agent: "Translation Layer",
         model: translationResult.model || "openai/gpt-4o-mini",
         temperature: 0.1,
         timestamp: translationTimestamp,
@@ -1620,6 +1630,49 @@ export class LLMRouterService {
         )
       }
 
+      // STEP 5.6: Widget Security Layer (widget only)
+      if (this.shouldApplyWidgetSecurity(params.channel)) {
+        const securityInput = finalCleanResponse
+        const widgetSecurityResult = await this.securityAgent.process({
+          workspaceId: params.workspaceId,
+          message: securityInput,
+          customerName: params.customerName,
+          customerId: params.customerId,
+        })
+
+        totalTokens += widgetSecurityResult.tokensUsed || 0
+        finalCleanResponse = widgetSecurityResult.message || securityInput
+
+        debugInfo.steps.push({
+          type: "safety",
+          agent: "Widget Security Layer",
+          model: "openai/gpt-4o-mini",
+          temperature: 0.2,
+          timestamp: new Date().toISOString(),
+          systemPrompt: widgetSecurityResult.systemPrompt,
+          input: {
+            textToValidate: securityInput,
+          },
+          output: {
+            translatedText: finalCleanResponse,
+            decision: widgetSecurityResult.safe ? "approved" : "blocked",
+            safe: widgetSecurityResult.safe,
+          },
+          tokenUsage: widgetSecurityResult.tokensUsed
+            ? {
+                promptTokens: 0,
+                completionTokens: widgetSecurityResult.tokensUsed,
+                totalTokens: widgetSecurityResult.tokensUsed,
+              }
+            : undefined,
+          safe: widgetSecurityResult.safe,
+          blocked: !widgetSecurityResult.safe,
+          blockedReason: widgetSecurityResult.blockedReason,
+        })
+      } else {
+        logger.info("⏭️ Skipping Widget Security (WhatsApp - scheduler handles it)")
+      }
+
       logger.info("✅ Message routed successfully", {
         executionTimeMs: Date.now() - startTime,
         totalTokens,
@@ -1628,6 +1681,55 @@ export class LLMRouterService {
         translated: true,
         urlsCleaned: finalCleanResponse !== finalResponse,
       })
+
+      // 📢 REGISTRATION REMINDER: Every 6 messages, add registration call-to-action
+      // This encourages users to register to receive offers and news
+      try {
+        // Count assistant messages (outbound) for this customer in current session
+        const messageCount = await this.prisma.conversationMessage.count({
+          where: {
+            workspaceId: params.workspaceId,
+            customerId: params.customerId,
+            role: "assistant", // Only count bot responses
+            createdAt: {
+              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+            },
+          },
+        })
+
+        // Every 6 messages (6, 12, 18, 24, ...), append registration reminder
+        if ((messageCount + 1) % 6 === 0) {
+          logger.info("📢 Adding registration reminder (every 6 messages)", {
+            messageCount: messageCount + 1,
+            customerId: params.customerId,
+          })
+
+          // Get customer language for proper translation
+          const languageCode = params.customerLanguage?.toLowerCase() || "it"
+          
+          // Reminder text (will be translated by Safety layer if needed)
+          const reminderText = languageCode === "it" 
+            ? "\n\nSe vuoi ricevere le nostre offerte e notizie, registrati a questo link: [LINK_REGISTRATION]"
+            : languageCode === "es"
+            ? "\n\nSi quieres recibir nuestras ofertas y noticias, regístrate en este enlace: [LINK_REGISTRATION]"
+            : languageCode === "pt"
+            ? "\n\nSe você deseja receber nossas ofertas e notícias, registre-se neste link: [LINK_REGISTRATION]"
+            : "\n\nIf you want to receive our offers and news, register at this link: [LINK_REGISTRATION]"
+
+          // Append to final response (LinkReplacementService will replace [LINK_REGISTRATION])
+          finalCleanResponse += reminderText
+          
+          logger.info("✅ Registration reminder appended", {
+            originalLength: finalCleanResponse.length - reminderText.length,
+            newLength: finalCleanResponse.length,
+          })
+        }
+      } catch (registrationReminderError) {
+        // Non-blocking error - continue even if reminder fails
+        logger.error("⚠️ Failed to add registration reminder (non-blocking)", {
+          error: registrationReminderError,
+        })
+      }
 
       // ⚠️ CRITICAL LOG - Verify we reach this point
       logger.error("🔴🔴🔴 CHECKPOINT BEFORE SAVE - THIS LOG MUST APPEAR!!!")
@@ -1778,65 +1880,100 @@ export class LLMRouterService {
         errorMessage: error instanceof Error ? error.message : String(error),
       })
 
-      // 🔧 Pass generic error message through Safety/Translation layer (ONLY for Widget)
-      // 🔧 WhatsApp: Skip - scheduler handles security + translation
+      // 🔧 Pass generic error message through Translation Layer (always)
+      // 🔧 Widget: apply security layer after translation
       const safetyTimestamp = new Date().toISOString()
-      let errorResponse: SafetyResult = {
-        translatedText: "System error - please try again",
-        safe: true,
-        tokensUsed: 0,
-        systemPrompt: undefined as string | undefined,
-      }
-      
-      if (this.shouldApplySafetyTranslation(params.channel)) {
-        errorResponse = await this.safetyAgent.process({
-          workspaceId: params.workspaceId,
-          response: "System error - please try again",
-          targetLanguage: params.customerLanguage,
-          customerName: params.customerName,
-        })
-      } else {
-        logger.info("⏭️ Skipping SafetyTranslation for error message (WhatsApp - scheduler handles it)")
-      }
+      const baseErrorMessage = "System error - please try again"
 
-      // 🔧 ADD SAFETY STEP TO DEBUG
+      const errorTranslationResult = await this.translationAgent.process({
+        workspaceId: params.workspaceId,
+        message: baseErrorMessage,
+        targetLanguage: params.customerLanguage || "it",
+        customerName: params.customerName,
+        customerId: params.customerId,
+        channel: params.channel,
+      })
+
+      let finalErrorMessage = errorTranslationResult.message
+      let errorTokensUsed = errorTranslationResult.tokensUsed || 0
+
       errorDebugSteps.push({
         type: "safety",
-        agent: "Safety & Translation Agent",
-        model: "openai/gpt-4o-mini",
-        temperature: 0.2,
+        agent: "Translation Layer",
+        model: errorTranslationResult.model || "openai/gpt-4o-mini",
+        temperature: 0.1,
         timestamp: safetyTimestamp,
-        systemPrompt: errorResponse.systemPrompt, // ✅ Add processed system prompt
-        tokenUsage: errorResponse.tokensUsed
+        systemPrompt: errorTranslationResult.systemPrompt,
+        tokenUsage: errorTranslationResult.tokensUsed
           ? {
               promptTokens: 0,
-              completionTokens: errorResponse.tokensUsed,
-              totalTokens: errorResponse.tokensUsed,
+              completionTokens: errorTranslationResult.tokensUsed,
+              totalTokens: errorTranslationResult.tokensUsed,
             }
           : undefined,
         input: {
-          textToValidate: "System error - please try again",
-          previousResponse: "Error fallback message",
+          previousResponse: baseErrorMessage,
+          targetLanguage: params.customerLanguage || "it",
         },
         output: {
-          safe: errorResponse.safe,
-          translatedText: errorResponse.translatedText,
-          decision: "error_translation",
+          translatedText: finalErrorMessage,
+          decision: errorTranslationResult.translated ? "translated" : "passthrough",
         },
-        safe: errorResponse.safe,
         language: params.customerLanguage || "it",
       })
 
+      if (this.shouldApplyWidgetSecurity(params.channel)) {
+        const securityInput = finalErrorMessage
+        const errorSecurityResult = await this.securityAgent.process({
+          workspaceId: params.workspaceId,
+          message: securityInput,
+          customerName: params.customerName,
+          customerId: params.customerId,
+        })
+
+        finalErrorMessage = errorSecurityResult.message || securityInput
+        errorTokensUsed += errorSecurityResult.tokensUsed || 0
+
+        errorDebugSteps.push({
+          type: "safety",
+          agent: "Widget Security Layer",
+          model: "openai/gpt-4o-mini",
+          temperature: 0.2,
+          timestamp: new Date().toISOString(),
+          systemPrompt: errorSecurityResult.systemPrompt,
+          tokenUsage: errorSecurityResult.tokensUsed
+            ? {
+                promptTokens: 0,
+                completionTokens: errorSecurityResult.tokensUsed,
+                totalTokens: errorSecurityResult.tokensUsed,
+              }
+            : undefined,
+          input: {
+            textToValidate: securityInput,
+          },
+          output: {
+            translatedText: finalErrorMessage,
+            decision: errorSecurityResult.safe ? "approved" : "blocked",
+            safe: errorSecurityResult.safe,
+          },
+          safe: errorSecurityResult.safe,
+          blocked: !errorSecurityResult.safe,
+          blockedReason: errorSecurityResult.blockedReason,
+        })
+      } else {
+        logger.info("⏭️ Skipping Widget Security for error message (WhatsApp - scheduler handles it)")
+      }
+
       return {
-        response: errorResponse.translatedText,
-        tokensUsed: errorResponse.tokensUsed || 0,
+        response: finalErrorMessage,
+        tokensUsed: errorTokensUsed,
         executionTimeMs,
         agentUsed: "ROUTER" as AgentType,
         confidence: 0,
         wasFAQ: false,
         debugInfo: {
-          steps: errorDebugSteps, // ✅ Now includes Router error + Safety translation
-          totalTokens: errorResponse.tokensUsed || 0,
+          steps: errorDebugSteps,
+          totalTokens: errorTokensUsed,
           totalCost: 0,
           executionTimeMs,
           timestamp: new Date().toISOString(),
@@ -2865,7 +3002,7 @@ export class LLMRouterService {
           )
 
           // ⬅️ EXIT LOOP - Return directly with sub-agent response
-          // Proceed to Safety & Translation layer
+          // Proceed to Translation layer
           return {
             response: subAgentFinalResponse,
             tokensUsed: totalTokens,
@@ -3138,33 +3275,40 @@ export class LLMRouterService {
         logger.warn("⚠️ Link replacement failed:", linkResult.error)
       }
 
-      // 🔒 STEP 2: Apply Safety & Translation Layer to response with links (ONLY for Widget)
-      // 🔧 WhatsApp: Skip - scheduler handles security + translation
-      let safeResponse: SafetyResult = {
-        translatedText: responseWithLinks,
-        safe: true,
-        blockedReason: undefined as string | undefined,
-        tokensUsed: 0,
-      }
-      
-      if (this.shouldApplySafetyTranslation(params.channel)) {
-        safeResponse = await this.safetyAgent.process({
+      // 🔒 STEP 2: Apply Translation Layer (always)
+      const translationResult = await this.translationAgent.process({
+        workspaceId: params.workspaceId,
+        message: responseWithLinks,
+        targetLanguage: params.customerLanguage || "it",
+        customerName: params.customerName,
+        customerId: params.customerId,
+        channel: params.channel,
+      })
+
+      let finalResponse = translationResult.message
+      let autoTokensUsed = translationResult.tokensUsed || 0
+      let widgetSecurityResult: SecurityResult | null = null
+
+      if (this.shouldApplyWidgetSecurity(params.channel)) {
+        const securityInput = finalResponse
+        widgetSecurityResult = await this.securityAgent.process({
           workspaceId: params.workspaceId,
-          response: responseWithLinks, // ✅ Use response with replaced links
-          targetLanguage: params.customerLanguage || "it",
+          message: securityInput,
           customerName: params.customerName,
+          customerId: params.customerId,
         })
+
+        finalResponse = widgetSecurityResult.message || securityInput
+        autoTokensUsed += widgetSecurityResult.tokensUsed || 0
+
+        if (!widgetSecurityResult.safe) {
+          logger.warn("⚠️ Response blocked by widget security layer", {
+            reason: widgetSecurityResult.blockedReason,
+          })
+        }
       } else {
-        logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles it)")
+        logger.info("⏭️ Skipping Widget Security (WhatsApp - scheduler handles it)")
       }
-
-      if (!safeResponse.safe) {
-        logger.warn("⚠️ Response blocked by safety layer", {
-          reason: safeResponse.blockedReason,
-        })
-      }
-
-      const finalResponse = safeResponse.translatedText
       const executionTimeMs = Date.now() - startTime
 
       // Save messages BEFORE returning (same as main flow)
@@ -3192,10 +3336,10 @@ export class LLMRouterService {
       const routerDelegateTimestamp = new Date().toISOString()
       const specialistTimestamp = new Date().toISOString()
       const routerReceiveTimestamp = new Date().toISOString()
-      const safetyTimestamp = new Date().toISOString()
+      const translationTimestamp = new Date().toISOString()
+      const securityTimestamp = new Date().toISOString()
 
-      const debugInfo: DebugInfoSteps = {
-        steps: [
+      const steps: DebugStep[] = [
           // Step 1: Router decides to delegate
           {
             type: "router",
@@ -3250,7 +3394,7 @@ export class LLMRouterService {
             },
             output: {
               decision:
-                "Response received from specialist - proceed to Safety layer",
+                "Response received from specialist - proceed to Translation layer",
             },
             tokenUsage: {
               promptTokens: 0,
@@ -3258,38 +3402,65 @@ export class LLMRouterService {
               totalTokens: 0,
             },
           },
-          // Step 4: Safety validates and translates with LLM call
+          // Step 4: Translation Layer
           {
             type: "safety",
-            agent: "Safety & Translation Agent",
-            model: "openai/gpt-4o-mini",
-            temperature: 0.2,
-            timestamp: safetyTimestamp,
-            systemPrompt: safeResponse.systemPrompt, // ✅ Add processed system prompt
-            tokenUsage: safeResponse.tokensUsed
+            agent: "Translation Layer",
+            model: translationResult.model || "openai/gpt-4o-mini",
+            temperature: 0.1,
+            timestamp: translationTimestamp,
+            systemPrompt: translationResult.systemPrompt,
+            tokenUsage: translationResult.tokensUsed
               ? {
                   promptTokens: 0,
-                  completionTokens: safeResponse.tokensUsed,
-                  totalTokens: safeResponse.tokensUsed,
+                  completionTokens: translationResult.tokensUsed,
+                  totalTokens: translationResult.tokensUsed,
                 }
               : undefined,
             input: {
-              textToValidate: specialistResponse.output,
-              previousResponse: `${activeAgent} response`,
+              previousResponse: responseWithLinks.substring(0, 200),
+              targetLanguage: params.customerLanguage || "it",
             },
             output: {
-              safe: safeResponse.safe,
-              translatedText: finalResponse,
-              decision: safeResponse.safe ? "approved" : "blocked",
+              translatedText: translationResult.message,
+              decision: translationResult.translated ? "translated" : "passthrough",
             },
-            safe: safeResponse.safe,
-            language: params.customerLanguage || "it",
-            blocked: !safeResponse.safe,
-            blockedReason: safeResponse.blockedReason,
           },
-        ],
+        ]
+
+      if (widgetSecurityResult) {
+        steps.push({
+          type: "safety",
+          agent: "Widget Security Layer",
+          model: "openai/gpt-4o-mini",
+          temperature: 0.2,
+          timestamp: securityTimestamp,
+          systemPrompt: widgetSecurityResult.systemPrompt,
+          tokenUsage: widgetSecurityResult.tokensUsed
+            ? {
+                promptTokens: 0,
+                completionTokens: widgetSecurityResult.tokensUsed,
+                totalTokens: widgetSecurityResult.tokensUsed,
+              }
+            : undefined,
+          input: {
+            textToValidate: translationResult.message,
+          },
+          output: {
+            translatedText: finalResponse,
+            decision: widgetSecurityResult.safe ? "approved" : "blocked",
+            safe: widgetSecurityResult.safe,
+          },
+          safe: widgetSecurityResult.safe,
+          blocked: !widgetSecurityResult.safe,
+          blockedReason: widgetSecurityResult.blockedReason,
+        })
+      }
+
+      const debugInfo: DebugInfoSteps = {
+        steps,
         totalTokens:
-          (specialistResponse.tokensUsed || 0) + (safeResponse.tokensUsed || 0),
+          (specialistResponse.tokensUsed || 0) + autoTokensUsed,
         totalCost: 0,
         executionTimeMs,
         timestamp: new Date().toISOString(),
@@ -3437,31 +3608,41 @@ export class LLMRouterService {
         customerDiscount,
       })
 
-      // Apply Safety & Translation (ONLY for Widget)
-      // 🔧 WhatsApp: Skip - scheduler handles security + translation
-      let safeResponse: SafetyResult = {
-        translatedText: cartResponse.output,
-        safe: true,
-        tokensUsed: 0,
-      }
-      
-      if (this.shouldApplySafetyTranslation(options.params.channel)) {
-        safeResponse = await this.safetyAgent.process({
+      // Apply Translation (always)
+      const cartTranslationResult = await this.translationAgent.process({
+        workspaceId: options.params.workspaceId,
+        message: cartResponse.output,
+        targetLanguage: options.params.customerLanguage || "it",
+        customerName: options.params.customerName,
+        customerId: options.params.customerId,
+        channel: options.params.channel,
+      })
+
+      let finalCartResponse = cartTranslationResult.message
+      let cartTokensUsed = (cartResponse.tokensUsed || 0) + (cartTranslationResult.tokensUsed || 0)
+
+      // Widget Security Layer (widget only)
+      if (this.shouldApplyWidgetSecurity(options.params.channel)) {
+        const securityInput = finalCartResponse
+        const cartSecurityResult = await this.securityAgent.process({
           workspaceId: options.params.workspaceId,
-          response: cartResponse.output,
-          targetLanguage: options.params.customerLanguage || "it",
+          message: securityInput,
           customerName: options.params.customerName,
+          customerId: options.params.customerId,
         })
+
+        finalCartResponse = cartSecurityResult.message || securityInput
+        cartTokensUsed += cartSecurityResult.tokensUsed || 0
       } else {
-        logger.info("⏭️ Skipping SafetyTranslation for cart handoff (WhatsApp - scheduler handles it)")
+        logger.info("⏭️ Skipping Widget Security for cart handoff (WhatsApp - scheduler handles it)")
       }
 
       const executionTimeMs = Date.now() - startTime
 
       return {
-        response: safeResponse.translatedText,
+        response: finalCartResponse,
         agentUsed: "CART_MANAGEMENT",
-        tokensUsed: cartResponse.tokensUsed || 0,
+        tokensUsed: cartTokensUsed,
         executionTimeMs,
         confidence: 1.0, // Delegation handoff has high confidence
         wasFAQ: false,

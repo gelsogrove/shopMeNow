@@ -3,7 +3,7 @@
  *
  * SCENARIO: Visual flow diagram for multi-agent architecture configuration.
  * This component displays agent hierarchy, allows prompt editing, and handles
- * hardcoded agents (Widget Security Layer) as read-only.
+ * editable agents and widget-only security layer.
  *
  * KEY BEHAVIORS TESTED:
  * 1. E-commerce agents filtered based on workspace type
@@ -125,6 +125,28 @@ const mockAgents = [
     isActive: true,
     order: 7,
   },
+  {
+    id: "agent-9",
+    name: "Translation Agent",
+    type: "TRANSLATION",
+    systemPrompt: "You translate responses...",
+    temperature: 0.1,
+    maxTokens: 1000,
+    model: "openai/gpt-4.1-mini",
+    isActive: true,
+    order: 8,
+  },
+  {
+    id: "agent-10",
+    name: "Security Agent",
+    type: "SECURITY",
+    systemPrompt: "You validate safety...",
+    temperature: 0.1,
+    maxTokens: 800,
+    model: "openai/gpt-4.1-mini",
+    isActive: true,
+    order: 9,
+  },
 ]
 
 const mockSaveAgent = vi.fn().mockResolvedValue(undefined)
@@ -232,9 +254,9 @@ describe("AgentFlowDiagram", () => {
     })
 
     /**
-     * RULE: Widget Security Layer is hardcoded (help dialog).
+     * RULE: Widget Security Layer should be editable (shares SECURITY prompt).
      */
-    it("should open help dialog when clicking Widget Security Layer", async () => {
+    it("should open edit Sheet when clicking Widget Security Layer", async () => {
       render(
         <AgentFlowDiagram
           sellsProductsAndServices={true}
@@ -249,11 +271,10 @@ describe("AgentFlowDiagram", () => {
       fireEvent.click(safetyAgent)
 
       await waitFor(() => {
-        expect(screen.getByText("This agent is hardcoded")).toBeInTheDocument()
+        expect(screen.getByText("System Prompt")).toBeInTheDocument()
       })
 
-      expect(screen.queryByText("Save Changes")).not.toBeInTheDocument()
-      expect(screen.getByText("Got it")).toBeInTheDocument()
+      expect(screen.getByText("Save Changes")).toBeInTheDocument()
     })
   })
 
@@ -511,6 +532,7 @@ describe("AgentFlowDiagram - Agent Metadata", () => {
     "PROFILE_MANAGEMENT",
     "CONVERSATION_HISTORY",
     "TRANSLATION",
+    "WIDGET_SECURITY",
     "SECURITY",
   ]
 
@@ -555,9 +577,8 @@ describe("AgentFlowDiagram - Agent Metadata", () => {
    * RULE: Widget-only agents should be marked with widgetOnly=true.
    */
   it("should mark widget-only agents correctly", () => {
-    const widgetOnlyAgents = ["TRANSLATION"]
-    // Translation is only used in Widget, not WhatsApp
-    // WhatsApp uses scheduler for translation
+    const widgetOnlyAgents = ["WIDGET_SECURITY"]
+    // Widget Security Layer is only applied for widget responses
     expect(widgetOnlyAgents.length).toBe(1)
   })
 

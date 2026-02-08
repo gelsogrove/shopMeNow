@@ -1,24 +1,14 @@
 /**
- * SafetyTranslationAgent
+ * SafetyTranslationAgent (DEPRECATED)
  *
- * Final layer that processes responses before sending to customer.
+ * Legacy layer that combined Safety checks + Translation.
  *
- * ⚠️ IMPORTANT: Widget-only (as of 2025-01)
- * - Widget channel: SafetyTranslationAgent is applied (no scheduler)
- * - WhatsApp channel: SKIPPED - Scheduler handles security + translation
+ * ✅ Replaced by:
+ * - TranslationAgent (always, all channels)
+ * - SecurityAgent (widget only)
+ * - Scheduler SecurityAgentService (WhatsApp)
  *
- * This optimization prevents double LLM costs for WhatsApp messages.
- * See llm-router.service.ts:shouldApplySafetyTranslation() for channel check logic.
- *
- * Functions:
- * 1. **Safety Check**: Blocks PII, profanity, phishing, spam
- * 2. **Translation**: Translates response to customer's language (IT → target)
- *
- * 🆕 DATABASE-DRIVEN PROMPTS: Uses agentConfig.systemPrompt from database
- * Falls back to shared/translation-prompts.ts if not found
- *
- * @architecture Clean Architecture - Database-driven configuration
- * @channel Widget only - WhatsApp uses Scheduler services
+ * Kept for backward compatibility and legacy tests.
  */
 
 import { PrismaClient } from "@echatbot/database"
@@ -120,6 +110,7 @@ export class SafetyTranslationAgent {
         })
       } else {
         // Replace variables in custom prompt
+        // Support BOTH formats: {TARGET_LANGUAGE} (code) and {{languageUser}} (UI/template)
         const languageName = options.targetLanguage.toUpperCase()
         const customerName = options.customerName || "Cliente"
         const allowedLinksText = options.allowedLinks?.length
@@ -127,10 +118,20 @@ export class SafetyTranslationAgent {
           : "- https://echatbot.ai/*\n- https://shopmenow.it/*\n- https://wa.me/*"
 
         systemPromptTemplate = systemPromptTemplate
+          // Language: support both {TARGET_LANGUAGE} and {{languageUser}}
           .replace(/{TARGET_LANGUAGE}/g, languageName)
+          .replace(/\{\{TARGET_LANGUAGE\}\}/g, languageName)
+          .replace(/\{\{languageUser\}\}/g, languageName)
+          // Customer name: support both {CUSTOMER_NAME} and {{nameUser}}
           .replace(/{CUSTOMER_NAME}/g, customerName)
-          .replace("{ALLOWED_LINKS}", allowedLinksText)
-          .replace("{MESSAGE}", options.response)
+          .replace(/\{\{CUSTOMER_NAME\}\}/g, customerName)
+          .replace(/\{\{nameUser\}\}/g, customerName)
+          // Allowed links
+          .replace(/{ALLOWED_LINKS}/g, allowedLinksText)
+          .replace(/\{\{ALLOWED_LINKS\}\}/g, allowedLinksText)
+          // Message to translate
+          .replace(/{MESSAGE}/g, options.response)
+          .replace(/\{\{MESSAGE\}\}/g, options.response)
       }
 
       // Use LLM settings from database if available, otherwise fallback

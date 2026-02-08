@@ -492,14 +492,17 @@ export class UltraMsgWebhookController {
           let wipMessage = rawWipMessage
           
           try {
-            const { SafetyTranslationAgent } = require('../../../application/agents/SafetyTranslationAgent')
-            const safetyAgent = new SafetyTranslationAgent(prisma)
-            const safetyResult = await safetyAgent.process({
-              text: rawWipMessage,
-              targetLanguage: customerLang,
+            const { TranslationAgent } = require('../../../application/agents/TranslationAgent')
+            const translationAgent = new TranslationAgent(prisma)
+            const translationResult = await translationAgent.process({
               workspaceId,
+              message: rawWipMessage,
+              targetLanguage: customerLang,
+              customerName: customer.name || 'Customer',
+              customerId: customer.id,
+              channel: 'whatsapp',
             })
-            wipMessage = safetyResult.translatedText || rawWipMessage
+            wipMessage = translationResult.message || rawWipMessage
             logger.info('[ULTRAMSG] 🌍 WIP message translated', {
               language: customerLang,
             })

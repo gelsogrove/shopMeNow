@@ -187,12 +187,12 @@ describe("PushController - sendSystemNotification", () => {
         mockResponse as Response
       )
 
-      // Assert: Message was in Italian (base) → SafetyTranslationAgent translates to Spanish
+      // Assert: Message was in Italian (base) → Translation Layer translates to Spanish
       expect(mockLLMRouterService.routeMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringContaining("Ciao Maria Garcia"), // Italian input
           customerLanguage: "ESP", // Spanish target
-          isSystemMessage: true, // Goes through SafetyTranslationAgent
+          isSystemMessage: true, // Goes through Translation Layer
         })
       )
 

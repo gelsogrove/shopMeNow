@@ -1,19 +1,19 @@
 /**
- * 🌍 Shared Translation & Safety Prompts
+ * 🌍 Shared Translation & Safety Prompts (LEGACY)
  *
- * Single source of truth for translation and security prompts.
- * Used by both Backend (SafetyTranslationAgent, TranslationAgent) and Scheduler.
+ * Legacy combined Safety + Translation prompt used by SafetyTranslationAgent.
+ * Current flow uses:
+ * - TranslationAgent (DB prompt)
+ * - SecurityAgent / Scheduler SecurityAgentService (DB prompt)
  *
  * HARDCODED: These prompts are NOT stored in database.
- * To modify: Update this file and redeploy both backend and scheduler.
- *
- * @architecture Shared module - used by backend + scheduler
- * @updated 2025-01-31
+ * @architecture Shared module (legacy)
+ * @updated 2026-02-08
  */
 
 /**
  * Combined Safety + Translation prompt
- * Used by SafetyTranslationAgent (Widget only) and Scheduler
+ * Used only by deprecated SafetyTranslationAgent
  *
  * Variables to replace:
  * - {TARGET_LANGUAGE}: "Italian", "English", "Spanish", "Portuguese"

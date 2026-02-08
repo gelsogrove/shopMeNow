@@ -16,7 +16,7 @@ Convert database schema from **Json** to **String** (English only):
 - `wipMessage`: Json → String  
 - `afterRegistrationMessages`: Json → String
 
-**Translation Layer** (Safety & Translation Agent) will automatically translate these messages to customer's language.
+**Translation Layer** will automatically translate these messages to customer's language.
 
 ## Changes Made
 

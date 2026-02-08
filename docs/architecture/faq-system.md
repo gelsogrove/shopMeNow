@@ -29,7 +29,7 @@ The FAQ system enables the chatbot to answer frequently asked questions using co
    ↓
 6. LLM matches question to FAQ and generates natural response
    ↓
-7. SafetyTranslationAgent translates to customer's language
+7. Translation Layer translates to customer's language
    ↓
 8. Response sent to customer
 ```
@@ -153,7 +153,7 @@ No FAQs available. Answer questions to the best of your knowledge.
 2. CustomerSupportAgent loads 68 FAQs from database
 3. LLM finds match: "How long does onboarding typically take?"
 4. LLM generates natural response using FAQ answer
-5. SafetyTranslation translates to customer's language (e.g., Spanish)
+5. Translation Layer translates to customer's language (e.g., Spanish)
 
 **Output**: 
 ```

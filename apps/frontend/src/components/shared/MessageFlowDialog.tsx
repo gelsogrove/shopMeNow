@@ -274,9 +274,6 @@ export default function MessageFlowDialog({
   // Operator Message steps (human operator messages)
   const operatorMessageSteps = allSteps.filter((s) => s.type === "operator_message")
 
-  // Safety & Translation step
-  const safetySteps = allSteps.filter((s) => s.type === "safety")
-
   // Link Replacement step
   const linkReplacementSteps = allSteps.filter(
     (s) => s.type === "token-replacement"
@@ -307,13 +304,17 @@ export default function MessageFlowDialog({
           input: { userMessage },
         }
 
-  // Estrai il messaggio finale dal Translation Agent (output.translatedText)
-  // Fallback: Safety Agent output, poi Router output
-  const translationStep = allSteps.find((s) => s.agent?.includes("Translation"))
+  // Estrai il messaggio finale dal Translation Layer (output.translatedText)
+  // Fallback: Widget Security output, poi Translation output, poi Router output
+  const translationStep = allSteps.find(
+    (s) => s.agent?.includes("Translation") && !s.agent?.includes("Widget")
+  )
+  const widgetSecurityStep = allSteps.find((s) =>
+    s.agent?.includes("Widget Security Layer")
+  )
   const finalMessage =
+    widgetSecurityStep?.output?.textResponse ||
     translationStep?.output?.translatedText ||
-    safetySteps[0]?.output?.textResponse ||
-    safetySteps[0]?.output?.result?.translatedResponse ||
     routerSteps[routerSteps.length - 1]?.output?.textResponse ||
     "Message delivered"
 
@@ -322,10 +323,10 @@ export default function MessageFlowDialog({
     type: "function_call",
     agent: "💾 Save to History",
     timestamp: new Date(
-      new Date(translationStep?.timestamp || safetySteps[0]?.timestamp || new Date()).getTime() + 100
+      new Date(widgetSecurityStep?.timestamp || translationStep?.timestamp || new Date()).getTime() + 100
     ).toISOString(),
     input: {
-      textContent: `Message from ${translationStep ? "Translation Agent" : "Router Agent"}:\n\n${finalMessage}`,
+      textContent: `Message from ${translationStep ? "Translation Layer" : "Router Agent"}:\n\n${finalMessage}`,
     },
     output: {
       textContent: "✅ Message saved to database (status: pending)",
@@ -337,7 +338,7 @@ export default function MessageFlowDialog({
     type: "function_call",
     agent: "📤 Add to WhatsApp Queue",
     timestamp: new Date(
-      new Date(translationStep?.timestamp || safetySteps[0]?.timestamp || new Date()).getTime() + 150
+      new Date(widgetSecurityStep?.timestamp || translationStep?.timestamp || new Date()).getTime() + 150
     ).toISOString(),
     input: {
       textContent: `Message to send:\n\n${finalMessage}`,
@@ -373,8 +374,9 @@ export default function MessageFlowDialog({
     ...regularSubAgentSteps, // STEP 3: Sub-agent execution (regular ones)
     ...summaryAgentSteps, // STEP 3.5: Summary Agent execution (if present)
     routerSteps[1], // STEP 4: Router iteration 2 (riceve risposta)
-    linkReplacementSteps[0], // STEP 5: Link Replacement (BEFORE Safety) ✅
-    safetySteps[0], // STEP 6: Safety & Translation (AFTER Link Replacement) ✅
+    linkReplacementSteps[0], // STEP 5: Link Replacement (BEFORE Translation) ✅
+    translationStep, // STEP 6: Translation Layer ✅
+    widgetSecurityStep, // STEP 7: Widget Security Layer (widget only) ✅
     saveToHistoryStep, // STEP 7: Save to history
     queueStep, // STEP 8: Add to WhatsApp Queue
     ...securityCheckSteps, // STEP 9: Security Check (from scheduler) ✅

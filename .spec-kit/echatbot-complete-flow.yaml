@@ -68,7 +68,7 @@ flows:
       2. "Router LLM (1st call) → Variable replacement + Delegation decision"
       3. "Specialist LLM → Execute with OWN prompt (last 3 messages context)"
       3.5: "Router LLM (2nd call) → Contextualize specialist response (full 10 min history)"
-      4. "Safety & Translation → Validate + Translate to customer language"
+      4. "Translation Layer → Translate to customer language"
       5. "Link Replacement → Replace [LINK_xxx] tokens with secure URLs"
       6. "History → Save INBOUND + OUTBOUND messages"
       7. "Queue → Emit to WhatsApp (DEFERRED - not implemented)"
@@ -110,8 +110,7 @@ flows:
                      │              └────────────────────────┬───────────────┘
                      │                                       │
         ┌────────────▼───────────────────────────────────────▼────────────────┐
-        │ 4. Safety & Translation Agent                                       │
-        │    • Validate content (no PII, profanity, harmful content)          │
+        │ 4. Translation Layer                                                │
         │    • Translate to customer language (IT/ES/PT/FR/EN)                │
         │    • Preserve Italian product names                                 │
         │    • Keep [LINK_xxx] tokens unchanged                               │
@@ -486,37 +485,35 @@ flows:
               ✅ Contextual, cohesive response
 
       # ========================================================================
-      # STEP 4: Safety & Translation Agent
+      # STEP 4: Translation Layer
       # ========================================================================
       - id: 4
-        name: "Safety & Translation Agent"
-        component: "SafetyTranslationAgent.process()"
-        file: "backend/src/application/agents/SafetyTranslationAgent.ts"
+        name: "Translation Layer"
+        component: "TranslationAgent.process()"
+        file: "backend/src/application/agents/TranslationAgent.ts"
 
         input:
           - "Response from Router OR specialist (English text with [LINK_xxx] tokens)"
           - "Customer language (IT/ES/PT/FR/EN)"
           - "Customer name for personalization"
-          - "Allowed link tokens (for validation)"
+          - "Channel (whatsapp | widget)"
 
         llm_call:
           model: "openai/gpt-4o-mini"
           temperature: 0.1
           max_tokens: 1024
-          prompt_source: "Database agentConfig table (AgentType.SAFETY_TRANSLATION)"
+          prompt_source: "Database agentConfig table (AgentType.TRANSLATION)"
 
         process:
-          - step: "Load SAFETY_TRANSLATION agent config from database"
-          - step: "Call LLM with safety + translation instructions"
-          - step: "Check for inappropriate content (scams, harassment, etc.)"
+          - step: "Load TRANSLATION agent config from database"
+          - step: "Call LLM with translation instructions"
           - step: "Translate to customer's language (IT/ES/PT/FR/EN)"
           - step: "Preserve Italian product names (Mozzarella, Parmigiano, etc.)"
           - step: "Keep [LINK_xxx] tokens unchanged"
 
         output:
           - "translatedText: string (customer's language with [LINK_xxx] tokens)"
-          - "safe: boolean"
-          - "blockedReason?: string (if unsafe)"
+          - "decision: translated | passthrough"
           - "tokensUsed: number"
 
         rules:

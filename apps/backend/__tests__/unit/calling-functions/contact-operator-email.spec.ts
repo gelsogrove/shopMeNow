@@ -53,6 +53,9 @@ const mockPrisma = {
   conversationMessage: {
     findMany: jest.fn(),
   },
+  whatsAppQueue: {
+    create: jest.fn(),
+  },
   workspace: {
     findUnique: jest.fn(),
   },
@@ -99,7 +102,7 @@ describe("ContactOperator Email Notifications", () => {
     id: workspaceId,
     name: "BellItalia Foods",
     operatorContactMethod: "email", // 🆕 Test email method
-    operatorEmail: "support@bellitalia.com", // 🆕 Andrea's spec: Use operatorEmail directly
+    operatorEmail: "support@bellitalia.com",
     operatorWhatsappNumber: null,
     hasHumanSupport: true,
     whatsappSettings: {
@@ -152,8 +155,8 @@ describe("ContactOperator Email Notifications", () => {
   })
 
   describe("Email sent to sales agent", () => {
-    it("should send email to workspace.operatorEmail", async () => {
-      // 🆕 Andrea's spec: Use workspace.operatorEmail directly (NOT agent/admin)
+    it("should send email to assigned agent when available", async () => {
+      // ✅ New rule: if agent is assigned, email goes to agent
       const request: ContactOperatorRequest = {
         phoneNumber,
         workspaceId,
@@ -166,16 +169,19 @@ describe("ContactOperator Email Notifications", () => {
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
-          to: "support@bellitalia.com", // 🎯 workspace.operatorEmail
+          to: "giovanni.bianchi@bellitalia.com", // 🎯 agent email
         })
       )
     })
   })
 
-  describe("Priority Logic - Email to operatorEmail (Andrea's spec)", () => {
-    it("should send email to workspace.operatorEmail when configured", async () => {
-      // SCENARIO: workspace.operatorEmail is configured
-      // RULE: Email goes to operatorEmail (NOT agent or admin)
+  describe("Priority Logic - Email targets", () => {
+    it("should fallback to workspace.operatorEmail when agent email is missing", async () => {
+      const mockCustomerNoAgentEmail = {
+        ...mockCustomer,
+        sales: { ...mockSalesAgent, email: "" },
+      }
+      mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgentEmail)
       
       const request: ContactOperatorRequest = {
         phoneNumber,
@@ -186,7 +192,6 @@ describe("ContactOperator Email Notifications", () => {
 
       await contactOperator(request)
 
-      // ✅ RULE: Use workspace.operatorEmail directly
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -194,14 +199,14 @@ describe("ContactOperator Email Notifications", () => {
           customerName: mockCustomer.name,
         })
       )
-      
-      // ❌ Should NOT query admin user (operatorEmail used directly)
-      expect(mockPrisma.user.findFirst).not.toHaveBeenCalled()
     })
 
-    it("should fallback to adminEmail when operatorEmail is null", async () => {
-      // SCENARIO: workspace.operatorEmail is null
-      // RULE: Fallback to whatsappSettings.adminEmail
+    it("should fallback to adminEmail when agent email and operatorEmail are null", async () => {
+      const mockCustomerNoAgentEmail = {
+        ...mockCustomer,
+        sales: { ...mockSalesAgent, email: "" },
+      }
+      mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgentEmail)
       
       const mockWorkspaceNoOperatorEmail = {
         ...mockWorkspace,
@@ -228,10 +233,15 @@ describe("ContactOperator Email Notifications", () => {
       )
     })
 
-    it("should NOT send email when both operatorEmail and adminEmail are null", async () => {
-      // SCENARIO: No email configured
-      // EXPECTED: No email sent
+    it("should NOT send email when agent email, operatorEmail, and adminEmail are null", async () => {
+      // SCENARIO: No email configured anywhere
       
+      const mockCustomerNoAgentEmail = {
+        ...mockCustomer,
+        sales: { ...mockSalesAgent, email: "" },
+      }
+      mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgentEmail)
+
       const mockWorkspaceNoEmails = {
         ...mockWorkspace,
         operatorEmail: null,
@@ -252,6 +262,54 @@ describe("ContactOperator Email Notifications", () => {
       
       // ❌ No email sent (no target)
       expect(mockEmailService.sendOperatorNotificationEmail).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("Contact method selection", () => {
+    it("should NOT send email when operatorContactMethod is whatsapp", async () => {
+      const mockWorkspaceWhatsApp = {
+        ...mockWorkspace,
+        operatorContactMethod: "whatsapp",
+      }
+      mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspaceWhatsApp)
+
+      const request: ContactOperatorRequest = {
+        phoneNumber,
+        workspaceId,
+        customerId,
+      }
+
+      await contactOperator(request)
+
+      expect(mockEmailService.sendOperatorNotificationEmail).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("WhatsApp notification routing", () => {
+    it("should send WhatsApp to assigned agent when available", async () => {
+      const mockWorkspaceWhatsApp = {
+        ...mockWorkspace,
+        operatorContactMethod: "whatsapp",
+        operatorWhatsappNumber: "+393330000000",
+      }
+      mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspaceWhatsApp)
+
+      const request: ContactOperatorRequest = {
+        phoneNumber,
+        workspaceId,
+        customerId,
+      }
+
+      await contactOperator(request)
+
+      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledTimes(1)
+      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            phoneNumber: mockSalesAgent.phone, // 🎯 agent phone
+          }),
+        })
+      )
     })
   })
 

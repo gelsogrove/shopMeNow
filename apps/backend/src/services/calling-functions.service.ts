@@ -236,46 +236,6 @@ export class CallingFunctionsService {
     }
   }
 
-  public async getProfileLink(
-    request: GetCartLinkRequest
-  ): Promise<TokenResponse> {
-    try {
-      logger.info("🔧 Calling getProfileLink with:", request)
-      logger.info("🔧 About to create token...")
-      const token = await this.secureTokenService.createToken(
-        "profile",
-        request.workspaceId,
-        { customerId: request.customerId },
-        undefined, // Uses TOKEN_EXPIRATION from env
-        undefined,
-        undefined,
-        undefined,
-        request.customerId
-      )
-      logger.info("🔧 Token created successfully:", token)
-      // Use centralized link generator for consistent URL shortening
-      const {
-        linkGeneratorService,
-      } = require("../application/services/link-generator.service")
-
-      const linkUrl = await linkGeneratorService.generateProfileLink(
-        token,
-        request.workspaceId
-      )
-
-      return {
-        success: true,
-        token: token,
-        linkUrl: linkUrl,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-        action: "profile",
-        timestamp: new Date().toISOString(),
-      }
-    } catch (error) {
-      return this.createErrorResponse(error, "getProfileLink") as TokenResponse
-    }
-  }
-
   public async contactOperator(request: {
     customerId: string
     workspaceId: string
@@ -371,6 +331,107 @@ export class CallingFunctionsService {
         success: false,
         message:
           "An error occurred while updating your notification preferences. Please try again later.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Handle push notifications (Router-facing alias)
+   * Maps enable/disable/status to SUBSCRIBE/UNSUBSCRIBE
+   */
+  public async handlePushNotifications(request: {
+    action: "enable" | "disable" | "status"
+    customerId: string
+    workspaceId: string
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🔔 Calling handlePushNotifications with:", request)
+
+      // Import the handlePushNotifications function
+      const {
+        handlePushNotifications,
+      } = require("../domain/calling-functions/handlePushNotifications")
+
+      const result = await handlePushNotifications({
+        action: request.action,
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+      })
+
+      logger.info("✅ handlePushNotifications result:", result)
+
+      return {
+        success: result.success,
+        message: result.message,
+        timestamp: new Date().toISOString(),
+        data: {
+          action: result.action,
+          currentStatus: result.currentStatus,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in handlePushNotifications:", error)
+      return {
+        success: false,
+        message:
+          "An error occurred while updating your notification preferences. Please try again later.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  /**
+   * Generate secure profile edit link with token
+   * Customer can view/edit their personal data and push notification consent
+   */
+  public async getProfileLink(request: {
+    customerId: string
+    workspaceId: string
+    expirationHours?: number
+  }): Promise<StandardResponse> {
+    try {
+      logger.info("🔗 Calling getProfileLink with:", request)
+
+      // Import the getProfileLink function
+      const {
+        getProfileLink,
+      } = require("../domain/calling-functions/getProfileLink")
+
+      const result = await getProfileLink({
+        customerId: request.customerId,
+        workspaceId: request.workspaceId,
+        expirationHours: request.expirationHours || 24,
+      })
+
+      logger.info("✅ getProfileLink result:", result)
+
+      if (!result.success) {
+        return {
+          success: false,
+          message: result.message,
+          timestamp: new Date().toISOString(),
+        }
+      }
+
+      // Return the message with [LINK_PROFILE_WITH_TOKEN] placeholder
+      // LinkReplacementService will replace it with the actual URL
+      return {
+        success: true,
+        message: result.message, // Contains [LINK_PROFILE_WITH_TOKEN]
+        timestamp: new Date().toISOString(),
+        data: {
+          profileLink: result.profileLink,
+          shortLink: result.shortLink,
+          expiresAt: result.expiresAt,
+        },
+      }
+    } catch (error) {
+      logger.error("❌ Error in getProfileLink:", error)
+      return {
+        success: false,
+        message:
+          "An error occurred while generating your profile link. Please try again later.",
         timestamp: new Date().toISOString(),
       }
     }

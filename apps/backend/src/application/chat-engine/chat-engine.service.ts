@@ -42,7 +42,8 @@ import {
 import { CartManagementAgentLLM } from "../agents/CartManagementAgentLLM"
 import { CustomerSupportAgentLLM } from "../agents/CustomerSupportAgentLLM"
 import { ProductContextAgentLLM, ProductContextData } from "../agents/ProductContextAgentLLM"
-import { SafetyTranslationAgent } from "../agents/SafetyTranslationAgent"
+import { TranslationAgent } from "../agents/TranslationAgent"
+import { SecurityAgent } from "../agents/SecurityAgent"
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
 import {
   ConversationStateService, 
@@ -54,7 +55,6 @@ import {
   NUMERIC_MEANS_CATEGORY,
   NUMERIC_MEANS_ORDER_ACTION,
 } from "./conversation-state.service"
-import { TranslationAgent } from "../agents/TranslationAgent"
 import { CatalogQueryService, CatalogQueryLoadedData } from "../catalog-query/catalog-query.service"
 import { confirmOrder } from "../../domain/calling-functions/confirmOrder"
 import { LLMRouterService } from "../../services/llm-router.service"
@@ -230,6 +230,8 @@ export class ChatEngineService {
   
   // Translation layer (applied as final step in routeMessage wrapper)
   private translationAgent: TranslationAgent
+  // Widget Security Layer (applied after translation for widget channel)
+  private securityAgent: SecurityAgent
   
   // 🆕 NEW: Routing orchestration services
   private welcomeMessageHandler: any // WelcomeMessageHandler
@@ -260,6 +262,7 @@ export class ChatEngineService {
     
     // Initialize translation layer
     this.translationAgent = new TranslationAgent(prisma)
+    this.securityAgent = new SecurityAgent(prisma)
     
     // 🆕 NEW: Initialize routing orchestration
     const { WelcomeMessageHandler } = require("../../utils/welcome-message.handler")
@@ -1253,8 +1256,8 @@ export class ChatEngineService {
     }
   ): void {
     debugSteps.push({
-      type: "sub_agent",
-      agent: "🌍 Translation Agent",
+      type: "safety",
+      agent: "Translation Layer",
       model: data.model,
       timestamp: new Date().toISOString(),
       tokenUsage: data.tokensUsed ? {
@@ -1271,7 +1274,7 @@ export class ChatEngineService {
       },
       output: {
         textResponse: data.outputMessage.substring(0, 200) + (data.outputMessage.length > 200 ? "..." : ""),
-        translated: data.translated,
+        decision: data.translated ? "translated" : "passthrough",
         executionTimeMs: data.executionTimeMs,
       },
       duration: data.executionTimeMs,
@@ -1417,8 +1420,8 @@ export class ChatEngineService {
    * 
    * This wrapper ensures:
    * 1. CONCURRENCY SAFETY: Only ONE message per customer processed at a time
-   * 2. TRANSLATION: Non-widget responses pass through Translation Layer
-   *    (Widget uses Widget Security Layer for translation + safety)
+   * 2. TRANSLATION: ALL responses pass through Translation Layer
+   * 3. Widget Security Layer applies only for widget channel (after translation)
    * 
    * Flow:
    *   0. Acquire customer lock (wait if another message is processing)
@@ -1497,23 +1500,19 @@ export class ChatEngineService {
       let translationTokens = 0
       let safetyTokens = 0
 
-      // STEP 2: Apply Translation Layer (SINGLE translation point for non-widget)
-      if (!isWidgetChannel) {
-        const translationResult = await this.applyTranslation(
-          result.message,
-          input.workspaceId,
-          normalizedLanguage, // Pass normalized code (pt, en, es, it)
-          debugSteps,
-          input.customerName
-        )
+      // STEP 2: Apply Translation Layer (ALWAYS)
+      const translationResult = await this.applyTranslation(
+        result.message,
+        input.workspaceId,
+        normalizedLanguage, // Pass normalized code (pt, en, es, it)
+        debugSteps,
+        input.customerName
+      )
 
-        translationTokens = translationResult.tokensUsed || 0
-        finalMessage = translationResult.message
-      } else {
-        logger.info("⏭️ [ChatEngine] Skipping translation (Widget uses Widget Security Layer)")
-      }
+      translationTokens = translationResult.tokensUsed || 0
+      finalMessage = translationResult.message
 
-      // STEP 2.5: Widget Security Layer (translation + safety) for widget only
+      // STEP 2.5: Widget Security Layer (after translation) for widget only
       if (isWidgetChannel) {
         const hasWidgetSafetyStep = debugSteps.some(
           (step) =>
@@ -1523,40 +1522,41 @@ export class ChatEngineService {
 
         if (!hasWidgetSafetyStep) {
           try {
-            const safetyAgent = new SafetyTranslationAgent(this.prisma)
-            const safetyResult = await safetyAgent.process({
+            const securityResult = await this.securityAgent.process({
               workspaceId: input.workspaceId,
-              response: finalMessage,
-              targetLanguage: normalizedLanguage,
+              message: finalMessage,
               customerName: input.customerName,
+              customerId: input.customerId,
             })
 
-            safetyTokens = safetyResult.tokensUsed || 0
+            safetyTokens = securityResult.tokensUsed || 0
 
             debugSteps.push({
               type: "safety",
               agent: "Widget Security Layer",
               timestamp: new Date().toISOString(),
               input: {
-                userMessage: finalMessage,
-                targetLanguage: normalizedLanguage,
+                textContent: finalMessage,
               },
               output: {
-                textResponse: safetyResult.translatedText,
-                translated: true,
+                textResponse: securityResult.message || finalMessage,
+                decision: securityResult.safe ? "approved" : "blocked",
               },
               tokenUsage: {
                 promptTokens: 0,
                 completionTokens: safetyTokens,
                 totalTokens: safetyTokens,
               },
+              details: {
+                safe: securityResult.safe,
+                blocked: !securityResult.safe,
+                blockedReason: securityResult.blockedReason,
+              },
             })
 
-            if (safetyResult.safe && safetyResult.translatedText) {
-              finalMessage = safetyResult.translatedText
-            }
+            finalMessage = securityResult.message || finalMessage
           } catch (error) {
-            logger.error("❌ [ChatEngine] Widget SafetyTranslation failed", {
+            logger.error("❌ [ChatEngine] Widget Security failed", {
               workspaceId: input.workspaceId,
               customerId: input.customerId,
               error: error instanceof Error ? error.message : String(error),
@@ -4021,13 +4021,14 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             workspaceId: input.workspaceId,
           })
 
-          if (!profileLinkResult.success || !profileLinkResult.linkUrl) {
+          if (!profileLinkResult.success || !profileLinkResult.data?.profileLink) {
             throw new Error("Failed to generate profile link")
           }
 
-          // Format the response with the link
+          // Format the response with the link (use shortLink if available)
           const customerFirstName = input.customerName?.split(" ")[0] || "!"
-          const profileMessage = `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLinkResult.linkUrl}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+          const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
+          const profileMessage = `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
 
           const processingTimeMs = Date.now() - startTime
 
@@ -4118,13 +4119,14 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             workspaceId: input.workspaceId,
           })
 
-          if (!profileLinkResult.success || !profileLinkResult.linkUrl) {
+          if (!profileLinkResult.success || !profileLinkResult.data?.profileLink) {
             throw new Error("Failed to generate profile link")
           }
 
-          // Format the response with the link and supported languages
+          // Format the response with the link and supported languages (use shortLink if available)
           const customerFirstName = input.customerName?.split(" ")[0] || "!"
-          const languageMessage = `Certo ${customerFirstName}! 🌍 Per cambiare la lingua di conversazione, puoi modificarla nel tuo profilo:\n\n👉 Modifica Lingua\n${profileLinkResult.linkUrl}\n\n📌 Lingue supportate:\n• 🇮🇹 Italiano\n• 🇬🇧 English\n• 🇪🇸 Español\n• 🇵🇹 Português\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+          const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
+          const languageMessage = `Certo ${customerFirstName}! 🌍 Per cambiare la lingua di conversazione, puoi modificarla nel tuo profilo:\n\n👉 Modifica Lingua\n${profileLink}\n\n📌 Lingue supportate:\n• 🇮🇹 Italiano\n• 🇬🇧 English\n• 🇪🇸 Español\n• 🇵🇹 Português\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
 
           const processingTimeMs = Date.now() - startTime
 
@@ -5350,46 +5352,58 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     })
 
     try {
-      // 🔧 Apply SafetyTranslationAgent ONLY for Widget channel
-      // WhatsApp: Skip - scheduler handles safety (translation already applied before queue)
-      if (input.channel === 'widget') {
-        const safetyAgent = new SafetyTranslationAgent(this.prisma)
-        const safetyResult = await safetyAgent.process({
+      // 🌍 Apply Translation Layer (ALWAYS)
+      const translationResult = await this.applyTranslation(
+        finalMessage,
+        input.workspaceId,
+        customerLanguage,
+        debugSteps,
+        customerName
+      )
+
+      totalTokens += translationResult.tokensUsed || 0
+      finalMessage = translationResult.message
+
+      // 🛡️ Widget Security Layer (widget only)
+      if (input.channel === "widget") {
+        const securityResult = await this.securityAgent.process({
           workspaceId: input.workspaceId,
-          response: finalMessage,
-          targetLanguage: customerLanguage,
+          message: finalMessage,
           customerName,
+          customerId: input.customerId,
         })
 
-        totalTokens += safetyResult.tokensUsed || 0
+        totalTokens += securityResult.tokensUsed || 0
 
         debugSteps.push({
           type: "safety",
           agent: "Widget Security Layer",
           timestamp: new Date().toISOString(),
           input: {
-            userMessage: finalMessage,
-            targetLanguage: customerLanguage,
+            textContent: finalMessage,
           },
           output: {
-            textResponse: safetyResult.translatedText,
-            translated: true,
+            textResponse: securityResult.message || finalMessage,
+            decision: securityResult.safe ? "approved" : "blocked",
           },
           tokenUsage: {
             promptTokens: 0,
-            completionTokens: safetyResult.tokensUsed || 0,
-            totalTokens: safetyResult.tokensUsed || 0,
+            completionTokens: securityResult.tokensUsed || 0,
+            totalTokens: securityResult.tokensUsed || 0,
+          },
+          details: {
+            safe: securityResult.safe,
+            blocked: !securityResult.safe,
+            blockedReason: securityResult.blockedReason,
           },
         })
 
-        if (safetyResult.safe && safetyResult.translatedText) {
-          finalMessage = safetyResult.translatedText
-        }
+        finalMessage = securityResult.message || finalMessage
       } else {
-        logger.info("⏭️ [ChatEngine] Skipping SafetyTranslation (WhatsApp - scheduler handles safety)")
+        logger.info("⏭️ [ChatEngine] Skipping Widget Security (WhatsApp - scheduler handles it)")
       }
     } catch (error) {
-      logger.error("❌ [ChatEngine] Informational safety/translation failed", {
+      logger.error("❌ [ChatEngine] Informational translation/security failed", {
         workspaceId: input.workspaceId,
         customerId: input.customerId,
         error: error.message,

@@ -51,6 +51,7 @@ import {
   Bot,
   Brain,
   CheckCircle,
+  Globe,
   HelpCircle,
   Loader2,
   Save,
@@ -205,8 +206,10 @@ export function AgentSettingsPage() {
       case "ORDER_TRACKING":
       case "CUSTOMER_SUPPORT":
         return Bot
-      case "SAFETY_TRANSLATION":
+      case "SECURITY":
         return Shield
+      case "TRANSLATION":
+        return Globe
       default:
         return Bot
     }
@@ -225,8 +228,10 @@ export function AgentSettingsPage() {
         return "rgb(156, 39, 176)" // Purple
       case "CUSTOMER_SUPPORT":
         return "rgb(233, 30, 99)" // Pink
-      case "SAFETY_TRANSLATION":
+      case "SECURITY":
         return "rgb(244, 67, 54)" // Red
+      case "TRANSLATION":
+        return "rgb(0, 150, 136)" // Teal
       default:
         return "rgb(158, 158, 158)" // Grey
     }
@@ -509,36 +514,42 @@ export function AgentSettingsPage() {
                         • Manages conversation history (10-minute rolling
                         window)
                       </li>
-                      <li>• Function Calling with 9 available functions</li>
+                      <li>• Function Calling with available functions</li>
                       <li>• Max 5 function call iterations per message</li>
                       <li>
                         • Functions: searchProducts, addToCart, viewCart,
                         removeFromCart, updateCartQuantity, clearCart,
-                        repeatLastOrder, getOrders, contactSupport
+                        repeatLastOrder, getOrders, contactOperator,
+                        getProfileLink, handlePushNotifications
                       </li>
                     </ul>
                   </div>
                 )}
 
-                {agent.agentType === "SAFETY_TRANSLATION" && (
+                {agent.agentType === "TRANSLATION" && (
+                  <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
+                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      Translation Layer - ALWAYS ACTIVE
+                    </h4>
+                    <ul className="text-sm space-y-1 text-muted-foreground">
+                      <li>• Translates every response to customer language</li>
+                      <li>• Uses workspace settings for product/service names</li>
+                      <li>• Runs for both WhatsApp and Widget channels</li>
+                    </ul>
+                  </div>
+                )}
+
+                {agent.agentType === "SECURITY" && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                     <h4 className="font-semibold mb-2 flex items-center gap-2">
                       <Shield className="w-4 h-4" />
-                      Safety Layer - ALWAYS ACTIVE
+                      Widget Security Layer - Widget Only
                     </h4>
                     <ul className="text-sm space-y-1 text-muted-foreground">
-                      <li>
-                        • Validates EVERY response before customer delivery
-                      </li>
-                      <li>
-                        • Blocks: PII (email, phone, password), profanity,
-                        phishing links, spam
-                      </li>
-                      <li>
-                        • Translates to customer's language (IT/ES/EN/PT
-                        supported)
-                      </li>
-                      <li>• If blocked: Returns safe fallback message</li>
+                      <li>• Validates responses before widget delivery</li>
+                      <li>• Blocks unsafe content & phishing links</li>
+                      <li>• WhatsApp security is handled by the scheduler</li>
                     </ul>
                   </div>
                 )}
@@ -679,6 +690,37 @@ export function AgentSettingsPage() {
                       <li>• Language auto-detected from browser settings</li>
                     </ul>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Translation + Security Variables */}
+            <div className="mt-6 space-y-3">
+              <h4 className="font-semibold text-lg flex items-center gap-2">
+                <Globe className="w-5 h-5 text-teal-600" />
+                Translation & Widget Security Variables
+              </h4>
+              <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-4">
+                <p className="text-xs text-teal-800 font-medium">
+                  ⚠️ These variables are used by the TRANSLATION and SECURITY agent prompts. They are replaced at runtime by the translation/security pipeline.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
+                  <code className="text-xs bg-teal-100 px-2 py-1 rounded font-mono whitespace-nowrap">{"{TARGET_LANGUAGE}"}</code>
+                  <span className="text-muted-foreground">Target language for translation (e.g., "Italian", "Spanish"). Also accepts <code className="text-xs bg-primary/10 px-1 rounded">{"{{languageUser}}"}</code></span>
+                </div>
+                <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
+                  <code className="text-xs bg-teal-100 px-2 py-1 rounded font-mono whitespace-nowrap">{"{MESSAGE}"}</code>
+                  <span className="text-muted-foreground">The AI response to translate/validate. Also accepts <code className="text-xs bg-primary/10 px-1 rounded">{"{{message}}"}</code></span>
+                </div>
+                <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
+                  <code className="text-xs bg-teal-100 px-2 py-1 rounded font-mono whitespace-nowrap">{"{CUSTOMER_NAME}"}</code>
+                  <span className="text-muted-foreground">Customer name for personalization. Also accepts <code className="text-xs bg-primary/10 px-1 rounded">{"{{customerName}}"}</code></span>
+                </div>
+                <div className="flex items-start gap-2 p-2 rounded bg-muted/50">
+                  <code className="text-xs bg-teal-100 px-2 py-1 rounded font-mono whitespace-nowrap">{"{ALLOWED_LINKS}"}</code>
+                  <span className="text-muted-foreground">List of allowed domains/links the agent can include (Security Layer)</span>
                 </div>
               </div>
             </div>

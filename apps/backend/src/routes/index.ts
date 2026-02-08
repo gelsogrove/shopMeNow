@@ -311,7 +311,7 @@ async function handleNewUserWelcomeFlow(
     // 🆕 Feature 174: Removed RegistrationAttempts check - users can receive welcome message freely
 
     // If no customer is found, this is a new user
-    // 🔒 USE LLMService.handleNewUserWelcome() - ENSURES Safety & Translation layer
+    // 🔒 USE LLMService.handleNewUserWelcome() - ENSURES Translation Layer
     const { LLMService } = require("../services/llm.service")
     const llmService = new LLMService()
 

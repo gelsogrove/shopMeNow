@@ -53,6 +53,17 @@ export class SecurityAgentService {
     // Spam/abuse patterns
     { pattern: /(viagra|cialis|casino|lottery|winner|congratulations.*won|claim.*prize)/i, reason: 'Spam content detected' },
   ]
+  private readonly openRouterApiKey = process.env.OPENROUTER_API_KEY || ''
+  private readonly openRouterBaseUrl = 'https://openrouter.ai/api/v1'
+
+  private buildSystemPrompt(basePrompt: string, variables: Record<string, string>) {
+    let prompt = basePrompt
+    for (const [key, value] of Object.entries(variables)) {
+      const regex = new RegExp(`{{${key}}}`, 'g')
+      prompt = prompt.replace(regex, value)
+    }
+    return prompt
+  }
 
   /**
    * Validate a message before sending
@@ -66,19 +77,21 @@ export class SecurityAgentService {
     }
 
     // 2. Check customer is not blacklisted
+    let customerName = 'Customer'
     try {
       const customer = await prisma.customers.findUnique({
         where: { 
           id: customerId,
           workspaceId, // Workspace isolation
         },
-        select: { isBlacklisted: true },
+        select: { isBlacklisted: true, name: true },
       })
 
       if (customer?.isBlacklisted) {
         logger.warn(`🚫 Message blocked: Customer ${customerId} is blacklisted`)
         return { isSafe: false, reason: 'Customer is blacklisted' }
       }
+      customerName = customer?.name || customerName
     } catch (error) {
       logger.error('Failed to check customer blacklist status:', error)
       // Don't block on error - proceed with pattern check
@@ -101,7 +114,98 @@ export class SecurityAgentService {
       return { isSafe: false, reason: 'Message too long (max 10000 chars)' }
     }
 
-    // Message passed all checks
-    return { isSafe: true }
+    // 5. LLM-based Security (dynamic prompt from DB) - optional
+    try {
+      if (!this.openRouterApiKey) {
+        logger.warn('⚠️ OPENROUTER_API_KEY missing - skipping LLM security check')
+        return { isSafe: true }
+      }
+
+      const securityAgent = await prisma.agentConfig.findFirst({
+        where: {
+          workspaceId,
+          type: 'SECURITY',
+          isActive: true,
+        },
+        select: {
+          systemPrompt: true,
+          model: true,
+          temperature: true,
+          maxTokens: true,
+        },
+      })
+
+      if (!securityAgent) {
+        return { isSafe: true }
+      }
+
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { allowedExternalLinks: true },
+      })
+
+      const allowedLinks = workspace?.allowedExternalLinks?.length
+        ? workspace.allowedExternalLinks.join(', ')
+        : ''
+
+      const systemPrompt = this.buildSystemPrompt(securityAgent.systemPrompt, {
+        nameUser: customerName,
+        workspaceId,
+        ALLOWED_EXTERNAL_LINKS: allowedLinks,
+      })
+
+      const userMessage = `Check if this message is safe:\n\n"${messageContent}"\n\nRespond with JSON: {"safe": true/false, "message": "...", "reason": "..."}` 
+
+      const response = await fetch(`${this.openRouterBaseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.openRouterApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.FRONTEND_URL || 'https://echatbot.ai',
+          'X-Title': 'eChatbot Scheduler Security Layer',
+        },
+        body: JSON.stringify({
+          model: securityAgent.model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
+          temperature: securityAgent.temperature,
+          max_tokens: securityAgent.maxTokens,
+          response_format: { type: 'json_object' },
+        }),
+      })
+
+      if (!response.ok) {
+        logger.warn('⚠️ LLM security check failed - allowing message', {
+          status: response.status,
+          statusText: response.statusText,
+        })
+        return { isSafe: true }
+      }
+
+      const data: any = await response.json()
+      const llmResponse = data?.choices?.[0]?.message?.content
+      if (!llmResponse) {
+        return { isSafe: true }
+      }
+
+      let parsed: { safe?: boolean; reason?: string; blockedReason?: string }
+      try {
+        parsed = JSON.parse(llmResponse)
+      } catch (error) {
+        logger.warn('⚠️ Failed to parse LLM security JSON - allowing message', {
+          error,
+        })
+        return { isSafe: true }
+      }
+
+      const safe = parsed.safe !== false
+      const reason = parsed.blockedReason || parsed.reason
+      return { isSafe: safe, reason }
+    } catch (error) {
+      logger.warn('⚠️ LLM security check error - allowing message', { error })
+      return { isSafe: true }
+    }
   }
 }

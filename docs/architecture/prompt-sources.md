@@ -1,12 +1,18 @@
 # Prompt Sources Architecture
 
-## ✅ LEGITIMATE Hardcoded Prompts
+## ✅ Prompt Sources (Current)
 
-### 1. Translation-Security Service
-**File**: `apps/backend/src/services/translation-security.service.ts`
-**Why Hardcoded**: Security-critical rules (profanity, scam, phishing patterns)
-**Reason**: MUST NOT be modifiable by workspace admins (security bypass risk)
-**Status**: ✅ Correct implementation
+### 1. Translation Layer (Database)
+**File**: `apps/backend/src/application/agents/TranslationAgent.ts`  
+**Prompt Source**: `agentConfig` (AgentType.TRANSLATION)  
+**Reason**: Workspace-specific translation tone and formatting rules.
+
+### 2. Security Layer (Database)
+**Files**:
+- `apps/backend/src/application/agents/SecurityAgent.ts` (Widget / backend)
+- `apps/scheduler/src/services/security-agent.service.ts` (WhatsApp scheduler)  
+**Prompt Source**: `agentConfig` (AgentType.SECURITY)  
+**Reason**: Security rules are editable but controlled by workspace admins.
 
 ## ❌ PROBLEMATIC Prompt Loading
 
@@ -25,7 +31,7 @@ All main agents load prompts from `agentConfig` table:
 - CartManagementAgentLLM  
 - OrderTrackingAgentLLM
 - CustomerSupportAgentLLM
-- SafetyTranslationAgent
+- SecurityAgent
 - TranslationAgent
 - Router Agent
 
@@ -39,7 +45,8 @@ const systemPrompt = config.systemPrompt
 
 | Service | Prompt Source | Status | Notes |
 |---------|--------------|--------|-------|
-| Translation-Security | Hardcoded | ✅ OK | Security rules |
+| Translation Layer | Database | ✅ OK | AgentType.TRANSLATION |
+| Security Layer | Database | ✅ OK | AgentType.SECURITY |
 | SummaryAgentLLM | File (missing) | ❌ BROKEN | Needs fix |
 | All other agents | Database | ✅ OK | Correct pattern |
 

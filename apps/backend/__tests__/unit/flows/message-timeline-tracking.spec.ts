@@ -18,7 +18,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
      * 2. Sistema genera welcome message
      * 3. Debug steps creati:
      *    - Step 1: Welcome message generation
-     *    - Step 2: Safety & Translation
+     *    - Step 2: Translation Layer
      *    - Step 3: WhatsApp queue
      * 4. Tutti gli step salvati in conversationMessage.debugInfo
      * 5. Frontend visualizza timeline completa
@@ -49,11 +49,11 @@ describe("Message Flow Timeline - Complete Tracking", () => {
       },
       {
         type: "safety",
-        agent: "Safety & Translation",
+        agent: "Translation Layer",
         model: "openai/gpt-4o-mini",
         temperature: 0.2,
         timestamp: "2025-11-20T10:00:01.000Z",
-        systemPrompt: "Safety & Translation Agent",
+        systemPrompt: "Translation Layer",
         input: {
           originalMessage: "Benvenuto! Link: https://...",
           targetLanguage: "it",
@@ -61,8 +61,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
         },
         output: {
           translatedMessage: "Benvenuto! Link: https://...",
-          safe: true,
-          blockedReason: null,
+          decision: "passthrough",
         },
         tokenUsage: {
           totalTokens: 150,
@@ -119,7 +118,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
      * 1. Operatore scrive messaggio (activeChatbot=false)
      * 2. Debug steps creati:
      *    - Step 1: Operator input
-     *    - Step 2: Safety & Translation
+     *    - Step 2: Translation Layer
      *    - Step 3: WhatsApp queue
      * 3. Steps salvati in conversationMessage.debugInfo
      * 4. conversationMessage.updateMany aggiorna con COMPLETE debug info
@@ -156,7 +155,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
       },
       {
         type: "safety",
-        agent: "Safety & Translation",
+        agent: "Translation Layer",
         model: "openai/gpt-4o-mini",
         temperature: 0.2,
         timestamp: "2025-11-20T10:05:01.000Z",
@@ -166,9 +165,8 @@ describe("Message Flow Timeline - Complete Tracking", () => {
           customerName: "Mario Rossi",
         },
         output: {
-          translatedMessage: "Ciao, come posso aiutarti?",
-          safe: true,
-          blockedReason: null,
+          translatedText: "Ciao, come posso aiutarti?",
+          decision: "passthrough",
         },
         tokenUsage: {
           totalTokens: 100,
@@ -203,7 +201,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
       isOperatorMessage: true,
       sentBy: "HUMAN_OPERATOR",
       timestamp: "2025-11-20T10:05:02.000Z",
-      steps: expectedDebugSteps, // COMPLETE with Safety & WhatsApp
+      steps: expectedDebugSteps, // COMPLETE with Translation & WhatsApp
       totalTokens: 100,
       totalCost: 0.0001,
       executionTimeMs: 2000,
@@ -227,15 +225,15 @@ describe("Message Flow Timeline - Complete Tracking", () => {
      * EXPECTED BEHAVIOR:
      *
      * 1. Customer scrive messaggio
-     * 2. LLM Router processa (Router → Agent → Safety)
+     * 2. LLM Router processa (Router → Agent → Translation)
      * 3. Debug steps creati:
      *    - Step 1: Router decision
      *    - Step 2: Agent execution (e.g., Product Search)
-     *    - Step 3: Safety & Translation
+     *    - Step 3: Translation Layer
      *    - Step 4: Function calls (if any)
      *    - Step 5: WhatsApp queue
      * 4. Tutti gli step salvati in conversationMessage.debugInfo
-     * 5. Timeline mostra flow completo: Router → Agent → Safety → Queue
+     * 5. Timeline mostra flow completo: Router → Agent → Translation → Queue
      *
      * VERIFIED IN: llm-router.service.ts (routeMessage method)
      *
@@ -285,20 +283,17 @@ describe("Message Flow Timeline - Complete Tracking", () => {
       },
       {
         type: "safety",
-        agent: "Safety & Translation",
+        agent: "Translation Layer",
         model: "openai/gpt-4o-mini",
         temperature: 0.2,
         timestamp: "2025-11-20T10:10:02.000Z",
         input: {
-          originalMessage: "Ecco i formaggi disponibili: ...",
+          previousResponse: "Ecco i formaggi disponibili: ...",
           targetLanguage: "it",
-          customerName: "Mario Rossi",
-          allowedLinks: ["https://echatbot.ai/products/123"],
         },
         output: {
-          translatedMessage: "Ecco i formaggi disponibili: ...",
-          safe: true,
-          blockedReason: null,
+          translatedText: "Ecco i formaggi disponibili: ...",
+          decision: "translated",
         },
         tokenUsage: {
           totalTokens: 200,
@@ -355,11 +350,11 @@ describe("Message Flow Timeline - Complete Tracking", () => {
      * 2. Sistema rileva WIP mode
      * 3. Debug steps creati:
      *    - Step 1: Maintenance Mode detection (Router)
-     *    - Step 2: SafetyTranslationAgent (translation + safety)
+     *    - Step 2: Translation Layer
      * 4. Steps salvati in conversationMessage.debugInfo
-     * 5. Timeline mostra "🚧 Maintenance Mode" → "SafetyTranslationAgent"
+     * 5. Timeline mostra "🚧 Maintenance Mode" → "Translation Layer"
      *
-     * VERIFIED IN: llm-router.service.ts:600-680 (P2 check with SafetyTranslationAgent)
+     * VERIFIED IN: llm-router.service.ts (WIP message with translation layer)
      *
      * CODE LOCATION:
      * apps/backend/src/services/llm-router.service.ts
@@ -388,17 +383,17 @@ describe("Message Flow Timeline - Complete Tracking", () => {
       },
       {
         type: "safety",
-        agent: "SafetyTranslationAgent",
+        agent: "Translation Layer",
         model: "openai/gpt-4o-mini",
         temperature: 0.2,
         timestamp: "2025-11-20T10:15:01.000Z",
         input: {
-          textToValidate: "Siamo in manutenzione. Ti contatteremo presto.",
+          previousResponse: "Siamo in manutenzione. Ti contatteremo presto.",
           targetLanguage: "it",
         },
         output: {
           translatedText: "Siamo in manutenzione. Ti contatteremo presto.",
-          safe: true,
+          decision: "passthrough",
         },
         tokenUsage: {
           promptTokens: 0,
@@ -419,7 +414,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
     // Verify WIP flow includes safety step
     const hasSafetyStep = expectedDebugSteps.some((s) => s.type === "safety")
     if (!hasSafetyStep) {
-      throw new Error("WIP message MUST pass through SafetyTranslationAgent (TASK16)")
+      throw new Error("WIP message MUST pass through Translation Layer (TASK16)")
     }
 
     // Verify no bypasses
@@ -428,7 +423,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
       throw new Error("WIP message MUST have Router step in timeline")
     }
 
-    console.log("✅ WIP message timeline with SafetyTranslationAgent documented (TASK16)")
+    console.log("✅ WIP message timeline with Translation Layer documented (TASK16)")
   })
 
   it("should save complete debug steps for security gate flow", () => {
@@ -439,9 +434,9 @@ describe("Message Flow Timeline - Complete Tracking", () => {
      * 2. Security Gate rileva malicious pattern
      * 3. Debug steps creati:
      *    - Step 1: Security Gate detection (Router)
-     *    - Step 2: SafetyTranslationAgent (translation + safety)
+     *    - Step 2: Translation Layer
      * 4. Steps salvati in conversationMessage.debugInfo
-     * 5. Timeline mostra "🚨 Security Gate" → "SafetyTranslationAgent"
+     * 5. Timeline mostra "🚨 Security Gate" → "Translation Layer"
      *
      * VERIFIED IN: llm-router.service.ts:480-550
      *
@@ -473,17 +468,17 @@ describe("Message Flow Timeline - Complete Tracking", () => {
       },
       {
         type: "safety",
-        agent: "SafetyTranslationAgent",
+        agent: "Translation Layer",
         model: "openai/gpt-4o-mini",
         temperature: 0.2,
         timestamp: "2025-11-20T10:20:01.000Z",
         input: {
-          textToValidate: "Security alert",
+          previousResponse: "Security alert",
           targetLanguage: "it",
         },
         output: {
           translatedText: "Avviso di sicurezza",
-          safe: true,
+          decision: "translated",
         },
         tokenUsage: {
           promptTokens: 0,
@@ -505,7 +500,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
     const hasSafetyStep = expectedDebugSteps.some((s) => s.type === "safety")
     if (!hasSafetyStep) {
       throw new Error(
-        "Security gate message MUST pass through SafetyTranslationAgent (TASK16)"
+        "Security gate message MUST pass through Translation Layer (TASK16)"
       )
     }
 
@@ -520,7 +515,7 @@ describe("Message Flow Timeline - Complete Tracking", () => {
     }
 
     console.log(
-      "✅ Security gate timeline with SafetyTranslationAgent documented (TASK16)"
+      "✅ Security gate timeline with Translation Layer documented (TASK16)"
     )
   })
 

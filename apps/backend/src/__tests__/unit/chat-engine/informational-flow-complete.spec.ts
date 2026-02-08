@@ -3,14 +3,14 @@
  * 
  * REQUIREMENTS (from analysis.md):
  * 1. Flow unico: TUTTI gli intent vanno al Router informational (NO delegations)
- * 2. SEMPRE passa da Safety + Translation + LinkReplacement
+ * 2. SEMPRE passa da Translation + LinkReplacement (+ Widget Security se widget)
  * 3. Variabili presenti: bot identity, personality, FAQ, address, human support
  * 4. NO token {{variables}} non sostituiti
  * 
  * Architecture:
  * ChatEngine → RouterOrchestrationService → InformationalWorkspaceStrategy
  *   → RouterAgent (template informational/01-router.template.md)
- *   → Safety + Translation + LinkReplacement
+ *   → Translation + LinkReplacement (+ Widget Security se widget)
  */
 
 import { prisma } from "@echatbot/database"

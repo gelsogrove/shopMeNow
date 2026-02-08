@@ -195,13 +195,13 @@ export async function contactOperator(
                   }
                 )
 
-                // 🔧 WhatsApp: Skip SafetyTranslationAgent - email summary doesn't need LLM translation
+                // 🔧 WhatsApp: Skip Widget Security - email summary is internal (no customer-facing translation)
                 // contactOperator is WhatsApp-only feature (human operator request)
                 // The summary is internal (for operator) so no need for customer-facing translation
                 const finalSummary = summaryResult.summary
                 
                 logger.info(
-                  "⏭️ [contactOperator] Skipping SafetyTranslation (internal summary for operator)"
+                  "⏭️ [contactOperator] Skipping Translation/Security (internal summary for operator)"
                 )
                 
                 // If summary is empty, throw error to trigger fallback
@@ -287,16 +287,19 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
             adminEmail: workspace?.whatsappSettings?.adminEmail || "NOT SET",
           })
 
-          // 📧 EMAIL NOTIFICATION (if method = "email" or operatorEmail is set)
-          if (workspace?.operatorContactMethod === "email" || workspace?.operatorEmail) {
+          // 📧 EMAIL NOTIFICATION (if method = "email")
+          if (workspace?.operatorContactMethod === "email") {
             // Import EmailService
             const {
               EmailService,
             } = require("../../application/services/email.service")
             const emailService = new EmailService()
 
-            // 🎯 Andrea's spec: Use workspace.operatorEmail directly
-            const targetEmail = workspace.operatorEmail || workspace.whatsappSettings?.adminEmail
+            // 🎯 Priority: agent email → workspace operatorEmail → adminEmail
+            const targetEmail =
+              customer.sales?.email ||
+              workspace.operatorEmail ||
+              workspace.whatsappSettings?.adminEmail
             const targetName = "Operatore"
 
             logger.info("✅ [contactOperator] Sending email to operator:", {

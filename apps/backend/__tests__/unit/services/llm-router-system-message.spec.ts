@@ -1,15 +1,26 @@
 import { LLMRouterService } from "../../../src/services/llm-router.service"
 
-const mockSafetyProcess = jest.fn().mockResolvedValue({
-  translatedText: "Hola!",
-  safe: true,
+const mockTranslationProcess = jest.fn().mockResolvedValue({
+  message: "Hola!",
+  translated: true,
   tokensUsed: 5,
+})
+const mockSecurityProcess = jest.fn().mockResolvedValue({
+  message: "Hola!",
+  safe: true,
+  tokensUsed: 3,
 })
 const mockSaveAssistantMessage = jest.fn()
 
-jest.mock("../../../src/application/agents/SafetyTranslationAgent", () => ({
-  SafetyTranslationAgent: jest.fn().mockImplementation(() => ({
-    process: mockSafetyProcess,
+jest.mock("../../../src/application/agents/TranslationAgent", () => ({
+  TranslationAgent: jest.fn().mockImplementation(() => ({
+    process: mockTranslationProcess,
+  })),
+}))
+
+jest.mock("../../../src/application/agents/SecurityAgent", () => ({
+  SecurityAgent: jest.fn().mockImplementation(() => ({
+    process: mockSecurityProcess,
   })),
 }))
 
@@ -32,12 +43,12 @@ describe("LLMRouterService - System message fast path", () => {
     jest.clearAllMocks()
   })
 
-  it("routes Widget system messages through SafetyTranslationAgent and saves history", async () => {
+  it("routes Widget system messages through Translation + Widget Security layers and saves history", async () => {
     /**
-     * 🆕 UPDATED: Widget-only SafetyTranslationAgent (2025-01)
-     * 
-     * System messages on WIDGET channel should pass through SafetyTranslationAgent.
-     * WhatsApp system messages SKIP SafetyTranslationAgent (scheduler handles).
+     * 🆕 UPDATED: Translation + Widget Security (2026)
+     *
+     * System messages on WIDGET channel should pass through Translation Layer
+     * and then Widget Security Layer. WhatsApp skips Widget Security.
      * 
      * This test verifies Widget channel behavior.
      */
@@ -72,14 +83,22 @@ describe("LLMRouterService - System message fast path", () => {
       customerLanguage: "es",
       customerName: "Juan",
       isSystemMessage: true,
-      channel: "widget", // Widget channel: SafetyTranslationAgent applied
+      channel: "widget", // Widget channel: Security layer applied
     })
 
-    expect(mockSafetyProcess).toHaveBeenCalledWith({
+    expect(mockTranslationProcess).toHaveBeenCalledWith({
       workspaceId: "ws-1",
-      response: "Messaggio di sistema",
+      message: "Messaggio di sistema",
       targetLanguage: "es",
       customerName: "Juan",
+      customerId: "cust-1",
+      channel: "widget",
+    })
+    expect(mockSecurityProcess).toHaveBeenCalledWith({
+      workspaceId: "ws-1",
+      message: "Hola!",
+      customerName: "Juan",
+      customerId: "cust-1",
     })
     expect(mockSaveAssistantMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -92,6 +111,6 @@ describe("LLMRouterService - System message fast path", () => {
     )
     expect(result.response).toBe("Hola!")
     expect(result.agentUsed).toBe("SYSTEM_NOTIFICATION")
-    expect(result.tokensUsed).toBe(5)
+    expect(result.tokensUsed).toBe(8)
   })
 })

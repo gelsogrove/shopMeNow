@@ -22,16 +22,19 @@ import { AgentType, PrismaClient, Workspace } from "@echatbot/database"
 import logger from "../utils/logger"
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
-import { SafetyTranslationAgent, type SafetyResult } from "../application/agents/SafetyTranslationAgent"
+import { TranslationAgent } from "../application/agents/TranslationAgent"
+import { SecurityAgent, type SecurityResult } from "../application/agents/SecurityAgent"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
 
 export class InformationalWorkspaceStrategy implements RoutingStrategy {
   private linkReplacementService: LinkReplacementService
-  private safetyAgent: SafetyTranslationAgent
+  private translationAgent: TranslationAgent
+  private securityAgent: SecurityAgent
 
   constructor(private prisma: PrismaClient) {
     this.linkReplacementService = new LinkReplacementService()
-    this.safetyAgent = new SafetyTranslationAgent(prisma)
+    this.translationAgent = new TranslationAgent(prisma)
+    this.securityAgent = new SecurityAgent(prisma)
   }
 
   /**
@@ -115,31 +118,34 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
         context.workspaceId
       )
 
-      // 🔒 STEP 2: Safety + Translation (ONLY for Widget)
-      // 🔧 WhatsApp: Skip SafetyTranslationAgent - scheduler handles safety (translation already applied before queue)
-      let safetyResult: SafetyResult = {
-        safe: true,
-        translatedText: linkReplacedResponse.response || agentResponse.output,
-        tokensUsed: 0,
-      }
-      
-      if (context.channel === 'widget') {
-        logger.debug("🔒 Translating informational response with SafetyTranslationAgent (Widget)")
-        safetyResult = await this.safetyAgent.process({
-          workspaceId: context.workspaceId,
-          response: linkReplacedResponse.response || agentResponse.output,
-          targetLanguage: customerData.language || "it",
-          customerName: customerData.name,
-        })
-      } else {
-        logger.info("⏭️ Skipping SafetyTranslation (WhatsApp - scheduler handles safety)")
-      }
+      // 🌍 STEP 2: Translation Layer (ALWAYS)
+      const translationInput =
+        linkReplacedResponse.response || agentResponse.output
+      const translationResult = await this.translationAgent.process({
+        workspaceId: context.workspaceId,
+        message: translationInput,
+        targetLanguage: customerData.language || "it",
+        customerName: customerData.name,
+        customerId: customerData.id,
+        channel: context.channel,
+      })
 
-      // Final response after filters
-      const finalResponse =
-        safetyResult.safe && safetyResult.translatedText
-          ? safetyResult.translatedText
-          : linkReplacedResponse.response || agentResponse.output
+      let finalResponse = translationResult.message
+      let securityResult: SecurityResult | null = null
+
+      // 🛡️ STEP 3: Widget Security Layer (Widget only)
+      if (context.channel === "widget") {
+        logger.debug("🛡️ Applying Widget Security Layer (Widget)")
+        securityResult = await this.securityAgent.process({
+          workspaceId: context.workspaceId,
+          message: finalResponse,
+          customerName: customerData.name,
+          customerId: customerData.id,
+        })
+        finalResponse = securityResult.message || finalResponse
+      } else {
+        logger.info("⏭️ Skipping Widget Security (WhatsApp - scheduler handles it)")
+      }
 
       // Build debug steps for timeline
       const debugSteps: any[] = [
@@ -166,30 +172,77 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
       if (context.channel === "widget") {
         debugSteps.push({
           type: "safety",
-          agent: "Widget Security Layer",
+          agent: "Translation Layer",
           timestamp: new Date().toISOString(),
           input: {
-            textContent: linkReplacedResponse.response || agentResponse.output,
+            previousResponse: translationInput,
             targetLanguage: customerData.language || "it",
           },
           output: {
-            textResponse: finalResponse,
-            translated: true,
+            translatedText: translationResult.message,
+            decision: translationResult.translated ? "translated" : "passthrough",
+            executionTimeMs: translationResult.executionTimeMs,
           },
           tokenUsage: {
             promptTokens: 0,
-            completionTokens: safetyResult.tokensUsed || 0,
-            totalTokens: safetyResult.tokensUsed || 0,
+            completionTokens: translationResult.tokensUsed || 0,
+            totalTokens: translationResult.tokensUsed || 0,
+          },
+        })
+      } else {
+        debugSteps.push({
+          type: "safety",
+          agent: "Translation Layer",
+          timestamp: new Date().toISOString(),
+          input: {
+            previousResponse: translationInput,
+            targetLanguage: customerData.language || "it",
+          },
+          output: {
+            translatedText: translationResult.message,
+            decision: translationResult.translated ? "translated" : "passthrough",
+            executionTimeMs: translationResult.executionTimeMs,
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: translationResult.tokensUsed || 0,
+            totalTokens: translationResult.tokensUsed || 0,
           },
         })
       }
 
+      if (context.channel === "widget" && securityResult) {
+        debugSteps.push({
+          type: "safety",
+          agent: "Widget Security Layer",
+          timestamp: new Date().toISOString(),
+          input: {
+            textToValidate: translationResult.message,
+          },
+          output: {
+            textResponse: finalResponse,
+            safe: securityResult.safe,
+            decision: securityResult.safe ? "approved" : "blocked",
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: securityResult.tokensUsed || 0,
+            totalTokens: securityResult.tokensUsed || 0,
+          },
+          safe: securityResult.safe,
+          blocked: !securityResult.safe,
+          blockedReason: securityResult.blockedReason,
+        })
+      }
+
       return {
-        response: finalResponse, // ✅ NOW with Safety + LinkReplacement + Translation
+        response: finalResponse, // ✅ NOW with LinkReplacement + Translation (+ Widget Security if widget)
         agentType: "CUSTOMER_SUPPORT" as AgentType,
         debugSteps,
         totalTokens:
-          (agentResponse.tokensUsed || 0) + (safetyResult.tokensUsed || 0),
+          (agentResponse.tokensUsed || 0) +
+          (translationResult.tokensUsed || 0) +
+          (securityResult?.tokensUsed || 0),
         conversationId: context.conversationId,
       }
 

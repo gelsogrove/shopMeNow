@@ -756,16 +756,14 @@ export class WhatsAppWebhookController {
         
         const rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
 
-        // 🛡️ STEP 4: Pass welcome message through Safety & Translation Agent
+        // 🌍 STEP 4: Pass welcome message through Translation Layer
         let finalMessage = rawWelcomeMessage
-        let safetyTokensUsed = 0
+        let translationTokensUsed = 0
         const debugSteps: any[] = []
 
         try {
-          const {
-            SafetyTranslationAgent,
-          } = require("../../../application/agents/SafetyTranslationAgent")
-          const safetyAgent = new SafetyTranslationAgent(prisma)
+          const { TranslationAgent } = require("../../../application/agents/TranslationAgent")
+          const translationAgent = new TranslationAgent(prisma)
 
           debugSteps.push({
             type: "welcome",
@@ -783,35 +781,24 @@ export class WhatsAppWebhookController {
             },
           })
 
-          const safetyResult = await safetyAgent.process({
+          const translationResult = await translationAgent.process({
             workspaceId: workspaceId,
-            response: rawWelcomeMessage,
+            message: rawWelcomeMessage,
             targetLanguage: finalLanguage, // 🌍 Already resolved: phonePrefix || workspace.defaultLanguage
             customerName: "New Customer",
-            allowedLinks: [registrationLink], // Allow registration link
+            channel: "whatsapp",
           })
 
-          if (!safetyResult.safe) {
-            logger.error(
-              "[WEBHOOK] ⚠️ Welcome message failed safety check (this should never happen)",
-              {
-                blockedReason: safetyResult.blockedReason,
-              }
-            )
-            // Fallback to raw message if safety check fails
-            finalMessage = rawWelcomeMessage
-          } else {
-            finalMessage = safetyResult.translatedText || rawWelcomeMessage
-            safetyTokensUsed = safetyResult.tokensUsed || 0
-          }
+          finalMessage = translationResult.message || rawWelcomeMessage
+          translationTokensUsed = translationResult.tokensUsed || 0
 
           debugSteps.push({
             type: "safety",
-            agent: "Safety & Translation",
+            agent: "Translation Layer",
             model: "openai/gpt-4o-mini",
             temperature: 0.2,
             timestamp: new Date().toISOString(),
-            systemPrompt: safetyResult.systemPrompt || "Safety & Translation Agent",
+            systemPrompt: translationResult.systemPrompt || "Translation Layer",
             input: {
               originalMessage: rawWelcomeMessage,
               targetLanguage: finalLanguage,
@@ -819,24 +806,22 @@ export class WhatsAppWebhookController {
             },
             output: {
               translatedMessage: finalMessage,
-              safe: safetyResult.safe,
-              blockedReason: safetyResult.blockedReason || null,
+              decision: translationResult.translated ? "translated" : "passthrough",
             },
             tokenUsage: {
-              totalTokens: safetyTokensUsed,
+              totalTokens: translationTokensUsed,
             },
           })
 
           logger.info(
-            "[WEBHOOK] 🛡️ Welcome message passed through Safety & Translation",
+            "[WEBHOOK] 🌍 Welcome message passed through Translation Layer",
             {
-              tokensUsed: safetyTokensUsed,
-              safe: safetyResult.safe,
+              tokensUsed: translationTokensUsed,
             }
           )
         } catch (safetyError) {
           logger.error(
-            "[WEBHOOK] ❌ Safety agent error - using raw message",
+            "[WEBHOOK] ❌ Translation error - using raw message",
             safetyError
           )
           // Fallback to raw message on error
@@ -920,7 +905,7 @@ export class WhatsAppWebhookController {
               role: "assistant", // Bot response
               content: finalMessage,
               agentType: "REGISTRATION_FLOW",
-              tokensUsed: safetyTokensUsed,
+              tokensUsed: translationTokensUsed,
               deliveryStatus: "not_queued", // 🚫 Welcome messages are NOT sent via WhatsApp queue
               debugInfo: JSON.stringify({
                 source: "whatsapp-webhook",
@@ -1312,18 +1297,21 @@ export class WhatsAppWebhookController {
             || workspace.defaultLanguage // NOT nullable - set during channel registration
           
           let finalWipMessage = rawWipMessage
-          let safetyTokensUsed = 0
+          let translationTokensUsed = 0
           
           try {
-            const { SafetyTranslationAgent } = require("../../../application/agents/SafetyTranslationAgent")
-            const safetyAgent = new SafetyTranslationAgent(prisma)
-            const safetyResult = await safetyAgent.process({
-              text: rawWipMessage,
-              targetLanguage: customerLang,
+            const { TranslationAgent } = require("../../../application/agents/TranslationAgent")
+            const translationAgent = new TranslationAgent(prisma)
+            const translationResult = await translationAgent.process({
               workspaceId: customer.workspaceId,
+              message: rawWipMessage,
+              targetLanguage: customerLang,
+              customerName: customer.name || "Customer",
+              customerId: customer.id,
+              channel: "whatsapp",
             })
-            finalWipMessage = safetyResult.translatedText || rawWipMessage
-            safetyTokensUsed = safetyResult.tokensUsed || 0
+            finalWipMessage = translationResult.message || rawWipMessage
+            translationTokensUsed = translationResult.tokensUsed || 0
             logger.info("[WEBHOOK] 🌍 WIP message translated", {
               from: rawWipMessage.substring(0, 50),
               to: finalWipMessage.substring(0, 50),
@@ -1362,7 +1350,7 @@ export class WhatsAppWebhookController {
               role: "assistant",
               content: finalWipMessage,
               agentType: "ROUTER",
-              tokensUsed: safetyTokensUsed,
+              tokensUsed: translationTokensUsed,
               deliveryStatus: "pending",
               debugInfo: JSON.stringify({
                 channelDisabled: true,

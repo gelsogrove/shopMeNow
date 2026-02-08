@@ -248,12 +248,12 @@ const AGENT_METADATA: Record<string, {
     gradientFrom: "from-teal-500",
     gradientTo: "to-teal-600",
     borderColor: "border-teal-400",
-    description: "Validates safety for widget users",
-    details: "Applies security checks and blocks unsafe content. This layer is applied only for widget messages.",
-    whenUsed: "Widget-only step before sending",
+    description: "Validates safety for widget responses",
+    details: "Applies security checks and blocks unsafe content. Uses the same prompt as WhatsApp scheduler security checks.",
+    whenUsed: "Widget-only step after translation",
     example: "Blocks unsafe content for widget customers",
     widgetOnly: true,
-    isHardcoded: true,
+    isHardcoded: false,
     availableFunctions: [],
   },
   SECURITY: {
@@ -441,9 +441,28 @@ export function AgentFlowDiagram({
     return meta.name
   }
 
-  // Get agent by type
+  const normalizeAgentType = (type: string) => {
+    return type.toUpperCase() === "WIDGET_SECURITY" ? "SECURITY" : type
+  }
+
+  // Get agent by type (Widget Security maps to SECURITY config)
   const getAgent = (type: string): AgentConfig | undefined => {
-    return agents.find(a => a.type.toUpperCase() === type.toUpperCase())
+    const normalized = normalizeAgentType(type)
+    const agent = agents.find(
+      (a) => a.type.toUpperCase() === normalized.toUpperCase()
+    )
+
+    if (!agent) return undefined
+
+    if (type.toUpperCase() === "WIDGET_SECURITY") {
+      return {
+        ...agent,
+        type: "WIDGET_SECURITY",
+        name: "Widget Security Layer",
+      }
+    }
+
+    return agent
   }
 
   // Check if agent exists in database
@@ -783,8 +802,9 @@ export function AgentFlowDiagram({
         {/* Widget Security Layer (Widget only) */}
         <div className="flex flex-col items-center gap-1">
           <AgentNode
+            agent={getAgent("WIDGET_SECURITY")}
             metadata={AGENT_METADATA.WIDGET_SECURITY}
-            isEditable={false}
+            isEditable={true}
             isActive={true}
             onClick={() => handleAgentClick("WIDGET_SECURITY")}
             size="normal"

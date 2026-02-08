@@ -7,6 +7,8 @@ import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import { usageService } from "../../../services/usage.service"
 import { websocketService } from "../../../services/websocket.service"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
+import { TranslationAgent } from "../../../application/agents/TranslationAgent"
+import { SecurityAgent } from "../../../application/agents/SecurityAgent"
 import logger from "../../../utils/logger"
 
 export class ChatController {
@@ -299,7 +301,7 @@ export class ChatController {
    * 
    * OPERATOR MESSAGE FLOW (MUST be represented in timeline):
    * 1. 🎧 Human Operator Input
-   * 2. 🛡️ Safety & Translation Agent (MANDATORY - always include in debugSteps)
+   * 2. 🌍 Translation Layer (always) + 🛡️ Widget Security Layer (widget only)
    * 3. 📤 WhatsApp Queue (MANDATORY - always include in debugSteps)
    * 
    * CRITICAL: Update conversationMessage.debugInfo with COMPLETE debugSteps 
@@ -407,41 +409,26 @@ export class ChatController {
       
       debugSteps.push(operatorDebugStep)
 
-      // 🛡️ STEP 2: Safety & Translation FIRST (before saving)
+      // 🌍 STEP 2: Translation Layer FIRST (before saving)
       let finalMessage = content
+      const isWidgetChannel = chatSession.channel === "widget"
       try {
-        const {
-          SafetyTranslationAgent,
-        } = require("../../../application/agents/SafetyTranslationAgent")
-        const safetyAgent = new SafetyTranslationAgent()
-
-        const safetyResult = await safetyAgent.process({
+        const translationAgent = new TranslationAgent(this.prisma)
+        const translationResult = await translationAgent.process({
           workspaceId: workspaceId,
-          response: content,
+          message: content,
           targetLanguage: chatSession.customer.language || "it",
           customerName: chatSession.customer.name || "Cliente",
-          allowedLinks: [], // Operator messages typically don't have tokens
+          customerId: chatSession.customer.id,
+          channel: chatSession.channel,
         })
 
-        if (!safetyResult.safe) {
-          logger.warn(
-            `[CHAT-SEND] ⚠️ Operator message failed safety check: ${safetyResult.blockedReason}`
-          )
-          // Block unsafe operator messages
-          res.status(400).json({
-            success: false,
-            error: "Message blocked by safety filter",
-            reason: safetyResult.blockedReason,
-          })
-          return
-        }
-
-        finalMessage = safetyResult.translatedText || content
+        finalMessage = translationResult.message || content
         
-        // 🆕 ADD Safety debug step
+        // 🆕 ADD Translation debug step
         debugSteps.push({
           type: "safety",
-          agent: "Safety & Translation",
+          agent: "Translation Layer",
           model: "openai/gpt-4o-mini",
           temperature: 0,
           timestamp: new Date().toISOString(),
@@ -451,23 +438,70 @@ export class ChatController {
             customerName: chatSession.customer.name || "Cliente",
           },
           output: {
-            translatedMessage: finalMessage,
-            safe: true,
-            blockedReason: null,
+            translatedText: finalMessage,
+            decision: translationResult.translated ? "translated" : "passthrough",
           },
           tokenUsage: {
             promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
+            completionTokens: translationResult.tokensUsed || 0,
+            totalTokens: translationResult.tokensUsed || 0,
           },
         })
-        
+
+        if (isWidgetChannel) {
+          const securityAgent = new SecurityAgent(this.prisma)
+          const securityResult = await securityAgent.process({
+            workspaceId: workspaceId,
+            message: finalMessage,
+            customerName: chatSession.customer.name || "Cliente",
+            customerId: chatSession.customer.id,
+          })
+
+          if (!securityResult.safe) {
+            logger.warn(
+              `[CHAT-SEND] ⚠️ Operator message blocked by Widget Security Layer: ${securityResult.blockedReason}`
+            )
+            res.status(400).json({
+              success: false,
+              error: "Message blocked by security filter",
+              reason: securityResult.blockedReason,
+            })
+            return
+          }
+
+          finalMessage = securityResult.message || finalMessage
+
+          debugSteps.push({
+            type: "safety",
+            agent: "Widget Security Layer",
+            model: "openai/gpt-4o-mini",
+            temperature: 0,
+            timestamp: new Date().toISOString(),
+            input: {
+              originalMessage: finalMessage,
+            },
+            output: {
+              safe: securityResult.safe,
+              blockedReason: securityResult.blockedReason || null,
+              textResponse: finalMessage,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: securityResult.tokensUsed || 0,
+              totalTokens: securityResult.tokensUsed || 0,
+            },
+            safe: securityResult.safe,
+            blocked: !securityResult.safe,
+            blockedReason: securityResult.blockedReason,
+          })
+        }
+
         logger.info(
-          `[CHAT-SEND] ✅ Operator message passed safety validation`
+          `[CHAT-SEND] ✅ Operator message processed (translation${isWidgetChannel ? " + widget security" : ""})`
         )
       } catch (safetyError) {
         logger.warn(
-          `[CHAT-SEND] ⚠️ Safety layer failed, using original message:`,
+          `[CHAT-SEND] ⚠️ Translation/security failed, using original message:`,
           safetyError.message
         )
         // Continue with original message if safety fails

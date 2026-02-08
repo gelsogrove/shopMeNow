@@ -2605,7 +2605,7 @@ export class MessageRepository {
   /**
    * Get WIP message from database - NO HARDCODE (English only)
    * @param workspaceId Workspace ID
-   * @returns WIP message from database (will be translated by Safety & Translation layer)
+   * @returns WIP message from database (will be translated by Translation Layer)
    */
   async getWipMessage(workspaceId: string): Promise<string> {
     try {
@@ -2635,7 +2635,7 @@ export class MessageRepository {
   /**
    * Get welcome message from database - NO HARDCODE (English only)
    * @param workspaceId Workspace ID
-   * @returns Welcome message from database (will be translated by Safety & Translation layer)
+   * @returns Welcome message from database (will be translated by Translation Layer)
    */
   async getWelcomeMessage(workspaceId: string): Promise<string> {
     try {
@@ -2713,7 +2713,7 @@ export class MessageRepository {
    * Get error message from database - NO HARDCODE (English only)
    * Uses wipMessage as fallback for error messages
    * @param workspaceId Workspace ID
-   * @returns Error message from database (will be translated by Safety & Translation layer)
+   * @returns Error message from database (will be translated by Translation Layer)
    */
   async getErrorMessage(workspaceId: string): Promise<string> {
     try {

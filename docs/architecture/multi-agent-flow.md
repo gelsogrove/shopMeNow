@@ -11,9 +11,9 @@
 eChatbot uses a **multi-agent architecture** with two distinct message processing flows:
 
 ### 1. Router Flow (`llm-router.service.ts`)
-- **Agents**: Router → Specialist Agents → SafetyTranslationAgent (**Widget only**)
-- **SafetyTranslationAgent** combines: safety validation + translation (Widget channel only)
-- WhatsApp messages: SafetyTranslationAgent **skipped** (Scheduler handles security + translation)
+- **Agents**: Router → Specialist Agents → Translation Layer → Widget Security Layer (**Widget only**)
+- **Translation Layer** handles language conversion; **Widget Security** validates safety (widget-only)
+- WhatsApp messages: Widget Security runs in Scheduler; translation happens before queue
 - Used for: complex routing, multiple agent coordination
 
 ### 2. ChatEngine Flow (`chat-engine.service.ts`) ⬅️ **NEW**
@@ -146,14 +146,14 @@ Result: questions like “avete pasta o formaggi?” now produce only those cate
     },
     {
       "type": "safety",
-      "agent": "Safety & Translation Agent",
+      "agent": "Translation Layer",
       "model": "gpt-4o-mini",
       "temperature": 0.2,
       "timestamp": "2025-11-13T18:40:12.500Z",
-      "systemPrompt": "# 🛡️ SAFETY & TRANSLATION...", // ✅ Safety prompt
+      "systemPrompt": "# 🌍 TRANSLATION...", // ✅ Translation prompt
       "tokenUsage": { "totalTokens": 3012 },
-      "input": { "textToValidate": "Ciao Mario! Ecco i salumi..." },
-      "output": { "safe": true, "translatedText": "Hola Mario! Aquí están..." }
+      "input": { "previousResponse": "Ciao Mario! Ecco i salumi..." },
+      "output": { "translatedText": "Hola Mario! Aquí están...", "decision": "translated" }
     }
   ],
   "totalTokens": 16366,
@@ -167,7 +167,7 @@ Result: questions like “avete pasta o formaggi?” now produce only those cate
 
 1. Router step (LLM call #1) with `systemPrompt`
 2. Sub-agent step with `systemPrompt`
-3. Safety step with `systemPrompt`
+3. Translation step with `systemPrompt`
 
 ❌ **MUST NOT have**:
 
@@ -247,7 +247,7 @@ debugSteps.push({ type: "safety", ... }) // ⬅️ Push here!
 | 1    | Router LLM call      | ~5000       | $0.00188 |
 | 2    | Specialist LLM call  | ~8000       | $0.00300 |
 | 3    | Token replacement    | 0 (backend) | $0       |
-| 4    | Safety LLM call      | ~3000       | $0.00113 |
+| 4    | Translation LLM call | ~3000       | $0.00113 |
 
 **Total**:
 
@@ -269,7 +269,7 @@ Before merging changes:
    - Step 1: Router Agent (LLM call)
    - Step 2: PRODUCT_SEARCH Agent
    - Step 3: Token Replacement (optional)
-   - Step 4: Safety & Translation Agent
+   - Step 4: Translation Layer
 4. **Expand each step**:
    - ✅ 📄 PROMPT (System) section present
    - ✅ PROMPT appears BEFORE INPUT (order: PROMPT → INPUT → OUTPUT)
@@ -385,34 +385,25 @@ async routeMessage(input: RouteMessageInput): Promise<RouteMessageResult> {
 }
 ```
 
-### TranslationAgent vs SafetyTranslationAgent
+### Translation & Security Layers
 
-| Agent | Location | Purpose | Channel |
+| Layer | Location | Purpose | Channel |
 |-------|----------|---------|---------|
-| **TranslationAgent** | `chat-engine.service.ts` | Translation ONLY - converts Italian to customer language | All channels |
-| **SafetyTranslationAgent** | `llm-router.service.ts` | Safety + Translation combined for router-based flow | **Widget only** |
+| **Translation Layer** | `llm-router.service.ts`, `chat-engine.service.ts` | Translation ONLY - converts base response to customer language | All channels |
+| **Widget Security Layer** | `SecurityAgent.ts` (backend) | Safety validation AFTER translation | Widget only |
+| **WhatsApp Security Layer** | `security-agent.service.ts` (scheduler) | Safety validation BEFORE WhatsApp send | WhatsApp only |
 
-#### SafetyTranslationAgent - Widget Only (Updated 2025-01)
-
-**Important**: SafetyTranslationAgent is applied **only for Widget channel**. WhatsApp messages are processed by the **Scheduler** which has its own SecurityAgentService + TranslationService.
-
-| Channel | SafetyTranslationAgent | Security Layer |
-|---------|------------------------|----------------|
-| **Widget** | ✅ Applied | SafetyTranslationAgent in backend |
-| **WhatsApp** | ❌ Skipped | Scheduler (SecurityAgentService + TranslationService) |
-
-**Rationale**: Prevents double LLM costs - WhatsApp messages go through the scheduler queue which already performs security checks and translation.
+**Important**: Translation happens before queueing. Widget security runs only for widget responses. WhatsApp security runs in the scheduler to avoid double LLM costs.
 
 ### Debug Step in Message Flow Timeline
 
 The translation step appears as:
 ```json
 {
-  "type": "translation",
-  "agent": "🌍 Translation Agent",
-  "input": "Risposta in italiano...",
-  "output": "Response in customer's language...",
-  "targetLanguage": "en"
+  "type": "safety",
+  "agent": "Translation Layer",
+  "input": { "previousResponse": "Risposta in italiano..." },
+  "output": { "translatedText": "Response in customer's language...", "decision": "translated" }
 }
 ```
 
