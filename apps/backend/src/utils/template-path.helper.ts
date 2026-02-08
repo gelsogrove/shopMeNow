@@ -11,7 +11,7 @@
  * Each folder is SELF-CONTAINED with all templates needed.
  */
 
-// 🗂️ ECOMMERCE TEMPLATE FILES (10 files)
+// 🗂️ ECOMMERCE TEMPLATE FILES (12 files)
 export const ECOMMERCE_TEMPLATE_FILES: Record<string, string> = {
   ROUTER: "01-router.template.md",
   PRODUCT_SEARCH: "02-product-search.template.md",
@@ -23,13 +23,17 @@ export const ECOMMERCE_TEMPLATE_FILES: Record<string, string> = {
   TRANSLATION: "08-translation.template.md",
   PRODUCT_CONTEXT: "09-product-context.template.md",
   ORDER_OPTIMIZATION: "10-order-optimization.template.md",
+  SUMMARY_AGENT: "11-summary.template.md",
+  CONVERSATION_HISTORY: "12-conversation-history.template.md",
 }
 
-// 🗂️ INFORMATIONAL TEMPLATE FILES (3 files)
+// 🗂️ INFORMATIONAL TEMPLATE FILES (5 files)
 export const INFORMATIONAL_TEMPLATE_FILES: Record<string, string> = {
   CUSTOMER_SUPPORT: "01-info-agent.template.md",  // Main conversational agent for info-only channels
   SECURITY: "02-security.template.md",
   TRANSLATION: "03-translation.template.md",
+  SUMMARY_AGENT: "04-summary.template.md",
+  CONVERSATION_HISTORY: "05-conversation-history.template.md",
 }
 
 // Agents available ONLY for e-commerce workspaces
