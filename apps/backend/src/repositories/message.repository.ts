@@ -2275,12 +2275,41 @@ export class MessageRepository {
         }
       }
 
-      // Delete all messages in the chat session
+      // Delete all messages in the chat session (old Message model)
       await this.prisma.message.deleteMany({
         where: {
           chatSessionId,
         },
       })
+
+      // 🔧 CRITICAL FIX: Also delete ConversationMessage records for this session
+      // Without this, WelcomeMessageHandler thinks customer already chatted
+      // because it checks conversationMessage.count (different table!)
+      
+      // First, get all conversationMessage IDs for this session
+      const conversationMessages = await this.prisma.conversationMessage.findMany({
+        where: { conversationId: chatSessionId },
+        select: { id: true },
+      })
+      
+      if (conversationMessages.length > 0) {
+        const messageIds = conversationMessages.map((m) => m.id)
+        
+        // Nullify WhatsAppQueue FK references to avoid constraint violations
+        await this.prisma.whatsAppQueue.updateMany({
+          where: { conversationMessageId: { in: messageIds } },
+          data: { conversationMessageId: null },
+        })
+        
+        // Now safe to delete conversation messages
+        const deletedConversationMessages = await this.prisma.conversationMessage.deleteMany({
+          where: { conversationId: chatSessionId },
+        })
+        
+        logger.info(
+          `deleteChat: Also deleted ${deletedConversationMessages.count} conversation_messages for session ${chatSessionId}`
+        )
+      }
 
       // Then delete the chat session itself
       await this.prisma.chatSession.delete({

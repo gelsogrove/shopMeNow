@@ -1003,7 +1003,7 @@ export class WhatsAppWebhookController {
       // If NO messages exist → send welcome message (even if customer is registered)
       // This handles scenario: registered customer with deleted chat history
       const messageCount = await prisma.conversationMessage.count({
-        where: { customerId: customer.id },
+        where: { customerId: customer.id, workspaceId: customer.workspaceId },
       })
 
       if (messageCount === 0) {
