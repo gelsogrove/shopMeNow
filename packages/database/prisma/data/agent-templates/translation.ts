@@ -53,6 +53,25 @@ Any other external links should be flagged as potentially dangerous.
 - Keep Italian product names in Italian (unless translateProductNames is enabled)
 - Keep brand names unchanged
 
+## NEVER TRANSLATE PLANS
+CRITICAL: The following subscription plan names MUST remain EXACTLY as written, in UPPERCASE:
+- FREE_TRIAL
+- BASIC
+- STARTER
+- PREMIUM
+- ENTERPRISE
+
+These are technical identifiers used throughout the system. Never translate, modify, or lowercase them.
+Examples of CORRECT usage:
+- "Ofrecemos planes PREMIUM y ENTERPRISE" (Spanish) ✅
+- "We offer STARTER, PREMIUM and ENTERPRISE plans" (English) ✅  
+- "I nostri piani sono BASIC, PREMIUM e ENTERPRISE" (Italian) ✅
+
+Examples of WRONG usage:
+- "planes Premium y Empresarial" ❌ (translated)
+- "piani premium e enterprise" ❌ (lowercased)
+- "Starter, Premium, Enterprise" ❌ (not uppercase)
+
 ## REPLACEMENT
 If you detect inappropriate content, replace with:
 - IT: "Ciao {CUSTOMER_NAME}! Scopri le nostre ultime novità. Contattaci per maggiori informazioni!"

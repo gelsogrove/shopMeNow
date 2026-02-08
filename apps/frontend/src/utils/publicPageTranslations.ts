@@ -213,6 +213,17 @@ export interface PublicPageTexts {
   downloadCreditNote: string
   documentNotAvailable: string
   documentBeingPrepared: string
+
+  // Delete Account
+  deleteAccountTitle: string
+  deleteAccountDescription: string
+  deleteAccountButton: string
+  deleteAccountConfirmTitle: string
+  deleteAccountConfirmMessage: string
+  deleteAccountConfirmButton: string
+  deleteAccountSuccess: string
+  deleteAccountError: string
+  deleteAccountDeleting: string
 }
 
 export const publicPageTranslations: Record<
@@ -434,6 +445,17 @@ export const publicPageTranslations: Record<
     downloadCreditNote: "Scarica Nota di Credito",
     documentNotAvailable: "Non disponibile",
     documentBeingPrepared: "Documento in preparazione",
+
+    // Delete Account
+    deleteAccountTitle: "Elimina Account",
+    deleteAccountDescription: "Questa azione eliminerà permanentemente il tuo account e tutti i dati associati: cronologia chat, ordini, carrello e preferenze. Questa azione è irreversibile.",
+    deleteAccountButton: "Elimina il mio account",
+    deleteAccountConfirmTitle: "Sei sicuro?",
+    deleteAccountConfirmMessage: "Tutti i tuoi dati verranno eliminati permanentemente. Questa azione non può essere annullata.",
+    deleteAccountConfirmButton: "Sì, elimina il mio account",
+    deleteAccountSuccess: "Account eliminato con successo",
+    deleteAccountError: "Errore durante l'eliminazione dell'account",
+    deleteAccountDeleting: "Eliminazione in corso...",
   },
 
   EN: {
@@ -651,6 +673,17 @@ export const publicPageTranslations: Record<
     downloadCreditNote: "Download Credit Note",
     documentNotAvailable: "Not available",
     documentBeingPrepared: "Document being prepared",
+
+    // Delete Account
+    deleteAccountTitle: "Delete Account",
+    deleteAccountDescription: "This action will permanently delete your account and all associated data: chat history, orders, cart and preferences. This action is irreversible.",
+    deleteAccountButton: "Delete my account",
+    deleteAccountConfirmTitle: "Are you sure?",
+    deleteAccountConfirmMessage: "All your data will be permanently deleted. This action cannot be undone.",
+    deleteAccountConfirmButton: "Yes, delete my account",
+    deleteAccountSuccess: "Account deleted successfully",
+    deleteAccountError: "Error deleting account",
+    deleteAccountDeleting: "Deleting...",
   },
 
   ES: {
@@ -868,6 +901,17 @@ export const publicPageTranslations: Record<
     downloadCreditNote: "Descargar Nota de Crédito",
     documentNotAvailable: "No disponible",
     documentBeingPrepared: "Documento en preparación",
+
+    // Delete Account
+    deleteAccountTitle: "Eliminar Cuenta",
+    deleteAccountDescription: "Esta acción eliminará permanentemente tu cuenta y todos los datos asociados: historial de chat, pedidos, carrito y preferencias. Esta acción es irreversible.",
+    deleteAccountButton: "Eliminar mi cuenta",
+    deleteAccountConfirmTitle: "¿Estás seguro?",
+    deleteAccountConfirmMessage: "Todos tus datos serán eliminados permanentemente. Esta acción no se puede deshacer.",
+    deleteAccountConfirmButton: "Sí, eliminar mi cuenta",
+    deleteAccountSuccess: "Cuenta eliminada con éxito",
+    deleteAccountError: "Error al eliminar la cuenta",
+    deleteAccountDeleting: "Eliminando...",
   },
 
   PT: {
@@ -1086,6 +1130,17 @@ export const publicPageTranslations: Record<
     downloadCreditNote: "Baixar Nota de Crédito",
     documentNotAvailable: "Não disponível",
     documentBeingPrepared: "Documento em preparação",
+
+    // Delete Account
+    deleteAccountTitle: "Excluir Conta",
+    deleteAccountDescription: "Esta ação excluirá permanentemente sua conta e todos os dados associados: histórico de chat, pedidos, carrinho e preferências. Esta ação é irreversível.",
+    deleteAccountButton: "Excluir minha conta",
+    deleteAccountConfirmTitle: "Tem certeza?",
+    deleteAccountConfirmMessage: "Todos os seus dados serão excluídos permanentemente. Esta ação não pode ser desfeita.",
+    deleteAccountConfirmButton: "Sim, excluir minha conta",
+    deleteAccountSuccess: "Conta excluída com sucesso",
+    deleteAccountError: "Erro ao excluir conta",
+    deleteAccountDeleting: "Excluindo...",
   },
 }
 

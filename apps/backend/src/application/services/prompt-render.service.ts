@@ -16,8 +16,8 @@ import { TemplateEngineService } from "./prompt-builder/template-engine.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
 import {
-  TEMPLATE_FILES,
-  SHARED_AGENTS,
+  ECOMMERCE_TEMPLATE_FILES,
+  INFORMATIONAL_TEMPLATE_FILES,
   getTemplateFolder,
   getTemplateFilename,
 } from "../../utils/template-path.helper"
@@ -88,8 +88,8 @@ export class PromptRenderService {
    * Load template from file system (with caching)
    */
   private async loadTemplate(agentType: string, isEcommerce: boolean): Promise<string> {
-    const templateFile = getTemplateFilename(agentType)
-    const folder = getTemplateFolder(agentType, isEcommerce)
+    const templateFile = getTemplateFilename(agentType, isEcommerce)
+    const folder = getTemplateFolder(isEcommerce)
 
     const cacheKey = `${folder}/${templateFile}`
 

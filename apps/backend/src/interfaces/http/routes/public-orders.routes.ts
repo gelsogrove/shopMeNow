@@ -637,6 +637,151 @@ router.put(
 
 /**
  * @swagger
+ * /api/internal/customer-profile/{token}:
+ *   delete:
+ *     tags:
+ *       - Public Profile
+ *     summary: Delete customer account (hard delete with cascade)
+ *     description: |
+ *       Permanently deletes a customer account and ALL related data:
+ *       chat sessions, messages, orders, cart, search history, billing,
+ *       push campaign records, feedback, secure tokens, etc.
+ *       This action is IRREVERSIBLE.
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Security token
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *       401:
+ *         description: Invalid or expired token
+ *       404:
+ *         description: Customer not found
+ *       500:
+ *         description: Error deleting account
+ */
+router.delete(
+  "/customer-profile/:token",
+  tokenValidationMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const customerId = (req as any).customerId
+      const workspaceId = (req as any).workspaceId
+
+      logger.info("[PUBLIC-PROFILE] 🗑️ Account deletion requested", {
+        customerId,
+        workspaceId,
+      })
+
+      // Verify customer exists
+      const customer = await prisma.customers.findFirst({
+        where: { id: customerId, workspaceId },
+        select: { id: true, name: true, email: true, phone: true },
+      })
+
+      if (!customer) {
+        return res.status(404).json({
+          success: false,
+          error: "Customer not found",
+        })
+      }
+
+      // 🗑️ CASCADE HARD DELETE - Remove ALL related data in correct order
+      // (child records first, then parent)
+      await prisma.$transaction(async (tx) => {
+        // 1. Push campaign recipients
+        await tx.pushCampaignRecipient.deleteMany({ where: { customerId } })
+
+        // 2. Customer feedback
+        await tx.customerFeedback.deleteMany({ where: { customerId } })
+
+        // 3. Campaign sent records
+        await tx.campaignSent.deleteMany({ where: { customerId } })
+
+        // 4. Agent conversation logs
+        await tx.agentConversationLog.deleteMany({ where: { customerId } })
+
+        // 5. Conversation messages (new system)
+        await tx.conversationMessage.deleteMany({ where: { customerId } })
+
+        // 6. Messages from chat sessions (old system)
+        await tx.message.deleteMany({
+          where: { chatSession: { customerId } },
+        })
+
+        // 7. Chat sessions
+        await tx.chatSession.deleteMany({ where: { customerId } })
+
+        // 8. Billing records
+        await tx.billing.deleteMany({ where: { customerId } })
+
+        // 9. Search conversations
+        await tx.searchConversations.deleteMany({ where: { customerId } })
+
+        // 10. Product search history
+        await tx.productSearch.deleteMany({ where: { customerId } })
+
+        // 11. Cart items first, then carts
+        const carts = await tx.carts.findMany({
+          where: { customerId },
+          select: { id: true },
+        })
+        if (carts.length > 0) {
+          await tx.cartItems.deleteMany({
+            where: { cartId: { in: carts.map((c) => c.id) } },
+          })
+          await tx.carts.deleteMany({ where: { customerId } })
+        }
+
+        // 12. Order cascade: credit notes → payment details → order items → orders
+        const orders = await tx.orders.findMany({
+          where: { customerId },
+          select: { id: true },
+        })
+        if (orders.length > 0) {
+          const orderIds = orders.map((o) => o.id)
+          await tx.creditNote.deleteMany({ where: { orderId: { in: orderIds } } })
+          await tx.paymentDetails.deleteMany({ where: { orderId: { in: orderIds } } })
+          await tx.orderItems.deleteMany({ where: { orderId: { in: orderIds } } })
+          await tx.orders.deleteMany({ where: { customerId } })
+        }
+
+        // 13. WhatsApp queue
+        await tx.whatsAppQueue.deleteMany({ where: { customerId } })
+
+        // 14. Secure tokens for this customer
+        await tx.secureToken.deleteMany({ where: { customerId } })
+
+        // 15. Finally: delete the customer record
+        await tx.customers.delete({ where: { id: customerId } })
+      })
+
+      logger.info("[PUBLIC-PROFILE] ✅ Account and all related data deleted permanently", {
+        customerId,
+        customerName: customer.name,
+        customerEmail: customer.email,
+      })
+
+      return res.json({
+        success: true,
+        message: "Account deleted successfully",
+      })
+    } catch (error) {
+      logger.error("[PUBLIC-PROFILE] ❌ Error deleting account:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Error deleting account",
+      })
+    }
+  }
+)
+
+/**
+ * @swagger
  * /api/internal/get-all-products:
  *   post:
  *     tags:

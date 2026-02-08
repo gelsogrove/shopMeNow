@@ -255,6 +255,14 @@ export class FunctionExecutor {
           result = await this.contactSupport(args, context)
           break
 
+        case "getProfileLink":
+          result = await this.getProfileLink(context)
+          break
+
+        case "handlePushNotifications":
+          result = await this.handlePushNotifications(args, context)
+          break
+
         default:
           throw new Error(`Unknown function: ${functionName}`)
       }
@@ -849,5 +857,39 @@ export class FunctionExecutor {
     })
 
     return result
+  }
+
+  /**
+   * 🔗 Get Profile Link - Generate secure token link to customer profile page
+   */
+  private async getProfileLink(context: ExecutionContext): Promise<any> {
+    logger.info("🔗 Generating profile link", { context })
+
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.getProfileLink({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+    })
+  }
+
+  /**
+   * 🔔 Handle Push Notifications - Toggle customer push notification consent
+   */
+  private async handlePushNotifications(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("🔔 Handling push notifications", { args, context })
+
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.handlePushNotifications({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+      consent: args.consent !== undefined ? args.consent : true,
+    })
   }
 }

@@ -1,16 +1,16 @@
 import * as fs from "fs"
 import * as path from "path"
 import {
-  TEMPLATE_FILES,
-  SHARED_AGENTS,
+  ECOMMERCE_TEMPLATE_FILES,
+  INFORMATIONAL_TEMPLATE_FILES,
   getTemplateFolder,
   getTemplateFilename,
 } from "../../../src/utils/template-path.helper"
 
 // Helper to load template files directly (without Prisma dependency)
 function loadTemplateFile(agentType: string, isEcommerce: boolean): string {
-  const templateFile = getTemplateFilename(agentType)
-  const folder = getTemplateFolder(agentType, isEcommerce)
+  const templateFile = getTemplateFilename(agentType, isEcommerce)
+  const folder = getTemplateFolder(isEcommerce)
   
   const templatePath = path.join(__dirname, "../../../src/templates", folder, templateFile)
   return fs.readFileSync(templatePath, "utf-8")
@@ -65,16 +65,17 @@ describe("AgentConfigController - Reset to Defaults - Template Loading", () => {
       expect(template).toContain("{{services}}")
     })
 
-    it("should load conversation history template with correct variable names", async () => {
-      // SCENARIO: Verify that Conversation History template uses correct variables
-      // EXPECTATION: Uses {{chatbotName}} and {{botIdentityResponse}}
+    it("should load security template with correct validation rules", async () => {
+      // SCENARIO: Verify that Security template has security checks
+      // EXPECTATION: Contains INJECTION ATTACKS, SENSITIVE DATA EXPOSURE, HARMFUL CONTENT
 
-      const template = loadTemplateFile("CONVERSATION_HISTORY", true)
+      const template = loadTemplateFile("SECURITY", true)
 
-      // Should contain correct variable names (fixed in this session)
-      expect(template).toContain("{{chatbotName}}")
-      expect(template).toContain("{{botIdentityResponse}}")
-      expect(template).toContain("{{companyName}}")
+      // Should contain security check sections
+      expect(template).toContain("INJECTION ATTACKS")
+      expect(template).toContain("SENSITIVE DATA EXPOSURE")
+      expect(template).toContain("HARMFUL CONTENT")
+      expect(template).toContain("EXTERNAL LINKS VALIDATION")
     })
 
     it("should load product search template with proper structure", async () => {

@@ -999,6 +999,390 @@ export class WhatsAppWebhookController {
         customerName: customer.name,
       })
 
+      // 🔍 CRITICAL FIX: Check if customer has chat history
+      // If NO messages exist → send welcome message (even if customer is registered)
+      // This handles scenario: registered customer with deleted chat history
+      const messageCount = await prisma.conversationMessage.count({
+        where: { customerId: customer.id },
+      })
+
+      if (messageCount === 0) {
+        logger.info("[WEBHOOK] 📭 Customer has NO chat history - sending welcome message", {
+          customerId: customer.id,
+          phone: customer.phone,
+        })
+
+        // 🎉 REDIRECT TO WELCOME MESSAGE FLOW
+        // Re-use same logic as new customer (lines 598-993)
+        // But skip customer creation - use existing customer record
+
+        // ✅ STEP 1: Billing checks (credit + customer limit already met)
+        // Skip trial check - existing customer already passed this
+        // Skip customer limit check - customer already exists
+        // Only check credit balance for welcome message
+
+        const { SubscriptionBillingService } = await import(
+          "../../../application/services/subscription-billing.service"
+        )
+        const billingService = new SubscriptionBillingService(prisma)
+
+        const messageCost = await billingService.getOperationCost(
+          customer.workspaceId,
+          "message"
+        )
+        const creditCheck = await billingService.checkCredit(
+          customer.workspaceId,
+          messageCost
+        )
+
+        if (!creditCheck.hasSufficientCredit) {
+          logger.warn("[WEBHOOK] ❌ Insufficient credit for welcome message", {
+            workspaceId: customer.workspaceId,
+            balance: creditCheck.currentBalance,
+            required: messageCost,
+          })
+          res.status(402).json({
+            status: "billing_error",
+            code: "INSUFFICIENT_CREDIT",
+            message: "Insufficient credit. Please recharge your account.",
+            currentBalance: creditCheck.currentBalance,
+            required: messageCost,
+          })
+          return
+        }
+
+        // ✅ STEP 2: Get workspace data
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: customer.workspaceId },
+          select: {
+            id: true,
+            name: true,
+            welcomeMessage: true,
+            defaultLanguage: true,
+            ownerId: true,
+            owner: {
+              select: { status: true },
+            },
+          },
+        })
+
+        if (!workspace) {
+          logger.error("[WEBHOOK] ⚠️ Workspace not found", {
+            workspaceId: customer.workspaceId,
+          })
+          res.status(404).json({ error: "Workspace not found" })
+          return
+        }
+
+        // 🚫 OWNER STATUS CHECK: Block if owner is INACTIVE
+        if (workspace.owner?.status === "INACTIVE") {
+          logger.warn("[WEBHOOK] ❌ Message blocked: Owner inactive", {
+            workspaceId: customer.workspaceId,
+            ownerId: workspace.ownerId,
+          })
+          res.status(200).json({ success: true, message: "Message received" })
+          return
+        }
+
+        // ✅ STEP 3: Language detection
+        // Priority: customer.language (from profile) → phone prefix → workspace.defaultLanguage
+        const detectedLanguageFromPhone =
+          detectLanguageFromPhonePrefix(customer.phone)
+        const finalLanguage =
+          customer.language ||
+          detectedLanguageFromPhone ||
+          workspace.defaultLanguage
+        logger.info(
+          "[WEBHOOK] 📱 Language resolution for EXISTING customer",
+          {
+            customerId: customer.id,
+            customerLanguage: customer.language,
+            detectedFromPhone: detectedLanguageFromPhone,
+            workspaceDefault: workspace.defaultLanguage,
+            finalLanguage,
+          }
+        )
+
+        // ✅ STEP 4: Generate registration link (if not already registered)
+        let registrationLink = ""
+        let registrationTexts: any = { link: "", validity: "" }
+
+        if (!customer.isActive) {
+          // Customer exists but not registered → generate link
+          const secureTokenService = new SecureTokenService()
+          const urlShortenerService = new UrlShortenerService()
+
+          const registrationToken = await secureTokenService.createToken(
+            "registration",
+            customer.workspaceId,
+            { phoneNumber: customer.phone, language: finalLanguage },
+            "24h",
+            undefined,
+            customer.phone,
+            undefined,
+            customer.id // Pass existing customerId
+          )
+
+          const { url: workspaceUrl, registrationPage } =
+            await workspaceService.getWorkspaceURLWithRegistration(
+              customer.workspaceId
+            )
+
+          const { LinkGeneratorService } = require("../../../application/services/link-generator.service")
+          const linkGeneratorService = new LinkGeneratorService()
+          registrationLink =
+            await linkGeneratorService.generateRegistrationLink(
+              registrationToken,
+              workspaceUrl,
+              customer.workspaceId,
+              registrationPage
+            )
+
+          registrationTexts = getRegistrationText(finalLanguage)
+        }
+
+        // ✅ STEP 5: Process welcome message template
+        const { PromptVariableBuilder } = require("../../../application/services/prompt-variable-builder.service")
+        const { PromptProcessorService } = require("../../../services/prompt-processor.service")
+
+        const variables = PromptVariableBuilder.build(customer, workspace, {})
+        const promptProcessor = new PromptProcessorService()
+
+        const welcomeMessageTemplate =
+          workspace.welcomeMessage || "Welcome! How can I help you?"
+        const welcomeMessage = promptProcessor.processWithVariables(
+          welcomeMessageTemplate,
+          variables
+        )
+
+        // Replace [LINK_REGISTRATION] placeholder with actual link
+        let rawWelcomeMessage = welcomeMessage.replace(
+          /\[LINK_REGISTRATION\]/g,
+          registrationLink || ""
+        )
+
+        // Only append registration footer if customer is not active
+        if (!customer.isActive && registrationLink) {
+          rawWelcomeMessage = `${rawWelcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
+        }
+
+        // ✅ STEP 6: Translation Layer
+        let finalMessage = rawWelcomeMessage
+        let translationTokensUsed = 0
+        const debugSteps: any[] = []
+
+        try {
+          const { TranslationAgent } = require("../../../application/agents/TranslationAgent")
+          const translationAgent = new TranslationAgent(prisma)
+
+          debugSteps.push({
+            type: "welcome",
+            agent: "Welcome Message Generator (Existing Customer)",
+            timestamp: new Date().toISOString(),
+            input: {
+              phoneNumber: customer.phone,
+              language: finalLanguage,
+              customerId: customer.id,
+            },
+            output: {
+              welcomeMessage: rawWelcomeMessage,
+            },
+            tokenUsage: {
+              totalTokens: 0,
+            },
+          })
+
+          const translationResult = await translationAgent.process({
+            workspaceId: customer.workspaceId,
+            message: rawWelcomeMessage,
+            targetLanguage: finalLanguage,
+            customerName: customer.name,
+            channel: "whatsapp",
+          })
+
+          finalMessage = translationResult.message || rawWelcomeMessage
+          translationTokensUsed = translationResult.tokensUsed || 0
+
+          debugSteps.push({
+            type: "safety",
+            agent: "Translation Layer",
+            model: "openai/gpt-4o-mini",
+            temperature: 0.2,
+            timestamp: new Date().toISOString(),
+            systemPrompt: translationResult.systemPrompt || "Translation Layer",
+            input: {
+              originalMessage: rawWelcomeMessage,
+              targetLanguage: finalLanguage,
+              customerName: customer.name,
+            },
+            output: {
+              translatedMessage: finalMessage,
+              decision: translationResult.translated
+                ? "translated"
+                : "passthrough",
+            },
+            tokenUsage: {
+              totalTokens: translationTokensUsed,
+            },
+          })
+
+          logger.info(
+            "[WEBHOOK] 🌍 Welcome message translated for existing customer",
+            {
+              customerId: customer.id,
+              tokensUsed: translationTokensUsed,
+            }
+          )
+        } catch (translationError) {
+          logger.error(
+            "[WEBHOOK] ❌ Translation error - using raw message",
+            translationError
+          )
+          finalMessage = rawWelcomeMessage
+        }
+
+        // ✅ STEP 7: Create session + save messages (transaction)
+        const welcomeMessagePrice = await platformConfigService.getPrice(
+          "MESSAGE"
+        )
+
+        const chatSession = await prisma.$transaction(async (tx) => {
+          // Create new chat session for existing customer
+          const session = await tx.chatSession.create({
+            data: {
+              customerId: customer.id,
+              workspaceId: customer.workspaceId,
+              status: "active",
+              context: {
+                createdBy: "whatsapp-webhook",
+                phoneNumber: customer.phone,
+                trigger: "no_chat_history",
+              },
+            },
+          })
+
+          // Save user's first message
+          await tx.conversationMessage.create({
+            data: {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              conversationId: session.id,
+              role: "user",
+              content: messageMarkdown,
+              agentType: "CUSTOMER",
+              tokensUsed: 0,
+              deliveryStatus: "delivered",
+              debugInfo: JSON.stringify({
+                source: "whatsapp-webhook",
+                type: "first_message_existing_customer",
+                timestamp: new Date().toISOString(),
+              }),
+            },
+          })
+
+          // Save welcome message
+          await tx.conversationMessage.create({
+            data: {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              conversationId: session.id,
+              role: "assistant",
+              content: finalMessage,
+              agentType: "REGISTRATION_FLOW",
+              tokensUsed: translationTokensUsed,
+              deliveryStatus: "not_queued",
+              debugInfo: JSON.stringify({
+                source: "whatsapp-webhook",
+                type: "welcome_existing_customer_no_history",
+                language: finalLanguage,
+                registrationLink: registrationLink || "already_registered",
+                timestamp: new Date().toISOString(),
+                flow: ["welcome", "safety", "save", "whatsapp"],
+                messagePrice: welcomeMessagePrice,
+                debugSteps: debugSteps,
+              }),
+            },
+          })
+
+          return session
+        })
+
+        // ✅ STEP 8: Track billing (outside transaction)
+        try {
+          const { BillingService } = await import(
+            "../../../application/services/billing.service"
+          )
+          const billingServiceTracker = new BillingService(prisma)
+
+          await billingServiceTracker.trackMessage(
+            customer.workspaceId,
+            customer.id,
+            "Welcome message - Existing customer (no history)",
+            finalMessage
+          )
+
+          logger.info(
+            `💰 [WEBHOOK] Welcome message cost tracked for existing customer: $${welcomeMessagePrice.toFixed(2)}`,
+            {
+              customerId: customer.id,
+              sessionId: chatSession.id,
+            }
+          )
+        } catch (billingError) {
+          logger.error(
+            "❌ [WEBHOOK] Failed to track welcome message billing:",
+            billingError
+          )
+          // Don't fail the flow
+        }
+
+        debugSteps.push({
+          type: "save",
+          agent: "Database Save",
+          timestamp: new Date().toISOString(),
+          output: {
+            conversationId: chatSession.id,
+            customerId: customer.id,
+          },
+        })
+
+        debugSteps.push({
+          type: "whatsapp",
+          agent: "WhatsApp Send",
+          timestamp: new Date().toISOString(),
+          output: {
+            status: "queued",
+            recipient: customer.phone,
+          },
+        })
+
+        logger.info(
+          "[WEBHOOK] ✅ Welcome message sent to existing customer (no history)",
+          {
+            customerId: customer.id,
+            sessionId: chatSession.id,
+            language: finalLanguage,
+            translated: translationTokensUsed > 0,
+          }
+        )
+
+        res.status(200).json({
+          status: "existing_customer_welcomed",
+          message: finalMessage,
+          language: finalLanguage,
+          registrationLink: registrationLink || "already_registered",
+          customerId: customer.id,
+          sessionId: chatSession.id,
+        })
+        return
+      }
+
+      // Customer has chat history → continue to normal LLM processing
+      logger.info("[WEBHOOK] 📚 Customer has chat history - continuing normal flow", {
+        customerId: customer.id,
+        messageCount,
+      })
+
       if (!isPlayground) {
         // 🚦 RATE LIMIT CHECK (token bucket): prevent abuse but allow bursts
         const [

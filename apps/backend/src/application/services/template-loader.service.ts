@@ -21,8 +21,8 @@ import { PrismaClient } from "@echatbot/database"
 import { TemplateEngineService } from "./prompt-builder/template-engine.service"
 import logger from "../../utils/logger"
 import {
-  TEMPLATE_FILES,
-  SHARED_AGENTS,
+  ECOMMERCE_TEMPLATE_FILES,
+  INFORMATIONAL_TEMPLATE_FILES,
   getTemplateFolder,
   getTemplateFilename,
 } from "../../utils/template-path.helper"
@@ -147,8 +147,8 @@ export class TemplateLoaderService {
    * Load template from file (cached in memory - DISABLED IN DEVELOPMENT)
    */
   private loadTemplate(agentType: string, isEcommerce: boolean): string {
-    const templateFile = getTemplateFilename(agentType)
-    const folder = getTemplateFolder(agentType, isEcommerce)
+    const templateFile = getTemplateFilename(agentType, isEcommerce)
+    const folder = getTemplateFolder(isEcommerce)
 
     const cacheKey = `${folder}/${templateFile}`
 

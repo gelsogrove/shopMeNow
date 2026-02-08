@@ -5,95 +5,73 @@
  * Used by: template-loader.service, prompt-render.service, seed scripts, tests
  * 
  * Directory Structure:
- * - templates/shared/       → SECURITY, TRANSLATION, SUMMARY_AGENT, CONVERSATION_HISTORY
- * - templates/ecommerce/    → E-commerce versions of ROUTER, PRODUCT_SEARCH, ORDER_TRACKING, etc.
- * - templates/informational/→ Info-only versions (fallback to ecommerce if missing)
+ * - templates/ecommerce/     → E-commerce channels (sells products/services)
+ * - templates/informational/ → Info-only channels (no products, FAQ/support only)
+ * 
+ * Each folder is SELF-CONTAINED with all templates needed.
  */
 
-export const TEMPLATE_FILES: Record<string, string> = {
+// 🗂️ ECOMMERCE TEMPLATE FILES (10 files)
+export const ECOMMERCE_TEMPLATE_FILES: Record<string, string> = {
   ROUTER: "01-router.template.md",
   PRODUCT_SEARCH: "02-product-search.template.md",
   CART_MANAGEMENT: "03-cart-management.template.md",
   ORDER_TRACKING: "03-order-tracking.template.md",
   CUSTOMER_SUPPORT: "04-customer-support.template.md",
   PROFILE_MANAGEMENT: "05-profile-management.template.md",
-  SECURITY: "06-security.template.md",
-  TRANSLATION: "07-translation.template.md",
-  SUMMARY_AGENT: "08-summary.template.md",
-  CONVERSATION_HISTORY: "09-conversation-history.template.md",
+  SECURITY: "07-security.template.md",
+  TRANSLATION: "08-translation.template.md",
   PRODUCT_CONTEXT: "09-product-context.template.md",
+  ORDER_OPTIMIZATION: "10-order-optimization.template.md",
 }
 
-// Agents that are workspace-type agnostic (same template for ecommerce & informational)
-export const SHARED_AGENTS = ["SECURITY", "TRANSLATION", "SUMMARY_AGENT", "CONVERSATION_HISTORY"]
+// 🗂️ INFORMATIONAL TEMPLATE FILES (3 files)
+export const INFORMATIONAL_TEMPLATE_FILES: Record<string, string> = {
+  CUSTOMER_SUPPORT: "01-info-agent.template.md",  // Main conversational agent for info-only channels
+  SECURITY: "02-security.template.md",
+  TRANSLATION: "03-translation.template.md",
+}
 
 // Agents available ONLY for e-commerce workspaces
-export const ECOMMERCE_ONLY_AGENTS = ["PRODUCT_SEARCH", "ORDER_TRACKING", "CART_MANAGEMENT"]
+export const ECOMMERCE_ONLY_AGENTS = ["ROUTER", "PRODUCT_SEARCH", "ORDER_TRACKING", "CART_MANAGEMENT", "CUSTOMER_SUPPORT", "PROFILE_MANAGEMENT", "PRODUCT_CONTEXT", "ORDER_OPTIMIZATION"]
 
-// All e-commerce agents (ecommerce folder + shared)
-export const ECOMMERCE_AGENTS = [
-  "ROUTER",
-  "PRODUCT_SEARCH",
-  "CART_MANAGEMENT",
-  "ORDER_TRACKING",
-  "CUSTOMER_SUPPORT",
-  "PROFILE_MANAGEMENT",
-  "PRODUCT_CONTEXT",
-  ...SHARED_AGENTS,
-]
+// All e-commerce agent types
+export const ECOMMERCE_AGENTS = Object.keys(ECOMMERCE_TEMPLATE_FILES)
 
-// All informational agents (informational folder + shared)
-export const INFORMATIONAL_AGENTS = [
-  "CUSTOMER_SUPPORT",
-]
+// All informational agent types
+export const INFORMATIONAL_AGENTS = Object.keys(INFORMATIONAL_TEMPLATE_FILES)
 
 /**
- * Get template subdirectory based on agent type and workspace config
+ * Get template subdirectory based on workspace type
  * 
- * @param agentType - Agent type (ROUTER, PRODUCT_SEARCH, etc.)
  * @param isEcommerce - Whether workspace sells products/services
- * @returns Subdirectory name: "shared" | "ecommerce" | "informational"
+ * @returns Subdirectory name: "ecommerce" | "informational"
  * 
  * @example
- * getTemplateFolder("SECURITY", true)        // → "shared"
- * getTemplateFolder("PRODUCT_SEARCH", true)  // → "ecommerce"
- * getTemplateFolder("ROUTER", false)         // → "informational"
+ * getTemplateFolder(true)   // → "ecommerce"
+ * getTemplateFolder(false)  // → "informational"
  */
-export function getTemplateFolder(agentType: string, isEcommerce: boolean): string {
-  // Shared agents: always from /shared folder
-  if (SHARED_AGENTS.includes(agentType)) {
-    return "shared"
-  }
-  
-  // E-commerce only agents: always from /ecommerce folder
-  if (ECOMMERCE_ONLY_AGENTS.includes(agentType)) {
-    return "ecommerce"
-  }
-  
-  // Other agents: workspace-specific (ecommerce vs informational)
+export function getTemplateFolder(isEcommerce: boolean): string {
   return isEcommerce ? "ecommerce" : "informational"
 }
 
 /**
  * Get template filename for agent type
  * 
- * @param agentType - Agent type
+ * @param agentType - Agent type (ROUTER, SECURITY, INFO_AGENT, etc.)
+ * @param isEcommerce - Whether workspace is ecommerce
  * @returns Template filename (e.g., "01-router.template.md")
  * @throws Error if agent type not found
  */
-export function getTemplateFilename(agentType: string): string {
-  const filename = TEMPLATE_FILES[agentType]
+export function getTemplateFilename(agentType: string, isEcommerce: boolean): string {
+  const templateMap = isEcommerce ? ECOMMERCE_TEMPLATE_FILES : INFORMATIONAL_TEMPLATE_FILES
+  const filename = templateMap[agentType]
+  
   if (!filename) {
-    throw new Error(`No template defined for agent type: ${agentType}`)
+    throw new Error(`No template defined for agent type: ${agentType} (isEcommerce: ${isEcommerce})`)
   }
+  
   return filename
-}
-
-/**
- * Check if agent type is workspace-type agnostic (shared)
- */
-export function isSharedAgent(agentType: string): boolean {
-  return SHARED_AGENTS.includes(agentType)
 }
 
 /**

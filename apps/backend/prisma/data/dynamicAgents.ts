@@ -3,8 +3,8 @@ import * as fs from "fs"
 import * as path from "path"
 import { getAgentFunctionNames } from "../../src/config/agent-functions.config"
 import {
-  TEMPLATE_FILES,
-  SHARED_AGENTS,
+  ECOMMERCE_TEMPLATE_FILES,
+  INFORMATIONAL_TEMPLATE_FILES,
   ECOMMERCE_ONLY_AGENTS,
   getTemplateFolder,
   getTemplateFilename,
@@ -40,8 +40,8 @@ interface DynamicAgent {
  * Uses centralized helper for path resolution
  */
 function loadTemplate(agentType: string, hasEcommerce: boolean = true): string {
-  const filename = getTemplateFilename(agentType)
-  const subDir = getTemplateFolder(agentType, hasEcommerce)
+  const filename = getTemplateFilename(agentType, hasEcommerce)
+  const subDir = getTemplateFolder(hasEcommerce)
   
   const templatePath = path.join(__dirname, "../../src/templates", subDir, filename)
   

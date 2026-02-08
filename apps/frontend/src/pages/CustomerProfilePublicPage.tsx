@@ -1,8 +1,19 @@
 import { logger } from "@/lib/logger"
-import { User } from "lucide-react"
+import { Trash2, User } from "lucide-react"
 import React, { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../components/ui/alert-dialog"
 import { ProfileForm } from "../components/profile/ProfileForm"
 import { StickyHeader } from "../components/public/StickyHeader"
 import { TokenError } from "../components/ui/TokenError"
@@ -22,6 +33,8 @@ interface CustomerProfile {
   currency: string
   discount: number
   invoiceAddress: any
+  push_notifications_consent: boolean
+  push_notifications_consent_at: string | null
   createdAt: string
   updatedAt: string
 }
@@ -49,6 +62,7 @@ const CustomerProfilePublicPage: React.FC = () => {
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
   const [customerLanguage, setCustomerLanguage] = useState<string>("IT") // Default to IT until loaded
 
@@ -211,7 +225,40 @@ const CustomerProfilePublicPage: React.FC = () => {
     }
   }
 
-  // 🛒 Navigate to cart
+  // �️ Handle account deletion (hard delete with cascade)
+  const handleDeleteAccount = async () => {
+    if (!token) return
+
+    setDeleting(true)
+
+    try {
+      logger.info("[PROFILE] 🗑️ Requesting account deletion...")
+
+      const response = await tokenApi.delete(`/customer-profile/${token}`)
+
+      if (response.data.success) {
+        toast.success(texts.deleteAccountSuccess)
+        logger.info("[PROFILE] ✅ Account deleted successfully")
+        // Redirect to a simple goodbye page after short delay
+        setTimeout(() => {
+          window.location.href = "about:blank"
+        }, 2000)
+      } else {
+        toast.error(response.data.error || texts.deleteAccountError)
+      }
+    } catch (error: any) {
+      logger.error("[PROFILE] Error deleting account:", error)
+      if (error.response?.status === 401) {
+        toast.error("Token expired, request a new link")
+      } else {
+        toast.error(texts.deleteAccountError)
+      }
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  // �🛒 Navigate to cart
   // 📋 Handle view cart - Use same token (TOKEN-ONLY system)
   const handleViewCart = () => {
     logger.info("[PROFILE] View Cart clicked, using current token")
@@ -290,6 +337,55 @@ const CustomerProfilePublicPage: React.FC = () => {
               />
             </div>
           )}
+
+          {/* 🗑️ Delete Account - Danger Zone */}
+          <div className="mt-6 bg-white rounded-xl shadow-sm border border-red-200 p-3 sm:p-4 lg:p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-700">
+                  {texts.deleteAccountTitle}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {texts.deleteAccountDescription}
+                </p>
+
+                <div className="mt-4">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={deleting}
+                      >
+                        {deleting ? texts.deleteAccountDeleting : texts.deleteAccountButton}
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-red-700">
+                          {texts.deleteAccountConfirmTitle}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {texts.deleteAccountConfirmMessage}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{texts.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDeleteAccount}
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          {texts.deleteAccountConfirmButton}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

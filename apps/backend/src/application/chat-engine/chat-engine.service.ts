@@ -712,7 +712,7 @@ export class ChatEngineService {
     const adminEmail =
       workspaceConfig.adminEmail || "support@echatbot.ai"
 
-    const finalMessage = this.applyHumanSupportPlaceholders(template, {
+    let finalMessage = this.applyHumanSupportPlaceholders(template, {
       nameUser: customerName,
       agentName,
       agentEmail,
@@ -739,6 +739,15 @@ export class ChatEngineService {
           reason: requestIntent.reason || input.message,
         })
 
+        // 🔧 FIX: Use the message returned by contactOperator (with variables replaced)
+        if (contactResult.success && contactResult.message) {
+          finalMessage = contactResult.message
+          logger.info("✅ [ChatEngine] Using contactOperator message with variables replaced", {
+            messageLength: finalMessage.length,
+            hasNameUser: finalMessage.includes(customer?.name || ""),
+          })
+        }
+
         debugSteps.push({
           type: "function_result",
           agent: "📞 contactOperator",
@@ -759,6 +768,31 @@ export class ChatEngineService {
       }
     }
 
+    // 🌍 TRANSLATION LAYER: Translate escalation message to customer language
+    let translationTokens = 0
+    if (finalMessage && input.customerLanguage) {
+      try {
+        const translationResult = await this.applyTranslation(
+          finalMessage,
+          input.workspaceId,
+          input.customerLanguage,
+          debugSteps,
+          input.customerName
+        )
+        finalMessage = translationResult.message
+        translationTokens = translationResult.tokensUsed
+        logger.info("✅ [ChatEngine] Escalation message translated", {
+          targetLanguage: input.customerLanguage,
+          tokensUsed: translationResult.tokensUsed,
+        })
+      } catch (translationError) {
+        logger.error("❌ [ChatEngine] Translation failed for escalation message", {
+          error: translationError,
+        })
+        // Continue with untranslated message
+      }
+    }
+
     const processingTimeMs = Date.now() - startTime
 
     const debugInfo = {
@@ -766,8 +800,8 @@ export class ChatEngineService {
       responseType: "HUMAN_SUPPORT",
       llmUsed: false,
       steps: debugSteps,
-      totalTokens,
-      totalCost: (totalTokens * 0.0003) / 1000,
+      totalTokens: totalTokens + translationTokens,
+      totalCost: ((totalTokens + translationTokens) * 0.0003) / 1000,
       executionTimeMs: processingTimeMs,
     }
 

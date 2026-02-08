@@ -89,7 +89,7 @@ export async function contactOperator(
 
       logger.info("✅ Chatbot disabled for customer:", customer.id)
 
-      // � GET WORKSPACE (needed for both email and WhatsApp)
+      // 🆕 GET WORKSPACE (needed for both email and WhatsApp)
       const workspace = await prisma.workspace.findUnique({
         where: { id: request.workspaceId },
         select: {
@@ -98,7 +98,8 @@ export async function contactOperator(
           operatorWhatsappNumber: true,
           operatorEmail: true, // 📧 Email operatore per notifiche
           hasHumanSupport: true,
-          frustrationEscalationInstructions: true, // 🆕 Andrea: Use this instead of humanSupportInstructions
+          humanSupportInstructions: true, // ✅ Message to send to customer when escalating
+          frustrationEscalationInstructions: true, // 🎯 Triggers for when to escalate (not the message!)
           whatsappSettings: {
             select: { adminEmail: true },
           },
@@ -439,8 +440,8 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
       await prisma.$disconnect()
 
       // 📝 Build response message with variable replacement (Andrea's spec)
-      // Use frustrationEscalationInstructions if available, otherwise default message
-      let responseMessage = workspace?.frustrationEscalationInstructions || 
+      // Use humanSupportInstructions (message to send) NOT frustrationEscalationInstructions (triggers)
+      let responseMessage = workspace?.humanSupportInstructions || 
         "Hello {{nameUser}}, I'm connecting you with our support team. They will contact you as soon as possible. We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝"
 
       // 🔧 Replace {{nameUser}} variable (Andrea's requirement)
@@ -459,7 +460,7 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
         .replace(/\{\{agentEmail\}\}/g, agentEmail)
       
       logger.info("✅ [contactOperator] Response message prepared:", {
-        hasCustomInstructions: !!workspace?.frustrationEscalationInstructions,
+        hasCustomMessage: !!workspace?.humanSupportInstructions,
         customerName: customer.name,
         replacedNameUser: responseMessage.includes(customer.name),
       })
