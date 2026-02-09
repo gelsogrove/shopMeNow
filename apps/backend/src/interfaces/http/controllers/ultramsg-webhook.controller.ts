@@ -1147,11 +1147,67 @@ export class UltraMsgWebhookController {
 
       logger.info('[ULTRAMSG] ✅ Security validation passed', { customerId: customer.id })
 
+      // 13.5. 📊 REGISTRATION PROMPT LOGIC (Progressive invitation system)
+      // Count user messages to determine registration prompt level
+      const messageCount = await prisma.conversationMessage.count({
+        where: {
+          conversationId: chatSession.id,
+          role: 'user',
+          customerId: customer.id,
+        },
+      })
+
+      logger.info('[ULTRAMSG] 📊 Message count check', {
+        customerId: customer.id,
+        messageCount,
+        isRegistered: customer.isRegistered,
+      })
+
+      // Import registration prompt service
+      const { registrationPromptService } = require('../../../services/registration-prompt.service')
+
+      // Check if user should be blocked (15+ messages without registration)
+      if (registrationPromptService.shouldBlockUser(messageCount, customer.isRegistered)) {
+        logger.warn('[ULTRAMSG] ⛔ Blocking unregistered user (15+ messages)', {
+          customerId: customer.id,
+          messageCount,
+        })
+
+        // Block customer
+        await prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            isBlocked: true,
+            blockedReason: 'MAX_MESSAGES_UNREGISTERED',
+            blockedAt: new Date(),
+          },
+        })
+
+        return res.status(403).json({
+          status: 'blocked',
+          code: 'MAX_MESSAGES_UNREGISTERED',
+          message: 'Account blocked. Please register to continue chatting.',
+        })
+      }
+
+      // Get registration prompt level (0-3)
+      const registrationPromptLevel = registrationPromptService.getPromptLevel(
+        messageCount,
+        customer.isRegistered
+      )
+
+      logger.info('[ULTRAMSG] 📊 Registration prompt level', {
+        customerId: customer.id,
+        messageCount,
+        promptLevel: registrationPromptLevel,
+      })
+
       // 14. 🤖 CHAT ENGINE (same as Meta)
       logger.info('[ULTRAMSG] 🎯 Calling ChatEngineService', {
         customerId: customer.id,
         conversationId: chatSession.id,
         messageLength: messageMarkdown.length,
+        registrationPromptLevel, // Pass level to chat engine
       })
 
       const chatEngine = getChatEngine(prisma)
@@ -1165,6 +1221,7 @@ export class UltraMsgWebhookController {
         customerDiscount: customer.discount || 0,
         isPlayground: false,
         channel: 'whatsapp',
+        registrationPromptLevel, // 🆕 NEW: Pass registration prompt level to Router
       })
 
       logger.info('[ULTRAMSG] ✅ ChatEngineService completed', {
