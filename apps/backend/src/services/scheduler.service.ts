@@ -1,18 +1,14 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
 
-import { CampaignScheduler } from "./campaign-scheduler.service"
-
 export class SchedulerService {
   private prisma: PrismaClient
-  private campaignScheduler: CampaignScheduler
   private readonly CHECK_INTERVAL = 5 * 60 * 1000 // 5 minuti
   private readonly URL_CLEANUP_INTERVAL = 60 * 60 * 1000 // 1 ora
   private readonly ANALYTICS_CLEANUP_INTERVAL = 7 * 24 * 60 * 60 * 1000 // 7 giorni (weekly cleanup)
 
   constructor() {
     this.prisma = prisma
-    this.campaignScheduler = new CampaignScheduler(this.prisma)
   }
 
   /**
@@ -131,11 +127,8 @@ export class SchedulerService {
       this.cleanupOldAnalytics()
     }, this.ANALYTICS_CLEANUP_INTERVAL)
 
-    // Start campaign scheduler (runs daily at 11:30 AM)
-    this.campaignScheduler.start()
-
     logger.info(
-      "Scheduler service started - managing offers, URLs cleanup, analytics cleanup (6 months), and campaign scheduler"
+      "Scheduler service started - managing offers, URLs cleanup, analytics cleanup (6 months)"
     )
   }
 }

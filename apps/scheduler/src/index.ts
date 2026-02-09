@@ -11,7 +11,6 @@ import {
   softDeleteCleanupJob,
   supportAttachmentsCleanupJob,
   pushCampaignsJob,
-  campaignCreditGuardJob,
 } from './jobs'
 import logger from './utils/logger'
 
@@ -20,8 +19,7 @@ import logger from './utils/logger'
 // Cron Jobs (ordered by execution time):
 // 1. WhatsApp Channel Queue   - every 5 SECONDS (parallel send, with lock)
 // 2. Push Campaigns Runner      - every minute
-// 3. Campaign Credit Guard      - daily at 11:30 (auto-deactivate campaigns without credit/subscription)
-// 4. Short URLs Cleanup         - daily at 23:00
+// 3. Short URLs Cleanup         - daily at 23:00
 // 5. Storage Cleanup            - daily at 23:05 (unused images + temp + invoices)
 // 6. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
 // 7. WhatsApp Queue Cleanup     - daily at 23:15 (delete errors/sent older than 7 days)
@@ -51,11 +49,6 @@ async function main() {
   // Push Campaigns runner - every minute
   cron.schedule('0 * * * * *', async () => {
     await runJob('push-campaigns', pushCampaignsJob)
-  })
-
-  // Campaign credit guard - daily at 11:30
-  cron.schedule('30 11 * * *', async () => {
-    await runJob('campaign-credit-guard', campaignCreditGuardJob)
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -119,8 +112,7 @@ async function main() {
   logger.info('📋 Scheduled jobs:')
   logger.info('   1. WhatsApp Channel Queue       - every 5 SECONDS')
   logger.info('   2. Push Campaigns Runner        - every minute')
-  logger.info('   3. Campaign Credit Guard        - daily at 11:30')
-  logger.info('   4. Short URLs Cleanup           - daily at 23:00')
+  logger.info('   3. Short URLs Cleanup           - daily at 23:00')
   logger.info('   5. Unused Images Cleanup        - daily at 23:05')
   logger.info('   6. Messages Archive             - daily at 23:10')
   logger.info('   7. WhatsApp Queue Cleanup       - daily at 23:15')

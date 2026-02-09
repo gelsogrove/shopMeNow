@@ -42,7 +42,6 @@ import { LLMRouterService } from "../services/llm-router.service"
 // 4. CONTROLLER IMPORTS
 // ============================================================================
 import { AuthController } from "../interfaces/http/controllers/auth.controller"
-import { CampaignController } from "../interfaces/http/controllers/campaign.controller"
 import { CartTokenController } from "../interfaces/http/controllers/cart-token.controller"
 import { CategoryController } from "../interfaces/http/controllers/category.controller"
 import { ChatController } from "../interfaces/http/controllers/chat.controller"
@@ -100,7 +99,6 @@ import publicOrdersRoutes from "../interfaces/http/routes/public-orders.routes"
 import { salesRouter } from "../interfaces/http/routes/sales.routes"
 
 // Customer & Communication
-import { campaignRoutes } from "../interfaces/http/routes/campaign.routes"
 import {
   customersRouter,
   workspaceCustomersRouter,
@@ -482,7 +480,6 @@ const otpService = new OtpService(prisma)
 const cartTokenController = new CartTokenController()
 const customersController = new CustomersController()
 const servicesController = new ServicesController()
-const campaignController = new CampaignController()
 const feedbackController = new FeedbackController()
 const pushController = new PushController()
 
@@ -647,12 +644,6 @@ router.use("/workspaces/:workspaceId/invitations", invitationRoutes)
 router.use("/workspaces/:workspaceId/members", memberRoutes)
 logger.info(
   "✅ Registered PROTECTED team management routes: /api/workspaces/:workspaceId/invitations, /api/workspaces/:workspaceId/members"
-)
-
-// Mount campaign routes
-router.use("/workspaces", campaignRoutes(campaignController))
-logger.info(
-  "✅ Registered campaign routes: /api/workspaces/:workspaceId/campaigns"
 )
 
 // Push Campaigns v2 (WhatsApp only)
