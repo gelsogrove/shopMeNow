@@ -98,8 +98,7 @@ export async function getProfileLink(
     )
 
     // 3. Get workspace URL
-    const { WorkspaceService } = require("../../application/services/workspace.service")
-    const workspaceService = new WorkspaceService()
+    const { workspaceService } = require("../../services/workspace.service")
     const { url: workspaceUrl } = await workspaceService.getWorkspaceURLWithRegistration(
       request.workspaceId
     )
@@ -152,7 +151,8 @@ export async function getProfileLink(
     }
   } catch (error) {
     logger.error("❌ getProfileLink failed", {
-      error,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
       customerId: request.customerId,
       workspaceId: request.workspaceId,
     })

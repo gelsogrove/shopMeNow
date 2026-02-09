@@ -508,9 +508,12 @@ describe("AgentFlowDiagram", () => {
         />
       )
 
+      // SCENARIO: Legend text may also appear as labels on agent nodes in the diagram,
+      // so "Widget only" and "E-commerce only" can appear more than once.
+      // Use getAllByText to verify at least one instance exists (legend + node label).
       expect(screen.getByText("Click to edit")).toBeInTheDocument()
-      expect(screen.getByText("E-commerce only")).toBeInTheDocument()
-      expect(screen.getByText("Widget only")).toBeInTheDocument()
+      expect(screen.getAllByText("E-commerce only").length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText("Widget only").length).toBeGreaterThanOrEqual(1)
     })
   })
 })
