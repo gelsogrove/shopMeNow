@@ -657,6 +657,8 @@ export class WorkspaceController {
 
       // Get stats for each workspace in parallel
       const statsPromises = workspaceIds.map(async (workspaceId) => {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
         const [unreadMessages, pendingOrders, needsIntervention, blockedUsers, newCustomers] =
           await Promise.all([
             // Count unread incoming messages (from customers)
@@ -695,7 +697,8 @@ export class WorkspaceController {
             prisma.customers.count({
               where: {
                 workspaceId,
-                name: "New Customer",
+                createdAt: { gte: since },
+                deletedAt: null,
               },
             }),
           ])

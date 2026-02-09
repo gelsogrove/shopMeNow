@@ -28,6 +28,7 @@ export type BlockReason =
   | "PAUSED"
   | "PAYMENT_FAILED"
   | "CREDIT_EXHAUSTED"
+  | "DEBUG_MODE"
   | "CHANNEL_DISABLED"
   | "WORKSPACE_INACTIVE"
   | "WORKSPACE_DELETED"
@@ -60,7 +61,8 @@ export class WorkspaceAccessService {
    * 2. No owner → block (shouldn't happen, but safety)
    * 3. Owner subscription paused → block ALL owner's workspaces
    * 4. Owner credit exhausted (< -€10) → block ALL owner's workspaces
-   * 5. Channel disabled → WIP mode (separate handling)
+   * 5. Debug mode → WIP mode (separate handling)
+   * 6. Channel disabled → silent block (no response)
    *
    * @param workspaceId - Workspace to check
    * @param skipChannelCheck - Skip channel status check (for internal operations)
@@ -202,14 +204,28 @@ export class WorkspaceAccessService {
         }
       }
 
-      if (!skipChannelCheck && (workspace.debugMode || channelStatus === false)) {
+      if (!skipChannelCheck && workspace.debugMode === true) {
         logger.info(
-          `[ACCESS] 🛠️ Channel disabled for workspace: ${workspace.name} (debugMode=${workspace.debugMode}, channelStatus=${channelStatus})`
+          `[ACCESS] 🛠️ Debug mode active for workspace: ${workspace.name} (debugMode=${workspace.debugMode})`
+        )
+        return {
+          canProcess: false,
+          blockReason: "DEBUG_MODE",
+          message: "Debug mode active (WIP message).",
+          details: {
+            ownerId: workspace.ownerId || undefined,
+          },
+        }
+      }
+
+      if (!skipChannelCheck && channelStatus === false) {
+        logger.info(
+          `[ACCESS] 🚫 Channel disabled for workspace: ${workspace.name} (channelStatus=${channelStatus})`
         )
         return {
           canProcess: false,
           blockReason: "CHANNEL_DISABLED",
-          message: "Channel is disabled (WIP mode).",
+          message: "Channel is disabled.",
           details: {
             ownerId: workspace.ownerId || undefined,
           },
@@ -245,7 +261,7 @@ export class WorkspaceAccessService {
    */
   async shouldShowWIPMessage(workspaceId: string): Promise<boolean> {
     const result = await this.canProcessMessages(workspaceId)
-    return result.blockReason === "CHANNEL_DISABLED"
+    return result.blockReason === "DEBUG_MODE"
   }
 
   /**
@@ -317,7 +333,10 @@ export class WorkspaceAccessService {
       status = "payment_failed"
     } else if (accessResult.blockReason === "CREDIT_EXHAUSTED") {
       status = "credit_exhausted"
-    } else if (accessResult.blockReason === "CHANNEL_DISABLED") {
+    } else if (
+      accessResult.blockReason === "DEBUG_MODE" ||
+      accessResult.blockReason === "CHANNEL_DISABLED"
+    ) {
       status = "wip"
     }
 

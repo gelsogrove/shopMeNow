@@ -679,11 +679,12 @@ export const workspaceService = {
   ): Promise<{ url: string; registrationPage: string | null }> {
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { url: true, registrationPage: true },
+      select: { url: true, registrationPage: true, websiteUrl: true },
     })
     return {
       url: workspace?.url || "http://localhost:3000",
-      registrationPage: workspace?.registrationPage || null,
+      // Prefer explicit registrationPage, fallback to websiteUrl if provided
+      registrationPage: workspace?.registrationPage || workspace?.websiteUrl || null,
     }
   },
 }

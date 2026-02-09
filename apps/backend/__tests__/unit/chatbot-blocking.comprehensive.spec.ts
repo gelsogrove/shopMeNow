@@ -10,7 +10,8 @@
  * 1. PAUSED - Owner paused subscription (IMMEDIATE - not end-of-month)
  * 2. PAYMENT_FAILED - Owner payment failed
  * 3. CREDIT_EXHAUSTED - Owner credit < -€10
- * 4. CHANNEL_DISABLED - Workspace channel is disabled (WIP mode)
+ * 4. DEBUG_MODE - Workspace debug mode (WIP message)
+ * 5. CHANNEL_DISABLED - Workspace channel is disabled (silent block)
  * 5. WORKSPACE_DELETED - Workspace soft deleted
  * 6. NO_OWNER - Workspace has no owner
  * 
@@ -37,6 +38,7 @@ const mockPrisma = {
 const createWorkspaceMock = (overrides: {
   workspaceId?: string
   deletedAt?: Date | null
+  debugMode?: boolean
   channelStatus?: boolean
   ownerSubscriptionStatus?: string
   ownerCreditBalance?: number
@@ -46,6 +48,7 @@ const createWorkspaceMock = (overrides: {
   id: overrides.workspaceId ?? "test-workspace-id",
   name: "Test Workspace",
   deletedAt: overrides.deletedAt ?? null,
+  debugMode: overrides.debugMode ?? false,
   channelStatus: overrides.channelStatus ?? true,
   ownerId: overrides.ownerId ?? "test-owner-id",
   owner: overrides.ownerId === null ? null : {
@@ -223,7 +226,20 @@ describe("Chatbot Blocking - Comprehensive Test Suite", () => {
     })
   })
 
-  describe("✅ SCENARIO 4: CHANNEL_DISABLED - Workspace WIP mode", () => {
+  describe("✅ SCENARIO 4: DEBUG_MODE - Workspace WIP mode", () => {
+    it("should BLOCK messages when debugMode is true", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue(
+        createWorkspaceMock({ debugMode: true })
+      )
+
+      const result = await service.canProcessMessages(workspaceId)
+
+      expect(result.canProcess).toBe(false)
+      expect(result.blockReason).toBe("DEBUG_MODE")
+    })
+  })
+
+  describe("✅ SCENARIO 5: CHANNEL_DISABLED - Workspace disabled", () => {
     it("should BLOCK messages when channelStatus is false", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
         createWorkspaceMock({ channelStatus: false })

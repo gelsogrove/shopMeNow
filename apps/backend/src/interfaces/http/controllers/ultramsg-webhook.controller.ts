@@ -40,6 +40,7 @@ import { SecurityCheckService } from '../../../application/services/security-che
 import { getChatEngine } from '../../../application/chat-engine'
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from '../../../middlewares/rateLimiter'
 import { platformConfigService } from '../../../services/platform-config.service'
+import { websocketService } from '../../../services/websocket.service'
 import logger from '../../../utils/logger'
 import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
@@ -315,6 +316,145 @@ export class UltraMsgWebhookController {
           workspaceId,
         })
 
+        // 🔒 ACCESS CHECK (debug/channel/owner/billing blocks) BEFORE welcome flow
+        const { WorkspaceAccessService } = await import(
+          '../../../application/services/workspace-access.service'
+        )
+        const workspaceAccessService = new WorkspaceAccessService(prisma)
+        const accessResult = await workspaceAccessService.canProcessMessages(
+          workspaceId,
+          false
+        )
+
+        if (!accessResult.canProcess) {
+          // 🚧 DEBUG_MODE → Send WIP message (no welcome)
+          if (accessResult.blockReason === 'DEBUG_MODE') {
+            logger.info('[ULTRAMSG] 🚧 Debug mode (new user) - sending WIP message', {
+              workspaceId,
+              phoneNumber,
+            })
+
+            const detectedLanguageFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
+            const finalLanguage = detectedLanguageFromPhone || workspace.defaultLanguage
+            const rawWipMessage =
+              workspace.wipMessage || 'Work in progress. Please contact us later.'
+
+            let wipMessage = rawWipMessage
+            let translationTokensUsed = 0
+            try {
+              const { TranslationAgent } = require('../../../application/agents/TranslationAgent')
+              const translationAgent = new TranslationAgent(prisma)
+              const translationResult = await translationAgent.process({
+                workspaceId,
+                message: rawWipMessage,
+                targetLanguage: finalLanguage,
+                customerName: 'Customer',
+                customerId: undefined,
+                channel: 'whatsapp',
+              })
+              wipMessage = translationResult.message || rawWipMessage
+              translationTokensUsed = translationResult.tokensUsed || 0
+            } catch (translationError) {
+              logger.warn('[ULTRAMSG] ⚠️ WIP translation failed (new user), using raw message', {
+                error: translationError,
+              })
+            }
+
+            const phoneForStorage =
+              phoneVariants.find((v) => v.startsWith('+')) || phoneVariants[0] || phoneNumber
+
+            const { tempCustomer, chatSession, assistantMessage } = await prisma.$transaction(async (tx) => {
+              const tempCustomer = await tx.customers.create({
+                data: {
+                  phone: phoneForStorage,
+                  workspaceId: workspaceId,
+                  name: 'New Customer',
+                  email: `${phoneForStorage.replace(/[^0-9]/g, '')}@whatsapp.ultramsg.temp`,
+                  language: finalLanguage,
+                  isActive: false,
+                },
+              })
+
+              const chatSession = await tx.chatSession.create({
+                data: {
+                  customerId: tempCustomer.id,
+                  workspaceId,
+                  status: 'active',
+                },
+              })
+
+              const messageMarkdown = whatsAppToMarkdown(messageText)
+              await tx.conversationMessage.create({
+                data: {
+                  workspaceId,
+                  customerId: tempCustomer.id,
+                  conversationId: chatSession.id,
+                  role: 'user',
+                  content: messageMarkdown,
+                  agentType: 'NONE',
+                  tokensUsed: 0,
+                  debugInfo: JSON.stringify({
+                    debugMode: true,
+                    reason: 'workspace.debugMode = true',
+                    source: 'ultramsg-webhook',
+                  }),
+                },
+              })
+
+              const assistantMessage = await tx.conversationMessage.create({
+                data: {
+                  workspaceId,
+                  customerId: tempCustomer.id,
+                  conversationId: chatSession.id,
+                  role: 'assistant',
+                  content: wipMessage,
+                  agentType: 'ROUTER',
+                  tokensUsed: translationTokensUsed,
+                  deliveryStatus: 'pending',
+                  debugInfo: JSON.stringify({
+                    debugMode: true,
+                    reason: 'workspace.debugMode = true',
+                    source: 'ultramsg-webhook',
+                  }),
+                },
+              })
+
+              return { tempCustomer, chatSession, assistantMessage }
+            })
+
+            try {
+              const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
+              const queueService = new WhatsAppQueueService(prisma)
+              await queueService.enqueue({
+                workspaceId,
+                customerId: tempCustomer.id,
+                phoneNumber: tempCustomer.phone,
+                messageContent: wipMessage,
+                conversationMessageId: assistantMessage.id,
+              })
+            } catch (error) {
+              logger.error('[ULTRAMSG] ❌ Failed to enqueue WIP message (new user)', {
+                error,
+                workspaceId,
+              })
+            }
+
+            return res.status(200).json({
+              status: 'debug_wip',
+              code: 'DEBUG_MODE',
+              message: 'Channel is in maintenance mode.',
+              wipMessage,
+            })
+          }
+
+          // Silent block for billing/paused/disabled (no response)
+          return res.status(402).json({
+            status: 'workspace_blocked',
+            code: accessResult.blockReason,
+            message: accessResult.message,
+          })
+        }
+
         // TODO: Implement welcome message flow for UltraMsg
         // For now, create customer without welcome message
         
@@ -410,8 +550,30 @@ export class UltraMsgWebhookController {
 
       // 🔍 CRITICAL: Check if customer has chat history (NEW + EXISTING customers)
       // If NO messages exist → send welcome message
+
+      // Get all chat sessions for this customer on WhatsApp channel (UltraMsg = WhatsApp provider)
+      const sessions = await prisma.chatSession.findMany({
+        where: {
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          channel: "whatsapp", // 🔧 CHANNEL ISOLATION (Widget messages don't affect WhatsApp)
+        },
+        select: { id: true },
+      })
+
+      const sessionIds = sessions.map((s) => s.id)
+
+      // Count only REAL user messages (exclude assistant/system/REGISTRATION_FLOW)
       const messageCount = await prisma.conversationMessage.count({
-        where: { customerId: customer.id, workspaceId: customer.workspaceId },
+        where: {
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          role: "user", // 🔧 ONLY user messages (exclude assistant/system)
+          agentType: {
+            not: "REGISTRATION_FLOW", // 🔧 EXCLUDE registration flow messages
+          },
+          ...(sessionIds.length > 0 ? { conversationId: { in: sessionIds } } : {}), // 🔧 CHANNEL SCOPING
+        },
       })
 
       logger.info('[ULTRAMSG] 📊 Message count check for welcome decision', {
@@ -587,8 +749,56 @@ export class UltraMsgWebhookController {
       )
 
       if (!accessResult.canProcess) {
-        // 🚧 CHANNEL_DISABLED → Send WIP message
+        // 🚫 CHANNEL_DISABLED → Silent block (no response)
         if (accessResult.blockReason === 'CHANNEL_DISABLED') {
+          logger.info('[ULTRAMSG] 🚫 Channel disabled - saving message without response', {
+            workspaceId,
+            customerId: customer.id,
+          })
+
+          let chatSession = await prisma.chatSession.findFirst({
+            where: {
+              customerId: customer.id,
+              status: 'active',
+            },
+          })
+
+          if (!chatSession) {
+            chatSession = await prisma.chatSession.create({
+              data: {
+                customerId: customer.id,
+                workspaceId,
+                status: 'active',
+              },
+            })
+          }
+
+          await prisma.conversationMessage.create({
+            data: {
+              workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: 'user',
+              content: whatsAppToMarkdown(messageText),
+              agentType: 'NONE',
+              tokensUsed: 0,
+              debugInfo: JSON.stringify({
+                channelDisabled: true,
+                reason: 'workspace.channelStatus = false',
+                source: 'ultramsg-webhook',
+              }),
+            },
+          })
+
+          return res.status(200).json({
+            status: 'channel_disabled',
+            code: 'CHANNEL_DISABLED',
+            message: 'Channel is disabled.',
+          })
+        }
+
+        // 🚧 DEBUG_MODE → Send WIP message
+        if (accessResult.blockReason === 'DEBUG_MODE') {
           logger.info('[ULTRAMSG] 🚧 Debug mode (WIP) - sending maintenance message', {
             workspaceId,
             customerId: customer.id,
@@ -695,8 +905,8 @@ export class UltraMsgWebhookController {
           }
           
           return res.status(200).json({
-            status: 'channel_disabled',
-            code: 'CHANNEL_DISABLED',
+            status: 'debug_wip',
+            code: 'DEBUG_MODE',
             message: 'Channel is in maintenance mode.',
             wipMessage,
           })
@@ -784,7 +994,7 @@ export class UltraMsgWebhookController {
           customerId: customer.id,
         })
 
-        await prisma.conversationMessage.create({
+        const savedMessage = await prisma.conversationMessage.create({
           data: {
             workspaceId,
             customerId: customer.id,
@@ -800,6 +1010,34 @@ export class UltraMsgWebhookController {
             }),
           },
         })
+
+        // 🔔 Notify realtime clients (chat list + message thread)
+        try {
+          websocketService.notifyNewMessage(workspaceId, {
+            id: savedMessage.id,
+            sessionId: chatSession.id,
+            content: messageMarkdown,
+            sender: 'user',
+            timestamp: savedMessage.createdAt.toISOString(),
+            workspaceId,
+            metadata: {
+              chatbotDisabled: true,
+              source: 'ultramsg-webhook',
+            },
+          })
+          websocketService.notifyChatUpdated(workspaceId, {
+            sessionId: chatSession.id,
+            lastMessage: messageMarkdown.substring(0, 100),
+            lastMessageAt: savedMessage.createdAt.toISOString(),
+            customerId: customer.id,
+          })
+        } catch (wsError) {
+          logger.warn('[ULTRAMSG] ⚠️ Failed to notify WebSocket for chatbot-disabled message', {
+            error: wsError,
+            workspaceId,
+            customerId: customer.id,
+          })
+        }
 
         return res.status(200).json({
           status: 'message_saved',

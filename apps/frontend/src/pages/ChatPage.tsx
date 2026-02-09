@@ -169,6 +169,7 @@ export function ChatPage() {
   const [clientSearchTerm, setClientSearchTerm] = useState(
     searchParams.get("client") || ""
   )
+  const [hideBlocked, setHideBlocked] = useState(true)
   const initialLoadRef = useRef(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
@@ -345,6 +346,10 @@ export function ChatPage() {
             .includes(clientSearchTerm.toLowerCase())
       )
     : chats
+
+  const visibleChats = hideBlocked
+    ? filteredChats.filter((chat: Chat) => !chat.isBlacklisted)
+    : filteredChats
 
   // SMART SELECTION: Auto-select when appropriate, but DON'T update existing selection
   useEffect(() => {
@@ -1186,23 +1191,33 @@ export function ChatPage() {
             }}
           />
           
-          {/* WebSocket Status */}
-          <div className="flex items-center gap-2 text-xs text-gray-500 px-1">
-            <div
-              className={`w-2 h-2 rounded-full ${
-                isWebSocketConnected ? "bg-green-500" : "bg-red-500"
-              } ${isWebSocketConnected ? "animate-pulse" : ""}`}
-            />
-            <span>
-              {isWebSocketConnected ? "Real-time" : "Connecting..."}
-            </span>
+          {/* WebSocket Status + Blocked Filter */}
+          <div className="flex items-center justify-between text-xs text-gray-500 px-1">
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  isWebSocketConnected ? "bg-green-500" : "bg-red-500"
+                } ${isWebSocketConnected ? "animate-pulse" : ""}`}
+              />
+              <span>
+                {isWebSocketConnected ? "Real-time" : "Connecting..."}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>Hide blocked</span>
+              <Switch
+                checked={hideBlocked}
+                onCheckedChange={setHideBlocked}
+                className="scale-75"
+              />
+            </div>
           </div>
           
           {/* Chat List */}
           <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar">
           <div className="flex flex-col gap-2">
-            {chats.length > 0 ? (
-              chats.map((chat: Chat) => {
+            {visibleChats.length > 0 ? (
+              visibleChats.map((chat: Chat) => {
                 // Compare sessionId instead of id
                 const isSelected = selectedChat?.sessionId === chat.sessionId
 

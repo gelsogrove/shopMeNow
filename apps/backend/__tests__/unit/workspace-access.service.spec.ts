@@ -209,10 +209,23 @@ describe("WorkspaceAccessService", () => {
       })
     })
 
-    describe("channel disabled (WIP mode)", () => {
+    describe("debug mode (WIP)", () => {
       it("should block when debugMode is true (test mode)", async () => {
         mockPrisma.workspace.findUnique.mockResolvedValue(
           createWorkspaceMock({ debugMode: true })
+        )
+
+        const result = await service.canProcessMessages(workspaceId)
+
+        expect(result.canProcess).toBe(false)
+        expect(result.blockReason).toBe("DEBUG_MODE")
+      })
+    })
+
+    describe("channel disabled", () => {
+      it("should block when channelStatus is false", async () => {
+        mockPrisma.workspace.findUnique.mockResolvedValue(
+          createWorkspaceMock({ channelStatus: false })
         )
 
         const result = await service.canProcessMessages(workspaceId)
@@ -412,7 +425,7 @@ describe("WorkspaceAccessService", () => {
 
     it("should return wip status for channel disabled", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
-        createWorkspaceMock({ debugMode: true })
+        createWorkspaceMock({ channelStatus: false }) // ✅ FIX: Test channel disabled, not debugMode
       )
 
       const result = await service.getAccessStatus(workspaceId)

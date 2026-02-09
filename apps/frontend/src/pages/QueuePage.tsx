@@ -159,6 +159,12 @@ export function QueuePage() {
   }
 
   // Filter messages by search term AND filter mode
+  const isErrorStatus = (status: QueueMessage["status"]) =>
+    status === "error" || status === "blocked"
+
+  const pendingCount = messages.filter((m) => m.status === "pending").length
+  const errorCount = messages.filter((m) => isErrorStatus(m.status)).length
+
   const filteredMessages = messages.filter((msg) => {
     const matchesSearch =
       msg.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,7 +173,7 @@ export function QueuePage() {
 
     if (filterMode === "all") return matchesSearch
     if (filterMode === "pending") return matchesSearch && msg.status === "pending"
-    if (filterMode === "error") return matchesSearch && msg.status === "error"
+    if (filterMode === "error") return matchesSearch && isErrorStatus(msg.status)
     return matchesSearch
   })
 
@@ -288,7 +294,7 @@ export function QueuePage() {
                 onClick={() => setFilterMode("pending")}
                 className={filterMode === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
               >
-                Pending ({messages.filter((m) => m.status === "pending").length})
+                Pending ({pendingCount})
               </Button>
               <Button
                 variant={filterMode === "error" ? "default" : "outline"}
@@ -296,7 +302,7 @@ export function QueuePage() {
                 onClick={() => setFilterMode("error")}
                 className={filterMode === "error" ? "bg-red-600 hover:bg-red-700" : ""}
               >
-                Error ({messages.filter((m) => m.status === "error").length})
+                Error ({errorCount})
               </Button>
             </div>
           </CardContent>
@@ -430,4 +436,3 @@ export function QueuePage() {
     </PageLayout>
   )
 }
-

@@ -96,6 +96,7 @@
     "@rollup/rollup-win32-ia32-msvc": "^4.54.0",
     "@rollup/rollup-win32-x64-gnu": "^4.54.0",
     "@rollup/rollup-win32-x64-msvc": "^4.54.0",
-    "quill-delta": "*"
+    "quill-delta": "*",
+    "tmux": "^1.0.0"
   }
 }

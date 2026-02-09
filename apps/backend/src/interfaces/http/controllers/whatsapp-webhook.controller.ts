@@ -8,6 +8,7 @@ import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../
 // 🆕 Chat Engine - Main conversation processor
 import { ChatEngineService, getChatEngine } from "../../../application/chat-engine"
 import { workspaceService } from "../../../services/workspace.service"
+import { websocketService } from "../../../services/websocket.service"
 import { getRegistrationText } from "../../../utils/language-detector"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
@@ -594,7 +595,268 @@ export class WhatsAppWebhookController {
         )
 
         // 🆕 Feature 174: Removed STEP 1&2 (RegistrationAttempts check) - users receive welcome freely
-        
+
+        // 🔒 ACCESS CHECK (debug/channel/owner/billing blocks) BEFORE welcome flow
+        const { WorkspaceAccessService } = await import(
+          "../../../application/services/workspace-access.service"
+        )
+        const workspaceAccessService = new WorkspaceAccessService(prisma)
+        const accessResult = await workspaceAccessService.canProcessMessages(
+          workspaceId,
+          false // check channelStatus + debugMode
+        )
+
+        // Get workspace config early (needed for WIP + language)
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: {
+            id: true,
+            name: true,
+            welcomeMessage: true,
+            defaultLanguage: true, // 🌍 Business Configuration default language
+            wipMessage: true,
+            debugMode: true,
+            channelStatus: true,
+            ownerId: true,
+            owner: {
+              select: { status: true },
+            },
+          },
+        })
+
+        if (!workspace) {
+          logger.error("[WEBHOOK] ⚠️ Workspace not found", { workspaceId })
+          res.status(404).json({ error: "Workspace not found" })
+          return
+        }
+
+        // 🚫 OWNER STATUS CHECK: Block if owner is INACTIVE
+        if (workspace.owner?.status === "INACTIVE") {
+          logger.warn("[WEBHOOK] ❌ Message blocked: Owner inactive", {
+            workspaceId,
+            ownerId: workspace.ownerId,
+          })
+          res.status(200).json({ success: true, message: "Message received" })
+          return
+        }
+
+        if (!accessResult.canProcess) {
+          // 🚫 CHANNEL_DISABLED → Save message, no response
+          if (accessResult.blockReason === "CHANNEL_DISABLED") {
+            logger.info("[WEBHOOK] 🚫 Channel disabled (new user) - saving message only", {
+              workspaceId,
+              phoneNumber,
+            })
+
+            const phoneForStorage =
+              lookupVariants.find((v) => v.startsWith("+")) ||
+              lookupVariants[0] ||
+              phoneNumber
+
+            const tempCustomer = await prisma.customers.create({
+              data: {
+                phone: phoneForStorage,
+                workspaceId: workspaceId,
+                name: contactName || "New Customer",
+                email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`,
+                language: workspace.defaultLanguage,
+                isActive: false,
+              },
+            })
+
+            const chatSession = await prisma.chatSession.create({
+              data: {
+                customerId: tempCustomer.id,
+                workspaceId: workspaceId,
+                status: "active",
+              },
+            })
+
+            const messageMarkdown = whatsAppToMarkdown(messageText)
+            const savedMessage = await prisma.conversationMessage.create({
+              data: {
+                workspaceId: workspaceId,
+                customerId: tempCustomer.id,
+                conversationId: chatSession.id,
+                role: "user",
+                content: messageMarkdown,
+                agentType: "NONE",
+                tokensUsed: 0,
+                debugInfo: JSON.stringify({
+                  channelDisabled: true,
+                  reason: "workspace.channelStatus = false",
+                  timestamp: new Date().toISOString(),
+                  source: "whatsapp-webhook",
+                }),
+              },
+            })
+
+            // 🔔 Notify realtime clients (chat list + message thread)
+            try {
+              websocketService.notifyNewMessage(workspaceId, {
+                id: savedMessage.id,
+                sessionId: chatSession.id,
+                content: messageMarkdown,
+                sender: "user",
+                timestamp: savedMessage.createdAt.toISOString(),
+                workspaceId,
+                metadata: { channelDisabled: true, source: "whatsapp-webhook" },
+              })
+              websocketService.notifyChatUpdated(workspaceId, {
+                sessionId: chatSession.id,
+                lastMessage: messageMarkdown.substring(0, 100),
+                lastMessageAt: savedMessage.createdAt.toISOString(),
+                customerId: tempCustomer.id,
+              })
+            } catch (wsError) {
+              logger.warn("[WEBHOOK] ⚠️ WebSocket notify failed for channel-disabled new user", {
+                error: wsError,
+                workspaceId,
+              })
+            }
+
+            res.status(200).json({
+              status: "channel_disabled",
+              code: "CHANNEL_DISABLED",
+              message: "Channel is disabled.",
+            })
+            return
+          }
+
+          // 🚧 DEBUG_MODE → Send WIP message
+          if (accessResult.blockReason === "DEBUG_MODE") {
+            logger.info("[WEBHOOK] 🚧 Debug mode (new user) - sending WIP message", {
+              workspaceId,
+              phoneNumber,
+            })
+
+            const detectedLanguageFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
+            const finalLanguage = detectedLanguageFromPhone || workspace.defaultLanguage
+            const rawWipMessage =
+              workspace.wipMessage || "Work in progress. Please contact us later."
+
+            let finalWipMessage = rawWipMessage
+            let translationTokensUsed = 0
+            try {
+              const { TranslationAgent } = require("../../../application/agents/TranslationAgent")
+              const translationAgent = new TranslationAgent(prisma)
+              const translationResult = await translationAgent.process({
+                workspaceId,
+                message: rawWipMessage,
+                targetLanguage: finalLanguage,
+                customerName: contactName || "Customer",
+                customerId: undefined,
+                channel: "whatsapp",
+              })
+              finalWipMessage = translationResult.message || rawWipMessage
+              translationTokensUsed = translationResult.tokensUsed || 0
+            } catch (translationError) {
+              logger.warn("[WEBHOOK] ⚠️ WIP translation failed (new user), using raw message", {
+                error: translationError,
+              })
+            }
+
+            const phoneForStorage =
+              lookupVariants.find((v) => v.startsWith("+")) ||
+              lookupVariants[0] ||
+              phoneNumber
+
+            const { tempCustomer, chatSession, assistantMessage } = await prisma.$transaction(async (tx) => {
+              const tempCustomer = await tx.customers.create({
+                data: {
+                  phone: phoneForStorage,
+                  workspaceId: workspaceId,
+                  name: contactName || "New Customer",
+                  email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`,
+                  language: finalLanguage,
+                  isActive: false,
+                },
+              })
+
+              const chatSession = await tx.chatSession.create({
+                data: {
+                  customerId: tempCustomer.id,
+                  workspaceId: workspaceId,
+                  status: "active",
+                },
+              })
+
+              const messageMarkdown = whatsAppToMarkdown(messageText)
+              await tx.conversationMessage.create({
+                data: {
+                  workspaceId: workspaceId,
+                  customerId: tempCustomer.id,
+                  conversationId: chatSession.id,
+                  role: "user",
+                  content: messageMarkdown,
+                  agentType: "NONE",
+                  tokensUsed: 0,
+                  debugInfo: JSON.stringify({
+                    debugMode: true,
+                    reason: "workspace.debugMode = true",
+                    timestamp: new Date().toISOString(),
+                    source: "whatsapp-webhook",
+                  }),
+                },
+              })
+
+              const assistantMessage = await tx.conversationMessage.create({
+                data: {
+                  workspaceId: workspaceId,
+                  customerId: tempCustomer.id,
+                  conversationId: chatSession.id,
+                  role: "assistant",
+                  content: finalWipMessage,
+                  agentType: "ROUTER",
+                  tokensUsed: translationTokensUsed,
+                  deliveryStatus: "pending",
+                  debugInfo: JSON.stringify({
+                    debugMode: true,
+                    reason: "workspace.debugMode = true",
+                    timestamp: new Date().toISOString(),
+                    source: "whatsapp-webhook",
+                  }),
+                },
+              })
+
+              return { tempCustomer, chatSession, assistantMessage }
+            })
+
+            try {
+              const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
+              const queueService = new WhatsAppQueueService(prisma)
+              await queueService.enqueue({
+                workspaceId,
+                customerId: tempCustomer.id,
+                phoneNumber: tempCustomer.phone,
+                messageContent: finalWipMessage,
+                conversationMessageId: assistantMessage.id,
+              })
+            } catch (error) {
+              logger.error("[WEBHOOK] ❌ Failed to enqueue WIP message (new user)", {
+                error,
+                workspaceId,
+              })
+            }
+
+            res.status(200).json({
+              status: "debug_wip",
+              code: "DEBUG_MODE",
+              message: "Channel is in maintenance mode.",
+              wipMessage: finalWipMessage,
+            })
+            return
+          }
+
+          // Silent block for billing issues (PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED, OWNER_DELETED)
+          res.status(402).json({
+            status: "workspace_blocked",
+            code: accessResult.blockReason,
+            message: accessResult.message,
+          })
+          return
+        }
+
         // ✅ STEP 3: Check billing before sending welcome message
         
         // 💰 BILLING CHECK: Verify credit and plan limits BEFORE creating customer
@@ -667,37 +929,6 @@ export class WhatsAppWebhookController {
             customersMax: customerLimitCheck.max,
           }
         )
-
-        // Get workspace to retrieve welcome message
-        const workspace = await prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: {
-            id: true,
-            name: true,
-            welcomeMessage: true,
-            defaultLanguage: true, // 🌍 Business Configuration default language
-            ownerId: true,
-            owner: {
-              select: { status: true }
-            }
-          },
-        })
-
-        if (!workspace) {
-          logger.error("[WEBHOOK] ⚠️ Workspace not found", { workspaceId })
-          res.status(404).json({ error: "Workspace not found" })
-          return
-        }
-
-        // 🚫 OWNER STATUS CHECK: Block if owner is INACTIVE
-        if (workspace.owner?.status === "INACTIVE") {
-          logger.warn("[WEBHOOK] ❌ Message blocked: Owner inactive", {
-            workspaceId,
-            ownerId: workspace.ownerId,
-          })
-          res.status(200).json({ success: true, message: "Message received" })
-          return
-        }
 
       // 🌍 LANGUAGE PRIORITY: customer.language → phone prefix (only IT/ES/PT) → workspace.defaultLanguage
         const detectedLanguageFromPhone = detectLanguageFromPhonePrefix(phoneNumber)
@@ -1002,8 +1233,30 @@ export class WhatsAppWebhookController {
       // 🔍 CRITICAL FIX: Check if customer has chat history
       // If NO messages exist → send welcome message (even if customer is registered)
       // This handles scenario: registered customer with deleted chat history
+
+      // Get all chat sessions for this customer on WhatsApp channel
+      const sessions = await prisma.chatSession.findMany({
+        where: {
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          channel: "whatsapp", // 🔧 CHANNEL ISOLATION (Widget messages don't affect WhatsApp)
+        },
+        select: { id: true },
+      })
+
+      const sessionIds = sessions.map((s) => s.id)
+
+      // Count only REAL user messages (exclude assistant/system/REGISTRATION_FLOW)
       const messageCount = await prisma.conversationMessage.count({
-        where: { customerId: customer.id, workspaceId: customer.workspaceId },
+        where: {
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          role: "user", // 🔧 ONLY user messages (exclude assistant/system)
+          agentType: {
+            not: "REGISTRATION_FLOW", // 🔧 EXCLUDE registration flow messages
+          },
+          ...(sessionIds.length > 0 ? { conversationId: { in: sessionIds } } : {}), // 🔧 CHANNEL SCOPING
+        },
       })
 
       if (messageCount === 0) {
@@ -1489,7 +1742,7 @@ export class WhatsAppWebhookController {
         }
 
         // Save customer message to conversationMessage table
-        await prisma.conversationMessage.create({
+        const savedMessage = await prisma.conversationMessage.create({
           data: {
             workspaceId: customer.workspaceId,
             customerId: customer.id,
@@ -1506,6 +1759,34 @@ export class WhatsAppWebhookController {
             }),
           },
         })
+
+        // 🔔 Notify realtime clients (chat list + message thread)
+        try {
+          websocketService.notifyNewMessage(customer.workspaceId, {
+            id: savedMessage.id,
+            sessionId: chatSession.id,
+            content: messageMarkdown,
+            sender: "user",
+            timestamp: savedMessage.createdAt.toISOString(),
+            workspaceId: customer.workspaceId,
+            metadata: {
+              chatbotDisabled: true,
+              source: "whatsapp-webhook",
+            },
+          })
+          websocketService.notifyChatUpdated(customer.workspaceId, {
+            sessionId: chatSession.id,
+            lastMessage: messageMarkdown.substring(0, 100),
+            lastMessageAt: savedMessage.createdAt.toISOString(),
+            customerId: customer.id,
+          })
+        } catch (wsError) {
+          logger.warn("[WEBHOOK] ⚠️ Failed to notify WebSocket for chatbot-disabled message", {
+            error: wsError,
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+          })
+        }
 
         // Return success WITHOUT processing with LLM
         res.status(200).json({
@@ -1624,7 +1905,7 @@ export class WhatsAppWebhookController {
       logger.info("[WEBHOOK] ✅ Security validation passed", { customerId: customer.id })
 
       // 🔒 Feature 197: Check workspace access BEFORE billing
-      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), CHANNEL_DISABLED (debugMode WIP)
+      // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), DEBUG_MODE (WIP), CHANNEL_DISABLED (silent)
       const { WorkspaceAccessService } = await import(
         "../../../application/services/workspace-access.service"
       )
@@ -1643,8 +1924,41 @@ export class WhatsAppWebhookController {
           )
 
       if (!accessResult.canProcess) {
-        // 🚧 CHANNEL_DISABLED → Send WIP message (debugMode only; channelStatus=false is blocked earlier)
+        // 🚫 CHANNEL_DISABLED → Silent block (no response)
         if (accessResult.blockReason === "CHANNEL_DISABLED") {
+          logger.info("[WEBHOOK] 🚫 Channel disabled - saving message without response", {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+          })
+
+          await prisma.conversationMessage.create({
+            data: {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: "user",
+              content: messageMarkdown,
+              agentType: "NONE",
+              tokensUsed: 0,
+              debugInfo: JSON.stringify({
+                channelDisabled: true,
+                reason: "workspace.channelStatus = false",
+                timestamp: new Date().toISOString(),
+                source: "whatsapp-webhook",
+              }),
+            },
+          })
+
+          res.status(200).json({
+            status: "channel_disabled",
+            code: "CHANNEL_DISABLED",
+            message: "Channel is disabled.",
+          })
+          return
+        }
+
+        // 🚧 DEBUG_MODE → Send WIP message
+        if (accessResult.blockReason === "DEBUG_MODE") {
           logger.info("[WEBHOOK] 🚧 Debug mode (WIP) - sending maintenance message", {
             workspaceId: customer.workspaceId,
             customerId: customer.id,
@@ -1764,8 +2078,8 @@ export class WhatsAppWebhookController {
           }
           
           res.status(200).json({
-            status: "channel_disabled",
-            code: "CHANNEL_DISABLED",
+            status: "debug_wip",
+            code: "DEBUG_MODE",
             message: "Channel is in maintenance mode. Your message has been saved.",
             wipMessage: finalWipMessage,
           })
