@@ -72,8 +72,6 @@ export {
   PlanType,
   TransactionType,
   BillingType,
-  CampaignFrequency,
-  CampaignTargetType,
   ConfigType,
   PricingType,
   AgentType,
@@ -121,8 +119,6 @@ export type {
   WhatsappSettings,
   PaymentDetails,
   PasswordReset,
-  Campaign,
-  CampaignSent,
   SoftDeleteAuditLog,
   // Additional types needed by backend
   AgentConfig,
@@ -152,7 +148,6 @@ export type {
   // Push Campaign Types
   PushCampaign,
   PushCampaignRecipient,
-  CustomerFeedback,
 } from './generated/prisma/index.js'
 
 // Export prisma as default
