@@ -164,6 +164,8 @@ export class WorkspaceController {
           ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
           ultraMsgToken: workspace.ultraMsgToken ?? null,
           ultraMsgApiUrl: workspace.ultraMsgApiUrl ?? null,
+          // 🔧 FIX: Include webhookId (was missing → Callback URL showed "Not generated")
+          whatsappWebhookId: (workspace as any).whatsappWebhookId ?? workspace.id,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
           language: workspace.language,
@@ -449,6 +451,8 @@ export class WorkspaceController {
         ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
         ultraMsgToken: workspace.ultraMsgToken ?? null,
         ultraMsgApiUrl: workspace.ultraMsgApiUrl ?? null,
+        // 🔧 FIX: Include webhookId so Callback URL is always generated after save
+        whatsappWebhookId: (workspace as any).whatsappWebhookId ?? workspace.id,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail,
         language: workspace.language,

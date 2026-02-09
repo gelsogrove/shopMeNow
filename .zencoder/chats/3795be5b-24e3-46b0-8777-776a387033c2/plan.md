@@ -33,6 +33,6 @@
     - [x] Add Tag selection dropdown in the targeting step.
 
 ## Phase 3: Final Polish & Verification
-- [ ] Ensure all UI strings are in English.
-- [ ] Run `npm run lint` and `npm run typecheck` in both backend and frontend.
+- [x] Ensure all UI strings are in English.
+- [x] Run `npm run lint` and `npm run typecheck` in both backend and frontend.
 - [x] Write/Update unit tests for the scheduler and recipient logic.

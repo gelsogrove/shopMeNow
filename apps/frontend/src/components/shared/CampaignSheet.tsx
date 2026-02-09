@@ -148,10 +148,10 @@ export function CampaignSheet({
       setLoading(true)
       const { data } = await api.get(`/workspaces/${workspaceId}/customers`)
 
-      // 🔥 Filtra clienti validi per campagne PUSH:
-      // - isBlacklisted = false (non bloccati)
-      // - isActive = true (attivi)
-      // - push_notifications_consent = true (hanno dato consenso push)
+      // Filter valid customers for PUSH campaigns:
+      // - isBlacklisted = false (not blocked)
+      // - isActive = true (active)
+      // - push_notifications_consent = true (have given push consent)
       const validCustomers = (data.data || []).filter((customer: Customer) => {
         const isBlocked = customer.isBlacklisted === true
         const isActive = customer.isActive !== false
@@ -159,13 +159,13 @@ export function CampaignSheet({
 
         const isValid = !isBlocked && isActive && hasPushConsent
 
-        // Log per debug (solo clienti esclusi)
+        // Debug log (only excluded customers)
         if (!isValid) {
           const reasons = []
           if (isBlocked) reasons.push("blocked")
           if (!isActive) reasons.push("inactive")
           if (!hasPushConsent) reasons.push("no push consent")
-          logger.info(`Cliente ${customer.name} escluso: ${reasons.join(", ")}`)
+          logger.info(`Customer ${customer.name} excluded: ${reasons.join(", ")}`)
         }
 
         return isValid
