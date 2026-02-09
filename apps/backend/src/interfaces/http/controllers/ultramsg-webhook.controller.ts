@@ -430,10 +430,33 @@ export class UltraMsgWebhookController {
         })
 
         if (welcomeResult.isWelcomeMessage && welcomeResult.welcomeText) {
-          logger.info('[ULTRAMSG] ✅ Welcome message sent', {
+          logger.info('[ULTRAMSG] ✅ Welcome message prepared', {
             customerId: customer.id,
             messageId: welcomeResult.assistantMessageId,
           })
+
+          // 📤 CRITICAL: Queue welcome message for WhatsApp delivery
+          // Without this, the welcome message is saved to DB but NEVER sent to customer!
+          try {
+            const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
+            const queueService = new WhatsAppQueueService(prisma)
+            await queueService.enqueue({
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              messageContent: welcomeResult.welcomeText,
+              conversationMessageId: welcomeResult.assistantMessageId,
+              isPlayground: false,
+            })
+            logger.info('[ULTRAMSG] ✅ Welcome message queued for WhatsApp delivery', {
+              customerId: customer.id,
+            })
+          } catch (queueError) {
+            logger.error('[ULTRAMSG] ❌ Failed to enqueue welcome message', {
+              error: queueError instanceof Error ? queueError.message : String(queueError),
+              customerId: customer.id,
+            })
+          }
 
           return res.status(200).json({
             status: 'welcomed',
