@@ -54,6 +54,14 @@ export function WhatsAppChannelSection({
   // 🔧 FIX: Use workspace.id as fallback if whatsappWebhookId is not set
   const webhookId = formData.whatsappWebhookId || currentWorkspace?.id || ""
   
+  // 🐛 DEBUG: Log webhook calculations
+  console.log('WhatsAppChannelSection - webhookId:', {
+    formDataWebhookId: formData.whatsappWebhookId,
+    workspaceId: currentWorkspace?.id,
+    calculatedWebhookId: webhookId,
+    provider: currentProvider,
+  })
+  
   const metaWebhookUrl =
     formData.whatsappWebhookUrl ||
     `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/webhook/${webhookId}`
@@ -63,6 +71,13 @@ export function WhatsAppChannelSection({
     : ""
 
   const webhookDisplayUrl = currentProvider === "ultramsg" ? ultraMsgWebhookUrl : metaWebhookUrl
+  
+  console.log('WhatsAppChannelSection - URLs:', {
+    metaWebhookUrl,
+    ultraMsgWebhookUrl,
+    webhookDisplayUrl,
+    provider: currentProvider,
+  })
 
   const handleCopy = async (text?: string) => {
     if (!text) {
