@@ -51,8 +51,10 @@ export function WhatsAppChannelSection({
   const { currentWorkspace } = useWorkspace()
   const currentProvider = formData.whatsappProvider || "meta"
   
-  // 🔧 FIX: Use workspace.id as fallback if whatsappWebhookId is not set
-  const webhookId = formData.whatsappWebhookId || currentWorkspace?.id || ""
+  // 🔧 FIX: For Meta, use workspace.id as fallback. For UltraMsg, require explicit webhookId
+  const webhookId = currentProvider === "ultramsg" 
+    ? formData.whatsappWebhookId || "" // UltraMsg: use form value or empty
+    : formData.whatsappWebhookId || currentWorkspace?.id || "" // Meta: fallback to workspace ID
   
   // 🐛 DEBUG: Log webhook calculations
   console.log('WhatsAppChannelSection - webhookId:', {
@@ -60,13 +62,14 @@ export function WhatsAppChannelSection({
     workspaceId: currentWorkspace?.id,
     calculatedWebhookId: webhookId,
     provider: currentProvider,
+    isUltraMsg: currentProvider === "ultramsg",
   })
   
   const metaWebhookUrl =
     formData.whatsappWebhookUrl ||
     `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/webhook/${webhookId}`
   
-  const ultraMsgWebhookUrl = webhookId
+  const ultraMsgWebhookUrl = webhookId && currentProvider === "ultramsg"
     ? `${WEBHOOK_BASE.replace(/\/$/, "")}/api/v1/whatsapp/ultramsg/${webhookId}`
     : ""
 
