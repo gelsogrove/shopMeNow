@@ -399,18 +399,8 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // Owner inactive or channel disabled
-      if (whatsappSettings.workspace.owner?.status === "INACTIVE" || whatsappSettings.workspace.channelStatus === false) {
-        logger.warn("[WEBHOOK] 🚫 Channel disabled or owner inactive", {
-          webhookId,
-          workspaceId: whatsappSettings.workspace.id,
-          channelStatus: whatsappSettings.workspace.channelStatus,
-          ownerStatus: whatsappSettings.workspace.owner?.status,
-        })
-        res.status(200).json({ success: true, message: "Channel disabled" })
-        return
-      }
-
+      // 🔒 SECURITY: Verify signature BEFORE checking channelStatus
+      // This prevents information disclosure (workspace enumeration attack)
       // Verify signature (strict) - SKIP for playground mode
       if (!isPlayground) {
         const sigHeader = req.header("x-hub-signature-256")
@@ -445,6 +435,18 @@ export class WhatsAppWebhookController {
         }
       } else {
         logger.info("[WEBHOOK] 🧪 Playground mode - skipping signature verification")
+      }
+
+      // Owner inactive or channel disabled (checked AFTER authentication)
+      if (whatsappSettings.workspace.owner?.status === "INACTIVE" || whatsappSettings.workspace.channelStatus === false) {
+        logger.warn("[WEBHOOK] 🚫 Channel disabled or owner inactive", {
+          webhookId,
+          workspaceId: whatsappSettings.workspace.id,
+          channelStatus: whatsappSettings.workspace.channelStatus,
+          ownerStatus: whatsappSettings.workspace.owner?.status,
+        })
+        res.status(200).json({ success: true, message: "Channel disabled" })
+        return
       }
 
       workspaceId = whatsappSettings.workspaceId

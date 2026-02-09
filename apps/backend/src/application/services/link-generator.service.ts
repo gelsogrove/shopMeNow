@@ -166,7 +166,42 @@ export class LinkGeneratorService {
       originalUrl = `${originalUrl}${separator}token=${token}`
     }
 
-    return this.generateShortLink(originalUrl, workspaceId, "registration")
+    // 🔧 FIX: Registration links should last 7 days, not 1 hour
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 7) // 7 days from now
+
+    return this.generateShortLinkWithExpiry(originalUrl, workspaceId, "registration", expiresAt)
+  }
+
+  /**
+   * Generate a short link with custom expiration
+   */
+  private async generateShortLinkWithExpiry(
+    originalUrl: string,
+    workspaceId: string,
+    linkType: string,
+    expiresAt: Date
+  ): Promise<string> {
+    try {
+      const shortResult = await this.urlShortenerService.createShortUrl(
+        originalUrl,
+        workspaceId,
+        expiresAt
+      )
+
+      const shortUrl = shortResult.shortUrl
+
+      logger.info(
+        `📎 Created short ${linkType} link (expires: ${expiresAt.toISOString()}): ${shortUrl} → ${originalUrl}`
+      )
+      return shortUrl
+    } catch (error) {
+      logger.warn(
+        `⚠️ Failed to create short URL for ${linkType}, using long URL:`,
+        error
+      )
+      return originalUrl
+    }
   }
 
   /**

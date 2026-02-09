@@ -200,7 +200,32 @@ export class UltraMsgWebhookController {
         })
       }
 
-      // Owner inactive or channel disabled
+      // 🔒 SECURITY: Verify instanceId BEFORE checking channelStatus
+      // This prevents information disclosure (workspace enumeration attack)
+      const receivedInstanceId = req.body.instanceId
+      const expectedInstanceId = workspace.ultraMsgInstanceId
+
+      if (!receivedInstanceId) {
+        logger.warn('[ULTRAMSG] ❌ Missing instanceId in payload', {
+          webhookId,
+          workspaceId,
+        })
+        return res.status(403).json({ error: 'missing_instance_id' })
+      }
+
+      if (receivedInstanceId !== expectedInstanceId) {
+        logger.warn('[ULTRAMSG] ❌ Invalid instanceId', {
+          webhookId,
+          workspaceId,
+          received: receivedInstanceId,
+          expected: expectedInstanceId ? '***' : 'NOT_CONFIGURED',
+        })
+        return res.status(403).json({ error: 'invalid_instance_id' })
+      }
+
+      logger.info('[ULTRAMSG] ✅ InstanceId verified', { workspaceId })
+
+      // Owner inactive or channel disabled (checked AFTER authentication)
       if (workspace.owner?.status === 'INACTIVE' || workspace.channelStatus === false) {
         logger.warn('[ULTRAMSG] 🚫 Channel disabled or owner inactive', {
           workspaceId,

@@ -13,9 +13,15 @@ import { toast } from '@/lib/toast'
 // Mock updateWorkspace function - must use vi.fn() directly, not a variable
 vi.mock('@/services/workspaceApi', () => ({
   updateWorkspace: vi.fn(),
+  getWorkspaceById: vi.fn(),
+  deleteWorkspace: vi.fn(),
   workspaceApi: {
     update: vi.fn(),
   },
+}))
+
+vi.mock('@/services/agent-config-api', () => ({
+  resetAgentPromptsToDefaults: vi.fn(),
 }))
 
 vi.mock('@/services/api', () => ({
@@ -27,15 +33,16 @@ vi.mock('@/services/api', () => ({
 }))
 vi.mock('@/lib/toast')
 vi.mock('@/hooks/useWorkspaceRole', () => ({
-  useWorkspaceRole: () => ({ isSuperAdmin: true }),
+  useWorkspaceRole: () => ({ isSuperAdmin: true, isOwner: true }),
 }))
 vi.mock('@/components/layout/PageLayout', () => ({
   PageLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
-// Import mocked updateWorkspace after mock definition
-import { updateWorkspace } from '@/services/workspaceApi'
+// Import mocked functions after mock definition
+import { updateWorkspace, getWorkspaceById } from '@/services/workspaceApi'
 const mockUpdateWorkspace = vi.mocked(updateWorkspace)
+const mockGetWorkspaceById = vi.mocked(getWorkspaceById)
 
 const mockWorkspace = {
   id: 'test-workspace-1',
@@ -72,11 +79,24 @@ const mockWorkspace = {
   widgetTitle: 'Chat with us',
   widgetLanguage: 'en',
   widgetPrimaryColor: '#22c55e',
+  chatbotName: 'Sofia',
+  businessType: 'retail',
+  currency: 'USD',
+  defaultLanguage: 'it',
+  widgetIcon: 'chat',
+  widgetUseChannelLogo: false,
+  registrationPage: '',
+  requireManualApproval: false,
+  isActive: true,
+  isDelete: false,
+  createdAt: '2024-01-01T00:00:00.000Z',
+  updatedAt: '2024-01-01T00:00:00.000Z',
 }
 
 const setupWorkspaceGet = () => {
   vi.mocked(api.get).mockResolvedValue({ data: mockWorkspace })
   mockUpdateWorkspace.mockResolvedValue(mockWorkspace)
+  mockGetWorkspaceById.mockResolvedValue(mockWorkspace)
 }
 
 const renderWithProviders = (component: React.ReactElement) => {

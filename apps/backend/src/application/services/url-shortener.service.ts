@@ -71,8 +71,10 @@ export class UrlShortenerService {
         },
       })
 
-      // Use app base URL for short links (always served by backend)
-      const baseUrl = config.appUrl.replace(/\/$/, "")
+      // 🔧 FIX: Use frontendUrl instead of appUrl for short links
+      // This ensures links use echatbot.ai instead of Heroku domain
+      // The /s/:shortCode route is served by the backend but uses frontend domain
+      const baseUrl = config.frontendUrl.replace(/\/$/, "")
       const shortUrl = `${baseUrl}/s/${shortCode}`
 
       logger.info(
