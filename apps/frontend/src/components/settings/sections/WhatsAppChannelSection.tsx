@@ -282,6 +282,18 @@ export function WhatsAppChannelSection({
                     disabled={!canEdit}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsappWebhookId">Webhook ID</Label>
+                  <Input
+                    id="whatsappWebhookId"
+                    value={formData.whatsappWebhookId || ""}
+                    onChange={(e) => onFieldChange("whatsappWebhookId", e.target.value)}
+                    placeholder="wh_20dbf5340425a7dbba9e3e73"
+                    disabled={!canEdit}
+                  />
+                  <p className="text-xs text-gray-500">Found in UltraMsg dashboard instance settings</p>
+                </div>
               </>
             )}
 
