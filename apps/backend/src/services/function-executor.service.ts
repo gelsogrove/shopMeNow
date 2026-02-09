@@ -259,8 +259,8 @@ export class FunctionExecutor {
           result = await this.getProfileLink(context)
           break
 
-        case "handlePushNotifications":
-          result = await this.handlePushNotifications(args, context)
+        case "contactOperator":
+          result = await this.contactOperator(args, context)
           break
 
         default:
@@ -875,21 +875,22 @@ export class FunctionExecutor {
   }
 
   /**
-   * 🔔 Handle Push Notifications - Toggle customer push notification consent
+   * 🆘 Contact Operator - Escalate to human support
    */
-  private async handlePushNotifications(
+  private async contactOperator(
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    logger.info("🔔 Handling push notifications", { args, context })
+    logger.info("🆘 Contacting operator", { args, context })
 
     const { CallingFunctionsService } = require("./calling-functions.service")
     const callingFunctions = new CallingFunctionsService()
 
-    return await callingFunctions.handlePushNotifications({
+    return await callingFunctions.contactOperator({
       workspaceId: context.workspaceId,
       customerId: context.customerId,
-      consent: args.consent !== undefined ? args.consent : true,
+      reason: args.reason || "Customer requested support",
+      urgency: args.urgency || "medium",
     })
   }
 }

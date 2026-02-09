@@ -182,22 +182,28 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
     it("should have profile management functions", () => {
       const functionNames = PROFILE_MANAGEMENT_FUNCTIONS.map((fn) => fn.function.name)
 
-      expect(functionNames).toContain("handlePushNotifications")
       expect(functionNames).toContain("getProfileLink")
+      expect(functionNames).toContain("contactOperator")
     })
 
     it("should have exactly 2 functions", () => {
       expect(PROFILE_MANAGEMENT_FUNCTIONS.length).toBe(2)
     })
 
-    it("handlePushNotifications should require boolean value parameter", () => {
-      const handlePush = PROFILE_MANAGEMENT_FUNCTIONS.find(
-        (fn) => fn.function.name === "handlePushNotifications"
+    it("contactOperator should require reason and urgency parameters", () => {
+      const contactOp = PROFILE_MANAGEMENT_FUNCTIONS.find(
+        (fn) => fn.function.name === "contactOperator"
       )
 
-      expect(handlePush).toBeDefined()
-      expect(handlePush!.function.parameters.required).toContain("value")
-      expect(handlePush!.function.parameters.properties.value.type).toBe("boolean")
+      expect(contactOp).toBeDefined()
+      expect(contactOp!.function.parameters.required).toContain("reason")
+      expect(contactOp!.function.parameters.required).toContain("urgency")
+      expect(contactOp!.function.parameters.properties.urgency.enum).toEqual([
+        "low",
+        "medium",
+        "high",
+        "critical",
+      ])
     })
   })
 
@@ -305,12 +311,26 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       })
     })
 
-    it("all function names should be unique across all agents", () => {
+    it("function names should be mostly unique (contactOperator is shared)", () => {
       const allFunctions = getAllFunctions()
       const allNames = allFunctions.map((fn) => fn.function.name)
       const uniqueNames = [...new Set(allNames)]
 
-      expect(uniqueNames.length).toBe(allNames.length)
+      // We expect 18 unique names out of 19 total (contactOperator appears twice)
+      expect(uniqueNames.length).toBe(18)
+      expect(allNames.length).toBe(19)
+
+      // Verify contactOperator is the only duplicate
+      const nameCounts: Record<string, number> = {}
+      allNames.forEach((name) => {
+        nameCounts[name] = (nameCounts[name] || 0) + 1
+      })
+
+      const duplicates = Object.entries(nameCounts)
+        .filter(([_, count]) => count > 1)
+        .map(([name]) => name)
+
+      expect(duplicates).toEqual(["contactOperator"])
     })
   })
 })

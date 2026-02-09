@@ -463,32 +463,38 @@ export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
   {
     type: "function",
     function: {
-      name: "handlePushNotifications",
+      name: "getProfileLink",
       description:
-        "🔔 PRIORITY 2 - HIGH. Gestisce SOLO sottoscrizione/cancellazione notifiche push promozionali. QUANDO USARE: Cliente vuole attivare/disattivare ESCLUSIVAMENTE notifiche/offerte/messaggi promozionali. ESEMPI: 'attiva notifiche', 'voglio ricevere offerte', 'disattiva messaggi', 'stop promozioni'. FLOW OBBLIGATORIO: 1) Mostra stato attuale, 2) Spiega cosa cambia, 3) Chiedi conferma esplicita 'SI', 4) SOLO dopo 'SI' → chiama handlePushNotifications(value). NON usare per modifiche dati profilo (email/telefono/indirizzo → usa getProfileLink invece).",
+        "🔗 PRIORITY 1 - HIGHEST. Genera link sicuro per gestire profilo cliente. QUANDO USARE: Cliente vuole: 1) 📦 Modificare indirizzo/email/telefono/nome, 2) 🔔 Gestire notifiche push/newsletter (SUBSCRIBE/UNSUBSCRIBE), 3) 🌐 Cambiare lingua, 4) 👁️ Vedere il proprio profilo, 5) 🗑️ Cancellare il proprio account (DELETE). ESEMPI: 'cambia indirizzo', 'disattiva notifiche', 'voglio inglese', 'mostrami profilo', 'cancella account'. Link ha validità 1 ora con token JWT. DOPO chiamata: mostrare SEMPRE [LINK_PROFILE_WITH_TOKEN] nel response.",
       parameters: {
         type: "object",
-        properties: {
-          value: {
-            type: "boolean",
-            description:
-              "true = attiva notifiche push (SUBSCRIBE), false = disattiva notifiche push (UNSUBSCRIBE).",
-          },
-        },
-        required: ["value"],
+        properties: {},
+        required: [],
       },
     },
   },
   {
     type: "function",
     function: {
-      name: "getProfileLink",
+      name: "contactOperator",
       description:
-        "🔗 PRIORITY 1 - HIGHEST. Genera link sicuro per modificare dati profilo cliente. QUANDO USARE: Cliente vuole modificare/cambiare/aggiornare QUALSIASI dato personale: 📦 indirizzo spedizione, 📧 email, 📞 telefono, 👤 nome. ESEMPI TRIGGER: 'cambia indirizzo', 'modifica email', 'aggiorna telefono', 'voglio cambiare nome', 'aggiorna profilo', 'modifica dati'. Link ha validità 1 ora con token JWT. IMPORTANTE: NON usare per notifiche push (usa handlePushNotifications). NON usare per vedere profilo senza modifiche (mostra info direttamente). DOPO chiamata: mostrare SEMPRE [LINK_PROFILE_WITH_TOKEN] token nel response.",
+        "🆘 PRIORITY 2 - HIGH. Escalation al supporto umano quando cliente frustrato, problema complesso, o richiesta esplicita operatore umano. QUANDO USARE: 1) Cliente chiede esplicitamente operatore ('voglio parlare con operatore'), 2) Cliente frustrato dopo 3+ tentativi falliti, 3) Problema troppo complesso per chatbot, 4) Sistema non può completare richiesta. DOPO chiamata: mostra messaggio escalation personalizzato da workspace.humanSupportInstructions.",
       parameters: {
         type: "object",
-        properties: {},
-        required: [],
+        properties: {
+          reason: {
+            type: "string",
+            description:
+              "Motivo escalation: problema non risolvibile, cliente frustrato, richiesta esplicita, etc.",
+          },
+          urgency: {
+            type: "string",
+            enum: ["low", "medium", "high", "critical"],
+            description:
+              "Livello urgenza: low (info generica), medium (problema moderato), high (cliente frustrato), critical (problema bloccante).",
+          },
+        },
+        required: ["reason", "urgency"],
       },
     },
   },
