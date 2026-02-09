@@ -408,28 +408,29 @@ export class UltraMsgWebhookController {
         const welcomeHandler = new WelcomeMessageHandler(prisma)
 
         // Process welcome message
-        const welcomeResult = await welcomeHandler.process({
-          customer,
-          workspace: customer.workspace,
-          messageText,
+        const welcomeResult = await welcomeHandler.handleWelcomeMessage({
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          customerLanguage: customer.language,
+          customerMessage: messageText,
           channel: 'whatsapp',
         })
 
-        if (welcomeResult.shouldShowWelcome && welcomeResult.welcomeMessage) {
+        if (welcomeResult.isWelcomeMessage && welcomeResult.welcomeText) {
           logger.info('[ULTRAMSG] ✅ Welcome message sent', {
             customerId: customer.id,
-            sessionId: welcomeResult.sessionId,
+            messageId: welcomeResult.assistantMessageId,
           })
 
           return res.status(200).json({
             status: 'welcomed',
-            message: welcomeResult.welcomeMessage,
+            message: welcomeResult.welcomeText,
             customerId: customer.id,
-            sessionId: welcomeResult.sessionId,
+            messageId: welcomeResult.assistantMessageId,
           })
         } else {
           logger.warn('[ULTRAMSG] ⚠️ Welcome message skipped', {
-            reason: welcomeResult.skipReason,
+            reason: 'Not configured or disabled',
           })
         }
       }

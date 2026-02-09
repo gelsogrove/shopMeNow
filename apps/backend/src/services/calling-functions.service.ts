@@ -249,7 +249,7 @@ export class CallingFunctionsService {
       // Get phoneNumber from customer if not provided
       let phoneNumber = request.phoneNumber
       if (!phoneNumber) {
-        const customer = await this.prisma.customers.findUnique({
+        const customer = await prisma.customers.findUnique({
           where: { id: request.customerId },
           select: { phone: true },
         })
