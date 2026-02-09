@@ -589,7 +589,7 @@ export class UltraMsgWebhookController {
       const sessionIds = sessions.map((s) => s.id)
 
       // Count only REAL user messages (exclude assistant/system/REGISTRATION_FLOW)
-      const messageCount = await prisma.conversationMessage.count({
+      const welcomeMessageCount = await prisma.conversationMessage.count({
         where: {
           customerId: customer.id,
           workspaceId: customer.workspaceId,
@@ -603,11 +603,11 @@ export class UltraMsgWebhookController {
 
       logger.info('[ULTRAMSG] 📊 Message count check for welcome decision', {
         customerId: customer.id,
-        messageCount,
-        willSendWelcome: messageCount === 0,
+        messageCount: welcomeMessageCount,
+        willSendWelcome: welcomeMessageCount === 0,
       })
 
-      if (messageCount === 0) {
+      if (welcomeMessageCount === 0) {
         // 🔧 CRITICAL: If customer has 0 messages but activeChatbot=false, reset it
         // This happens when chats are deleted but activeChatbot wasn't reset
         if (customer && !customer.activeChatbot) {
@@ -706,7 +706,7 @@ export class UltraMsgWebhookController {
       // Customer has chat history → continue to normal LLM processing
       logger.info('[ULTRAMSG] 📚 Customer has chat history - continuing normal flow', {
         customerId: customer.id,
-        messageCount,
+        messageCount: welcomeMessageCount,
       })
 
       // 6. 🚦 Rate limiting (EXACTLY like Meta)
@@ -1174,12 +1174,14 @@ export class UltraMsgWebhookController {
         })
 
         // Block customer
-        await prisma.customer.update({
+        // TODO: Need migration to add isBlocked, blockedReason, blockedAt to Customers table
+        await prisma.customers.update({
           where: { id: customer.id },
           data: {
-            isBlocked: true,
-            blockedReason: 'MAX_MESSAGES_UNREGISTERED',
-            blockedAt: new Date(),
+            isBlacklisted: true, // 🚨 TEMP: Using isBlacklisted until migration adds isBlocked
+            // isBlocked: true,
+            // blockedReason: 'MAX_MESSAGES_UNREGISTERED',
+            // blockedAt: new Date(),
           },
         })
 

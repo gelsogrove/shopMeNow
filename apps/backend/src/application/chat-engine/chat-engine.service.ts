@@ -175,6 +175,7 @@ export interface ChatEngineInput {
   customerDiscount?: number
   isPlayground?: boolean // 🧪 Skip billing and real actions in playground mode
   channel?: string
+  registrationPromptLevel?: number // 🆕 Progressive registration prompt (0=none, 1=gentle, 2=insistent, 3=warning)
 }
 
 export interface ChatEngineOutput {
