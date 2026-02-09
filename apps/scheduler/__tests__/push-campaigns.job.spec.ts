@@ -47,7 +47,7 @@ describe('push-campaigns.job helpers', () => {
 
   describe('buildMessageContent', () => {
     const baseCampaign = {
-      bodyPreview: 'Hi {{firstName}} {{lastName}} from {{company}}! {{unknown}}',
+      message: 'Hi {{firstName}} {{lastName}} from {{company}}! {{unknown}}',
     }
     const baseCustomer = {
       name: 'Mario Rossi',
@@ -97,7 +97,7 @@ describe('push-campaigns.job helpers', () => {
       }
 
       await buildMessageContent({
-        campaign: { bodyPreview: 'Hello {{workspace}}' },
+        campaign: { message: 'Hello {{workspace}}' },
         customer: minimalCustomer,
         workspaceName: 'MyWS',
       })

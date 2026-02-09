@@ -187,6 +187,32 @@ export default function CampaignsPage() {
       ),
     },
     {
+      accessorKey: "targetingType",
+      header: "Targeting",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1 text-sm">
+          {row.original.targetingType === "ALL" && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Globe className="w-3 h-3" />
+              All
+            </Badge>
+          )}
+          {row.original.targetingType === "MANUAL" && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              Manual
+            </Badge>
+          )}
+          {row.original.targetingType === "TAGS" && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Sparkles className="w-3 h-3" />
+              By Tag
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
       accessorKey: "frequency",
       header: "Frequency",
       cell: ({ row }) => (

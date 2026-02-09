@@ -194,25 +194,18 @@ export function CampaignSheet({
       return
     }
 
-    const trimmedMessage = messagePreview.trim()
+    const trimmedMessage = message.trim()
     if (!trimmedMessage) {
-      toast.error("Please enter campaign message (body)")
+      toast.error("Please enter campaign message")
       return
     }
 
-    if (recipientMode === "TAGS" && selectedTags.length === 0) {
-      toast.error("Please select at least one tag")
+    if (targetingType === "TAGS" && !tagId) {
+      toast.error("Please select a tag")
       return
     }
 
-    const selectedIds =
-      recipientMode === "ALL"
-        ? customers.map((c) => c.id)
-        : recipientMode === "TAGS"
-          ? taggedCustomerIds
-          : customerIds
-
-    if (selectedIds.length === 0) {
+    if (targetingType === "MANUAL" && targetCustomerIds.length === 0) {
       toast.error("Please select at least one recipient")
       return
     }
@@ -229,15 +222,16 @@ export function CampaignSheet({
 
     const formData = {
       name: name.trim(),
-      bodyPreview: trimmedMessage,
+      message: trimmedMessage,
+      frequency,
+      isActive,
+      targetingType,
+      targetCustomerIds,
+      tagId,
       sendAt: sendAtDate,
       throttlePerSecond:
         throttlePerSecond === "" ? undefined : Number(throttlePerSecond),
       batchSize: batchSize === "" ? undefined : Number(batchSize),
-      recipients: {
-        customerIds: selectedIds,
-        tags: recipientMode === "TAGS" ? selectedTags : undefined,
-      },
     }
 
     try {
@@ -251,10 +245,10 @@ export function CampaignSheet({
   }
 
   const toggleCustomerSelection = (customerId: string) => {
-    if (customerIds.includes(customerId)) {
-      setCustomerIds(customerIds.filter((id) => id !== customerId))
+    if (targetCustomerIds.includes(customerId)) {
+      setTargetCustomerIds(targetCustomerIds.filter((id) => id !== customerId))
     } else {
-      setCustomerIds([...customerIds, customerId])
+      setTargetCustomerIds([...targetCustomerIds, customerId])
     }
   }
 
@@ -279,19 +273,57 @@ export function CampaignSheet({
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          {/* Campaign Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">
-              Campaign Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Semi-annual Feedback Request"
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="active">Active</Label>
+              <p className="text-xs text-muted-foreground">
+                Whether the campaign should run according to schedule.
+              </p>
+            </div>
+            <Switch
+              id="active"
+              checked={isActive}
+              onCheckedChange={setIsActive}
               disabled={!isEditMode}
-              required
             />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Campaign Name */}
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                Campaign Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Weekly Offers"
+                disabled={!isEditMode}
+                required
+              />
+            </div>
+
+            {/* Frequency */}
+            <div className="space-y-2">
+              <Label htmlFor="frequency">Frequency</Label>
+              <Select
+                value={frequency}
+                onValueChange={setFrequency}
+                disabled={!isEditMode}
+              >
+                <SelectTrigger id="frequency">
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ONCE">Once</SelectItem>
+                  <SelectItem value="WEEKLY">Weekly</SelectItem>
+                  <SelectItem value="MONTHLY">Monthly</SelectItem>
+                  <SelectItem value="QUARTERLY">Quarterly (3 Months)</SelectItem>
+                  <SelectItem value="SEMIANNUAL">Semiannual (6 Months)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Message */}
@@ -299,46 +331,133 @@ export function CampaignSheet({
             <Label htmlFor="campaign-message">
               Message <span className="text-red-500">*</span>
             </Label>
-            <p className="text-xs text-gray-500">
-              Write your campaign message here.
-            </p>
             <Textarea
               id="campaign-message"
-              value={messagePreview}
-              onChange={(e) => setMessagePreview(e.target.value)}
-              rows={6}
-              placeholder="Hello!\n\nDid you like our service?\n\nThank you! 🙏"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={5}
+              placeholder="Hello {{name}}! Check out our new offers..."
               className="font-mono text-sm"
               disabled={!isEditMode}
               required
             />
-
-            <p className="text-xs text-gray-500">
-              {messagePreview.length}/500 characters
-            </p>
-
-            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
-              <div className="font-semibold text-slate-800">Available variables</div>
-              <div className="flex flex-wrap gap-2">
-                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{name}}"}</code>
-                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{firstName}}"}</code>
-                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{lastName}}"}</code>
-                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{email}}"}</code>
-                <code className="px-2 py-1 rounded bg-white border border-slate-200">{"{{company}}"}</code>
-              </div>
-              <p className="text-[11px] text-slate-600">
-                Variables are replaced per recipient. Missing data stay as placeholders.
-              </p>
-              <p className="text-[11px] text-slate-600">
-                🌍 Each message is translated automatically to the customer&apos;s language (it/en/es/pt) before sending.
-              </p>
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex flex-wrap gap-2">
+              <code className="px-1 py-0.5 rounded bg-white">{"{{name}}"}</code>
+              <code className="px-1 py-0.5 rounded bg-white">{"{{firstName}}"}</code>
+              <code className="px-1 py-0.5 rounded bg-white">{"{{lastName}}"}</code>
+              <code className="px-1 py-0.5 rounded bg-white">{"{{email}}"}</code>
+              <code className="px-1 py-0.5 rounded bg-white">{"{{company}}"}</code>
             </div>
           </div>
 
-          {/* Schedule & controls */}
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Targeting */}
+          <div className="space-y-4 pt-4 border-t">
             <div className="space-y-2">
-              <Label htmlFor="sendAt">Send time (optional)</Label>
+              <Label>Targeting Type</Label>
+              <Select
+                value={targetingType}
+                onValueChange={setTargetingType}
+                disabled={!isEditMode}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select targeting" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Active Customers</SelectItem>
+                  <SelectItem value="MANUAL">Manual Selection</SelectItem>
+                  <SelectItem value="TAGS">By Tag</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {targetingType === "TAGS" && (
+              <div className="space-y-2">
+                <Label>Select Tag</Label>
+                <Select
+                  value={tagId || ""}
+                  onValueChange={setTagId}
+                  disabled={!isEditMode}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTags.map((tag) => (
+                      <SelectItem key={tag} value={tag}>
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {targetingType === "MANUAL" && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center mb-2">
+                  <Label>Recipients ({targetCustomerIds.length})</Label>
+                  {isEditMode && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setTargetCustomerIds(
+                          targetCustomerIds.length === customers.length
+                            ? []
+                            : customers.map((c) => c.id)
+                        )
+                      }
+                    >
+                      {targetCustomerIds.length === customers.length
+                        ? "Deselect All"
+                        : "Select All"}
+                    </Button>
+                  )}
+                </div>
+                <ScrollArea className="h-48 rounded-md border p-4 bg-slate-50">
+                  {customers.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">
+                      No active customers with push consent found.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {customers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={customer.id}
+                            checked={targetCustomerIds.includes(customer.id)}
+                            onCheckedChange={() =>
+                              toggleCustomerSelection(customer.id)
+                            }
+                            disabled={!isEditMode}
+                          />
+                          <Label
+                            htmlFor={customer.id}
+                            className="text-sm font-normal cursor-pointer truncate"
+                            title={`${customer.name} (${customer.phone})`}
+                          >
+                            {customer.name}
+                            <span className="text-gray-400 ml-1">
+                              ({customer.phone})
+                            </span>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+
+          {/* Schedule Controls */}
+          <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
+            <div className="space-y-2">
+              <Label htmlFor="sendAt">First Send At</Label>
               <Input
                 id="sendAt"
                 type="datetime-local"
@@ -346,9 +465,6 @@ export function CampaignSheet({
                 onChange={(e) => setSendAt(e.target.value)}
                 disabled={!isEditMode}
               />
-              <p className="text-xs text-gray-500">
-                Leave empty to send as soon as the scheduler picks the job.
-              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -363,7 +479,7 @@ export function CampaignSheet({
                       e.target.value === "" ? "" : Number(e.target.value)
                     )
                   }
-                  placeholder="Default (10)"
+                  placeholder="10"
                   disabled={!isEditMode}
                 />
               </div>
@@ -375,9 +491,11 @@ export function CampaignSheet({
                   min={1}
                   value={batchSize}
                   onChange={(e) =>
-                    setBatchSize(e.target.value === "" ? "" : Number(e.target.value))
+                    setBatchSize(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
                   }
-                  placeholder="Default (50)"
+                  placeholder="50"
                   disabled={!isEditMode}
                 />
               </div>
