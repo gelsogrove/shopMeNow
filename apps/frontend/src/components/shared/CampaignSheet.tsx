@@ -309,6 +309,11 @@ export function CampaignSheet({
                   <SelectItem value="SEMIANNUAL">Semiannual (6 Months)</SelectItem>
                 </SelectContent>
               </Select>
+              {frequency === "ONCE" && (
+                <p className="text-xs text-muted-foreground">
+                  One-time campaigns turn off automatically after the first run.
+                </p>
+              )}
             </div>
           </div>
 

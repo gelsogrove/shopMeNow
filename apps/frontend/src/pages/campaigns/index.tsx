@@ -212,11 +212,23 @@ export default function CampaignsPage() {
     {
       accessorKey: "isActive",
       header: "Active",
-      cell: ({ row }) => (
-        <Badge variant={row.original.isActive ? "default" : "secondary"}>
-          {row.original.isActive ? "Yes" : "No"}
-        </Badge>
-      ),
+      cell: ({ row }) => {
+        const isAutoOff =
+          row.original.frequency === "ONCE" &&
+          row.original.status === "COMPLETED"
+        const label = isAutoOff
+          ? "Auto-off"
+          : row.original.isActive
+          ? "Yes"
+          : "No"
+        return (
+          <Badge
+            variant={row.original.isActive && !isAutoOff ? "default" : "secondary"}
+          >
+            {label}
+          </Badge>
+        )
+      },
     },
     {
       accessorKey: "sendAt",
