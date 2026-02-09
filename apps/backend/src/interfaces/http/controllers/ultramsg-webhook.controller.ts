@@ -398,6 +398,19 @@ export class UltraMsgWebhookController {
       })
 
       if (messageCount === 0) {
+        // 🔧 CRITICAL: If customer has 0 messages but activeChatbot=false, reset it
+        // This happens when chats are deleted but activeChatbot wasn't reset
+        if (customer && !customer.activeChatbot) {
+          await prisma.customers.update({
+            where: { id: customer.id },
+            data: { activeChatbot: true },
+          })
+          customer.activeChatbot = true
+          logger.info('[ULTRAMSG] 🔄 Reset activeChatbot=true (customer had 0 messages but chatbot was disabled)', {
+            customerId: customer.id,
+          })
+        }
+
         logger.info('[ULTRAMSG] 📭 Customer has NO chat history - sending welcome message', {
           customerId: customer.id,
           phone: customer.phone,

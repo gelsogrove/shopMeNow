@@ -421,7 +421,23 @@ export class CustomerRepository implements ICustomerRepository {
     try {
       logger.info(`Starting to delete related records for customer ${id}`)
 
-      // Delete messages from chat sessions
+      // 🔧 CRITICAL: Delete WhatsAppQueue FIRST (has FK to ConversationMessage)
+      const deletedQueue = await prisma.whatsAppQueue.deleteMany({
+        where: { customerId: id },
+      })
+      if (deletedQueue.count > 0) {
+        logger.info(`Deleted ${deletedQueue.count} whatsAppQueue records for customer ${id}`)
+      }
+
+      // 🔧 CRITICAL: Delete ConversationMessage (used by welcome message check)
+      const deletedConvMsgs = await prisma.conversationMessage.deleteMany({
+        where: { customerId: id },
+      })
+      if (deletedConvMsgs.count > 0) {
+        logger.info(`Deleted ${deletedConvMsgs.count} conversationMessage records for customer ${id}`)
+      }
+
+      // Delete messages from chat sessions (old Message model)
       await prisma.message.deleteMany({
         where: {
           chatSession: {

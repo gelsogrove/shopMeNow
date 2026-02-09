@@ -2312,11 +2312,27 @@ export class MessageRepository {
       }
 
       // Then delete the chat session itself
-      await this.prisma.chatSession.delete({
+      const deletedSession = await this.prisma.chatSession.delete({
         where: {
           id: chatSessionId,
         },
+        select: { customerId: true },
       })
+
+      // 🔧 CRITICAL: If customer has NO remaining chat sessions, reset activeChatbot to true
+      // This ensures the bot responds again after all chats are deleted
+      if (deletedSession.customerId) {
+        const remainingSessions = await this.prisma.chatSession.count({
+          where: { customerId: deletedSession.customerId },
+        })
+        if (remainingSessions === 0) {
+          await this.prisma.customers.update({
+            where: { id: deletedSession.customerId },
+            data: { activeChatbot: true },
+          })
+          logger.info(`deleteChat: Reset activeChatbot=true for customer ${deletedSession.customerId} (no remaining sessions)`)
+        }
+      }
 
       logger.info(`Deleted chat session: ${chatSessionId}`)
       return true
