@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
+import { ProfileService } from "../../../application/services/profile.service"
 import { publicOrdersLimiter } from "../../../config/rate-limiters"
 import { prisma } from "../../../lib/prisma"
 import { parseCustomerAddresses } from "../../../utils/address-parser"
@@ -8,6 +9,7 @@ import { tokenValidationMiddleware } from "../middlewares/token-validation.middl
 
 const router = Router()
 const secureTokenService = new SecureTokenService()
+const profileService = new ProfileService()
 
 // ========================================
 // 🔧 HELPER: Get Orders List Handler
@@ -620,6 +622,28 @@ router.put(
         ? addressResult.addresses[0]
         : null
 
+      // 📤 Send "Dati personali aggiornati" message asynchronously
+      // Fire and forget - don't wait for response
+      profileService
+        .sendProfileUpdateMessage(customerId)
+        .then((success) => {
+          if (success) {
+            logger.info(
+              `[PUBLIC-PROFILE] ✅ Profile update message sent to customer ${customerId}`
+            )
+          } else {
+            logger.error(
+              `[PUBLIC-PROFILE] ❌ Failed to send profile update message to customer ${customerId}`
+            )
+          }
+        })
+        .catch((error) => {
+          logger.error(
+            "[PUBLIC-PROFILE] Error sending profile update message:",
+            error
+          )
+        })
+
       return res.json({
         success: true,
         data: parsedCustomer,
@@ -641,12 +665,15 @@ router.put(
  *   delete:
  *     tags:
  *       - Public Profile
- *     summary: Delete customer account (hard delete with cascade)
+ *     summary: Soft delete customer account (disable chatbot + mark as deleted)
  *     description: |
- *       Permanently deletes a customer account and ALL related data:
- *       chat sessions, messages, orders, cart, search history, billing,
- *       push campaign records, feedback, secure tokens, etc.
- *       This action is IRREVERSIBLE.
+ *       Soft deletes a customer account by:
+ *       1. Setting deletedAt = NOW()
+ *       2. Setting activeChatbot = false (chatbot disabled)
+ *       3. Sending "Utente cancellato" message via WhatsApp
+ *
+ *       Customer data is preserved for GDPR compliance.
+ *       To permanently delete, use admin panel hard delete.
  *     parameters:
  *       - in: path
  *         name: token
@@ -656,7 +683,7 @@ router.put(
  *         description: Security token
  *     responses:
  *       200:
- *         description: Account deleted successfully
+ *         description: Account deleted successfully (soft delete)
  *       401:
  *         description: Invalid or expired token
  *       404:
@@ -672,7 +699,7 @@ router.delete(
       const customerId = (req as any).customerId
       const workspaceId = (req as any).workspaceId
 
-      logger.info("[PUBLIC-PROFILE] 🗑️ Account deletion requested", {
+      logger.info("[PUBLIC-PROFILE] 🗑️ Account soft deletion requested", {
         customerId,
         workspaceId,
       })
@@ -680,7 +707,7 @@ router.delete(
       // Verify customer exists
       const customer = await prisma.customers.findFirst({
         where: { id: customerId, workspaceId },
-        select: { id: true, name: true, email: true, phone: true },
+        select: { id: true, name: true, email: true, phone: true, deletedAt: true },
       })
 
       if (!customer) {
@@ -690,75 +717,56 @@ router.delete(
         })
       }
 
-      // 🗑️ CASCADE HARD DELETE - Remove ALL related data in correct order
-      // (child records first, then parent)
-      await prisma.$transaction(async (tx) => {
-        // 1. Push campaign recipients
-        await tx.pushCampaignRecipient.deleteMany({ where: { customerId } })
-
-        // 2. Agent conversation logs
-        await tx.agentConversationLog.deleteMany({ where: { customerId } })
-
-        // 5. Conversation messages (new system)
-        await tx.conversationMessage.deleteMany({ where: { customerId } })
-
-        // 6. Messages from chat sessions (old system)
-        await tx.message.deleteMany({
-          where: { chatSession: { customerId } },
+      // Check if already soft deleted
+      if (customer.deletedAt) {
+        logger.warn("[PUBLIC-PROFILE] Customer already soft deleted", {
+          customerId,
+          deletedAt: customer.deletedAt,
         })
-
-        // 7. Chat sessions
-        await tx.chatSession.deleteMany({ where: { customerId } })
-
-        // 8. Billing records
-        await tx.billing.deleteMany({ where: { customerId } })
-
-        // 9. Search conversations
-        await tx.searchConversations.deleteMany({ where: { customerId } })
-
-        // 10. Product search history
-        await tx.productSearch.deleteMany({ where: { customerId } })
-
-        // 11. Cart items first, then carts
-        const carts = await tx.carts.findMany({
-          where: { customerId },
-          select: { id: true },
+        return res.status(400).json({
+          success: false,
+          error: "Account already deleted",
         })
-        if (carts.length > 0) {
-          await tx.cartItems.deleteMany({
-            where: { cartId: { in: carts.map((c) => c.id) } },
-          })
-          await tx.carts.deleteMany({ where: { customerId } })
-        }
+      }
 
-        // 12. Order cascade: credit notes → payment details → order items → orders
-        const orders = await tx.orders.findMany({
-          where: { customerId },
-          select: { id: true },
-        })
-        if (orders.length > 0) {
-          const orderIds = orders.map((o) => o.id)
-          await tx.creditNote.deleteMany({ where: { orderId: { in: orderIds } } })
-          await tx.paymentDetails.deleteMany({ where: { orderId: { in: orderIds } } })
-          await tx.orderItems.deleteMany({ where: { orderId: { in: orderIds } } })
-          await tx.orders.deleteMany({ where: { customerId } })
-        }
-
-        // 13. WhatsApp queue
-        await tx.whatsAppQueue.deleteMany({ where: { customerId } })
-
-        // 14. Secure tokens for this customer
-        await tx.secureToken.deleteMany({ where: { customerId } })
-
-        // 15. Finally: delete the customer record
-        await tx.customers.delete({ where: { id: customerId } })
+      // 🗑️ SOFT DELETE - Mark as deleted + disable chatbot
+      await prisma.customers.update({
+        where: { id: customerId },
+        data: {
+          deletedAt: new Date(),
+          activeChatbot: false, // Disable chatbot
+          isActive: false, // Deactivate account
+        },
       })
 
-      logger.info("[PUBLIC-PROFILE] ✅ Account and all related data deleted permanently", {
+      logger.info("[PUBLIC-PROFILE] ✅ Account soft deleted", {
         customerId,
         customerName: customer.name,
         customerEmail: customer.email,
+        deletedAt: new Date().toISOString(),
       })
+
+      // 📤 Send "Utente cancellato" message asynchronously
+      // Fire and forget - don't wait for response
+      profileService
+        .sendAccountDeleteMessage(customerId)
+        .then((success) => {
+          if (success) {
+            logger.info(
+              `[PUBLIC-PROFILE] ✅ Account deletion message sent to customer ${customerId}`
+            )
+          } else {
+            logger.error(
+              `[PUBLIC-PROFILE] ❌ Failed to send account deletion message to customer ${customerId}`
+            )
+          }
+        })
+        .catch((error) => {
+          logger.error(
+            "[PUBLIC-PROFILE] Error sending account deletion message:",
+            error
+          )
+        })
 
       return res.json({
         success: true,
