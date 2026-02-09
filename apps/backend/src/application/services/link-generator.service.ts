@@ -136,13 +136,15 @@ export class LinkGeneratorService {
     workspaceId: string,
     customRegistrationPage?: string | null
   ): Promise<string> {
-    const appBaseUrl = config.frontendUrl.replace(/\/$/, "")
+    // 🚨 CRITICAL FIX: Use workspace URL (custom domain), NOT global frontend URL
+    // workspaceUrl is the actual domain (e.g., www.echatbot.ai), not Heroku internal URL
+    const baseUrl = (workspaceUrl || config.frontendUrl).replace(/\/$/, "")
     let originalUrl: string
 
     if (customRegistrationPage && customRegistrationPage.trim() !== "") {
       // Use custom registration page URL
       // If it's a full URL (starts with http), use it directly
-      // If it's a relative path, append it to the app base URL
+      // If it's a relative path, append it to the workspace base URL
       const customUrl = customRegistrationPage
         .trim()
         .replace(/\{workspaceId\}/g, workspaceId)
@@ -151,13 +153,13 @@ export class LinkGeneratorService {
         originalUrl = customUrl
       } else {
         const basePath = customUrl.startsWith("/") ? customUrl : `/${customUrl}`
-        originalUrl = `${appBaseUrl}${basePath}`
+        originalUrl = `${baseUrl}${basePath}`
       }
       logger.info(`📎 Using custom registration page: ${originalUrl}`)
     } else {
-      // Default registration path (hosted on eChatbot)
+      // Default registration path (hosted on workspace domain)
       const safeWorkspaceId = encodeURIComponent(workspaceId)
-      originalUrl = `${appBaseUrl}/registration/${safeWorkspaceId}`
+      originalUrl = `${baseUrl}/registration/${safeWorkspaceId}`
     }
 
     // Ensure token is attached once
