@@ -6,10 +6,6 @@ import { translationService } from '../services/translation.service'
  * Push Campaigns job (WhatsApp only).
  * Picks campaigns with status SCHEDULED and sendAt <= now,
  * enqueues messages into whatsapp_queue, and updates recipient statuses.
- *
- * NOTE: throttle/rate-limit will be handled by the whatsapp-channel-queue job;
- * here we just enqueue and update states. BatchSize limits how many recipients
- * are processed per loop to avoid long locks.
  */
 export async function pushCampaignsJob(): Promise<void> {
   const now = new Date()
@@ -29,14 +25,34 @@ export async function pushCampaignsJob(): Promise<void> {
     try {
       const workspace = await prisma.workspace.findUnique({
         where: { id: campaign.workspaceId },
-        select: { ownerId: true, name: true },
+        select: { ownerId: true, name: true, enableWhatsapp: true },
       })
+
+      if (!workspace?.enableWhatsapp) {
+        await prisma.pushCampaign.update({
+          where: { id: campaign.id },
+          data: { status: 'FAILED', lastError: 'WhatsApp not enabled for workspace' },
+        })
+        continue
+      }
+
       if (!workspace?.ownerId) {
         await prisma.pushCampaign.update({
           where: { id: campaign.id },
           data: { status: 'FAILED', lastError: 'Workspace owner not found' },
         })
         continue
+      }
+
+      // Ensure we have recipients
+      {
+        const pendingCount = await prisma.pushCampaignRecipient.count({
+          where: { campaignId: campaign.id, status: 'PENDING' },
+        })
+
+        if (pendingCount === 0) {
+          await populateDynamicRecipients(campaign)
+        }
       }
 
       await prisma.pushCampaign.update({
@@ -63,21 +79,13 @@ export async function pushCampaignsJob(): Promise<void> {
       for (const recipient of recipients) {
         if (creditExhausted) break
         try {
-          if (!recipient.customerId) {
-            await prisma.pushCampaignRecipient.update({
-              where: { id: recipient.id },
-              data: {
-                status: 'SKIPPED',
-                errorCode: 'NO_CUSTOMER',
-                errorMessage: 'Recipient has no customerId (unsupported)',
-              },
-            })
-            continue
-          }
-
-          // Load customer for variables, language, consent (defense-in-depth)
-          const customer = await prisma.customers.findUnique({
-            where: { id: recipient.customerId },
+          // Load customer for variables, language, consent
+          const customer = await prisma.customers.findFirst({
+            where: {
+              id: recipient.customerId || undefined,
+              phone: !recipient.customerId ? recipient.phone : undefined,
+              workspaceId: campaign.workspaceId,
+            },
             select: {
               id: true,
               name: true,
@@ -86,8 +94,7 @@ export async function pushCampaignsJob(): Promise<void> {
               phone: true,
               language: true,
               isBlacklisted: true,
-              push_notifications_consent: true,
-              push_notifications_consent_at: true,
+              isActive: true,
             },
           })
 
@@ -97,30 +104,19 @@ export async function pushCampaignsJob(): Promise<void> {
               data: {
                 status: 'SKIPPED',
                 errorCode: 'NO_CUSTOMER',
-                errorMessage: 'Customer not found',
+                errorMessage: 'Customer not found or inactive',
               },
             })
             continue
           }
-          if (customer.isBlacklisted) {
+
+          if (customer.isBlacklisted || !customer.isActive) {
             await prisma.pushCampaignRecipient.update({
               where: { id: recipient.id },
               data: {
                 status: 'SKIPPED',
-                errorCode: 'BLACKLISTED',
-                errorMessage: 'Customer blacklisted',
-              },
-            })
-            continue
-          }
-          if (!customer.push_notifications_consent) {
-            await prisma.pushCampaignRecipient.update({
-              where: { id: recipient.id },
-              data: {
-                status: 'SKIPPED',
-                errorCode: 'OPT_OUT',
-                errorMessage: 'Marketing opt-in missing',
-                optOutAt: customer.push_notifications_consent_at ?? undefined,
+                errorCode: customer.isBlacklisted ? 'BLACKLISTED' : 'INACTIVE',
+                errorMessage: `Customer is ${customer.isBlacklisted ? 'blacklisted' : 'inactive'}`,
               },
             })
             continue
@@ -136,7 +132,8 @@ export async function pushCampaignsJob(): Promise<void> {
             break
           }
 
-          if (!recipient.phone) {
+          const phone = recipient.phone || customer.phone
+          if (!phone) {
             await prisma.pushCampaignRecipient.update({
               where: { id: recipient.id },
               data: {
@@ -169,8 +166,8 @@ export async function pushCampaignsJob(): Promise<void> {
             const queue = await tx.whatsAppQueue.create({
               data: {
                 workspaceId: campaign.workspaceId,
-                customerId: recipient.customerId!,
-                phoneNumber: recipient.phone,
+                customerId: customer.id,
+                phoneNumber: phone,
                 messageContent,
                 status: 'pending',
                 channel: 'whatsapp',
@@ -219,43 +216,33 @@ export async function pushCampaignsJob(): Promise<void> {
         continue
       }
 
-      // If there are still pending recipients, keep RUNNING
-      const pendingCount = await prisma.pushCampaignRecipient.count({
+      // Check if finished this run
+      const stillPending = await prisma.pushCampaignRecipient.count({
         where: { campaignId: campaign.id, status: 'PENDING' },
       })
 
-      if (pendingCount > 0) {
-        logger.info(
-          `[PUSH-CAMPAIGN] Campaign ${campaign.id} processed ${processed} recipients this run. Pending=${pendingCount}`
-        )
+      if (stillPending > 0) {
+        await prisma.pushCampaign.update({
+          where: { id: campaign.id },
+          data: { status: 'SCHEDULED' }, // back to scheduled to be picked up again
+        })
         continue
       }
 
-      // Update counters and close campaign
-      const counts = await prisma.pushCampaignRecipient.groupBy({
-        by: ['status'],
-        where: { campaignId: campaign.id },
-        _count: { _all: true },
-      })
-      const actualSent = counts.find((c) => c.status === 'SENT')?._count._all || 0
-      const actualFailed = counts.find((c) => c.status === 'FAILED')?._count._all || 0
-      const actualSkipped = counts.find((c) => c.status === 'SKIPPED')?._count._all || 0
-
+      // Finish this iteration — campaigns are one-shot (no recurring)
       await prisma.pushCampaign.update({
         where: { id: campaign.id },
         data: {
-          actualSent,
-          actualFailed,
-          actualSkipped,
           status: 'COMPLETED',
+          actualSent: { increment: processed },
         },
       })
 
       logger.info(
-        `[PUSH-CAMPAIGN] Campaign ${campaign.id} completed. Sent=${actualSent} failed=${actualFailed} skipped=${actualSkipped}`
+        `[PUSH-CAMPAIGN] Campaign ${campaign.id} iteration done.`
       )
     } catch (error) {
-      logger.error(`[PUSH-CAMPAIGN] Campaign ${campaign.id} failed:`, error)
+      logger.error(`[PUSH-CAMPAIGN] Campaign ${campaign.id} error:`, error)
       await prisma.pushCampaign.update({
         where: { id: campaign.id },
         data: {
@@ -264,6 +251,36 @@ export async function pushCampaignsJob(): Promise<void> {
         },
       })
     }
+  }
+}
+
+async function populateDynamicRecipients(campaign: any) {
+  const where: any = {
+    workspaceId: campaign.workspaceId,
+    isActive: true,
+    isBlacklisted: false,
+  }
+
+  if (campaign.targetTags && campaign.targetTags.length > 0) {
+    where.tags = { hasSome: campaign.targetTags }
+  }
+
+  const customers = await prisma.customers.findMany({
+    where,
+    select: { id: true, phone: true },
+  })
+
+  if (customers.length > 0) {
+    await prisma.pushCampaignRecipient.createMany({
+      data: customers.map((c) => ({
+        workspaceId: campaign.workspaceId,
+        campaignId: campaign.id,
+        customerId: c.id,
+        phone: c.phone || '',
+        status: 'PENDING',
+      })),
+      skipDuplicates: true,
+    })
   }
 }
 
@@ -325,4 +342,5 @@ async function buildMessageContent({
 export const __test = {
   buildMessageContent,
   normalizeLanguage,
+  populateDynamicRecipients,
 }
