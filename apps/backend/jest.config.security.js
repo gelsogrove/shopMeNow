@@ -1,35 +1,21 @@
-/** @type {import('jest').Config} */
 module.exports = {
-  clearMocks: true,
-  coverageDirectory: "coverage",
-  coverageProvider: "v8",
-  moduleDirectories: ["node_modules"],
-  moduleFileExtensions: ["js", "jsx", "ts", "tsx", "json", "node"],
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/tests/security'],
+  testMatch: ['**/*.security.test.ts'],
   moduleNameMapper: {
-    "^@shared/(.*)$": "<rootDir>/../../shared/$1",
+    '^@/(.*)$': '<rootDir>/src/$1',
   },
-  preset: "ts-jest",
   transform: {
-    "^.+\\.(ts|tsx)$": [
-      "ts-jest",
-      {
-        tsconfig: "tsconfig.test.json",
-        useESM: true,
-        diagnostics: {
-          ignoreCodes: [2615, 6133],
-        },
-      },
-    ],
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: 'tsconfig.json',
+    }],
   },
-  testEnvironment: "node",
-  testTimeout: 60000, // 60s for integration tests (workspace-isolation needs real DB + Express)
-  coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/src/utils/"],
-  testMatch: ["**/__tests__/security/**/*.test.ts"],
-  testPathIgnorePatterns: ["/node_modules/", "/dist/"],
-  setupFilesAfterEnv: ["<rootDir>/jest.security.setup.js"],
-  globalTeardown: "<rootDir>/jest.security.teardown.js",
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+    '!src/**/*.test.ts',
+  ],
+  coverageDirectory: 'coverage',
   verbose: true,
-  transformIgnorePatterns: ["node_modules/"],
-  extensionsToTreatAsEsm: [".ts"],
-  forceExit: true,
 }
