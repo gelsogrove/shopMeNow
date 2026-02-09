@@ -97,7 +97,6 @@ export class WorkspaceChecklistService {
       servicesCount,
       salesCount,
       offersCount,
-      campaignsCount,
       pushCampaignsCount,
     ] = await Promise.all([
       this.prismaClient.fAQ.count({
@@ -113,9 +112,6 @@ export class WorkspaceChecklistService {
         where: { workspaceId, isActive: true },
       }),
       this.prismaClient.offers.count({
-        where: { workspaceId, isActive: true },
-      }),
-      this.prismaClient.campaign.count({
         where: { workspaceId, isActive: true },
       }),
       this.prismaClient.pushCampaign.count({
@@ -226,7 +222,7 @@ export class WorkspaceChecklistService {
     this.addItem(items, {
       key: "campaigns",
       label: "Campaign",
-      completed: campaignsCount + pushCampaignsCount > 0,
+      completed: pushCampaignsCount > 0,
       action: { path: "/campaigns" },
     })
 

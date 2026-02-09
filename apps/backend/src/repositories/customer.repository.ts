@@ -72,12 +72,7 @@ export class CustomerRepository implements ICustomerRepository {
           isActive: true,
         },
         orderBy: { createdAt: "desc" },
-        include: {
-          feedbacks: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-          },
-        },
+
       })
 
       return customers

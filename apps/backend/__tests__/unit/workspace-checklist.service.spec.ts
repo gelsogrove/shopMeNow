@@ -42,8 +42,8 @@ describe("WorkspaceChecklistService", () => {
       services: { count: jest.fn().mockResolvedValue(0) },
       sales: { count: jest.fn().mockResolvedValue(0) },
       offers: { count: jest.fn().mockResolvedValue(0) },
-      campaign: { count: jest.fn().mockResolvedValue(1) },
-      pushCampaign: { count: jest.fn().mockResolvedValue(0) },
+      campaign: { count: jest.fn().mockResolvedValue(0) },
+      pushCampaign: { count: jest.fn().mockResolvedValue(1) },
     }
 
     const service = new WorkspaceChecklistService(mockPrisma as any)

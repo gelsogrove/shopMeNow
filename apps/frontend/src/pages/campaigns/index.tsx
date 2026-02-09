@@ -21,7 +21,12 @@ interface Campaign {
   id: string
   name: string
   status: string
+  frequency: string
+  isActive: boolean
+  targetingType: string
   sendAt?: string | null
+  nextRunAt?: string | null
+  lastRunAt?: string | null
   expectedRecipients?: number | null
   actualSent?: number | null
   actualFailed?: number | null
@@ -119,11 +124,24 @@ export default function CampaignsPage() {
     setCampaignSheetOpen(true)
   }
 
-  // Handle campaign form submission (create + optional schedule)
-  const handleCampaignSubmit = async (formData: any) => {
+  const handleEditCampaign = (campaign: Campaign) => {
+    setSelectedCampaign(campaign)
+    setCampaignSheetOpen(true)
+  }
+
+  // Handle campaign form submission (create/update)
+  const handleCampaignSubmit = async (formData: any, campaignId?: string) => {
     try {
-      await api.post(`/workspaces/${workspace?.id}/push-campaigns`, formData)
-      toast.success("Campaign created")
+      if (campaignId) {
+        await api.put(
+          `/workspaces/${workspace?.id}/push-campaigns/${campaignId}`,
+          formData
+        )
+        toast.success("Campaign updated")
+      } else {
+        await api.post(`/workspaces/${workspace?.id}/push-campaigns`, formData)
+        toast.success("Campaign created")
+      }
       setCampaignSheetOpen(false)
       loadCampaigns()
     } catch (error: any) {
@@ -169,16 +187,35 @@ export default function CampaignsPage() {
       ),
     },
     {
-      accessorKey: "sendAt",
-      header: "Send at",
+      accessorKey: "frequency",
+      header: "Frequency",
       cell: ({ row }) => (
-        <div className="flex items-center gap-1 text-sm">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          {row.original.sendAt
-            ? new Date(row.original.sendAt).toLocaleString()
-            : "Now"}
-        </div>
+        <Badge variant="outline" className="capitalize">
+          {row.original.frequency.toLowerCase()}
+        </Badge>
       ),
+    },
+    {
+      accessorKey: "isActive",
+      header: "Active",
+      cell: ({ row }) => (
+        <Badge variant={row.original.isActive ? "default" : "secondary"}>
+          {row.original.isActive ? "Yes" : "No"}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "sendAt",
+      header: "Next Run",
+      cell: ({ row }) => {
+        const date = row.original.nextRunAt || row.original.sendAt
+        return (
+          <div className="flex items-center gap-1 text-sm">
+            <Clock className="w-4 h-4 text-gray-400" />
+            {date ? new Date(date).toLocaleString() : "Asap"}
+          </div>
+        )
+      },
     },
     {
       accessorKey: "expectedRecipients",
@@ -202,8 +239,26 @@ export default function CampaignsPage() {
     },
   ]
 
-  const renderActions = (campaign: Campaign) => (
+const renderActions = (campaign: Campaign) => (
     <div className="flex items-center gap-1">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleEditCampaign(campaign)}
+              className="h-8 w-8 p-0 flex items-center justify-center"
+            >
+              <Sparkles className="h-4 w-4 text-purple-600" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Edit Campaign</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

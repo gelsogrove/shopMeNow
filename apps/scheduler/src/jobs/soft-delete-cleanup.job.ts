@@ -225,15 +225,6 @@ export async function softDeleteCleanupJob(): Promise<void> {
         where: { workspaceId: { in: workspaceIds } }
       })).count
 
-      // --- Campaign tables ---
-      deletedCounts.campaignSent = (await tx.campaignSent.deleteMany({
-        where: { campaign: { workspaceId: { in: workspaceIds } } }
-      })).count
-
-      deletedCounts.campaign = (await tx.campaign.deleteMany({
-        where: { workspaceId: { in: workspaceIds } }
-      })).count
-
       // --- Product relation tables (many-to-many) ---
       deletedCounts.productCertification = (await tx.productCertification.deleteMany({
         where: { product: { workspaceId: { in: workspaceIds } } }
@@ -270,10 +261,6 @@ export async function softDeleteCleanupJob(): Promise<void> {
       })).count
 
       // --- Customer-related ---
-      deletedCounts.customerFeedback = (await tx.customerFeedback.deleteMany({
-        where: { customer: { workspaceId: { in: workspaceIds } } }
-      })).count
-
       deletedCounts.searchConversations = (await tx.searchConversations.deleteMany({
         where: { workspaceId: { in: workspaceIds } }
       })).count

@@ -601,12 +601,6 @@ export class TrashController {
           // Chat sessions
           await tx.chatSession.deleteMany({ where: { workspaceId: wsId } })
           
-          // Campaign tables
-          await tx.campaignSent.deleteMany({
-            where: { campaign: { workspaceId: wsId } },
-          })
-          await tx.campaign.deleteMany({ where: { workspaceId: wsId } })
-          
           // Product relation tables
           await tx.productCertification.deleteMany({
             where: { product: { workspaceId: wsId } },
@@ -634,9 +628,6 @@ export class TrashController {
           await tx.orders.deleteMany({ where: { workspaceId: wsId } })
           
           // Customer-related
-          await tx.customerFeedback.deleteMany({
-            where: { customer: { workspaceId: wsId } },
-          })
           await tx.searchConversations.deleteMany({ where: { workspaceId: wsId } })
           await tx.customers.deleteMany({ where: { workspaceId: wsId } })
           
@@ -709,12 +700,6 @@ export class TrashController {
             await tx.agentConversationLog.deleteMany({ where: { workspaceId: wsId } })
             await tx.chatSession.deleteMany({ where: { workspaceId: wsId } })
             
-            // Campaign tables
-            await tx.campaignSent.deleteMany({
-              where: { campaign: { workspaceId: wsId } },
-            })
-            await tx.campaign.deleteMany({ where: { workspaceId: wsId } })
-            
             // Product relation tables
             await tx.productCertification.deleteMany({
               where: { product: { workspaceId: wsId } },
@@ -742,9 +727,6 @@ export class TrashController {
             await tx.orders.deleteMany({ where: { workspaceId: wsId } })
             
             // Customer-related
-            await tx.customerFeedback.deleteMany({
-              where: { customer: { workspaceId: wsId } },
-            })
             await tx.searchConversations.deleteMany({ where: { workspaceId: wsId } })
             await tx.customers.deleteMany({ where: { workspaceId: wsId } })
             

@@ -13,7 +13,9 @@ export const pushCampaignRoutes = () => {
   router.get("/:id", controller.get.bind(controller))
   router.get("/:id/recipients", controller.recipients.bind(controller))
 
-  router.post("/", checkTrialValid, controller.create.bind(controller)) // Block campaign creation if FREE_TRIAL expired
+  router.post("/", checkTrialValid, controller.create.bind(controller))
+  router.put("/:id", controller.update.bind(controller))
+  router.delete("/:id", controller.delete.bind(controller))
   router.post("/:id/schedule", controller.schedule.bind(controller))
   router.post("/:id/run-now", controller.runNow.bind(controller))
   router.post("/:id/pause", controller.pause.bind(controller))

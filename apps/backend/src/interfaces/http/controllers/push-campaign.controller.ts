@@ -54,12 +54,16 @@ export class PushCampaignController {
       const createdByUserId = (req.user as any)?.userId
       const {
         name,
+        frequency,
+        isActive,
+        targetingType,
+        targetCustomerIds,
+        tagId,
+        message,
         templateId,
         templateLocale,
-        bodyPreview,
         mediaUrl,
         sendAt,
-        recipients,
         throttlePerSecond,
         batchSize,
       } = req.body
@@ -67,38 +71,27 @@ export class PushCampaignController {
       if (!name) {
         return res.status(400).json({ error: "Name is required" })
       }
-      const hasCustomerIds =
-        Array.isArray(recipients?.customerIds) && recipients.customerIds.length > 0
-      const hasPhones =
-        Array.isArray(recipients?.phones) && recipients.phones.length > 0
-      const hasTags =
-        Array.isArray(recipients?.tags)
-          ? recipients.tags.length > 0
-          : typeof recipients?.tags === "string"
-            ? recipients.tags.trim().length > 0
-            : false
-
-      if (!recipients || (!hasCustomerIds && !hasPhones && !hasTags)) {
-        return res
-          .status(400)
-          .json({ error: "At least one recipient list (customerIds, tags, or phones) is required" })
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" })
       }
-      if (hasPhones) {
-        return res
-          .status(400)
-          .json({ error: "Custom phone lists are not supported yet. Select existing customers." })
+      if (!targetingType) {
+        return res.status(400).json({ error: "Targeting type is required" })
       }
 
       const campaign = await service.create({
         workspaceId,
         createdByUserId,
         name,
+        frequency,
+        isActive,
+        targetingType,
+        targetCustomerIds,
+        tagId,
+        message,
         templateId,
         templateLocale,
-        bodyPreview,
         mediaUrl,
         sendAt,
-        recipients,
         throttlePerSecond,
         batchSize,
       })
@@ -106,6 +99,28 @@ export class PushCampaignController {
       res.status(201).json(campaign)
     } catch (error) {
       logger.error("[PushCampaignController] create error", error)
+      next(error)
+    }
+  }
+
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId, id } = req.params
+      const campaign = await service.update(workspaceId, id, req.body)
+      res.json(campaign)
+    } catch (error) {
+      logger.error("[PushCampaignController] update error", error)
+      next(error)
+    }
+  }
+
+  async delete(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId, id } = req.params
+      await service.delete(workspaceId, id)
+      res.status(204).send()
+    } catch (error) {
+      logger.error("[PushCampaignController] delete error", error)
       next(error)
     }
   }

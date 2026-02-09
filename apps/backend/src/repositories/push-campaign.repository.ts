@@ -1,19 +1,54 @@
-import { Prisma, PrismaClient, PushCampaignStatus, PushCampaignRecipientStatus } from "@echatbot/database"
+import {
+  Prisma,
+  PrismaClient,
+  PushCampaignStatus,
+  PushCampaignRecipientStatus,
+  CampaignFrequency,
+  CampaignTargetType,
+} from "@echatbot/database"
 
 export interface CreatePushCampaignInput {
   workspaceId: string
   createdByUserId?: string
   name: string
+  status?: PushCampaignStatus
+  frequency?: CampaignFrequency
+  isActive?: Boolean
+  targetingType?: CampaignTargetType
+  targetCustomerIds?: string[]
+  tagId?: string | null
+  message?: string | null
+  sendAt?: Date | null
+  nextRunAt?: Date | null
+  lastRunAt?: Date | null
   templateId?: string
   templateLocale?: string
   bodyPreview?: string
   mediaUrl?: string
   targetTags?: string[]
-  sendAt?: Date | null
   costPerMessage?: Prisma.Decimal | number
   throttlePerSecond?: number
   batchSize?: number
+}
+
+export interface UpdatePushCampaignInput {
+  name?: string
   status?: PushCampaignStatus
+  frequency?: CampaignFrequency
+  isActive?: boolean
+  targetingType?: CampaignTargetType
+  targetCustomerIds?: string[]
+  tagId?: string | null
+  message?: string | null
+  sendAt?: Date | null
+  nextRunAt?: Date | null
+  lastRunAt?: Date | null
+  templateId?: string
+  templateLocale?: string
+  bodyPreview?: string
+  mediaUrl?: string
+  throttlePerSecond?: number
+  batchSize?: number
 }
 
 export interface RecipientCreateInput {
@@ -42,16 +77,24 @@ export class PushCampaignRepository {
         workspaceId: data.workspaceId,
         createdByUserId: data.createdByUserId,
         name: data.name,
+        status: data.status ?? PushCampaignStatus.DRAFT,
+        frequency: data.frequency ?? CampaignFrequency.ONCE,
+        isActive: data.isActive !== undefined ? (data.isActive as boolean) : true,
+        targetingType: data.targetingType ?? CampaignTargetType.ALL,
+        targetCustomerIds: data.targetCustomerIds ?? [],
+        tagId: data.tagId,
+        message: data.message,
+        sendAt: data.sendAt,
+        nextRunAt: data.nextRunAt,
+        lastRunAt: data.lastRunAt,
         templateId: data.templateId,
         templateLocale: data.templateLocale,
         bodyPreview: data.bodyPreview,
         mediaUrl: data.mediaUrl,
         targetTags: data.targetTags ?? [],
-        sendAt: data.sendAt,
         costPerMessage: data.costPerMessage,
         throttlePerSecond: data.throttlePerSecond,
         batchSize: data.batchSize,
-        status: data.status ?? PushCampaignStatus.DRAFT,
         expectedRecipients: recipients.length,
         recipients: {
           createMany: {
@@ -77,6 +120,23 @@ export class PushCampaignRepository {
     })
   }
 
+  async updateCampaign(
+    id: string,
+    workspaceId: string,
+    data: UpdatePushCampaignInput
+  ) {
+    return this.prisma.pushCampaign.update({
+      where: { id, workspaceId },
+      data,
+    })
+  }
+
+  async deleteCampaign(id: string, workspaceId: string) {
+    return this.prisma.pushCampaign.delete({
+      where: { id, workspaceId },
+    })
+  }
+
   async listByWorkspace(workspaceId: string) {
     return this.prisma.pushCampaign.findMany({
       where: { workspaceId },
@@ -85,12 +145,16 @@ export class PushCampaignRepository {
         id: true,
         name: true,
         status: true,
+        frequency: true,
+        isActive: true,
+        targetingType: true,
         sendAt: true,
+        nextRunAt: true,
+        lastRunAt: true,
         expectedRecipients: true,
         actualSent: true,
         actualFailed: true,
         actualSkipped: true,
-        targetTags: true,
         billingStatus: true,
         costPerMessage: true,
         createdAt: true,

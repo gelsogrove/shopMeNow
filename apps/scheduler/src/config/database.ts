@@ -1,8 +1,8 @@
 // Use shared Prisma client from database package (includes auto-retry Proxy)
-import { prisma, Prisma, PlanType, CampaignFrequency, SubscriptionStatus } from '@echatbot/database'
+import { prisma, Prisma, PlanType, CampaignFrequency, CampaignTargetType, PushCampaignStatus, PushCampaignRecipientStatus, SubscriptionStatus } from '@echatbot/database'
 
 // Re-export for use in scheduler jobs
-export { prisma, Prisma, PlanType, CampaignFrequency, SubscriptionStatus }
+export { prisma, Prisma, PlanType, CampaignFrequency, CampaignTargetType, PushCampaignStatus, PushCampaignRecipientStatus, SubscriptionStatus }
 
 /**
  * Connects to the database with retry logic.

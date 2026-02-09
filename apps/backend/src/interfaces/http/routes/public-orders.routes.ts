@@ -696,13 +696,7 @@ router.delete(
         // 1. Push campaign recipients
         await tx.pushCampaignRecipient.deleteMany({ where: { customerId } })
 
-        // 2. Customer feedback
-        await tx.customerFeedback.deleteMany({ where: { customerId } })
-
-        // 3. Campaign sent records
-        await tx.campaignSent.deleteMany({ where: { customerId } })
-
-        // 4. Agent conversation logs
+        // 2. Agent conversation logs
         await tx.agentConversationLog.deleteMany({ where: { customerId } })
 
         // 5. Conversation messages (new system)

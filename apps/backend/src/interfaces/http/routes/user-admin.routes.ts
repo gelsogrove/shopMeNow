@@ -1482,7 +1482,7 @@ router.get(
       })
 
       // Fetch push campaigns
-      const campaigns = await prisma.campaign.findMany({
+      const campaigns = await prisma.pushCampaign.findMany({
         where: {
           createdAt: { gte: startDate },
         },
@@ -1490,7 +1490,7 @@ router.get(
           createdAt: true,
           _count: {
             select: {
-              sends: true,
+              recipients: true,
             },
           },
         },
@@ -1575,7 +1575,7 @@ router.get(
         }
 
         entry.pushCampaigns += 1
-        entry.pushRecipients += campaign._count.sends
+        entry.pushRecipients += campaign._count.recipients
 
         statsMap.set(key, entry)
       })

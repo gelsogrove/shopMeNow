@@ -133,7 +133,6 @@ model Workspace {
   usage                  Usage[]
   whatsappSettings       WhatsappSettings?
   adminSessions          AdminSession[]
-  campaigns              Campaign[]
   productSearches        ProductSearch[]
   searchConversations    SearchConversations[]
   certifications         Certification[]
@@ -145,7 +144,6 @@ model Workspace {
   supportTickets         SupportTicket[] // 🎫 Support tickets for this workspace
   pushCampaigns          PushCampaign[]
   pushCampaignRecipients PushCampaignRecipient[]
-  customerFeedbacks      CustomerFeedback[] // 👍👎 Customer feedback
 
   @@index([ownerId])
   @@index([planType])
@@ -412,8 +410,6 @@ model Customers {
   billings                      Billing[]
   agentConversationLogs         AgentConversationLog[]
   conversationMessages          ConversationMessage[]
-  campaignSends                 CampaignSent[]
-  feedbacks                     CustomerFeedback[]
   productSearches               ProductSearch[]
   whatsappQueue                 WhatsAppQueue[]
   pushCampaignRecipients        PushCampaignRecipient[] // Campaign recipients for this customer
@@ -1530,23 +1526,19 @@ enum BillingType {
 }
 
 enum CampaignFrequency {
-  ONCE // Una sola volta (no ripetizione)
-  WEEKLY // Ogni 7 giorni
-  BIWEEKLY // Ogni 14 giorni
-  MONTHLY // Ogni 30 giorni
-  BIMONTHLY // Ogni 60 giorni
-  QUARTERLY // Ogni 90 giorni
-  SEMIANNUAL // Ogni 180 giorni (6 mesi)
-  ANNUAL // Ogni 365 giorni
+  ONCE
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
 }
 
 enum CampaignTargetType {
-  ALL // Tutti i customer attivi del workspace
-  SELECTED // Solo customer IDs specificati
-  TAGS // Solo customer che matchano i tag
+  ALL
+  MANUAL
+  TAGS
 }
 
-// 🔔 Push Campaigns (v2)
 enum PushCampaignStatus {
   DRAFT
   SCHEDULED
@@ -1575,90 +1567,27 @@ enum PushCampaignRecipientStatus {
   SKIPPED
 }
 
-model Campaign {
-  id             String            @id @default(cuid())
-  workspaceId    String
-  name           String // "Richiesta Feedback Semestrale"
-  messagePreview String            @db.Text // Markdown per visualizzazione admin (con token [FEEDBACK], {{nome}}, ecc)
-  frequency      CampaignFrequency
-  isActive       Boolean           @default(true)
-
-  // Destinatari
-  targetType  CampaignTargetType @default(ALL)
-  customerIds String[]           @default([]) // Array di customer IDs se targetType = SELECTED
-  targetTags  String[]           @default([]) // Tag dei customer se targetType = TAGS
-
-  // Template WhatsApp (opzionale, per uso futuro con Meta Business API)
-  templateName   String? // Nome template Meta (es: "feedback_request_v1")
-  templateParams Json? // Parametri template WhatsApp come JSON
-
-  // Metadata
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  lastRunAt DateTime? // Ultima esecuzione cron
-
-  // Relations
-  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  sends     CampaignSent[]
-  feedbacks CustomerFeedback[]
-
-  @@index([workspaceId])
-  @@index([isActive])
-  @@index([frequency])
-}
-
-model CampaignSent {
-  id          String    @id @default(cuid())
-  campaignId  String
-  customerId  String
-  workspaceId String
-  sentAt      DateTime  @default(now())
-  tokenUsed   String? // Token generato per tracking click
-  clickedAt   DateTime? // Se customer ha cliccato sul link
-
-  // Relations
-  campaign Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  customer Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  @@index([campaignId])
-  @@index([customerId])
-  @@index([workspaceId])
-  @@index([sentAt])
-}
-
-model CustomerFeedback {
-  id          String   @id @default(cuid())
-  customerId  String
-  workspaceId String
-  campaignId  String? // Opzionale: da quale campagna arriva
-  rating      Int // 1-5 stelline
-  comment     String?  @db.Text
-  createdAt   DateTime @default(now())
-
-  // Relations
-  customer  Customers @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  campaign  Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([customerId])
-  @@index([workspaceId])
-  @@index([campaignId])
-  @@index([createdAt])
-}
-
 // 🚀 Push Campaigns v2 (promotional/scheduled sends)
 model PushCampaign {
   id                 String                    @id @default(cuid())
   workspaceId        String
   createdByUserId    String?
-  name               String
+  name               String // Title of the campaign
   status             PushCampaignStatus        @default(DRAFT)
   channel            PushCampaignChannel       @default(WHATSAPP)
-  sendAt             DateTime?
+  frequency          CampaignFrequency         @default(ONCE)
+  isActive           Boolean                   @default(true)
+  targetingType      CampaignTargetType        @default(ALL)
+  targetCustomerIds  String[]                  @default([]) // For MANUAL targeting
+  tagId              String? // For TAGS targeting
+  message            String?                   @db.Text // The push message content
+  sendAt             DateTime? // First run/scheduled time
+  nextRunAt          DateTime? // Calculated next run
+  lastRunAt          DateTime? // Last execution time
   templateId         String?
   templateLocale     String?
   bodyPreview        String?                   @db.Text
-  targetTags         String[]                  @default([])
+  targetTags         String[]                  @default([]) // Deprecated in favor of tagId or targetCustomerIds
   mediaUrl           String?
   expectedRecipients Int                       @default(0)
   actualSent         Int                       @default(0)
@@ -1680,6 +1609,7 @@ model PushCampaign {
   @@index([workspaceId])
   @@index([status])
   @@index([sendAt])
+  @@index([nextRunAt])
 }
 
 model PushCampaignRecipient {
@@ -1705,7 +1635,6 @@ model PushCampaignRecipient {
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer  Customers?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
-  @@unique([campaignId, phone])
   @@index([campaignId])
   @@index([workspaceId])
   @@index([status])

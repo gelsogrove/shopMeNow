@@ -1,18 +1,28 @@
-import { prisma, Prisma } from '../config/database'
+import {
+  prisma,
+  Prisma,
+  CampaignFrequency,
+  CampaignTargetType,
+  PushCampaignStatus,
+} from '../config/database'
 import logger from '../utils/logger'
 import { translationService } from '../services/translation.service'
 
 /**
  * Push Campaigns job (WhatsApp only).
- * Picks campaigns with status SCHEDULED and sendAt <= now,
+ * Picks campaigns with status SCHEDULED and sendAt/nextRunAt <= now,
  * enqueues messages into whatsapp_queue, and updates recipient statuses.
  */
 export async function pushCampaignsJob(): Promise<void> {
   const now = new Date()
   const campaigns = await prisma.pushCampaign.findMany({
     where: {
-      status: 'SCHEDULED',
-      OR: [{ sendAt: null }, { sendAt: { lte: now } }],
+      status: PushCampaignStatus.SCHEDULED,
+      isActive: true,
+      OR: [
+        { sendAt: { lte: now }, lastRunAt: null },
+        { nextRunAt: { lte: now } },
+      ],
     },
     orderBy: { createdAt: 'asc' },
   })
@@ -44,20 +54,27 @@ export async function pushCampaignsJob(): Promise<void> {
         continue
       }
 
-      // Ensure we have recipients
+      // Ensure we have recipients for this run
       {
         const pendingCount = await prisma.pushCampaignRecipient.count({
           where: { campaignId: campaign.id, status: 'PENDING' },
         })
 
         if (pendingCount === 0) {
-          await populateDynamicRecipients(campaign)
+          // If no pending, it means either we just started a run or we finished.
+          // For dynamic targeting, we always repopulate.
+          // For manual, we repopulate if this is a new run (lastRunAt updated recently).
+          await populateRecipientsForRun(campaign)
         }
       }
 
       await prisma.pushCampaign.update({
         where: { id: campaign.id },
-        data: { status: 'RUNNING', lastError: null },
+        data: {
+          status: 'RUNNING',
+          lastError: null,
+          lastRunAt: new Date(),
+        },
       })
 
       const batchSize = campaign.batchSize || 50
@@ -224,22 +241,27 @@ export async function pushCampaignsJob(): Promise<void> {
       if (stillPending > 0) {
         await prisma.pushCampaign.update({
           where: { id: campaign.id },
-          data: { status: 'SCHEDULED' }, // back to scheduled to be picked up again
+          data: { status: PushCampaignStatus.SCHEDULED },
         })
         continue
       }
 
-      // Finish this iteration — campaigns are one-shot (no recurring)
+      // Finish this run
+      const nextRunAt = calculateNextRunAt(campaign.frequency, new Date())
+      const finalStatus =
+        nextRunAt ? PushCampaignStatus.SCHEDULED : PushCampaignStatus.COMPLETED
+
       await prisma.pushCampaign.update({
         where: { id: campaign.id },
         data: {
-          status: 'COMPLETED',
+          status: finalStatus,
+          nextRunAt,
           actualSent: { increment: processed },
         },
       })
 
       logger.info(
-        `[PUSH-CAMPAIGN] Campaign ${campaign.id} iteration done.`
+        `[PUSH-CAMPAIGN] Campaign ${campaign.id} run done. Next run: ${nextRunAt}`
       )
     } catch (error) {
       logger.error(`[PUSH-CAMPAIGN] Campaign ${campaign.id} error:`, error)
@@ -254,43 +276,88 @@ export async function pushCampaignsJob(): Promise<void> {
   }
 }
 
-async function populateDynamicRecipients(campaign: any) {
-  const where: any = {
-    workspaceId: campaign.workspaceId,
-    isActive: true,
-    isBlacklisted: false,
-  }
+async function populateRecipientsForRun(campaign: any) {
+  let targetCustomerIds: string[] = []
 
-  if (campaign.targetTags && campaign.targetTags.length > 0) {
-    where.tags = { hasSome: campaign.targetTags }
-  }
-
-  const customers = await prisma.customers.findMany({
-    where,
-    select: { id: true, phone: true },
-  })
-
-  if (customers.length > 0) {
-    await prisma.pushCampaignRecipient.createMany({
-      data: customers.map((c) => ({
+  if (campaign.targetingType === CampaignTargetType.ALL) {
+    const customers = await prisma.customers.findMany({
+      where: {
         workspaceId: campaign.workspaceId,
-        campaignId: campaign.id,
-        customerId: c.id,
-        phone: c.phone || '',
-        status: 'PENDING',
-      })),
-      skipDuplicates: true,
+        isActive: true,
+        activeChatbot: true,
+        isBlacklisted: false,
+        deletedAt: null,
+      },
+      select: { id: true },
     })
+    targetCustomerIds = customers.map((c) => c.id)
+  } else if (campaign.targetingType === CampaignTargetType.TAGS && campaign.tagId) {
+    const customers = await prisma.customers.findMany({
+      where: {
+        workspaceId: campaign.workspaceId,
+        tags: { has: campaign.tagId },
+        isActive: true,
+        activeChatbot: true,
+        isBlacklisted: false,
+        deletedAt: null,
+      },
+      select: { id: true },
+    })
+    targetCustomerIds = customers.map((c) => c.id)
+  } else if (campaign.targetingType === CampaignTargetType.MANUAL) {
+    targetCustomerIds = campaign.targetCustomerIds || []
+  }
+
+  if (targetCustomerIds.length > 0) {
+    const customers = await prisma.customers.findMany({
+      where: {
+        id: { in: targetCustomerIds },
+        workspaceId: campaign.workspaceId,
+        isActive: true,
+        activeChatbot: true,
+        isBlacklisted: false,
+        deletedAt: null,
+      },
+      select: { id: true, phone: true },
+    })
+
+    if (customers.length > 0) {
+      await prisma.pushCampaignRecipient.createMany({
+        data: customers.map((c) => ({
+          workspaceId: campaign.workspaceId,
+          campaignId: campaign.id,
+          customerId: c.id,
+          phone: c.phone || '',
+          status: 'PENDING',
+        })),
+      })
+    }
   }
 }
 
-function normalizeLanguage(lang?: string | null): string {
-  if (!lang) return 'it'
-  const l = lang.toLowerCase()
-  if (l.startsWith('en')) return 'en'
-  if (l.startsWith('es')) return 'es'
-  if (l.startsWith('pt')) return 'pt'
-  return 'it'
+function calculateNextRunAt(
+  frequency: CampaignFrequency,
+  lastRun: Date = new Date()
+): Date | null {
+  if (frequency === CampaignFrequency.ONCE) return null
+  const next = new Date(lastRun)
+  switch (frequency) {
+    case CampaignFrequency.WEEKLY:
+      next.setDate(next.getDate() + 7)
+      break
+    case CampaignFrequency.MONTHLY:
+      next.setMonth(next.getMonth() + 1)
+      break
+    case CampaignFrequency.QUARTERLY:
+      next.setMonth(next.getMonth() + 3)
+      break
+    case CampaignFrequency.SEMIANNUAL:
+      next.setMonth(next.getMonth() + 6)
+      break
+    default:
+      return null
+  }
+  return next
 }
 
 async function buildMessageContent({
@@ -302,7 +369,7 @@ async function buildMessageContent({
   customer: any
   workspaceName: string
 }): Promise<string> {
-  const template = campaign.bodyPreview || 'Campaign message'
+  const template = campaign.message || campaign.bodyPreview || 'Campaign message'
   const name = customer.name || ''
   const [firstName, ...rest] = name.split(' ')
   const lastName = rest.join(' ').trim()
@@ -338,9 +405,19 @@ async function buildMessageContent({
   }
 }
 
+function normalizeLanguage(lang?: string | null): string {
+  if (!lang) return 'it'
+  const l = lang.toLowerCase()
+  if (l.startsWith('en')) return 'en'
+  if (l.startsWith('es')) return 'es'
+  if (l.startsWith('pt')) return 'pt'
+  return 'it'
+}
+
 // Export helpers for unit testing
 export const __test = {
   buildMessageContent,
   normalizeLanguage,
-  populateDynamicRecipients,
+  populateRecipientsForRun,
+  calculateNextRunAt,
 }

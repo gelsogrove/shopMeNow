@@ -29,10 +29,27 @@ interface Customer {
   tags?: string[]
 }
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Checkbox } from "@/components/ui/checkbox"
+
 interface Campaign {
   id: string
   name: string
+  message?: string
   bodyPreview?: string
+  frequency: string
+  isActive: boolean
+  targetingType: string
+  targetCustomerIds: string[]
+  tagId?: string | null
   sendAt?: string | null
   throttlePerSecond?: number | null
   batchSize?: number | null
@@ -59,14 +76,15 @@ export function CampaignSheet({
 }: CampaignSheetProps) {
   // Form state
   const [name, setName] = useState("")
-  const [messagePreview, setMessagePreview] = useState("")
+  const [message, setMessage] = useState("")
+  const [frequency, setFrequency] = useState("ONCE")
+  const [isActive, setIsActive] = useState(true)
+  const [targetingType, setTargetingType] = useState("ALL")
+  const [targetCustomerIds, setTargetCustomerIds] = useState<string[]>([])
+  const [tagId, setTagId] = useState<string | null>(null)
   const [sendAt, setSendAt] = useState<string>("")
   const [throttlePerSecond, setThrottlePerSecond] = useState<number | "">("")
   const [batchSize, setBatchSize] = useState<number | "">("")
-  const [recipientMode, setRecipientMode] = useState<"ALL" | "SELECTED" | "TAGS">("ALL")
-  const [customerIds, setCustomerIds] = useState<string[]>([])
-  const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [tagInput, setTagInput] = useState("")
 
   // Additional state
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -84,12 +102,16 @@ export function CampaignSheet({
   useEffect(() => {
     if (campaign) {
       setName(campaign.name || "")
-      setMessagePreview(campaign.bodyPreview || "")
-      setSendAt(
-        campaign.sendAt ? campaign.sendAt.slice(0, 16) : ""
-      )
+      setMessage(campaign.message || campaign.bodyPreview || "")
+      setFrequency(campaign.frequency || "ONCE")
+      setIsActive(campaign.isActive ?? true)
+      setTargetingType(campaign.targetingType || "ALL")
+      setTargetCustomerIds(campaign.targetCustomerIds || [])
+      setTagId(campaign.tagId || null)
+      setSendAt(campaign.sendAt ? campaign.sendAt.slice(0, 16) : "")
       setThrottlePerSecond(
-        campaign.throttlePerSecond !== undefined && campaign.throttlePerSecond !== null
+        campaign.throttlePerSecond !== undefined &&
+          campaign.throttlePerSecond !== null
           ? campaign.throttlePerSecond
           : ""
       )
@@ -98,33 +120,20 @@ export function CampaignSheet({
           ? campaign.batchSize
           : ""
       )
-      setRecipientMode("ALL")
-      setCustomerIds([])
-      setSelectedTags([])
-      setTagInput("")
     } else {
       // Reset form for new campaign
       setName("")
-      setMessagePreview("")
+      setMessage("")
+      setFrequency("ONCE")
+      setIsActive(true)
+      setTargetingType("ALL")
+      setTargetCustomerIds([])
+      setTagId(null)
       setSendAt("")
       setThrottlePerSecond("")
       setBatchSize("")
-      setRecipientMode("ALL")
-      setCustomerIds([])
-      setSelectedTags([])
-      setTagInput("")
     }
   }, [campaign])
-
-  const normalizeTagsInput = (input?: string | string[] | null) => {
-    if (!input) return []
-    const raw = Array.isArray(input) ? input : input.split(",")
-    const cleaned = raw
-      .map((tag) => tag.trim())
-      .filter(Boolean)
-      .map((tag) => tag.toLowerCase())
-    return Array.from(new Set(cleaned))
-  }
 
   const availableTags = Array.from(
     new Set(
@@ -133,30 +142,6 @@ export function CampaignSheet({
       )
     )
   ).sort()
-
-  const addTagsFromInput = () => {
-    const tagsToAdd = normalizeTagsInput(tagInput)
-    if (tagsToAdd.length === 0) return
-    setSelectedTags((prev) => Array.from(new Set([...prev, ...tagsToAdd])))
-    setTagInput("")
-  }
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    )
-  }
-
-  const taggedCustomerIds =
-    selectedTags.length === 0
-      ? []
-      : customers
-          .filter((customer) =>
-            (customer.tags || []).some((tag) =>
-              selectedTags.includes(tag.toLowerCase())
-            )
-          )
-          .map((customer) => customer.id)
 
   const loadCustomers = async () => {
     try {
