@@ -391,6 +391,55 @@ export class UltraMsgWebhookController {
         })
       }
 
+      // 🔍 CRITICAL: Check if customer has chat history (NEW + EXISTING customers)
+      // If NO messages exist → send welcome message
+      const messageCount = await prisma.conversationMessage.count({
+        where: { customerId: customer.id, workspaceId: customer.workspaceId },
+      })
+
+      if (messageCount === 0) {
+        logger.info('[ULTRAMSG] 📭 Customer has NO chat history - sending welcome message', {
+          customerId: customer.id,
+          phone: customer.phone,
+        })
+
+        // Import welcome message services
+        const { WelcomeMessageHandler } = await import('../../../utils/welcome-message.handler')
+        const welcomeHandler = new WelcomeMessageHandler(prisma)
+
+        // Process welcome message
+        const welcomeResult = await welcomeHandler.process({
+          customer,
+          workspace: customer.workspace,
+          messageText,
+          channel: 'whatsapp',
+        })
+
+        if (welcomeResult.shouldShowWelcome && welcomeResult.welcomeMessage) {
+          logger.info('[ULTRAMSG] ✅ Welcome message sent', {
+            customerId: customer.id,
+            sessionId: welcomeResult.sessionId,
+          })
+
+          return res.status(200).json({
+            status: 'welcomed',
+            message: welcomeResult.welcomeMessage,
+            customerId: customer.id,
+            sessionId: welcomeResult.sessionId,
+          })
+        } else {
+          logger.warn('[ULTRAMSG] ⚠️ Welcome message skipped', {
+            reason: welcomeResult.skipReason,
+          })
+        }
+      }
+
+      // Customer has chat history → continue to normal LLM processing
+      logger.info('[ULTRAMSG] 📚 Customer has chat history - continuing normal flow', {
+        customerId: customer.id,
+        messageCount,
+      })
+
       // 6. 🚦 Rate limiting (EXACTLY like Meta)
       const [
         customerPerMin,

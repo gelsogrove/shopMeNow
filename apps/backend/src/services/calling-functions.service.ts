@@ -239,19 +239,32 @@ export class CallingFunctionsService {
   public async contactOperator(request: {
     customerId: string
     workspaceId: string
-    phoneNumber: string
+    phoneNumber?: string
+    reason?: string
+    urgency?: string
   }): Promise<StandardResponse> {
     try {
       logger.info("🔧 Calling contactOperator with:", request)
+      
+      // Get phoneNumber from customer if not provided
+      let phoneNumber = request.phoneNumber
+      if (!phoneNumber) {
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: request.customerId },
+          select: { phone: true },
+        })
+        phoneNumber = customer?.phone || ""
+      }
+
       // Import the contactOperator function
       const {
         contactOperator,
       } = require("../domain/calling-functions/contactOperator")
 
       const result = await contactOperator({
-        phoneNumber: request.phoneNumber, // 🎯 CORRETTO: phoneNumber invece di phone
+        phoneNumber: phoneNumber,
         workspaceId: request.workspaceId,
-        customerId: request.customerId, // 🎯 AGGIUNTO: customerId se disponibile
+        customerId: request.customerId,
       })
 
       logger.info("✅ contactOperator result:", result)
