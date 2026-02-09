@@ -986,6 +986,7 @@ export class ChatEngineService {
         customerDiscount: input.customerDiscount || 0,
         conversationId,
         messageId: `${conversationId}-fallback-${Date.now()}`,
+        registrationPromptLevel: input.registrationPromptLevel, // 🆕 Progressive registration invitation
       })
 
       debugSteps.push({
@@ -3016,6 +3017,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 customerDiscount: input.customerDiscount || 0,
                 conversationId,
                 messageId: `${conversationId}-context-${Date.now()}`,
+                registrationPromptLevel: input.registrationPromptLevel, // 🆕 Progressive registration invitation
               })
               
               debugSteps.push({

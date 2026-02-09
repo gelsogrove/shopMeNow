@@ -84,6 +84,7 @@ export interface RouteMessageParams {
   conversationHistory?: Array<{ role: string; content: string }>
   customerDiscount?: number
   channel?: string // 🚫 WIDGET FIX: Channel type (widget, whatsapp, etc.)
+  registrationPromptLevel?: number // 🆕 Progressive registration invitation (0=none, 1=gentle, 2=insistent, 3=warning)
 }
 
 export interface RouteMessageResponse {
@@ -1130,6 +1131,20 @@ export class LLMRouterService {
       logger.info(
         "✅ Router prompt processed with variables replaced (no products/categories)"
       )
+
+      // 🆕 STEP 4.8: Add Registration Prompt (Progressive invitation system)
+      if (params.registrationPromptLevel && params.registrationPromptLevel > 0) {
+        const { registrationPromptService } = require("../services/registration-prompt.service")
+        const registrationPromptText = registrationPromptService.getPromptText(params.registrationPromptLevel)
+        processedRouterPrompt += "\n\n" + registrationPromptText
+        
+        logger.info("📝 [RegistrationPrompt] Added to Router prompt", {
+          level: params.registrationPromptLevel,
+          promptLength: registrationPromptText.length,
+        })
+      } else {
+        logger.info("📝 [RegistrationPrompt] Skipped (level 0 or not set)")
+      }
 
       // 🆕 STEP 4.9: Add System Context (hidden SKU mappings, cart summary, etc.)
       const systemContextJson = await this.systemContextService.formatForSystemMessage(
