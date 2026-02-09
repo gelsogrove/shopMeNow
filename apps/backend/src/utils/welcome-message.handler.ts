@@ -98,11 +98,18 @@ export class WelcomeMessageHandler {
         workspaceId: input.workspaceId,
         previousMessageCount,
         isFirstMessage,
+        inputChannel,
+        conversationFilter,
       })
 
       if (!isFirstMessage) {
+        logger.info("🚫 [WelcomeMessageHandler] NOT first message - skipping welcome", {
+          previousMessageCount,
+        })
         return { isWelcomeMessage: false }
       }
+
+      logger.info("✅ [WelcomeMessageHandler] IS first message - proceeding with welcome")
 
       // Load workspace configuration
       const workspace = await this.prisma.workspace.findUnique({
@@ -118,8 +125,16 @@ export class WelcomeMessageHandler {
         },
       })
 
+      logger.info("🔍 [WelcomeMessageHandler] Workspace loaded", {
+        workspaceId: input.workspaceId,
+        hasWorkspace: !!workspace,
+        hasWelcomeMessage: !!workspace?.welcomeMessage,
+        welcomeMessageType: typeof workspace?.welcomeMessage,
+        welcomeMessageLength: workspace?.welcomeMessage ? String(workspace.welcomeMessage).length : 0,
+      })
+
       if (!workspace || !workspace.welcomeMessage) {
-        logger.info("👋 [WelcomeMessageHandler] No welcome message configured")
+        logger.info("🚫 [WelcomeMessageHandler] No welcome message configured")
         return { isWelcomeMessage: false }
       }
 
