@@ -848,6 +848,54 @@ export class LLMService {
       )
     }
 
+    // Pattern 3: /profile (without proper token) -> generate proper link with token
+    // 🚨 CRITICAL: LLM sometimes writes hardcoded "/profile" URLs - must auto-fix!
+    // Matches: echatbot.ai/profile, www.echatbot.ai/profile, any domain/profile
+    const profilePatterns = [
+      new RegExp(`${workspaceUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/profile(?![/\\w-])`, "gi"),
+      /https?:\/\/(?:www\.)?echatbot\.ai\/profile(?![/\w-])/gi,
+      /https?:\/\/[^\s]+\/profile(?=[\s.,)]|$)/gi, // Any URL ending with /profile
+    ]
+
+    for (const profilePattern of profilePatterns) {
+      // Check if pattern matches (use match() to avoid consuming with test())
+      const matches = finalResponse.match(profilePattern)
+      if (matches && matches.length > 0) {
+        logger.warn(
+          `⚠️ AUTO-FIX: LLM generated hardcoded /profile link: "${matches[0]}", replacing with token-based link`
+        )
+
+        const profileResult = await this.callingFunctionsService.getProfileLink({
+          customerId: customer.id,
+          workspaceId: workspace.id,
+        })
+
+        // getProfileLink returns { data: { shortLink, profileLink } }
+        const properProfileLink = profileResult?.data?.shortLink || profileResult?.data?.profileLink || ""
+        
+        if (properProfileLink) {
+          // Replace all matches of this pattern
+          finalResponse = finalResponse.replace(profilePattern, properProfileLink)
+
+          linkReplacements.push({
+            token: "[AUTO-FIX: hardcoded /profile]",
+            replacedWith: properProfileLink,
+            tokenGenerated: "from-profile-link-service",
+            shortUrlCreated: properProfileLink.includes("/s/"),
+            timestamp: new Date().toISOString(),
+            autoFixed: true,
+          })
+
+          logger.info(
+            `✅ AUTO-FIX: Replaced hardcoded /profile link with: ${properProfileLink}`
+          )
+          break // Only process one pattern
+        } else {
+          logger.error("❌ AUTO-FIX: getProfileLink returned empty URL")
+        }
+      }
+    }
+
     return finalResponse
   }
 
