@@ -319,6 +319,7 @@ export class ChatController {
       const { sessionId } = req.params
       const { content, sender } = req.body
       const workspaceId = (req as any).workspaceId
+      const userId = (req as any).user?.userId || (req as any).user?.id
 
       if (!sessionId) {
         res.status(400).json({
@@ -342,6 +343,31 @@ export class ChatController {
           error: "Workspace ID is required",
         })
         return
+      }
+
+      // 🔒 SECURITY: Verify user has access to this workspace (IDOR protection)
+      if (userId) {
+        const userWorkspace = await this.prisma.userWorkspace.findFirst({
+          where: {
+            userId: userId,
+            workspaceId: workspaceId,
+          },
+        })
+
+        if (!userWorkspace) {
+          logger.warn(
+            `🚫 SECURITY: User ${userId} attempted to access workspace ${workspaceId} without permission`
+          )
+          res.status(403).json({
+            success: false,
+            error: "Access denied to this workspace",
+          })
+          return
+        }
+
+        logger.info(
+          `✅ SECURITY: User ${userId} authorized for workspace ${workspaceId} (role: ${userWorkspace.role})`
+        )
       }
 
       logger.info(

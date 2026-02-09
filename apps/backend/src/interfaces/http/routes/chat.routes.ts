@@ -3,6 +3,7 @@ import { ChatController } from "../controllers/chat.controller"
 import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import rateLimit from "express-rate-limit"
 
 /**
  * @swagger
@@ -59,6 +60,18 @@ import { workspaceValidationMiddleware } from "../middlewares/workspace-validati
 
 export const chatRouter = (chatController: ChatController): express.Router => {
   const router = express.Router()
+
+  // 🔒 SECURITY: Rate limiter for message sending (10 msg/min per operator)
+  const sendMessageLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // Max 10 messages per minute
+    message: {
+      success: false,
+      error: "Too many messages sent. Please wait before sending more.",
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
 
   // 🔒 SECURITY: Debug endpoint only in development
   if (process.env.NODE_ENV !== "production") {
@@ -398,6 +411,7 @@ export const chatRouter = (chatController: ChatController): express.Router => {
    */
   router.post(
     "/:sessionId/send",
+    sendMessageLimiter, // 🔒 Rate limiting: max 10 msg/min
     asyncHandler(chatController.sendMessage.bind(chatController))
   )
 
