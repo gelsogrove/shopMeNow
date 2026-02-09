@@ -83,8 +83,8 @@ export function CampaignSheet({
   const [targetCustomerIds, setTargetCustomerIds] = useState<string[]>([])
   const [tagId, setTagId] = useState<string | null>(null)
   const [sendAt, setSendAt] = useState<string>("")
-  const [throttlePerSecond, setThrottlePerSecond] = useState<number | "">("")
-  const [batchSize, setBatchSize] = useState<number | "">("")
+  const DEFAULT_THROTTLE_PER_SECOND = 1
+  const DEFAULT_BATCH_SIZE = 1
 
   // Additional state
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -109,17 +109,6 @@ export function CampaignSheet({
       setTargetCustomerIds(campaign.targetCustomerIds || [])
       setTagId(campaign.tagId || null)
       setSendAt(campaign.sendAt ? campaign.sendAt.slice(0, 16) : "")
-      setThrottlePerSecond(
-        campaign.throttlePerSecond !== undefined &&
-          campaign.throttlePerSecond !== null
-          ? campaign.throttlePerSecond
-          : ""
-      )
-      setBatchSize(
-        campaign.batchSize !== undefined && campaign.batchSize !== null
-          ? campaign.batchSize
-          : ""
-      )
     } else {
       // Reset form for new campaign
       setName("")
@@ -130,8 +119,6 @@ export function CampaignSheet({
       setTargetCustomerIds([])
       setTagId(null)
       setSendAt("")
-      setThrottlePerSecond("")
-      setBatchSize("")
     }
   }, [campaign])
 
@@ -229,9 +216,8 @@ export function CampaignSheet({
       targetCustomerIds,
       tagId,
       sendAt: sendAtDate,
-      throttlePerSecond:
-        throttlePerSecond === "" ? undefined : Number(throttlePerSecond),
-      batchSize: batchSize === "" ? undefined : Number(batchSize),
+      throttlePerSecond: DEFAULT_THROTTLE_PER_SECOND,
+      batchSize: DEFAULT_BATCH_SIZE,
     }
 
     try {
@@ -455,7 +441,7 @@ export function CampaignSheet({
           </div>
 
           {/* Schedule Controls */}
-          <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
+          <div className="grid gap-4 pt-4 border-t">
             <div className="space-y-2">
               <Label htmlFor="sendAt">First Send At</Label>
               <Input
@@ -465,40 +451,6 @@ export function CampaignSheet({
                 onChange={(e) => setSendAt(e.target.value)}
                 disabled={!isEditMode}
               />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="throttle">Msgs/sec</Label>
-                <Input
-                  id="throttle"
-                  type="number"
-                  min={1}
-                  value={throttlePerSecond}
-                  onChange={(e) =>
-                    setThrottlePerSecond(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  placeholder="10"
-                  disabled={!isEditMode}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="batchSize">Batch size</Label>
-                <Input
-                  id="batchSize"
-                  type="number"
-                  min={1}
-                  value={batchSize}
-                  onChange={(e) =>
-                    setBatchSize(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  placeholder="50"
-                  disabled={!isEditMode}
-                />
-              </div>
             </div>
           </div>
 

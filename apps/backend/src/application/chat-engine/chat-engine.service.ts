@@ -137,6 +137,8 @@ export interface DebugStep {
     conversationHistory?: any[]
     functionResult?: any
     textContent?: string
+    textToValidate?: string
+    previousResponse?: string
     targetLanguage?: string  // 🆕 For Translation Agent
     customerLanguage?: string  // 🆕 For Info Agent
   }
@@ -145,6 +147,9 @@ export interface DebugStep {
     functionCall?: { name: string; arguments: any } | string
     functionCalls?: any[]  // 🆕 For Info Agent multiple function calls
     textResponse?: string
+    translatedText?: string
+    safe?: boolean
+    blockedReason?: string
     result?: any
     executionTimeMs?: number
     textContent?: string

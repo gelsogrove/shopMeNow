@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import { commonStyles } from "@/styles/common"
 import { ColumnDef } from "@tanstack/react-table"
-import { Calendar, Globe, Megaphone, Pause, Sparkles, Trash2, Users, Clock, CheckCircle2 } from "lucide-react"
+import { Calendar, Megaphone, Trash2, Users, Clock, Power, Pencil } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useWorkspace } from "../../contexts/WorkspaceContext"
 import { toast } from "../../lib/toast"
@@ -70,18 +70,6 @@ export default function CampaignsPage() {
   }
 
   // Actions
-  const handleRunNow = async (campaign: Campaign) => {
-    try {
-      await api.post(
-        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/run-now`
-      )
-      toast.success("Campaign queued to run now")
-      loadCampaigns()
-    } catch {
-      toast.error("Error running campaign")
-    }
-  }
-
   const handlePause = async (campaign: Campaign) => {
     try {
       await api.post(
@@ -265,8 +253,15 @@ export default function CampaignsPage() {
     },
   ]
 
-const renderActions = (campaign: Campaign) => (
-    <div className="flex items-center gap-1">
+const renderActions = (campaign: Campaign) => {
+    const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(
+      campaign.status || ""
+    )
+    const isCampaignActive =
+      campaign.isActive !== false && campaign.status !== "PAUSED"
+
+    return (
+      <div className="flex items-center gap-2">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -276,7 +271,7 @@ const renderActions = (campaign: Campaign) => (
               onClick={() => handleEditCampaign(campaign)}
               className="h-8 w-8 p-0 flex items-center justify-center"
             >
-              <Sparkles className="h-4 w-4 text-purple-600" />
+              <Pencil className="h-4 w-4 text-gray-700" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
@@ -285,67 +280,33 @@ const renderActions = (campaign: Campaign) => (
         </Tooltip>
       </TooltipProvider>
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleRunNow(campaign)}
-              className="h-8 w-8 p-0 flex items-center justify-center"
-              disabled={
-                ["COMPLETED", "CANCELLED", "FAILED"].includes(
-                  campaign.status || ""
-                ) || campaign.expectedRecipients === 0
-              }
-            >
-              <Megaphone className="h-4 w-4 text-green-600" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Run now</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {campaign.status === "PAUSED" ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleResume(campaign)}
-                className="h-8 w-8 p-0 flex items-center justify-center"
-                disabled={
-                  ["COMPLETED", "CANCELLED", "FAILED"].includes(
-                    campaign.status || ""
-                  )
-                }
-              >
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handlePause(campaign)}
-                className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
-                disabled={
-                  ["COMPLETED", "CANCELLED", "FAILED"].includes(
-                    campaign.status || ""
-                  )
-                }
-              >
-                <Pause className="h-4 w-4 text-amber-600" />
-              </Button>
-            )}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{campaign.status === "PAUSED" ? "Resume" : "Pause"}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <button
+        type="button"
+        onClick={() =>
+          isCampaignActive ? handlePause(campaign) : handleResume(campaign)
+        }
+        disabled={isTerminalStatus}
+        aria-pressed={isCampaignActive}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
+          isCampaignActive
+            ? "border-green-200 bg-green-50 text-green-700"
+            : "border-gray-200 bg-gray-100 text-gray-600"
+        } disabled:opacity-50`}
+      >
+        <Power className="h-3.5 w-3.5" />
+        <span>Active</span>
+        <span
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+            isCampaignActive ? "bg-green-500" : "bg-gray-300"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+              isCampaignActive ? "translate-x-4" : "translate-x-1"
+            }`}
+          />
+        </span>
+      </button>
 
       <TooltipProvider>
         <Tooltip>
@@ -371,6 +332,7 @@ const renderActions = (campaign: Campaign) => (
       </TooltipProvider>
     </div>
   )
+}
 
   const renderEmptyState = (
     <div className="text-center py-12">
@@ -387,81 +349,6 @@ const renderActions = (campaign: Campaign) => (
 
   return (
     <PageLayout>
-      {/* AI-Powered Campaign Info Box */}
-      <div className="mb-6 bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 border border-purple-200 rounded-xl p-5 shadow-sm">
-        <div className="flex items-start gap-4">
-          {/* AI Icon */}
-          <div className="flex-shrink-0">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Sparkles className="w-6 h-6 text-white" />
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              Push Intelligente • AI-Powered Multilingual Campaigns
-              <Badge className="bg-purple-100 text-purple-700 border-purple-200">
-                Smart
-              </Badge>
-            </h3>
-            <p className="text-sm text-gray-600 mt-1 mb-4">
-              Write your campaign in <b>your native language</b> - our AI automatically translates it to each customer's preferred language.
-            </p>
-
-            {/* How it works - Steps */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
-                <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-xs font-bold text-purple-600">1</div>
-                <span className="text-xs text-gray-700">Write message in Italian</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">2</div>
-                <span className="text-xs text-gray-700">Select recipients</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
-                <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <Clock className="w-3 h-3 text-indigo-600" />
-                </div>
-                <span className="text-xs text-gray-700">Scheduler runs daily at 10:00</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                  <Globe className="w-3 h-3 text-green-600" />
-                </div>
-                <span className="text-xs text-gray-700">AI translates per customer</span>
-              </div>
-            </div>
-
-            {/* Supported Languages */}
-            <div className="flex items-center gap-2 mt-4">
-              <span className="text-xs text-gray-500">Supported languages:</span>
-              <div className="flex gap-1">
-                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇮🇹 IT</span>
-                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇬🇧 EN</span>
-                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇪🇸 ES</span>
-                <span className="px-2 py-0.5 bg-white rounded text-xs font-medium text-gray-700">🇵🇹 PT</span>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-2 text-xs text-gray-600">
-              <div>
-                <span className="font-semibold text-gray-700">IT:</span> Segmenta i clienti con i tag e invia messaggi mirati in automatico.
-              </div>
-              <div>
-                <span className="font-semibold text-gray-700">EN:</span> Segment customers by tags and send targeted messages automatically.
-              </div>
-              <div>
-                <span className="font-semibold text-gray-700">ES:</span> Segmenta clientes por etiquetas y envía mensajes dirigidos automáticamente.
-              </div>
-              <div>
-                <span className="font-semibold text-gray-700">PT:</span> Segmente clientes por tags e envie mensagens direcionadas automaticamente.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <CrudPageContent
         title={<span className={commonStyles.primary}>WhatsApp Campaigns</span>}
         titleIcon={<Megaphone className={commonStyles.headerIcon} />}

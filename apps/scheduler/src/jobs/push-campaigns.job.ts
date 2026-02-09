@@ -247,9 +247,8 @@ export async function pushCampaignsJob(): Promise<void> {
       }
 
       // Finish this run
-      const nextRunAt = calculateNextRunAt(campaign.frequency, new Date())
-      const finalStatus =
-        nextRunAt ? PushCampaignStatus.SCHEDULED : PushCampaignStatus.COMPLETED
+      const { nextRunAt, finalStatus, shouldDeactivate } =
+        computeCompletionUpdate(campaign, new Date())
 
       await prisma.pushCampaign.update({
         where: { id: campaign.id },
@@ -257,6 +256,7 @@ export async function pushCampaignsJob(): Promise<void> {
           status: finalStatus,
           nextRunAt,
           actualSent: { increment: processed },
+          ...(shouldDeactivate ? { isActive: false } : {}),
         },
       })
 
@@ -360,6 +360,15 @@ function calculateNextRunAt(
   return next
 }
 
+function computeCompletionUpdate(campaign: any, now: Date) {
+  const nextRunAt = calculateNextRunAt(campaign.frequency, now)
+  const finalStatus = nextRunAt
+    ? PushCampaignStatus.SCHEDULED
+    : PushCampaignStatus.COMPLETED
+  const shouldDeactivate = campaign.frequency === CampaignFrequency.ONCE
+  return { nextRunAt, finalStatus, shouldDeactivate }
+}
+
 async function buildMessageContent({
   campaign,
   customer,
@@ -420,4 +429,5 @@ export const __test = {
   normalizeLanguage,
   populateRecipientsForRun,
   calculateNextRunAt,
+  computeCompletionUpdate,
 }

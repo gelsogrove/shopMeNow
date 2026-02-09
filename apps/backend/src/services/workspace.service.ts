@@ -343,6 +343,13 @@ export const workspaceService = {
     if (channelType === "WHATSAPP" && !workspaceData.whatsappPhoneNumber) {
       throw new Error("WhatsApp phone number is required for WHATSAPP channels")
     }
+
+    // 🛡️ Default allowed external links (always include platform domain)
+    if (!workspaceData.allowedExternalLinks || workspaceData.allowedExternalLinks.length === 0) {
+      workspaceData.allowedExternalLinks = ["www.echatbot.ai"]
+    } else if (!workspaceData.allowedExternalLinks.includes("www.echatbot.ai")) {
+      workspaceData.allowedExternalLinks.push("www.echatbot.ai")
+    }
     
     const created = await prisma.workspace.create({
       data: {

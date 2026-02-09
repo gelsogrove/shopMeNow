@@ -104,8 +104,9 @@ export async function getProfileLink(
     )
 
     // 4. Generate full profile URL
-    const baseUrl = workspaceUrl || process.env.FRONTEND_URL || "https://app.echatbot.ai"
-    const profileUrl = `${baseUrl}/profile?token=${token}`
+    // 🚨 CRITICAL: Use /customer-profile (public page with token), NOT /profile (auth required)
+    const baseUrl = workspaceUrl || process.env.FRONTEND_URL || "https://www.echatbot.ai"
+    const profileUrl = `${baseUrl}/customer-profile?token=${token}`
 
     logger.info("✅ Profile URL generated", {
       customerId: request.customerId,

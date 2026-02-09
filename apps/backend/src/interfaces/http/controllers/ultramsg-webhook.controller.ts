@@ -391,10 +391,33 @@ export class UltraMsgWebhookController {
         })
       }
 
+      // 🧹 CLEANUP: Delete orphaned temp- conversation messages from old welcome flow
+      // These were created before the fix that uses real chatSession IDs
+      // Without this cleanup, messageCount would always be > 0 after first welcome attempt
+      const cleanedUp = await prisma.conversationMessage.deleteMany({
+        where: {
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          conversationId: { startsWith: 'temp-' },
+        },
+      })
+      if (cleanedUp.count > 0) {
+        logger.info('[ULTRAMSG] 🧹 Cleaned up orphaned temp- messages', {
+          customerId: customer.id,
+          count: cleanedUp.count,
+        })
+      }
+
       // 🔍 CRITICAL: Check if customer has chat history (NEW + EXISTING customers)
       // If NO messages exist → send welcome message
       const messageCount = await prisma.conversationMessage.count({
         where: { customerId: customer.id, workspaceId: customer.workspaceId },
+      })
+
+      logger.info('[ULTRAMSG] 📊 Message count check for welcome decision', {
+        customerId: customer.id,
+        messageCount,
+        willSendWelcome: messageCount === 0,
       })
 
       if (messageCount === 0) {
@@ -416,17 +439,39 @@ export class UltraMsgWebhookController {
           phone: customer.phone,
         })
 
+        // 🔧 FIX: Create a real chatSession for welcome messages
+        // Without this, welcome messages get saved with temp-{customerId} conversationId
+        // which is never cleaned up by deleteChat (it only deletes by real chatSessionId)
+        let welcomeSession = await prisma.chatSession.findFirst({
+          where: { customerId: customer.id, workspaceId, channel: 'whatsapp', status: 'active' },
+        })
+        if (!welcomeSession) {
+          welcomeSession = await prisma.chatSession.create({
+            data: {
+              customerId: customer.id,
+              workspaceId,
+              channel: 'whatsapp',
+              status: 'active',
+            },
+          })
+          logger.info('[ULTRAMSG] ✅ Created chatSession for welcome message', {
+            sessionId: welcomeSession.id,
+            customerId: customer.id,
+          })
+        }
+
         // Import welcome message services
         const { WelcomeMessageHandler } = await import('../../../utils/welcome-message.handler')
         const welcomeHandler = new WelcomeMessageHandler(prisma)
 
-        // Process welcome message
+        // Process welcome message with real chatSession ID
         const welcomeResult = await welcomeHandler.handleWelcomeMessage({
           customerId: customer.id,
           workspaceId: customer.workspaceId,
           customerLanguage: customer.language,
           customerMessage: messageText,
           channel: 'whatsapp',
+          conversationId: welcomeSession.id,
         })
 
         if (welcomeResult.isWelcomeMessage && welcomeResult.welcomeText) {

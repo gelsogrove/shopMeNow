@@ -13,6 +13,33 @@ jest.mock('../src/utils/logger', () => ({
   },
 }))
 
+// Mock database config enums used by helpers
+jest.mock('../src/config/database', () => ({
+  __esModule: true,
+  prisma: {},
+  Prisma: {},
+  CampaignFrequency: {
+    ONCE: 'ONCE',
+    WEEKLY: 'WEEKLY',
+    MONTHLY: 'MONTHLY',
+    QUARTERLY: 'QUARTERLY',
+    SEMIANNUAL: 'SEMIANNUAL',
+  },
+  CampaignTargetType: {
+    ALL: 'ALL',
+    TAGS: 'TAGS',
+    MANUAL: 'MANUAL',
+  },
+  PushCampaignStatus: {
+    SCHEDULED: 'SCHEDULED',
+    COMPLETED: 'COMPLETED',
+    FAILED: 'FAILED',
+    RUNNING: 'RUNNING',
+    PAUSED: 'PAUSED',
+    DRAFT: 'DRAFT',
+  },
+}))
+
 // Mock translation service
 const translateMessageMock = jest.fn()
 jest.mock('../src/services/translation.service', () => ({
@@ -24,7 +51,7 @@ jest.mock('../src/services/translation.service', () => ({
 
 describe('push-campaigns.job helpers', () => {
   const { __test } = require('../src/jobs/push-campaigns.job')
-  const { buildMessageContent, normalizeLanguage } = __test
+  const { buildMessageContent, normalizeLanguage, computeCompletionUpdate } = __test
 
   beforeEach(() => {
     translateMessageMock.mockReset()
@@ -106,6 +133,22 @@ describe('push-campaigns.job helpers', () => {
         'Hello MyWS',
         'es'
       )
+    })
+  })
+
+  describe('computeCompletionUpdate', () => {
+    it('deactivates one-time campaigns after completion', () => {
+      const result = computeCompletionUpdate({ frequency: 'ONCE' }, new Date())
+      expect(result.finalStatus).toBe('COMPLETED')
+      expect(result.shouldDeactivate).toBe(true)
+      expect(result.nextRunAt).toBeNull()
+    })
+
+    it('keeps recurring campaigns scheduled with next run', () => {
+      const result = computeCompletionUpdate({ frequency: 'WEEKLY' }, new Date())
+      expect(result.finalStatus).toBe('SCHEDULED')
+      expect(result.shouldDeactivate).toBe(false)
+      expect(result.nextRunAt).toBeInstanceOf(Date)
     })
   })
 })
