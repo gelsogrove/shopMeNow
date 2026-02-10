@@ -10,7 +10,6 @@ import {
   PushCampaignRepository,
   UpdatePushCampaignInput,
 } from "../../repositories/push-campaign.repository"
-import { platformConfigService } from "../../services/platform-config.service"
 import logger from "../../utils/logger"
 
 export interface CreatePushCampaignDTO {
@@ -81,16 +80,14 @@ export class PushCampaignService {
     const sendAt =
       typeof input.sendAt === "string" ? new Date(input.sendAt) : input.sendAt ?? new Date()
 
-    // Read cost/throttle defaults
-    const costItem = await platformConfigService.getPrice("PUSH_CAMPAIGN").catch(() => null)
-    const limitThrottle = await platformConfigService
-      .getLimit("PUSH_THROTTLE_PER_SEC")
-      .catch(() => null)
-    const limitBatch = await platformConfigService.getLimit("PUSH_BATCH_SIZE").catch(() => null)
+    // Default values for push campaigns
+    const DEFAULT_COST_PER_MESSAGE = 1.0 // €1.00 per push notification
+    const DEFAULT_THROTTLE_PER_SEC = 10  // Max 10 messages per second
+    const DEFAULT_BATCH_SIZE = 50        // Process 50 recipients per batch
 
-    const costPerMessage = typeof costItem === "number" ? costItem : 1
-    const throttlePerSecond = Number(input.throttlePerSecond ?? limitThrottle ?? 10)
-    const batchSize = Number(input.batchSize ?? limitBatch ?? 50)
+    const costPerMessage = DEFAULT_COST_PER_MESSAGE
+    const throttlePerSecond = Number(input.throttlePerSecond ?? DEFAULT_THROTTLE_PER_SEC)
+    const batchSize = Number(input.batchSize ?? DEFAULT_BATCH_SIZE)
 
     // Build recipients list based on targeting
     const recipients: Array<{

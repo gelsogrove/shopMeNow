@@ -316,6 +316,7 @@ async function populateRecipientsForRun(campaign: any) {
         isActive: true,
         activeChatbot: true,
         isBlacklisted: false,
+        push_notifications_consent: true, // Security: opt-out enforcement (Rule #4 from security audit)
         deletedAt: null,
       },
       select: { id: true, phone: true },

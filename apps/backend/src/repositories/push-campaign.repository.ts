@@ -194,7 +194,7 @@ export class PushCampaignRepository {
     }
   ) {
     return this.prisma.pushCampaign.update({
-      where: { id },
+      where: { id, workspaceId }, // Security: workspace isolation (Rule #2 from CLAUDE.md)
       data: counts,
     })
   }
