@@ -699,7 +699,7 @@ export class WhatsAppWebhookController {
                 id: savedMessage.id,
                 sessionId: chatSession.id,
                 content: messageMarkdown,
-                sender: "user",
+                sender: "customer",
                 timestamp: savedMessage.createdAt.toISOString(),
                 workspaceId,
                 metadata: { channelDisabled: true, source: "whatsapp-webhook" },
@@ -1768,7 +1768,7 @@ export class WhatsAppWebhookController {
             id: savedMessage.id,
             sessionId: chatSession.id,
             content: messageMarkdown,
-            sender: "user",
+            sender: "customer",
             timestamp: savedMessage.createdAt.toISOString(),
             workspaceId: customer.workspaceId,
             metadata: {
@@ -1933,7 +1933,7 @@ export class WhatsAppWebhookController {
             customerId: customer.id,
           })
 
-          await prisma.conversationMessage.create({
+          const savedMessage = await prisma.conversationMessage.create({
             data: {
               workspaceId: customer.workspaceId,
               customerId: customer.id,
@@ -1950,6 +1950,34 @@ export class WhatsAppWebhookController {
               }),
             },
           })
+
+          // 🔔 Notify realtime clients (chat list + message thread)
+          try {
+            websocketService.notifyNewMessage(customer.workspaceId, {
+              id: savedMessage.id,
+              sessionId: chatSession.id,
+              content: messageMarkdown,
+              sender: "customer",
+              timestamp: savedMessage.createdAt.toISOString(),
+              workspaceId: customer.workspaceId,
+              metadata: {
+                channelDisabled: true,
+                source: "whatsapp-webhook",
+              },
+            })
+            websocketService.notifyChatUpdated(customer.workspaceId, {
+              sessionId: chatSession.id,
+              lastMessage: messageMarkdown.substring(0, 100),
+              lastMessageAt: savedMessage.createdAt.toISOString(),
+              customerId: customer.id,
+            })
+          } catch (wsError) {
+            logger.warn("[WEBHOOK] ⚠️ Failed to notify WebSocket for channel-disabled message", {
+              error: wsError,
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+            })
+          }
 
           res.status(200).json({
             status: "channel_disabled",
@@ -2024,7 +2052,7 @@ export class WhatsAppWebhookController {
           }
 
           // Save WIP message to history so operator can see customer tried to contact
-          await prisma.conversationMessage.create({
+          const userMessage = await prisma.conversationMessage.create({
             data: {
               workspaceId: customer.workspaceId,
               customerId: customer.id,
@@ -2060,6 +2088,46 @@ export class WhatsAppWebhookController {
               }),
             },
           })
+
+          // 🔔 Notify realtime clients (user + assistant)
+          try {
+            websocketService.notifyNewMessage(customer.workspaceId, {
+              id: userMessage.id,
+              sessionId: chatSession.id,
+              content: messageMarkdown,
+              sender: "customer",
+              timestamp: userMessage.createdAt.toISOString(),
+              workspaceId: customer.workspaceId,
+              metadata: {
+                debugMode: true,
+                source: "whatsapp-webhook",
+              },
+            })
+            websocketService.notifyNewMessage(customer.workspaceId, {
+              id: assistantMessage.id,
+              sessionId: chatSession.id,
+              content: finalWipMessage,
+              sender: "agent",
+              timestamp: assistantMessage.createdAt.toISOString(),
+              workspaceId: customer.workspaceId,
+              metadata: {
+                debugMode: true,
+                source: "whatsapp-webhook",
+              },
+            })
+            websocketService.notifyChatUpdated(customer.workspaceId, {
+              sessionId: chatSession.id,
+              lastMessage: finalWipMessage.substring(0, 100),
+              lastMessageAt: assistantMessage.createdAt.toISOString(),
+              customerId: customer.id,
+            })
+          } catch (wsError) {
+            logger.warn("[WEBHOOK] ⚠️ Failed to notify WebSocket for debug WIP message", {
+              error: wsError,
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+            })
+          }
 
           try {
             const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")

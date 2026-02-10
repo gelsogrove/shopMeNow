@@ -39,6 +39,17 @@ export function useLoadMoreMessages(
   const firstMessageIdRef = useRef<string | null>(null)
   const prevSessionIdRef = useRef<string | null>(null)
 
+  const refreshMessages = useCallback(() => {
+    if (!sessionId) return
+    logger.info(`🔄 Refreshing messages for session ${sessionId} (reset to page 1)`)
+    setPage(1)
+    setAllMessages([])
+    firstMessageIdRef.current = null
+    queryClient.invalidateQueries({
+      queryKey: ["load-more-messages", sessionId],
+    })
+  }, [queryClient, sessionId])
+
   // 🔧 FIX: Reset state when sessionId changes (customer switched)
   useEffect(() => {
     if (sessionId !== prevSessionIdRef.current) {
@@ -60,19 +71,35 @@ export function useLoadMoreMessages(
             "📥 Received chat messages update from another tab for session",
             sessionId
           )
-          // Reset to page 1 when new message arrives
-          setPage(1)
-          setAllMessages([])
-          queryClient.invalidateQueries({
-            queryKey: ["load-more-messages", sessionId],
-          })
+          refreshMessages()
         }
       }
     }
 
     window.addEventListener("storage", handleStorageChange)
     return () => window.removeEventListener("storage", handleStorageChange)
-  }, [queryClient, sessionId])
+  }, [refreshMessages, sessionId])
+
+  // Listen for in-tab refresh events (triggered by WebSocket handler)
+  useEffect(() => {
+    const handleChatRefresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ sessionId?: string }>).detail
+      if (!detail?.sessionId || detail.sessionId !== sessionId) return
+      logger.info(
+        "📥 Received in-tab chat refresh event for session",
+        sessionId
+      )
+      refreshMessages()
+    }
+
+    window.addEventListener("chat-messages-updated", handleChatRefresh as EventListener)
+    return () => {
+      window.removeEventListener(
+        "chat-messages-updated",
+        handleChatRefresh as EventListener
+      )
+    }
+  }, [refreshMessages, sessionId])
 
   // Fetch messages for current page
   const {

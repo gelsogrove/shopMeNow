@@ -134,6 +134,11 @@ export function useWebSocket(options: UseWebSocketOptions) {
         queryKey: ["chat-messages", message.sessionId],
       })
 
+      // 🔧 ChatPage uses load-more pagination - invalidate that cache too
+      queryClient.invalidateQueries({
+        queryKey: ["load-more-messages", message.sessionId],
+      })
+
       // Invalidate chat list (to update last message preview)
       queryClient.invalidateQueries({
         queryKey: ["chats", sessionId],
@@ -153,6 +158,19 @@ export function useWebSocket(options: UseWebSocketOptions) {
       ) {
         // New message from customer in different chat
         toast.info("New message received", { duration: 2000 })
+      }
+
+      // 🔔 Notify in-tab listeners (useLoadMoreMessages) to reset pagination
+      try {
+        window.dispatchEvent(
+          new CustomEvent("chat-messages-updated", {
+            detail: { sessionId: message.sessionId },
+          })
+        )
+      } catch (error) {
+        logger.warn("[WebSocket] Failed to dispatch chat-messages-updated event", {
+          error,
+        })
       }
     }
 
