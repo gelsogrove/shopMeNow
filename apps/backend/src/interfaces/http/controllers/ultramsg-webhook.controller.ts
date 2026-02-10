@@ -4,7 +4,7 @@
  * Handles incoming webhooks from UltraMsg
  * Normalizes messages to internal format and processes them
  * 
- * Webhook URL format: POST /api/v1/whatsapp/ultramsg/:webhookId
+ * Webhook URL format: POST /api/whatsapp/ultramsg/:webhookId
  * 
  * UltraMsg webhook payload format (VERIFIED - nested structure):
  * {
@@ -62,7 +62,7 @@ const customerMessageLocks = new Map<string, Promise<void>>()
 export class UltraMsgWebhookController {
   /**
    * Handle incoming webhook from UltraMsg
-   * POST /api/v1/whatsapp/ultramsg/:webhookId
+   * POST /api/whatsapp/ultramsg/:webhookId
    * 
    * FLOW (IDENTICAL TO META):
    * 1. Extract phone for locking
@@ -1318,7 +1318,7 @@ export class UltraMsgWebhookController {
 
   /**
    * Test connection endpoint
-   * GET /api/v1/whatsapp/ultramsg/test/:workspaceId
+   * GET /api/whatsapp/ultramsg/test/:workspaceId
    */
   async testConnection(req: Request, res: Response): Promise<Response> {
     const { workspaceId } = req.params
@@ -1329,6 +1329,11 @@ export class UltraMsgWebhookController {
           id: workspaceId,
           deletedAt: null,
         },
+        include: {
+          whatsappSettings: {
+            select: { webhookId: true }
+          }
+        }
       })
 
       if (!workspace) {
@@ -1349,10 +1354,12 @@ export class UltraMsgWebhookController {
         })
       }
 
+      const webhookId = workspace.whatsappSettings?.webhookId || workspaceId
+
       return res.status(200).json({
         success: true,
         message: 'UltraMsg connection configured',
-        webhookUrl: `${process.env.API_URL}/api/v1/whatsapp/ultramsg/${workspaceId}`,
+        webhookUrl: `https://www.echatbot.ai/api/whatsapp/ultramsg/${webhookId}`,
       })
 
     } catch (error: any) {

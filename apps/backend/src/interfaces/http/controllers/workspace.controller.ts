@@ -838,8 +838,8 @@ export class WorkspaceController {
           whatsappProvider: ws.whatsappProvider,
           ultraMsgApiUrl: ws.ultraMsgApiUrl || '',
           webhookUrl: whatsappProvider === 'meta' 
-            ? `https://www.echatbot.ai/api/v1/whatsapp/webhook/${webhookId}`
-            : `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${webhookId}`,
+            ? `https://www.echatbot.ai/api/whatsapp/webhook/${webhookId}`
+            : `https://www.echatbot.ai/api/whatsapp/ultramsg/${webhookId}`,
         },
       })
     } catch (error) {
@@ -892,8 +892,8 @@ export class WorkspaceController {
           ultraMsgToken: ws.ultraMsgToken || '',
           ultraMsgApiUrl: ws.ultraMsgApiUrl || '',
           webhookUrl: ws.whatsappProvider === 'ultramsg'
-            ? `https://www.echatbot.ai/api/v1/whatsapp/ultramsg/${webhookId}`
-            : `https://www.echatbot.ai/api/v1/whatsapp/webhook/${webhookId}`,
+            ? `https://www.echatbot.ai/api/whatsapp/ultramsg/${webhookId}`
+            : `https://www.echatbot.ai/api/whatsapp/webhook/${webhookId}`,
         },
       })
     } catch (error) {
