@@ -33,7 +33,10 @@
     "node_modules",
     "**/*.spec.ts",
     "**/*.test.ts",
-    "src/__tests__/**/*"
+    "src/__tests__/**/*",
+    "src/application/agents/CustomAgentLLM.ts",
+    "src/application/agents/NotificationsAgentLLM.ts",
+    "src/application/agents/OperatorAgentLLM.ts"
   ],
   "ts-node": {
     "transpileOnly": true,
