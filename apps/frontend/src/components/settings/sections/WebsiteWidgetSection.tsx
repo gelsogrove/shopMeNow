@@ -116,7 +116,7 @@ export function WebsiteWidgetSection({
             <Switch
               checked={formData.enableWidget}
               onCheckedChange={(checked) => onFieldChange("enableWidget", checked)}
-              disabled={true}
+              disabled={widgetDisabled}
             />
           </div>
         </CardHeader>
