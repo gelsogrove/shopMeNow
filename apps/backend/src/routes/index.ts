@@ -808,6 +808,11 @@ logger.info("Registered push notification routes for chatbot reactivation")
 router.use("/whatsapp", whatsappRoutes)
 logger.info("Registered WhatsApp routes for webhook and send message")
 
+// Mount WaAPI routes
+import waapiRoutes from "../interfaces/http/routes/waapi.routes"
+router.use("/", waapiRoutes)
+logger.info("Registered WaAPI routes for instance management and webhooks")
+
 // Mount public orders routes (for secure token validation and public access)
 router.use("/internal", publicOrdersRoutes)
 logger.info("Registered public orders routes for secure token validation")

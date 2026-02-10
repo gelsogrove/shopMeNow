@@ -12,6 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Smartphone, Copy, AlertCircle } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { WaapiOnboarding } from "@/components/WaapiOnboarding"
+import { WaapiSettings } from "@/components/WaapiSettings"
 
 interface WhatsAppChannelSectionProps {
   formData: {
@@ -143,7 +145,20 @@ export function WhatsAppChannelSection({
             {/* Provider Selection */}
             <div className="space-y-3">
               <Label>WhatsApp Provider</Label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => onFieldChange("whatsappProvider", "waapi")}
+                  disabled={!canEdit}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    currentProvider === "waapi"
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className="font-semibold">WaAPI</div>
+                  <div className="text-xs text-gray-500 mt-1">QR code registration</div>
+                </button>
                 <button
                   type="button"
                   onClick={() => onFieldChange("whatsappProvider", "meta")}
@@ -173,21 +188,39 @@ export function WhatsAppChannelSection({
               </div>
             </div>
 
-            {/* Shared Field: Phone Number */}
-            <div
-              className="space-y-2"
-              onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
-              data-focus-key="whatsappAccess"
-            >
-              <Label htmlFor="whatsappPhoneNumber">Phone Number</Label>
-              <Input
-                id="whatsappPhoneNumber"
-                value={formData.whatsappPhoneNumber}
-                onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
-                placeholder="+1234567890"
-                disabled={!canEdit}
-              />
-            </div>
+            {/* WaAPI Provider Section */}
+            {currentProvider === "waapi" && (
+              <Card className="border-emerald-200 bg-emerald-50">
+                <CardContent className="pt-6">
+                  {currentWorkspace?.waapiInstanceStatus === 'ready' ? (
+                    <WaapiSettings />
+                  ) : (
+                    <WaapiOnboarding onComplete={async () => {
+                      await currentWorkspace?.id;
+                      toast.success('WhatsApp connected successfully!');
+                    }} />
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Shared Field: Phone Number (Meta/UltraMsg only) */}
+            {currentProvider !== "waapi" && (
+              <div
+                className="space-y-2"
+                onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
+                data-focus-key="whatsappAccess"
+              >
+                <Label htmlFor="whatsappPhoneNumber">Phone Number</Label>
+                <Input
+                  id="whatsappPhoneNumber"
+                  value={formData.whatsappPhoneNumber}
+                  onChange={(e) => onFieldChange("whatsappPhoneNumber", e.target.value)}
+                  placeholder="+1234567890"
+                  disabled={!canEdit}
+                />
+              </div>
+            )}
 
             {/* Meta Provider Fields */}
             {currentProvider === "meta" && (
