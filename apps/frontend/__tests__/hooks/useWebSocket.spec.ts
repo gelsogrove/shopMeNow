@@ -175,6 +175,11 @@ describe("useWebSocket - React Query Invalidation", () => {
           queryKey: ["chat-messages", "chat-session-other"],
         })
 
+        // Should invalidate load-more pagination cache
+        expect(invalidateSpy).toHaveBeenCalledWith({
+          queryKey: ["load-more-messages", "chat-session-other"],
+        })
+
         // Should invalidate chat list
         expect(invalidateSpy).toHaveBeenCalledWith({
           queryKey: ["chats", "session-123"],
@@ -186,7 +191,7 @@ describe("useWebSocket - React Query Invalidation", () => {
         })
       })
 
-      expect(invalidateSpy).toHaveBeenCalledTimes(3)
+      expect(invalidateSpy).toHaveBeenCalledTimes(4)
     })
 
     it("should show toast for messages in non-active chats", async () => {
@@ -385,6 +390,7 @@ describe("useWebSocket - React Query Invalidation", () => {
       console.log("📡 WebSocket Events → React Query Invalidation:")
       console.log("\n1. new-message (customer sends message):")
       console.log("   ✅ invalidateQueries(['chat-messages', sessionId])")
+      console.log("   ✅ invalidateQueries(['load-more-messages', sessionId])")
       console.log("   ✅ invalidateQueries(['chats', sessionId])")
       console.log("   ✅ invalidateQueries(['recent-chats', sessionId])")
       console.log("   🔔 toast.info() if message from non-active chat + customer")
