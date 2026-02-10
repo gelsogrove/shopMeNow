@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@echatbot/database';
+import { prisma } from '../../../lib/prisma';
 import { WaapiClientService } from '../../../services/waapi-client.service';
 import logger from '../../../utils/logger';
-
-const prisma = new PrismaClient();
 
 interface WaapiWebhookPayload {
   event: 'qr' | 'authenticated' | 'ready' | 'disconnected' | 'auth_failure';
