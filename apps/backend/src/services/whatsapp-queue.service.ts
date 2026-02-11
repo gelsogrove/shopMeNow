@@ -464,16 +464,39 @@ export class WhatsAppQueueService {
 
       logger.info("✅ Message passed Security Agent check")
 
-      // 🆕 STEP 2: Send to WhatsApp (placeholder for now)
+      // 🆕 STEP 2: Send to WhatsApp via provider
       const whatsappStartTime = Date.now()
 
-      // 🚨 PLACEHOLDER: Log instead of actual WhatsApp send (API not yet integrated)
-      logger.info("📤 [PLACEHOLDER] WhatsApp message ready for send", {
+      logger.info("📤 Sending message via WhatsApp provider", {
         phone: message.phoneNumber,
         customerId: message.customerId,
         workspaceId: message.workspaceId,
         messageLength: message.messageContent.length,
       })
+
+      // Load workspace to get WhatsApp configuration
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: message.workspaceId },
+        include: { whatsapp_settings: true },
+      })
+
+      if (!workspace || !workspace.whatsapp_settings) {
+        return {
+          success: false,
+          error: "WhatsApp not configured for this workspace",
+        }
+      }
+
+      // Create WhatsApp provider (UltraMsg or Meta)
+      const provider = WhatsAppProviderFactory.createProvider(
+        workspace.whatsapp_settings
+      )
+
+      // Send message via provider
+      const sendResult = await provider.sendTextMessage(
+        message.phoneNumber,
+        message.messageContent
+      )
 
       const whatsappDuration = Date.now() - whatsappStartTime
 
@@ -484,15 +507,32 @@ export class WhatsAppQueueService {
         timestamp: new Date().toISOString(),
         output: {
           result: {
-            success: true,
+            success: sendResult.success,
+            messageId: sendResult.messageId,
             phone: message.phoneNumber,
+            error: sendResult.error,
           },
           executionTimeMs: whatsappDuration,
         },
       })
 
-      // Simulate success
-      return { success: true }
+      if (!sendResult.success) {
+        logger.error("❌ Failed to send WhatsApp message", {
+          error: sendResult.error,
+          messageId: message.id,
+        })
+        return {
+          success: false,
+          error: sendResult.error || "Failed to send message",
+        }
+      }
+
+      logger.info("✅ Message sent successfully via WhatsApp", {
+        messageId: sendResult.messageId,
+        queueId: message.id,
+      })
+
+      return { success: true, messageId: sendResult.messageId }
     } catch (error) {
       logger.error(`[WhatsAppQueueService] Error in validateAndSend:`, error)
       return {
