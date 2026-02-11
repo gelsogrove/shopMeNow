@@ -48,7 +48,7 @@ Other English terms to translate:
 - **HTML tags**: `<img src="..." alt="..." />`, `<a href="...">`, `<strong>`, `<em>`, `<br>` - KEEP EXACTLY AS-IS
 - Product codes: `SKU-001`, `PROD-ABC`
 - Order codes: `ORD-123-2025`
-- Link tokens: `[LINK_ORDER_WITH_TOKEN]`, `[LINK_PROFILE_WITH_TOKEN]`
+- Link tokens: `[LINK_ORDER_WITH_TOKEN]`, `[LINK_PROFILE_WITH_TOKEN]`, `[LINK_REGISTRATION]`, `[LINK_CHECKOUT_WITH_TOKEN]`, `[LINK_CATALOG]`
 - URLs: `http://...`, `https://...`
 - Emojis: keep as-is
 - Italian brand names (DOP, IGP, Parmigiano, Prosciutto, etc.)
