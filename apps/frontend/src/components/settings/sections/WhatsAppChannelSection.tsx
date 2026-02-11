@@ -53,8 +53,8 @@ export function WhatsAppChannelSection({
   const { currentWorkspace } = useWorkspace()
   const currentProvider = formData.whatsappProvider || "meta"
   
-  // 🔧 FIX: Always use workspace.id as fallback so Callback URL is never "Not generated"
-  const webhookId = formData.whatsappWebhookId || currentWorkspace?.id || ""
+  // Use only the webhookId from formData - no fallback to workspaceId
+  const webhookId = formData.whatsappWebhookId || ""
   
   // 🐛 DEBUG: Log webhook calculations
   console.log('WhatsAppChannelSection - webhookId:', {
