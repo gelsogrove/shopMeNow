@@ -103,7 +103,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         whatsappProvider: true, // 🆕 Multi-provider support
         metaPhoneNumberId: true, // 🆕 Meta provider
         metaAccessToken: true, // 🆕 Meta provider  
@@ -199,7 +198,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         whatsappProvider: true, // 🆕 Multi-provider support
         metaPhoneNumberId: true, // 🆕 Meta provider
         metaAccessToken: true, // 🆕 Meta provider  
@@ -367,7 +365,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
