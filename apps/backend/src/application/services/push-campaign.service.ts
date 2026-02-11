@@ -253,6 +253,22 @@ export class PushCampaignService {
   }
 
   async update(workspaceId: string, id: string, input: UpdatePushCampaignInput) {
+    if (input.sendAt !== undefined) {
+      if (input.sendAt === null) {
+        // keep null
+      } else if (typeof input.sendAt === "string") {
+        const parsed = new Date(input.sendAt)
+        if (Number.isNaN(parsed.getTime())) {
+          throw new AppError(400, "Invalid send date/time")
+        }
+        input.sendAt = parsed
+      } else if (input.sendAt instanceof Date) {
+        if (Number.isNaN(input.sendAt.getTime())) {
+          throw new AppError(400, "Invalid send date/time")
+        }
+      }
+    }
+
     if (input.frequency && input.sendAt) {
       const sendAtDate =
         typeof input.sendAt === "string" ? new Date(input.sendAt) : input.sendAt
