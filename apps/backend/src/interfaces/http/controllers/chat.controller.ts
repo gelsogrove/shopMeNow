@@ -6,7 +6,6 @@ import { LLMRouterService } from "../../../services/llm-router.service"
 import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import { usageService } from "../../../services/usage.service"
 import { websocketService } from "../../../services/websocket.service"
-import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { TranslationAgent } from "../../../application/agents/TranslationAgent"
 import { SecurityAgent } from "../../../application/agents/SecurityAgent"
 import logger from "../../../utils/logger"
@@ -600,7 +599,7 @@ export class ChatController {
         // Ignore - default to not_queued
       }
 
-      await this.prisma.conversationMessage.create({
+      const conversationMessage = await this.prisma.conversationMessage.create({
         data: {
           workspaceId: workspaceId,
           customerId: chatSession.customerId,
@@ -617,6 +616,7 @@ export class ChatController {
             steps: debugSteps, // Include all current debug steps
           }),
         },
+        select: { id: true },
       })
 
       logger.info(
@@ -629,29 +629,6 @@ export class ChatController {
       logger.info(
         `[CHAT-SEND] ✅ Operator message ALSO saved to conversationMessage for chat history`
       )
-
-      // 🆕 Add operator message to WhatsApp Queue
-      try {
-        const customer = await this.prisma.customers.findUnique({
-          where: { id: chatSession.customerId },
-          select: { phone: true },
-        })
-
-        if (customer?.phone) {
-          await this.whatsappQueueService.enqueue({
-            workspaceId: workspaceId,
-            customerId: chatSession.customerId,
-            phoneNumber: customer.phone,
-            messageContent: finalMessage,
-          })
-          logger.info(
-            `[CHAT-SEND] 📤 Operator message added to WhatsApp queue for ${customer.phone}`
-          )
-        }
-      } catch (queueError) {
-        logger.error(`[CHAT-SEND] ❌ Failed to add to WhatsApp queue:`, queueError)
-        // Non-critical - continue
-      }
 
       // 🆕 SAVE DEBUG INFO to agentInteractions table (for timeline)
       const debugInfo = {
@@ -688,7 +665,7 @@ export class ChatController {
         // Continue - message is saved even if debug logging fails
       }
 
-      // 📤 STEP 4: Track usage and deduct credit (ONLY if debugMode=false)
+      // 📤 STEP 4: Track usage (ONLY if debugMode=false)
       try {
         // Check if workspace is in debug mode
         const workspace = await this.prisma.workspace.findUnique({
@@ -711,21 +688,6 @@ export class ChatController {
             `[CHAT-SEND] 💰 Usage tracked for operator response: $${config.llm.defaultPrice}`
           )
           
-          // 💰 FIX #4: Also deduct from workspace creditBalance
-          const billingService = new SubscriptionBillingService(this.prisma)
-          const deductResult = await billingService.deductMessageCredit(
-            workspaceId,
-            savedMessage.id
-          )
-          if (deductResult.success) {
-            logger.info(
-              `[CHAT-SEND] 💰 Credit deducted - New balance: $${deductResult.newBalance}`
-            )
-          } else {
-            logger.warn(
-              `[CHAT-SEND] ⚠️ Credit deduction failed: ${deductResult.error}`
-            )
-          }
         }
       } catch (usageError) {
         logger.warn(
@@ -738,12 +700,12 @@ export class ChatController {
       // 📤 Add to WhatsApp Queue (instead of sending directly)
       // This ensures messages go through Security Agent and respect Debug Mode
       try {
-        await this.whatsappQueueService.enqueue({
+        const queueEntry = await this.whatsappQueueService.enqueue({
           workspaceId,
           customerId: chatSession.customerId,
           phoneNumber: chatSession.customer.phone || "",
           messageContent: finalMessage, // Use validated/translated message
-          conversationMessageId: savedMessage.id,
+          conversationMessageId: conversationMessage.id,
         })
         logger.info(`[CHAT-SEND] ✅ Message added to WhatsApp queue`)
         
@@ -763,7 +725,8 @@ export class ChatController {
           },
           output: {
             success: true,
-            messageId: savedMessage.id,
+            messageId: queueEntry.id,
+            conversationMessageId: conversationMessage.id,
             queueStatus: "pending",
             executionTimeMs: 10,
           },
@@ -796,7 +759,7 @@ export class ChatController {
           },
           output: {
             success: false,
-            messageId: savedMessage.id,
+            conversationMessageId: conversationMessage.id,
             queueStatus: "failed",
             error: queueError instanceof Error ? queueError.message : "Unknown error",
             executionTimeMs: 20,
@@ -822,13 +785,8 @@ export class ChatController {
 
       // 🚨 CRITICAL: UPDATE conversationMessage with COMPLETE debug info
       // This ensures frontend gets ALL debug steps, not just the initial one
-      await this.prisma.conversationMessage.updateMany({
-        where: {
-          conversationId: sessionId,
-          agentType: "OPERATOR",
-          content: content,
-          workspaceId: workspaceId,
-        },
+      await this.prisma.conversationMessage.update({
+        where: { id: conversationMessage.id },
         data: {
           debugInfo: JSON.stringify({
             isOperatorMessage: true,

@@ -75,6 +75,12 @@ jest.mock('../../../src/config/database', () => ({
         const otherVal = other instanceof Decimal ? other.value : other
         return this.value < otherVal
       }
+      valueOf(): number {
+        return this.value
+      }
+      toString(): string {
+        return String(this.value)
+      }
       toNumber(): number {
         return this.value
       }
