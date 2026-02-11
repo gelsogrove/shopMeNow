@@ -376,24 +376,3 @@ export function WhatsAppChannelSection({
     </div>
   )
 }
-                </code>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleCopy(webhookDisplayUrl)}
-                  disabled={!webhookDisplayUrl}
-                >
-                  <Copy className="h-4 w-4 mr-1" />
-                  Copy
-                </Button>
-              </div>
-            </div>
-
-            </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
