@@ -209,6 +209,7 @@ export class WhatsAppQueueRepository {
         where: {
           customerId,
           messageContent: content,
+          status: "pending", // 🔥 ONLY check pending messages, allow same message if previous is sent/error
           createdAt: {
             gte: timeThreshold,
           },
