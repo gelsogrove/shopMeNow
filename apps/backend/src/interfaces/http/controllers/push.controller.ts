@@ -1,7 +1,6 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
 import { LLMRouterService } from "../../../services/llm-router.service"
-import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import logger from "../../../utils/logger"
 
 /**
@@ -37,14 +36,10 @@ const NOTIFICATION_TEMPLATES: Record<
 export class PushController {
   private prisma: PrismaClient
   private llmRouterService: LLMRouterService
-  private whatsappQueueService: WhatsAppQueueService
-
-  constructor(prisma?: PrismaClient, llmRouterService?: LLMRouterService, whatsappQueueService?: WhatsAppQueueService) {
+  constructor(prisma?: PrismaClient, llmRouterService?: LLMRouterService) {
     this.prisma = prisma
     this.llmRouterService =
       llmRouterService || new LLMRouterService(this.prisma)
-    this.whatsappQueueService =
-      whatsappQueueService || new WhatsAppQueueService(this.prisma)
   }
   /**
    * Send system notification to customers
@@ -208,29 +203,8 @@ export class PushController {
               `[PUSH-CONTROLLER] Notification blocked for ${customer.name}`
             )
           } else {
-            // ✅ NEW: Enqueue message in WhatsApp queue for actual delivery
-            try {
-              await this.whatsappQueueService.enqueue({
-                workspaceId,
-                customerId: customer.id,
-                phoneNumber: customer.phone,
-                messageContent: result.response, // Use translated message from LLM router
-              })
-              logger.info(
-                `[PUSH-CONTROLLER] Message queued for WhatsApp delivery to ${customer.name}`
-              )
-            } catch (queueError) {
-              logger.error(
-                `[PUSH-CONTROLLER] Failed to enqueue message for ${customer.name}:`,
-                queueError
-              )
-              results.failed++
-              results.errors.push(
-                `Customer ${customer.name}: Failed to queue message for delivery`
-              )
-              continue
-            }
-
+            // ✅ Message already queued by LLMRouterService (system message fast-path)
+            // Avoid double-queue + double billing
             results.sent++
           }
         } catch (error) {
