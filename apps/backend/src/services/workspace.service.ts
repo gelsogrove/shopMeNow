@@ -574,6 +574,19 @@ export const workspaceService = {
         translateCategoryNames: true,
         translateServiceNames: true,
         catalogBaseLanguage: true,
+        whatsappSettings: {
+          select: {
+            phoneNumber: true,
+            apiKey: true,
+            appName: true,
+            appSecret: true,
+            webhookId: true,
+            webhookToken: true,
+            webhookUrl: true,
+            businessAccountId: true,
+            adminEmail: true,
+          },
+        },
       },
     })
 
@@ -613,19 +626,16 @@ export const workspaceService = {
       })
     }
 
-    // Return workspace with adminEmail included
-    const whatsappSettings = await prisma.whatsappSettings.findUnique({
-      where: { workspaceId: id },
-    })
-
+    // Return workspace with whatsappSettings mapped
+    const settings = (updatedWorkspace as any).whatsappSettings
     return {
       ...updatedWorkspace,
-      adminEmail: whatsappSettings?.adminEmail || null,
-      whatsappWebhookId: whatsappSettings?.webhookId || null,
-      whatsappWebhookToken: whatsappSettings?.webhookToken || null,
-      whatsappAppSecret: whatsappSettings?.appSecret || null,
-      whatsappAppName: whatsappSettings?.appName || null,
-      whatsappBusinessAccountId: whatsappSettings?.businessAccountId || null,
+      adminEmail: settings?.adminEmail || null,
+      whatsappWebhookId: settings?.webhookId || null,
+      whatsappWebhookToken: settings?.webhookToken || null,
+      whatsappAppSecret: settings?.appSecret || null,
+      whatsappAppName: settings?.appName || null,
+      whatsappBusinessAccountId: settings?.businessAccountId || null,
     }
   },
 

@@ -13,7 +13,7 @@ window.eChatbotConfig = {
   workspaceId: config.workspaceId,
   apiUrl: apiBaseUrl,
   title: config.title,
-  language: config.language || language, // ← Usa lingua da header dropdown
+  language: config.language || language, // ← Usa lingua da header dropdown test
   primaryColor: config.primaryColor,
 }
 ```
