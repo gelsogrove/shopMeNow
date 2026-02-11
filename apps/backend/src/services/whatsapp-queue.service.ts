@@ -12,7 +12,6 @@ import { WhatsAppQueueRepository } from "../repositories/whatsapp-queue.reposito
 
 // Services
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
-import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 
 export interface EnqueueMessageDto {
   workspaceId: string
@@ -26,7 +25,6 @@ export interface EnqueueMessageDto {
 export interface ValidateAndSendResult {
   success: boolean
   error?: string
-  messageId?: string
 }
 
 /**
@@ -469,97 +467,72 @@ export class WhatsAppQueueService {
       // 🆕 STEP 2: Send to WhatsApp via provider
       const whatsappStartTime = Date.now()
 
-      // Load workspace with WhatsApp provider configuration
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: message.workspaceId },
+      logger.info("📤 Sending message via WhatsApp provider", {
+        phone: message.phoneNumber,
+        customerId: message.customerId,
+        workspaceId: message.workspaceId,
+        messageLength: message.messageContent.length,
       })
 
-      if (!workspace) {
-        logger.error("[WhatsAppQueueService] Workspace not found", {
-          workspaceId: message.workspaceId,
-        })
-        return { success: false, error: "Workspace not found" }
-      }
+      // Load workspace to get WhatsApp configuration
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: message.workspaceId },
+        include: { whatsapp_settings: true },
+      })
 
-      // Check if workspace has WhatsApp configured
-      if (!WhatsAppProviderFactory.isConfigured(workspace)) {
-        const providerName = WhatsAppProviderFactory.getProviderDisplayName(workspace)
-        logger.error("[WhatsAppQueueService] WhatsApp not configured", {
-          workspaceId: message.workspaceId,
-          provider: workspace.whatsappProvider || "meta",
-          providerName,
-        })
+      if (!workspace || !workspace.whatsapp_settings) {
         return {
           success: false,
-          error: `WhatsApp not configured (${providerName})`,
+          error: "WhatsApp not configured for this workspace",
         }
       }
 
-      // Create provider using Factory
-      const provider = WhatsAppProviderFactory.create(workspace)
-      const providerName = provider.getProviderName()
+      // Create WhatsApp provider (UltraMsg or Meta)
+      const provider = WhatsAppProviderFactory.createProvider(
+        workspace.whatsapp_settings
+      )
 
-      logger.info("📤 Sending message via WhatsApp provider", {
-        workspaceId: message.workspaceId,
-        provider: providerName,
-        phone: message.phoneNumber,
-        customerId: message.customerId,
-      })
-
-      // Send via provider
-      const result = await provider.sendTextMessage(
+      // Send message via provider
+      const sendResult = await provider.sendTextMessage(
         message.phoneNumber,
         message.messageContent
       )
 
       const whatsappDuration = Date.now() - whatsappStartTime
 
-      if (!result.success) {
-        logger.error("[WhatsAppQueueService] ❌ WhatsApp send failed", {
-          workspaceId: message.workspaceId,
-          provider: providerName,
-          error: result.error,
-        })
-
-        // 📊 Append failed step to timeline
-        await this.appendTimelineStep(message.conversationMessageId, {
-          type: "sub_agent",
-          agent: "Send to WhatsApp",
-          timestamp: new Date().toISOString(),
-          output: {
-            result: {
-              success: false,
-              error: result.error,
-            },
-            executionTimeMs: whatsappDuration,
-          },
-        })
-
-        return { success: false, error: result.error }
-      }
-
-      logger.info("[WhatsAppQueueService] ✅ Message sent successfully", {
-        workspaceId: message.workspaceId,
-        provider: providerName,
-        messageId: result.messageId,
-      })
-
-      // 📊 Append success step to timeline
+      // 📊 Append Send to WhatsApp step to timeline
       await this.appendTimelineStep(message.conversationMessageId, {
         type: "sub_agent",
         agent: "Send to WhatsApp",
         timestamp: new Date().toISOString(),
         output: {
           result: {
-            success: true,
+            success: sendResult.success,
+            messageId: sendResult.messageId,
             phone: message.phoneNumber,
-            messageId: result.messageId,
+            error: sendResult.error,
           },
           executionTimeMs: whatsappDuration,
         },
       })
 
-      return { success: true, messageId: result.messageId }
+      if (!sendResult.success) {
+        logger.error("❌ Failed to send WhatsApp message", {
+          error: sendResult.error,
+          messageId: message.id,
+        })
+        return {
+          success: false,
+          error: sendResult.error || "Failed to send message",
+        }
+      }
+
+      logger.info("✅ Message sent successfully via WhatsApp", {
+        messageId: sendResult.messageId,
+        queueId: message.id,
+      })
+
+      return { success: true, messageId: sendResult.messageId }
     } catch (error) {
       logger.error(`[WhatsAppQueueService] Error in validateAndSend:`, error)
       return {

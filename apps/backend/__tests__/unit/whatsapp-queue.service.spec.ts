@@ -50,7 +50,7 @@ jest.mock("../../src/services/whatsapp/whatsapp-provider.factory", () => {
     WhatsAppProviderFactory: {
       isConfigured: jest.fn().mockReturnValue(true),
       getProviderDisplayName: jest.fn().mockReturnValue("Meta Business API"),
-      create: jest.fn().mockReturnValue({
+      createProvider: jest.fn().mockReturnValue({
         sendTextMessage: jest.fn().mockResolvedValue({
           success: true,
           messageId: "wamid_test_123",
@@ -101,6 +101,11 @@ describe("WhatsAppQueueService - Unit Tests", () => {
       wipMessage: null,
       ownerId: "owner-1",
       channelStatus: true,
+      whatsapp_settings: {
+        ultraMsgInstanceId: "161048",
+        ultraMsgToken: "test_token",
+        whatsappProvider: "ultramsg",
+      },
     })
     mockPrisma.user.findUnique = jest.fn().mockResolvedValue({
       creditBalance: 0,

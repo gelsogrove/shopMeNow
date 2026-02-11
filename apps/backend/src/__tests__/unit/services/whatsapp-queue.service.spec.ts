@@ -66,7 +66,7 @@ describe("WhatsAppQueueService", () => {
     ;(WhatsAppProviderFactory.getProviderDisplayName as jest.Mock) = jest
       .fn()
       .mockReturnValue("UltraMsg")
-    ;(WhatsAppProviderFactory.create as jest.Mock) = jest
+    ;(WhatsAppProviderFactory.createProvider as jest.Mock) = jest
       .fn()
       .mockReturnValue(mockProvider)
 
@@ -128,7 +128,7 @@ describe("WhatsAppQueueService", () => {
       })
 
       // Verify provider was called with correct parameters
-      expect(WhatsAppProviderFactory.create).toHaveBeenCalledWith(mockWorkspace)
+      expect(WhatsAppProviderFactory.createProvider).toHaveBeenCalledWith(mockWorkspace.whatsapp_settings)
       expect(mockProvider.sendTextMessage).toHaveBeenCalledWith(
         "+34654728753",
         "Test message"
@@ -171,7 +171,7 @@ describe("WhatsAppQueueService", () => {
 
       // Verify error result
       expect(result.success).toBe(false)
-      expect(result.error).toBe("Workspace not found")
+      expect(result.error).toBe("WhatsApp not configured for this workspace")
       expect(mockProvider.sendTextMessage).not.toHaveBeenCalled()
     })
 
@@ -199,6 +199,7 @@ describe("WhatsAppQueueService", () => {
         id: "ws_abc",
         whatsappProvider: "ultramsg",
         // Missing ultraMsgInstanceId and ultraMsgToken
+        whatsapp_settings: null, // No WhatsApp config
       }
 
       mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspace)
@@ -215,7 +216,7 @@ describe("WhatsAppQueueService", () => {
 
       // Verify error result
       expect(result.success).toBe(false)
-      expect(result.error).toBe("WhatsApp not configured (UltraMsg)")
+      expect(result.error).toBe("WhatsApp not configured for this workspace")
       expect(mockProvider.sendTextMessage).not.toHaveBeenCalled()
     })
 

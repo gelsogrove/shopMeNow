@@ -26,7 +26,7 @@ jest.mock("../../../src/services/whatsapp/whatsapp-provider.factory", () => ({
   WhatsAppProviderFactory: {
     isConfigured: jest.fn().mockReturnValue(true),
     getProviderDisplayName: jest.fn().mockReturnValue("UltraMsg"),
-    create: jest.fn().mockReturnValue({
+    createProvider: jest.fn().mockReturnValue({
       sendTextMessage: jest.fn().mockResolvedValue({
         success: true,
         messageId: "wamid_test_123",
@@ -75,11 +75,31 @@ describe("🛡️ WhatsAppQueueService - Security Agent Integration", () => {
       whatsappProvider: "ultramsg",
       ultraMsgInstanceId: "161048",
       ultraMsgToken: "test_token",
+      whatsapp_settings: {
+        ultraMsgInstanceId: "161048",
+        ultraMsgToken: "test_token",
+        whatsappProvider: "ultramsg",
+      },
     })
     
     // Mock conversationMessage (if needed for timeline)
-    mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue(null)
+    mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue({
+      id: "conv-msg-123",
+      debugInfo: null,
+    })
     mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
+    
+    // Mock user with credit
+    mockPrisma.user.findUnique = jest.fn().mockResolvedValue({
+      creditBalance: 100,
+    })
+    
+    // Security Agent returns safe by default
+    mockSecurityAgentProcess.mockResolvedValue({
+      safe: true,
+      message: "Message passed",
+      tokensUsed: 100,
+    })
     
     queueService = new WhatsAppQueueService(mockPrisma)
   })
