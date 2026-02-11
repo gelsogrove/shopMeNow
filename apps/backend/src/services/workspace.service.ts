@@ -1,7 +1,17 @@
 import { prisma } from "@echatbot/database"
 import logger from "../utils/logger"
+import { randomBytes } from 'crypto'
 
 // prisma imported
+
+/**
+ * Generate unique webhook ID for WhatsApp providers
+ * Format: wh_<24 random hex chars>
+ * Example: wh_20dbf5340425a7dbba9e3e73
+ */
+function generateWebhookId(): string {
+  return `wh_${randomBytes(12).toString('hex')}`
+}
 
 interface CreateWorkspaceData {
   name: string
@@ -600,7 +610,16 @@ export const workspaceService = {
     logger.info("Updated workspace:", JSON.stringify(updatedWorkspace, null, 2))
 
     // Update adminEmail/appSecret in WhatsappSettings if provided
+    // 🔧 AUTO-GENERATE webhookId if enabling WhatsApp and it doesn't exist
     if (adminEmail !== undefined || whatsappAppName !== undefined || whatsappAppSecret !== undefined || whatsappVerifyToken !== undefined || whatsappBusinessAccountId !== undefined) {
+      // Check if whatsappSettings exists and has webhookId
+      const existingSettings = await prisma.whatsappSettings.findUnique({
+        where: { workspaceId: id },
+        select: { webhookId: true }
+      })
+
+      const webhookIdToUse = existingSettings?.webhookId || generateWebhookId()
+
       await prisma.whatsappSettings.upsert({
         where: {
           workspaceId: id,
@@ -609,7 +628,7 @@ export const workspaceService = {
           workspaceId: id,
           phoneNumber: updatedWorkspace.whatsappPhoneNumber || "",
           apiKey: updatedWorkspace.whatsappApiKey || "",
-          webhookId: `webhook-${id}`,
+          webhookId: webhookIdToUse, // ✅ Use existing or generate new
           webhookToken: whatsappVerifyToken || `token-${Date.now()}`,
           ...(adminEmail !== undefined ? { adminEmail } : {}),
           ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
@@ -617,6 +636,7 @@ export const workspaceService = {
           ...(whatsappBusinessAccountId !== undefined ? { businessAccountId: whatsappBusinessAccountId } : {}),
         },
         update: {
+          // ⚠️ NEVER update webhookId once created - it's immutable
           ...(adminEmail !== undefined ? { adminEmail } : {}),
           ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
           ...(whatsappAppSecret !== undefined ? { appSecret: whatsappAppSecret } : {}),
