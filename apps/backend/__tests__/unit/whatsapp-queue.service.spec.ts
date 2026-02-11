@@ -44,6 +44,23 @@ jest.mock("../../src/application/services/subscription-billing.service", () => {
   }
 })
 
+// Mock WhatsAppProviderFactory to return mock provider
+jest.mock("../../src/services/whatsapp/whatsapp-provider.factory", () => {
+  return {
+    WhatsAppProviderFactory: {
+      isConfigured: jest.fn().mockReturnValue(true),
+      getProviderDisplayName: jest.fn().mockReturnValue("Meta Business API"),
+      create: jest.fn().mockReturnValue({
+        sendTextMessage: jest.fn().mockResolvedValue({
+          success: true,
+          messageId: "wamid_test_123",
+        }),
+        getProviderName: jest.fn().mockReturnValue("Meta"),
+      }),
+    },
+  }
+})
+
 // Mock PrismaClient
 const mockPrisma = {
   whatsAppQueue: {
@@ -165,7 +182,16 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         errorMessage: null,
         createdAt: new Date(),
         deliveredAt: null,
+        conversationMessageId: null,
       }
+
+      // Mock workspace with WhatsApp configuration
+      mockPrisma.workspace.findUnique.mockResolvedValueOnce({
+        id: "ws1",
+        whatsappProvider: "meta",
+        whatsappApiKey: "test_key",
+        whatsappPhoneNumber: "+1234567890",
+      })
 
       const result = await service.validateAndSend(message)
 
@@ -278,19 +304,31 @@ describe("WhatsAppQueueService - Unit Tests", () => {
       }
 
       // Mock repository methods
-      mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({
-        debugMode: false,
-        name: "Test",
-        ownerId: "owner-1",
-        channelStatus: true,
-      })
+      mockPrisma.workspace.findUnique = jest.fn()
+        .mockResolvedValueOnce({
+          debugMode: false,
+          name: "Test",
+          ownerId: "owner-1",
+          channelStatus: true,
+        })
+        .mockResolvedValueOnce({
+          id: "ws1",
+          whatsappProvider: "meta",
+          whatsappApiKey: "test_key",
+          whatsappPhoneNumber: "+1234567890",
+        })
       mockPrisma.whatsAppQueue.findMany = jest.fn().mockResolvedValue([mockMessage])
       mockPrisma.whatsAppQueue.update = jest.fn().mockResolvedValue({
         ...mockMessage,
         status: "sent",
       })
       mockPrisma.conversationMessage.findFirst = jest.fn().mockResolvedValue(null)
+      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue(null)
       mockPrisma.chatSession.findFirst = jest.fn().mockResolvedValue(null)
+      mockPrisma.user.findUnique = jest.fn().mockResolvedValue({
+        creditBalance: 100,
+        subscriptionStatus: "ACTIVE",
+      })
 
       await service.processPendingMessages("ws1")
 
@@ -449,12 +487,19 @@ describe("WhatsAppQueueService - Unit Tests", () => {
         createdAt: new Date(),
       }
 
-      mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({
-        debugMode: false,
-        name: "Test",
-        ownerId: "owner-1",
-        channelStatus: true,
-      })
+      mockPrisma.workspace.findUnique = jest.fn()
+        .mockResolvedValueOnce({
+          debugMode: false,
+          name: "Test",
+          ownerId: "owner-1",
+          channelStatus: true,
+        })
+        .mockResolvedValueOnce({
+          id: "ws1",
+          whatsappProvider: "meta",
+          whatsappApiKey: "test_key",
+          whatsappPhoneNumber: "+1234567890",
+        })
       mockPrisma.whatsAppQueue.findMany = jest.fn().mockResolvedValue([mockMessage])
       mockPrisma.whatsAppQueue.update = jest.fn().mockResolvedValue({
         ...mockMessage,
@@ -463,11 +508,16 @@ describe("WhatsAppQueueService - Unit Tests", () => {
       mockPrisma.conversationMessage.findFirst = jest
         .fn()
         .mockResolvedValue(mockConversationMessage)
+      mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue(null)
       mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({
         ...mockConversationMessage,
         deliveredAt: new Date(),
       })
       mockPrisma.chatSession.findFirst = jest.fn().mockResolvedValue(null)
+      mockPrisma.user.findUnique = jest.fn().mockResolvedValue({
+        creditBalance: 100,
+        subscriptionStatus: "ACTIVE",
+      })
 
       await service.processPendingMessages("ws1")
 
