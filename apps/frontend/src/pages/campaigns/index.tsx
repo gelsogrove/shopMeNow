@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import { commonStyles } from "@/styles/common"
 import { ColumnDef } from "@tanstack/react-table"
-import { Calendar, Megaphone, Trash2, Users, Clock, Power, Pencil } from "lucide-react"
+import { Calendar, Megaphone, Trash2, Users, Clock, Power, Pencil, Globe } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useWorkspace } from "../../contexts/WorkspaceContext"
 import { toast } from "../../lib/toast"
