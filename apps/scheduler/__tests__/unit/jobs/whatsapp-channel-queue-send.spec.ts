@@ -18,6 +18,7 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
   let workspaceModel: any
   let queueModel: any
   let conversationModel: any
+  let pushCampaignRecipientModel: any
   const setWorkspace = (workspace: any) => {
     workspaceModel.findMany.mockResolvedValue([workspace])
     workspaceModel.findUnique.mockResolvedValue(workspace)
@@ -34,9 +35,13 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     workspaceModel = { findMany: jest.fn(), findUnique: jest.fn() }
     queueModel = { findMany: jest.fn(), update: jest.fn() }
     conversationModel = { findUnique: jest.fn(), update: jest.fn() }
+    pushCampaignRecipientModel = { findMany: jest.fn(), updateMany: jest.fn() }
     ;(prisma as any).workspace = workspaceModel
     ;(prisma as any).whatsAppQueue = queueModel
     ;(prisma as any).conversationMessage = conversationModel
+    ;(prisma as any).pushCampaignRecipient = pushCampaignRecipientModel
+
+    pushCampaignRecipientModel.findMany.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -87,6 +92,52 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     expect(queueModel.update).toHaveBeenCalled()
     const sentCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'sent')
     expect(sentCall?.[0].data.status).toBe('sent')
+  })
+
+  it('charges push cost when queue message belongs to a push campaign', async () => {
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      apiKey: 'token',
+    })
+
+    setWorkspace({
+      id: 'w1',
+      name: 'W',
+      whatsappApiKey: 'token',
+      whatsappPhoneNumber: '19999999999',
+      channelStatus: true,
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token',
+    })
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'q1',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+39000000000',
+        messageContent: 'hello world',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: undefined,
+      },
+    ])
+
+    pushCampaignRecipientModel.findMany.mockResolvedValue([
+      { messageId: 'q1' },
+    ])
+
+    queueModel.update.mockResolvedValue({})
+    ;(axios.post as jest.Mock).mockResolvedValue({
+      data: { messages: [{ id: 'wa-123' }] },
+    })
+
+    await whatsappChannelQueueJob()
+
+    expect(billingSpy).toHaveBeenCalledWith('w1', 'q1', 'PUSH')
   })
 
   it('uses phoneNumberId in Graph API URL (Meta expects ID, not display number)', async () => {

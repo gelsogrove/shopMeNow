@@ -67,7 +67,21 @@ export class WhatsAppQueueController {
         status as string | undefined
       )
 
-      return res.json(messages)
+      const messageIds = messages.map((message) => message.id)
+      const pushRecipients = await this.prisma.pushCampaignRecipient.findMany({
+        where: { messageId: { in: messageIds } },
+        select: { messageId: true },
+      })
+      const pushMessageIds = new Set(
+        pushRecipients.map((recipient) => recipient.messageId)
+      )
+
+      const enriched = messages.map((message) => ({
+        ...message,
+        messageType: pushMessageIds.has(message.id) ? "PUSH" : "MESSAGE",
+      }))
+
+      return res.json(enriched)
     } catch (error) {
       logger.error("[WhatsAppQueueController] Error in getQueueMessages:", error)
       return res.status(500).json({

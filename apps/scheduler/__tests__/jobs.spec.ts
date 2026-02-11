@@ -41,6 +41,10 @@ const mockPrisma: Record<string, any> = {
     update: jest.fn(),
     deleteMany: jest.fn(),
   },
+  pushCampaignRecipient: {
+    findMany: jest.fn(),
+    updateMany: jest.fn(),
+  },
   conversationMessage: {
     findUnique: jest.fn(),
     update: jest.fn(),
@@ -140,6 +144,7 @@ import { monthlyBillingJob } from '../src/jobs/monthly-billing.job'
 describe('Scheduler Jobs', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([])
   })
 
   describe('WhatsApp Channel Queue Job', () => {

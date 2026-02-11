@@ -26,7 +26,8 @@ export class BillingService {
    */
   async deductMessageCredit(
     workspaceId: string,
-    messageId?: string
+    messageId?: string,
+    messageType: 'MESSAGE' | 'PUSH' = 'MESSAGE'
   ): Promise<{
     success: boolean
     newBalance?: number
@@ -74,19 +75,24 @@ export class BillingService {
       // Get message cost from owner's plan configuration (Feature 198: use owner's plan)
       const planConfig = await prisma.planConfiguration.findUnique({
         where: { planType: owner.planType },
-        select: { messageCost: true },
+        select: { messageCost: true, pushCost: true },
       })
 
       if (!planConfig) {
         return { success: false, error: 'Plan configuration not found' }
       }
 
-      const messageCost = Number(planConfig.messageCost)
+      const messageCost =
+        messageType === 'PUSH'
+          ? Number(planConfig.pushCost)
+          : Number(planConfig.messageCost)
       const currentBalance = Number(owner.creditBalance)
 
       // Check if sufficient balance on Owner
       if (currentBalance < messageCost) {
-        logger.warn(`[Billing] ⚠️ Insufficient credit for owner ${owner.firstName}: $${currentBalance.toFixed(2)} < $${messageCost.toFixed(2)}`)
+        logger.warn(
+          `[Billing] ⚠️ Insufficient credit for owner ${owner.firstName}: $${currentBalance.toFixed(2)} < $${messageCost.toFixed(2)} (${messageType})`
+        )
         return {
           success: false,
           error: `Insufficient credit. Balance: $${currentBalance.toFixed(2)}, Required: $${messageCost.toFixed(2)}`
@@ -109,17 +115,22 @@ export class BillingService {
           data: {
             userId: owner.id,          // Required: Owner who paid
             workspaceId: workspaceId,  // Optional: Which workspace used the credit (for tracking)
-            type: 'MESSAGE',
+            type: messageType === 'PUSH' ? 'PUSH_NOTIFICATION' : 'MESSAGE',
             amount: new Prisma.Decimal((-messageCost).toFixed(2)), // Negative for deductions
             balanceAfter: new Prisma.Decimal(newBalance.toFixed(2)),
-            description: `WhatsApp Message - ${workspace.name}`,
+            description:
+              messageType === 'PUSH'
+                ? `Push Campaign - ${workspace.name}`
+                : `WhatsApp Message - ${workspace.name}`,
             referenceId: messageId,
             referenceType: 'message',
           },
         })
       })
 
-      logger.info(`[Billing] 💰 Deducted $${messageCost.toFixed(2)} from owner "${ownerName}" (workspace: ${workspace.name}): $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)}`)
+      logger.info(
+        `[Billing] 💰 Deducted $${messageCost.toFixed(2)} (${messageType}) from owner "${ownerName}" (workspace: ${workspace.name}): $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)}`
+      )
 
       return {
         success: true,
@@ -144,7 +155,10 @@ export class BillingService {
    * @param workspaceId - The workspace to check
    * @returns true if owner has enough credit
    */
-  async hasOwnerCredit(workspaceId: string): Promise<boolean> {
+  async hasOwnerCredit(
+    workspaceId: string,
+    messageType: 'MESSAGE' | 'PUSH' = 'MESSAGE'
+  ): Promise<boolean> {
     try {
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId, deletedAt: null },
@@ -171,14 +185,17 @@ export class BillingService {
       // Get message cost
       const planConfig = await prisma.planConfiguration.findUnique({
         where: { planType: workspace.owner.planType },
-        select: { messageCost: true },
+        select: { messageCost: true, pushCost: true },
       })
 
       if (!planConfig) {
         return false
       }
 
-      const messageCost = Number(planConfig.messageCost)
+      const messageCost =
+        messageType === 'PUSH'
+          ? Number(planConfig.pushCost)
+          : Number(planConfig.messageCost)
       const currentBalance = Number(workspace.owner.creditBalance)
 
       return currentBalance >= messageCost

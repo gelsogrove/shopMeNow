@@ -37,6 +37,7 @@ interface QueueMessage {
   messageContent: string
   status: "pending" | "sent" | "error" | "blocked"
   errorMessage: string | null
+  messageType?: "MESSAGE" | "PUSH"
   createdAt: string
   deliveredAt: string | null
   customer: {
@@ -328,6 +329,7 @@ export function QueuePage() {
                   <TableRow>
                     <TableHead>Customer</TableHead>
                     <TableHead>Message</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="w-16 text-right">Action</TableHead>
@@ -352,6 +354,11 @@ export function QueuePage() {
                           {msg.messageContent.substring(0, 100)}
                           {msg.messageContent.length > 100 && "..."}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {msg.messageType === "PUSH" ? "Push" : "Message"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div>

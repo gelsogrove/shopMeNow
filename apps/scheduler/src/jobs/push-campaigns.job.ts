@@ -92,6 +92,19 @@ export async function pushCampaignsJob(): Promise<void> {
 
       let processed = 0
       let creditExhausted = false
+      const costPerMessage = Number(campaign.costPerMessage)
+      let availableBalance = 0
+
+      if (recipients.length > 0) {
+        const owner = await prisma.user.findUnique({
+          where: { id: workspace.ownerId },
+          select: { creditBalance: true },
+        })
+        if (!owner) {
+          throw new Error('Owner not found for credit check')
+        }
+        availableBalance = Number(owner.creditBalance)
+      }
 
       for (const recipient of recipients) {
         if (creditExhausted) break
@@ -139,12 +152,8 @@ export async function pushCampaignsJob(): Promise<void> {
             continue
           }
 
-          // Credit check (owner-level)
-          const owner = await prisma.user.findUnique({
-            where: { id: workspace.ownerId },
-            select: { creditBalance: true },
-          })
-          if (!owner || owner.creditBalance.lt(campaign.costPerMessage)) {
+          // Credit check (owner-level, in-memory)
+          if (availableBalance < costPerMessage) {
             creditExhausted = true
             break
           }
@@ -170,16 +179,6 @@ export async function pushCampaignsJob(): Promise<void> {
           })
 
           await prisma.$transaction(async (tx) => {
-            // Debit credit
-            await tx.user.update({
-              where: { id: workspace.ownerId },
-              data: {
-                creditBalance: {
-                  decrement: campaign.costPerMessage,
-                },
-              },
-            })
-
             const queue = await tx.whatsAppQueue.create({
               data: {
                 workspaceId: campaign.workspaceId,
@@ -195,13 +194,12 @@ export async function pushCampaignsJob(): Promise<void> {
               where: { id: recipient.id },
               data: {
                 status: 'SENT',
-                sentAt: new Date(),
                 messageId: queue.id,
-                priceCharged: campaign.costPerMessage,
               },
             })
           })
 
+          availableBalance -= costPerMessage
           processed++
         } catch (error) {
           logger.error(

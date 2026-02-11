@@ -1,4 +1,4 @@
-import { prisma } from '../config/database'
+import { prisma, Prisma } from '../config/database'
 import logger from '../utils/logger'
 import { SecurityAgentService } from '../services/security-agent.service'
 import { BillingService } from '../services/billing.service'
@@ -445,6 +445,20 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
       if (pendingMessages.length === 0) continue
 
+      const pushMessageIds = new Set<string>()
+      const pendingIds = pendingMessages.map((msg) => msg.id)
+      const pushRecipients = await prisma.pushCampaignRecipient.findMany({
+        where: {
+          messageId: { in: pendingIds },
+        },
+        select: { messageId: true },
+      })
+      for (const recipient of pushRecipients) {
+        if (recipient.messageId) {
+          pushMessageIds.add(recipient.messageId)
+        }
+      }
+
       logger.info(`[WhatsApp Queue] Processing ${pendingMessages.length} messages for workspace: ${workspace.name}`)
 
       let workspaceProcessed = 0
@@ -452,6 +466,8 @@ export async function whatsappChannelQueueJob(): Promise<void> {
       let workspaceErrors = 0
 
       for (const message of pendingMessages) {
+        const isPushMessage = pushMessageIds.has(message.id)
+
         const markQueue = async (status: 'blocked' | 'error', errorMessage: string) => {
           await prisma.whatsAppQueue.update({
             where: { id: message.id },
@@ -464,6 +480,15 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             await prisma.conversationMessage.update({
               where: { id: message.conversationMessageId },
               data: { deliveryStatus: status },
+            })
+          }
+          if (isPushMessage) {
+            await prisma.pushCampaignRecipient.updateMany({
+              where: { messageId: message.id },
+              data: {
+                status: 'FAILED',
+                errorMessage,
+              },
             })
           }
         }
@@ -483,7 +508,10 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             }
           }
 
-          const hasCredit = await billingService.hasOwnerCredit(workspace.id)
+          const hasCredit = await billingService.hasOwnerCredit(
+            workspace.id,
+            isPushMessage ? 'PUSH' : 'MESSAGE'
+          )
           if (!hasCredit) {
             await markQueue('error', 'Subscription inactive or insufficient credit')
             workspaceErrors++
@@ -621,10 +649,21 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             // 💰 BILLING: Deduct credit for sent message (sequential to avoid double-spend)
             const deductResult = await billingService.deductMessageCredit(
               workspace.id,
-              message.id
+              message.id,
+              isPushMessage ? 'PUSH' : 'MESSAGE'
             )
             if (deductResult.success) {
               logger.info(`[WhatsApp Queue] 💰 Credit deducted for message ${message.id}: €${deductResult.amountDeducted?.toFixed(2)} → Balance: €${deductResult.newBalance?.toFixed(2)}`)
+              if (isPushMessage && deductResult.amountDeducted !== undefined) {
+                await prisma.pushCampaignRecipient.updateMany({
+                  where: { messageId: message.id },
+                  data: {
+                    priceCharged: new Prisma.Decimal(deductResult.amountDeducted.toFixed(2)),
+                    sentAt: new Date(),
+                    status: 'SENT',
+                  },
+                })
+              }
             } else {
               await markQueue('error', `Billing failed: ${deductResult.error}`)
               workspaceErrors++

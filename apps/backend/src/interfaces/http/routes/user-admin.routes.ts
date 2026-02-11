@@ -559,9 +559,23 @@ router.get(
         },
       })
 
+      const messageIds = queueMessages.map((message) => message.id)
+      const pushRecipients = await prisma.pushCampaignRecipient.findMany({
+        where: { messageId: { in: messageIds } },
+        select: { messageId: true },
+      })
+      const pushMessageIds = new Set(
+        pushRecipients.map((recipient) => recipient.messageId)
+      )
+
+      const enriched = queueMessages.map((message) => ({
+        ...message,
+        messageType: pushMessageIds.has(message.id) ? "PUSH" : "MESSAGE",
+      }))
+
       return res.json({
         success: true,
-        data: queueMessages,
+        data: enriched,
       })
     } catch (error) {
       logger.error("[ADMIN] Error fetching WhatsApp queue:", error)

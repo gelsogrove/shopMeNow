@@ -213,7 +213,12 @@ export class UltraMsgWebhookController {
         return res.status(403).json({ error: 'missing_instance_id' })
       }
 
-      if (receivedInstanceId !== expectedInstanceId) {
+      // Normalize both IDs: UltraMsg sends "161048", we might store "instance161048" or "161048"
+      const normalizeInstanceId = (id: string) => id.replace(/^instance/, '')
+      const receivedNormalized = normalizeInstanceId(receivedInstanceId)
+      const expectedNormalized = normalizeInstanceId(expectedInstanceId)
+
+      if (receivedNormalized !== expectedNormalized) {
         logger.warn('[ULTRAMSG] ❌ Invalid instanceId', {
           webhookId,
           workspaceId,

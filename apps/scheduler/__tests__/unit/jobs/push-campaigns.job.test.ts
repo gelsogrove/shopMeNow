@@ -11,7 +11,7 @@
  * 7. Recurring campaigns (nextRunAt calculation)
  * 8. Campaign completion (SCHEDULED → RUNNING → COMPLETED/SCHEDULED)
  * 9. Batch processing with throttling
- * 10. Transaction safety (credit debit + queue + recipient update)
+ * 10. Transaction safety (queue + recipient update)
  */
 
 // Mock logger FIRST
@@ -111,6 +111,10 @@ describe('Push Campaigns Job', () => {
     jest.clearAllMocks()
     // Reset transaction mock to pass-through by default
     mockPrisma.$transaction.mockImplementation((callback) => callback(mockPrisma))
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'owner-default',
+      creditBalance: new Prisma.Decimal(100.0),
+    })
   })
 
   describe('Campaign Discovery', () => {
@@ -1082,9 +1086,9 @@ describe('Push Campaigns Job', () => {
   })
 
   describe('Transaction Safety', () => {
-    it('should execute credit debit, queue creation, and recipient update in transaction', async () => {
+    it('should execute queue creation and recipient update in transaction', async () => {
       // SCENARIO: Successful message send
-      // RULE: All DB operations must happen atomically in transaction
+      // RULE: Queue + recipient update must happen atomically in transaction
 
       const mockCampaign = {
         id: 'campaign-1',
@@ -1149,15 +1153,6 @@ describe('Push Campaigns Job', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalled()
 
       // Verify operations inside transaction
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'owner-1' },
-        data: {
-          creditBalance: {
-            decrement: new Prisma.Decimal(1.0),
-          },
-        },
-      })
-
       expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           workspaceId: 'ws-1',
@@ -1173,15 +1168,13 @@ describe('Push Campaigns Job', () => {
         where: { id: 'recipient-1' },
         data: expect.objectContaining({
           status: 'SENT',
-          sentAt: expect.any(Date),
           messageId: 'queue-1',
-          priceCharged: new Prisma.Decimal(1.0),
         }),
       })
     })
 
     it('should handle transaction failure gracefully', async () => {
-      // SCENARIO: Transaction fails during credit debit
+      // SCENARIO: Transaction fails during queue creation/update
       // RULE: Mark recipient as FAILED, log error, continue with other recipients
 
       const mockCampaign = {
