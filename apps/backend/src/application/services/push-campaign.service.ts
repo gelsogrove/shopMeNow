@@ -6,6 +6,7 @@ import {
   CampaignFrequency,
   CampaignTargetType,
 } from "@echatbot/database"
+import { AppError } from "../../interfaces/http/middlewares/error.middleware"
 import {
   PushCampaignRepository,
   UpdatePushCampaignInput,
@@ -70,15 +71,36 @@ export class PushCampaignService {
       where: { id: input.workspaceId },
       select: { enableWhatsapp: true, ownerId: true },
     })
-    if (!workspace || !workspace.enableWhatsapp) {
-      throw new Error("Push campaigns are available only for WhatsApp-enabled workspaces")
+    if (!workspace) {
+      throw new AppError(404, "Workspace not found")
+    }
+    if (!workspace.enableWhatsapp) {
+      throw new AppError(
+        400,
+        "Push campaigns are available only for WhatsApp-enabled workspaces"
+      )
     }
     if (!workspace.ownerId) {
-      throw new Error("Workspace owner not found for credit check")
+      throw new AppError(500, "Workspace owner not found for credit check")
     }
 
-    const sendAt =
-      typeof input.sendAt === "string" ? new Date(input.sendAt) : input.sendAt ?? new Date()
+    const sendAt = (() => {
+      if (input.sendAt === undefined || input.sendAt === null) return new Date()
+      if (typeof input.sendAt === "string") {
+        const parsed = new Date(input.sendAt)
+        if (Number.isNaN(parsed.getTime())) {
+          throw new AppError(400, "Invalid send date/time")
+        }
+        return parsed
+      }
+      if (input.sendAt instanceof Date) {
+        if (Number.isNaN(input.sendAt.getTime())) {
+          throw new AppError(400, "Invalid send date/time")
+        }
+        return input.sendAt
+      }
+      return new Date()
+    })()
 
     // Default values for push campaigns
     const DEFAULT_COST_PER_MESSAGE = 1.0 // €1.00 per push notification
@@ -181,7 +203,10 @@ export class PushCampaignService {
     }
 
     if (recipients.length === 0) {
-      throw new Error("No valid recipients found for the selected targeting")
+      throw new AppError(
+        400,
+        "No valid recipients found for the selected targeting"
+      )
     }
 
     // Credit check
@@ -189,11 +214,13 @@ export class PushCampaignService {
       where: { id: workspace.ownerId },
       select: { creditBalance: true },
     })
-    if (!owner) throw new Error("Owner not found for credit check")
+    if (!owner) {
+      throw new AppError(404, "Owner not found for credit check")
+    }
 
     const estimatedCost = new Prisma.Decimal(costPerMessage).mul(recipients.length)
     if (owner.creditBalance.lt(estimatedCost)) {
-      throw new Error("Insufficient credit for campaign")
+      throw new AppError(402, "Insufficient credit for campaign")
     }
 
     const nextRunAt = this.calculateNextRunAt(input.frequency ?? CampaignFrequency.ONCE, sendAt)

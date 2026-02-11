@@ -99,10 +99,30 @@ export class SecurityAgent {
         select: { allowedExternalLinks: true },
       })
       
+      // 🛡️ ALWAYS allow internal domains (short links, registration, etc.)
+      const internalDomains = [
+        "echatbot.ai",
+        "www.echatbot.ai",
+        "echatbot.ai/s/*", // Short links
+        "www.echatbot.ai/s/*", // Short links
+        "echatbot.ai/registration/*", // Registration links
+        "www.echatbot.ai/registration/*", // Registration links
+        "echatbot.ai/cart*", // Cart links
+        "www.echatbot.ai/cart*", // Cart links
+        "echatbot.ai/orders-public*", // Order links
+        "www.echatbot.ai/orders-public*", // Order links
+      ]
+      
+      // 🛡️ Merge internal domains with workspace-configured external links
+      const allAllowedLinks = [
+        ...internalDomains,
+        ...(workspace?.allowedExternalLinks || [])
+      ]
+      
       // 🛡️ Build allowed links string (comma-separated)
-      const allowedLinks = workspace?.allowedExternalLinks?.length 
-        ? workspace.allowedExternalLinks.join(", ")
-        : "" // Empty = no external links allowed
+      const allowedLinks = allAllowedLinks.length > 0
+        ? allAllowedLinks.join(", ")
+        : internalDomains.join(", ") // Fallback: at least internal domains
 
       // 2. Build system prompt with dynamic variables
       const systemPrompt = this.buildSystemPrompt(securityAgent.systemPrompt, {

@@ -50,7 +50,6 @@ import {
   workspaceApi,
   type WorkspaceChecklist,
 } from "@/services/workspaceApi"
-import { getUnreadCount } from "@/services/supportApi"
 
 // ============================================================================
 // WIZARD TYPES & CONFIGURATION
@@ -165,8 +164,8 @@ export function WorkspaceSelectionPage() {
   const [selectedChecklistWorkspaceId, setSelectedChecklistWorkspaceId] = useState<string | null>(null)
   const [checklistError, setChecklistError] = useState<string | null>(null)
   
-  // Support tickets unread count
-  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
+  // Support tickets unread count (only loaded in Chat History)
+  const supportUnreadCount = 0
   
   // PayPal connection state
   const [paypalStatus, setPaypalStatus] = useState<PayPalStatusResponse | null>(null)
@@ -356,34 +355,6 @@ export function WorkspaceSelectionPage() {
       }
   }, [])
   
-  // Load support unread count
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const result = await getUnreadCount()
-        if (result.success) {
-          setSupportUnreadCount(result.data.unreadCount)
-        }
-      } catch (error) {
-        // Silently fail
-      }
-    }
-    fetchUnread()
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchUnread, 30000)
-    
-    // Listen for ticket view events
-    const handleTicketViewed = () => {
-      fetchUnread()
-    }
-    window.addEventListener("support-ticket-viewed", handleTicketViewed)
-    
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
-    }
-  }, [])
-
   // Get first workspace ID for role check (all workspaces share the same owner)
 const firstWorkspace = workspaces.length > 0 ? workspaces[0] : null
 const firstWorkspaceId = firstWorkspace?.id ?? null

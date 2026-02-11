@@ -133,46 +133,73 @@ export class LinkGeneratorService {
   async generateRegistrationLink(
     token: string,
     workspaceUrl: string,
-    workspaceId: string,
+    workspaceIdOrSlug: string, // Can be either ID or slug
     customRegistrationPage?: string | null
   ): Promise<string> {
-    // 🚨 CRITICAL FIX: Use workspace URL (custom domain), NOT global frontend URL
-    // workspaceUrl is the actual domain (e.g., www.echatbot.ai), not Heroku internal URL
-    const baseUrl = (workspaceUrl || config.frontendUrl).replace(/\/$/, "")
-    let originalUrl: string
-
-    if (customRegistrationPage && customRegistrationPage.trim() !== "") {
-      // Use custom registration page URL
-      // If it's a full URL (starts with http), use it directly
-      // If it's a relative path, append it to the workspace base URL
-      const customUrl = customRegistrationPage
-        .trim()
-        .replace(/\{workspaceId\}/g, workspaceId)
-
-      if (customUrl.startsWith("http://") || customUrl.startsWith("https://")) {
-        originalUrl = customUrl
-      } else {
-        const basePath = customUrl.startsWith("/") ? customUrl : `/${customUrl}`
-        originalUrl = `${baseUrl}${basePath}`
+    // 🔧 FIX: Load workspace to get REAL ID (not slug)
+    // workspaceIdOrSlug might be a slug, we need the actual ID for the URL
+    const { PrismaClient } = require("@prisma/client")
+    const prisma = new PrismaClient()
+    
+    try {
+      const workspace = await prisma.workspace.findFirst({
+        where: {
+          OR: [
+            { id: workspaceIdOrSlug },
+            { slug: workspaceIdOrSlug },
+          ],
+        },
+        select: { id: true },
+      })
+      
+      if (!workspace) {
+        logger.error(`❌ Workspace not found: ${workspaceIdOrSlug}`)
+        throw new Error(`Workspace not found: ${workspaceIdOrSlug}`)
       }
-      logger.info(`📎 Using custom registration page: ${originalUrl}`)
-    } else {
-      // Default registration path (hosted on workspace domain)
-      const safeWorkspaceId = encodeURIComponent(workspaceId)
-      originalUrl = `${baseUrl}/registration/${safeWorkspaceId}`
+      
+      const workspaceId = workspace.id // Use REAL ID, not slug
+      
+      // 🚨 CRITICAL FIX: Use workspace URL (custom domain), NOT global frontend URL
+      // workspaceUrl is the actual domain (e.g., www.echatbot.ai), not Heroku internal URL
+      const baseUrl = (workspaceUrl || config.frontendUrl).replace(/\/$/, "")
+      let originalUrl: string
+
+      if (customRegistrationPage && customRegistrationPage.trim() !== "") {
+        // Use custom registration page URL
+        // If it's a full URL (starts with http), use it directly
+        // If it's a relative path, append it to the workspace base URL
+        const customUrl = customRegistrationPage
+          .trim()
+          .replace(/\{workspaceId\}/g, workspaceId)
+
+        if (customUrl.startsWith("http://") || customUrl.startsWith("https://")) {
+          originalUrl = customUrl
+        } else {
+          const basePath = customUrl.startsWith("/") ? customUrl : `/${customUrl}`
+          originalUrl = `${baseUrl}${basePath}`
+        }
+        logger.info(`📎 Using custom registration page: ${originalUrl}`)
+      } else {
+        // Default registration path (hosted on workspace domain)
+        // ✅ NOW ALWAYS USES REAL ID, NOT SLUG
+        const safeWorkspaceId = encodeURIComponent(workspaceId)
+        originalUrl = `${baseUrl}/registration/${safeWorkspaceId}`
+      }
+
+      // Ensure token is attached once
+      if (!/[?&]token=/.test(originalUrl)) {
+        const separator = originalUrl.includes("?") ? "&" : "?"
+        originalUrl = `${originalUrl}${separator}token=${token}`
+      }
+
+      // 🔧 FIX: Registration links should last 7 days, not 1 hour
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 7) // 7 days from now
+
+      return this.generateShortLinkWithExpiry(originalUrl, workspaceId, "registration", expiresAt)
+    } finally {
+      await prisma.$disconnect()
     }
-
-    // Ensure token is attached once
-    if (!/[?&]token=/.test(originalUrl)) {
-      const separator = originalUrl.includes("?") ? "&" : "?"
-      originalUrl = `${originalUrl}${separator}token=${token}`
-    }
-
-    // 🔧 FIX: Registration links should last 7 days, not 1 hour
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7) // 7 days from now
-
-    return this.generateShortLinkWithExpiry(originalUrl, workspaceId, "registration", expiresAt)
   }
 
   /**

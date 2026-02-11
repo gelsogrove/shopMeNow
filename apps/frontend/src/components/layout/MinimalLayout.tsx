@@ -16,9 +16,8 @@ import {
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { storage } from "@/lib/storage"
-import { getUnreadCount } from "@/services/supportApi"
 import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo, Mail } from "lucide-react"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { WidgetLoader } from "@/components/WidgetLoader"
 
@@ -34,6 +33,7 @@ import { WidgetLoader } from "@/components/WidgetLoader"
 export function MinimalLayout() {
   const navigate = useNavigate()
   const location = useLocation()
+  const isChatPage = location.pathname.startsWith("/chat")
   
   // Get workspace from context (reactive to changes)
   const { workspace } = useWorkspace()
@@ -47,38 +47,6 @@ export function MinimalLayout() {
   const [userInitials, setUserInitials] = useState<string>("U")
   const [profilePicture, setProfilePicture] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
-  
-  // Support ticket unread count
-  const [supportUnreadCount, setSupportUnreadCount] = useState<number>(0)
-
-  // Load support unread count
-  const loadSupportUnreadCount = useCallback(async () => {
-    try {
-      const response = await getUnreadCount()
-      if (response.success) {
-        setSupportUnreadCount(response.data.unreadCount)
-      }
-    } catch (error) {
-      // Silently fail - user might not have support access
-    }
-  }, [])
-
-  // Poll for unread messages every 30 seconds
-  useEffect(() => {
-    loadSupportUnreadCount()
-    const interval = setInterval(loadSupportUnreadCount, 30000)
-    
-    // Listen for ticket view events to refresh immediately
-    const handleTicketViewed = () => {
-      loadSupportUnreadCount()
-    }
-    window.addEventListener("support-ticket-viewed", handleTicketViewed)
-    
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
-    }
-  }, [loadSupportUnreadCount])
 
   // Derived from workspace context (reactive)
   const planType = workspace?.planType || "FREE_TRIAL"
@@ -155,8 +123,6 @@ export function MinimalLayout() {
 
   // Check if we're on user-level pages (no workspace context needed)
   const isUserLevelPage = location.pathname === "/profile" || location.pathname === "/billing"
-  // Check if we're on chat page (needs minimal menu)
-  const isChatPage = location.pathname === "/chat"
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">

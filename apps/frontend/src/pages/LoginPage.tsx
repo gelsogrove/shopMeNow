@@ -52,7 +52,6 @@ import { auth, api } from "../services/api"
 import { workspaceApi } from "../services/workspaceApi"
 import { widgetApi } from "../services/widgetApi"
 import { getBillingOverview, PlanLimits, UsageStats, PlanType } from "../services/subscriptionBillingApi"
-import { getUnreadCount } from "../services/supportApi"
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com'
 
@@ -247,8 +246,8 @@ export function LoginPage() {
   const [contactHoneypot, setContactHoneypot] = useState("")
   const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ""
   
-  // Support ticket unread count
-  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
+  // Support ticket unread count (only loaded in Chat History)
+  const supportUnreadCount = 0
   
   // Ref for contact form name input
   const contactNameInputRef = useRef<HTMLInputElement>(null)
@@ -513,37 +512,6 @@ export function LoginPage() {
 
   // 🆕 Session check is now done in the first useEffect above
   // No auto-redirect - we show avatar instead if user is logged in
-
-  // Load support unread count when user is logged in
-  useEffect(() => {
-    if (!isLoggedIn) {
-      setSupportUnreadCount(0)
-      return
-    }
-
-    const loadSupportUnreadCount = async () => {
-      try {
-        const response = await getUnreadCount()
-        setSupportUnreadCount(response.data.unreadCount)
-      } catch (error) {
-        // Silently fail - user might not have support access
-      }
-    }
-
-    loadSupportUnreadCount()
-    const interval = setInterval(loadSupportUnreadCount, 30000)
-
-    // Listen for ticket view events
-    const handleTicketViewed = () => {
-      loadSupportUnreadCount()
-    }
-    window.addEventListener("support-ticket-viewed", handleTicketViewed)
-
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
-    }
-  }, [isLoggedIn])
 
   const onSubmit = async (data: LoginForm) => {
     // 🚀 Check if login is enabled (bypass if admin access mode)

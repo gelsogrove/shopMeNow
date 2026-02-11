@@ -43,7 +43,7 @@ export class WorkspaceController {
       // WORKSPACE ISOLATION: Fetch ONLY workspaces this user has access to
       const workspaces = await this.workspaceService.getByUserId(userId)
 
-      // Fetch webhookIds for all workspaces
+      // Fetch webhookIds for all workspaces from WhatsappSettings table
       const workspaceIds = workspaces.map(w => w.id)
       const whatsappSettings = await prisma.whatsappSettings.findMany({
         where: { workspaceId: { in: workspaceIds } },
@@ -111,8 +111,9 @@ export class WorkspaceController {
         ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
         ultraMsgToken: workspace.ultraMsgToken ?? null,
         ultraMsgApiUrl: workspace.ultraMsgApiUrl ?? null,
-        // 🆕 Webhook ID for URL generation
-        whatsappWebhookId: webhookIdMap.get(workspace.id) ?? workspace.id,
+        // 🔧 FIX: Use REAL webhookId from WhatsappSettings, NOT workspace.id as fallback
+        // If no WhatsappSettings exists, return null (UI will show "Not generated")
+        whatsappWebhookId: webhookIdMap.get(workspace.id) ?? null,
       }))
 
       return res.json(serializedWorkspaces)
@@ -145,6 +146,12 @@ export class WorkspaceController {
           return res.status(404).json({ message: "Workspace not found" })
         }
 
+        // 🔧 FIX: Load webhookId from WhatsappSettings table
+        const whatsappSettings = await prisma.whatsappSettings.findUnique({
+          where: { workspaceId: workspace.id },
+          select: { webhookId: true }
+        })
+
         // Serialize workspace to plain object with all properties
         const serializedWorkspace = {
           id: workspace.id,
@@ -164,8 +171,8 @@ export class WorkspaceController {
           ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
           ultraMsgToken: workspace.ultraMsgToken ?? null,
           ultraMsgApiUrl: workspace.ultraMsgApiUrl ?? null,
-          // 🔧 FIX: Include webhookId (was missing → Callback URL showed "Not generated")
-          whatsappWebhookId: (workspace as any).whatsappWebhookId ?? workspace.id,
+          // 🔧 FIX: Use REAL webhookId from WhatsappSettings, NOT workspace.id
+          whatsappWebhookId: whatsappSettings?.webhookId ?? null,
           notificationEmail: workspace.notificationEmail,
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
           language: workspace.language,
@@ -433,6 +440,12 @@ export class WorkspaceController {
         return res.status(404).json({ message: "Workspace not found" })
       }
 
+      // 🔧 FIX: Load webhookId from WhatsappSettings table after update
+      const whatsappSettings = await prisma.whatsappSettings.findUnique({
+        where: { workspaceId: workspace.id },
+        select: { webhookId: true }
+      })
+
       // Serialize workspace to plain object with all properties (same as getWorkspaceById)
       const serializedWorkspace = {
         id: workspace.id,
@@ -451,8 +464,8 @@ export class WorkspaceController {
         ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
         ultraMsgToken: workspace.ultraMsgToken ?? null,
         ultraMsgApiUrl: workspace.ultraMsgApiUrl ?? null,
-        // 🔧 FIX: Include webhookId so Callback URL is always generated after save
-        whatsappWebhookId: (workspace as any).whatsappWebhookId ?? workspace.id,
+        // 🔧 FIX: Use REAL webhookId from WhatsappSettings, NOT workspace.id
+        whatsappWebhookId: whatsappSettings?.webhookId ?? null,
         notificationEmail: workspace.notificationEmail,
         adminEmail: workspace.adminEmail,
         language: workspace.language,

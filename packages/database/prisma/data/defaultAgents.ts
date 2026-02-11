@@ -43,6 +43,25 @@ export const defaultAgents = (
   },
 
   // ====================================================================
+  // OPERATOR AGENT (order: 0.5) - Human operator manual message bypass
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Operator Message",
+    type: "OPERATOR" as AgentType,
+    icon: "User",
+    description:
+      "Human operator manual message bypass (no LLM processing, direct to customer)",
+
+    model: "openai/gpt-4o-mini",
+    temperature: 0,
+    maxTokens: 100,
+    order: 0.5,
+    isActive: true,
+    availableFunctions: null, // No function calls - direct passthrough
+  },
+
+  // ====================================================================
   // PRODUCT SEARCH AGENT (order: 1) - Product catalog expert with progressive filtering
   // ====================================================================
   {
@@ -138,7 +157,7 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // PROFILE MANAGEMENT AGENT (order: 7) - Customer profile & notifications
+  // PROFILE MANAGEMENT AGENT (order: 6) - Customer profile & notifications
   // ====================================================================
   {
     workspaceId,
@@ -157,7 +176,26 @@ export const defaultAgents = (
   },
 
   // ====================================================================
-  // TRANSLATION AGENT (order: 7) - Safety + Translation layer
+  // NOTIFICATIONS AGENT (order: 7) - Push campaigns and announcements
+  // ====================================================================
+  {
+    workspaceId,
+    name: "Notifications Agent",
+    type: "NOTIFICATIONS" as AgentType,
+    icon: "Bell",
+    description:
+      "Specialist in push notification campaigns, announcements, and broadcast messages",
+
+    model: "openai/gpt-4o-mini",
+    temperature: 0.3, // Low-medium temperature for consistent but friendly notifications
+    maxTokens: 1000,
+    order: 7,
+    isActive: true,
+    availableFunctions: getAgentFunctionNames("NOTIFICATIONS"),
+  },
+
+  // ====================================================================
+  // TRANSLATION AGENT (order: 8) - Safety + Translation layer
   // ====================================================================
   {
     workspaceId,
@@ -170,13 +208,13 @@ export const defaultAgents = (
     model: "openai/gpt-4o-mini",
     temperature: 0.3, // Low temperature for consistent translations
     maxTokens: 1000,
-    order: 7,
+    order: 8,
     isActive: true,
     availableFunctions: null, // No function calls - pure translation + safety
   },
 
   // ====================================================================
-  // CONVERSATION HISTORY LAYER (order: 8) - Humanization layer
+  // CONVERSATION HISTORY LAYER (order: 9) - Humanization layer
   // ====================================================================
   {
     workspaceId,
@@ -189,13 +227,13 @@ export const defaultAgents = (
     model: "openai/gpt-4o-mini",
     temperature: 0.7, // Higher for creativity and natural language
     maxTokens: 500,
-    order: 8, // After Translation (7)
+    order: 9, // After Translation (8)
     isActive: true,
     availableFunctions: null, // No function calls - pure text transformation
   },
 
   // ====================================================================
-  // SECURITY AGENT (order: 99) - Security validation and content moderation
+  // SECURITY AGENT (order: 98) - Security validation and content moderation
   // ====================================================================
   {
     workspaceId,
@@ -208,7 +246,7 @@ export const defaultAgents = (
     model: "openai/gpt-4o-mini",
     temperature: 0, // Zero temperature = deterministic security checks
     maxTokens: 500, // Security checks don't need long responses
-    order: 99, // Last - final security check before sending
+    order: 98, // Before TRANSLATION - final security check before sending
     isActive: true,
     availableFunctions: getAgentFunctionNames("SECURITY"),
   },

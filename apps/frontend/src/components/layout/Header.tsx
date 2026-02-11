@@ -21,7 +21,7 @@ import { storage } from "@/lib/storage"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview } from "@/services/subscriptionBillingApi"
-import { getUnreadCount } from "@/services/supportApi"
+import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import {
   ArrowLeft,
   Bot,
@@ -35,11 +35,13 @@ import {
   Settings,
   User,
 } from "lucide-react"
-import { useEffect, useState, useCallback } from "react"
-import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 
 export function Header() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const isChatPage = location.pathname.startsWith("/chat")
 
   // ✅ FIX: Use WorkspaceContext (single source of truth)
   const { workspace } = useWorkspace()
@@ -55,37 +57,7 @@ export function Header() {
   const [actualPlanType, setActualPlanType] = useState<string | null>(null)
   // Trial days remaining
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number | null>(null)
-  // Support ticket unread count
-  const [supportUnreadCount, setSupportUnreadCount] = useState<number>(0)
-
-  // Load support unread count
-  const loadSupportUnreadCount = useCallback(async () => {
-    try {
-      const response = await getUnreadCount()
-      if (response.success) {
-        setSupportUnreadCount(response.data.unreadCount)
-      }
-    } catch (error) {
-      // Silently fail - user might not have support access
-    }
-  }, [])
-
-  // Poll for unread messages every 30 seconds
-  useEffect(() => {
-    loadSupportUnreadCount()
-    const interval = setInterval(loadSupportUnreadCount, 30000)
-    
-    // Listen for ticket view events to refresh immediately
-    const handleTicketViewed = () => {
-      loadSupportUnreadCount()
-    }
-    window.addEventListener("support-ticket-viewed", handleTicketViewed)
-    
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener("support-ticket-viewed", handleTicketViewed)
-    }
-  }, [loadSupportUnreadCount])
+  const supportUnreadCount = useSupportUnreadCount(isChatPage)
 
   // Load user data from storage
   useEffect(() => {

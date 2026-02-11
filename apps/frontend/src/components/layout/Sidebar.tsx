@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { IMG_BASE_URL } from "@/config"
 import { storage } from "@/lib/storage"
-import { getUnreadCount } from "@/services/supportApi"
+import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import {
   Bot,
   Building2,
@@ -38,10 +38,11 @@ export function Sidebar() {
   console.log("🔍 sellsProductsAndServices:", workspace?.sellsProductsAndServices)
   const totalUnreadMessages = 0
   const location = useLocation()
+  const isChatPage = location.pathname.startsWith("/chat")
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({
     ecommerce: false, // Inizialmente chiuso
   })
-  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
+  const supportUnreadCount = useSupportUnreadCount(isChatPage)
   
   // Check if in impersonation mode (Feature 190)
   const [isImpersonating, setIsImpersonating] = useState(false)
@@ -51,24 +52,6 @@ export function Sidebar() {
     setIsImpersonating(impersonating)
   }, [])
   
-  // Fetch support unread count
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const result = await getUnreadCount()
-        if (result.success) {
-          setSupportUnreadCount(result.data.unreadCount)
-        }
-      } catch (error) {
-        // Silently fail - not critical
-      }
-    }
-    fetchUnread()
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchUnread, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
   // Controlla se siamo in una pagina che fa parte del sottomenu E-commerce
   useEffect(() => {
     const ecommercePages = ["/products", "/services", "/offers", "/sales", "/admin/orders"]
