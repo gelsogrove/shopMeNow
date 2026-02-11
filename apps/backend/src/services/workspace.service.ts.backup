@@ -1,17 +1,7 @@
 import { prisma } from "@echatbot/database"
 import logger from "../utils/logger"
-import { randomBytes } from 'crypto'
 
 // prisma imported
-
-/**
- * Generate unique webhook ID for WhatsApp providers
- * Format: wh_<24 random hex chars>
- * Example: wh_20dbf5340425a7dbba9e3e73
- */
-function generateWebhookId(): string {
-  return `wh_${randomBytes(12).toString('hex')}`
-}
 
 interface CreateWorkspaceData {
   name: string
@@ -113,7 +103,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         whatsappProvider: true, // 🆕 Multi-provider support
         metaPhoneNumberId: true, // 🆕 Meta provider
         metaAccessToken: true, // 🆕 Meta provider  
@@ -209,7 +198,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         whatsappProvider: true, // 🆕 Multi-provider support
         metaPhoneNumberId: true, // 🆕 Meta provider
         metaAccessToken: true, // 🆕 Meta provider  
@@ -377,7 +365,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
@@ -588,19 +575,6 @@ export const workspaceService = {
         translateCategoryNames: true,
         translateServiceNames: true,
         catalogBaseLanguage: true,
-        whatsappSettings: {
-          select: {
-            phoneNumber: true,
-            apiKey: true,
-            appName: true,
-            appSecret: true,
-            webhookId: true,
-            webhookToken: true,
-            webhookUrl: true,
-            businessAccountId: true,
-            adminEmail: true,
-          },
-        },
       },
     })
 
@@ -614,16 +588,7 @@ export const workspaceService = {
     logger.info("Updated workspace:", JSON.stringify(updatedWorkspace, null, 2))
 
     // Update adminEmail/appSecret in WhatsappSettings if provided
-    // 🔧 AUTO-GENERATE webhookId if enabling WhatsApp and it doesn't exist
     if (adminEmail !== undefined || whatsappAppName !== undefined || whatsappAppSecret !== undefined || whatsappVerifyToken !== undefined || whatsappBusinessAccountId !== undefined) {
-      // Check if whatsappSettings exists and has webhookId
-      const existingSettings = await prisma.whatsappSettings.findUnique({
-        where: { workspaceId: id },
-        select: { webhookId: true }
-      })
-
-      const webhookIdToUse = existingSettings?.webhookId || generateWebhookId()
-
       await prisma.whatsappSettings.upsert({
         where: {
           workspaceId: id,
@@ -632,7 +597,7 @@ export const workspaceService = {
           workspaceId: id,
           phoneNumber: updatedWorkspace.whatsappPhoneNumber || "",
           apiKey: updatedWorkspace.whatsappApiKey || "",
-          webhookId: webhookIdToUse, // ✅ Use existing or generate new
+          webhookId: `webhook-${id}`,
           webhookToken: whatsappVerifyToken || `token-${Date.now()}`,
           ...(adminEmail !== undefined ? { adminEmail } : {}),
           ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
@@ -640,7 +605,6 @@ export const workspaceService = {
           ...(whatsappBusinessAccountId !== undefined ? { businessAccountId: whatsappBusinessAccountId } : {}),
         },
         update: {
-          // ⚠️ NEVER update webhookId once created - it's immutable
           ...(adminEmail !== undefined ? { adminEmail } : {}),
           ...(whatsappAppName !== undefined ? { appName: whatsappAppName } : {}),
           ...(whatsappAppSecret !== undefined ? { appSecret: whatsappAppSecret } : {}),
@@ -650,16 +614,19 @@ export const workspaceService = {
       })
     }
 
-    // Return workspace with whatsappSettings mapped
-    const settings = (updatedWorkspace as any).whatsappSettings
+    // Return workspace with adminEmail included
+    const whatsappSettings = await prisma.whatsappSettings.findUnique({
+      where: { workspaceId: id },
+    })
+
     return {
       ...updatedWorkspace,
-      adminEmail: settings?.adminEmail || null,
-      whatsappWebhookId: settings?.webhookId || null,
-      whatsappWebhookToken: settings?.webhookToken || null,
-      whatsappAppSecret: settings?.appSecret || null,
-      whatsappAppName: settings?.appName || null,
-      whatsappBusinessAccountId: settings?.businessAccountId || null,
+      adminEmail: whatsappSettings?.adminEmail || null,
+      whatsappWebhookId: whatsappSettings?.webhookId || null,
+      whatsappWebhookToken: whatsappSettings?.webhookToken || null,
+      whatsappAppSecret: whatsappSettings?.appSecret || null,
+      whatsappAppName: whatsappSettings?.appName || null,
+      whatsappBusinessAccountId: whatsappSettings?.businessAccountId || null,
     }
   },
 
