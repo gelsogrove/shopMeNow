@@ -113,7 +113,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         whatsappProvider: true, // 🆕 Multi-provider support
         metaPhoneNumberId: true, // 🆕 Meta provider
         metaAccessToken: true, // 🆕 Meta provider  
@@ -209,7 +208,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         whatsappProvider: true, // 🆕 Multi-provider support
         metaPhoneNumberId: true, // 🆕 Meta provider
         metaAccessToken: true, // 🆕 Meta provider  
@@ -311,18 +309,19 @@ export const workspaceService = {
     })
 
     // 3. Combina i risultati
+    const settings = (workspace as any).whatsappSettings
     return {
       ...workspace,
-      whatsappPhoneNumber: workspace.whatsappSettings?.phoneNumber ?? workspace.whatsappPhoneNumber,
-      whatsappApiKey: workspace.whatsappSettings?.apiKey ?? workspace.whatsappApiKey,
-      whatsappAppName: workspace.whatsappSettings?.appName ?? null,
-      whatsappAppSecret: workspace.whatsappSettings?.appSecret ?? null,
-      whatsappWebhookId: workspace.whatsappSettings?.webhookId ?? null,
-      whatsappWebhookToken: workspace.whatsappSettings?.webhookToken ?? null,
-      whatsappWebhookUrl: workspace.whatsappSettings?.webhookUrl ?? workspace.webhookUrl ?? null,
-      whatsappVerifyToken: workspace.whatsappSettings?.webhookToken ?? workspace.whatsappVerifyToken ?? null,
-      whatsappBusinessAccountId: workspace.whatsappSettings?.businessAccountId ?? null,
-      adminEmail: workspace.whatsappSettings?.adminEmail ?? null,
+      whatsappPhoneNumber: settings?.phoneNumber ?? workspace.whatsappPhoneNumber,
+      whatsappApiKey: settings?.apiKey ?? workspace.whatsappApiKey,
+      whatsappAppName: settings?.appName ?? null,
+      whatsappAppSecret: settings?.appSecret ?? null,
+      whatsappWebhookId: settings?.webhookId ?? null,
+      whatsappWebhookToken: settings?.webhookToken ?? null,
+      whatsappWebhookUrl: settings?.webhookUrl ?? workspace.webhookUrl ?? null,
+      whatsappVerifyToken: settings?.webhookToken ?? workspace.whatsappVerifyToken ?? null,
+      whatsappBusinessAccountId: settings?.businessAccountId ?? null,
+      adminEmail: settings?.adminEmail ?? null,
       agentConfigs,
     }
   },
@@ -377,7 +376,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // Webhook ID for UltraMsg
         createdAt: true,
         updatedAt: true,
         deletedAt: true,
@@ -541,7 +539,6 @@ export const workspaceService = {
         whatsappApiKey: true,
         whatsappPhoneNumberId: true,
         whatsappVerifyToken: true,
-        whatsappWebhookId: true, // 🆕 Webhook ID for UltraMsg
         webhookUrl: true,  // 🆕 Webhook URL
         whatsappProvider: true, // 🆕 Multi-provider support
         metaPhoneNumberId: true, // 🆕 Meta provider

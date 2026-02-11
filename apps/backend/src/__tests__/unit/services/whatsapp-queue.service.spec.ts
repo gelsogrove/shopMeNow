@@ -66,7 +66,7 @@ describe("WhatsAppQueueService", () => {
     ;(WhatsAppProviderFactory.getProviderDisplayName as jest.Mock) = jest
       .fn()
       .mockReturnValue("UltraMsg")
-    ;(WhatsAppProviderFactory.createProvider as jest.Mock) = jest
+    ;(WhatsAppProviderFactory.create as jest.Mock) = jest
       .fn()
       .mockReturnValue(mockProvider)
 
@@ -128,7 +128,7 @@ describe("WhatsAppQueueService", () => {
       })
 
       // Verify provider was called with correct parameters
-      expect(WhatsAppProviderFactory.createProvider).toHaveBeenCalledWith(mockWorkspace.whatsapp_settings)
+      expect(WhatsAppProviderFactory.create).toHaveBeenCalledWith(mockWorkspace)
       expect(mockProvider.sendTextMessage).toHaveBeenCalledWith(
         "+34654728753",
         "Test message"
@@ -171,7 +171,7 @@ describe("WhatsAppQueueService", () => {
 
       // Verify error result
       expect(result.success).toBe(false)
-      expect(result.error).toBe("WhatsApp not configured for this workspace")
+      expect(result.error).toBe("Workspace not found")
       expect(mockProvider.sendTextMessage).not.toHaveBeenCalled()
     })
 
@@ -199,7 +199,6 @@ describe("WhatsAppQueueService", () => {
         id: "ws_abc",
         whatsappProvider: "ultramsg",
         // Missing ultraMsgInstanceId and ultraMsgToken
-        whatsapp_settings: null, // No WhatsApp config
       }
 
       mockPrisma.workspace.findUnique.mockResolvedValue(mockWorkspace)
@@ -207,6 +206,10 @@ describe("WhatsAppQueueService", () => {
       ;(WhatsAppProviderFactory.getProviderDisplayName as jest.Mock).mockReturnValue(
         "UltraMsg"
       )
+      // Mock factory to throw error when WhatsApp not configured
+      ;(WhatsAppProviderFactory.create as jest.Mock).mockImplementation(() => {
+        throw new Error("UltraMsg provider selected but credentials not configured")
+      })
 
       // Execute
       const result = await service.validateAndSend(mockMessage)
@@ -216,7 +219,7 @@ describe("WhatsAppQueueService", () => {
 
       // Verify error result
       expect(result.success).toBe(false)
-      expect(result.error).toBe("WhatsApp not configured for this workspace")
+      expect(result.error).toContain("credentials not configured")
       expect(mockProvider.sendTextMessage).not.toHaveBeenCalled()
     })
 

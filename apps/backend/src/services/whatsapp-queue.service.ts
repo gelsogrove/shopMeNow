@@ -12,6 +12,7 @@ import { WhatsAppQueueRepository } from "../repositories/whatsapp-queue.reposito
 
 // Services
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
+import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 
 export interface EnqueueMessageDto {
   workspaceId: string
@@ -25,6 +26,7 @@ export interface EnqueueMessageDto {
 export interface ValidateAndSendResult {
   success: boolean
   error?: string
+  messageId?: string
 }
 
 /**
@@ -477,20 +479,25 @@ export class WhatsAppQueueService {
       // Load workspace to get WhatsApp configuration
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: message.workspaceId },
-        include: { whatsapp_settings: true },
       })
 
-      if (!workspace || !workspace.whatsapp_settings) {
+      if (!workspace) {
         return {
           success: false,
-          error: "WhatsApp not configured for this workspace",
+          error: "Workspace not found",
         }
       }
 
       // Create WhatsApp provider (UltraMsg or Meta)
-      const provider = WhatsAppProviderFactory.createProvider(
-        workspace.whatsapp_settings
-      )
+      let provider
+      try {
+        provider = WhatsAppProviderFactory.create(workspace)
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || "WhatsApp not configured for this workspace",
+        }
+      }
 
       // Send message via provider
       const sendResult = await provider.sendTextMessage(

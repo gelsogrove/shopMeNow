@@ -26,7 +26,7 @@ jest.mock("../../../src/services/whatsapp/whatsapp-provider.factory", () => ({
   WhatsAppProviderFactory: {
     isConfigured: jest.fn().mockReturnValue(true),
     getProviderDisplayName: jest.fn().mockReturnValue("UltraMsg"),
-    createProvider: jest.fn().mockReturnValue({
+    create: jest.fn().mockReturnValue({
       sendTextMessage: jest.fn().mockResolvedValue({
         success: true,
         messageId: "wamid_test_123",
@@ -75,11 +75,6 @@ describe("🛡️ WhatsAppQueueService - Security Agent Integration", () => {
       whatsappProvider: "ultramsg",
       ultraMsgInstanceId: "161048",
       ultraMsgToken: "test_token",
-      whatsapp_settings: {
-        ultraMsgInstanceId: "161048",
-        ultraMsgToken: "test_token",
-        whatsappProvider: "ultramsg",
-      },
     })
     
     // Mock conversationMessage (if needed for timeline)
