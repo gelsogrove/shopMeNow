@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
+import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import { storage } from "@/lib/storage"
 import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo, Mail } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -34,6 +35,7 @@ export function MinimalLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const isChatPage = location.pathname.startsWith("/chat")
+  const supportUnreadCount = useSupportUnreadCount(isChatPage)
   
   // Get workspace from context (reactive to changes)
   const { workspace } = useWorkspace()
