@@ -17,6 +17,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **ALWAYS** call the user "Andrea" in discussions and messages
 - Example: "Andrea, I've completed the task" or "Andrea, what do you think?"
 
+### 0.1. **NEVER Use Worktree - ALWAYS Work on Main Branch** (🚨 CRITICAL)
+
+- **REPOSITORY PATH**: `/Users/gelso/workspace/shopME` (MAIN REPOSITORY)
+- **WORKTREE PATH**: `/Users/gelso/workspace/shopME.worktrees/copilot-worktree-*` (❌ FORBIDDEN)
+- **RULE**: At the START of EVERY session, IMMEDIATELY run:
+  ```bash
+  cd /Users/gelso/workspace/shopME
+  git checkout main
+  ```
+- **BEFORE ANY COMMIT/PUSH**: Verify location:
+  ```bash
+  pwd  # MUST return: /Users/gelso/workspace/shopME
+  git branch --show-current  # MUST return: main
+  ```
+- **NEVER** work in worktree directory - it causes merge issues
+- **NEVER** commit/push from worktree - always from main repository
+- **If accidentally in worktree**: STOP, cd to main repository, redo work there
+- This is a **SACRED RULE** - breaking it causes deployment problems
+
 ## Development Commands
 
 ### Starting Services

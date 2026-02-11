@@ -6,6 +6,29 @@ This file defines 7 specialized development agents for the eChatbot project. Eac
 
 ---
 
+## 🚨 SACRED RULE #0: NEVER Use Worktree - ALWAYS Work on Main Branch
+
+**REPOSITORY PATH**: `/Users/gelso/workspace/shopME` ✅ (WORK HERE)
+**WORKTREE PATH**: `/Users/gelso/workspace/shopME.worktrees/copilot-worktree-*` ❌ (FORBIDDEN)
+
+**AT START OF EVERY SESSION**:
+```bash
+cd /Users/gelso/workspace/shopME
+git checkout main
+pwd  # Verify: /Users/gelso/workspace/shopME
+git branch --show-current  # Verify: main
+```
+
+**BEFORE EVERY COMMIT/PUSH**:
+```bash
+pwd  # MUST return: /Users/gelso/workspace/shopME
+git branch --show-current  # MUST return: main
+```
+
+**WHY**: Worktree causes merge conflicts, deployment issues, and confusion. Andrea explicitly requires ALL work on main branch.
+
+---
+
 ## 1. BACKEND AGENT
 
 ### Scope
