@@ -18,8 +18,46 @@ jest.mock("../../../src/application/agents/SecurityAgent", () => ({
   })),
 }))
 
+jest.mock("../../../src/application/services/subscription-billing.service", () => ({
+  SubscriptionBillingService: jest.fn().mockImplementation(() => ({})),
+}))
+
+jest.mock("../../../src/services/whatsapp/whatsapp-provider.factory", () => ({
+  WhatsAppProviderFactory: {
+    isConfigured: jest.fn().mockReturnValue(true),
+    getProviderDisplayName: jest.fn().mockReturnValue("UltraMsg"),
+    create: jest.fn().mockReturnValue({
+      sendTextMessage: jest.fn().mockResolvedValue({
+        success: true,
+        messageId: "wamid_test_123",
+      }),
+      getProviderName: jest.fn().mockReturnValue("UltraMsg"),
+    }),
+  },
+}))
+
 import { beforeAll, afterAll, describe, it, expect, jest, beforeEach } from "@jest/globals"
 import { WhatsAppQueueService } from "../../../src/services/whatsapp-queue.service"
+import { PrismaClient } from "@prisma/client"
+
+// Mock PrismaClient
+const mockPrisma = {
+  workspace: {
+    findUnique: jest.fn(),
+  },
+  conversationMessage: {
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
+  whatsAppQueue: {
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
+  user: {
+    findUnique: jest.fn(),
+  },
+} as unknown as PrismaClient
 
 describe("🛡️ WhatsAppQueueService - Security Agent Integration", () => {
   let queueService: WhatsAppQueueService
@@ -30,7 +68,20 @@ describe("🛡️ WhatsAppQueueService - Security Agent Integration", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    queueService = new WhatsAppQueueService()
+    
+    // Mock workspace with WhatsApp configuration
+    mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({
+      id: testWorkspaceId,
+      whatsappProvider: "ultramsg",
+      ultraMsgInstanceId: "161048",
+      ultraMsgToken: "test_token",
+    })
+    
+    // Mock conversationMessage (if needed for timeline)
+    mockPrisma.conversationMessage.findUnique = jest.fn().mockResolvedValue(null)
+    mockPrisma.conversationMessage.update = jest.fn().mockResolvedValue({})
+    
+    queueService = new WhatsAppQueueService(mockPrisma)
   })
 
   describe("✅ SAFE Message Flow", () => {
