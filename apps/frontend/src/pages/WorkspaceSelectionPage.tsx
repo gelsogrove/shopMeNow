@@ -40,7 +40,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { getPayPalConnectUrl, getPayPalStatus, disconnectPayPal, getPayPalConfig, type PayPalStatusResponse, type PayPalConfigResponse } from "@/services/paypalApi"
-import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power, Monitor } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -1461,11 +1461,26 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         : "bg-gradient-to-r from-slate-500 to-slate-600"
                     }`}
                   >
-                    {/* Left: Type Badge */}
-                    <span className="text-white text-sm font-semibold flex items-center gap-2">
-                      <Store className="h-4 w-4" />
-                      {workspace.sellsProductsAndServices ? "E-commerce" : "Info Channel"}
-                    </span>
+                    {/* Left: Type Badge + Channel Icon */}
+                    <div className="flex items-center gap-3">
+                      <span className="text-white text-sm font-semibold flex items-center gap-2">
+                        <Store className="h-4 w-4" />
+                        {workspace.sellsProductsAndServices ? "E-commerce" : "Info Channel"}
+                      </span>
+                      
+                      {/* WhatsApp/Widget Icon Badge */}
+                      {workspace.channelType === 'WHATSAPP' ? (
+                        <div className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-md flex items-center gap-1.5" title="WhatsApp Channel">
+                          <MessageCircle className="h-3.5 w-3.5 text-white" />
+                          <span className="text-xs text-white font-medium">WhatsApp</span>
+                        </div>
+                      ) : workspace.channelType === 'WIDGET' ? (
+                        <div className="bg-white/20 backdrop-blur-sm px-2 py-1 rounded-md flex items-center gap-1.5" title="Website Widget">
+                          <Monitor className="h-3.5 w-3.5 text-white" />
+                          <span className="text-xs text-white font-medium">Widget</span>
+                        </div>
+                      ) : null}
+                    </div>
                     
                     {/* Right: Settings Button */}
                     <button
