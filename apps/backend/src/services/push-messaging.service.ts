@@ -1,7 +1,5 @@
 import { prisma } from "@echatbot/database"
-import { platformConfigService } from "./platform-config.service"
 import logger from "../utils/logger"
-import { usageService } from "./usage.service"
 import { WhatsAppQueueService } from "./whatsapp-queue.service"
 
 // WhatsApp Queue Service instance
@@ -14,8 +12,7 @@ const whatsappQueueService = new WhatsAppQueueService(prisma)
  *
  * Gestisce tutti i push messaging WhatsApp con:
  * - 🌍 Supporto multilingua automatico
- * - 💰 Tracking costi da PlatformConfig (single source of truth)
- * - 📊 Integrazione analytics
+ * - 📊 Integrazione analytics (via queue/billing)
  * - 🔄 Template messaging unificati
  *
  * @author Andrea Gelso
@@ -175,25 +172,6 @@ export const pushMessagingService = {
         whatsappResult.messageId
       )
 
-      // 7. 💰 Track usage cost based on message type (using centralized pricing)
-      const messagePrice = await this.getMessagePrice(data.type)
-
-      if (messagePrice > 0) {
-        await this.trackPushCost(
-          data.workspaceId,
-          data.customerId,
-          messagePrice,
-          data.type
-        )
-        logger.info(
-          `[PUSH-MESSAGING] 💰 Cost tracked: $${messagePrice.toFixed(2)} for ${data.type}`
-        )
-      } else {
-        logger.info(
-          `[PUSH-MESSAGING] 🆓 FREE message: ${data.type} ($${messagePrice.toFixed(2)})`
-        )
-      }
-
       if (whatsappResult.success) {
         logger.info(
           `[PUSH-MESSAGING] ✅ Push sent successfully: ${data.type} to ${customer.name}`
@@ -322,47 +300,6 @@ export const pushMessagingService = {
     logger.info(
       `[PUSH-MESSAGING] 💾 Message saved with status: ${messageStatus}${messageId ? `, messageId: ${messageId}` : ""}`
     )
-  },
-
-  /**
-   * 💰 Get message price - ALL push notifications use PUSH_CAMPAIGN price
-   * Simplified: only 2 prices exist (MESSAGE and PUSH_CAMPAIGN)
-   */
-  async getMessagePrice(_type: PushMessageType): Promise<number> {
-    // All push notifications have the same price
-    return platformConfigService.getPrice("PUSH_CAMPAIGN")
-  },
-
-  /**
-   * 💰 Traccia costo push message con prezzo configurabile
-   */
-  async trackPushCost(
-    workspaceId: string,
-    customerId: string,
-    price: number,
-    messageType: PushMessageType
-  ) {
-    try {
-      if (price === 0) {
-        logger.info(
-          `[PUSH-MESSAGING] 🆓 FREE message - no cost tracking for ${messageType}`
-        )
-        return
-      }
-
-      await usageService.trackUsage({
-        workspaceId: workspaceId,
-        clientId: customerId,
-        price: price,
-      })
-
-      logger.info(
-        `[PUSH-MESSAGING] ✅ Cost tracked: $${price.toFixed(2)} for ${messageType}`
-      )
-    } catch (error) {
-      logger.error(`[PUSH-MESSAGING] ❌ Error tracking push cost:`, error)
-      throw error
-    }
   },
 
   /**
