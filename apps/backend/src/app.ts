@@ -820,11 +820,12 @@ app.get("/registration/:workspaceId", async (req, res) => {
     }
 
     // Use real workspace ID (not slug)
+    // Frontend expects: /registration/:workspaceId?token=xxx (workspaceId in PATH, not query)
     const query = new URLSearchParams(req.query as Record<string, string>)
-    query.set("workspace", workspace.id) // ✅ Always use real ID
+    // Don't add workspace to query string - it goes in the path
     const queryString = query.toString()
     const baseUrl = config.frontendUrl.replace(/\/$/, "")
-    const redirectTarget = `${baseUrl}/registration${queryString ? `?${queryString}` : ""}`
+    const redirectTarget = `${baseUrl}/registration/${workspace.id}${queryString ? `?${queryString}` : ""}`
     
     logger.info(`[REGISTRATION-REDIRECT] ${workspaceIdOrSlug} → ${workspace.id}`)
     res.redirect(302, redirectTarget)
