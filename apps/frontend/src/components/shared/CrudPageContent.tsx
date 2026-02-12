@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 interface CrudPageContentProps<T> {
   title: string | ReactNode
   titleIcon?: ReactNode
+  className?: string
   searchValue: string
   onSearch: (value: string) => void
   searchPlaceholder?: string
@@ -30,6 +31,7 @@ interface CrudPageContentProps<T> {
 export function CrudPageContent<T>({
   title,
   titleIcon,
+  className,
   searchValue,
   onSearch,
   searchPlaceholder,
@@ -57,7 +59,7 @@ export function CrudPageContent<T>({
   }
 
   return (
-    <Card className="min-h-[calc(100vh-13.7rem)]">
+    <Card className={`min-h-[calc(100vh-13.7rem)] ${className || ""}`}>
       <CardContent className="p-6">
         <PageHeader
           title={title}

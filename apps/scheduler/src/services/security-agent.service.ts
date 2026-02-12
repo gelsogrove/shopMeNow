@@ -58,26 +58,10 @@ export class SecurityAgentService {
   private readonly openRouterBaseUrl = 'https://openrouter.ai/api/v1'
 
   private buildSystemPrompt(basePrompt: string, variables: Record<string, string>) {
-    // Step 1: Process Handlebars conditionals ({{#if}}...{{/if}})
-    // Create boolean flags for conditional rendering
-    const conditionalFlags: Record<string, boolean> = {}
-    for (const [key, value] of Object.entries(variables)) {
-      // Variable is "truthy" if it exists, is not empty, and is not just whitespace
-      conditionalFlags[key] = !!value && value.trim() !== ''
-    }
-    
-    // Compile and render template with conditionals
-    const template = Handlebars.compile(basePrompt)
-    const withConditionals = template(conditionalFlags)
-    
-    // Step 2: Replace {{variableName}} placeholders with actual values
-    let result = withConditionals
-    for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{${key}}}`, 'g')
-      result = result.replace(regex, value)
-    }
-    
-    return result
+    // Use Handlebars to process BOTH conditionals ({{#if}}) AND variable replacement ({{var}})
+    // in a single pass. noEscape prevents HTML-escaping values (not needed for LLM prompts).
+    const template = Handlebars.compile(basePrompt, { noEscape: true })
+    return template(variables)
   }
 
   /**

@@ -160,7 +160,8 @@ export class PushCampaignController {
         name: String(body.name).trim(),
         message: String(body.message).trim(),
         frequency: body.frequency ? String(body.frequency).toUpperCase() : undefined,
-        targetingType: body.targetingType ? String(body.targetingType).toUpperCase() : undefined,
+        // ⚠️ Hotfix: do not overwrite targetingType on update (enum mismatch in prod DB)
+        targetingType: undefined,
       }
 
       // Normalize date

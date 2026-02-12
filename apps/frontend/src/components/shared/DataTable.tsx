@@ -208,7 +208,7 @@ export function DataTable<TData>({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-hidden">
       {(searchKey || onSearchChange) && (
         <div className="flex items-center border rounded-md px-3 mb-4">
           <Search className="h-4 w-4 text-gray-400 mr-2" />

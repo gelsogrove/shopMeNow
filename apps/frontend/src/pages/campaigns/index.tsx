@@ -176,7 +176,7 @@ export default function CampaignsPage() {
     {
       accessorKey: "name",
       header: "Name",
-      size: 300,
+      size: 220,
       cell: ({ row }) => (
         <div>
           <div className="font-medium">{row.original.name}</div>
@@ -239,27 +239,6 @@ export default function CampaignsPage() {
       ),
     },
     {
-      accessorKey: "isActive",
-      header: "Active",
-      cell: ({ row }) => {
-        const isAutoOff =
-          row.original.frequency === "ONCE" &&
-          row.original.status === "COMPLETED"
-        const label = isAutoOff
-          ? "Auto-off"
-          : row.original.isActive
-          ? "Yes"
-          : "No"
-        return (
-          <Badge
-            variant={row.original.isActive && !isAutoOff ? "default" : "secondary"}
-          >
-            {label}
-          </Badge>
-        )
-      },
-    },
-    {
       accessorKey: "sendAt",
       header: "Next Run",
       cell: ({ row }) => {
@@ -284,10 +263,27 @@ export default function CampaignsPage() {
     },
     {
       accessorKey: "actualSent",
-      header: "Sent/Failed/Skipped",
+      header: "Sent",
       cell: ({ row }) => (
         <div className="text-sm text-gray-700">
-          {row.original.actualSent ?? 0} / {row.original.actualFailed ?? 0} /{" "}
+          {row.original.actualSent ?? 0}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "actualFailed",
+      header: "Failed",
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-700">
+          {row.original.actualFailed ?? 0}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "actualSkipped",
+      header: "Skipped",
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-700">
           {row.original.actualSkipped ?? 0}
         </div>
       ),
@@ -410,6 +406,7 @@ const renderActions = (campaign: Campaign) => {
         renderActions={renderActions}
         renderEmptyState={renderEmptyState}
         disablePagination={true}
+        className="overflow-hidden"
       />
 
       <CampaignSheet
