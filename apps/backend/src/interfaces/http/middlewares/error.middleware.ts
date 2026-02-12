@@ -20,27 +20,21 @@ export const errorMiddleware = (
 ): void => {
   logger.error("Error:", err)
 
+  // Feature flag (default ON): show real errors to clients when true.
+  // Set SHOW_ERRORS=false (env/backoffice toggle) to always return generic internal error.
+  const showErrors = (process.env.SHOW_ERRORS ?? "true").toLowerCase() !== "false"
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       status: "error",
-      message: err.message,
+      message: showErrors ? err.message : "Internal server error",
     })
     return
   }
 
-  // For non-AppError, expose minimal debug to help troubleshooting (no stack)
-  const payload: any = {
+  res.status(500).json({
     status: "error",
-    message: "Internal server error",
-  }
-
-  // If the error has a known code/message, surface it to speed up debugging (trusted admin UI)
-  if (err && (err as any).message) {
-    payload.debug = {
-      message: (err as any).message,
-      code: (err as any).code,
-    }
-  }
-
-  res.status(500).json(payload)
+    message: showErrors && err?.message ? err.message : "Internal server error",
+    ...(showErrors && (err as any)?.code ? { code: (err as any).code } : {}),
+  })
 }
