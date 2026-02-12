@@ -791,6 +791,7 @@ app.use("/api/v1", apiRouter)
 // ✅ FIX SPP-1032: Resolve slug to ID before redirect (e.g., /registration/echatbot-hq-support → uses real workspace ID)
 app.get("/registration/:workspaceId", async (req, res) => {
   const { workspaceId: workspaceIdOrSlug } = req.params
+  logger.info(`[REGISTRATION-REDIRECT] 🔍 Received request for: ${workspaceIdOrSlug}`)
   
   try {
     // 🔍 Lookup workspace by ID or slug
