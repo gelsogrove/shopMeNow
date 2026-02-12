@@ -217,44 +217,11 @@ export class WelcomeMessageHandler {
       logger.info(welcomeText)
       logger.info("*******END PROMPT*******")
 
-      logger.info("👋 [WelcomeMessageHandler] Before translation", {
-        customerId: input.customerId,
-        workspaceId: input.workspaceId,
-        welcomeMessageLength: welcomeText.length,
-        customerLanguage: input.customerLanguage || "it",
-        hasRegistrationToken: welcomeText.includes("[LINK_REGISTRATION]"),
-      })
-
-      // 🌍 CRITICAL: Translate welcome message to customer's language FIRST
-      // NOTE: Do NOT replace [LINK_REGISTRATION] before translation
-      // The token will be preserved during translation and replaced after
-      const customerLanguage = input.customerLanguage || "it"
+      // 🔧 CRITICAL: Replace [LINK_REGISTRATION] with placeholder BEFORE translation
+      // Strategy: Use UUID placeholder that translation won't touch, then replace after
+      const REGISTRATION_PLACEHOLDER = `__REG_LINK_${Date.now()}_PLACEHOLDER__`
+      let registrationLink: string | null = null
       
-      logger.info("🌍 [WelcomeMessageHandler] BEFORE Translation", {
-        customerLanguage,
-        originalText: welcomeText.substring(0, 100),
-        textLength: welcomeText.length,
-      })
-
-      const translationResult = await this.translationAgent.process({
-        workspaceId: input.workspaceId,
-        message: welcomeText,
-        targetLanguage: customerLanguage,
-        customerName: input.customerId, // We don't have name yet for anonymous users
-      })
-
-      welcomeText = translationResult.message
-
-      logger.info("🌍 [WelcomeMessageHandler] AFTER Translation", {
-        originalLength: welcomeText.length,
-        translatedLength: translationResult.message.length,
-        targetLanguage: customerLanguage,
-        wasTranslated: translationResult.translated,
-        translatedText: translationResult.message.substring(0, 100),
-      })
-
-      // 🔧 CRITICAL: Replace [LINK_REGISTRATION] token with actual registration link
-      // This MUST happen AFTER translation to prevent the link from being translated
       if (welcomeText.includes("[LINK_REGISTRATION]")) {
         try {
           // Load customer to get phone number
@@ -267,19 +234,63 @@ export class WelcomeMessageHandler {
           })
 
           if (customer?.phone) {
-            const registrationLink = await this.generateRegistrationLink(
+            registrationLink = await this.generateRegistrationLink(
               customer.phone,
               input.workspaceId
             )
-            welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
-            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with actual link after translation")
+            // Replace token with placeholder BEFORE translation
+            welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, REGISTRATION_PLACEHOLDER)
+            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with placeholder before translation", {
+              placeholder: REGISTRATION_PLACEHOLDER,
+              link: registrationLink
+            })
           } else {
             logger.warn("⚠️ [WelcomeMessageHandler] Customer phone not found, cannot replace [LINK_REGISTRATION]")
           }
         } catch (error) {
-          logger.error("❌ [WelcomeMessageHandler] Error replacing registration link:", error)
-          // Keep [LINK_REGISTRATION] token if generation fails
+          logger.error("❌ [WelcomeMessageHandler] Error generating registration link:", error)
         }
+      }
+
+      logger.info("👋 [WelcomeMessageHandler] Before translation", {
+        customerId: input.customerId,
+        workspaceId: input.workspaceId,
+        welcomeMessageLength: welcomeText.length,
+        customerLanguage: input.customerLanguage || "it",
+        hasPlaceholder: welcomeText.includes(REGISTRATION_PLACEHOLDER),
+      })
+
+      // 🌍 Translate welcome message to customer's language
+      const customerLanguage = input.customerLanguage || "it"
+      
+      logger.info("🌍 [WelcomeMessageHandler] BEFORE Translation", {
+        customerLanguage,
+        originalText: welcomeText.substring(0, 100),
+        textLength: welcomeText.length,
+      })
+
+      const translationResult = await this.translationAgent.process({
+        workspaceId: input.workspaceId,
+        message: welcomeText,
+        targetLanguage: customerLanguage,
+        customerName: input.customerId,
+      })
+
+      welcomeText = translationResult.message
+
+      logger.info("🌍 [WelcomeMessageHandler] AFTER Translation", {
+        originalLength: welcomeText.length,
+        translatedLength: translationResult.message.length,
+        targetLanguage: customerLanguage,
+        wasTranslated: translationResult.translated,
+        translatedText: translationResult.message.substring(0, 100),
+        hasPlaceholder: welcomeText.includes(REGISTRATION_PLACEHOLDER),
+      })
+
+      // 🔧 Replace placeholder with actual link AFTER translation
+      if (registrationLink && welcomeText.includes(REGISTRATION_PLACEHOLDER)) {
+        welcomeText = welcomeText.replace(new RegExp(REGISTRATION_PLACEHOLDER, 'g'), registrationLink)
+        logger.info("✅ [WelcomeMessageHandler] Replaced placeholder with actual link after translation")
       }
 
       // Save welcome exchange to conversation history

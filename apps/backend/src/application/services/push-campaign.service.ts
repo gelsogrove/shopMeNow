@@ -274,7 +274,27 @@ export class PushCampaignService {
         typeof input.sendAt === "string" ? new Date(input.sendAt) : input.sendAt
       input.nextRunAt = this.calculateNextRunAt(input.frequency, sendAtDate)
     }
-    return this.repo.updateCampaign(id, workspaceId, input)
+    const existing = await this.repo.findById(id, workspaceId)
+    if (!existing) {
+      throw new AppError(404, "Campaign not found")
+    }
+
+    try {
+      return await this.repo.updateCampaign(id, workspaceId, input)
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2025") {
+          throw new AppError(404, "Campaign not found")
+        }
+        if (error.code === "P2002") {
+          throw new AppError(409, "Campaign already exists")
+        }
+        if (error.code === "P2003") {
+          throw new AppError(400, "Invalid reference in campaign update")
+        }
+      }
+      throw error
+    }
   }
 
   async delete(workspaceId: string, id: string) {

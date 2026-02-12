@@ -847,6 +847,7 @@ describe('PushCampaignService', () => {
         message: 'Updated message',
       }
 
+      mockRepo.findById.mockResolvedValue(mockUpdated as any)
       mockRepo.updateCampaign.mockResolvedValue(mockUpdated as any)
 
       const result = await service.update('workspace-1', 'campaign-1', {
@@ -872,6 +873,10 @@ describe('PushCampaignService', () => {
       const sendAt = new Date('2024-01-01T10:00:00Z')
       const expectedNextRun = new Date('2024-02-01T10:00:00Z') // 1 month later
 
+      mockRepo.findById.mockResolvedValue({
+        id: 'campaign-1',
+        workspaceId: 'workspace-1',
+      } as any)
       mockRepo.updateCampaign.mockResolvedValue({
         id: 'campaign-1',
         frequency: CampaignFrequency.MONTHLY,
