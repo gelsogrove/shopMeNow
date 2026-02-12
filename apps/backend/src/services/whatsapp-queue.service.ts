@@ -21,6 +21,7 @@ export interface EnqueueMessageDto {
   messageContent: string
   conversationMessageId?: string // FK to ConversationMessage for timeline tracking
   isPlayground?: boolean // 🧪 Skip billing and real sending in playground mode
+  skipSecurityCheck?: boolean // 🔐 Skip security validation for trusted messages (e.g., welcome message)
 }
 
 export interface ValidateAndSendResult {

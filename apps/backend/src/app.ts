@@ -788,14 +788,49 @@ app.use("/api/v1", apiRouter)
 
 // 🔁 Legacy/compat redirect: /registration/:workspaceId → /registration?workspace=...
 // This keeps older frontend builds working while supporting the new path format.
-app.get("/registration/:workspaceId", (req, res) => {
-  const { workspaceId } = req.params
-  const query = new URLSearchParams(req.query as Record<string, string>)
-  query.set("workspace", workspaceId)
-  const queryString = query.toString()
-  const baseUrl = config.frontendUrl.replace(/\/$/, "")
-  const redirectTarget = `${baseUrl}/registration${queryString ? `?${queryString}` : ""}`
-  res.redirect(302, redirectTarget)
+// ✅ FIX SPP-1032: Resolve slug to ID before redirect (e.g., /registration/echatbot-hq-support → uses real workspace ID)
+app.get("/registration/:workspaceId", async (req, res) => {
+  const { workspaceId: workspaceIdOrSlug } = req.params
+  
+  try {
+    // 🔍 Lookup workspace by ID or slug
+    const workspace = await prisma.workspace.findFirst({
+      where: {
+        OR: [
+          { id: workspaceIdOrSlug },
+          { slug: workspaceIdOrSlug }
+        ],
+        deletedAt: null // Only active workspaces
+      },
+      select: { id: true }
+    })
+
+    if (!workspace) {
+      logger.warn(`[REGISTRATION-REDIRECT] Workspace not found: ${workspaceIdOrSlug}`)
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html><head><title>Workspace Not Found</title></head>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>Workspace Not Found</h1>
+          <p>The registration link you're trying to access is invalid or the workspace has been deleted.</p>
+          <p>Please contact support if you believe this is an error.</p>
+        </body></html>
+      `)
+    }
+
+    // Use real workspace ID (not slug)
+    const query = new URLSearchParams(req.query as Record<string, string>)
+    query.set("workspace", workspace.id) // ✅ Always use real ID
+    const queryString = query.toString()
+    const baseUrl = config.frontendUrl.replace(/\/$/, "")
+    const redirectTarget = `${baseUrl}/registration${queryString ? `?${queryString}` : ""}`
+    
+    logger.info(`[REGISTRATION-REDIRECT] ${workspaceIdOrSlug} → ${workspace.id}`)
+    res.redirect(302, redirectTarget)
+  } catch (error) {
+    logger.error(`[REGISTRATION-REDIRECT] Error:`, error)
+    return res.status(500).send("Internal Server Error")
+  }
 })
 
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes

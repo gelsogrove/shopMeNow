@@ -12,6 +12,7 @@ export interface CreateQueueMessageDto {
   status?: string
   errorMessage?: string
   conversationMessageId?: string // FK to ConversationMessage for timeline tracking
+  skipSecurityCheck?: boolean // 🔐 Skip security validation for trusted messages (e.g., welcome message)
 }
 
 export class WhatsAppQueueRepository {
