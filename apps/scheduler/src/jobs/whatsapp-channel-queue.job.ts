@@ -527,15 +527,16 @@ export async function whatsappChannelQueueJob(): Promise<void> {
           })
 
           // 📊 Append Security Check step to timeline
+          // Show the REAL compiled prompt and model from the LLM security check (not hardcoded descriptions)
           const securityTimestamp = new Date()
           await appendTimelineStep(message.conversationMessageId, {
             type: 'sub_agent',
             agent: 'Security Check',
             timestamp: securityTimestamp.toISOString(),
-            model: 'security-patterns/v1',
-            systemPrompt: 'Validates outgoing messages using pattern-based detection: SQL injection, XSS, command injection, sensitive data exposure, spam patterns. Also checks customer blacklist status.',
+            model: securityCheck.debugModel || 'security-patterns/v1',
+            systemPrompt: securityCheck.debugPrompt || 'Pattern-based detection: SQL injection, XSS, command injection, sensitive data exposure, spam patterns. Customer blacklist check.',
             input: {
-              messageContent: message.messageContent.substring(0, 200) + (message.messageContent.length > 200 ? '...' : ''),
+              messageContent: message.messageContent.substring(0, 500) + (message.messageContent.length > 500 ? '...' : ''),
               customerId: message.customerId,
             },
             output: {

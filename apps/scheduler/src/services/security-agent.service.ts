@@ -5,6 +5,10 @@ import Handlebars from 'handlebars'
 interface SecurityCheckResult {
   isSafe: boolean
   reason?: string
+  /** Debug: the actual compiled prompt sent to LLM (for debug view) */
+  debugPrompt?: string
+  /** Debug: the LLM model used (for debug view) */
+  debugModel?: string
 }
 
 interface SecurityCheckParams {
@@ -56,6 +60,28 @@ export class SecurityAgentService {
   ]
   private readonly openRouterApiKey = process.env.OPENROUTER_API_KEY || ''
   private readonly openRouterBaseUrl = 'https://openrouter.ai/api/v1'
+
+  /**
+   * Check if a URL is from an internal eChatbot domain.
+   * Used to override LLM false-positives on internal links.
+   */
+  private isInternalUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url)
+      return parsed.hostname === 'echatbot.ai' || parsed.hostname === 'www.echatbot.ai'
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Check if ALL URLs in a message are from internal eChatbot domains.
+   * Returns true if there are no URLs or all URLs are internal.
+   */
+  private allUrlsInternal(messageContent: string): boolean {
+    const urls = messageContent.match(/https?:\/\/[^\s)]+/gi) || []
+    return urls.every(url => this.isInternalUrl(url))
+  }
 
   private buildSystemPrompt(basePrompt: string, variables: Record<string, string>) {
     // Use Handlebars to process BOTH conditionals ({{#if}}) AND variable replacement ({{var}})
@@ -173,6 +199,14 @@ export class SecurityAgentService {
         allowedExternalLinks: allowedLinks, // Fixed: camelCase to match Handlebars template
       })
 
+      // Log compiled prompt for debugging (truncated to avoid log bloat)
+      logger.info('🔒 Security LLM check', {
+        workspaceId,
+        model: securityAgent.model,
+        promptLength: systemPrompt.length,
+        promptPreview: systemPrompt.substring(0, 300),
+      })
+
       const userMessage = `Check if this message is safe:\n\n"${messageContent}"\n\nRespond with JSON: {"safe": true/false, "message": "...", "reason": "..."}` 
 
       const response = await fetch(`${this.openRouterBaseUrl}/chat/completions`, {
@@ -221,7 +255,19 @@ export class SecurityAgentService {
 
       const safe = parsed.safe !== false
       const reason = parsed.blockedReason || parsed.reason
-      return { isSafe: safe, reason }
+
+      // 🛡️ Override LLM false-positive: if reason is UNAUTHORIZED_LINK but ALL URLs
+      // in the message are from internal echatbot.ai domains, allow the message.
+      // The LLM sometimes fails to match URLs against the allowed domain patterns.
+      if (!safe && reason?.includes('UNAUTHORIZED_LINK') && this.allUrlsInternal(messageContent)) {
+        logger.info('✅ Security override: LLM flagged UNAUTHORIZED_LINK but all URLs are internal eChatbot domains — allowing message', {
+          workspaceId,
+          customerId,
+        })
+        return { isSafe: true, debugPrompt: systemPrompt, debugModel: securityAgent.model }
+      }
+
+      return { isSafe: safe, reason, debugPrompt: systemPrompt, debugModel: securityAgent.model }
     } catch (error) {
       logger.warn('⚠️ LLM security check error - allowing message', { error })
       return { isSafe: true }

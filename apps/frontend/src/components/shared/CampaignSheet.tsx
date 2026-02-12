@@ -103,9 +103,9 @@ export function CampaignSheet({
     if (campaign) {
       setName(campaign.name || "")
       setMessage(campaign.message || campaign.bodyPreview || "")
-      setFrequency(campaign.frequency || "ONCE")
+      setFrequency((campaign.frequency || "ONCE").toUpperCase())
       setIsActive(campaign.isActive ?? true)
-      setTargetingType(campaign.targetingType || "ALL")
+      setTargetingType((campaign.targetingType || "ALL").toUpperCase())
       setTargetCustomerIds(campaign.targetCustomerIds || [])
       setTagId(campaign.tagId || null)
       setSendAt(campaign.sendAt ? campaign.sendAt.slice(0, 16) : "")

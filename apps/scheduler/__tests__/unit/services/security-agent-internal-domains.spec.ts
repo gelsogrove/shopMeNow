@@ -415,4 +415,176 @@ Validate message.`,
       expect(result.reason).toContain('too long')
     })
   })
+
+  /**
+   * SCENARIO: LLM returns UNAUTHORIZED_LINK but all URLs are internal eChatbot domains.
+   * RULE: The code must override the LLM's false-positive and allow the message.
+   * ROOT CAUSE: GPT-4o-mini sometimes fails to match https://echatbot.ai/registration/...
+   * against the allowed pattern echatbot.ai/registration/* in the prompt.
+   */
+  describe('LLM UNAUTHORIZED_LINK override for internal URLs', () => {
+    beforeEach(() => {
+      // Customer exists, not blacklisted
+      mockPrisma.customers.findUnique.mockResolvedValue({
+        isBlacklisted: false,
+        name: 'Andrea Gelsomino',
+      })
+
+      // Security agent config exists
+      mockPrisma.agentConfig.findFirst.mockResolvedValue({
+        systemPrompt: `# Security Agent
+{{#if allowedExternalLinks}}
+## ALLOWED EXTERNAL DOMAINS
+{{allowedExternalLinks}}
+{{/if}}
+Check if message is safe. Respond with JSON.`,
+        model: 'openai/gpt-4o-mini',
+        temperature: 0,
+        maxTokens: 500,
+      })
+
+      // Workspace exists
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        allowedExternalLinks: [],
+      })
+    })
+
+    // SCENARIO: LLM incorrectly flags echatbot.ai registration link as UNAUTHORIZED_LINK
+    // RULE: Override LLM false-positive when all URLs are from echatbot.ai domain
+    it('should override LLM UNAUTHORIZED_LINK for echatbot.ai registration links', async () => {
+      // Setup: LLM returns UNAUTHORIZED_LINK false-positive
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                safe: false,
+                reason: 'UNAUTHORIZED_LINK',
+                details: 'External URL detected',
+              }),
+            },
+          }],
+        }),
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+
+      const result = await service.validateMessage({
+        workspaceId: 'echatbot-hq-support',
+        messageContent: 'Ciao! Registrati qui: https://echatbot.ai/registration/echatbot-hq-support?token=abc123',
+        customerId: 'cust-456',
+      })
+
+      // RULE: Must be safe - override LLM false-positive
+      expect(result.isSafe).toBe(true)
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.stringContaining('Security override'),
+        expect.any(Object),
+      )
+
+      process.env.OPENROUTER_API_KEY = originalKey
+    })
+
+    // SCENARIO: LLM flags external URL as UNAUTHORIZED_LINK — should NOT override
+    // RULE: Only override for internal echatbot.ai domains, not external URLs
+    it('should NOT override LLM UNAUTHORIZED_LINK for external URLs', async () => {
+      // Setup: LLM correctly blocks an external URL
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                safe: false,
+                reason: 'UNAUTHORIZED_LINK',
+                details: 'External URL detected',
+              }),
+            },
+          }],
+        }),
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Visit https://evil-site.com/phishing for more info',
+        customerId: 'cust-456',
+      })
+
+      // RULE: Must remain blocked — external URL is NOT internal
+      expect(result.isSafe).toBe(false)
+      expect(result.reason).toBe('UNAUTHORIZED_LINK')
+
+      process.env.OPENROUTER_API_KEY = originalKey
+    })
+
+    // SCENARIO: Message with www.echatbot.ai URL should also be overridden
+    it('should override LLM UNAUTHORIZED_LINK for www.echatbot.ai URLs', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                safe: false,
+                reason: 'UNAUTHORIZED_LINK',
+                details: 'URL not in allowed list',
+              }),
+            },
+          }],
+        }),
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Ecco il tuo carrello: https://www.echatbot.ai/cart?token=xyz',
+        customerId: 'cust-456',
+      })
+
+      expect(result.isSafe).toBe(true)
+      process.env.OPENROUTER_API_KEY = originalKey
+    })
+
+    // SCENARIO: Mixed internal + external URLs should NOT override
+    // RULE: ALL URLs must be internal for the override to apply
+    it('should NOT override when message has mix of internal and external URLs', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                safe: false,
+                reason: 'UNAUTHORIZED_LINK',
+              }),
+            },
+          }],
+        }),
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Visit https://echatbot.ai/cart and also https://malicious.com/steal',
+        customerId: 'cust-456',
+      })
+
+      // RULE: Must remain blocked — not all URLs are internal
+      expect(result.isSafe).toBe(false)
+      process.env.OPENROUTER_API_KEY = originalKey
+    })
+  })
 })
