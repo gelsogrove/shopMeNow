@@ -133,7 +133,7 @@ export default function CampaignsPage() {
     setCampaignSheetOpen(true)
   }
 
-  const handleEditCampaign = (campaign: Campaign) => {
+  const handleEditCampaign = async (campaign: Campaign) => {
     if (!hasEnoughCreditForPush) {
       toast.error(
         `Insufficient credit to edit/run this campaign. Need $${pushCost.toFixed(
@@ -142,8 +142,23 @@ export default function CampaignsPage() {
       )
       return
     }
-    setSelectedCampaign(campaign)
-    setCampaignSheetOpen(true)
+
+    try {
+      const { data } = await api.get(
+        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}`
+      )
+      setSelectedCampaign({
+        ...campaign,
+        ...data,
+      })
+      setCampaignSheetOpen(true)
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Unable to load campaign"
+      toast.error(msg)
+    }
   }
 
   // Handle campaign form submission (create/update)
