@@ -171,7 +171,7 @@ export class SecurityAgentService {
       const systemPrompt = this.buildSystemPrompt(securityAgent.systemPrompt, {
         nameUser: customerName,
         workspaceId,
-        ALLOWED_EXTERNAL_LINKS: allowedLinks,
+        allowedExternalLinks: allowedLinks, // Fixed: camelCase to match Handlebars template
       })
 
       const userMessage = `Check if this message is safe:\n\n"${messageContent}"\n\nRespond with JSON: {"safe": true/false, "message": "...", "reason": "..."}` 

@@ -83,7 +83,7 @@ describe('SecurityAgentService - Internal Domains', () => {
 
       // Setup: security agent config exists
       mockPrisma.agentConfig.findFirst.mockResolvedValue({
-        systemPrompt: 'Check security. Allowed links: {{ALLOWED_EXTERNAL_LINKS}}',
+        systemPrompt: 'Check security. Allowed links: {{allowedExternalLinks}}',
         model: 'openai/gpt-4o-mini',
         temperature: 0,
         maxTokens: 500,
@@ -148,7 +148,7 @@ describe('SecurityAgentService - Internal Domains', () => {
       })
 
       mockPrisma.agentConfig.findFirst.mockResolvedValue({
-        systemPrompt: 'Allowed: {{ALLOWED_EXTERNAL_LINKS}}',
+        systemPrompt: 'Allowed: {{allowedExternalLinks}}',
         model: 'openai/gpt-4o-mini',
         temperature: 0,
         maxTokens: 500,
