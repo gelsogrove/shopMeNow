@@ -111,6 +111,8 @@ interface FormData {
   widgetLanguage: string
   widgetIcon: string
   widgetUseChannelLogo: boolean
+  widgetAutoSuggestionsEnabled: boolean
+  widgetQuickReplies: string[]
   // AI Config
   customAiRules: string
   welcomeMessage: string
