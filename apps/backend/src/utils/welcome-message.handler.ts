@@ -19,6 +19,9 @@ import logger from "../utils/logger"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { PromptProcessorService } from "../services/prompt-processor.service"
 import { PromptVariableBuilder } from "../application/services/prompt-variable-builder.service"
+import { TokenService } from "../application/services/token.service"
+import { LinkGeneratorService } from "../application/services/link-generator.service"
+import { workspaceService } from "../services/workspace.service"
 
 export interface WelcomeMessageInput {
   customerId: string
@@ -431,11 +434,6 @@ export class WelcomeMessageHandler {
     workspaceId: string
   ): Promise<string> {
     try {
-      // Import services
-      const { TokenService } = require("../application/services/token.service")
-      const { LinkGeneratorService } = require("../application/services/link-generator.service")
-      const { workspaceService } = require("../services/workspace.service")
-
       // Create registration token
       const tokenService = new TokenService()
       const token = await tokenService.createRegistrationToken(phone, workspaceId)
