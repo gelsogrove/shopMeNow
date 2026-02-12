@@ -131,6 +131,43 @@ export class PushCampaignRepository {
     })
   }
 
+  /**
+   * Replace recipients and update campaign counts in a single transaction.
+   */
+  async replaceRecipients(
+    id: string,
+    workspaceId: string,
+    updateData: UpdatePushCampaignInput & { expectedRecipients: number },
+    recipients: RecipientCreateInput[]
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.pushCampaignRecipient.deleteMany({
+        where: { campaignId: id, workspaceId },
+      })
+
+      await tx.pushCampaignRecipient.createMany({
+        data: recipients.map((r) => ({
+          campaignId: id,
+          workspaceId,
+          customerId: r.customerId,
+          phone: r.phone,
+          status: r.status,
+          errorCode: r.errorCode,
+          errorMessage: r.errorMessage,
+          isBlacklisted: r.isBlacklisted ?? false,
+          isBlocked: r.isBlocked ?? false,
+          isFake: r.isFake ?? false,
+          optOutAt: r.optOutAt,
+        })),
+      })
+
+      return tx.pushCampaign.update({
+        where: { id, workspaceId },
+        data: updateData,
+      })
+    })
+  }
+
   async deleteCampaign(id: string, workspaceId: string) {
     return this.prisma.pushCampaign.delete({
       where: { id, workspaceId },

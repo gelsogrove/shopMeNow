@@ -37,6 +37,108 @@ export class PushCampaignService {
     this.repo = new PushCampaignRepository(prisma)
   }
 
+  /**
+   * Resolve target customers and build recipient rows according to targeting strategy.
+   */
+  private async buildRecipients(
+    workspaceId: string,
+    targetingType: CampaignTargetType,
+    manualCustomerIds?: string[] | null,
+    tagId?: string | null
+  ) {
+    let targetCustomerIds: string[] = []
+
+    if (targetingType === CampaignTargetType.ALL) {
+      const activeCustomers = await this.prisma.customers.findMany({
+        where: {
+          workspaceId,
+          activeChatbot: true,
+          deletedAt: null,
+          isBlacklisted: false,
+        },
+        select: { id: true },
+      })
+      targetCustomerIds = activeCustomers.map((c) => c.id)
+    } else if (targetingType === CampaignTargetType.MANUAL) {
+      targetCustomerIds = manualCustomerIds || []
+    } else if (targetingType === CampaignTargetType.TAGS && tagId) {
+      const taggedCustomers = await this.prisma.customers.findMany({
+        where: {
+          workspaceId,
+          tags: { has: tagId },
+          activeChatbot: true,
+          deletedAt: null,
+          isBlacklisted: false,
+        },
+        select: { id: true },
+      })
+      targetCustomerIds = taggedCustomers.map((c) => c.id)
+    }
+
+    const recipients: Array<{
+      workspaceId: string
+      customerId?: string
+      phone: string
+      status: PushCampaignRecipientStatus
+      errorCode?: string
+      errorMessage?: string
+      isBlacklisted?: boolean
+      optOutAt?: Date | null
+    }> = []
+
+    if (targetCustomerIds.length > 0) {
+      const customers = await this.prisma.customers.findMany({
+        where: {
+          workspaceId,
+          id: { in: targetCustomerIds },
+        },
+        select: {
+          id: true,
+          phone: true,
+          isBlacklisted: true,
+          activeChatbot: true,
+          push_notifications_consent: true,
+          push_notifications_consent_at: true,
+        },
+      })
+
+      for (const c of customers) {
+        const phone = c.phone ? this.sanitizePhone(c.phone) : ""
+        if (!phone) continue
+
+        // Rule: Must be not blacklisted, chatbot active, and have consent
+        if (c.isBlacklisted || !c.activeChatbot || !c.push_notifications_consent) {
+          recipients.push({
+            workspaceId,
+            customerId: c.id,
+            phone,
+            status: PushCampaignRecipientStatus.SKIPPED,
+            errorCode: c.isBlacklisted
+              ? "BLACKLISTED"
+              : !c.activeChatbot
+                ? "CHATBOT_INACTIVE"
+                : "OPT_OUT",
+            errorMessage: c.isBlacklisted
+              ? "Customer is blacklisted"
+              : !c.activeChatbot
+                ? "Chatbot is inactive for this customer"
+                : "Marketing opt-in missing",
+          })
+          continue
+        }
+
+        recipients.push({
+          workspaceId,
+          customerId: c.id,
+          phone,
+          status: PushCampaignRecipientStatus.PENDING,
+        })
+      }
+    }
+
+    return { recipients, targetCustomerIds }
+  }
+
   private sanitizePhone(phone: string): string {
     return phone.replace(/\s+/g, "")
   }
@@ -111,96 +213,12 @@ export class PushCampaignService {
     const throttlePerSecond = Number(input.throttlePerSecond ?? DEFAULT_THROTTLE_PER_SEC)
     const batchSize = Number(input.batchSize ?? DEFAULT_BATCH_SIZE)
 
-    // Build recipients list based on targeting
-    const recipients: Array<{
-      workspaceId: string
-      customerId?: string
-      phone: string
-      status: PushCampaignRecipientStatus
-      errorCode?: string
-      errorMessage?: string
-      isBlacklisted?: boolean
-      optOutAt?: Date | null
-    }> = []
-
-    let targetCustomerIds: string[] = []
-
-    if (input.targetingType === CampaignTargetType.ALL) {
-      const activeCustomers = await this.prisma.customers.findMany({
-        where: {
-          workspaceId: input.workspaceId,
-          activeChatbot: true,
-          deletedAt: null,
-          isBlacklisted: false,
-        },
-        select: { id: true },
-      })
-      targetCustomerIds = activeCustomers.map((c) => c.id)
-    } else if (input.targetingType === CampaignTargetType.MANUAL) {
-      targetCustomerIds = input.targetCustomerIds || []
-    } else if (input.targetingType === CampaignTargetType.TAGS && input.tagId) {
-      const taggedCustomers = await this.prisma.customers.findMany({
-        where: {
-          workspaceId: input.workspaceId,
-          tags: { has: input.tagId },
-          activeChatbot: true,
-          deletedAt: null,
-          isBlacklisted: false,
-        },
-        select: { id: true },
-      })
-      targetCustomerIds = taggedCustomers.map((c) => c.id)
-    }
-
-    if (targetCustomerIds.length > 0) {
-      const customers = await this.prisma.customers.findMany({
-        where: {
-          workspaceId: input.workspaceId,
-          id: { in: targetCustomerIds },
-        },
-        select: {
-          id: true,
-          phone: true,
-          isBlacklisted: true,
-          activeChatbot: true,
-          push_notifications_consent: true,
-          push_notifications_consent_at: true,
-        },
-      })
-
-      for (const c of customers) {
-        const phone = c.phone ? this.sanitizePhone(c.phone) : ""
-        if (!phone) continue
-
-        // Rule: Must be not blacklisted, chatbot active, and have consent
-        if (c.isBlacklisted || !c.activeChatbot || !c.push_notifications_consent) {
-          recipients.push({
-            workspaceId: input.workspaceId,
-            customerId: c.id,
-            phone,
-            status: PushCampaignRecipientStatus.SKIPPED,
-            errorCode: c.isBlacklisted
-              ? "BLACKLISTED"
-              : !c.activeChatbot
-                ? "CHATBOT_INACTIVE"
-                : "OPT_OUT",
-            errorMessage: c.isBlacklisted
-              ? "Customer is blacklisted"
-              : !c.activeChatbot
-                ? "Chatbot is inactive for this customer"
-                : "Marketing opt-in missing",
-          })
-          continue
-        }
-
-        recipients.push({
-          workspaceId: input.workspaceId,
-          customerId: c.id,
-          phone,
-          status: PushCampaignRecipientStatus.PENDING,
-        })
-      }
-    }
+    const { recipients, targetCustomerIds } = await this.buildRecipients(
+      input.workspaceId,
+      input.targetingType,
+      input.targetCustomerIds,
+      input.tagId
+    )
 
     if (recipients.length === 0) {
       throw new AppError(
@@ -253,6 +271,11 @@ export class PushCampaignService {
   }
 
   async update(workspaceId: string, id: string, input: UpdatePushCampaignInput) {
+    const existing = await this.repo.findById(id, workspaceId)
+    if (!existing) {
+      throw new AppError(404, "Campaign not found")
+    }
+
     if (input.sendAt !== undefined) {
       if (input.sendAt === null) {
         // keep null
@@ -274,12 +297,38 @@ export class PushCampaignService {
         typeof input.sendAt === "string" ? new Date(input.sendAt) : input.sendAt
       input.nextRunAt = this.calculateNextRunAt(input.frequency, sendAtDate)
     }
-    const existing = await this.repo.findById(id, workspaceId)
-    if (!existing) {
-      throw new AppError(404, "Campaign not found")
-    }
+
+    // If targeting changes we must rebuild recipients to keep counts consistent
+    const targetingChanged = input.targetingType && input.targetingType !== existing.targetingType
+    const nextTargetingType = (input.targetingType as CampaignTargetType) || existing.targetingType
+    const nextTargetIds = input.targetCustomerIds ?? existing.targetCustomerIds ?? []
+    const nextTagId = input.tagId ?? (existing as any).tagId ?? null
 
     try {
+      if (targetingChanged) {
+        const { recipients, targetCustomerIds } = await this.buildRecipients(
+          workspaceId,
+          nextTargetingType,
+          nextTargetIds,
+          nextTagId
+        )
+
+        if (recipients.length === 0) {
+          throw new AppError(400, "No valid recipients found for the selected targeting")
+        }
+
+        return await this.repo.replaceRecipients(
+          id,
+          workspaceId,
+          {
+            ...input,
+            expectedRecipients: recipients.length,
+            targetCustomerIds,
+          },
+          recipients
+        )
+      }
+
       return await this.repo.updateCampaign(id, workspaceId, input)
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {

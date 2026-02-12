@@ -359,7 +359,13 @@ export function CampaignSheet({
               <Label>Targeting Type</Label>
               <Select
                 value={targetingType || "ALL"}
-                onValueChange={(v) => setTargetingType(v.toUpperCase())}
+                onValueChange={(v) => {
+                  setTargetingType(v.toUpperCase())
+                  // Reset recipients when switching away from manual to avoid stale counts
+                  if (v.toUpperCase() !== "MANUAL") {
+                    setTargetCustomerIds([])
+                  }
+                }}
                 disabled={!isEditMode}
               >
                 <SelectTrigger>
