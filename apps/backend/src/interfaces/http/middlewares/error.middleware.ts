@@ -28,8 +28,19 @@ export const errorMiddleware = (
     return
   }
 
-  res.status(500).json({
+  // For non-AppError, expose minimal debug to help troubleshooting (no stack)
+  const payload: any = {
     status: "error",
     message: "Internal server error",
-  })
+  }
+
+  // If the error has a known code/message, surface it to speed up debugging (trusted admin UI)
+  if (err && (err as any).message) {
+    payload.debug = {
+      message: (err as any).message,
+      code: (err as any).code,
+    }
+  }
+
+  res.status(500).json(payload)
 }
