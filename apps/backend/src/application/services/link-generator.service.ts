@@ -37,10 +37,17 @@ export class LinkGeneratorService {
         `📎 Created short ${linkType} link: ${shortUrl} → ${originalUrl}`
       )
       return shortUrl
-    } catch (error) {
-      logger.warn(
-        `⚠️ Failed to create short URL for ${linkType}, using long URL:`,
-        error
+    } catch (error: any) {
+      // 🚨 CRITICAL: Log detailed error for Heroku diagnosis
+      logger.error(
+        `🚨 Failed to create short URL for ${linkType} - FALLING BACK TO LONG URL:`,
+        {
+          errorMessage: error?.message,
+          errorCode: error?.code,
+          originalUrl: originalUrl.substring(0, 100),
+          workspaceId,
+          linkType,
+        }
       )
       return originalUrl // Fallback to original URL
     }
@@ -218,10 +225,19 @@ export class LinkGeneratorService {
         `📎 Created short ${linkType} link (expires: ${expiresAt.toISOString()}): ${shortUrl} → ${originalUrl}`
       )
       return shortUrl
-    } catch (error) {
-      logger.warn(
-        `⚠️ Failed to create short URL for ${linkType}, using long URL:`,
-        error
+    } catch (error: any) {
+      // 🚨 CRITICAL: Log detailed error for Heroku diagnosis
+      // Known issue: URL shortener intermittently fails on Heroku
+      logger.error(
+        `🚨 Failed to create short URL for ${linkType} - FALLING BACK TO LONG URL:`,
+        {
+          errorMessage: error?.message,
+          errorCode: error?.code,
+          originalUrl: originalUrl.substring(0, 100),
+          workspaceId,
+          linkType,
+          expiresAt: expiresAt.toISOString(),
+        }
       )
       return originalUrl
     }

@@ -1730,11 +1730,29 @@ export class LLMRouterService {
             })
 
             // Single reminder text with [LINK_REGISTRATION] token
-            // LLM will translate to customer's language naturally
             const reminderText = "\n\n[LINK_REGISTRATION]"
 
-            // Append to final response (LinkReplacementService will replace [LINK_REGISTRATION])
+            // Append to final response
             finalCleanResponse += reminderText
+
+            // 🔧 FIX: Run link replacement on the appended token
+            // The main replaceTokens() call already happened earlier, so the newly
+            // appended [LINK_REGISTRATION] token must be replaced now
+            try {
+              const reminderLinkResult = await this.linkReplacementService.replaceTokens(
+                { response: finalCleanResponse },
+                params.customerId,
+                params.workspaceId
+              )
+              if (reminderLinkResult.success && reminderLinkResult.response) {
+                finalCleanResponse = reminderLinkResult.response
+                logger.info("✅ Registration reminder: [LINK_REGISTRATION] replaced with actual link")
+              }
+            } catch (linkError) {
+              logger.warn("⚠️ Failed to replace [LINK_REGISTRATION] in reminder, removing token", { error: linkError })
+              // Remove the raw token to avoid showing it to the user
+              finalCleanResponse = finalCleanResponse.replace(/\[LINK_REGISTRATION\]/g, "")
+            }
             
             logger.info("✅ Registration reminder appended", {
               originalLength: finalCleanResponse.length - reminderText.length,
@@ -2064,6 +2082,10 @@ export class LLMRouterService {
     // 🔧 NEW: Track execution steps for debug timeline
     const debugSteps: DebugStep[] = []
 
+    // 🔧 LOOP-SAFETY: break out if LLM keeps requesting same function
+    let lastFunctionSignature = ""
+    let repeatedFunctionCalls = 0
+
     // 🆕 NOTE: FAST-PATH removed - LLM now handles all selections using conversation history
     // The preprocessor enriches the message with hints, and LLM understands context
 
@@ -2160,6 +2182,33 @@ export class LLMRouterService {
         const functionArgs = JSON.parse(
           llmResponse.function_call.arguments || "{}"
         )
+
+        // LOOP-SAFETY: detect endless identical function calls (e.g., greetings)
+        const currentSignature = `${functionName}:${JSON.stringify(functionArgs)}`
+        if (currentSignature === lastFunctionSignature) {
+          repeatedFunctionCalls += 1
+        } else {
+          repeatedFunctionCalls = 0
+          lastFunctionSignature = currentSignature
+        }
+
+        if (repeatedFunctionCalls >= 2) {
+          logger.warn("⚠️ Detected repeating function calls. Breaking with safe fallback.", {
+            functionName,
+            iterations,
+            repeatedFunctionCalls,
+          })
+          return {
+            response:
+              "Ciao! Sto ancora elaborando, ma posso già aiutarti: dimmi cosa ti serve (ordini, prodotti o supporto) e ci penso io.",
+            tokensUsed: totalTokens,
+            iterations,
+            agentUsed,
+            confidence: 0.5,
+            debugSteps,
+            selectedProduct: selectedProductFromAgent,
+          }
+        }
 
         logger.info(`⚙️ LLM requested function: ${functionName}`, {
           args: functionArgs,

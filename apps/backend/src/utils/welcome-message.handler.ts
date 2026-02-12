@@ -20,7 +20,7 @@ import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { PromptProcessorService } from "../services/prompt-processor.service"
 import { PromptVariableBuilder } from "../application/services/prompt-variable-builder.service"
 import { TokenService } from "../application/services/token.service"
-import { LinkGeneratorService } from "../application/services/link-generator.service"
+import { linkGeneratorService } from "../application/services/link-generator.service"
 import { workspaceService } from "../services/workspace.service"
 
 export interface WelcomeMessageInput {
@@ -268,7 +268,7 @@ export class WelcomeMessageHandler {
           })
 
           if (customer?.phone) {
-            // Create registration token directly (bypass LinkGeneratorService)
+            // Create registration token
             const tokenService = new TokenService()
             const token = await tokenService.createRegistrationToken(customer.phone, input.workspaceId)
 
@@ -276,21 +276,18 @@ export class WelcomeMessageHandler {
             const { url: workspaceUrl, registrationPage } = 
               await workspaceService.getWorkspaceURLWithRegistration(input.workspaceId)
 
-            // Build direct link WITHOUT URL shortener (workaround for Heroku Prisma issue)
-            // Extract path from registrationPage if it's a full URL (e.g., https://echatbot.ai/registration/...)
-            let registrationPath = registrationPage || `/registration/${input.workspaceId}`
-            if (registrationPath.startsWith('http://') || registrationPath.startsWith('https://')) {
-              try {
-                registrationPath = new URL(registrationPath).pathname
-              } catch (error) {
-                logger.warn("⚠️ Failed to parse registrationPage URL, using as-is", { registrationPage })
-              }
-            }
-            const registrationLink = `${workspaceUrl}${registrationPath}?token=${token}`
+            // Use LinkGeneratorService to create short link (with retry logic)
+            const registrationLink = await linkGeneratorService.generateRegistrationLink(
+              token,
+              workspaceUrl,
+              input.workspaceId,
+              registrationPage
+            )
 
             welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
-            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with DIRECT link (no shortener)", {
-              linkGenerated: registrationLink.substring(0, 50) + "...",
+            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with link", {
+              linkGenerated: registrationLink.substring(0, 60) + "...",
+              isShortLink: registrationLink.includes("/s/"),
             })
           } else {
             logger.warn("⚠️ [WelcomeMessageHandler] Customer phone not found, cannot replace [LINK_REGISTRATION]")

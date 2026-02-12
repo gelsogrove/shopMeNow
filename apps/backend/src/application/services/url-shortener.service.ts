@@ -33,59 +33,67 @@ export class UrlShortenerService {
     workspaceId: string,
     expiresAt?: Date
   ): Promise<{ shortCode: string; shortUrl: string }> {
-    try {
-      let shortCode: string
-      let attempts = 0
-      const maxAttempts = 10
+    const maxRetries = 3
 
-      // Generate unique short code
-      do {
-        shortCode = this.generateShortCode()
-        attempts++
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        const shortCode = this.generateShortCode()
 
-        if (attempts > maxAttempts) {
-          throw new Error("Could not generate unique short code")
-        }
+        // Default expiration: 1 hour from now
+        const defaultExpiration = new Date()
+        defaultExpiration.setHours(defaultExpiration.getHours() + 1)
 
-        // Check if code already exists
-        const existing = await prisma.shortUrls.findFirst({
-          where: { shortCode },
+        // Create short URL record directly (single DB call)
+        // If unique constraint violation on shortCode, retry with new code
+        await prisma.shortUrls.create({
+          data: {
+            shortCode,
+            originalUrl,
+            workspaceId,
+            expiresAt: expiresAt || defaultExpiration,
+            clicks: 0,
+            isActive: true,
+          },
         })
 
-        if (!existing) break
-      } while (true)
+        // 🔧 FIX: Use frontendUrl instead of appUrl for short links
+        // This ensures links use echatbot.ai instead of Heroku domain
+        // The /s/:shortCode route is served by the backend but uses frontend domain
+        const baseUrl = config.frontendUrl.replace(/\/$/, "")
+        const shortUrl = `${baseUrl}/s/${shortCode}`
 
-      // Default expiration: 1 hour from now
-      const defaultExpiration = new Date()
-      defaultExpiration.setHours(defaultExpiration.getHours() + 1)
+        logger.info(
+          `📎 Short URL created: ${shortUrl} → ${originalUrl.substring(0, 50)}...`
+        )
 
-      // Create short URL record
-      await prisma.shortUrls.create({
-        data: {
-          shortCode,
-          originalUrl,
+        return { shortCode, shortUrl }
+      } catch (error: any) {
+        // P2002 = Unique constraint violation (shortCode collision) → retry with new code
+        if (error?.code === "P2002" && retry < maxRetries - 1) {
+          logger.info(`🔄 Short code collision, retrying (${retry + 1}/${maxRetries})`)
+          continue
+        }
+
+        // Log detailed error for diagnosis (Heroku Prisma issues)
+        logger.error("❌ Error creating short URL:", {
+          retry: retry + 1,
+          maxRetries,
+          errorCode: error?.code,
+          errorMessage: error?.message,
+          originalUrl: originalUrl.substring(0, 80),
           workspaceId,
-          expiresAt: expiresAt || defaultExpiration,
-          clicks: 0,
-          isActive: true,
-        },
-      })
+        })
 
-      // 🔧 FIX: Use frontendUrl instead of appUrl for short links
-      // This ensures links use echatbot.ai instead of Heroku domain
-      // The /s/:shortCode route is served by the backend but uses frontend domain
-      const baseUrl = config.frontendUrl.replace(/\/$/, "")
-      const shortUrl = `${baseUrl}/s/${shortCode}`
+        if (retry >= maxRetries - 1) {
+          throw new Error(`Failed to create short URL after ${maxRetries} attempts: ${error?.message || "Unknown error"}`)
+        }
 
-      logger.info(
-        `📎 Short URL created: ${shortUrl} → ${originalUrl.substring(0, 50)}...`
-      )
-
-      return { shortCode, shortUrl }
-    } catch (error) {
-      logger.error("❌ Error creating short URL:", error)
-      throw new Error("Failed to create short URL")
+        // Small delay before retry for transient errors
+        await new Promise(resolve => setTimeout(resolve, 200 * (retry + 1)))
+      }
     }
+
+    throw new Error("Failed to create short URL: exhausted retries")
   }
 
   /**

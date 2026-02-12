@@ -43,7 +43,7 @@ export class TokenService {
         "registration",    // type
         workspaceId,       // workspaceId
         undefined,         // payload
-        undefined,         // expiresIn (uses TOKEN_EXPIRATION env or 1h default)
+        "7d",             // expiresIn: 7 days (registration links should last longer than default 1h)
         undefined,         // userId
         phoneNumber,       // phoneNumber
         undefined,         // ipAddress

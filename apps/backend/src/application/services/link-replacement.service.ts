@@ -454,12 +454,52 @@ export class LinkReplacementService {
               /LINK_REGISTRATION/g,
               registrationLink
             )
-          } else {
-            logger.warn("⚠️ Missing customer phone for registration link", {
-              customerId,
-              workspaceId,
-            })
-          }
+        } else {
+          logger.warn("⚠️ Missing customer phone for registration link", {
+            customerId,
+            workspaceId,
+          })
+
+          // 🔧 FALLBACK: Use public registration page without token
+          // We still want to show a working link in the widget even if phone is unknown.
+          const { url: workspaceUrl, registrationPage } =
+            await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
+
+          const baseUrl = (workspaceUrl || config.frontendUrl).replace(/\/$/, "")
+          const fallbackRegistrationLink =
+            registrationPage && registrationPage.trim() !== ""
+              ? registrationPage.startsWith("http")
+                ? registrationPage.trim()
+                : `${baseUrl}/${registrationPage.replace(/^\//, "")}`
+              : `${baseUrl}/registration`
+
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(\[LINK_REGISTRATION\]\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${fallbackRegistrationLink})${punctuation}`
+          )
+
+          replacedResponse = replacedResponse.replace(
+            /\[([^\]]+)\]\(LINK_REGISTRATION\)([\.!?,;:]?)/g,
+            (match, text, punctuation) =>
+              `[${text}](${fallbackRegistrationLink})${punctuation}`
+          )
+
+          replacedResponse = replacedResponse.replace(
+            /\[LINK_REGISTRATION\]([\)\.]?[\.!?,]?)/g,
+            (match, suffix) => {
+              const cleanSuffix = suffix.replace(/\)/g, "")
+              return cleanSuffix
+                ? `${fallbackRegistrationLink}${cleanSuffix}`
+                : fallbackRegistrationLink
+            }
+          )
+
+          replacedResponse = replacedResponse.replace(
+            /LINK_REGISTRATION/g,
+            fallbackRegistrationLink
+          )
+        }
         } catch (error) {
           logger.error("❌ Error generating registration link:", error)
         }

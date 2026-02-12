@@ -164,8 +164,8 @@ export class SecureTokenService {
       const effectiveExpiresIn =
         expiresIn || process.env.TOKEN_EXPIRATION || "1h"
 
-      // Parse duration correctly for both hours (h) and minutes (m)
-      const match = effectiveExpiresIn.match(/^(\d+)([hm])$/)
+      // Parse duration correctly for days (d), hours (h), and minutes (m)
+      const match = effectiveExpiresIn.match(/^(\d+)([dhm])$/)
       if (!match) {
         // Fallback to 1 hour if format is invalid
         expiresAt.setHours(expiresAt.getHours() + 1)
@@ -173,7 +173,10 @@ export class SecureTokenService {
         const value = parseInt(match[1], 10)
         const unit = match[2]
 
-        if (unit === "m") {
+        if (unit === "d") {
+          // Days
+          expiresAt.setDate(expiresAt.getDate() + value)
+        } else if (unit === "m") {
           // Minutes
           expiresAt.setMinutes(expiresAt.getMinutes() + value)
         } else {

@@ -874,7 +874,7 @@ Would you like details about something specific?"`,
       language: "ENG",
       currency: "EUR",
       description: "eChatbot Enterprise Support - product education channel",
-      url: "https://echatbot.ai/support",
+      url: "https://www.echatbot.ai",
       channelStatus: true,
       deletedAt: null,
       welcomeMessage:
