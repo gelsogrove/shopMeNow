@@ -35,7 +35,7 @@ export async function pushCampaignsJob(): Promise<void> {
     try {
       const workspace = await prisma.workspace.findUnique({
         where: { id: campaign.workspaceId },
-        select: { ownerId: true, name: true, enableWhatsapp: true },
+        select: { ownerId: true, name: true, enableWhatsapp: true, defaultLanguage: true },
       })
 
       if (!workspace?.enableWhatsapp) {
@@ -176,6 +176,7 @@ export async function pushCampaignsJob(): Promise<void> {
             campaign,
             customer,
             workspaceName: workspace.name || 'eChatbot',
+            workspaceLanguage: workspace.defaultLanguage || 'it',
           })
 
           await prisma.$transaction(async (tx) => {
@@ -372,10 +373,12 @@ async function buildMessageContent({
   campaign,
   customer,
   workspaceName,
+  workspaceLanguage,
 }: {
   campaign: any
   customer: any
   workspaceName: string
+  workspaceLanguage: string
 }): Promise<string> {
   const template = campaign.message || campaign.bodyPreview || 'Campaign message'
   const name = customer.name || ''
@@ -400,7 +403,7 @@ async function buildMessageContent({
   })
 
   // Translate to customer's preferred language (best-effort)
-  const targetLanguage = normalizeLanguage(customer.language)
+  const targetLanguage = normalizeLanguage(customer.language, workspaceLanguage)
   try {
     const translated = await translationService.translateMessage(
       message,
@@ -413,12 +416,15 @@ async function buildMessageContent({
   }
 }
 
-function normalizeLanguage(lang?: string | null): string {
-  if (!lang) return 'it'
-  const l = lang.toLowerCase()
-  if (l.startsWith('en')) return 'en'
-  if (l.startsWith('es')) return 'es'
-  if (l.startsWith('pt')) return 'pt'
+function normalizeLanguage(
+  customerLang?: string | null,
+  workspaceLang?: string | null
+): string {
+  const lang = (customerLang || workspaceLang || 'it').toLowerCase()
+  if (lang.startsWith('en')) return 'en'
+  if (lang.startsWith('es')) return 'es'
+  if (lang.startsWith('pt')) return 'pt'
+  if (lang.startsWith('fr')) return 'fr'
   return 'it'
 }
 

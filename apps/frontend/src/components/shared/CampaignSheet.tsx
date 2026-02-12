@@ -207,12 +207,15 @@ export function CampaignSheet({
       sendAtDate = parsed.toISOString()
     }
 
+    const normalizedFrequency = (frequency || "ONCE").toUpperCase()
+    const normalizedTargeting = (targetingType || "ALL").toUpperCase()
+
     const formData = {
       name: name.trim(),
       message: trimmedMessage,
-      frequency,
+      frequency: normalizedFrequency,
       isActive,
-      targetingType,
+      targetingType: normalizedTargeting,
       targetCustomerIds,
       tagId,
       sendAt: sendAtDate,
@@ -225,6 +228,14 @@ export function CampaignSheet({
       await onSubmit(formData, campaign?.id)
     } catch (error) {
       logger.error("Error submitting campaign:", error)
+      const apiMessage =
+        (error as any)?.response?.data?.message ||
+        (error as any)?.response?.data?.error
+      if (apiMessage) {
+        toast.error(apiMessage)
+      } else {
+        toast.error("Error saving campaign")
+      }
     } finally {
       setSaving(false)
     }
@@ -293,11 +304,12 @@ export function CampaignSheet({
             {/* Frequency */}
             <div className="space-y-2">
               <Label htmlFor="frequency">Frequency</Label>
-              <Select
-                value={frequency}
-                onValueChange={setFrequency}
-                disabled={!isEditMode}
-              >
+            <Select
+              value={frequency || "ONCE"}
+              onValueChange={(v) => setFrequency(v.toUpperCase())}
+              disabled={!isEditMode}
+              required
+            >
                 <SelectTrigger id="frequency">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
@@ -346,8 +358,8 @@ export function CampaignSheet({
             <div className="space-y-2">
               <Label>Targeting Type</Label>
               <Select
-                value={targetingType}
-                onValueChange={setTargetingType}
+                value={targetingType || "ALL"}
+                onValueChange={(v) => setTargetingType(v.toUpperCase())}
                 disabled={!isEditMode}
               >
                 <SelectTrigger>

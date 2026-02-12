@@ -22,12 +22,12 @@ import {
 } from "@/components/ui/tooltip"
 import { Progress } from "@/components/ui/progress"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { BillingSection } from "@/components/billing/BillingSection"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
@@ -99,6 +99,99 @@ const normalizePlanType = (value?: string | null): PlanType => {
   return "FREE_TRIAL"
 }
 
+const CHECKLIST_ITEM_HELP: Record<string, { title: string; description: string; impact: string }> = {
+  "channel-active": {
+    title: "Channel Is Active",
+    description: "Ensures the selected channel is enabled and ready to receive conversations.",
+    impact: "If disabled, customers will not be able to reach your assistant.",
+  },
+  faqs: {
+    title: "At Least 10 FAQs",
+    description: "Gives the assistant enough context to answer the most common questions accurately.",
+    impact: "More FAQs improve answer quality and reduce repetitive support.",
+  },
+  "bot-identity": {
+    title: "Bot Identity",
+    description: "Defines how the assistant introduces itself and its purpose.",
+    impact: "A clear identity builds trust and sets expectations.",
+  },
+  "default-language": {
+    title: "Default Language",
+    description: "Sets the primary language used for responses and system messages.",
+    impact: "Prevents mismatched language experiences for customers.",
+  },
+  "welcome-message": {
+    title: "Welcome Message",
+    description: "First message users see when they open a conversation.",
+    impact: "Sets the tone and guides users on how to interact.",
+  },
+  "wip-message": {
+    title: "WIP Message",
+    description: "Fallback message when the assistant is under maintenance or paused.",
+    impact: "Keeps users informed instead of leaving them without a response.",
+  },
+  "assistant-name": {
+    title: "Assistant Name",
+    description: "The public-facing name shown in conversations.",
+    impact: "Makes the assistant feel consistent and branded.",
+  },
+  "tone-of-voice": {
+    title: "Tone of Voice",
+    description: "Defines the communication style used by the assistant.",
+    impact: "Aligns the bot personality with your brand voice.",
+  },
+  "human-support": {
+    title: "Human Support",
+    description: "Allows escalation to a human operator when needed.",
+    impact: "Improves customer satisfaction for complex requests.",
+  },
+  "frustration-triggers": {
+    title: "Frustration Triggers",
+    description: "Rules that detect frustration and trigger human escalation.",
+    impact: "Prevents negative experiences and saves at-risk conversations.",
+  },
+  campaigns: {
+    title: "Campaign",
+    description: "At least one campaign configured for proactive outreach.",
+    impact: "Unlocks broadcast or follow-up workflows.",
+  },
+  paypal: {
+    title: "PayPal Account",
+    description: "Connects PayPal for automatic billing and plan management.",
+    impact: "Keeps billing uninterrupted and the channel active.",
+  },
+  "whatsapp-settings": {
+    title: "WhatsApp Access Settings",
+    description: "Required WhatsApp API details for sending and receiving messages.",
+    impact: "Missing values block message delivery.",
+  },
+  "widget-settings": {
+    title: "Widget Access Settings",
+    description: "Widget title, primary color, icon, and language configuration.",
+    impact: "Ensures the widget looks consistent and works across the site.",
+  },
+  services: {
+    title: "Services",
+    description: "At least one service published in your catalog.",
+    impact: "Allows the assistant to answer service-related questions.",
+  },
+  products: {
+    title: "Products",
+    description: "At least one product published in your catalog.",
+    impact: "Enables product recommendations and sales flows.",
+  },
+  "sales-agents": {
+    title: "Sales Agent",
+    description: "At least one sales agent configured for assisted selling.",
+    impact: "Lets the assistant route lead requests to the right agent.",
+  },
+  offers: {
+    title: "Offers",
+    description: "At least one offer configured for promotions.",
+    impact: "Allows the assistant to highlight active promotions.",
+  },
+}
+
 const initialWizardData: WizardFormData = {
   alias: "",
   channelType: 'WHATSAPP',
@@ -163,6 +256,7 @@ export function WorkspaceSelectionPage() {
   const [selectedChecklist, setSelectedChecklist] = useState<WorkspaceChecklist | null>(null)
   const [selectedChecklistWorkspaceId, setSelectedChecklistWorkspaceId] = useState<string | null>(null)
   const [checklistError, setChecklistError] = useState<string | null>(null)
+  const [activeChecklistItemKey, setActiveChecklistItemKey] = useState<string | null>(null)
   
   // Support tickets unread count (only loaded in Chat History)
   const supportUnreadCount = 0
@@ -184,6 +278,14 @@ export function WorkspaceSelectionPage() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [debugSavingId, setDebugSavingId] = useState<string | null>(null)
   const [activeSavingId, setActiveSavingId] = useState<string | null>(null)
+
+  const activeChecklistItem =
+    selectedChecklist?.items.find((item) => item.key === activeChecklistItemKey) ??
+    selectedChecklist?.items?.[0] ??
+    null
+  const activeChecklistHelp = activeChecklistItem
+    ? CHECKLIST_ITEM_HELP[activeChecklistItem.key]
+    : null
 
   // ============================================================================
   // WIZARD HELPERS
@@ -249,6 +351,14 @@ export function WorkspaceSelectionPage() {
     }
     return wizardStep - 1
   }
+
+  useEffect(() => {
+    if (selectedChecklist?.items?.length) {
+      setActiveChecklistItemKey(selectedChecklist.items[0].key)
+    } else {
+      setActiveChecklistItemKey(null)
+    }
+  }, [selectedChecklist?.workspaceId])
 
   const handleNextStep = () => {
     if (validateCurrentStep()) {
@@ -2595,82 +2705,144 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         </div>
       )}
 
-      <Sheet open={checklistOpen} onOpenChange={setChecklistOpen}>
-        <SheetContent side="right" className="w-[420px] sm:max-w-[420px]">
-          <SheetHeader className="border-b border-gray-200 pb-3">
-            <SheetTitle>Channel Setup Checklist</SheetTitle>
-            <SheetDescription>
-              {selectedChecklist
-                ? `${selectedChecklist.completedCount}/${selectedChecklist.totalCount} completed • ${selectedChecklist.percent}%`
-                : "Loading checklist..."}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-4 space-y-4">
-            {selectedChecklist ? (
-              <>
-                <div className="space-y-2">
-                  <Progress value={selectedChecklist.percent} className="h-2" />
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>
-                      {selectedChecklist.sellsProductsAndServices ? "E-commerce channel" : "Info channel"}
-                    </span>
-                    <span>{selectedChecklist.channelType}</span>
-                  </div>
+      <Dialog open={checklistOpen} onOpenChange={setChecklistOpen}>
+        <DialogContent className="max-w-5xl w-[92vw] p-0 overflow-hidden">
+          <div className="border-b border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 px-6 py-5">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <ListTodo className="h-5 w-5 text-emerald-600" />
+                Channel Setup Checklist
+              </DialogTitle>
+              <DialogDescription className="text-sm">
+                {selectedChecklist
+                  ? `${selectedChecklist.completedCount}/${selectedChecklist.totalCount} completed • ${selectedChecklist.percent}%`
+                  : "Loading checklist..."}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedChecklist && (
+              <div className="mt-4 space-y-2">
+                <Progress value={selectedChecklist.percent} className="h-2" />
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>
+                    {selectedChecklist.sellsProductsAndServices ? "E-commerce channel" : "Info channel"}
+                  </span>
+                  <span>{selectedChecklist.channelType}</span>
                 </div>
-                <div className="space-y-1">
-                  {selectedChecklist.items.map((item) => (
-                    <div
-                      key={item.key}
-                      onClick={() => item.action && handleChecklistAction(item)}
-                      className={`flex items-center gap-2 py-2 px-2 rounded-lg transition-colors ${
-                        item.action ? "cursor-pointer hover:bg-gray-50" : ""
-                      }`}
-                    >
-                      {/* Simple Checkbox */}
-                      <div
-                        className={`flex h-5 w-5 items-center justify-center rounded border-2 flex-shrink-0 ${
-                          item.completed
-                            ? "bg-emerald-500 border-emerald-500"
-                            : "border-gray-300 bg-white"
-                        }`}
-                      >
-                        {item.completed && <Check className="h-3.5 w-3.5 text-white stroke-[3]" />}
-                      </div>
-                      
-                      {/* Label */}
-                      <p className={`text-sm flex-1 ${
-                        item.completed 
-                          ? "text-gray-500 line-through" 
-                          : "text-gray-900"
-                      }`}>
-                        {item.label}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : checklistError ? (
-              <div className="space-y-3 text-sm text-gray-600">
-                <p>{checklistError}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const workspace = workspaces.find((w) => w.id === selectedChecklistWorkspaceId)
-                    if (workspace) {
-                      handleOpenChecklist(workspace, { stopPropagation: () => {} } as any)
-                    }
-                  }}
-                >
-                  Retry
-                </Button>
               </div>
-            ) : (
-              <div className="text-sm text-gray-500">Loading checklist...</div>
             )}
           </div>
-        </SheetContent>
-      </Sheet>
+
+          <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="px-6 py-5">
+              {selectedChecklist ? (
+                <div className="space-y-2">
+                  {selectedChecklist.items.map((item) => {
+                    const isActive = item.key === activeChecklistItem?.key
+                    return (
+                      <div
+                        key={item.key}
+                        onMouseEnter={() => setActiveChecklistItemKey(item.key)}
+                        onFocus={() => setActiveChecklistItemKey(item.key)}
+                        onClick={() => item.action && handleChecklistAction(item)}
+                        className={`group flex items-center gap-3 rounded-xl border px-3 py-2 transition-all ${
+                          isActive
+                            ? "border-emerald-200 bg-emerald-50/60 shadow-sm"
+                            : "border-transparent hover:border-gray-200 hover:bg-gray-50"
+                        } ${item.action ? "cursor-pointer" : ""}`}
+                      >
+                        <div
+                          className={`flex h-6 w-6 items-center justify-center rounded-lg border-2 flex-shrink-0 ${
+                            item.completed
+                              ? "bg-emerald-500 border-emerald-500"
+                              : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {item.completed && <Check className="h-3.5 w-3.5 text-white stroke-[3]" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`text-sm font-medium ${
+                            item.completed 
+                              ? "text-gray-500 line-through" 
+                              : "text-gray-900"
+                          }`}>
+                            {item.label}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {item.completed ? "Completed" : "Not completed yet"}
+                          </p>
+                        </div>
+                        {item.action && (
+                          <ChevronRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-0.5" />
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : checklistError ? (
+                <div className="space-y-3 text-sm text-gray-600">
+                  <p>{checklistError}</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const workspace = workspaces.find((w) => w.id === selectedChecklistWorkspaceId)
+                      if (workspace) {
+                        handleOpenChecklist(workspace, { stopPropagation: () => {} } as any)
+                      }
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-500">Loading checklist...</div>
+              )}
+            </div>
+
+            <div className="border-t lg:border-t-0 lg:border-l border-gray-100 bg-gray-50/60 px-6 py-5">
+              <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                {activeChecklistItem ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          {activeChecklistHelp?.title ?? activeChecklistItem.label}
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                          {activeChecklistItem.completed ? "Status: Completed" : "Status: Incomplete"}
+                        </p>
+                      </div>
+                      <div className={`rounded-full px-2 py-1 text-xs font-medium ${
+                        activeChecklistItem.completed
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}>
+                        {activeChecklistItem.completed ? "Ready" : "Needs attention"}
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      {activeChecklistHelp?.description ?? "Hover an item to see what it means."}
+                    </p>
+                    <div className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                      {activeChecklistHelp?.impact ?? "This item helps ensure your setup works as expected."}
+                    </div>
+                    {activeChecklistItem.action && (
+                      <div className="text-xs text-gray-500">
+                        Click the item to open the exact settings page.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <p>Hover an item on the left to see the explanation here.</p>
+                    <p>This panel explains why each value matters and how it affects your channel.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
 
       {/* Footer - Fixed at bottom */}
