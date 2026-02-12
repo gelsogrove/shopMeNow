@@ -277,7 +277,16 @@ export class WelcomeMessageHandler {
               await workspaceService.getWorkspaceURLWithRegistration(input.workspaceId)
 
             // Build direct link WITHOUT URL shortener (workaround for Heroku Prisma issue)
-            const registrationLink = `${workspaceUrl}${registrationPage}?token=${token}`
+            // Extract path from registrationPage if it's a full URL (e.g., https://echatbot.ai/registration/...)
+            let registrationPath = registrationPage || `/registration/${input.workspaceId}`
+            if (registrationPath.startsWith('http://') || registrationPath.startsWith('https://')) {
+              try {
+                registrationPath = new URL(registrationPath).pathname
+              } catch (error) {
+                logger.warn("⚠️ Failed to parse registrationPage URL, using as-is", { registrationPage })
+              }
+            }
+            const registrationLink = `${workspaceUrl}${registrationPath}?token=${token}`
 
             welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
             logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with DIRECT link (no shortener)", {
