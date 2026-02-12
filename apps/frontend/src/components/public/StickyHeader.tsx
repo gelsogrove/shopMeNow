@@ -6,6 +6,7 @@ interface StickyHeaderProps {
   title: string
   subtitle?: string
   icon?: React.ReactNode
+  logoUrl?: string | null
   showMenu?: boolean
   token?: string | null
   currentPage?: "cart" | "orders" | "profile"
@@ -24,6 +25,7 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
   title,
   subtitle,
   icon,
+  logoUrl,
   showMenu = true,
   token,
   currentPage,
@@ -88,7 +90,20 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
               minWidth: 0,
             }}
           >
-            {icon && (
+            {/* Logo or Icon */}
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={title}
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: designSystem.borderRadius.lg,
+                  objectFit: "cover",
+                  flexShrink: 0,
+                }}
+              />
+            ) : icon ? (
               <div
                 style={{
                   display: "flex",
@@ -104,7 +119,7 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
               >
                 {icon}
               </div>
-            )}
+            ) : null}
             <div style={{ minWidth: 0, overflow: "hidden" }}>
               <h1
                 style={{

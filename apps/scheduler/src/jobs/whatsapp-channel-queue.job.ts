@@ -436,8 +436,6 @@ export async function whatsappChannelQueueJob(): Promise<void> {
         where: {
           workspaceId: workspace.id,
           status: 'pending',
-          // Skip widget messages: handled synchronously without queue
-          channel: { not: 'widget' },
         },
         take: 10,
         orderBy: { createdAt: 'asc' }, // FIFO order

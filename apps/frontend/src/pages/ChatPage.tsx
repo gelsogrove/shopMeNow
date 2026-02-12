@@ -31,6 +31,7 @@ import {
   MessageSquare,
   Pencil,
   Send,
+  ShieldX,
   Trash2,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -526,6 +527,7 @@ export function ChatPage() {
           sender: message.direction === "INBOUND" ? "customer" : "user",
           timestamp: message.createdAt,
           agentName: message.metadata?.agentName || undefined,
+          deliveryStatus: message.deliveryStatus,
           metadata: message.metadata, // 🔧 AGGIUNTO! Ora il metadata viene passato correttamente
         }))
 
@@ -1510,7 +1512,15 @@ export function ChatPage() {
                         "MANUAL_OPERATOR_CONTROL" ||
                       message.metadata?.sentBy === "HUMAN_OPERATOR"
 
+                    const isBlockedMessage =
+                      message.deliveryStatus === "blocked"
+
                     const getMessageStyle = () => {
+                      // 🛑 BLOCKED: Security Agent blocked this message
+                      if (isBlockedMessage) {
+                        return "bg-red-50 text-red-800 border-l-4 border-red-500 opacity-75"
+                      }
+
                       if (!isAgentMessage) {
                         return isOperatorControl
                           ? "bg-orange-50 text-orange-900 border-l-4 border-orange-400" // Customer under control
@@ -1551,11 +1561,24 @@ export function ChatPage() {
                       >
                         <div
                           className={`p-3 rounded-lg max-w-[75%] relative ${
-                            isOperatorMessage || isOperatorControl || isManualOperator 
+                            isOperatorMessage || isOperatorControl || isManualOperator || isBlockedMessage
                               ? 'pt-6' 
                               : ''
                           } ${getMessageStyle()}`}
                         >
+                          {/* 🛑 SECURITY BLOCKED BADGE */}
+                          {isBlockedMessage && (
+                            <div className="absolute -top-2 -left-2">
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-medium bg-red-600 text-white"
+                                title="This message was blocked by the Security Agent and NOT sent to the customer"
+                              >
+                                <ShieldX className="w-3 h-3" />
+                                BLOCKED
+                              </span>
+                            </div>
+                          )}
+
                           {/* 🚨 OPERATOR CONTROL BADGE */}
                           {(isOperatorMessage ||
                             isOperatorControl ||
@@ -1605,6 +1628,14 @@ export function ChatPage() {
                               {isOperatorControl && (
                                 <span className="text-[10px] font-medium bg-orange-200 text-orange-800 px-2 py-0.5 rounded ml-2">
                                   📋 Under Manual Control
+                                </span>
+                              )}
+
+                              {/* 🛑 Blocked Message Indicator */}
+                              {isBlockedMessage && (
+                                <span className="text-[10px] font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded ml-2 flex items-center gap-1">
+                                  <ShieldX className="w-3 h-3" />
+                                  Not sent to customer
                                 </span>
                               )}
                             </div>

@@ -37,6 +37,11 @@ interface CustomerProfile {
   push_notifications_consent_at: string | null
   createdAt: string
   updatedAt: string
+  workspace?: {
+    id: string
+    name: string
+    logoUrl?: string | null
+  }
 }
 
 const CustomerProfilePublicPage: React.FC = () => {
@@ -317,11 +322,12 @@ const CustomerProfilePublicPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <StickyHeader
-        title={texts.personalData}
+        title={profileData?.workspace?.name || texts.personalData}
         subtitle={texts.contactInfo}
         customerLanguage={customerLanguage}
         token={token}
         currentPage="profile"
+        logoUrl={profileData?.workspace?.logoUrl}
         icon={profileIcon}
       />
 
