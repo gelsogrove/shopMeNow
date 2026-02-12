@@ -677,7 +677,7 @@ Would you like details about something specific?"`,
         type: "TEXT",
         aiGenerated: true,
         metadata: {
-          agentSelected: "CUSTOMER_SUPPORT",
+          agentSelected: "INFO_AGENT",
           workspace: "BellItalia Info",
         },
         createdAt: new Date(Date.now() - 1000 * 60 * 2),

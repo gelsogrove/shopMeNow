@@ -29,7 +29,7 @@ export const ECOMMERCE_TEMPLATE_FILES: Record<string, string> = {
 
 // 🗂️ INFORMATIONAL TEMPLATE FILES (5 files)
 export const INFORMATIONAL_TEMPLATE_FILES: Record<string, string> = {
-  CUSTOMER_SUPPORT: "01-info-agent.template.md",  // Main conversational agent for info-only channels
+  INFO_AGENT: "01-info-agent.template.md",  // Main conversational agent for info-only channels
   SECURITY: "02-security.template.md",
   TRANSLATION: "03-translation.template.md",
   SUMMARY_AGENT: "04-summary.template.md",
@@ -38,6 +38,9 @@ export const INFORMATIONAL_TEMPLATE_FILES: Record<string, string> = {
 
 // Agents available ONLY for e-commerce workspaces
 export const ECOMMERCE_ONLY_AGENTS = ["ROUTER", "PRODUCT_SEARCH", "ORDER_TRACKING", "CART_MANAGEMENT", "CUSTOMER_SUPPORT", "PROFILE_MANAGEMENT", "PRODUCT_CONTEXT", "ORDER_OPTIMIZATION"]
+
+// Agents available ONLY for informational workspaces
+export const INFORMATIONAL_ONLY_AGENTS = ["INFO_AGENT"]
 
 // All e-commerce agent types
 export const ECOMMERCE_AGENTS = Object.keys(ECOMMERCE_TEMPLATE_FILES)

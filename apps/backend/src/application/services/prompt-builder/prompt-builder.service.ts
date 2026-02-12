@@ -184,7 +184,7 @@ ${content}`
       return workspace.hasHumanSupport === true
     }
 
-    // Always available: ROUTER, CUSTOMER_SUPPORT, PROFILE_MANAGEMENT, SECURITY, TRANSLATION
+    // Always available: ROUTER, CUSTOMER_SUPPORT/INFO_AGENT, PROFILE_MANAGEMENT, SECURITY, TRANSLATION
     return true
   }
 
@@ -197,6 +197,7 @@ ${content}`
       "PRODUCT_SEARCH" as AgentType,
       "ORDER_TRACKING" as AgentType,
       "CUSTOMER_SUPPORT" as AgentType,
+      "INFO_AGENT" as AgentType,
       "PROFILE_MANAGEMENT" as AgentType,
       "SECURITY" as AgentType,
       "TRANSLATION" as AgentType,

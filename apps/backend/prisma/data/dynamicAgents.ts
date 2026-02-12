@@ -116,12 +116,12 @@ export const dynamicAgents = (
   baseAgents.push({
     workspaceId,
     name: isInformational ? "Info Agent" : "Customer Support Agent",
-    type: "CUSTOMER_SUPPORT" as AgentType,
+    type: (isInformational ? "INFO_AGENT" : "CUSTOMER_SUPPORT") as AgentType,
     icon: "Headset",
     description: isInformational
       ? "Answers FAQs and informational requests with optional escalation"
       : "Customer support with conditional human escalation",
-    systemPrompt: loadTemplate("CUSTOMER_SUPPORT", hasEcommerce),
+    systemPrompt: loadTemplate(isInformational ? "INFO_AGENT" : "CUSTOMER_SUPPORT", hasEcommerce),
     model: "openai/gpt-4o-mini",
     temperature: 0.3,
     maxTokens: 2048,

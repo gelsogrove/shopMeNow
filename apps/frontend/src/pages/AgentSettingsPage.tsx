@@ -205,6 +205,7 @@ export function AgentSettingsPage() {
       case "CART_MANAGEMENT":
       case "ORDER_TRACKING":
       case "CUSTOMER_SUPPORT":
+      case "INFO_AGENT":
         return Bot
       case "SECURITY":
         return Shield
@@ -227,6 +228,7 @@ export function AgentSettingsPage() {
       case "ORDER_TRACKING":
         return "rgb(156, 39, 176)" // Purple
       case "CUSTOMER_SUPPORT":
+      case "INFO_AGENT":
         return "rgb(233, 30, 99)" // Pink
       case "SECURITY":
         return "rgb(244, 67, 54)" // Red

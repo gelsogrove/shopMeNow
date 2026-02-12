@@ -11,7 +11,7 @@
  * Replaces direct IntentParser calls in ChatEngine.
  * 
  * Strategy Selection:
- * - Informational workspaces (sellsProductsAndServices=false) → Always CUSTOMER_SUPPORT
+ * - Informational workspaces (sellsProductsAndServices=false) → Always INFO_AGENT
  * - E-commerce workspaces (sellsProductsAndServices=true) → Full Router LLM
  * 
  * This service is the entry point for ALL message routing decisions.

@@ -427,7 +427,7 @@ export function AgentFlowDiagram({
   const [isResetting, setIsResetting] = useState(false)
 
   const getResolvedMeta = (type: string) => {
-    if (!sellsProductsAndServices && type === "CUSTOMER_SUPPORT") {
+    if (!sellsProductsAndServices && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
       return INFO_AGENT_METADATA
     }
     return AGENT_METADATA[type]
@@ -435,7 +435,7 @@ export function AgentFlowDiagram({
 
   // Get display name for agent - "Info Agent" for informational channels
   const getAgentDisplayName = (type: string, meta: typeof AGENT_METADATA[keyof typeof AGENT_METADATA]): string => {
-    if (!sellsProductsAndServices && type === "CUSTOMER_SUPPORT") {
+    if (!sellsProductsAndServices && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
       return "Info Agent"
     }
     return meta.name
@@ -551,7 +551,7 @@ export function AgentFlowDiagram({
         workspaceType: sellsProductsAndServices ? "ecommerce" : "informational",
         agents: agents.map(agent => ({
           type: agent.type,
-          name: !sellsProductsAndServices && agent.type.toUpperCase() === "CUSTOMER_SUPPORT"
+          name: !sellsProductsAndServices && (agent.type.toUpperCase() === "CUSTOMER_SUPPORT" || agent.type.toUpperCase() === "INFO_AGENT")
             ? "Info Agent"
             : agent.name,
           systemPrompt: agent.systemPrompt,
@@ -661,16 +661,16 @@ export function AgentFlowDiagram({
         
         {/* Root Agent */}
         <AgentNode
-          agent={getAgent(sellsProductsAndServices ? "ROUTER" : "CUSTOMER_SUPPORT")}
-          metadata={getResolvedMeta(sellsProductsAndServices ? "ROUTER" : "CUSTOMER_SUPPORT")}
+          agent={getAgent(sellsProductsAndServices ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
+          metadata={getResolvedMeta(sellsProductsAndServices ? "ROUTER" : "INFO_AGENT")}
           displayName={
             sellsProductsAndServices
               ? "Router Agent"
-              : getAgentDisplayName("CUSTOMER_SUPPORT", INFO_AGENT_METADATA)
+              : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
           }
           isEditable={true}
           isActive={true}
-          onClick={() => handleAgentClick(sellsProductsAndServices ? "ROUTER" : "CUSTOMER_SUPPORT")}
+          onClick={() => handleAgentClick(sellsProductsAndServices ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
           size="large"
         />
         {!sellsProductsAndServices && (

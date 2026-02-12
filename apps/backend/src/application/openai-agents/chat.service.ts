@@ -192,7 +192,7 @@ export class OpenAIChatService {
         confidence: 0.95, // SDK doesn't provide confidence, assume high
         tokensUsed: this.estimateTokens(responseText),
         executionTimeMs,
-        wasFAQ: agentUsed === "CUSTOMER_SUPPORT",
+        wasFAQ: agentUsed === "CUSTOMER_SUPPORT" || agentUsed === "INFO_AGENT",
         sdkDebugInfo: {
           agentChain: this.extractAgentChain(result),
           handoffs: this.countHandoffs(result),

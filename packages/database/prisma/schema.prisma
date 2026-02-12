@@ -1736,7 +1736,8 @@ enum AgentType {
   PRODUCT_SEARCH // order: 2 - Product search specialist
   CART_MANAGEMENT // order: 3 - Cart operations
   ORDER_TRACKING // order: 4 - Order viewing
-  CUSTOMER_SUPPORT // order: 5 - Support & escalation
+  CUSTOMER_SUPPORT // order: 5 - Support & escalation (ecommerce)
+  INFO_AGENT // order: 0 - Main agent for informational workspaces (FAQ/support)
   SUMMARY_AGENT // order: 5.5 - Conversation summarization
   PROFILE_MANAGEMENT // order: 6 - Profile modifications
   NOTIFICATIONS // order: 7 - Push notifications

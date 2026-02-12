@@ -142,14 +142,14 @@ export class AgentConfigController {
       const infoAgentFunctions = isInformational
         ? Array.from(
             new Set([
-              ...(getAgentFunctionNames("CUSTOMER_SUPPORT") || []),
+              ...(getAgentFunctionNames("INFO_AGENT") || []),
               ...(getAgentFunctionNames("PROFILE_MANAGEMENT") || []),
             ])
           )
         : null
 
       const mappedAgents = agents.map((agent) => {
-        if (isInformational && agent.type === "CUSTOMER_SUPPORT") {
+        if (isInformational && (agent.type === "CUSTOMER_SUPPORT" || agent.type === "INFO_AGENT")) {
           return {
             ...agent,
             name: "Info Agent",
@@ -536,7 +536,7 @@ export class AgentConfigController {
       for (const agent of agents) {
         const filename = `${agent.type.toLowerCase()}-agent.md`
         const displayName =
-          isInformational && agent.type === "CUSTOMER_SUPPORT"
+          isInformational && (agent.type === "CUSTOMER_SUPPORT" || agent.type === "INFO_AGENT")
             ? "Info Agent"
             : agent.name
         const content = agent.systemPrompt || `# ${displayName}\n\nNo prompt configured.`

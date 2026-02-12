@@ -632,6 +632,7 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
       ]
 
     case "CUSTOMER_SUPPORT":
+    case "INFO_AGENT":
       return ["contactSupport"]
 
     case "NOTIFICATIONS":

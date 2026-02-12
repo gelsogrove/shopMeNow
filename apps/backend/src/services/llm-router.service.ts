@@ -906,14 +906,18 @@ export class LLMRouterService {
       // If LLM fails → orphan INBOUND message in DB without response
       // MOVED TO: After safety layer (with OUTBOUND save) for atomic operation
 
-      // STEP 4: Load Router template from files
+      // STEP 4: Load Router/Info Agent template from files
+      // 🛍️ Feature 174: Informational workspaces use INFO_AGENT template instead of ROUTER
+      const isInformational = workspace?.sellsProductsAndServices === false
+      const mainAgentType = isInformational ? "INFO_AGENT" : "ROUTER"
       const routerSystemPrompt = await this.templateLoader.loadAndRenderTemplate(
-        "ROUTER",
+        mainAgentType,
         params.workspaceId
       )
 
-      logger.info("📋 Loaded ROUTER template from files", {
+      logger.info(`📋 Loaded ${mainAgentType} template from files`, {
         promptLength: routerSystemPrompt.length,
+        isInformational,
       })
 
       // STEP 4.5: Load customer data and dynamic content for Router prompt
@@ -1053,7 +1057,8 @@ export class LLMRouterService {
       let processedRouterPrompt: string
       try {
         // Try new PromptBuilder system (templates from filesystem)
-        const builtPrompt = await this.promptBuilder.build("ROUTER", {
+        // 🛍️ Feature 174: Use INFO_AGENT for informational workspaces
+        const builtPrompt = await this.promptBuilder.build(mainAgentType, {
           workspaceId: params.workspaceId,
           customerId: params.customerId,
         })
@@ -1065,7 +1070,7 @@ export class LLMRouterService {
           promptVariables
         )
         
-        logger.info("✅ Router prompt generated via PromptBuilder", {
+        logger.info(`✅ ${mainAgentType} prompt generated via PromptBuilder`, {
           sellsProductsAndServices: builtPrompt.variables.sellsProductsAndServices,
           promptLength: processedRouterPrompt.length,
         })
@@ -1442,6 +1447,7 @@ export class LLMRouterService {
         CART_MANAGEMENT: "CART_STATUS",
         ORDER_TRACKING: "ORDER_LIST",
         CUSTOMER_SUPPORT: "FAQ_ANSWER",
+        INFO_AGENT: "FAQ_ANSWER",
         PROFILE_MANAGEMENT: "PROFILE",
         ROUTER: "GENERIC",
       }
@@ -2049,7 +2055,8 @@ export class LLMRouterService {
 
     let totalTokens = 0
     let iterations = 0
-    let agentUsed: AgentType = "ROUTER"
+    // 🛍️ Feature 174: Default to INFO_AGENT for informational workspaces
+    let agentUsed: AgentType = sellsProductsAndServices ? "ROUTER" : "INFO_AGENT"
     
     // 🆕 Track selected product from ProductSearchAgentLLM for pendingAction
     let selectedProductFromAgent: { sku: string; name: string; itemType: string } | null = null
@@ -3970,6 +3977,7 @@ export class LLMRouterService {
         return new OrderTrackingAgentLLM(this.prisma)
 
       case "CUSTOMER_SUPPORT":
+      case "INFO_AGENT":
         return new CustomerSupportAgentLLM(this.prisma)
 
       default:

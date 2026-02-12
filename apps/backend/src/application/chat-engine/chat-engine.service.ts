@@ -1786,7 +1786,7 @@ export class ChatEngineService {
       }
 
       // ========================================================================
-      // STEP 0.2: Informational Workspace - Force CUSTOMER_SUPPORT prompt flow
+      // STEP 0.2: Informational Workspace - Force INFO_AGENT prompt flow
       // ========================================================================
       if (!workspaceConfig.sellsProductsAndServices) {
         return await this.handleInformationalMessage({
@@ -3588,7 +3588,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
       // ========================================================================
       // STEP 2.19: Informational Workspace - Override intent for FAQ-based response
-      // 🔒 Feature 174: If workspace doesn't sell products, force CUSTOMER_SUPPORT agent (with FAQ)
+      // 🔒 Feature 174: If workspace doesn't sell products, force INFO_AGENT (with FAQ)
       // This ensures GREETING, UPDATE_PROFILE, CHANGE_LANGUAGE go through unified Router flow
       // ========================================================================
       if ((this.isEcommerceIntent(intentResult.intent.type) || this.isInformationalIntent(intentResult.intent.type)) && !workspaceConfig.sellsProductsAndServices) {
@@ -3656,7 +3656,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // 🆕 NEW ARCHITECTURE: IntentParser returned UNKNOWN (no pattern/keyword match)
       // This means we have a complex query that needs LLM routing.
       // Delegate to RouterOrchestrationService which will:
-      // - Informational workspace → CUSTOMER_SUPPORT (FAQ system)
+      // - Informational workspace → INFO_AGENT (FAQ system)
       // - E-commerce workspace → Full Router LLM (all agents)
       if (intentResult.intent.type === "UNKNOWN") {
         logger.info("❓ [ChatEngine] UNKNOWN intent - delegating to RouterOrchestrationService", {
@@ -5484,7 +5484,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       conversationId,
       input.message,
       finalMessage,
-      AgentType.CUSTOMER_SUPPORT,
+      AgentType.INFO_AGENT,
       totalTokens,
       {
         steps: debugSteps,
@@ -5495,7 +5495,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
     return {
       message: finalMessage,
-      agentType: AgentType.CUSTOMER_SUPPORT,
+      agentType: AgentType.INFO_AGENT,
       wasHandled: true,
       intent: "ASK_FAQ",
       confidence: "HIGH",
@@ -5507,7 +5507,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         executionTimeMs: processingTimeMs,
       },
       response: finalMessage,
-      agentUsed: AgentType.CUSTOMER_SUPPORT,
+      agentUsed: AgentType.INFO_AGENT,
       tokensUsed: totalTokens,
       executionTimeMs: processingTimeMs,
       wasFAQ: false,
@@ -5635,16 +5635,16 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
   /**
    * Map intent type to AgentType for logging/analytics
-   * 🔒 Feature 174: Informational workspaces route e-commerce intents to CUSTOMER_SUPPORT with FAQ
+   * 🔒 Feature 174: Informational workspaces route e-commerce intents to INFO_AGENT with FAQ
    */
   private mapIntentToAgentType(intentType: string, workspaceConfig?: WorkspaceConfig): AgentType {
-    // 🆕 If informational workspace + e-commerce intent → route to CUSTOMER_SUPPORT (has FAQ in template)
+    // 🆕 If informational workspace + e-commerce intent → route to INFO_AGENT (has FAQ in template)
     if (
       workspaceConfig &&
       !workspaceConfig.sellsProductsAndServices &&
       this.isEcommerceIntent(intentType)
     ) {
-      return AgentType.CUSTOMER_SUPPORT
+      return AgentType.INFO_AGENT
     }
 
     const mapping: Record<string, AgentType> = {

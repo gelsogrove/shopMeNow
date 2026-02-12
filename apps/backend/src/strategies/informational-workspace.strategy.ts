@@ -4,8 +4,8 @@
  * Routing strategy for informational workspaces (sellsProductsAndServices=false).
  * 
  * Behavior:
- * - ALWAYS routes to CUSTOMER_SUPPORT agent
- * - CUSTOMER_SUPPORT agent has FAQ system enabled
+ * - ALWAYS routes to INFO_AGENT
+ * - INFO_AGENT has FAQ system enabled
  * - No product catalog, cart, or order functionality
  * - Simple routing: Customer question → FAQ/Support agent
  * 
@@ -45,8 +45,8 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
   }
 
   /**
-   * Route ALL messages to CUSTOMER_SUPPORT agent
-   * CUSTOMER_SUPPORT has FAQ system enabled
+   * Route ALL messages to INFO_AGENT
+   * INFO_AGENT has FAQ system enabled
    */
   async route(context: RoutingContext, workspace: Workspace): Promise<RoutingResult> {
     const startTime = Date.now()
@@ -77,7 +77,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
         throw new Error(`Customer not found: ${context.customerId}`)
       }
 
-      // Create CUSTOMER_SUPPORT agent
+      // Create INFO_AGENT (CustomerSupportAgentLLM)
       const customerSupportAgent = new CustomerSupportAgentLLM(this.prisma)
 
       // Execute agent query
@@ -237,7 +237,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
 
       return {
         response: finalResponse, // ✅ NOW with LinkReplacement + Translation (+ Widget Security if widget)
-        agentType: "CUSTOMER_SUPPORT" as AgentType,
+        agentType: "INFO_AGENT" as AgentType,
         debugSteps,
         totalTokens:
           (agentResponse.tokensUsed || 0) +
