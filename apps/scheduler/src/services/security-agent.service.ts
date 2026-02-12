@@ -144,8 +144,20 @@ export class SecurityAgentService {
       })
 
       // 🛡️ ALWAYS allow internal eChatbot domains (aligned with backend SecurityAgent.ts)
-      // Allow any subdomain/path of echatbot.ai
-      const internalDomains = ['echatbot.ai', '*.echatbot.ai']
+      const internalDomains = [
+        'echatbot.ai',
+        'www.echatbot.ai',
+        'echatbot.ai/s/*', // Short links
+        'www.echatbot.ai/s/*', // Short links
+        'echatbot.ai/registration/*', // Registration links
+        'www.echatbot.ai/registration/*', // Registration links
+        'echatbot.ai/cart*', // Cart links
+        'www.echatbot.ai/cart*', // Cart links
+        'echatbot.ai/orders-public*', // Order links
+        'www.echatbot.ai/orders-public*', // Order links
+        'echatbot.ai/customer-profile*', // Profile links
+        'www.echatbot.ai/customer-profile*', // Profile links
+      ]
 
       // 🛡️ Merge internal domains with workspace-configured external links
       const allAllowedLinks = [

@@ -81,9 +81,18 @@ describe('SecurityAgentService - Internal Domains', () => {
         name: 'Test Customer',
       })
 
-      // Setup: security agent config exists
+      // Setup: security agent config exists WITH Handlebars {{#if}} conditionals
+      // This matches the REAL template stored in the database (agent_configs.systemPrompt)
       mockPrisma.agentConfig.findFirst.mockResolvedValue({
-        systemPrompt: 'Check security. Allowed links: {{allowedExternalLinks}}',
+        systemPrompt: `# Security Agent
+
+{{#if allowedExternalLinks}}
+## ALLOWED EXTERNAL DOMAINS
+The following domains are allowed for external links:
+{{allowedExternalLinks}}
+{{/if}}
+
+Check if message is safe. Respond with JSON.`,
         model: 'openai/gpt-4o-mini',
         temperature: 0,
         maxTokens: 500,
@@ -136,7 +145,81 @@ describe('SecurityAgentService - Internal Domains', () => {
       expect(systemPromptSent).toContain('myshop.com')
       expect(systemPromptSent).toContain('paypal.com')
 
+      // RULE: Handlebars {{#if}} blocks must be processed - NO raw template syntax in final prompt
+      expect(systemPromptSent).not.toContain('{{#if')
+      expect(systemPromptSent).not.toContain('{{/if}}')
+      expect(systemPromptSent).not.toContain('{{allowedExternalLinks}}')
+
+      // RULE: The ALLOWED EXTERNAL DOMAINS section must be rendered (not stripped)
+      expect(systemPromptSent).toContain('ALLOWED EXTERNAL DOMAINS')
+
       // Restore env
+      process.env.OPENROUTER_API_KEY = originalKey
+    })
+
+    // SCENARIO: Handlebars template with {{#if}} must NOT render "true" instead of actual values
+    // ROOT CAUSE OF BUG: buildSystemPrompt was doing 2-pass (booleans then regex) causing
+    // {{allowedExternalLinks}} to be replaced with "true" instead of actual domain list
+    it('should render actual domain values, NOT boolean "true" in Handlebars template', async () => {
+      mockPrisma.customers.findUnique.mockResolvedValue({
+        isBlacklisted: false,
+        name: 'Test Customer',
+      })
+
+      // Template with {{#if}} + {{variable}} inside (matches real DB template)
+      mockPrisma.agentConfig.findFirst.mockResolvedValue({
+        systemPrompt: `{{#if allowedExternalLinks}}
+## ALLOWED DOMAINS
+{{allowedExternalLinks}}
+{{/if}}
+Validate the message.`,
+        model: 'openai/gpt-4o-mini',
+        temperature: 0,
+        maxTokens: 500,
+      })
+
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        allowedExternalLinks: ['example.com', 'trusted.org'],
+      })
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '{"safe": true}' } }],
+        }),
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+
+      await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Hello, check https://echatbot.ai/registration/test',
+        customerId: 'cust-456',
+      })
+
+      expect(mockFetch).toHaveBeenCalled()
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+      const prompt = body.messages[0].content
+
+      // RULE: Must contain actual domain values, NOT the word "true"
+      expect(prompt).toContain('example.com')
+      expect(prompt).toContain('trusted.org')
+      expect(prompt).toContain('echatbot.ai')
+      expect(prompt).toContain('ALLOWED DOMAINS')
+
+      // RULE: Must NOT contain raw Handlebars syntax
+      expect(prompt).not.toContain('{{#if')
+      expect(prompt).not.toContain('{{/if}}')
+      expect(prompt).not.toContain('{{allowedExternalLinks}}')
+
+      // CRITICAL REGRESSION CHECK: Must NOT contain "true" as the domain value
+      // This was the bug - Handlebars replaced {{allowedExternalLinks}} with "true" (boolean)
+      // instead of the actual domain list
+      const allowedSection = prompt.split('ALLOWED DOMAINS')[1]?.split('Validate')[0] || ''
+      expect(allowedSection).not.toMatch(/^\s*true\s*$/m)
+
       process.env.OPENROUTER_API_KEY = originalKey
     })
 
@@ -148,7 +231,10 @@ describe('SecurityAgentService - Internal Domains', () => {
       })
 
       mockPrisma.agentConfig.findFirst.mockResolvedValue({
-        systemPrompt: 'Allowed: {{allowedExternalLinks}}',
+        systemPrompt: `{{#if allowedExternalLinks}}
+Allowed: {{allowedExternalLinks}}
+{{/if}}
+Validate message.`,
         model: 'openai/gpt-4o-mini',
         temperature: 0,
         maxTokens: 500,

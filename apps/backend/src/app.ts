@@ -786,57 +786,11 @@ logger.info("✅ Registered PayPal webhook handler at /api/v1/paypal/webhook (le
 // Versioned routes - API v1 is the only endpoint
 app.use("/api/v1", apiRouter)
 
-// 🔁 Legacy/compat redirect: /registration/:workspaceId → /registration?workspace=...
-// This keeps older frontend builds working while supporting the new path format.
-// ✅ FIX SPP-1032: Resolve slug to ID before redirect (e.g., /registration/echatbot-hq-support → uses real workspace ID)
-app.get("/registration/:workspaceId", async (req, res) => {
-  const { workspaceId: workspaceIdOrSlug } = req.params
-  logger.info(`[REGISTRATION-REDIRECT] 🔍 Received request for: ${workspaceIdOrSlug}`)
-  
-  try {
-    // 🔍 Lookup workspace by ID or slug
-    const workspace = await prisma.workspace.findFirst({
-      where: {
-        OR: [
-          { id: workspaceIdOrSlug },
-          { slug: workspaceIdOrSlug }
-        ],
-        deletedAt: null // Only active workspaces
-      },
-      select: { id: true }
-    })
-
-    if (!workspace) {
-      logger.warn(`[REGISTRATION-REDIRECT] Workspace not found: ${workspaceIdOrSlug}`)
-      return res.status(404).send(`
-        <!DOCTYPE html>
-        <html><head><title>Workspace Not Found</title></head>
-        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-          <h1>Workspace Not Found</h1>
-          <p>The registration link you're trying to access is invalid or the workspace has been deleted.</p>
-          <p>Please contact support if you believe this is an error.</p>
-        </body></html>
-      `)
-    }
-
-    // Use real workspace ID (not slug)
-    // Frontend expects: /registration/:workspaceId?token=xxx (workspaceId in PATH, not query)
-    const query = new URLSearchParams(req.query as Record<string, string>)
-    // Don't add workspace to query string - it goes in the path
-    const queryString = query.toString()
-    const baseUrl = config.frontendUrl.replace(/\/$/, "")
-    const redirectTarget = `${baseUrl}/registration/${workspace.id}${queryString ? `?${queryString}` : ""}`
-    
-    logger.info(`[REGISTRATION-REDIRECT] ${workspaceIdOrSlug} → ${workspace.id}`)
-    res.redirect(302, redirectTarget)
-  } catch (error) {
-    logger.error(`[REGISTRATION-REDIRECT] Error:`, error)
-    return res.status(500).send("Internal Server Error")
-  }
-})
-
 // 🌐 PRODUCTION: SPA fallback - serve index.html for all non-API routes
 // This MUST be after all API routes to avoid conflicts
+// NOTE: /registration/:workspaceId is handled by React Router (frontend route)
+// DO NOT add a backend handler for it - it would create a circular redirect loop
+// since frontendUrl and the backend are on the same domain (echatbot.ai)
 if (process.env.NODE_ENV === "production") {
   const frontendDistPath = path.join(backendRoot, "apps/frontend/dist")
   const frontendIndexPath = path.join(frontendDistPath, "index.html")
