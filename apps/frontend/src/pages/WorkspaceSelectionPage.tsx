@@ -257,6 +257,7 @@ export function WorkspaceSelectionPage() {
   const [selectedChecklistWorkspaceId, setSelectedChecklistWorkspaceId] = useState<string | null>(null)
   const [checklistError, setChecklistError] = useState<string | null>(null)
   const [activeChecklistItemKey, setActiveChecklistItemKey] = useState<string | null>(null)
+  const [showOnlyPending, setShowOnlyPending] = useState(false)
   
   // Support tickets unread count (only loaded in Chat History)
   const supportUnreadCount = 0
@@ -354,11 +355,15 @@ export function WorkspaceSelectionPage() {
 
   useEffect(() => {
     if (selectedChecklist?.items?.length) {
-      setActiveChecklistItemKey(selectedChecklist.items[0].key)
+      const firstVisible =
+        (showOnlyPending
+          ? selectedChecklist.items.filter((i) => !i.completed)
+          : selectedChecklist.items)[0]
+      setActiveChecklistItemKey(firstVisible ? firstVisible.key : null)
     } else {
       setActiveChecklistItemKey(null)
     }
-  }, [selectedChecklist?.workspaceId])
+  }, [selectedChecklist?.workspaceId, showOnlyPending])
 
   const handleNextStep = () => {
     if (validateCurrentStep()) {
@@ -2706,10 +2711,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       )}
 
       <Dialog open={checklistOpen} onOpenChange={setChecklistOpen}>
-        <DialogContent className="max-w-5xl w-[92vw] p-0 overflow-hidden">
-          <div className="border-b border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 px-6 py-5">
+        <DialogContent className="max-w-4xl w-[96vw] max-h-[90vh] p-0 overflow-hidden">
+          <div className="border-b border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-lime-50 px-4 sm:px-6 py-3 sm:py-4">
             <DialogHeader>
-              <DialogTitle className="text-xl flex items-center gap-2">
+              <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
                 <ListTodo className="h-5 w-5 text-emerald-600" />
                 Channel Setup Checklist
               </DialogTitle>
@@ -2720,23 +2725,43 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               </DialogDescription>
             </DialogHeader>
             {selectedChecklist && (
-              <div className="mt-4 space-y-2">
+              <div className="mt-3 space-y-2">
                 <Progress value={selectedChecklist.percent} className="h-2" />
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
                   <span>
                     {selectedChecklist.sellsProductsAndServices ? "E-commerce channel" : "Info channel"}
                   </span>
-                  <span>{selectedChecklist.channelType}</span>
+                  <div className="flex items-center gap-2">
+                    <span>{selectedChecklist.channelType}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] text-emerald-700">
+                      Done {selectedChecklist.completedCount}/{selectedChecklist.totalCount}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+                      Pending {selectedChecklist.totalCount - selectedChecklist.completedCount}
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={showOnlyPending ? "secondary" : "outline"}
+                      className="h-7 px-3 text-xs"
+                      onClick={() => setShowOnlyPending((v) => !v)}
+                    >
+                      {showOnlyPending ? "Show all" : "Show pending"}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="px-6 py-5">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="px-4 sm:px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)] lg:max-h-[calc(90vh-130px)]">
               {selectedChecklist ? (
                 <div className="space-y-2">
-                  {selectedChecklist.items.map((item) => {
+                  {(showOnlyPending
+                    ? selectedChecklist.items.filter((i) => !i.completed)
+                    : selectedChecklist.items
+                  ).map((item) => {
                     const isActive = item.key === activeChecklistItem?.key
                     return (
                       <div
@@ -2799,7 +2824,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               )}
             </div>
 
-            <div className="border-t lg:border-t-0 lg:border-l border-gray-100 bg-gray-50/60 px-6 py-5">
+            <div className="border-t lg:border-t-0 lg:border-l border-gray-100 bg-gray-50/60 px-4 sm:px-6 py-4 overflow-y-auto max-h-[calc(90vh-140px)] lg:max-h-[calc(90vh-130px)] hidden lg:block">
               <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
                 {activeChecklistItem ? (
                   <div className="space-y-3">
@@ -2839,6 +2864,49 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Mobile detail panel (stacked) */}
+          <div className="border-t border-gray-100 bg-gray-50/60 px-4 sm:px-6 py-4 lg:hidden">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+              {activeChecklistItem ? (
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900">
+                        {activeChecklistHelp?.title ?? activeChecklistItem.label}
+                      </h3>
+                      <p className="text-xs text-gray-500">
+                        {activeChecklistItem.completed ? "Status: Completed" : "Status: Incomplete"}
+                      </p>
+                    </div>
+                    <div className={`rounded-full px-2 py-1 text-xs font-medium ${
+                      activeChecklistItem.completed
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}>
+                      {activeChecklistItem.completed ? "Ready" : "Needs attention"}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    {activeChecklistHelp?.description ?? "Tap an item to see details."}
+                  </p>
+                  <div className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                    {activeChecklistHelp?.impact ?? "This item helps ensure your setup works as expected."}
+                  </div>
+                  {activeChecklistItem.action && (
+                    <div className="text-xs text-gray-500">
+                      Tap the item to open the exact settings page.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>Tap an item to see the explanation here.</p>
+                  <p>This panel explains why each value matters and how it affects your channel.</p>
+                </div>
+              )}
             </div>
           </div>
         </DialogContent>

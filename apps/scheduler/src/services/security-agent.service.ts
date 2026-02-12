@@ -144,9 +144,29 @@ export class SecurityAgentService {
         select: { allowedExternalLinks: true },
       })
 
-      const allowedLinks = workspace?.allowedExternalLinks?.length
-        ? workspace.allowedExternalLinks.join(', ')
-        : ''
+      // 🛡️ ALWAYS allow internal eChatbot domains (aligned with backend SecurityAgent.ts)
+      const internalDomains = [
+        'echatbot.ai',
+        'www.echatbot.ai',
+        'echatbot.ai/s/*',                    // Short links
+        'www.echatbot.ai/s/*',
+        'echatbot.ai/registration/*',          // Registration links
+        'www.echatbot.ai/registration/*',
+        'echatbot.ai/cart*',                   // Cart links
+        'www.echatbot.ai/cart*',
+        'echatbot.ai/orders-public*',          // Order links
+        'www.echatbot.ai/orders-public*',
+        'echatbot.ai/customer-profile*',       // Profile links
+        'www.echatbot.ai/customer-profile*',
+      ]
+
+      // 🛡️ Merge internal domains with workspace-configured external links
+      const allAllowedLinks = [
+        ...internalDomains,
+        ...(workspace?.allowedExternalLinks || []),
+      ]
+
+      const allowedLinks = allAllowedLinks.join(', ')
 
       const systemPrompt = this.buildSystemPrompt(securityAgent.systemPrompt, {
         nameUser: customerName,

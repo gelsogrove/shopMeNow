@@ -111,6 +111,8 @@ export class SecurityAgent {
         "www.echatbot.ai/cart*", // Cart links
         "echatbot.ai/orders-public*", // Order links
         "www.echatbot.ai/orders-public*", // Order links
+        "echatbot.ai/customer-profile*", // Profile links
+        "www.echatbot.ai/customer-profile*", // Profile links
       ]
       
       // 🛡️ Merge internal domains with workspace-configured external links
