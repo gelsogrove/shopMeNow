@@ -14,6 +14,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Calendar, Megaphone, Trash2, Users, Clock, Power, Pencil, Globe } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useWorkspace } from "../../contexts/WorkspaceContext"
+import { useBilling } from "@/contexts/BillingContext"
 import { toast } from "../../lib/toast"
 import { api } from "../../services/api"
 
@@ -38,6 +39,12 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const { workspace } = useWorkspace()
+  const {
+    creditBalance,
+    billingOverview,
+    refreshOverview,
+    isLoadingOverview,
+  } = useBilling()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
@@ -52,8 +59,14 @@ export default function CampaignsPage() {
   useEffect(() => {
     if (workspace?.id) {
       loadCampaigns()
+      if (!billingOverview && !isLoadingOverview) {
+        void refreshOverview()
+      }
     }
   }, [workspace?.id])
+
+  const pushCost = billingOverview?.limits.pushCost ?? 1.0
+  const hasEnoughCreditForPush = creditBalance >= pushCost
 
   const loadCampaigns = async () => {
     try {
@@ -108,11 +121,27 @@ export default function CampaignsPage() {
 
   // Open sheet to create
   const handleAddCampaign = () => {
+    if (!hasEnoughCreditForPush) {
+      toast.error(
+        `Insufficient credit for a campaign. Need at least $${pushCost.toFixed(
+          2
+        )}, current balance $${creditBalance.toFixed(2)}.`
+      )
+      return
+    }
     setSelectedCampaign(null)
     setCampaignSheetOpen(true)
   }
 
   const handleEditCampaign = (campaign: Campaign) => {
+    if (!hasEnoughCreditForPush) {
+      toast.error(
+        `Insufficient credit to edit/run this campaign. Need $${pushCost.toFixed(
+          2
+        )}, balance $${creditBalance.toFixed(2)}.`
+      )
+      return
+    }
     setSelectedCampaign(campaign)
     setCampaignSheetOpen(true)
   }
@@ -361,6 +390,12 @@ const renderActions = (campaign: Campaign) => {
 
   return (
     <PageLayout>
+      {!hasEnoughCreditForPush && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          You need at least ${pushCost.toFixed(2)} of credit to create or edit a push campaign.
+          Current balance: ${creditBalance.toFixed(2)}. Please recharge first.
+        </div>
+      )}
       <CrudPageContent
         title={<span className={commonStyles.primary}>WhatsApp Campaigns</span>}
         titleIcon={<Megaphone className={commonStyles.headerIcon} />}

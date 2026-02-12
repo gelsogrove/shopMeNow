@@ -447,6 +447,7 @@ describe('Push Campaigns Job', () => {
         campaign,
         customer,
         workspaceName: 'Test Workspace',
+        workspaceLanguage: 'it',
       })
 
       // Note: Translation service will be called, so we just verify the input to translation
@@ -481,6 +482,7 @@ describe('Push Campaigns Job', () => {
         campaign,
         customer,
         workspaceName: 'Test Shop',
+        workspaceLanguage: 'it',
       })
 
       expect(mockTranslationService.translateMessage).toHaveBeenCalledWith(
@@ -512,6 +514,7 @@ describe('Push Campaigns Job', () => {
         campaign,
         customer,
         workspaceName: 'Test',
+        workspaceLanguage: 'it',
       })
 
       expect(mockTranslationService.translateMessage).toHaveBeenCalledWith(
@@ -545,6 +548,7 @@ describe('Push Campaigns Job', () => {
         campaign,
         customer,
         workspaceName: 'Shop',
+        workspaceLanguage: 'it',
       })
 
       expect(mockTranslationService.translateMessage).toHaveBeenCalledWith(
@@ -576,6 +580,7 @@ describe('Push Campaigns Job', () => {
         campaign,
         customer,
         workspaceName: 'Shop',
+        workspaceLanguage: 'es',
       })
 
       expect(result).toBe('Test message')
@@ -599,9 +604,11 @@ describe('Push Campaigns Job', () => {
       expect(__test.normalizeLanguage('pt-BR')).toBe('pt')
       expect(__test.normalizeLanguage('it')).toBe('it')
       expect(__test.normalizeLanguage('IT')).toBe('it')
+      expect(__test.normalizeLanguage('fr')).toBe('fr') // French supported
+      expect(__test.normalizeLanguage('fr-FR')).toBe('fr')
       expect(__test.normalizeLanguage(null)).toBe('it') // Default
       expect(__test.normalizeLanguage(undefined)).toBe('it') // Default
-      expect(__test.normalizeLanguage('fr')).toBe('it') // Unsupported fallback
+      expect(__test.normalizeLanguage('de')).toBe('it') // Unsupported fallback (German)
     })
   })
 
