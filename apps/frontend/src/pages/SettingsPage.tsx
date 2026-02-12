@@ -274,6 +274,8 @@ export function SettingsPage() {
         widgetLanguage: currentWorkspace.widgetLanguage || "it",
         widgetIcon: currentWorkspace.widgetIcon || "chat",
         widgetUseChannelLogo: currentWorkspace.widgetUseChannelLogo ?? false,
+        widgetAutoSuggestionsEnabled: currentWorkspace.widgetAutoSuggestionsEnabled ?? false,
+        widgetQuickReplies: currentWorkspace.widgetQuickReplies || [],
         customAiRules: currentWorkspace.customAiRules || "",
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
         wipMessage: currentWorkspace.wipMessage || defaultWipMessage,
