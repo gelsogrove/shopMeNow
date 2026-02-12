@@ -255,6 +255,7 @@ export class WelcomeMessageHandler {
       })
 
       // 🔧 FIX: Replace [LINK_REGISTRATION] token AFTER translation to prevent link being broken
+      // 🚨 WORKAROUND: Generate direct link without URL shortener to avoid Prisma module error on Heroku
       if (welcomeText.includes("[LINK_REGISTRATION]")) {
         try {
           // Load customer to get phone number
@@ -267,12 +268,19 @@ export class WelcomeMessageHandler {
           })
 
           if (customer?.phone) {
-            const registrationLink = await this.generateRegistrationLink(
-              customer.phone,
-              input.workspaceId
-            )
+            // Create registration token directly (bypass LinkGeneratorService)
+            const tokenService = new TokenService()
+            const token = await tokenService.createRegistrationToken(customer.phone, input.workspaceId)
+
+            // Get workspace URL and custom registration page
+            const { url: workspaceUrl, registrationPage } = 
+              await workspaceService.getWorkspaceURLWithRegistration(input.workspaceId)
+
+            // Build direct link WITHOUT URL shortener (workaround for Heroku Prisma issue)
+            const registrationLink = `${workspaceUrl}${registrationPage}?token=${token}`
+
             welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
-            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with actual link AFTER translation", {
+            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with DIRECT link (no shortener)", {
               linkGenerated: registrationLink.substring(0, 50) + "...",
             })
           } else {
