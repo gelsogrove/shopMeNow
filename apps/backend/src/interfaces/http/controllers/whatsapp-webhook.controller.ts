@@ -2394,9 +2394,13 @@ export class WhatsAppWebhookController {
       })
 
       // Still return 200 to prevent WhatsApp from retrying
+      const showErrors =
+        (process.env.SHOW_ERRORS ?? process.env.DEBUG_MODE ?? "true").toLowerCase() !== "false"
+
       res.status(200).json({ 
-        error: "Internal error",
-        debugMessage: process.env.DEBUG_MODE === "true" ? error.message : undefined,
+        error: showErrors && error?.message ? error.message : "Internal error",
+        debugMessage: showErrors ? error?.message : undefined,
+        code: showErrors && (error as any)?.code ? (error as any).code : undefined,
       })
     }
   }
