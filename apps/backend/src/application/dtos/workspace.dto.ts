@@ -196,9 +196,6 @@ export class WorkspaceDTO extends BaseDTO {
   @IsBoolean()
   @IsOptional()
   widgetUseChannelLogo?: boolean;
-  widgetAutoSuggestionsEnabled?: boolean;
-  widgetQuickReplies?: string[];
-  widgetSuggestionsModel?: string;
 
   @IsBoolean()
   @IsOptional()
@@ -207,6 +204,10 @@ export class WorkspaceDTO extends BaseDTO {
   @IsArray()
   @IsOptional()
   widgetQuickReplies?: string[];
+
+  @IsString()
+  @IsOptional()
+  widgetSuggestionsModel?: string;
 
   @ValidateNested()
   @Type(() => WorkspaceContactDTO)
@@ -315,9 +316,6 @@ export class CreateWorkspaceDTO {
   @IsBoolean()
   @IsOptional()
   widgetUseChannelLogo?: boolean;
-  widgetAutoSuggestionsEnabled?: boolean;
-  widgetQuickReplies?: string[];
-  widgetSuggestionsModel?: string;
 
   @IsBoolean()
   @IsOptional()
@@ -326,6 +324,10 @@ export class CreateWorkspaceDTO {
   @IsArray()
   @IsOptional()
   widgetQuickReplies?: string[];
+
+  @IsString()
+  @IsOptional()
+  widgetSuggestionsModel?: string;
 }
 
 /**
@@ -411,10 +413,7 @@ export class UpdateWorkspaceDTO {
   @IsBoolean()
   @IsOptional()
   widgetUseChannelLogo?: boolean;
-  widgetAutoSuggestionsEnabled?: boolean;
-  widgetQuickReplies?: string[];
-  widgetSuggestionsModel?: string;
- 
+
   @IsBoolean()
   @IsOptional()
   widgetAutoSuggestionsEnabled?: boolean;
@@ -422,7 +421,11 @@ export class UpdateWorkspaceDTO {
   @IsArray()
   @IsOptional()
   widgetQuickReplies?: string[];
- 
+
+  @IsString()
+  @IsOptional()
+  widgetSuggestionsModel?: string;
+
   @IsString()
   @IsOptional()
   url?: string;

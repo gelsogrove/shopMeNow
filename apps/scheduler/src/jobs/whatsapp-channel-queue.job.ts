@@ -407,6 +407,8 @@ export async function whatsappChannelQueueJob(): Promise<void> {
         whatsappPhoneNumber: true,
         channelStatus: true,
         debugMode: true,
+        defaultLanguage: true,
+        widgetSuggestionsModel: true,
       },
     })
 

@@ -77,6 +77,9 @@ export interface WorkspaceProps {
   widgetPrimaryColor?: string | null
   widgetIcon?: string | null
   widgetUseChannelLogo?: boolean | null
+  widgetAutoSuggestionsEnabled?: boolean | null
+  widgetQuickReplies?: string[] | null
+  widgetSuggestionsModel?: string | null
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -364,6 +367,18 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get widgetUseChannelLogo(): boolean | null | undefined {
     return this.props.widgetUseChannelLogo
+  }
+
+  get widgetAutoSuggestionsEnabled(): boolean | null | undefined {
+    return this.props.widgetAutoSuggestionsEnabled
+  }
+
+  get widgetQuickReplies(): string[] | null | undefined {
+    return this.props.widgetQuickReplies
+  }
+
+  get widgetSuggestionsModel(): string | null | undefined {
+    return this.props.widgetSuggestionsModel
   }
 
   // 🆕 Translation Settings getters

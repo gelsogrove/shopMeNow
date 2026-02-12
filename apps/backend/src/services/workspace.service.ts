@@ -49,6 +49,15 @@ interface CreateWorkspaceData {
   createdBy?: string // User ID who created the workspace
   enableWhatsapp?: boolean
   enableWidget?: boolean
+  // 🆕 Widget Configuration
+  widgetTitle?: string
+  widgetLanguage?: string
+  widgetPrimaryColor?: string
+  widgetIcon?: string
+  widgetUseChannelLogo?: boolean
+  widgetAutoSuggestionsEnabled?: boolean
+  widgetQuickReplies?: string[]
+  widgetSuggestionsModel?: string
 }
 
 interface UpdateWorkspaceData {
@@ -99,8 +108,6 @@ interface UpdateWorkspaceData {
   widgetAutoSuggestionsEnabled?: boolean
   widgetQuickReplies?: string[]
   widgetSuggestionsModel?: string
-  widgetAutoSuggestionsEnabled?: boolean
-  widgetQuickReplies?: string[]
 }
 
 export const workspaceService = {
