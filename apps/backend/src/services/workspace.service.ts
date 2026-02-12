@@ -359,6 +359,20 @@ export const workspaceService = {
       workspaceData.operatorEmail = workspaceData.adminEmail
     }
 
+    // Clamp widget quick replies (max 4, trimmed)
+    if (workspaceData.widgetQuickReplies) {
+      workspaceData.widgetQuickReplies = workspaceData.widgetQuickReplies
+        .map((r) => (r || "").trim())
+        .filter((r) => r.length > 0)
+        .slice(0, 4)
+    }
+    if (!workspaceData.widgetAutoSuggestionsEnabled) {
+      workspaceData.widgetAutoSuggestionsEnabled = false
+    }
+    if (!workspaceData.widgetQuickReplies) {
+      workspaceData.widgetQuickReplies = []
+    }
+
     if (channelType === "WHATSAPP" && !workspaceData.whatsappPhoneNumber) {
       throw new Error("WhatsApp phone number is required for WHATSAPP channels")
     }

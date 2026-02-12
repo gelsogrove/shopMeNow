@@ -1699,44 +1699,47 @@ export class LLMRouterService {
 
       // 📢 REGISTRATION REMINDER: Every 6 messages, add registration call-to-action
       // This encourages users to register to receive offers and news
+      // 🔒 GUARD: Only for unregistered users (customerIsActive=false)
+      // 🔒 GUARD: Skip if RegistrationPromptService already injected a prompt (avoid double-prompting)
       try {
-        // Count assistant messages (outbound) for this customer in current session
-        const messageCount = await this.prisma.conversationMessage.count({
-          where: {
-            workspaceId: params.workspaceId,
-            customerId: params.customerId,
-            role: "assistant", // Only count bot responses
-            createdAt: {
-              gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+        if (!customerIsActive && !(params.registrationPromptLevel && params.registrationPromptLevel > 0)) {
+          // Count assistant messages (outbound) for this customer in current session
+          const messageCount = await this.prisma.conversationMessage.count({
+            where: {
+              workspaceId: params.workspaceId,
+              customerId: params.customerId,
+              role: "assistant", // Only count bot responses
+              createdAt: {
+                gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+              },
             },
-          },
-        })
-
-        // Every 6 messages (6, 12, 18, 24, ...), append registration reminder
-        if ((messageCount + 1) % 6 === 0) {
-          logger.info("📢 Adding registration reminder (every 6 messages)", {
-            messageCount: messageCount + 1,
-            customerId: params.customerId,
           })
 
-          // Get customer language for proper translation
-          const languageCode = params.customerLanguage?.toLowerCase() || "it"
-          
-          // Reminder text (will be translated by Safety layer if needed)
-          const reminderText = languageCode === "it" 
-            ? "\n\nSe vuoi ricevere le nostre offerte e notizie, registrati a questo link: [LINK_REGISTRATION]"
-            : languageCode === "es"
-            ? "\n\nSi quieres recibir nuestras ofertas y noticias, regístrate en este enlace: [LINK_REGISTRATION]"
-            : languageCode === "pt"
-            ? "\n\nSe você deseja receber nossas ofertas e notícias, registre-se neste link: [LINK_REGISTRATION]"
-            : "\n\nIf you want to receive our offers and news, register at this link: [LINK_REGISTRATION]"
+          // Every 6 messages (6, 12, 18, 24, ...), append registration reminder
+          if ((messageCount + 1) % 6 === 0) {
+            logger.info("📢 Adding registration reminder (every 6 messages)", {
+              messageCount: messageCount + 1,
+              customerId: params.customerId,
+              customerIsActive,
+            })
 
-          // Append to final response (LinkReplacementService will replace [LINK_REGISTRATION])
-          finalCleanResponse += reminderText
-          
-          logger.info("✅ Registration reminder appended", {
-            originalLength: finalCleanResponse.length - reminderText.length,
-            newLength: finalCleanResponse.length,
+            // Single reminder text with [LINK_REGISTRATION] token
+            // LLM will translate to customer's language naturally
+            const reminderText = "\n\n[LINK_REGISTRATION]"
+
+            // Append to final response (LinkReplacementService will replace [LINK_REGISTRATION])
+            finalCleanResponse += reminderText
+            
+            logger.info("✅ Registration reminder appended", {
+              originalLength: finalCleanResponse.length - reminderText.length,
+              newLength: finalCleanResponse.length,
+            })
+          }
+        } else {
+          logger.info("📢 Registration reminder skipped", {
+            customerIsActive,
+            registrationPromptLevel: params.registrationPromptLevel,
+            reason: customerIsActive ? "customer already registered" : "progressive prompt already active",
           })
         }
       } catch (registrationReminderError) {
