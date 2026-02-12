@@ -9,6 +9,7 @@ interface Message {
   sender: "user" | "customer"
   timestamp: string
   agentName?: string
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked"
   metadata?: {
     isOperatorMessage?: boolean
     isOperatorControl?: boolean
@@ -70,6 +71,7 @@ export function useCurrentChatMessages(
               sender: message.direction === "INBOUND" ? "customer" : "user",
               timestamp: message.createdAt || new Date().toISOString(),
               agentName: message.metadata?.agentName,
+              deliveryStatus: message.deliveryStatus,
               metadata: message.metadata,
             })
           )

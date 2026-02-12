@@ -4,6 +4,7 @@ export interface Message {
   sender: "user" | "customer"
   timestamp: string
   agentName?: string
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked"
   functionCalls?: Array<{
     functionName: string
     toolCall?: {
