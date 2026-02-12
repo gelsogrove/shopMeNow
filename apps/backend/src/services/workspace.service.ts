@@ -96,6 +96,10 @@ interface UpdateWorkspaceData {
   widgetPrimaryColor?: string
   widgetIcon?: string
   widgetUseChannelLogo?: boolean
+  widgetAutoSuggestionsEnabled?: boolean
+  widgetQuickReplies?: string[]
+  widgetAutoSuggestionsEnabled?: boolean
+  widgetQuickReplies?: string[]
 }
 
 export const workspaceService = {
@@ -156,6 +160,8 @@ export const workspaceService = {
         widgetPrimaryColor: true,
         widgetIcon: true,
         widgetUseChannelLogo: true,
+        widgetAutoSuggestionsEnabled: true,
+        widgetQuickReplies: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -252,6 +258,8 @@ export const workspaceService = {
         widgetPrimaryColor: true,
         widgetIcon: true,
         widgetUseChannelLogo: true,
+        widgetAutoSuggestionsEnabled: true,
+        widgetQuickReplies: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
@@ -393,11 +401,13 @@ export const workspaceService = {
         requireManualApproval: true,
         enableWhatsapp: true,
         enableWidget: true,
-        widgetTitle: true,
-        widgetLanguage: true,
-        widgetPrimaryColor: true,
-        widgetIcon: true,
-        widgetUseChannelLogo: true,
+       widgetTitle: true,
+       widgetLanguage: true,
+       widgetPrimaryColor: true,
+       widgetIcon: true,
+       widgetUseChannelLogo: true,
+        widgetAutoSuggestionsEnabled: true,
+        widgetQuickReplies: true,
       },
     })
 
@@ -520,6 +530,17 @@ export const workspaceService = {
     const sanitizedData = Object.fromEntries(
       Object.entries(workspaceData).filter(([_, value]) => value !== "")
     )
+
+    // Clamp widget quick replies (max 4, trim, remove empty)
+    if (sanitizedData.widgetQuickReplies) {
+      const replies = Array.isArray(sanitizedData.widgetQuickReplies)
+        ? sanitizedData.widgetQuickReplies
+        : []
+      sanitizedData.widgetQuickReplies = replies
+        .map((r) => (r || "").trim())
+        .filter((r) => r.length > 0)
+        .slice(0, 4)
+    }
 
     // Update workspace data
     const updatedWorkspace = await prisma.workspace.update({

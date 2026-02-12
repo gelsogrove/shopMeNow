@@ -95,6 +95,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetPrimaryColor: data.widgetPrimaryColor ?? "#22c55e",
       widgetIcon: data.widgetIcon ?? "chat",
       widgetUseChannelLogo: data.widgetUseChannelLogo ?? false,
+      widgetAutoSuggestionsEnabled: data.widgetAutoSuggestionsEnabled ?? false,
+      widgetQuickReplies: data.widgetQuickReplies ?? [],
       // 🆕 Translation Settings
       translateProductNames: data.translateProductNames ?? false,
       translateCategoryNames: data.translateCategoryNames ?? false,
@@ -171,6 +173,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
       widgetIcon: workspace.widgetIcon ?? "chat",
       widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
+      widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
+      widgetQuickReplies: workspace.widgetQuickReplies ?? [],
       // 🆕 Translation Settings
       translateProductNames: workspace.translateProductNames,
       translateCategoryNames: workspace.translateCategoryNames,

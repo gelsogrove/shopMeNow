@@ -106,6 +106,8 @@ export class WorkspaceController {
         widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
         widgetIcon: workspace.widgetIcon ?? "chat",
         widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
+        widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
+        widgetQuickReplies: workspace.widgetQuickReplies ?? [],
         // 🆕 Multi-Provider WhatsApp Support
         whatsappProvider: workspace.whatsappProvider ?? "meta",
         ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
@@ -218,6 +220,8 @@ export class WorkspaceController {
           widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
           widgetIcon: workspace.widgetIcon ?? "chat",
           widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
+          widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
+          widgetQuickReplies: workspace.widgetQuickReplies ?? [],
           // 🆕 Translation Settings
           translateProductNames: workspace.translateProductNames,
           translateCategoryNames: workspace.translateCategoryNames,
