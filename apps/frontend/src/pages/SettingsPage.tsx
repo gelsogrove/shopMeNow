@@ -447,6 +447,13 @@ export function SettingsPage() {
     try {
       const updateData: any = { ...dataToSave }
       delete updateData.logoUrl
+      // Trim and cap quick replies
+      if (updateData.widgetQuickReplies) {
+        updateData.widgetQuickReplies = (updateData.widgetQuickReplies as string[])
+          .map((r) => r.trim())
+          .filter((r) => r.length > 0)
+          .slice(0, 4)
+      }
 
       if (!updateData.whatsappAppSecret) {
         delete updateData.whatsappAppSecret

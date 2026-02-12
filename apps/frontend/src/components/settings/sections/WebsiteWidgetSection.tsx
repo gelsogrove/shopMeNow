@@ -33,9 +33,11 @@ interface WebsiteWidgetSectionProps {
     enableWidget: boolean
     widgetTitle: string
     widgetPrimaryColor: string
-    widgetLanguage: string
-    widgetIcon: string
-    widgetUseChannelLogo: boolean
+  widgetLanguage: string
+  widgetIcon: string
+  widgetUseChannelLogo: boolean
+  widgetAutoSuggestionsEnabled: boolean
+  widgetQuickReplies: string[]
     logoUrl?: string
   }
   workspaceId: string

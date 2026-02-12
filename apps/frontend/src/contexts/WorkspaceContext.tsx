@@ -73,6 +73,8 @@ export interface Workspace {
   widgetPrimaryColor?: string
   widgetIcon?: string
   widgetUseChannelLogo?: boolean
+  widgetAutoSuggestionsEnabled?: boolean
+  widgetQuickReplies?: string[]
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

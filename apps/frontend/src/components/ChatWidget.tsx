@@ -207,6 +207,11 @@ export function ChatWidget({
     useChannelLogo === true
   const resolvedIcon = widgetConfig?.icon || icon || "chat"
   const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
+  const resolvedAutoSuggestionsEnabled =
+    (widgetConfig as any)?.autoSuggestionsEnabled === true
+  const resolvedQuickReplies = Array.isArray((widgetConfig as any)?.quickReplies)
+    ? (widgetConfig as any)?.quickReplies.slice(0, 4)
+    : []
   
   console.log("✅ Resolved widget config:", {
     workspaceId: resolvedWorkspaceId,
@@ -273,8 +278,8 @@ export function ChatWidget({
   /**
    * Send message to API
    */
-  const handleSendMessage = async () => {
-    const message = inputValue.trim()
+  const sendMessage = async (text: string) => {
+    const message = text.trim()
     if (!message || isLoading || !visitorId) return
 
     // Add user message
@@ -336,6 +341,14 @@ export function ChatWidget({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSendMessage = async () => {
+    await sendMessage(inputValue)
+  }
+
+  const handleQuickReply = async (reply: string) => {
+    await sendMessage(reply)
   }
 
   /**
@@ -682,6 +695,22 @@ export function ChatWidget({
               </div>
             )}
           </ScrollArea>
+
+          {/* Quick replies */}
+          {resolvedAutoSuggestionsEnabled && resolvedQuickReplies.length > 0 && (
+            <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap gap-2">
+              {resolvedQuickReplies.map((qr: string, idx: number) => (
+                <button
+                  key={`${qr}-${idx}`}
+                  className="text-sm px-3 py-2 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
+                  onClick={() => handleQuickReply(qr)}
+                  disabled={isLoading}
+                >
+                  {qr}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Footer with Input */}
           <div className="border-t border-gray-200 p-5 space-y-3">

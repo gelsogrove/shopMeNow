@@ -1,7 +1,6 @@
-import { BillingService } from "../../src/application/services/billing.service"
-import { SubscriptionBillingService } from "../../src/application/services/subscription-billing.service"
-import { TransactionType } from "../../src/repositories/subscription-billing.repository"
-import { platformConfigService } from "../../src/services/platform-config.service"
+import { BillingService } from "../../application/services/billing.service"
+import { SubscriptionBillingService } from "../../application/services/subscription-billing.service"
+import { platformConfigService } from "../../services/platform-config.service"
 
 /**
  * Security tests to lock billing unit prices and deductions:
@@ -26,7 +25,10 @@ describe("Billing unit rates security", () => {
             name: "WS",
           }),
         },
-        billing: { create: jest.fn() },
+        billing: { 
+          create: jest.fn(),
+          aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+        },
         billingTransaction: {
           create: jest.fn().mockImplementation(({ data }: any) => {
             createdTransactions.push(data)
@@ -75,13 +77,12 @@ describe("Billing unit rates security", () => {
           success: true,
           newBalance: 4.5,
         }),
+        shouldSendOwnerLowBalanceNotification: jest.fn().mockResolvedValue(false),
+        updateOwnerLowBalanceNotification: jest.fn().mockResolvedValue(undefined),
       }
 
-      jest
-        .spyOn(SubscriptionBillingService.prototype as any, "repository", "get")
-        .mockReturnValue(mockRepository)
-
       const service = new SubscriptionBillingService({} as any)
+      ;(service as any).repository = mockRepository
       const result = await service.deductOwnerWidgetMessageCredit(
         "owner1",
         "ws1",
@@ -94,7 +95,7 @@ describe("Billing unit rates security", () => {
       expect(mockRepository.deductCredit).toHaveBeenCalledWith(
         "owner1",
         0.05,
-        TransactionType.MESSAGE,
+        "MESSAGE",
         "Widget message",
         "ws1",
         "msg1",
