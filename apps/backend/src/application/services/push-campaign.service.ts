@@ -302,7 +302,55 @@ export class PushCampaignService {
   }
 
   async list(workspaceId: string) {
-    return this.repo.listByWorkspace(workspaceId)
+    const campaigns = await this.repo.listByWorkspace(workspaceId)
+    if (campaigns.length === 0) return []
+
+    const campaignIds = campaigns.map((c: any) => c.id)
+
+    const grouped = await this.prisma.pushCampaignRecipient.groupBy({
+      where: { campaignId: { in: campaignIds } },
+      by: ["campaignId", "status"],
+      _count: { _all: true },
+    })
+
+    const statsMap = new Map<
+      string,
+      { total: number; pending: number; sent: number; failed: number; skipped: number }
+    >()
+
+    for (const row of grouped) {
+      const entry = statsMap.get(row.campaignId) || {
+        total: 0,
+        pending: 0,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+      }
+      entry.total += row._count._all
+      if (row.status === "PENDING") entry.pending += row._count._all
+      if (row.status === "SENT") entry.sent += row._count._all
+      if (row.status === "FAILED") entry.failed += row._count._all
+      if (row.status === "SKIPPED") entry.skipped += row._count._all
+      statsMap.set(row.campaignId, entry)
+    }
+
+    return campaigns.map((c: any) => {
+      const s = statsMap.get(c.id) || {
+        total: c.expectedRecipients ?? 0,
+        pending: 0,
+        sent: c.actualSent ?? 0,
+        failed: c.actualFailed ?? 0,
+        skipped: c.actualSkipped ?? 0,
+      }
+      return {
+        ...c,
+        recipientsTotal: s.total,
+        recipientsPending: s.pending,
+        actualSent: s.sent,
+        actualFailed: s.failed,
+        actualSkipped: s.skipped,
+      }
+    })
   }
 
   async get(workspaceId: string, id: string) {

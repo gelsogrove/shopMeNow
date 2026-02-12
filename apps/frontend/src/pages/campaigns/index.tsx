@@ -232,8 +232,10 @@ export default function CampaignsPage() {
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Recipients</div>
-            <div className="mt-1 text-base font-semibold">{campaign.expectedRecipients ?? 0}</div>
+            <div className="text-xs text-slate-500">Recipients (pending)</div>
+            <div className="mt-1 text-base font-semibold">
+              {(campaign as any).recipientsPending ?? campaign.expectedRecipients ?? 0}
+            </div>
           </div>
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Sent</div>
