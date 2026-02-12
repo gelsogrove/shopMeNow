@@ -88,6 +88,7 @@ interface Message {
   role: "user" | "bot"
   content: string
   timestamp?: string
+  suggestions?: string[]
 }
 
 interface ChatWidgetProps {
@@ -349,6 +350,14 @@ export function ChatWidget({
 
   const handleQuickReply = async (reply: string) => {
     await sendMessage(reply)
+    // After sending a quick reply, hide suggestions from previous bot message
+    setMessages((prev) =>
+      prev.map((m, idx) =>
+        idx === prev.length - 1 && m.role === "bot"
+          ? { ...m, suggestions: undefined }
+          : m
+      )
+    )
   }
 
   /**
@@ -696,21 +705,25 @@ export function ChatWidget({
             )}
           </ScrollArea>
 
-          {/* Quick replies */}
-          {resolvedAutoSuggestionsEnabled && resolvedQuickReplies.length > 0 && (
-            <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap gap-2">
-              {resolvedQuickReplies.map((qr: string, idx: number) => (
-                <button
-                  key={`${qr}-${idx}`}
-                  className="text-sm px-3 py-2 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
-                  onClick={() => handleQuickReply(qr)}
-                  disabled={isLoading}
-                >
-                  {qr}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* AI Suggestions from last bot message (widget only) */}
+          {resolvedAutoSuggestionsEnabled && (() => {
+            const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
+            const suggestions = lastBot?.suggestions || resolvedQuickReplies
+            return suggestions && suggestions.length > 0 ? (
+              <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap gap-2">
+                {suggestions.slice(0, 4).map((qr: string, idx: number) => (
+                  <button
+                    key={`${qr}-${idx}`}
+                    className="text-sm px-3 py-2 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
+                    onClick={() => handleQuickReply(qr)}
+                    disabled={isLoading}
+                  >
+                    {qr}
+                  </button>
+                ))}
+              </div>
+            ) : null
+          })()}
 
           {/* Footer with Input */}
           <div className="border-t border-gray-200 p-5 space-y-3">

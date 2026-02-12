@@ -72,12 +72,13 @@ export class WidgetEmbedController {
         widgetLanguage: true,
       widgetPrimaryColor: true,
       widgetIcon: true,
-      widgetUseChannelLogo: true,
-      widgetAutoSuggestionsEnabled: true,
-      widgetQuickReplies: true,
-      sellsProductsAndServices: true,
-    },
-  })
+        widgetUseChannelLogo: true,
+        widgetAutoSuggestionsEnabled: true,
+        widgetQuickReplies: true,
+        widgetSuggestionsModel: true,
+        sellsProductsAndServices: true,
+      },
+    })
 
     // ❌ BLOCK: Widget not for e-commerce channels
     if (workspace?.sellsProductsAndServices === true) {
@@ -102,6 +103,7 @@ export class WidgetEmbedController {
     const quickReplies = Array.isArray(workspace?.widgetQuickReplies)
       ? workspace!.widgetQuickReplies.slice(0, 4)
       : []
+    const suggestionsModel = workspace?.widgetSuggestionsModel || ""
 
     return `<!-- eChatbot Widget - Embed this code on your website -->
 <script>
@@ -117,6 +119,7 @@ export class WidgetEmbedController {
       icon: "${icon.replace(/"/g, '\\"')}",
       autoSuggestionsEnabled: ${autoSuggestionsEnabled},
       quickReplies: ${JSON.stringify(quickReplies).replace(/</g, "\\u003c")},
+      suggestionsModel: "${suggestionsModel.replace(/"/g, '\\"')}",
       position: "bottom-right",
       theme: "light"
     };

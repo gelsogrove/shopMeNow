@@ -4,6 +4,7 @@ export type WidgetStoredMessage = {
   role: "user" | "bot"
   content: string
   timestamp?: string
+  suggestions?: string[]
 }
 
 type WidgetSendInput = {
@@ -33,6 +34,7 @@ export const mapWidgetMessages = (
   messages.map((message) => ({
     role: message.role,
     content: message.content,
+    meta: message.suggestions ? { suggestions: message.suggestions } : undefined,
   }))
 
 export const loadWidgetMessages = (

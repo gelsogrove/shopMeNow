@@ -97,6 +97,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetUseChannelLogo: data.widgetUseChannelLogo ?? false,
       widgetAutoSuggestionsEnabled: data.widgetAutoSuggestionsEnabled ?? false,
       widgetQuickReplies: data.widgetQuickReplies ?? [],
+      widgetSuggestionsModel: data.widgetSuggestionsModel ?? null,
       // 🆕 Translation Settings
       translateProductNames: data.translateProductNames ?? false,
       translateCategoryNames: data.translateCategoryNames ?? false,
@@ -175,6 +176,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
       widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
       widgetQuickReplies: workspace.widgetQuickReplies ?? [],
+      widgetSuggestionsModel: workspace.widgetSuggestionsModel ?? null,
       // 🆕 Translation Settings
       translateProductNames: workspace.translateProductNames,
       translateCategoryNames: workspace.translateCategoryNames,

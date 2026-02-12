@@ -247,7 +247,22 @@ export class UltraMsgWebhookController {
       const phoneWithPrefix = cleanFrom.startsWith('+') ? cleanFrom : `+${cleanFrom}`
       const phoneVariants = buildPhoneVariants(phoneWithPrefix)
       const phoneNumber = phoneVariants[0]
-      const messageText = body || ''
+
+      // 🎤 MEDIA HANDLING: For audio/image/video/document/sticker, UltraMSG sends body="" 
+      // Instead of ignoring silently, pass a placeholder so LLM can respond appropriately
+      // This matches WAAPI webhook behavior (whatsapp-webhook.controller.ts L237-242)
+      const mediaTypes = ['audio', 'image', 'video', 'document', 'sticker', 'ptt']
+      let messageText = body || ''
+      if (!messageText.trim() && type && mediaTypes.includes(type)) {
+        // Map 'ptt' (push-to-talk) to 'audio' for consistency
+        const displayType = type === 'ptt' ? 'audio' : type
+        messageText = `[${displayType} message]`
+        logger.info('[ULTRAMSG] 🎤 Media message detected, using placeholder', {
+          workspaceId,
+          type,
+          placeholder: messageText,
+        })
+      }
 
       if (!messageText || messageText.trim() === '') {
         logger.warn('[ULTRAMSG] ⚠️ No message text - ignoring', { workspaceId })

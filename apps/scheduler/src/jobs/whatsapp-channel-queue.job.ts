@@ -6,6 +6,7 @@ import { getWorkspaceWhatsAppConfig, WorkspaceWhatsAppConfig } from '../services
 import { whatsAppInteractiveConverter, WhatsAppMessage } from '../services/whatsapp-interactive-converter.service'
 import { WhatsAppProviderFactory } from '../services/whatsapp/whatsapp-provider.factory'
 import { formatForWhatsApp } from '../utils/whatsapp-formatter'
+import { buildWidgetSuggestions } from '../services/widget-suggestions.service'
 
 const MAX_DEBUG_STEPS = 50
 const RECIPIENT_COOLDOWN_MS = 6000 // WhatsApp limit ~1 msg / 6s per recipient
@@ -553,8 +554,14 @@ export async function whatsappChannelQueueJob(): Promise<void> {
           
           // 🔀 CHANNEL-SPECIFIC DELIVERY
           if (message.channel === 'widget') {
-            // Widget: Save response to queue (no API call)
-            // Frontend will poll for this response
+            // Widget: save response + AI suggestions
+            const suggestions = await buildWidgetSuggestions({
+              workspaceId: workspace.id,
+              response: message.messageContent,
+              language: workspace.defaultLanguage || 'it',
+              model: workspace.widgetSuggestionsModel || undefined,
+            })
+
             await prisma.whatsAppQueue.update({
               where: { id: message.id },
               data: { 
@@ -563,13 +570,15 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                 responsePayload: {
                   response: message.messageContent, // LLM response already in messageContent
                   processedAt: new Date().toISOString(),
+                  suggestions,
                 },
               },
             })
             
-            logger.info(`✅ Widget message delivered (response saved for polling)`, {
+            logger.info(`✅ Widget message delivered (response + suggestions saved)`, {
               messageId: message.id,
               visitorId: message.visitorId,
+              suggestionsCount: suggestions.length,
             })
             deliveryNote = `✅ Response saved for polling by visitor ${message.visitorId}`
           } else {

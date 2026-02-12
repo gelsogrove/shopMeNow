@@ -98,6 +98,7 @@ interface UpdateWorkspaceData {
   widgetUseChannelLogo?: boolean
   widgetAutoSuggestionsEnabled?: boolean
   widgetQuickReplies?: string[]
+  widgetSuggestionsModel?: string
   widgetAutoSuggestionsEnabled?: boolean
   widgetQuickReplies?: string[]
 }
@@ -371,6 +372,9 @@ export const workspaceService = {
     }
     if (!workspaceData.widgetQuickReplies) {
       workspaceData.widgetQuickReplies = []
+    }
+    if (workspaceData.widgetSuggestionsModel === "") {
+      workspaceData.widgetSuggestionsModel = null
     }
 
     if (channelType === "WHATSAPP" && !workspaceData.whatsappPhoneNumber) {
