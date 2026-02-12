@@ -1,22 +1,14 @@
+import { useEffect, useState } from "react"
+import { Megaphone, Clock, Users, Sparkles, Globe, Pencil, Pause, Play, Trash2 } from "lucide-react"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { CampaignSheet } from "@/components/shared/CampaignSheet"
-import { CrudPageContent } from "@/components/shared/CrudPageContent"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { commonStyles } from "@/styles/common"
-import { ColumnDef } from "@tanstack/react-table"
-import { Calendar, Megaphone, Trash2, Users, Clock, Power, Pencil, Globe } from "lucide-react"
-import { useEffect, useState } from "react"
-import { useWorkspace } from "../../contexts/WorkspaceContext"
+import { Input } from "@/components/ui/input"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useBilling } from "@/contexts/BillingContext"
-import { toast } from "../../lib/toast"
-import { api } from "../../services/api"
+import { toast } from "@/lib/toast"
+import { api } from "@/services/api"
 
 interface Campaign {
   id: string
@@ -39,22 +31,12 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const { workspace } = useWorkspace()
-  const {
-    creditBalance,
-    billingOverview,
-    refreshOverview,
-    isLoadingOverview,
-  } = useBilling()
+  const { creditBalance, billingOverview, refreshOverview, isLoadingOverview } = useBilling()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
-
-  // Campaign Sheet state
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(
-    null
-  )
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [campaignSheetOpen, setCampaignSheetOpen] = useState(false)
-  const [campaignSheetMode] = useState<"view" | "edit">("edit")
 
   useEffect(() => {
     if (workspace?.id) {
@@ -71,9 +53,7 @@ export default function CampaignsPage() {
   const loadCampaigns = async () => {
     try {
       setLoading(true)
-      const { data } = await api.get(
-        `/workspaces/${workspace?.id}/push-campaigns`
-      )
+      const { data } = await api.get(`/workspaces/${workspace?.id}/push-campaigns`)
       setCampaigns(data.data || [])
     } catch (error) {
       toast.error("Error loading campaigns")
@@ -82,12 +62,9 @@ export default function CampaignsPage() {
     }
   }
 
-  // Actions
   const handlePause = async (campaign: Campaign) => {
     try {
-      await api.post(
-        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/pause`
-      )
+      await api.post(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/pause`)
       toast.success("Campaign paused")
       loadCampaigns()
     } catch {
@@ -97,9 +74,7 @@ export default function CampaignsPage() {
 
   const handleResume = async (campaign: Campaign) => {
     try {
-      await api.post(
-        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/resume`
-      )
+      await api.post(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/resume`)
       toast.success("Campaign resumed")
       loadCampaigns()
     } catch {
@@ -109,9 +84,7 @@ export default function CampaignsPage() {
 
   const handleCancel = async (campaign: Campaign) => {
     try {
-      await api.post(
-        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/cancel`
-      )
+      await api.post(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/cancel`)
       toast.success("Campaign cancelled")
       loadCampaigns()
     } catch {
@@ -119,7 +92,6 @@ export default function CampaignsPage() {
     }
   }
 
-  // Open sheet to create
   const handleAddCampaign = () => {
     if (!hasEnoughCreditForPush) {
       toast.error(
@@ -144,13 +116,8 @@ export default function CampaignsPage() {
     }
 
     try {
-      const { data } = await api.get(
-        `/workspaces/${workspace?.id}/push-campaigns/${campaign.id}`
-      )
-      setSelectedCampaign({
-        ...campaign,
-        ...data,
-      })
+      const { data } = await api.get(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}`)
+      setSelectedCampaign({ ...campaign, ...data })
       setCampaignSheetOpen(true)
     } catch (error: any) {
       const msg =
@@ -161,14 +128,10 @@ export default function CampaignsPage() {
     }
   }
 
-  // Handle campaign form submission (create/update)
   const handleCampaignSubmit = async (formData: any, campaignId?: string) => {
     try {
       if (campaignId) {
-        await api.put(
-          `/workspaces/${workspace?.id}/push-campaigns/${campaignId}`,
-          formData
-        )
+        await api.put(`/workspaces/${workspace?.id}/push-campaigns/${campaignId}`, formData)
         toast.success("Campaign updated")
       } else {
         await api.post(`/workspaces/${workspace?.id}/push-campaigns`, formData)
@@ -181,223 +144,111 @@ export default function CampaignsPage() {
     }
   }
 
-  // Filter campaigns based on search
   const filteredCampaigns = campaigns.filter((campaign) =>
     campaign.name.toLowerCase().includes(searchValue.toLowerCase())
   )
 
-  // Define table columns
-  const columns: ColumnDef<Campaign>[] = [
-    {
-      accessorKey: "name",
-      header: "Name",
-      size: 220,
-      cell: ({ row }) => (
-        <div>
-          <div className="font-medium">{row.original.name}</div>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1 text-sm">
-          <Badge
-            variant={
-              row.original.status === "COMPLETED"
-                ? "default"
-                : row.original.status === "FAILED" ||
-                  row.original.status === "CANCELLED"
-                ? "destructive"
-                : "secondary"
-            }
-          >
-            {row.original.status}
-          </Badge>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "targetingType",
-      header: "Targeting",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1 text-sm">
-          {row.original.targetingType === "ALL" && (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Globe className="w-3 h-3" />
-              All
-            </Badge>
-          )}
-          {row.original.targetingType === "MANUAL" && (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              Manual
-            </Badge>
-          )}
-          {row.original.targetingType === "TAGS" && (
-            <Badge variant="outline" className="flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              By Tag
-            </Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "frequency",
-      header: "Frequency",
-      cell: ({ row }) => (
-        <Badge variant="outline" className="capitalize">
-          {row.original.frequency.toLowerCase()}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "sendAt",
-      header: "Next Run",
-      cell: ({ row }) => {
-        const date = row.original.nextRunAt || row.original.sendAt
-        return (
-          <div className="flex items-center gap-1 text-sm">
-            <Clock className="w-4 h-4 text-gray-400" />
-            {date ? new Date(date).toLocaleString() : "Asap"}
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: "expectedRecipients",
-      header: "Recipients",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1 text-sm">
-          <Users className="w-4 h-4 text-gray-400" />
-          {row.original.expectedRecipients ?? 0}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "actualSent",
-      header: "Sent",
-      cell: ({ row }) => (
-        <div className="text-sm text-gray-700">
-          {row.original.actualSent ?? 0}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "actualFailed",
-      header: "Failed",
-      cell: ({ row }) => (
-        <div className="text-sm text-gray-700">
-          {row.original.actualFailed ?? 0}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "actualSkipped",
-      header: "Skipped",
-      cell: ({ row }) => (
-        <div className="text-sm text-gray-700">
-          {row.original.actualSkipped ?? 0}
-        </div>
-      ),
-    },
-  ]
+  const renderCard = (campaign: Campaign) => {
+    const date = campaign.nextRunAt || campaign.sendAt
+    const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(campaign.status || "")
+    const isCampaignActive = campaign.isActive !== false && campaign.status !== "PAUSED"
 
-const renderActions = (campaign: Campaign) => {
-    const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(
-      campaign.status || ""
-    )
-    const isCampaignActive =
-      campaign.isActive !== false && campaign.status !== "PAUSED"
+    const targetingBadge =
+      campaign.targetingType === "ALL"
+        ? { icon: <Globe className="w-3 h-3" />, label: "All" }
+        : campaign.targetingType === "MANUAL"
+        ? { icon: <Users className="w-3 h-3" />, label: "Manual" }
+        : { icon: <Sparkles className="w-3 h-3" />, label: "By Tag" }
 
     return (
-      <div className="flex items-center gap-2">
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
+      <div
+        key={campaign.id}
+        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-slate-900">{campaign.name}</h3>
+              <Badge
+                variant={
+                  campaign.status === "COMPLETED"
+                    ? "default"
+                    : campaign.status === "FAILED" || campaign.status === "CANCELLED"
+                    ? "destructive"
+                    : "secondary"
+                }
+              >
+                {campaign.status}
+              </Badge>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+              <Badge variant="outline" className="flex items-center gap-1">
+                {targetingBadge.icon}
+                {targetingBadge.label}
+              </Badge>
+              <Badge variant="outline" className="capitalize">
+                {campaign.frequency.toLowerCase()}
+              </Badge>
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4 text-gray-400" />
+                {date ? new Date(date).toLocaleString() : "Asap"}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => handleEditCampaign(campaign)}
-              className="h-8 w-8 p-0 flex items-center justify-center"
+              className="h-8 w-8 p-0"
             >
-              <Pencil className="h-4 w-4 text-gray-700" />
+              <Pencil className="h-4 w-4 text-slate-700" />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Edit Campaign</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <button
-        type="button"
-        onClick={() =>
-          isCampaignActive ? handlePause(campaign) : handleResume(campaign)
-        }
-        disabled={isTerminalStatus}
-        aria-pressed={isCampaignActive}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
-          isCampaignActive
-            ? "border-green-200 bg-green-50 text-green-700"
-            : "border-gray-200 bg-gray-100 text-gray-600"
-        } disabled:opacity-50`}
-      >
-        <Power className="h-3.5 w-3.5" />
-        <span>{isCampaignActive ? "Pause" : "Resume"}</span>
-        <span
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-            isCampaignActive ? "bg-green-500" : "bg-gray-300"
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-              isCampaignActive ? "translate-x-4" : "translate-x-1"
-            }`}
-          />
-        </span>
-      </button>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => (isCampaignActive ? handlePause(campaign) : handleResume(campaign))}
+              disabled={isTerminalStatus}
+              className="h-8 w-8 p-0"
+            >
+              {isCampaignActive ? (
+                <Pause className="h-4 w-4 text-amber-600" />
+              ) : (
+                <Play className="h-4 w-4 text-emerald-600" />
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => handleCancel(campaign)}
-              className="h-8 w-8 p-0 flex items-center justify-center hover:bg-red-50"
-              disabled={
-                ["COMPLETED", "CANCELLED", "FAILED"].includes(
-                  campaign.status || ""
-                )
-              }
+              disabled={isTerminalStatus}
+              className="h-8 w-8 p-0"
             >
               <Trash2 className="h-4 w-4 text-red-600" />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Cancel</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </div>
-  )
-}
+          </div>
+        </div>
 
-  const renderEmptyState = (
-    <div className="text-center py-12">
-      <Megaphone className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-      <h3 className="text-lg font-medium text-gray-900 mb-2">
-        No campaigns yet
-      </h3>
-      <p className="text-gray-600 mb-6">
-        Create your first automated WhatsApp campaign to engage with your
-        customers
-      </p>
-    </div>
-  )
+        <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+            <div className="text-xs text-slate-500">Recipients</div>
+            <div className="mt-1 text-base font-semibold">{campaign.expectedRecipients ?? 0}</div>
+          </div>
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+            <div className="text-xs text-slate-500">Sent</div>
+            <div className="mt-1 text-base font-semibold">{campaign.actualSent ?? 0}</div>
+          </div>
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+            <div className="text-xs text-slate-500">Failed / Skipped</div>
+            <div className="mt-1 text-base font-semibold">
+              {(campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <PageLayout>
@@ -407,29 +258,52 @@ const renderActions = (campaign: Campaign) => {
           Current balance: ${creditBalance.toFixed(2)}. Please recharge first.
         </div>
       )}
-      <CrudPageContent
-        title={<span className={commonStyles.primary}>WhatsApp Campaigns</span>}
-        titleIcon={<Megaphone className={commonStyles.headerIcon} />}
-        searchValue={searchValue}
-        onSearch={setSearchValue}
-        searchPlaceholder="Search campaigns..."
-        onAdd={handleAddCampaign}
-        addButtonText="New Campaign"
-        data={filteredCampaigns}
-        columns={columns}
-        isLoading={loading}
-        renderActions={renderActions}
-        renderEmptyState={renderEmptyState}
-        disablePagination={true}
-        className="overflow-hidden"
-      />
+
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-2">
+          <Megaphone className="h-5 w-5 text-emerald-600" />
+          <h1 className="text-xl font-semibold text-slate-900">WhatsApp Campaigns</h1>
+          <span className="text-sm text-slate-500">({filteredCampaigns.length} items)</span>
+        </div>
+        <div className="flex flex-1 gap-3 md:flex-none">
+          <Input
+            placeholder="Search campaigns..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className="md:w-64"
+          />
+          <Button onClick={handleAddCampaign} className="bg-emerald-600 hover:bg-emerald-700">
+            + New Campaign
+          </Button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500">
+          Loading...
+        </div>
+      ) : filteredCampaigns.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+          <h3 className="text-lg font-medium text-slate-900 mb-2">No campaigns yet</h3>
+          <p className="text-slate-600 mb-4">
+            Create your first automated WhatsApp campaign to engage your customers.
+          </p>
+          <Button onClick={handleAddCampaign} className="bg-emerald-600 hover:bg-emerald-700">
+            + New Campaign
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredCampaigns.map(renderCard)}
+        </div>
+      )}
 
       <CampaignSheet
         campaign={selectedCampaign}
         open={campaignSheetOpen}
         onOpenChange={setCampaignSheetOpen}
         onSubmit={handleCampaignSubmit}
-        mode={campaignSheetMode}
+        mode="edit"
         workspaceId={workspace?.id}
       />
     </PageLayout>
