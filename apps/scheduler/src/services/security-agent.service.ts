@@ -166,26 +166,13 @@ export class SecurityAgentService {
 
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { allowedExternalLinks: true },
+        select: { allowedExternalLinks: true, name: true },
       })
 
-      // 🛡️ ALWAYS allow internal eChatbot domains (aligned with backend SecurityAgent.ts)
-      const internalDomains = [
-        'echatbot.ai',
-        'www.echatbot.ai',
-        'echatbot.ai/s/*', // Short links
-        'www.echatbot.ai/s/*', // Short links
-        'echatbot.ai/registration/*', // Registration links
-        'www.echatbot.ai/registration/*', // Registration links
-        'echatbot.ai/cart*', // Cart links
-        'www.echatbot.ai/cart*', // Cart links
-        'echatbot.ai/orders-public*', // Order links
-        'www.echatbot.ai/orders-public*', // Order links
-        'echatbot.ai/customer-profile*', // Profile links
-        'www.echatbot.ai/customer-profile*', // Profile links
-      ]
+      // 🛡️ Internal eChatbot domains (just base domains — all paths are safe)
+      const internalDomains = ['echatbot.ai', 'www.echatbot.ai']
 
-      // 🛡️ Merge internal domains with workspace-configured external links
+      // Merge with workspace-configured external domains from DB
       const allAllowedLinks = [
         ...internalDomains,
         ...(workspace?.allowedExternalLinks || []),
@@ -196,6 +183,7 @@ export class SecurityAgentService {
       const systemPrompt = this.buildSystemPrompt(securityAgent.systemPrompt, {
         nameUser: customerName,
         workspaceId,
+        companyName: workspace?.name || workspaceId,
         allowedExternalLinks: allowedLinks, // Fixed: camelCase to match Handlebars template
       })
 

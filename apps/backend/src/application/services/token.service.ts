@@ -1,86 +1,57 @@
-import { prisma, PrismaClient } from "@echatbot/database"
-import crypto from "crypto"
+import { SecureTokenService } from "./secure-token.service"
 import logger from "../../utils/logger"
 
 /**
  * Service for managing registration tokens
+ * 
+ * 🔄 MIGRATED: Now delegates to SecureTokenService (secureToken table)
+ * Previously wrote to registrationToken table, causing validation failures
+ * because frontend validates via SecureTokenService which reads secureToken table.
+ * 
+ * This is a thin wrapper that preserves the same public interface for all callers:
+ * - router-orchestration.service.ts
+ * - llm.service.ts
+ * - welcome-message.handler.ts
+ * - link-replacement.service.ts
  */
 export class TokenService {
-  private prisma: PrismaClient
+  private secureTokenService: SecureTokenService
 
   constructor() {
-    this.prisma = prisma
-  }
-
-  /**
-   * Generate a secure random token
-   * @returns A secure random token
-   */
-  private generateSecureToken(): string {
-    // Generate 32 bytes of random data and convert to hex
-    return crypto.randomBytes(32).toString("hex")
+    this.secureTokenService = new SecureTokenService()
   }
 
   /**
    * Create a registration token for a phone number and workspace
+   * 
+   * 🔄 MIGRATED: Now writes to secureToken table via SecureTokenService
+   * SecureTokenService handles: cleanup, reuse of existing valid tokens, KISS logic
    *
    * @param phoneNumber The phone number to create a token for
    * @param workspaceId The workspace ID
-   * @returns The created registration token
+   * @returns The created registration token string
    */
   async createRegistrationToken(
     phoneNumber: string,
     workspaceId: string
   ): Promise<string> {
     try {
-      // 🧹 AUTO-CLEANUP: Remove expired registration tokens (older than 1 hour) for this workspace
-      const oneHourAgo = new Date()
-      oneHourAgo.setHours(oneHourAgo.getHours() - 1)
-      
-      const cleanupResult = await this.prisma.registrationToken.deleteMany({
-        where: {
-          workspaceId,
-          expiresAt: {
-            lt: oneHourAgo
-          }
-        }
-      })
-
-      if (cleanupResult.count > 0) {
-        logger.info(`[REGISTRATION-TOKEN] 🧹 Auto-cleaned ${cleanupResult.count} expired registration tokens (older than 1 hour) for workspace ${workspaceId}`)
-      }
-
-      // First, invalidate any existing tokens for this phone number
-      await this.prisma.registrationToken.updateMany({
-        where: {
-          phoneNumber,
-          workspaceId,
-          usedAt: null,
-        },
-        data: {
-          expiresAt: new Date(),
-        },
-      })
-
-      // Generate a new secure token
-      const token = this.generateSecureToken()
-
-      // Set expiration to 1 ora da adesso
-      const expiresAt = new Date()
-      expiresAt.setHours(expiresAt.getHours() + 1)
-
-      // Save the token to the database
-      await this.prisma.registrationToken.create({
-        data: {
-          token,
-          phoneNumber,
-          workspaceId,
-          expiresAt,
-        },
-      })
+      // Delegate to SecureTokenService which writes to secureToken table
+      // This ensures tokens are findable by SecureTokenService.validateToken()
+      // which is used by frontend POST /validate-secure-token
+      const token = await this.secureTokenService.createToken(
+        "registration",    // type
+        workspaceId,       // workspaceId
+        undefined,         // payload
+        undefined,         // expiresIn (uses TOKEN_EXPIRATION env or 1h default)
+        undefined,         // userId
+        phoneNumber,       // phoneNumber
+        undefined,         // ipAddress
+        undefined          // customerId (not needed for registration - customer doesn't exist yet)
+      )
 
       logger.info(
-        `Created registration token for phone ${phoneNumber} in workspace ${workspaceId}`
+        `[REGISTRATION-TOKEN] ✅ Created registration token in secureToken table for phone ${phoneNumber} in workspace ${workspaceId}`
       )
       return token
     } catch (error) {
@@ -91,30 +62,23 @@ export class TokenService {
 
   /**
    * Validate a registration token
+   * 
+   * 🔄 MIGRATED: Now reads from secureToken table via SecureTokenService
    *
    * @param token The token to validate
    * @returns The registration token data if valid, null otherwise
    */
   async validateToken(token: string): Promise<any> {
     try {
-      // Find the token in the database
-      const registrationToken = await this.prisma.registrationToken.findFirst({
-        where: {
-          token,
-          expiresAt: {
-            gt: new Date(), // Token expiration time must be in the future
-          },
-          usedAt: null, // Token must not have been used yet
-        },
-      })
+      const validation = await this.secureTokenService.validateToken(token)
 
-      if (!registrationToken) {
+      if (!validation.valid || !validation.data) {
         logger.warn(`Invalid or expired token: ${token.substring(0, 10)}...`)
         return null
       }
 
-      logger.info(`Validated token for phone ${registrationToken.phoneNumber}`)
-      return registrationToken
+      logger.info(`Validated token for phone ${validation.data.phoneNumber}`)
+      return validation.data
     } catch (error) {
       logger.error("Error validating registration token:", error)
       throw new Error("Failed to validate registration token")
@@ -123,20 +87,14 @@ export class TokenService {
 
   /**
    * Mark a token as used
+   * 
+   * 🔄 MIGRATED: Delegates to SecureTokenService (currently a no-op - tokens remain valid until expiry)
    *
    * @param token The token to mark as used
    */
   async markTokenAsUsed(token: string): Promise<void> {
     try {
-      await this.prisma.registrationToken.update({
-        where: {
-          token,
-        },
-        data: {
-          usedAt: new Date(),
-        },
-      })
-
+      await this.secureTokenService.markTokenAsUsed(token)
       logger.info(`Marked token as used: ${token.substring(0, 10)}...`)
     } catch (error) {
       logger.error("Error marking token as used:", error)
@@ -146,25 +104,16 @@ export class TokenService {
 
   /**
    * Clean up expired tokens
+   * 
+   * 🔄 MIGRATED: Delegates to SecureTokenService
    *
    * @returns The number of tokens deleted
    */
   async cleanupExpiredTokens(): Promise<number> {
     try {
-      // Delete tokens that expired more than 7 days ago
-      const cutoffDate = new Date()
-      cutoffDate.setDate(cutoffDate.getDate() - 7)
-
-      const result = await this.prisma.registrationToken.deleteMany({
-        where: {
-          expiresAt: {
-            lt: cutoffDate,
-          },
-        },
-      })
-
-      logger.info(`Cleaned up ${result.count} expired registration tokens`)
-      return result.count
+      const count = await this.secureTokenService.cleanupExpiredTokens()
+      logger.info(`Cleaned up ${count} expired registration tokens`)
+      return count
     } catch (error) {
       logger.error("Error cleaning up expired tokens:", error)
       throw new Error("Failed to clean up expired tokens")

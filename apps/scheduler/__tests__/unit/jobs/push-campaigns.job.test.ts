@@ -48,6 +48,7 @@ const mockPrisma = {
     findMany: jest.fn(),
     createMany: jest.fn(),
     update: jest.fn(),
+    updateMany: jest.fn(),
   },
   customers: {
     findFirst: jest.fn(),
@@ -58,6 +59,11 @@ const mockPrisma = {
     update: jest.fn(),
   },
   whatsAppQueue: {
+    create: jest.fn(),
+    upsert: jest.fn(),
+  },
+  conversationMessage: {
+    findFirst: jest.fn(),
     create: jest.fn(),
   },
   $transaction: jest.fn(),
@@ -107,6 +113,12 @@ jest.mock('../../../src/config/database', () => ({
     FAILED: 'FAILED',
     CANCELLED: 'CANCELLED',
   },
+  PushCampaignRecipientStatus: {
+    PENDING: 'PENDING',
+    SENT: 'SENT',
+    FAILED: 'FAILED',
+    SKIPPED: 'SKIPPED',
+  },
 }))
 
 import { pushCampaignsJob, __test } from '../../../src/jobs/push-campaigns.job'
@@ -121,6 +133,12 @@ describe('Push Campaigns Job', () => {
       id: 'owner-default',
       creditBalance: new Prisma.Decimal(100.0),
     })
+    mockPrisma.conversationMessage.create.mockResolvedValue({
+      id: 'conv-msg-1',
+      conversationId: 'conv_customer1',
+    })
+    mockPrisma.conversationMessage.findFirst.mockResolvedValue(null)
+    mockPrisma.whatsAppQueue.upsert.mockResolvedValue({ id: 'queue-1' })
   })
 
   describe('Campaign Discovery', () => {
@@ -1165,15 +1183,27 @@ describe('Push Campaigns Job', () => {
       // Verify transaction was used
       expect(mockPrisma.$transaction).toHaveBeenCalled()
 
-      // Verify operations inside transaction
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
+      // Verify operations inside transaction (upsert dedupe)
+      expect(mockPrisma.whatsAppQueue.upsert).toHaveBeenCalledWith({
+        where: { pushCampaignRecipientId: 'recipient-1' },
+        update: expect.objectContaining({
           workspaceId: 'ws-1',
           customerId: 'customer-1',
           phoneNumber: '+393331234567',
           messageContent: 'Test message',
           status: 'pending',
           channel: 'whatsapp',
+          pushCampaignId: 'campaign-1',
+        }),
+        create: expect.objectContaining({
+          workspaceId: 'ws-1',
+          customerId: 'customer-1',
+          phoneNumber: '+393331234567',
+          messageContent: 'Test message',
+          status: 'pending',
+          channel: 'whatsapp',
+          pushCampaignId: 'campaign-1',
+          pushCampaignRecipientId: 'recipient-1',
         }),
       })
 
@@ -1307,6 +1337,104 @@ describe('Push Campaigns Job', () => {
       expect(mockLogger.info).not.toHaveBeenCalledWith(
         expect.stringContaining('Found')
       )
+    })
+  })
+
+  describe('Idempotent recipients and history', () => {
+    it('populateRecipientsForRun resets existing recipients and adds missing (manual)', async () => {
+      const campaign = {
+        id: 'camp-1',
+        workspaceId: 'ws-1',
+        targetingType: 'MANUAL',
+        targetCustomerIds: ['c1', 'c2'],
+      }
+
+      mockPrisma.customers.findMany.mockResolvedValue([
+        { id: 'c1', phone: '+1' },
+        { id: 'c2', phone: '+2' },
+      ])
+      mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([
+        { id: 'r1', customerId: 'c1' },
+      ])
+
+      await __test.populateRecipientsForRun(campaign)
+
+      expect(mockPrisma.pushCampaignRecipient.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['r1'] } },
+        data: {
+          status: 'PENDING',
+          errorCode: null,
+          errorMessage: null,
+          messageId: null,
+        },
+      })
+      expect(mockPrisma.pushCampaignRecipient.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            workspaceId: 'ws-1',
+            campaignId: 'camp-1',
+            customerId: 'c2',
+            phone: '+2',
+            status: 'PENDING',
+          },
+        ],
+      })
+    })
+
+    it('pushCampaignsJob creates conversationMessage and links queue', async () => {
+      const now = new Date('2026-02-10T10:00:00Z')
+      jest.useFakeTimers().setSystemTime(now)
+
+      const mockCampaign = {
+        id: 'campaign-1',
+        workspaceId: 'ws-1',
+        status: 'SCHEDULED',
+        isActive: true,
+        frequency: 'ONCE',
+        nextRunAt: now,
+        batchSize: 10,
+        throttlePerSecond: 10,
+        costPerMessage: new Prisma.Decimal(1.0),
+        message: 'Hi {{name}}',
+      }
+
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([mockCampaign])
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: 'ws-1',
+        ownerId: 'owner-1',
+        name: 'Test Workspace',
+        enableWhatsapp: true,
+        defaultLanguage: 'it',
+      })
+      mockPrisma.pushCampaignRecipient.count.mockResolvedValue(1)
+      mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([
+        { id: 'rec-1', customerId: 'cust-1', phone: '+39', status: 'PENDING' },
+      ])
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        id: 'cust-1',
+        name: 'Mario Rossi',
+        email: 'mario@example.com',
+        company: 'Acme',
+        phone: '+39',
+        language: 'it',
+        isBlacklisted: false,
+        isActive: true,
+      })
+      mockPrisma.pushCampaignRecipient.update.mockResolvedValue(null)
+      mockPrisma.pushCampaign.update.mockResolvedValue(mockCampaign)
+
+      await pushCampaignsJob()
+
+      expect(mockPrisma.conversationMessage.create).toHaveBeenCalledTimes(1)
+      const convoCreateArgs = mockPrisma.conversationMessage.create.mock.calls[0][0]
+      expect(convoCreateArgs.data.agentType).toBe('PUSH_CAMPAIGN')
+
+      expect(mockPrisma.whatsAppQueue.upsert).toHaveBeenCalledTimes(1)
+      const queueArgs = mockPrisma.whatsAppQueue.upsert.mock.calls[0][0]
+      expect(queueArgs.create.conversationMessageId).toBe('conv-msg-1')
+      expect(queueArgs.create.pushCampaignRecipientId).toBe('rec-1')
+
+      jest.useRealTimers()
     })
   })
 })

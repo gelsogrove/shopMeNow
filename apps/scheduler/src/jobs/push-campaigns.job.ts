@@ -4,6 +4,7 @@ import {
   CampaignFrequency,
   CampaignTargetType,
   PushCampaignStatus,
+  PushCampaignRecipientStatus,
 } from '../config/database'
 import logger from '../utils/logger'
 import { translationService } from '../services/translation.service'
@@ -180,14 +181,62 @@ export async function pushCampaignsJob(): Promise<void> {
           })
 
           await prisma.$transaction(async (tx) => {
-            const queue = await tx.whatsAppQueue.create({
+            // Find or create conversationId for this customer
+            let conversationId = `conv_${customer.id}`
+            const lastConversation = await tx.conversationMessage.findFirst({
+              where: { workspaceId: campaign.workspaceId, customerId: customer.id },
+              orderBy: { createdAt: 'desc' },
+              select: { conversationId: true },
+            })
+            if (lastConversation?.conversationId) {
+              conversationId = lastConversation.conversationId
+            }
+
+            const conversationMessage = await tx.conversationMessage.create({
               data: {
+                workspaceId: campaign.workspaceId,
+                customerId: customer.id,
+                conversationId,
+                role: 'assistant',
+                content: messageContent,
+                agentType: 'PUSH_CAMPAIGN',
+                functionName: 'push-campaign',
+                functionArguments: {
+                  campaignId: campaign.id,
+                  recipientId: recipient.id,
+                },
+                deliveryStatus: 'pending',
+                debugInfo: JSON.stringify({
+                  source: 'push-campaign',
+                  frequency: campaign.frequency,
+                }),
+              },
+            })
+
+            const queue = await tx.whatsAppQueue.upsert({
+              where: {
+                pushCampaignRecipientId: recipient.id,
+              },
+              update: {
                 workspaceId: campaign.workspaceId,
                 customerId: customer.id,
                 phoneNumber: phone,
                 messageContent,
                 status: 'pending',
                 channel: 'whatsapp',
+                conversationMessageId: conversationMessage.id,
+                pushCampaignId: campaign.id,
+              },
+              create: {
+                workspaceId: campaign.workspaceId,
+                customerId: customer.id,
+                phoneNumber: phone,
+                messageContent,
+                status: 'pending',
+                channel: 'whatsapp',
+                conversationMessageId: conversationMessage.id,
+                pushCampaignId: campaign.id,
+                pushCampaignRecipientId: recipient.id,
               },
             })
 
@@ -276,63 +325,116 @@ export async function pushCampaignsJob(): Promise<void> {
 }
 
 async function populateRecipientsForRun(campaign: any) {
-  let targetCustomerIds: string[] = []
+  return prisma.$transaction(async (tx) => {
+    let targetCustomerIds: string[] = []
 
-  if (campaign.targetingType === CampaignTargetType.ALL) {
-    const customers = await prisma.customers.findMany({
-      where: {
-        workspaceId: campaign.workspaceId,
-        isActive: true,
-        activeChatbot: true,
-        isBlacklisted: false,
-        deletedAt: null,
-      },
-      select: { id: true },
-    })
-    targetCustomerIds = customers.map((c) => c.id)
-  } else if (campaign.targetingType === CampaignTargetType.TAGS && campaign.tagId) {
-    const customers = await prisma.customers.findMany({
-      where: {
-        workspaceId: campaign.workspaceId,
-        tags: { has: campaign.tagId },
-        isActive: true,
-        activeChatbot: true,
-        isBlacklisted: false,
-        deletedAt: null,
-      },
-      select: { id: true },
-    })
-    targetCustomerIds = customers.map((c) => c.id)
-  } else if (campaign.targetingType === CampaignTargetType.MANUAL) {
-    targetCustomerIds = campaign.targetCustomerIds || []
-  }
+    if (campaign.targetingType === CampaignTargetType.ALL) {
+      const customers = await tx.customers.findMany({
+        where: {
+          workspaceId: campaign.workspaceId,
+          isActive: true,
+          activeChatbot: true,
+          isBlacklisted: false,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+      targetCustomerIds = customers.map((c) => c.id)
+    } else if (campaign.targetingType === CampaignTargetType.TAGS && campaign.tagId) {
+      const customers = await tx.customers.findMany({
+        where: {
+          workspaceId: campaign.workspaceId,
+          tags: { has: campaign.tagId },
+          isActive: true,
+          activeChatbot: true,
+          isBlacklisted: false,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+      targetCustomerIds = customers.map((c) => c.id)
+    } else if (campaign.targetingType === CampaignTargetType.MANUAL) {
+      targetCustomerIds = campaign.targetCustomerIds || []
+    }
 
-  if (targetCustomerIds.length > 0) {
-    const customers = await prisma.customers.findMany({
+    if (targetCustomerIds.length === 0) {
+      return
+    }
+
+    // Fetch eligible customers (consent, active, not blacklisted)
+    const customers = await tx.customers.findMany({
       where: {
         id: { in: targetCustomerIds },
         workspaceId: campaign.workspaceId,
         isActive: true,
         activeChatbot: true,
         isBlacklisted: false,
-        push_notifications_consent: true, // Security: opt-out enforcement (Rule #4 from security audit)
+        push_notifications_consent: true,
         deletedAt: null,
       },
       select: { id: true, phone: true },
     })
 
-    if (customers.length > 0) {
-      await prisma.pushCampaignRecipient.createMany({
-        data: customers.map((c) => ({
-          workspaceId: campaign.workspaceId,
-          campaignId: campaign.id,
-          customerId: c.id,
-          phone: c.phone || '',
-          status: 'PENDING',
-        })),
+    if (customers.length === 0) return
+
+    const eligibleIds = new Set(customers.map((c) => c.id))
+
+    // Load existing recipients to avoid duplicates across runs
+    const existing = await tx.pushCampaignRecipient.findMany({
+      where: { campaignId: campaign.id },
+      select: { id: true, customerId: true },
+    })
+
+    const existingMap = new Map(existing.map((r) => [r.customerId, r.id]))
+
+    // Reset existing recipients to PENDING for this run (if still targeted)
+    const resetIds = existing
+      .filter((r) => eligibleIds.has(r.customerId))
+      .map((r) => r.id)
+
+    if (resetIds.length > 0) {
+      await tx.pushCampaignRecipient.updateMany({
+        where: { id: { in: resetIds } },
+        data: {
+          status: PushCampaignRecipientStatus.PENDING,
+          errorCode: null,
+          errorMessage: null,
+          messageId: null,
+        },
       })
     }
-  }
+
+    // Mark non-eligible existing recipients as SKIPPED to prevent reuse
+    const removedIds = existing
+      .filter((r) => !eligibleIds.has(r.customerId))
+      .map((r) => r.id)
+    if (removedIds.length > 0) {
+      await tx.pushCampaignRecipient.updateMany({
+        where: { id: { in: removedIds } },
+        data: {
+          status: PushCampaignRecipientStatus.SKIPPED,
+          errorCode: 'NOT_TARGET',
+          errorMessage: 'Recipient no longer targeted',
+          messageId: null,
+        },
+      })
+    }
+
+    // Create recipients that do not exist yet
+    const newRecipients = customers
+      .filter((c) => !existingMap.has(c.id))
+      .map((c) => ({
+        workspaceId: campaign.workspaceId,
+        campaignId: campaign.id,
+        customerId: c.id,
+        phone: c.phone || '',
+        status: PushCampaignRecipientStatus.PENDING,
+      }))
+
+    if (newRecipients.length > 0) {
+      await tx.pushCampaignRecipient.createMany({ data: newRecipients })
+    }
+  })
 }
 
 function calculateNextRunAt(

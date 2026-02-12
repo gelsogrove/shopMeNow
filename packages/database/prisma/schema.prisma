@@ -345,6 +345,9 @@ model WhatsAppQueue {
   createdAt             DateTime  @default(now())
   deliveredAt           DateTime?
   conversationMessageId String? // FK to ConversationMessage for timeline tracking
+  // Push Campaign linkage for idempotency
+  pushCampaignId           String?
+  pushCampaignRecipientId  String?   @unique
 
   // 🆕 Widget Support
   channel         String    @default("whatsapp") // "whatsapp" | "widget"
@@ -358,9 +361,11 @@ model WhatsAppQueue {
   // 🧪 Playground Mode
   isPlayground Boolean @default(false) // true for test messages (skip billing & real sending)
 
-  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  customer            Customers            @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  conversationMessage ConversationMessage? @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)
+  workspace               Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer                Customers               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  conversationMessage     ConversationMessage?    @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)
+  pushCampaign            PushCampaign?           @relation(fields: [pushCampaignId], references: [id], onDelete: SetNull)
+  pushCampaignRecipient   PushCampaignRecipient?  @relation(fields: [pushCampaignRecipientId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status])
   @@index([workspaceId, channel])
@@ -1620,6 +1625,7 @@ model PushCampaign {
   workspace  Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy  User?                   @relation(fields: [createdByUserId], references: [id])
   recipients PushCampaignRecipient[]
+  whatsappQueue WhatsAppQueue[]
 
   @@index([workspaceId])
   @@index([status])
@@ -1648,6 +1654,7 @@ model PushCampaignRecipient {
 
   campaign  PushCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  whatsappQueue WhatsAppQueue[]
   customer  Customers?   @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])

@@ -4,11 +4,20 @@
  * SCENARIO: Scheduler SecurityAgentService must include internal eChatbot domains
  * when sending the allowed links list to the LLM for outbound security validation.
  *
- * ROOT CAUSE OF BUG: Previously, scheduler only sent workspace.allowedExternalLinks
- * from the database, missing internal domains like echatbot.ai/registration/*,
- * causing the LLM to flag legitimate eChatbot links as UNAUTHORIZED_LINK.
+ * ROOT CAUSE OF BUG (4 days debugging!):
+ * 1. Scheduler only sent workspace.allowedExternalLinks from DB, missing echatbot.ai
+ * 2. Handlebars 2-pass compilation replaced {{allowedExternalLinks}} with "true"
+ * 3. LLM (GPT-4o-mini) flagged echatbot.ai links as UNAUTHORIZED_LINK (false positive)
+ * 4. blocked status was TERMINAL — messages never retried
+ * 5. No code-level override existed to catch LLM false positives on internal domains
  *
- * RULE: Internal domains in scheduler MUST match backend SecurityAgent.ts
+ * SOLUTION:
+ * - Always inject echatbot.ai + www.echatbot.ai as internal domains
+ * - Single-pass Handlebars compilation (no boolean "true" bug)
+ * - Code-level override: if LLM says UNAUTHORIZED_LINK but ALL URLs are echatbot.ai → allow
+ * - debugPrompt/debugModel returned to debug view for visibility
+ *
+ * RULE: These tests are the BIBLE — never change logic without Andrea's approval
  */
 
 // Mock logger
@@ -58,19 +67,10 @@ describe('SecurityAgentService - Internal Domains', () => {
    * RULE: Internal domains must be merged with workspace allowedExternalLinks
    */
   describe('Internal domains alignment with backend SecurityAgent', () => {
+    // Only base domains — no need to list every path, the domain check is sufficient
     const EXPECTED_INTERNAL_DOMAINS = [
       'echatbot.ai',
       'www.echatbot.ai',
-      'echatbot.ai/s/*',
-      'www.echatbot.ai/s/*',
-      'echatbot.ai/registration/*',
-      'www.echatbot.ai/registration/*',
-      'echatbot.ai/cart*',
-      'www.echatbot.ai/cart*',
-      'echatbot.ai/orders-public*',
-      'www.echatbot.ai/orders-public*',
-      'echatbot.ai/customer-profile*',
-      'www.echatbot.ai/customer-profile*',
     ]
 
     // SCENARIO: When LLM security check runs, it receives ALL internal domains
@@ -266,9 +266,9 @@ Validate message.`,
       const body = JSON.parse(mockFetch.mock.calls[0][1].body)
       const prompt = body.messages[0].content
 
-      // RULE: Internal domains always present regardless of workspace config
-      expect(prompt).toContain('echatbot.ai/customer-profile*')
-      expect(prompt).toContain('echatbot.ai/registration/*')
+      // RULE: Internal base domains always present regardless of workspace config
+      expect(prompt).toContain('echatbot.ai')
+      expect(prompt).toContain('www.echatbot.ai')
 
       process.env.OPENROUTER_API_KEY = originalKey
     })
@@ -585,6 +585,270 @@ Check if message is safe. Respond with JSON.`,
       // RULE: Must remain blocked — not all URLs are internal
       expect(result.isSafe).toBe(false)
       process.env.OPENROUTER_API_KEY = originalKey
+    })
+  })
+
+  /**
+   * 🔴 REGRESSION TESTS - 4-DAY BUG (Feb 2026)
+   *
+   * These tests prevent the exact bugs that took 4 days to debug in production.
+   * NEVER remove or weaken these without Andrea's explicit approval.
+   *
+   * Bug timeline:
+   * Day 1: Messages blocked with UNAUTHORIZED_LINK — couldn't see why
+   * Day 2: Found Handlebars rendered "true" instead of domain list
+   * Day 3: Fixed Handlebars, but LLM still false-positive on echatbot.ai links
+   * Day 4: Added code-level override + debug view with real prompt
+   */
+  describe('🔴 REGRESSION: UNAUTHORIZED_LINK 4-day production bug', () => {
+    // Helper to set up LLM mock that returns UNAUTHORIZED_LINK
+    const setupLLMBlockMock = () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                safe: false,
+                reason: 'UNAUTHORIZED_LINK',
+                details: 'External URL not in allowed domains',
+              }),
+            },
+          }],
+        }),
+      })
+    }
+
+    const setupLLMSafeMock = () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({ safe: true }),
+            },
+          }],
+        }),
+      })
+    }
+
+    beforeEach(() => {
+      mockPrisma.customers.findUnique.mockResolvedValue({
+        isBlacklisted: false,
+        name: 'Test Customer',
+      })
+
+      mockPrisma.agentConfig.findFirst.mockResolvedValue({
+        systemPrompt: `# Security Agent - {{companyName}}
+{{#if allowedExternalLinks}}
+## ALLOWED EXTERNAL DOMAINS
+{{allowedExternalLinks}}
+{{/if}}
+Check if message is safe. Respond with JSON: {"safe": true/false, "reason": "..."}`,
+        model: 'openai/gpt-4o-mini',
+        temperature: 0,
+        maxTokens: 500,
+      })
+
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        allowedExternalLinks: ['paypall.com'],
+        name: 'eChatbot HQ',
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+    })
+
+    afterEach(() => {
+      delete process.env.OPENROUTER_API_KEY
+    })
+
+    // REGRESSION: The EXACT message that was blocked in production for 4 days
+    // This is the registration link that eChatbot sends to new workspace owners
+    it('should NEVER block echatbot.ai/registration links (the exact production bug)', async () => {
+      setupLLMBlockMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'echatbot-hq-support',
+        messageContent: 'Ciao Andrea! Benvenuto su eChatbot. Registrati qui: https://echatbot.ai/registration/echatbot-hq-support?token=eyJhbGciOiJIUzI1NiJ9.abc123',
+        customerId: 'cust-production',
+      })
+
+      // CRITICAL: Must be safe — this is an internal link, LLM is wrong
+      expect(result.isSafe).toBe(true)
+    })
+
+    // REGRESSION: Order links were also blocked
+    it('should NEVER block echatbot.ai/orders-public links', async () => {
+      setupLLMBlockMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'echatbot-hq-support',
+        messageContent: 'Il tuo ordine è pronto! Controlla qui: https://echatbot.ai/orders-public?token=abc123&orderId=ord_456',
+        customerId: 'cust-789',
+      })
+
+      expect(result.isSafe).toBe(true)
+    })
+
+    // REGRESSION: Cart links were also blocked
+    it('should NEVER block echatbot.ai/cart links', async () => {
+      setupLLMBlockMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Ecco il tuo carrello: https://www.echatbot.ai/cart?token=xyz789&workspaceId=ws-123',
+        customerId: 'cust-456',
+      })
+
+      expect(result.isSafe).toBe(true)
+    })
+
+    // REGRESSION: Short links (echatbot.ai/s/xxx) were also blocked
+    it('should NEVER block echatbot.ai/s/ short links', async () => {
+      setupLLMBlockMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Clicca qui per vedere i dettagli: https://echatbot.ai/s/abc123xyz',
+        customerId: 'cust-456',
+      })
+
+      expect(result.isSafe).toBe(true)
+    })
+
+    // REGRESSION: Customer profile links were also blocked
+    it('should NEVER block echatbot.ai/customer-profile links', async () => {
+      setupLLMBlockMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Accedi al tuo profilo: https://echatbot.ai/customer-profile?token=profile_token_123',
+        customerId: 'cust-456',
+      })
+
+      expect(result.isSafe).toBe(true)
+    })
+
+    // REGRESSION: External URLs must STILL be blocked — override only for echatbot.ai
+    it('should STILL block truly external UNAUTHORIZED_LINK', async () => {
+      setupLLMBlockMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Visita https://phishing-site.com/steal-your-data',
+        customerId: 'cust-456',
+      })
+
+      // CRITICAL: External links must remain blocked
+      expect(result.isSafe).toBe(false)
+      expect(result.reason).toBe('UNAUTHORIZED_LINK')
+    })
+
+    // REGRESSION: Domains list in prompt must be SIMPLE (just base domains)
+    // Bug was: listing every path (echatbot.ai/s/*, echatbot.ai/cart*, etc) = useless noise
+    it('should send only base domains to LLM, not every path pattern', async () => {
+      setupLLMSafeMock()
+
+      await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Normal safe message',
+        customerId: 'cust-456',
+      })
+
+      expect(mockFetch).toHaveBeenCalled()
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+      const prompt = body.messages[0].content
+
+      // RULE: Only base domains, NOT path patterns
+      expect(prompt).toContain('echatbot.ai')
+      expect(prompt).toContain('www.echatbot.ai')
+      expect(prompt).toContain('paypall.com') // from DB
+
+      // RULE: Must NOT contain path-specific patterns (the old noise)
+      expect(prompt).not.toContain('echatbot.ai/s/*')
+      expect(prompt).not.toContain('echatbot.ai/registration/*')
+      expect(prompt).not.toContain('echatbot.ai/cart*')
+      expect(prompt).not.toContain('echatbot.ai/orders-public*')
+      expect(prompt).not.toContain('echatbot.ai/customer-profile*')
+    })
+
+    // REGRESSION: Handlebars must NOT render "true" instead of actual domain values
+    // This was the root cause — 2-pass compilation replaced variables with booleans
+    it('should never render boolean "true" instead of domain list in prompt', async () => {
+      setupLLMSafeMock()
+
+      await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Test message',
+        customerId: 'cust-456',
+      })
+
+      expect(mockFetch).toHaveBeenCalled()
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+      const prompt = body.messages[0].content
+
+      // CRITICAL: The word "true" must NOT appear as a domain value
+      // Split at ALLOWED EXTERNAL DOMAINS and check the domain section
+      const domainSection = prompt.split('ALLOWED EXTERNAL DOMAINS')[1]?.split('Check if')[0] || ''
+      expect(domainSection).not.toMatch(/^\s*true\s*$/m)
+      expect(domainSection).toContain('echatbot.ai')
+    })
+
+    // REGRESSION: {{companyName}} must be replaced with actual workspace name
+    // Bug: prompt showed "# Security Agent - " (empty) because companyName wasn't passed
+    it('should replace {{companyName}} with workspace name', async () => {
+      setupLLMSafeMock()
+
+      await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Test message',
+        customerId: 'cust-456',
+      })
+
+      expect(mockFetch).toHaveBeenCalled()
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body)
+      const prompt = body.messages[0].content
+
+      // RULE: companyName must be resolved to workspace.name
+      expect(prompt).toContain('# Security Agent - eChatbot HQ')
+      expect(prompt).not.toContain('{{companyName}}')
+    })
+
+    // REGRESSION: debugPrompt and debugModel must be returned for debug view
+    // Bug: debug view showed hardcoded "security-patterns/v1" instead of real prompt
+    it('should return debugPrompt and debugModel in SecurityCheckResult', async () => {
+      setupLLMSafeMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Test message',
+        customerId: 'cust-456',
+      })
+
+      // RULE: Result must contain the actual compiled prompt and model
+      expect(result.debugPrompt).toBeDefined()
+      expect(result.debugPrompt).toContain('Security Agent')
+      expect(result.debugPrompt).toContain('echatbot.ai')
+      expect(result.debugModel).toBe('openai/gpt-4o-mini')
+    })
+
+    // REGRESSION: Override must also return debugPrompt/debugModel
+    // So debug view shows what happened even when override kicks in
+    it('should return debugPrompt and debugModel even when overriding LLM', async () => {
+      setupLLMBlockMock()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Link: https://echatbot.ai/registration/test?token=abc',
+        customerId: 'cust-456',
+      })
+
+      expect(result.isSafe).toBe(true) // Overridden
+      expect(result.debugPrompt).toBeDefined()
+      expect(result.debugPrompt).toContain('Security Agent')
+      expect(result.debugModel).toBe('openai/gpt-4o-mini')
     })
   })
 })
