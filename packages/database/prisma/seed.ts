@@ -1308,7 +1308,7 @@ Can I help with anything else?"`,
       type: "TEXT",
       aiGenerated: true,
       metadata: {
-        agentSelected: "CUSTOMER_SUPPORT",
+        agentSelected: "INFO_AGENT",
       },
       createdAt: new Date(Date.now() - 1000 * 60 * 3),
     },

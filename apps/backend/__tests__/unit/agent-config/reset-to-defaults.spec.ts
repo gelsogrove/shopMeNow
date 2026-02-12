@@ -105,7 +105,7 @@ describe("AgentConfigController - Reset to Defaults - Template Loading", () => {
       // SCENARIO: Informational workspace should use informational templates
       // EXPECTATION: Template loads successfully
 
-      const infoTemplate = loadTemplateFile("CUSTOMER_SUPPORT", false)
+      const infoTemplate = loadTemplateFile("INFO_AGENT", false)
       
       // Should load successfully
       expect(infoTemplate).toBeTruthy()

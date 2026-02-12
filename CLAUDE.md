@@ -178,7 +178,7 @@ Customer Message → Router Agent → Specialized Agent → Response Builder →
 2. **PRODUCT_SEARCH** - Catalog queries with semantic search
 3. **CART_MANAGEMENT** - Add/remove items, quantity adjustments
 4. **ORDER_TRACKING** - View orders, shipment status
-5. **CUSTOMER_SUPPORT** - Escalation, issue resolution
+5. **CUSTOMER_SUPPORT** - Escalation, issue resolution (ecommerce) / **INFO_AGENT** for informational workspaces
 6. **PROFILE_MANAGEMENT** - User data updates
 7. **NOTIFICATIONS** - Push campaigns
 8. **CONVERSATION_HISTORY** - Context enrichment
@@ -908,7 +908,7 @@ const userId = (req as any).user.id // Set by authMiddleware
 
 ### Updating Agent Prompts
 
-**Multi-Agent System**: eChatbot uses 6 specialized agents (ROUTER, PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING, CUSTOMER_SUPPORT, SAFETY_TRANSLATION).
+**Multi-Agent System**: eChatbot uses 6 specialized agents (ROUTER, PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING, CUSTOMER_SUPPORT, SAFETY_TRANSLATION) for ecommerce, and INFO_AGENT for informational workspaces.
 
 ```bash
 # Export prompts from database to markdown files

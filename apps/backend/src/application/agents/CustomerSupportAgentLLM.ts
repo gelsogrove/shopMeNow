@@ -3,6 +3,10 @@
  *
  * ✅ SPECIALIST AGENT with OWN LLM - Clean Architecture
  *
+ * Used by:
+ * - Ecommerce workspaces: AgentType CUSTOMER_SUPPORT (via Router delegation)
+ * - Informational workspaces: AgentType INFO_AGENT (main agent, processes all messages)
+ *
  * Responsibilities:
  * 1. Handle customer support queries with dedicated LLM
  * 2. Execute function calls for FAQ, support tickets, complaints
@@ -10,20 +14,21 @@
  *
  * Architecture:
  * - Own LLM instance (OpenRouter + GPT-4o-mini)
- * - Own system prompt from files (TemplateLoaderService loads from /templates/ecommerce/04-customer-support.template.md)
+ * - Own system prompt from files (ecommerce: /templates/ecommerce/04-customer-support.template.md,
+ *   informational: /templates/informational/01-info-agent.template.md)
  * - Function execution via FAQRepository
- * - Returns English ONLY (Router handles translation)
+ * - Returns English ONLY (Router/Translation layer handles translation)
  *
  * Flow:
- * 1. Router delegates query → CustomerSupportAgentLLM
- * 2. Load system prompt from database (agentType: CUSTOMER_SUPPORT)
+ * 1. Router/ChatEngine delegates query → CustomerSupportAgentLLM
+ * 2. Load system prompt from database (agentType: CUSTOMER_SUPPORT or INFO_AGENT)
  * 3. Call LLM with support functions
  * 4. Execute functions via FAQRepository
- * 5. Return English response with tokens → Router
+ * 5. Return English response with tokens → Router/ChatEngine
  *
  * Security:
  * - ALL queries filtered by workspaceId
- * - NO translation (Router handles it)
+ * - NO translation (Router/Translation layer handles it)
  * - NO direct customer interaction
  *
  * @critical NEVER call LLMService - this is a SPECIALIST with OWN LLM

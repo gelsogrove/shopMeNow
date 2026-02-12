@@ -172,8 +172,8 @@ describe.skip("Security Template Auto-Load (SPP-1032)", () => {
     expect(productSearchAgent).toBeUndefined()
     expect(cartAgent).toBeUndefined()
 
-    // Verify shared agents exist (CUSTOMER_SUPPORT becomes INFO_AGENT)
-    const infoAgent = agents.find((a) => a.type === "CUSTOMER_SUPPORT")
+    // Verify shared agents exist (INFO_AGENT for informational workspaces)
+    const infoAgent = agents.find((a) => a.type === "INFO_AGENT" || a.type === "CUSTOMER_SUPPORT")
     expect(infoAgent).toBeDefined()
     expect(infoAgent?.name).toBe("Info Agent") // Renamed for informational context
   })

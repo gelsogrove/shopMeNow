@@ -47,7 +47,7 @@ describe("LLM Flow Coverage - Auto-Delegation (Documentation)", () => {
     // Assert structure matches expected pattern
     expect(expectedDelegationStep.type).toBe("delegation")
     expect(expectedDelegationStep.fromAgent).toBe("ROUTER")
-    expect(["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING", "CUSTOMER_SUPPORT"]).toContain(
+    expect(["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING", "CUSTOMER_SUPPORT", "INFO_AGENT"]).toContain(
       expectedDelegationStep.toAgent
     )
   })

@@ -55,14 +55,13 @@ Limited functionality for info-only channels:
 
 | Agent | Description |
 |-------|-------------|
-| Router | Routes to support/profile only |
-| Customer Support | Questions, feedback, escalation |
-| Profile Management | Profile updates, notifications |
+| Info Agent (INFO_AGENT) | Main agent - questions, feedback, escalation |
 | Security | Message validation |
 | Translation | Format for WhatsApp, translate |
 | Summary | Summarize for operator emails |
+| Conversation History | Humanization layer |
 
-**NOT available**: Product Search, Cart Management, Order Tracking
+**NOT available**: Router, Product Search, Cart Management, Order Tracking, Customer Support, Profile Management
 
 ## How It Works
 
