@@ -15,6 +15,15 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - **ALWAYS** call the user "Andrea" in discussions and messages
 - Example: "Andrea, I've completed the task" or "Andrea, what do you think?"
 
+### 0.5. **NEVER Use Worktrees - Always Work on Main Branch** (🚨 CRITICAL)
+
+- **ABSOLUTELY FORBIDDEN**: NEVER create or use git worktrees
+- **ALWAYS** work directly on the `main` branch in `/Users/gelso/workspace/shopME`
+- **NEVER** work in paths like `/Users/gelso/workspace/shopME.worktrees/*`
+- If Copilot CLI creates a worktree automatically: immediately merge changes to main before saying "task completed"
+- `npm run publish` ALWAYS pushes from main branch - worktree changes will NOT be deployed
+- Andrea wants ALL work done on main branch ONLY for this project
+
 ### 1. **Database-First Architecture**
 
 - **NEVER** use hardcoded fallbacks, default values, or mock data
