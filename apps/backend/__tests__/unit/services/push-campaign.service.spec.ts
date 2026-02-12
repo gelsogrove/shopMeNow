@@ -36,6 +36,9 @@ describe('PushCampaignService', () => {
       user: {
         findUnique: jest.fn(),
       },
+      pushCampaignRecipient: {
+        groupBy: jest.fn().mockResolvedValue([]),
+      },
     } as any
 
     // Create service instance
@@ -942,10 +945,32 @@ describe('PushCampaignService', () => {
       ]
 
       mockRepo.listByWorkspace.mockResolvedValue(mockCampaigns as any)
+      // groupBy returns empty (no recipients)
+      mockPrisma.pushCampaignRecipient.groupBy.mockResolvedValue([])
 
       const result = await service.list('workspace-1')
 
-      expect(result).toEqual(mockCampaigns)
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'campaign-1',
+            workspaceId: 'workspace-1',
+            name: 'Campaign 1',
+            status: PushCampaignStatus.SCHEDULED,
+            recipientsTotal: 0,
+            recipientsPending: 0,
+            actualSent: 0,
+            actualFailed: 0,
+            actualSkipped: 0,
+          }),
+          expect.objectContaining({
+            id: 'campaign-2',
+            workspaceId: 'workspace-1',
+            name: 'Campaign 2',
+            status: PushCampaignStatus.COMPLETED,
+          }),
+        ])
+      )
       expect(mockRepo.listByWorkspace).toHaveBeenCalledWith('workspace-1')
     })
 
