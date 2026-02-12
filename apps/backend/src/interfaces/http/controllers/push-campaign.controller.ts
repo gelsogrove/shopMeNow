@@ -68,6 +68,9 @@ export class PushCampaignController {
         batchSize,
       } = req.body
 
+      const allowedFrequencies = ["ONCE", "WEEKLY", "MONTHLY", "QUARTERLY", "SEMIANNUAL"]
+      const allowedTargeting = ["ALL", "MANUAL", "TAGS"]
+
       if (!name) {
         return res.status(400).json({ error: "Name is required" })
       }
@@ -77,21 +80,42 @@ export class PushCampaignController {
       if (!targetingType) {
         return res.status(400).json({ error: "Targeting type is required" })
       }
+      const normalizedFrequency = frequency ? String(frequency).toUpperCase() : undefined
+      const normalizedTargeting = targetingType ? String(targetingType).toUpperCase() : undefined
+      if (normalizedFrequency && !allowedFrequencies.includes(normalizedFrequency)) {
+        return res.status(400).json({ error: "Invalid frequency" })
+      }
+      if (normalizedTargeting && !allowedTargeting.includes(normalizedTargeting)) {
+        return res.status(400).json({ error: "Invalid targeting type" })
+      }
+
+      let normalizedSendAt: Date | string | null | undefined = undefined
+      if (sendAt === undefined) {
+        normalizedSendAt = undefined // let service decide default
+      } else if (sendAt === null || sendAt === "") {
+        normalizedSendAt = null
+      } else {
+        const parsed = new Date(sendAt)
+        if (Number.isNaN(parsed.getTime())) {
+          return res.status(400).json({ error: "Invalid send date/time" })
+        }
+        normalizedSendAt = parsed.toISOString()
+      }
 
       const campaign = await service.create({
         workspaceId,
         createdByUserId,
         name,
-        frequency,
+        frequency: normalizedFrequency as any,
         isActive,
-        targetingType,
+        targetingType: normalizedTargeting as any,
         targetCustomerIds,
         tagId,
         message,
         templateId,
         templateLocale,
         mediaUrl,
-        sendAt,
+        sendAt: normalizedSendAt,
         throttlePerSecond,
         batchSize,
       })
@@ -106,7 +130,61 @@ export class PushCampaignController {
   async update(req: Request, res: Response, next: NextFunction) {
     try {
       const { workspaceId, id } = req.params
-      const campaign = await service.update(workspaceId, id, req.body)
+      const enabled = await ensureWhatsappEnabled(workspaceId)
+      if (!enabled) {
+        return res.status(400).json({
+          error: "Push campaigns available only for WhatsApp-enabled workspaces",
+        })
+      }
+
+      const allowedFrequencies = ["ONCE", "WEEKLY", "MONTHLY", "QUARTERLY", "SEMIANNUAL"]
+      const allowedTargeting = ["ALL", "MANUAL", "TAGS"]
+
+      const body = req.body || {}
+
+      if (!body.name) {
+        return res.status(400).json({ error: "Name is required" })
+      }
+      if (!body.message) {
+        return res.status(400).json({ error: "Message is required" })
+      }
+      if (body.targetingType && !allowedTargeting.includes(String(body.targetingType).toUpperCase())) {
+        return res.status(400).json({ error: "Invalid targeting type" })
+      }
+      if (body.frequency && !allowedFrequencies.includes(String(body.frequency).toUpperCase())) {
+        return res.status(400).json({ error: "Invalid frequency" })
+      }
+
+      const payload: any = {
+        ...body,
+        name: String(body.name).trim(),
+        message: String(body.message).trim(),
+        frequency: body.frequency ? String(body.frequency).toUpperCase() : undefined,
+        targetingType: body.targetingType ? String(body.targetingType).toUpperCase() : undefined,
+      }
+
+      // Normalize date
+      if (body.sendAt === undefined) {
+        // leave undefined (no change)
+      } else if (body.sendAt === null || body.sendAt === "") {
+        payload.sendAt = null
+      } else {
+        const parsed = new Date(body.sendAt)
+        if (Number.isNaN(parsed.getTime())) {
+          return res.status(400).json({ error: "Invalid send date/time" })
+        }
+        payload.sendAt = parsed
+      }
+
+      // Normalize numbers if provided
+      if (body.throttlePerSecond !== undefined) {
+        payload.throttlePerSecond = Number(body.throttlePerSecond)
+      }
+      if (body.batchSize !== undefined) {
+        payload.batchSize = Number(body.batchSize)
+      }
+
+      const campaign = await service.update(workspaceId, id, payload)
       res.json(campaign)
     } catch (error) {
       logger.error("[PushCampaignController] update error", error)

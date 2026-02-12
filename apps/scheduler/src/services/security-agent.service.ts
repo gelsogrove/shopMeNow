@@ -1,5 +1,6 @@
 import { prisma } from '../config/database'
 import logger from '../utils/logger'
+import Handlebars from 'handlebars'
 
 interface SecurityCheckResult {
   isSafe: boolean
