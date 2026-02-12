@@ -220,50 +220,15 @@ export class WelcomeMessageHandler {
       logger.info(welcomeText)
       logger.info("*******END PROMPT*******")
 
-      // 🔧 CRITICAL: Replace [LINK_REGISTRATION] with placeholder BEFORE translation
-      // Strategy: Use UUID placeholder that translation won't touch, then replace after
-      const REGISTRATION_PLACEHOLDER = `__REG_LINK_${Date.now()}_PLACEHOLDER__`
-      let registrationLink: string | null = null
-      
-      if (welcomeText.includes("[LINK_REGISTRATION]")) {
-        try {
-          // Load customer to get phone number
-          const customer = await this.prisma.customers.findFirst({
-            where: {
-              id: input.customerId,
-              workspaceId: input.workspaceId,
-            },
-            select: { phone: true },
-          })
-
-          if (customer?.phone) {
-            registrationLink = await this.generateRegistrationLink(
-              customer.phone,
-              input.workspaceId
-            )
-            // Replace token with placeholder BEFORE translation
-            welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, REGISTRATION_PLACEHOLDER)
-            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with placeholder before translation", {
-              placeholder: REGISTRATION_PLACEHOLDER,
-              link: registrationLink
-            })
-          } else {
-            logger.warn("⚠️ [WelcomeMessageHandler] Customer phone not found, cannot replace [LINK_REGISTRATION]")
-          }
-        } catch (error) {
-          logger.error("❌ [WelcomeMessageHandler] Error generating registration link:", error)
-        }
-      }
-
-      logger.info("👋 [WelcomeMessageHandler] Before translation", {
+      logger.info("👋 [WelcomeMessageHandler] Returning welcome message", {
         customerId: input.customerId,
         workspaceId: input.workspaceId,
         welcomeMessageLength: welcomeText.length,
         customerLanguage: input.customerLanguage || "it",
-        hasPlaceholder: welcomeText.includes(REGISTRATION_PLACEHOLDER),
+        hasRegistrationToken: welcomeText.includes("[LINK_REGISTRATION]"),
       })
 
-      // 🌍 Translate welcome message to customer's language
+      // 🌍 CRITICAL: Translate welcome message to customer's language FIRST
       const customerLanguage = input.customerLanguage || "it"
       
       logger.info("🌍 [WelcomeMessageHandler] BEFORE Translation", {
@@ -276,7 +241,7 @@ export class WelcomeMessageHandler {
         workspaceId: input.workspaceId,
         message: welcomeText,
         targetLanguage: customerLanguage,
-        customerName: input.customerId,
+        customerName: input.customerId, // We don't have name yet for anonymous users
       })
 
       welcomeText = translationResult.message
@@ -287,13 +252,36 @@ export class WelcomeMessageHandler {
         targetLanguage: customerLanguage,
         wasTranslated: translationResult.translated,
         translatedText: translationResult.message.substring(0, 100),
-        hasPlaceholder: welcomeText.includes(REGISTRATION_PLACEHOLDER),
       })
 
-      // 🔧 Replace placeholder with actual link AFTER translation
-      if (registrationLink && welcomeText.includes(REGISTRATION_PLACEHOLDER)) {
-        welcomeText = welcomeText.replace(new RegExp(REGISTRATION_PLACEHOLDER, 'g'), registrationLink)
-        logger.info("✅ [WelcomeMessageHandler] Replaced placeholder with actual link after translation")
+      // 🔧 FIX: Replace [LINK_REGISTRATION] token AFTER translation to prevent link being broken
+      if (welcomeText.includes("[LINK_REGISTRATION]")) {
+        try {
+          // Load customer to get phone number
+          const customer = await this.prisma.customers.findFirst({
+            where: {
+              id: input.customerId,
+              workspaceId: input.workspaceId,
+            },
+            select: { phone: true },
+          })
+
+          if (customer?.phone) {
+            const registrationLink = await this.generateRegistrationLink(
+              customer.phone,
+              input.workspaceId
+            )
+            welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
+            logger.info("🔗 [WelcomeMessageHandler] Replaced [LINK_REGISTRATION] with actual link AFTER translation", {
+              linkGenerated: registrationLink.substring(0, 50) + "...",
+            })
+          } else {
+            logger.warn("⚠️ [WelcomeMessageHandler] Customer phone not found, cannot replace [LINK_REGISTRATION]")
+          }
+        } catch (error) {
+          logger.error("❌ [WelcomeMessageHandler] Error replacing registration link:", error)
+          // Keep [LINK_REGISTRATION] token if generation fails
+        }
       }
 
       // Save welcome exchange to conversation history
