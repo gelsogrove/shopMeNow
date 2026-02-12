@@ -205,6 +205,8 @@ export function SettingsPage() {
     widgetLanguage: "it",
     widgetIcon: "chat",
     widgetUseChannelLogo: false,
+    widgetAutoSuggestionsEnabled: false,
+    widgetQuickReplies: [],
     customAiRules: "",
     welcomeMessage: defaultWelcomeMessage,
     wipMessage: defaultWipMessage,
