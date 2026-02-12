@@ -444,8 +444,7 @@ export class WelcomeMessageHandler {
       const { url: workspaceUrl, registrationPage } =
         await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
 
-      // Use centralized link generator service
-      const linkGeneratorService = new LinkGeneratorService()
+      // Use centralized link generator service (imported singleton)
       const registrationLink = await linkGeneratorService.generateRegistrationLink(
         token,
         workspaceUrl,
