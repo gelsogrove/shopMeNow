@@ -968,7 +968,8 @@ export class WhatsAppWebhookController {
           registrationToken,
           workspaceUrl,
           workspaceId,
-          registrationPage // Pass custom registration page if configured
+          registrationPage, // Pass custom registration page if configured
+          finalLanguage // 🌍 Pass customer language for registration page i18n
         )
 
         // Get localized registration texts
@@ -1390,7 +1391,8 @@ export class WhatsAppWebhookController {
               registrationToken,
               workspaceUrl,
               customer.workspaceId,
-              registrationPage
+              registrationPage,
+              finalLanguage // 🌍 Pass customer language for registration page i18n
             )
 
           registrationTexts = getRegistrationText(finalLanguage)

@@ -386,7 +386,7 @@ export class LinkReplacementService {
         try {
           const customer = await prisma.customers.findFirst({
             where: { id: customerId, workspaceId },
-            select: { phone: true, isActive: true, registrationStatus: true },
+            select: { phone: true, isActive: true, registrationStatus: true, language: true },
           })
 
           // Use registrationStatus for 3-state logic:
@@ -425,7 +425,8 @@ export class LinkReplacementService {
                 token,
                 workspaceUrl,
                 workspaceId,
-                registrationPage // Pass custom registration page if configured
+                registrationPage, // Pass custom registration page if configured
+                customer.language // 🌍 Pass customer language for registration page i18n
               )
 
             replacedResponse = replacedResponse.replace(

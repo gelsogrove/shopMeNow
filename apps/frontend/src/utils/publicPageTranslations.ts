@@ -175,6 +175,12 @@ export interface PublicPageTexts {
   registrationErrorTitle: string
   tryAgain: string
   validatingLink: string
+  // Registration success page (detailed)
+  whatHappensNext: string
+  welcomeMessageStep: string
+  browseProductsStep: string
+  preferencesSavedStep: string
+  goToHomepage: string
 
   // Payment page (Mock Stripe)
   paymentTitle: string
@@ -406,6 +412,11 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Errore di Registrazione",
     tryAgain: "Riprova",
     validatingLink: "Validazione link di registrazione...",
+    whatHappensNext: "Cosa succede ora?",
+    welcomeMessageStep: "Riceverai un messaggio di benvenuto su WhatsApp",
+    browseProductsStep: "Potrai sfogliare prodotti e servizi tramite WhatsApp",
+    preferencesSavedStep: "Le tue preferenze sono state salvate e verranno usate per personalizzare la tua esperienza",
+    goToHomepage: "Vai alla Homepage",
 
     // Payment page (Mock Stripe)
     paymentTitle: "Pagamento Sicuro",
@@ -634,6 +645,11 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Registration Error",
     tryAgain: "Try Again",
     validatingLink: "Validating registration link...",
+    whatHappensNext: "What happens next?",
+    welcomeMessageStep: "You'll receive a welcome message on WhatsApp",
+    browseProductsStep: "You can now browse products and services via WhatsApp",
+    preferencesSavedStep: "Your preferences have been saved and will be used to personalize your experience",
+    goToHomepage: "Go to Homepage",
 
     // Payment page (Mock Stripe)
     paymentTitle: "Secure Payment",
@@ -862,6 +878,11 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Error de Registro",
     tryAgain: "Intentar de Nuevo",
     validatingLink: "Validando enlace de registro...",
+    whatHappensNext: "¿Qué pasa ahora?",
+    welcomeMessageStep: "Recibirás un mensaje de bienvenida en WhatsApp",
+    browseProductsStep: "Ahora puedes explorar productos y servicios a través de WhatsApp",
+    preferencesSavedStep: "Tus preferencias han sido guardadas y se usarán para personalizar tu experiencia",
+    goToHomepage: "Ir a la Página Principal",
 
     // Payment page (Mock Stripe)
     paymentTitle: "Pago Seguro",
@@ -1091,6 +1112,11 @@ export const publicPageTranslations: Record<
     registrationErrorTitle: "Erro de Registro",
     tryAgain: "Tentar Novamente",
     validatingLink: "Validando link de registro...",
+    whatHappensNext: "O que acontece agora?",
+    welcomeMessageStep: "Você receberá uma mensagem de boas-vindas no WhatsApp",
+    browseProductsStep: "Agora você pode navegar por produtos e serviços pelo WhatsApp",
+    preferencesSavedStep: "Suas preferências foram salvas e serão usadas para personalizar sua experiência",
+    goToHomepage: "Ir para a Página Inicial",
 
     // Payment page (Mock Stripe)
     paymentTitle: "Pagamento Seguro",

@@ -1,8 +1,9 @@
+import { useEffect, useState } from "react"
+import { useNavigate, useSearchParams, useParams } from "react-router-dom"
+import { IMG_BASE_URL } from "@/config"
 import { GDPRDialog } from "@/components/ui/gdpr-dialog"
 import { logger } from "@/lib/logger"
 import { getPublicPageTexts } from "@/utils/publicPageTranslations"
-import { useEffect, useState } from "react"
-import { useNavigate, useSearchParams, useParams } from "react-router-dom"
 import { useTokenValidation } from "../hooks/useTokenValidation"
 import { tokenApi } from "../services/tokenApi"
 
@@ -19,6 +20,7 @@ const RegisterPage = () => {
   const texts = getPublicPageTexts(langParam)
 
   const [workspaceName, setWorkspaceName] = useState("")
+  const [workspaceLogoUrl, setWorkspaceLogoUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [initialLoading, setInitialLoading] = useState(true)
 
@@ -40,7 +42,7 @@ const RegisterPage = () => {
     lastName: "",
     company: "",
     email: "",
-    language: "ENG", // Default, will be updated based on lang parameter
+    language: "en", // Default, will be updated based on lang parameter (2-letter ISO 639-1)
     currency: "USD", // Always USD by default
     gdprConsent: false,
     pushNotificationsConsent: false,
@@ -72,6 +74,16 @@ const RegisterPage = () => {
     )
   }, [langParam])
 
+  // Sync workspace branding from validated token
+  useEffect(() => {
+    if (tokenData?.workspaceName) {
+      setWorkspaceName(tokenData.workspaceName)
+    }
+    if (tokenData?.workspaceLogoUrl !== undefined) {
+      setWorkspaceLogoUrl(tokenData.workspaceLogoUrl || null)
+    }
+  }, [tokenData])
+
   const [formErrors, setFormErrors] = useState({
     firstName: "",
     lastName: "",
@@ -88,12 +100,12 @@ const RegisterPage = () => {
 
   const hasToken = token.trim().length > 0
 
-  // Array of available languages
+  // Array of available languages (2-letter ISO 639-1 codes matching Customer schema)
   const languages = [
-    { code: "IT", name: "Italiano" },
-    { code: "ESP", name: "Español" },
-    { code: "ENG", name: "English" },
-    { code: "PRT", name: "Português" },
+    { code: "it", name: "Italiano" },
+    { code: "es", name: "Español" },
+    { code: "en", name: "English" },
+    { code: "pt", name: "Português" },
   ]
 
   // Array of available currencies (kept for reference)
@@ -249,9 +261,9 @@ const RegisterPage = () => {
           error: "",
         })
 
-        // Redirect to success page or back to WhatsApp
+        // Redirect to success page with lang param for translations
         setTimeout(() => {
-          navigate("/registration-success")
+          navigate(`/registration-success?lang=${langParam}`)
         }, 3000)
       } else {
         throw new Error("Registration failed")
@@ -376,6 +388,19 @@ const RegisterPage = () => {
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-8 text-white">
+          {workspaceLogoUrl && (
+            <div className="flex justify-center mb-3">
+              <img
+                src={
+                  workspaceLogoUrl.startsWith("http")
+                    ? workspaceLogoUrl
+                    : `${IMG_BASE_URL}${workspaceLogoUrl}`
+                }
+                alt="Workspace logo"
+                className="h-12 w-12 rounded-full border border-white/50 shadow-sm object-contain bg-white"
+              />
+            </div>
+          )}
           <h1 className="text-lg font-bold text-center">
             {texts.registerTitle.replace(
               "{workspaceName}",

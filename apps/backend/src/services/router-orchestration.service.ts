@@ -78,13 +78,14 @@ export class RouterOrchestrationService {
               id: context.customerId,
               workspaceId: context.workspaceId,
             },
-            select: { phone: true, isActive: true },
+            select: { phone: true, isActive: true, language: true },
           })
 
           if (customer?.phone && !customer.isActive) {
             const registrationLink = await this.generateRegistrationLink(
               customer.phone,
-              context.workspaceId
+              context.workspaceId,
+              customer.language // 🌍 Pass language for registration page i18n
             )
             result.response = result.response.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
             logger.info("🔗 [RouterOrchestration] Replaced [LINK_REGISTRATION] with actual link for non-registered user")
@@ -145,7 +146,8 @@ export class RouterOrchestrationService {
    */
   private async generateRegistrationLink(
     phone: string,
-    workspaceId: string
+    workspaceId: string,
+    customerLanguage?: string | null
   ): Promise<string> {
     try {
       // Import services
@@ -167,7 +169,8 @@ export class RouterOrchestrationService {
         token,
         workspaceUrl,
         workspaceId,
-        registrationPage // Pass custom registration page if configured
+        registrationPage, // Pass custom registration page if configured
+        customerLanguage // 🌍 Pass customer language for registration page i18n
       )
 
       logger.info(`📎 [RouterOrchestration] Created registration link: ${registrationLink}`)

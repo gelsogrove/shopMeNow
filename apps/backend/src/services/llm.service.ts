@@ -575,7 +575,8 @@ export class LLMService {
       // 5. Generate registration link
       const registrationLink = await this.generateRegistrationLink(
         phone,
-        workspaceId
+        workspaceId,
+        detectedLanguage // 🌍 Pass language for registration page i18n
       )
 
       // 6. Build complete message with link
@@ -760,7 +761,8 @@ export class LLMService {
             )
             const registrationLink = await this.generateRegistrationLink(
               customer.phone,
-              workspace.id
+              workspace.id,
+              customer.language // 🌍 Pass language for registration page i18n
             )
             finalResponse = finalResponse.replace(token, registrationLink)
             logger.info(
@@ -1532,7 +1534,8 @@ export class LLMService {
   private async newUserLink(
     phone: string,
     workspaceId: string,
-    welcomeMessage: string
+    welcomeMessage: string,
+    customerLanguage?: string | null
   ): Promise<string> {
     const token = welcomeMessage.includes("[LINK_REGISTRATION]")
       ? "[LINK_REGISTRATION]"
@@ -1544,7 +1547,8 @@ export class LLMService {
 
     const registrationLink = await this.generateRegistrationLink(
       phone,
-      workspaceId
+      workspaceId,
+      customerLanguage // 🌍 Pass language for registration page i18n
     )
     return welcomeMessage.replace(token, registrationLink)
   }
@@ -1554,7 +1558,8 @@ export class LLMService {
    */
   private async generateRegistrationLink(
     phone: string,
-    workspaceId: string
+    workspaceId: string,
+    customerLanguage?: string | null
   ): Promise<string> {
     const tokenService = new TokenService()
     const token = await tokenService.createRegistrationToken(phone, workspaceId)
@@ -1571,7 +1576,8 @@ export class LLMService {
       token,
       workspaceUrl,
       workspaceId,
-      registrationPage // Pass custom registration page if configured
+      registrationPage, // Pass custom registration page if configured
+      customerLanguage // 🌍 Pass customer language for registration page i18n
     )
   }
 
@@ -1718,7 +1724,8 @@ export class LLMService {
     const output = await this.newUserLink(
       llmRequest.phone,
       workspace.id,
-      welcomeMessage
+      welcomeMessage,
+      detectedLanguage // 🌍 Pass language for registration page i18n
     )
 
     return {

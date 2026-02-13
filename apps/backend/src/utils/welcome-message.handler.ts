@@ -281,7 +281,8 @@ export class WelcomeMessageHandler {
               token,
               workspaceUrl,
               input.workspaceId,
-              registrationPage
+              registrationPage,
+              input.customerLanguage // 🌍 Pass customer language for registration page i18n
             )
 
             welcomeText = welcomeText.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
@@ -433,7 +434,8 @@ export class WelcomeMessageHandler {
    */
   private async generateRegistrationLink(
     phone: string,
-    workspaceId: string
+    workspaceId: string,
+    customerLanguage?: string | null
   ): Promise<string> {
     try {
       // Create registration token
@@ -449,7 +451,8 @@ export class WelcomeMessageHandler {
         token,
         workspaceUrl,
         workspaceId,
-        registrationPage // Pass custom registration page if configured
+        registrationPage, // Pass custom registration page if configured
+        customerLanguage // 🌍 Pass customer language for registration page i18n
       )
 
       logger.info(`📎 [WelcomeMessageHandler] Created registration link: ${registrationLink}`)

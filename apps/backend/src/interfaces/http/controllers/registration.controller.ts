@@ -44,11 +44,20 @@ export class RegistrationController {
         return res.status(404).json({ error: "Invalid or expired token" })
       }
 
+      // Fetch workspace branding for registration page (logo, name)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: tokenData.workspaceId },
+        select: { name: true, logoUrl: true, registrationPage: true },
+      })
+
       res.status(200).json({
         valid: true,
         phoneNumber: tokenData.phoneNumber,
         workspaceId: tokenData.workspaceId,
         expiresAt: tokenData.expiresAt,
+        workspaceName: workspace?.name,
+        workspaceLogoUrl: workspace?.logoUrl || null,
+        customRegistrationPage: workspace?.registrationPage || null,
       })
     } catch (error) {
       logger.error("Error validating token:", error)
@@ -209,7 +218,7 @@ export class RegistrationController {
             name: `${first_name} ${last_name}`,
             email: email, // Use the email provided by the user
             company,
-            language: language || "ENG",
+            language: language || "it",
             currency: currency || "USD",
             last_privacy_version_accepted: "1.0.0", // Current privacy policy version
             privacy_accepted_at: new Date(),
@@ -233,7 +242,7 @@ export class RegistrationController {
               phone,
               company,
               workspaceId: workspace_id,
-              language: language || "ENG",
+              language: language || "it",
               currency: currency || "USD",
               last_privacy_version_accepted: "1.0.0", // Current privacy policy version
               privacy_accepted_at: new Date(),
@@ -281,7 +290,7 @@ export class RegistrationController {
                 name: `${first_name} ${last_name}`,
                 email: email,
                 company,
-                language: language || "ENG",
+                language: language || "it",
                 currency: currency || "USD",
                 last_privacy_version_accepted: "1.0.0",
                 privacy_accepted_at: new Date(),

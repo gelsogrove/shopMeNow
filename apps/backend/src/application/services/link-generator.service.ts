@@ -137,12 +137,14 @@ export class LinkGeneratorService {
    * @param workspaceUrl - Base workspace URL (legacy/custom use cases)
    * @param workspaceId - Workspace ID for short URL generation
    * @param customRegistrationPage - Optional: Custom registration page URL from workspace.registrationPage
+   * @param customerLanguage - Optional: Customer language code to pass as ?lang= in the registration URL
    */
   async generateRegistrationLink(
     token: string,
     workspaceUrl: string,
     workspaceIdOrSlug: string, // Can be either ID or slug
-    customRegistrationPage?: string | null
+    customRegistrationPage?: string | null,
+    customerLanguage?: string | null
   ): Promise<string> {
     // 🔧 FIX: Load workspace to get REAL ID (not slug)
     // workspaceIdOrSlug might be a slug, we need the actual ID for the URL
@@ -194,6 +196,12 @@ export class LinkGeneratorService {
     if (!/[?&]token=/.test(originalUrl)) {
       const separator = originalUrl.includes("?") ? "&" : "?"
       originalUrl = `${originalUrl}${separator}token=${token}`
+    }
+
+    // 🌍 Add language parameter so registration page renders in customer's language
+    if (customerLanguage) {
+      const langCode = this.mapToUrlLanguageCode(customerLanguage)
+      originalUrl = `${originalUrl}&lang=${langCode}`
     }
 
     // 🔧 FIX: Registration links should last 7 days, not 1 hour
@@ -254,6 +262,23 @@ export class LinkGeneratorService {
   ): Promise<string> {
     const originalUrl = `${baseUrl}/orders-public/${orderCode}?token=${token}`
     return this.generateShortLink(originalUrl, workspaceId, "shipment-tracking")
+  }
+
+  /**
+   * Map any customer language code format to URL-friendly 2-letter ISO 639-1 code
+   * Handles: "it", "IT", "ITA", "ENG", "ESP", "PRT", "en", "es", "pt", etc.
+   */
+  private mapToUrlLanguageCode(language: string): string {
+    const map: Record<string, string> = {
+      // 2-letter lowercase (ISO 639-1)
+      it: "it", en: "en", es: "es", pt: "pt",
+      // 2-letter uppercase
+      IT: "it", EN: "en", ES: "es", PT: "pt",
+      // 3-letter codes (used in some DB records)
+      ITA: "it", ENG: "en", ESP: "es", PRT: "pt", POR: "pt",
+      ita: "it", eng: "en", esp: "es", prt: "pt", por: "pt",
+    }
+    return map[language] || "en"
   }
 }
 
