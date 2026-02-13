@@ -188,7 +188,13 @@ router.post("/validate-secure-token", async (req: Request, res: Response) => {
     // 🔎 Fetch workspace branding (logo, name) to support public pages (registration, profile, checkout)
     const workspaceInfo = await prisma.workspace.findUnique({
       where: { id: validation.data?.workspaceId },
-      select: { id: true, name: true, logoUrl: true, logoKey: true },
+      select: {
+        id: true,
+        name: true,
+        logoUrl: true,
+        logoKey: true,
+        widgetPrimaryColor: true,
+      },
     })
 
     return res.json({
