@@ -21,6 +21,7 @@ const RegisterPage = () => {
 
   const [workspaceName, setWorkspaceName] = useState("")
   const [workspaceLogoUrl, setWorkspaceLogoUrl] = useState<string | null>(null)
+  const [workspacePrimaryColor, setWorkspacePrimaryColor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [initialLoading, setInitialLoading] = useState(true)
 
@@ -85,6 +86,9 @@ const RegisterPage = () => {
       (tokenData as any)?.workspaceLogoUrl ||
       null
     const wsLogoKey = (tokenData as any)?.workspace?.logoKey
+    const wsPrimary =
+      (tokenData as any)?.workspace?.widgetPrimaryColor ||
+      (tokenData as any)?.workspacePrimaryColor
 
     if (wsName) setWorkspaceName(wsName)
 
@@ -98,6 +102,10 @@ const RegisterPage = () => {
           ? `${IMG_BASE_URL}${wsLogo}`
           : null
       setWorkspaceLogoUrl(finalLogo)
+    }
+
+    if (wsPrimary && typeof wsPrimary === "string") {
+      setWorkspacePrimaryColor(wsPrimary)
     }
   }, [tokenData])
 
@@ -404,7 +412,14 @@ const RegisterPage = () => {
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-8 text-white">
+        <div
+          className="px-6 py-8 text-white"
+          style={{
+            background: workspacePrimaryColor
+              ? `linear-gradient(135deg, ${workspacePrimaryColor} 0%, ${workspacePrimaryColor}CC 70%)`
+              : "linear-gradient(to right, #3b82f6, #6366f1)",
+          }}
+        >
           {workspaceLogoUrl && (
             <div className="flex justify-center mb-4">
               <img
