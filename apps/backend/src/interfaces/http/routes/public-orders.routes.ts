@@ -185,10 +185,17 @@ router.post("/validate-secure-token", async (req: Request, res: Response) => {
 
     logger.info("[TOKEN-VALIDATION] ✅ Token validated successfully")
 
+    // 🔎 Fetch workspace branding (logo, name) to support public pages (registration, profile, checkout)
+    const workspaceInfo = await prisma.workspace.findUnique({
+      where: { id: validation.data?.workspaceId },
+      select: { id: true, name: true, logoUrl: true, logoKey: true },
+    })
+
     return res.json({
       valid: true,
       data: validation.data,
       payload: validation.payload,
+      workspace: workspaceInfo || null,
     })
   } catch (error) {
     logger.error("[TOKEN-VALIDATION] Error validating token:", error)
