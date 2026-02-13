@@ -23,6 +23,7 @@ describe('PushCampaignService', () => {
   let service: PushCampaignService
   let mockPrisma: jest.Mocked<PrismaClient>
   let mockRepo: jest.Mocked<PushCampaignRepository>
+  let buildRecipientsSpy: jest.SpyInstance
 
   beforeEach(() => {
     // Mock Prisma client
@@ -53,16 +54,42 @@ describe('PushCampaignService', () => {
       findById: jest.fn(),
       updateStatus: jest.fn(),
       listRecipients: jest.fn(),
+      replaceRecipients: jest.fn(),
     } as any
 
     // Replace the internal repo with our mock
     ;(service as any).repo = mockRepo
+
+    // Spy on buildRecipients to control output during update tests
+    buildRecipientsSpy = jest
+      .spyOn<any, any>(service as any, 'buildRecipients')
+      .mockResolvedValue({
+        recipients: [
+          {
+            workspaceId: 'workspace-1',
+            customerId: 'c1',
+            phone: '+1',
+            status: PushCampaignRecipientStatus.PENDING,
+          },
+          {
+            workspaceId: 'workspace-1',
+            customerId: 'c2',
+            phone: '+2',
+            status: PushCampaignRecipientStatus.PENDING,
+          },
+        ],
+        targetCustomerIds: ['c1', 'c2'],
+      })
 
     // Mock platform config service
     ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(1.0)
     ;(platformConfigService.getLimit as jest.Mock).mockResolvedValue(10)
 
     jest.clearAllMocks()
+  })
+
+  afterEach(() => {
+    buildRecipientsSpy.mockRestore()
   })
 
   describe('create', () => {
@@ -835,6 +862,133 @@ describe('PushCampaignService', () => {
         }),
         expect.any(Array)
       )
+    })
+  })
+
+  describe('update', () => {
+    const existingCampaign = {
+      id: 'camp-1',
+      workspaceId: 'workspace-1',
+      targetingType: CampaignTargetType.MANUAL,
+      targetCustomerIds: ['c1'],
+      expectedRecipients: 1,
+    }
+
+    const existingAllCampaign = {
+      id: 'camp-2',
+      workspaceId: 'workspace-1',
+      targetingType: CampaignTargetType.ALL,
+      targetCustomerIds: [],
+      expectedRecipients: 3,
+    }
+
+    const existingTagCampaign = {
+      id: 'camp-3',
+      workspaceId: 'workspace-1',
+      targetingType: CampaignTargetType.TAGS,
+      tagId: 'tag-old',
+      targetCustomerIds: [],
+      expectedRecipients: 5,
+    }
+
+    it('rebuilds recipients when manual list changes (count or ids)', async () => {
+      mockRepo.findById.mockResolvedValue(existingCampaign as any)
+      mockRepo.replaceRecipients.mockResolvedValue({ id: 'camp-1' } as any)
+
+      await service.update('workspace-1', 'camp-1', {
+        targetingType: CampaignTargetType.MANUAL,
+        targetCustomerIds: ['c1', 'c2'], // changed list/length
+      })
+
+      expect(buildRecipientsSpy).toHaveBeenCalledWith(
+        'workspace-1',
+        CampaignTargetType.MANUAL,
+        ['c1', 'c2'],
+        null
+      )
+      expect(mockRepo.replaceRecipients).toHaveBeenCalledWith(
+        'camp-1',
+        'workspace-1',
+        expect.objectContaining({
+          targetCustomerIds: ['c1', 'c2'],
+          expectedRecipients: 2,
+        }),
+        expect.arrayContaining([
+          expect.objectContaining({ customerId: 'c1' }),
+          expect.objectContaining({ customerId: 'c2' }),
+        ])
+      )
+      expect(mockRepo.updateCampaign).not.toHaveBeenCalled()
+    })
+
+    it('keeps simple update when manual list unchanged', async () => {
+      mockRepo.findById.mockResolvedValue(existingCampaign as any)
+      mockRepo.updateCampaign.mockResolvedValue({ id: 'camp-1' } as any)
+
+      await service.update('workspace-1', 'camp-1', {
+        name: 'New name',
+      })
+
+      expect(mockRepo.updateCampaign).toHaveBeenCalledWith(
+        'camp-1',
+        'workspace-1',
+        expect.objectContaining({ name: 'New name' })
+      )
+      expect(mockRepo.replaceRecipients).not.toHaveBeenCalled()
+    })
+
+    it('forces rebuild when targeting ALL (refresh snapshot)', async () => {
+      mockRepo.findById.mockResolvedValue(existingAllCampaign as any)
+      mockRepo.replaceRecipients.mockResolvedValue({ id: 'camp-2' } as any)
+
+      await service.update('workspace-1', 'camp-2', {
+        targetingType: CampaignTargetType.ALL, // even unchanged, ALL triggers snapshot refresh
+      })
+
+      expect(buildRecipientsSpy).toHaveBeenCalledWith(
+        'workspace-1',
+        CampaignTargetType.ALL,
+        [],
+        null
+      )
+      expect(mockRepo.replaceRecipients).toHaveBeenCalledWith(
+        'camp-2',
+        'workspace-1',
+        expect.objectContaining({
+          expectedRecipients: 2, // from mocked buildRecipientsSpy result length
+          targetCustomerIds: ['c1', 'c2'],
+        }),
+        expect.any(Array)
+      )
+      expect(mockRepo.updateCampaign).not.toHaveBeenCalled()
+    })
+
+    it('rebuilds recipients when tag changes in TAGS targeting', async () => {
+      mockRepo.findById.mockResolvedValue(existingTagCampaign as any)
+      mockRepo.replaceRecipients.mockResolvedValue({ id: 'camp-3' } as any)
+
+      await service.update('workspace-1', 'camp-3', {
+        targetingType: CampaignTargetType.TAGS,
+        tagId: 'tag-new',
+      })
+
+      expect(buildRecipientsSpy).toHaveBeenCalledWith(
+        'workspace-1',
+        CampaignTargetType.TAGS,
+        [],
+        'tag-new'
+      )
+      expect(mockRepo.replaceRecipients).toHaveBeenCalledWith(
+        'camp-3',
+        'workspace-1',
+        expect.objectContaining({
+          tagId: 'tag-new',
+          expectedRecipients: 2,
+          targetCustomerIds: ['c1', 'c2'],
+        }),
+        expect.any(Array)
+      )
+      expect(mockRepo.updateCampaign).not.toHaveBeenCalled()
     })
   })
 

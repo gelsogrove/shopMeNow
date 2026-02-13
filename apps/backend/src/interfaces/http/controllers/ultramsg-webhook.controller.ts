@@ -556,6 +556,10 @@ export class UltraMsgWebhookController {
         // Create customer
         const phoneForStorage = phoneVariants.find((v) => v.startsWith('+')) || phoneVariants[0] || phoneNumber
         
+        // 🌍 Detect language from phone prefix (+34→es, +39→it, +351→pt) or use workspace default
+        const detectedLanguage = detectLanguageFromPhonePrefix(phoneForStorage)
+        const customerLanguage = detectedLanguage || workspace.defaultLanguage
+        
         customer = await prisma.customers.create({
           data: {
             workspace: {
@@ -564,7 +568,7 @@ export class UltraMsgWebhookController {
             phone: phoneForStorage,
             email: `${phoneForStorage.replace(/[^0-9]/g, '')}@whatsapp.ultramsg.temp`,
             name: 'New Customer',
-            language: workspace.defaultLanguage, // NOT nullable - set during channel registration
+            language: customerLanguage, // 🌍 Detected from phone prefix or workspace default
             isActive: false, // Mark inactive until registration
           },
           select: customerSelect,
@@ -573,6 +577,8 @@ export class UltraMsgWebhookController {
         logger.info('[ULTRAMSG] ✅ New customer created', {
           customerId: customer.id,
           phone: customer.phone,
+          detectedLanguage,
+          finalLanguage: customerLanguage,
         })
       }
 

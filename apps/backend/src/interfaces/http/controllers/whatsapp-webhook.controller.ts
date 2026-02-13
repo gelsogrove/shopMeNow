@@ -655,13 +655,17 @@ export class WhatsAppWebhookController {
               lookupVariants[0] ||
               phoneNumber
 
+            // 🌍 Detect language from phone prefix (+34→es, +39→it, +351→pt) or use workspace default
+            const detectedLanguage = detectLanguageFromPhonePrefix(phoneForStorage)
+            const customerLanguage = detectedLanguage || workspace.defaultLanguage
+
             const tempCustomer = await prisma.customers.create({
               data: {
                 phone: phoneForStorage,
                 workspaceId: workspaceId,
                 name: contactName || "New Customer",
                 email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`,
-                language: workspace.defaultLanguage,
+                language: customerLanguage, // 🌍 Detected from phone prefix or workspace default
                 isActive: false,
               },
             })
