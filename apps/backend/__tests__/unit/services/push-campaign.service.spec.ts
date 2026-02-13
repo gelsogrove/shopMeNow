@@ -60,36 +60,11 @@ describe('PushCampaignService', () => {
     // Replace the internal repo with our mock
     ;(service as any).repo = mockRepo
 
-    // Spy on buildRecipients to control output during update tests
-    buildRecipientsSpy = jest
-      .spyOn<any, any>(service as any, 'buildRecipients')
-      .mockResolvedValue({
-        recipients: [
-          {
-            workspaceId: 'workspace-1',
-            customerId: 'c1',
-            phone: '+1',
-            status: PushCampaignRecipientStatus.PENDING,
-          },
-          {
-            workspaceId: 'workspace-1',
-            customerId: 'c2',
-            phone: '+2',
-            status: PushCampaignRecipientStatus.PENDING,
-          },
-        ],
-        targetCustomerIds: ['c1', 'c2'],
-      })
-
     // Mock platform config service
     ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(1.0)
     ;(platformConfigService.getLimit as jest.Mock).mockResolvedValue(10)
 
     jest.clearAllMocks()
-  })
-
-  afterEach(() => {
-    buildRecipientsSpy.mockRestore()
   })
 
   describe('create', () => {
@@ -866,6 +841,33 @@ describe('PushCampaignService', () => {
   })
 
   describe('update', () => {
+    // Spy on buildRecipients for update tests only
+    beforeEach(() => {
+      buildRecipientsSpy = jest
+        .spyOn<any, any>(service as any, 'buildRecipients')
+        .mockResolvedValue({
+          recipients: [
+            {
+              workspaceId: 'workspace-1',
+              customerId: 'c1',
+              phone: '+1',
+              status: PushCampaignRecipientStatus.PENDING,
+            },
+            {
+              workspaceId: 'workspace-1',
+              customerId: 'c2',
+              phone: '+2',
+              status: PushCampaignRecipientStatus.PENDING,
+            },
+          ],
+          targetCustomerIds: ['c1', 'c2'],
+        })
+    })
+
+    afterEach(() => {
+      buildRecipientsSpy.mockRestore()
+    })
+
     const existingCampaign = {
       id: 'camp-1',
       workspaceId: 'workspace-1',
