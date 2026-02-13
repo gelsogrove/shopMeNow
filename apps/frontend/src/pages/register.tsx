@@ -406,7 +406,7 @@ const RegisterPage = () => {
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-8 text-white">
           {workspaceLogoUrl && (
-            <div className="flex justify-center mb-3">
+            <div className="flex justify-center mb-4">
               <img
                 src={
                   workspaceLogoUrl.startsWith("http")
@@ -414,7 +414,7 @@ const RegisterPage = () => {
                     : `${IMG_BASE_URL}${workspaceLogoUrl}`
                 }
                 alt="Workspace logo"
-                className="h-12 w-12 rounded-full border border-white/50 shadow-sm object-contain bg-white"
+                className="h-16 w-16 rounded-full border-2 border-white/70 shadow-md object-contain bg-white"
               />
             </div>
           )}

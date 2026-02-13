@@ -81,9 +81,7 @@ export class PushCampaignController {
         return res.status(400).json({ error: "Targeting type is required" })
       }
       const normalizedFrequency = frequency ? String(frequency).toUpperCase() : undefined
-      const normalizedTargeting = targetingType
-        ? String(targetingType).trim().replace(/^"+|"+$/g, "").toUpperCase()
-        : undefined
+      const normalizedTargeting = normalizeTargetingType(targetingType)
       if (normalizedFrequency && !allowedFrequencies.includes(normalizedFrequency)) {
         return res.status(400).json({ error: "Invalid frequency" })
       }
@@ -158,9 +156,7 @@ export class PushCampaignController {
       }
 
       // Normalize targeting type and strip accidental quotes (observed "\"MANUAL\"")
-      const normalizedTargeting = body.targetingType
-        ? String(body.targetingType).trim().replace(/^"+|"+$/g, "").toUpperCase()
-        : undefined
+      const normalizedTargeting = normalizeTargetingType(body.targetingType)
 
       const payload: any = {
         ...body,
@@ -294,4 +290,25 @@ export class PushCampaignController {
       next(error)
     }
   }
+}
+// Utility: normalize targeting type (handles values like "\"MANUAL\"" coming from buggy clients)
+function normalizeTargetingType(raw: any): string | undefined {
+  if (raw === undefined || raw === null) return undefined
+
+  let val = String(raw).trim()
+
+  // If it's a JSON-stringified string (e.g. "\"MANUAL\"") try to parse
+  if (/^".*"$/.test(val) || /^\\?".*\\?"$/.test(val)) {
+    try {
+      val = JSON.parse(val)
+    } catch {
+      // ignore parse errors, fall back to stripping quotes
+    }
+  }
+
+  // Remove any leading/trailing quotes or escaped quotes
+  val = val.replace(/^"+|"+$/g, "").replace(/^'+|'+$/g, "")
+
+  const upper = val.toUpperCase()
+  return upper.length ? upper : undefined
 }
