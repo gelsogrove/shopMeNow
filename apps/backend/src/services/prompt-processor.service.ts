@@ -109,7 +109,7 @@ export class PromptProcessorService {
       .replace(/\{\{customerPhone\}\}/g, vars.customerPhone || '')
       .replace(/\{\{customerEmail\}\}/g, vars.customerEmail || '')
       .replace(/\{\{customerDiscount\}\}/g, String(vars.customerDiscount || 0))
-      .replace(/\{\{languageUser\}\}/g, vars.languageUser || 'ITALIANO')
+      .replace(/\{\{languageUser\}\}/g, vars.languageUser || 'ENGLISH')
       .replace(/\{\{pushNotificationsConsent\}\}/g, vars.pushNotificationsConsent ? 'true' : 'false')
 
       // Sales agent variables
@@ -780,7 +780,7 @@ Il nostro team ti contatterà via email (${email}) il prima possibile per risolv
         /\{\{workspaceName\}\}/g,
         customerData.companyName || customerData.channelName || "Shop"
       )
-      .replace(/\{\{languageUser\}\}/g, customerData.languageUser || "ITALIANO")
+      .replace(/\{\{languageUser\}\}/g, customerData.languageUser || "ENGLISH")
       .replace(/\{\{lastordercode\}\}/g, customerData.lastordercode || "N/A")
       .replace(
         /\{\{TOKEN_DURATION\}\}/g,

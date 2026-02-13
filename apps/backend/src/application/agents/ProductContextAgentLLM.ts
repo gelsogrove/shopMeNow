@@ -126,7 +126,7 @@ export class ProductContextAgentLLM {
         discountUser: input.customerDiscount || 0,
         companyName: workspaceName,
         lastordercode: "",
-        languageUser: input.customerLanguage || "it",
+        languageUser: input.customerLanguage || "en",
         agentName: "Non assegnato",
         agentPhone: "N/A",
         agentEmail: "N/A",

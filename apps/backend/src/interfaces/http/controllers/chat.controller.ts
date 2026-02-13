@@ -442,7 +442,7 @@ export class ChatController {
         const translationResult = await translationAgent.process({
           workspaceId: workspaceId,
           message: content,
-          targetLanguage: chatSession.customer.language || "it",
+          targetLanguage: chatSession.customer.language || "en",
           customerName: chatSession.customer.name || "Cliente",
           customerId: chatSession.customer.id,
           channel: chatSession.channel,
@@ -459,7 +459,7 @@ export class ChatController {
           timestamp: new Date().toISOString(),
           input: {
             originalMessage: content,
-            targetLanguage: chatSession.customer.language || "it",
+            targetLanguage: chatSession.customer.language || "en",
             customerName: chatSession.customer.name || "Cliente",
           },
           output: {

@@ -165,7 +165,7 @@ export class PromptVariableBuilder {
       customerEmail: customer?.email || '',
       customerDiscount: customer?.discount || 0,
       customerIsActive: customer?.isActive ?? false, // 🔒 Feature 174: Registration status for price visibility
-      languageUser: this.getLanguageDisplayName(customer?.language || workspace?.language || 'it'),
+      languageUser: this.getLanguageDisplayName(customer?.language || workspace?.language || 'en'),
       pushNotificationsConsent: customer?.push_notifications_consent ?? undefined,
 
       // Sales agent variables
@@ -378,7 +378,7 @@ export class PromptVariableBuilder {
       'PORTUGUÊS': 'PORTUGUÊS',
     }
 
-    return languageMap[langCode?.toUpperCase() || 'IT'] || 'ITALIANO'
+    return languageMap[langCode?.toUpperCase() || 'EN'] || 'ENGLISH'
   }
 
   /**

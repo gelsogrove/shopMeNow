@@ -456,7 +456,7 @@ export class FunctionHandlerService {
         workspaceId: workspaceId,
         orderCode: params.orderCode || undefined,
         documentType: params.documentType || "order",
-        language: params.language || "it",
+        language: params.language || "en",
       })
 
       logger.info(

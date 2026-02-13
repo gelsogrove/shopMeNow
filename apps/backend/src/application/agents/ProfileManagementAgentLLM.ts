@@ -102,7 +102,7 @@ export class ProfileManagementAgentLLM {
             phone: customer.phone || "",
             discountUser: customer.discount || 0,
             companyName: workspace?.name || "",
-            languageUser: customer.language || "ITALIANO",
+            languageUser: customer.language || "ENGLISH",
             pushNotificationsConsent: customer.push_notifications_consent,
           }
         : {}

@@ -85,7 +85,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
         workspaceId: context.workspaceId,
         customerId: context.customerId,
         customerName: context.customerName || customerData.name,
-        customerLanguage: context.customerLanguage || customerData.language || "it",
+        customerLanguage: context.customerLanguage || customerData.language || "en",
         query: context.message,
         customerData: {
           nameUser: customerData.name,
@@ -95,7 +95,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
           discountUser: 0,
           companyName: workspace.name,
           lastordercode: "",
-          languageUser: customerData.language || "it",
+          languageUser: customerData.language || "en",
           agentName: "",
           agentPhone: "",
           agentEmail: "",
@@ -124,7 +124,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
       const translationResult = await this.translationAgent.process({
         workspaceId: context.workspaceId,
         message: translationInput,
-        targetLanguage: customerData.language || "it",
+        targetLanguage: customerData.language || "en",
         customerName: customerData.name,
         customerId: customerData.id,
         channel: context.channel,
@@ -157,7 +157,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
           timestamp: new Date().toISOString(),
           input: {
             userMessage: context.message,
-            customerLanguage: context.customerLanguage || "it",
+            customerLanguage: context.customerLanguage || "en",
           },
           output: {
             message: agentResponse.output,
@@ -176,7 +176,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
           timestamp: new Date().toISOString(),
           input: {
             previousResponse: translationInput,
-            targetLanguage: customerData.language || "it",
+            targetLanguage: customerData.language || "en",
           },
           output: {
             translatedText: translationResult.message,
@@ -196,7 +196,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
           timestamp: new Date().toISOString(),
           input: {
             previousResponse: translationInput,
-            targetLanguage: customerData.language || "it",
+            targetLanguage: customerData.language || "en",
           },
           output: {
             translatedText: translationResult.message,

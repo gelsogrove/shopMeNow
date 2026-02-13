@@ -76,7 +76,7 @@ export class NaturalMixerService {
 
   private buildUserContent(params: BuildParams): string {
     const { output, context, customerLanguage } = params
-    const lang = customerLanguage || "it"
+    const lang = customerLanguage || "en"
     const blocks: any = {
       intro: output.intro,
       productGroups: output.productGroups,

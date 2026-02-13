@@ -136,8 +136,8 @@ export const pushMessagingService = {
         DE: "de",
       }
 
-      const rawLanguage = data.customerLanguage || customer.language || "it"
-      const language = languageMapping[rawLanguage] || rawLanguage || "it"
+      const rawLanguage = data.customerLanguage || customer.language || "en"
+      const language = languageMapping[rawLanguage] || rawLanguage || "en"
 
       logger.info(
         `[PUSH-MESSAGING] 🌍 Language mapping: ${customer.language} -> ${language} for customer ${customer.name}`

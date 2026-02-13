@@ -402,7 +402,7 @@ export class LLMRouterService {
         logger.info("📍 FAST-PATH STEP 1 INPUT:", {
           workspaceId: params.workspaceId,
           message: params.message,
-          targetLanguage: params.customerLanguage || "it",
+          targetLanguage: params.customerLanguage || "en",
           customerName: params.customerName,
         })
 
@@ -431,7 +431,7 @@ export class LLMRouterService {
           },
         })
 
-        const targetLanguage = params.customerLanguage || "it"
+        const targetLanguage = params.customerLanguage || "en"
         logger.info("🌍 Applying Translation Layer", {
           customerLanguage: params.customerLanguage,
           targetLanguage,
@@ -628,7 +628,7 @@ export class LLMRouterService {
         const securityTranslationResult = await this.translationAgent.process({
           workspaceId: params.workspaceId,
           message: securityMessage,
-          targetLanguage: params.customerLanguage || "it",
+          targetLanguage: params.customerLanguage || "en",
           customerName: params.customerName,
           customerId: params.customerId,
           channel: params.channel,
@@ -646,7 +646,7 @@ export class LLMRouterService {
           systemPrompt: securityTranslationResult.systemPrompt,
           input: {
             previousResponse: securityMessage,
-            targetLanguage: params.customerLanguage || "it",
+            targetLanguage: params.customerLanguage || "en",
           },
           output: {
             translatedText: translatedSecurityMessage,
@@ -1394,7 +1394,7 @@ export class LLMRouterService {
         agentEmail: customer.sales?.email || "N/A",
         companyName: workspace?.name || "L'Altra Italia", // ✅ FIX: Changed from customer.company to workspace.name
         languageUser: this.getLanguageDisplayName(
-          customer.language || workspace?.language || "it"
+          customer.language || workspace?.language || "en"
         ),
         lastordercode: lastOrder?.orderCode || "",
         channelName: workspace?.name || "Shop",
@@ -1540,7 +1540,7 @@ export class LLMRouterService {
         hasSalesAgents: workspace?.hasSalesAgents ?? false,
         isFirstMessage,
         lastAgentUsed: result.agentUsed || "ROUTER",
-        customerLanguage: params.customerLanguage || "it",
+        customerLanguage: params.customerLanguage || "en",
       })
       
       // Use humanized message for translation
@@ -1577,7 +1577,7 @@ export class LLMRouterService {
       const translationResult = await this.translationAgent.process({
         workspaceId: params.workspaceId,
         message: messageForTranslation,
-        targetLanguage: params.customerLanguage || "it",
+        targetLanguage: params.customerLanguage || "en",
         customerName: params.customerName,
         customerId: params.customerId,
         channel: params.channel,
@@ -1599,7 +1599,7 @@ export class LLMRouterService {
         systemPrompt: translationResult.systemPrompt || "Translate the following message to the target language while preserving: emojis, formatting, links, and technical terms.",
         input: {
           previousResponse: responseWithLinks.substring(0, 200) + (responseWithLinks.length > 200 ? '...' : ''),
-          targetLanguage: params.customerLanguage || "it",
+          targetLanguage: params.customerLanguage || "en",
         },
         output: {
           translatedText: translationResult.message,
@@ -1930,7 +1930,7 @@ export class LLMRouterService {
       const errorTranslationResult = await this.translationAgent.process({
         workspaceId: params.workspaceId,
         message: baseErrorMessage,
-        targetLanguage: params.customerLanguage || "it",
+        targetLanguage: params.customerLanguage || "en",
         customerName: params.customerName,
         customerId: params.customerId,
         channel: params.channel,
@@ -1955,13 +1955,13 @@ export class LLMRouterService {
           : undefined,
         input: {
           previousResponse: baseErrorMessage,
-          targetLanguage: params.customerLanguage || "it",
+          targetLanguage: params.customerLanguage || "en",
         },
         output: {
           translatedText: finalErrorMessage,
           decision: errorTranslationResult.translated ? "translated" : "passthrough",
         },
-        language: params.customerLanguage || "it",
+        language: params.customerLanguage || "en",
       })
 
       if (this.shouldApplyWidgetSecurity(params.channel)) {
@@ -3320,7 +3320,7 @@ export class LLMRouterService {
         sessionId: params.conversationId,
         query,
         customerName: params.customerName,
-        customerLanguage: params.customerLanguage || "it",
+        customerLanguage: params.customerLanguage || "en",
       })
 
       // Check for delegation handoff pattern
@@ -3353,7 +3353,7 @@ export class LLMRouterService {
       const translationResult = await this.translationAgent.process({
         workspaceId: params.workspaceId,
         message: responseWithLinks,
-        targetLanguage: params.customerLanguage || "it",
+        targetLanguage: params.customerLanguage || "en",
         customerName: params.customerName,
         customerId: params.customerId,
         channel: params.channel,
@@ -3493,7 +3493,7 @@ export class LLMRouterService {
               : undefined,
             input: {
               previousResponse: responseWithLinks.substring(0, 200),
-              targetLanguage: params.customerLanguage || "it",
+              targetLanguage: params.customerLanguage || "en",
             },
             output: {
               translatedText: translationResult.message,
@@ -3678,7 +3678,7 @@ export class LLMRouterService {
         sessionId: options.params.conversationId,
         query: cartQuery,
         customerName: options.params.customerName,
-        customerLanguage: options.params.customerLanguage || "it",
+        customerLanguage: options.params.customerLanguage || "en",
         customerDiscount,
       })
 
@@ -3686,7 +3686,7 @@ export class LLMRouterService {
       const cartTranslationResult = await this.translationAgent.process({
         workspaceId: options.params.workspaceId,
         message: cartResponse.output,
-        targetLanguage: options.params.customerLanguage || "it",
+        targetLanguage: options.params.customerLanguage || "en",
         customerName: options.params.customerName,
         customerId: options.params.customerId,
         channel: options.params.channel,
@@ -4063,7 +4063,7 @@ export class LLMRouterService {
       DEU: "DEUTSCH", // ✅ FIX: Add DEU mapping
       FRA: "FRANÇAIS", // ✅ FIX: Add FRA mapping
     }
-    return languageMap[languageCode] || "ITALIANO"
+    return languageMap[languageCode] || "ENGLISH"
   }
 
   /**

@@ -382,7 +382,7 @@ export class PlatformConfigController {
             workspaceName: workspace.name,
             logoUrl: workspace.widgetUseChannelLogo ? workspace.logoUrl : null,
             title: workspace.widgetTitle || "Chat with us 💬",
-            language: workspace.widgetLanguage || "it",
+            language: workspace.widgetLanguage || "en",
             primaryColor: workspace.widgetPrimaryColor || "#22c55e",
             icon: workspace.widgetIcon || "chat",
             useChannelLogo: workspace.widgetUseChannelLogo ?? false,

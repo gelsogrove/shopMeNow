@@ -214,7 +214,7 @@ export class VariableResolverService {
       variables.customerPhone = ""
       variables.customerDiscount = 0
       variables.pushNotificationsConsent = false
-      variables.languageUser = variables.language || "it"
+      variables.languageUser = variables.language || "en"
       variables.customerIsActive = false // 🔒 Feature 174: Default to non-registered
       // 🔧 Set agentName even if customer not found
       variables.agentName = "Not assigned"
@@ -228,7 +228,7 @@ export class VariableResolverService {
     variables.customerPhone = customer.phone || ""
     variables.customerDiscount = customer.discount || 0
     variables.pushNotificationsConsent = customer.push_notifications_consent ?? false
-    variables.languageUser = this.getLanguageDisplayName(customer.language || variables.language || "it")
+    variables.languageUser = this.getLanguageDisplayName(customer.language || variables.language || "en")
     variables.customerIsActive = customer.isActive ?? false // 🔒 Feature 174: Registration status
 
     // Sales agent info

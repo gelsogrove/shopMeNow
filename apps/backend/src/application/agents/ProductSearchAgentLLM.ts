@@ -194,7 +194,7 @@ export class ProductSearchAgentLLM {
             email: customer.email || "",
             phone: customer.phone || "",
             discountUser: customer.discount || 0,
-            languageUser: customer.language || "ITALIANO",
+            languageUser: customer.language || "ENGLISH",
           }
           : {}
         customerDiscount = customer?.discount || 0

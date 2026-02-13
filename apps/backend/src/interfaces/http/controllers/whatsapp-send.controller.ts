@@ -153,7 +153,7 @@ export class WhatsAppSendController {
         customerId,
         sendType: "ADMIN_MANUAL",
         skipSecurityLayer: true, // Admin è fidato, no security check
-        userLanguage: (customer.language as "it" | "es" | "pt" | "en") || "it",
+        userLanguage: (customer.language as "it" | "es" | "pt" | "en") || "en",
         metadata: {
           sentBy: session.userId,
           sentByEmail: session.user?.email,

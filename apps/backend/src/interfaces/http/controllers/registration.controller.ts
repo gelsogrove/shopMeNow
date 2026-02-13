@@ -218,7 +218,7 @@ export class RegistrationController {
             name: `${first_name} ${last_name}`,
             email: email, // Use the email provided by the user
             company,
-            language: language || "it",
+            language: language || "en",
             currency: currency || "USD",
             last_privacy_version_accepted: "1.0.0", // Current privacy policy version
             privacy_accepted_at: new Date(),
@@ -242,7 +242,7 @@ export class RegistrationController {
               phone,
               company,
               workspaceId: workspace_id,
-              language: language || "it",
+              language: language || "en",
               currency: currency || "USD",
               last_privacy_version_accepted: "1.0.0", // Current privacy policy version
               privacy_accepted_at: new Date(),
@@ -290,7 +290,7 @@ export class RegistrationController {
                 name: `${first_name} ${last_name}`,
                 email: email,
                 company,
-                language: language || "it",
+                language: language || "en",
                 currency: currency || "USD",
                 last_privacy_version_accepted: "1.0.0",
                 privacy_accepted_at: new Date(),

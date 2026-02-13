@@ -229,7 +229,7 @@ export class TranslationSecurityService {
   ): Promise<TranslationResult> {
     // Use provided apiKey or fallback to constructor's key
     const effectiveApiKey = apiKey || this.openRouterApiKey
-    const normalizedTarget = (targetLanguage || "it").toLowerCase()
+    const normalizedTarget = (targetLanguage || "en").toLowerCase()
     const needsTranslation =
       normalizedTarget !== "it" && !normalizedTarget.startsWith("it-")
 
@@ -374,7 +374,7 @@ export class TranslationSecurityService {
       fr: "Désolé, je ne peux pas vous aider avec ça. Comment puis-je vous aider avec nos produits?",
     }
 
-    const normalized = language?.toLowerCase() || "it"
+    const normalized = language?.toLowerCase() || "en"
     if (baseMessages[normalized as keyof typeof baseMessages]) {
       return baseMessages[normalized as keyof typeof baseMessages]
     }

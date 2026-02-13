@@ -48,7 +48,7 @@ export class WidgetChatController {
       typeof rawMessage === "object" && rawMessage !== null
         ? (rawMessage as Record<string, string>)
         : null
-    const lang = (requestedLanguage || "it").toLowerCase()
+    const lang = (requestedLanguage || "en").toLowerCase()
     return (
       wipMessageObj?.[lang] ||
       wipMessageObj?.it ||
@@ -159,7 +159,7 @@ export class WidgetChatController {
         status: "active",
         channelStatus: workspace.channelStatus ?? true,
         debugMode: workspace.debugMode ?? false,
-        language: workspace.widgetLanguage || "it", // 🌍 Widget configured language
+        language: workspace.widgetLanguage || "en", // 🌍 Widget configured language
         primaryColor: workspace.widgetPrimaryColor || "#22c55e", // 🎨 Widget color
         icon: workspace.widgetIcon || "sparkles", // 🎨 Widget icon
         useChannelLogo: workspace.widgetUseChannelLogo ?? false,
@@ -440,7 +440,7 @@ export class WidgetChatController {
           channelStatus: workspace.channelStatus,
         })
 
-        const rawLanguage = (req.body.language as string)?.toLowerCase() || "it"
+        const rawLanguage = (req.body.language as string)?.toLowerCase() || "en"
         const wipResponse = this.resolveWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
           rawLanguage

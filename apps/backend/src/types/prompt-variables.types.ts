@@ -60,7 +60,7 @@ export interface PromptVariables {
 
   /** Lingua del cliente (display name)
    * Template: {{languageUser}}
-   * Source: getLanguageDisplayName(customer.language) || 'ITALIANO'
+   * Source: getLanguageDisplayName(customer.language) || 'ENGLISH'
    * Values: ITALIANO, ENGLISH, ESPAÑOL, PORTUGUÊS
    */
   languageUser: string

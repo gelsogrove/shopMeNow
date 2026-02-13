@@ -92,6 +92,16 @@ export default function CampaignsPage() {
     }
   }
 
+  const handleDelete = async (campaign: Campaign) => {
+    try {
+      await api.delete(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}`)
+      toast.success("Campaign deleted")
+      loadCampaigns()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Error deleting campaign")
+    }
+  }
+
   const handleAddCampaign = () => {
     if (!hasEnoughCreditForPush) {
       toast.error(
@@ -231,8 +241,7 @@ export default function CampaignsPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleCancel(campaign)}
-              disabled={isTerminalStatus}
+              onClick={() => handleDelete(campaign)}
               className="h-8 w-8 p-0"
             >
               <Trash2 className="h-4 w-4 text-red-600" />

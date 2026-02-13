@@ -154,7 +154,7 @@ export class OrderOptimizationAgentLLM {
           ivaAmount: analysis.ivaAmount,
         },
         availableProducts: availableProducts.slice(0, 3), // Limit to 3 transport types
-        customerLanguage: input.customerLanguage || "it",
+        customerLanguage: input.customerLanguage || "en",
       }
 
       const llmResponse = await this.callLLM(llmInput)

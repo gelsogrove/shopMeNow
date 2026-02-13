@@ -168,7 +168,7 @@ export class AgentChatController {
         conversationId: finalConversationId,
         messageId,
         message,
-        customerLanguage: customerLanguage || "it",
+        customerLanguage: customerLanguage || "en",
         customerName,
       })
 

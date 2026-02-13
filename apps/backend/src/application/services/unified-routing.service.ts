@@ -234,7 +234,7 @@ export class UnifiedRoutingService {
         enableServices: true,
         enableOffers: true,
         defaultPath: "LLM",
-        preferredLanguage: (workspace as any).language || "it",
+        preferredLanguage: (workspace as any).language || "en",
       }
 
       // Cache for 5 minutes

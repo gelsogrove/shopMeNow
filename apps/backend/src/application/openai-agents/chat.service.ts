@@ -122,7 +122,7 @@ export class OpenAIChatService {
         conversationId: input.conversationId,
         prisma: this.prisma,
         customerName: customer.name || input.customerName || "Cliente",
-        customerLanguage: customer.language || input.customerLanguage || "it",
+        customerLanguage: customer.language || input.customerLanguage || "en",
         customerDiscount: customer.discount || input.customerDiscount || 0,
         customerEmail: customer.email || undefined,
         customerPhone: customer.phone,
@@ -152,7 +152,7 @@ export class OpenAIChatService {
       let responseText = this.extractResponseText(result)
 
       // 8. Apply translation if needed
-      const targetLanguage = context.customerLanguage || "it"
+      const targetLanguage = context.customerLanguage || "en"
       if (targetLanguage !== "it") {
         logger.info(`🌐 [OpenAI-SDK] Translating to ${targetLanguage}`)
         const translationResult = await this.translationAgent.process({

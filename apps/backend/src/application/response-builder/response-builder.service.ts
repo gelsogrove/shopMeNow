@@ -298,7 +298,7 @@ export class ResponseBuilderService {
     const discountPercent = options.customerDiscount || 0
     const context: ResponseContext = {
       intentType: intent.type,
-      customerLanguage: options.customerLanguage || "it",
+      customerLanguage: options.customerLanguage || "en",
       hasDiscount: discountPercent > 0,
       discountPercent,
       customerName: options.customerName,

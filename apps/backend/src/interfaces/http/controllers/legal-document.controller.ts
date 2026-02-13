@@ -8,7 +8,7 @@ export class LegalDocumentController {
   async getLegalDocument(req: Request, res: Response) {
     try {
       const { type } = req.params
-      const language = (req.query.lang as string) || "it"
+      const language = (req.query.lang as string) || "en"
 
       logger.info(`🌍 PUBLIC request for GLOBAL legal document: ${type}, lang=${language}`)
 

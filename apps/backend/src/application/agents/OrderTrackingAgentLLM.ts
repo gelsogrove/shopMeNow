@@ -162,7 +162,7 @@ export class OrderTrackingAgentLLM {
         discountUser: 0,
         companyName: workspace?.name || "",
         lastordercode: context.lastOrderCode || "",
-        languageUser: context.customerLanguage || "it",
+        languageUser: context.customerLanguage || "en",
         agentName: "Non assegnato",
         agentPhone: "N/A",
         agentEmail: "N/A",

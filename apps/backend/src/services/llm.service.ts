@@ -196,7 +196,7 @@ export class LLMService {
     debugInfo.linkCounts = linkCounts
 
     // 5. Pre-processing:
-    const userLanguage = customer.language || workspace.language || "it"
+    const userLanguage = customer.language || workspace.language || "en"
     const faqs = await messageRepo.getActiveFaqs(workspace.id)
     
     // 🔒 Feature 174: Check registration status for price visibility (Rule #4)

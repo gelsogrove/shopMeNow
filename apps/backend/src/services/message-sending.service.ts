@@ -91,7 +91,7 @@ export class MessageSendingService {
         const translationResult = await this.translationAgent.process({
           workspaceId: options.workspaceId,
           message: options.message,
-          targetLanguage: options.userLanguage || "it",
+          targetLanguage: options.userLanguage || "en",
           customerName: options.metadata?.customerName,
           customerId: options.customerId,
           channel: "whatsapp",

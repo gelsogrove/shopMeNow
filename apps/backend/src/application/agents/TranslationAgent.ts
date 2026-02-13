@@ -516,7 +516,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
       português: "PORTUGUÊS",
     }
 
-    return languageMap[langCode?.toLowerCase?.() || "it"] || "ITALIANO"
+    return languageMap[langCode?.toLowerCase?.() || "en"] || "ENGLISH"
   }
 
   /**

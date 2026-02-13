@@ -90,7 +90,7 @@ export class WidgetEmbedController {
     const title = workspace?.widgetTitle?.trim() || workspace?.name || "Chat with us 💬"
     const useChannelLogo = workspace?.widgetUseChannelLogo === true
     const logoUrl = useChannelLogo ? (workspace?.logoUrl?.trim() || "") : ""
-    const language = workspace?.widgetLanguage || "it"
+    const language = workspace?.widgetLanguage || "en"
     const primaryColor = workspace?.widgetPrimaryColor || "#22c55e"
     const icon = (workspace?.widgetIcon || "chat").trim()
 
