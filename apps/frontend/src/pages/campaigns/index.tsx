@@ -119,8 +119,12 @@ export default function CampaignsPage() {
       const { data } = await api.get(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}`)
       // Preserve targeting + recipients; if recipients exist but targetingType is missing/ALL, infer MANUAL
       const merged = { ...campaign, ...data }
-      const hasManualRecipients = Array.isArray(merged.targetCustomerIds) && merged.targetCustomerIds.length > 0
-      if ((!merged.targetingType || merged.targetingType === "ALL") && hasManualRecipients) {
+      const hasManualRecipients =
+        Array.isArray(merged.targetCustomerIds) && merged.targetCustomerIds.length > 0
+      const hasRecipientCount = (merged.expectedRecipients || 0) > 0
+
+      // If the campaign has recipients but targetingType is missing/ALL, treat it as MANUAL
+      if ((!merged.targetingType || merged.targetingType === "ALL") && (hasManualRecipients || hasRecipientCount)) {
         merged.targetingType = "MANUAL"
       }
       setSelectedCampaign(merged)

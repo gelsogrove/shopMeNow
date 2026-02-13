@@ -298,14 +298,20 @@ export class PushCampaignService {
       input.nextRunAt = this.calculateNextRunAt(input.frequency, sendAtDate)
     }
 
-    // If targeting changes we must rebuild recipients to keep counts consistent
-    const targetingChanged = input.targetingType && input.targetingType !== existing.targetingType
+    // If targeting changes OR recipients inputs change we must rebuild recipients to keep counts consistent
     const nextTargetingType = (input.targetingType as CampaignTargetType) || existing.targetingType
     const nextTargetIds = input.targetCustomerIds ?? existing.targetCustomerIds ?? []
     const nextTagId = input.tagId ?? (existing as any).tagId ?? null
 
+    const targetingChanged = input.targetingType && input.targetingType !== existing.targetingType
+    const manualListChanged =
+      nextTargetingType === CampaignTargetType.MANUAL && input.targetCustomerIds !== undefined
+    const tagChanged = nextTargetingType === CampaignTargetType.TAGS && input.tagId !== undefined
+    const forceAllRebuild = nextTargetingType === CampaignTargetType.ALL // always refresh ALL snapshot on edit
+    const shouldRebuildRecipients = targetingChanged || manualListChanged || tagChanged || forceAllRebuild
+
     try {
-      if (targetingChanged) {
+      if (shouldRebuildRecipients) {
         const { recipients, targetCustomerIds } = await this.buildRecipients(
           workspaceId,
           nextTargetingType,

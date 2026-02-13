@@ -101,9 +101,15 @@ export function CampaignSheet({
   // Reset form when campaign changes
   useEffect(() => {
     if (campaign) {
-      const inferredTargeting =
-        (campaign.targetingType ||
-          ((campaign.targetCustomerIds || []).length > 0 ? "MANUAL" : "ALL")).toUpperCase()
+      const hasManualRecipients =
+        Array.isArray(campaign.targetCustomerIds) &&
+        campaign.targetCustomerIds.length > 0
+      const hasRecipientCount = (campaign.expectedRecipients || 0) > 0
+
+      const inferredTargeting = (
+        campaign.targetingType ||
+        (hasManualRecipients || hasRecipientCount ? "MANUAL" : "ALL")
+      ).toUpperCase()
 
       setName(campaign.name || "")
       setMessage(campaign.message || campaign.bodyPreview || "")
