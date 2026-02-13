@@ -16,6 +16,7 @@ interface TokenValidationResult {
     phoneNumber?: string
     expiresAt?: string
     createdAt?: string
+    workspace?: any
   } | null
   payload: any | null
 }
@@ -77,7 +78,10 @@ export const useTokenValidation = ({
 
       if (response.data.valid) {
         setValid(true)
-        setTokenData(response.data.data)
+        setTokenData({
+          ...response.data.data,
+          workspace: response.data.workspace,
+        })
         setPayload(response.data.payload)
         logger.info("[TOKEN-VALIDATION] ✅ Token validated successfully")
       } else {

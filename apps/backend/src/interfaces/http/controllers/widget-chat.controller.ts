@@ -569,8 +569,14 @@ export class WidgetChatController {
         },
       })
 
-      // 🌍 LANGUAGE PRIORITY: customer.language (WINS) → workspace.defaultLanguage (NOT nullable)
-      const customerLanguage = customer.language || workspace.defaultLanguage
+      // 🌍 LANGUAGE PRIORITY for this message:
+      // 1) requestedLanguage (explicit/browser/phone) if present
+      // 2) customer.language stored in DB
+      // 3) workspace.defaultLanguage
+      const customerLanguage =
+        requestedLanguage ||
+        customer.language ||
+        workspace.defaultLanguage
       logger.info("🌍 Widget calling LLM Router with language", {
         requestedLanguage,
         customerLanguage,

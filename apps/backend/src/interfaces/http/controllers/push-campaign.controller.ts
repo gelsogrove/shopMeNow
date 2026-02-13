@@ -81,7 +81,9 @@ export class PushCampaignController {
         return res.status(400).json({ error: "Targeting type is required" })
       }
       const normalizedFrequency = frequency ? String(frequency).toUpperCase() : undefined
-      const normalizedTargeting = targetingType ? String(targetingType).toUpperCase() : undefined
+      const normalizedTargeting = targetingType
+        ? String(targetingType).trim().replace(/^"+|"+$/g, "").toUpperCase()
+        : undefined
       if (normalizedFrequency && !allowedFrequencies.includes(normalizedFrequency)) {
         return res.status(400).json({ error: "Invalid frequency" })
       }
@@ -155,12 +157,17 @@ export class PushCampaignController {
         return res.status(400).json({ error: "Invalid frequency" })
       }
 
+      // Normalize targeting type and strip accidental quotes (observed "\"MANUAL\"")
+      const normalizedTargeting = body.targetingType
+        ? String(body.targetingType).trim().replace(/^"+|"+$/g, "").toUpperCase()
+        : undefined
+
       const payload: any = {
         ...body,
         name: String(body.name).trim(),
         message: String(body.message).trim(),
         frequency: body.frequency ? String(body.frequency).toUpperCase() : undefined,
-        targetingType: body.targetingType ? String(body.targetingType).toUpperCase() : undefined,
+        targetingType: normalizedTargeting,
       }
 
       // Normalize date
