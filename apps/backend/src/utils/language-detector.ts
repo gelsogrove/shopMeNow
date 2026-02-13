@@ -10,7 +10,7 @@ export interface RegistrationText {
 }
 
 // 🚨 ONLY supported prefixes: IT, ES, PT (Andrea's rule)
-// For unrecognized prefixes → return "" → caller uses workspace.defaultLanguage
+// For unrecognized prefixes → return "en" (English as default)
 const PHONE_PREFIX_TO_LANGUAGE: Record<string, string> = {
   "+39": "it", // Italy
   "+34": "es", // Spain
@@ -36,8 +36,8 @@ const REGISTRATION_TEXTS: Record<string, RegistrationText> = {
 /**
  * Detect language from phone number prefix
  * @param phone Phone number with country code (e.g., +390212345678)
- * @returns Language code (it, es, pt) or empty string if unrecognized
- * NOTE: If empty string returned, caller MUST use workspace.defaultLanguage as fallback
+ * @returns Language code: "it" (+39), "es" (+34), "pt" (+351), "en" (all other prefixes)
+ * NOTE: Unknown prefixes default to English (Andrea's rule: only IT/ES/PT are mapped)
  */
 export function detectLanguageFromPhonePrefix(phone: string): string {
   // Clean phone number (remove spaces, dashes, etc.)
@@ -46,7 +46,7 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
   // Extract prefix (first 1-4 digits after +)
   const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
   if (!prefixMatch) {
-    return "" // No prefix found → caller uses workspace.defaultLanguage
+    return "en" // No prefix found → default to English
   }
 
   const prefix = prefixMatch[1]
@@ -65,7 +65,7 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
     }
   }
 
-  return "" // Unrecognized prefix → caller uses workspace.defaultLanguage
+  return "en" // Unrecognized prefix → default to English
 }
 
 /**
@@ -75,7 +75,10 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
  */
 export function getRegistrationText(language: string): RegistrationText {
   return (
-    REGISTRATION_TEXTS[language] || REGISTRATION_TEXTS["it"] // Default to Italian (base language)
+    REGISTRATION_TEXTS[language] || {
+      link: "Complete your registration",
+      validity: "Link valid for 24 hours",
+    } // Default to English for unsupported languages
   )
 }
 
@@ -89,6 +92,7 @@ export function getLanguageName(languageCode: string): string {
     it: "Italiano",
     es: "Español",
     pt: "Português",
+    en: "English",
   }
-  return languageNames[languageCode] || "Italiano" // Default to Italian (base language)
+  return languageNames[languageCode] || "English" // Default to English
 }

@@ -38,6 +38,27 @@ export class PushCampaignService {
   }
 
   /**
+   * Normalize targeting type coming from controllers/clients.
+   * Handles values like "\"MANUAL\"" or "manual" and returns enum-friendly string.
+   */
+  private normalizeTargetingType(raw?: any): CampaignTargetType | undefined {
+    if (raw === undefined || raw === null) return undefined
+    let val = String(raw).trim()
+    if (/^".*"$/.test(val) || /^\\?".*\\?"$/.test(val)) {
+      try {
+        val = JSON.parse(val)
+      } catch {
+        // ignore parsing errors, continue with stripped quotes
+      }
+    }
+    val = val.replace(/^"+|"+$/g, "").replace(/^'+|'+$/g, "").toUpperCase()
+    if (val === "ALL") return CampaignTargetType.ALL
+    if (val === "MANUAL") return CampaignTargetType.MANUAL
+    if (val === "TAGS") return CampaignTargetType.TAGS
+    return undefined
+  }
+
+  /**
    * Resolve target customers and build recipient rows according to targeting strategy.
    */
   private async buildRecipients(
@@ -169,6 +190,9 @@ export class PushCampaignService {
   }
 
   async create(input: CreatePushCampaignDTO) {
+    // Extra safety: normalize targeting type here too (in case controller missed)
+    input.targetingType = this.normalizeTargetingType(input.targetingType) as any
+
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: input.workspaceId },
       select: { enableWhatsapp: true, ownerId: true },
@@ -271,6 +295,9 @@ export class PushCampaignService {
   }
 
   async update(workspaceId: string, id: string, input: UpdatePushCampaignInput) {
+    // Extra safety: normalize targeting type here too
+    input.targetingType = this.normalizeTargetingType(input.targetingType) as any
+
     const existing = await this.repo.findById(id, workspaceId)
     if (!existing) {
       throw new AppError(404, "Campaign not found")

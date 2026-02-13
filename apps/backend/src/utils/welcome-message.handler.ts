@@ -157,7 +157,7 @@ export class WelcomeMessageHandler {
       // Extract welcome message in customer's language
       let welcomeText = this.extractWelcomeText(
         workspace.welcomeMessage,
-        input.customerLanguage || "it"
+        input.customerLanguage || "en"
       )
 
       // 🎯 CRITICAL: Build PromptVariables and replace ALL variables
@@ -224,12 +224,12 @@ export class WelcomeMessageHandler {
         customerId: input.customerId,
         workspaceId: input.workspaceId,
         welcomeMessageLength: welcomeText.length,
-        customerLanguage: input.customerLanguage || "it",
+        customerLanguage: input.customerLanguage || "en",
         hasRegistrationToken: welcomeText.includes("[LINK_REGISTRATION]"),
       })
 
       // 🌍 CRITICAL: Translate welcome message to customer's language FIRST
-      const customerLanguage = input.customerLanguage || "it"
+      const customerLanguage = input.customerLanguage || "en"
       
       logger.info("🌍 [WelcomeMessageHandler] BEFORE Translation", {
         customerLanguage,
@@ -352,7 +352,7 @@ export class WelcomeMessageHandler {
    */
   private normalizeLanguageCode(lang: string): string {
     const normalized = lang.toLowerCase().substring(0, 2)
-    return ["it", "en", "es", "pt", "fr", "de"].includes(normalized) ? normalized : "it"
+    return ["it", "en", "es", "pt", "fr", "de"].includes(normalized) ? normalized : "en"
   }
 
   private async getConversationChannel(conversationId?: string): Promise<string | null> {

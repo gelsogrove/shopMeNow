@@ -523,7 +523,7 @@ export class ChatEngineService {
 
       const structuredResponse = this.responseBuilder.build(faqIntent, loadedData, {
         workspaceId: input.workspaceId,
-        customerLanguage: input.customerLanguage || "it",
+        customerLanguage: input.customerLanguage || "en",
         customerName: input.customerName,
         customerDiscount: input.customerDiscount,
         userMessage: input.message,
@@ -536,7 +536,7 @@ export class ChatEngineService {
 
       const formatterResult = await this.formatWithCustomRules(
         structuredResponse,
-        input.customerLanguage || "it",
+        input.customerLanguage || "en",
         workspaceConfig,
         undefined,
         { customerName: input.customerName }
@@ -902,7 +902,7 @@ export class ChatEngineService {
       const result = await this.translationAgent.process({
         workspaceId,
         message,
-        targetLanguage: targetLanguage || "it",
+        targetLanguage: targetLanguage || "en",
         customerName,
       })
       
@@ -913,7 +913,7 @@ export class ChatEngineService {
         model: result.model || "gpt-4o-mini",
         inputMessage: message,
         outputMessage: result.message,
-        targetLanguage: targetLanguage || "it",
+        targetLanguage: targetLanguage || "en",
         translated: result.translated,
         tokensUsed: result.tokensUsed,
         executionTimeMs,
@@ -940,7 +940,7 @@ export class ChatEngineService {
         model: "error",
         inputMessage: message,
         outputMessage: message,
-        targetLanguage: targetLanguage || "it",
+        targetLanguage: targetLanguage || "en",
         translated: false,
         tokensUsed: 0,
         executionTimeMs: Date.now() - startTime,
@@ -980,7 +980,7 @@ export class ChatEngineService {
         workspaceId: input.workspaceId,
         customerId: input.customerId,
         customerName: input.customerName || "Cliente",
-        customerLanguage: input.customerLanguage || "it",
+        customerLanguage: input.customerLanguage || "en",
         message: prompt,
         conversationHistory: history,
         customerDiscount: input.customerDiscount || 0,
@@ -1432,7 +1432,7 @@ export class ChatEngineService {
    * This is critical to avoid translating Italian to Italian when DB has "ITA"
    */
   private normalizeLanguageCode(language: string): string {
-    const normalized = language?.trim?.().toLowerCase?.().split(/[-_]/)[0] || "it"
+    const normalized = language?.trim?.().toLowerCase?.().split(/[-_]/)[0] || "en"
     
     const mapping: Record<string, string> = {
       // Italian
@@ -1449,7 +1449,7 @@ export class ChatEngineService {
       de: "de", deu: "de", ger: "de", german: "de",
     }
     
-    return mapping[normalized] || "it"  // Default to Italian if unknown
+    return mapping[normalized] || "en"  // Default to English if unknown
   }
 
   /**
@@ -1533,7 +1533,7 @@ export class ChatEngineService {
       const result = await this.processMessageInternal(input)
     
       const debugSteps = result.debugInfo?.steps || []
-      const rawTargetLanguage = input.customerLanguage || "it"
+      const rawTargetLanguage = input.customerLanguage || "en"
       const normalizedLanguage = this.normalizeLanguageCode(rawTargetLanguage)
       const isWidgetChannel = input.channel === "widget"
 
@@ -1950,7 +1950,7 @@ export class ChatEngineService {
             customerId: input.customerId,
             query: `aggiungi ${quantity} ${pendingAction.productName || itemLabel} al carrello`,
             customerName: input.customerName || "",
-            customerLanguage: input.customerLanguage || "it",
+            customerLanguage: input.customerLanguage || "en",
             customerDiscount: input.customerDiscount || 0,
             selectedSku: pendingAction.productId, // SKU/code for precise cart addition
             selectedItemType: pendingAction.itemType || "PRODUCT", // 🆕 Pass item type
@@ -2033,7 +2033,7 @@ export class ChatEngineService {
           
           const structuredResponse = this.responseBuilder.build(showIntent, loadedData, {
             workspaceId: input.workspaceId,
-            customerLanguage: input.customerLanguage || "it",
+            customerLanguage: input.customerLanguage || "en",
             customerName: input.customerName,
             customerDiscount: input.customerDiscount,
             userMessage: input.message,
@@ -2042,7 +2042,7 @@ export class ChatEngineService {
           
           const formatterResult = await this.formatWithCustomRules(
             structuredResponse,
-            input.customerLanguage || "it",
+            input.customerLanguage || "en",
             workspaceConfig,
             undefined, // conversationHistory
             { customerName: input.customerName, isFirstMessage: history.length === 0 }
@@ -2239,7 +2239,7 @@ export class ChatEngineService {
                 loadedData,
                 {
                   customerName: input.customerName,
-                  customerLanguage: input.customerLanguage || "it",
+                  customerLanguage: input.customerLanguage || "en",
                   workspaceId: input.workspaceId,
                   customerDiscount: input.customerDiscount,
                   userMessage: input.message,
@@ -2250,7 +2250,7 @@ export class ChatEngineService {
               // Format with LLM
               const formatterResult = await this.formatWithCustomRules(
                 structuredResponse,
-                input.customerLanguage || "it",
+                input.customerLanguage || "en",
                 workspaceConfig,
                 undefined,
                 { customerName: input.customerName, isFirstMessage: history.length === 0 }
@@ -2605,7 +2605,7 @@ export class ChatEngineService {
                 const optimizationResult = await optimizationAgent.process({
                   workspaceId: input.workspaceId,
                   customerId: input.customerId,
-                  customerLanguage: input.customerLanguage || "it",
+                  customerLanguage: input.customerLanguage || "en",
                 })
                 
                 // Persist response
@@ -2739,7 +2739,7 @@ export class ChatEngineService {
                 
                 const formatterResult = await this.formatWithCustomRules(
                   structuredResp,
-                  input.customerLanguage || "it",
+                  input.customerLanguage || "en",
                   workspaceConfig,
                   undefined,
                   { customerName: input.customerName }
@@ -2820,7 +2820,7 @@ export class ChatEngineService {
                 
                 const formatterResult = await this.formatWithCustomRules(
                   structuredResp,
-                  input.customerLanguage || "it",
+                  input.customerLanguage || "en",
                   workspaceConfig,
                   undefined,
                   { customerName: input.customerName }
@@ -3011,7 +3011,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 workspaceId: input.workspaceId,
                 customerId: input.customerId,
                 customerName: input.customerName || "Cliente",
-                customerLanguage: input.customerLanguage || "it",
+                customerLanguage: input.customerLanguage || "en",
                 message: contextPrompt,
                 conversationHistory: history,
                 customerDiscount: input.customerDiscount || 0,
@@ -3067,7 +3067,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             if (structuredResponse.type !== "NO_RESULTS" && structuredResponse.type !== "ERROR") {
               const formattedResult = await this.formatWithCustomRules(
                 structuredResponse,
-                input.customerLanguage || "it",
+                input.customerLanguage || "en",
                 workspaceConfig,
                 undefined,
                 { customerName: input.customerName }
@@ -3871,7 +3871,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               customerId: input.customerId,
               query: `aggiungi ${quantity} ${pendingAction.productName || itemLabel} al carrello`,
               customerName: input.customerName || "",
-              customerLanguage: input.customerLanguage || "it",
+              customerLanguage: input.customerLanguage || "en",
               customerDiscount: input.customerDiscount || 0,
               selectedSku: pendingAction.productId, // 🔧 SKU/code for precise cart addition
               selectedItemType: pendingAction.itemType || "PRODUCT", // 🆕 Pass item type
@@ -4589,7 +4589,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             message: input.message,
             customerDiscount: input.customerDiscount || 0,
             intentType: intentResult.intent.type,
-            customerLanguage: input.customerLanguage || "it",
+            customerLanguage: input.customerLanguage || "en",
             customerIsActive, // 🔒 Feature 174: Pass registration status for price control
           })
 
@@ -4754,7 +4754,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         structuredResponseOverride ??
         this.responseBuilder.build(intentResult.intent, finalLoadedData as LoadedData, {
           customerName: input.customerName,
-          customerLanguage: input.customerLanguage || "it",
+          customerLanguage: input.customerLanguage || "en",
           workspaceId: input.workspaceId,
           customerDiscount: input.customerDiscount,
           showOptimizeOption,
@@ -4777,7 +4777,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         // Use LLM formatter but with cached template
         const formatterResult = await this.formatWithCustomRules(
           structuredResponse,
-          input.customerLanguage || "it",
+          input.customerLanguage || "en",
           workspaceConfig,
           undefined,
           { customerName: input.customerName, isFirstMessage: history.length === 0 }
@@ -4789,7 +4789,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         // Full LLM formatting for complex responses
         const formatterResult = await this.formatWithCustomRules(
           structuredResponse,
-          input.customerLanguage || "it",
+          input.customerLanguage || "en",
           workspaceConfig,
           undefined,
           { customerName: input.customerName, isFirstMessage: history.length === 0 }
@@ -5318,7 +5318,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
     const customerName = input.customerName || customer?.name || "Cliente"
     const customerLanguage =
-      input.customerLanguage || customer?.language || "it"
+      input.customerLanguage || customer?.language || "en"
 
     let agentResponse = {
       success: false,
@@ -5542,7 +5542,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
     const structuredResponse = this.responseBuilder.build(showIntent, loadedData, {
       workspaceId: input.workspaceId,
-      customerLanguage: input.customerLanguage || "it",
+      customerLanguage: input.customerLanguage || "en",
       customerName: input.customerName,
       customerDiscount: input.customerDiscount,
       userMessage: input.message,
@@ -5551,7 +5551,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
     const formatterResult = await this.formatWithCustomRules(
       structuredResponse,
-      input.customerLanguage || "it",
+      input.customerLanguage || "en",
       workspaceConfig,
       undefined,
       { customerName: input.customerName, isFirstMessage: history.length === 0 }

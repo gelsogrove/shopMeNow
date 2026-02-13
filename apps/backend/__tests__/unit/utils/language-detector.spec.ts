@@ -2,8 +2,8 @@
  * Unit Tests: Language Detector
  * T019 - detectLanguageFromPhonePrefix returns correct language for phone prefixes
  * 
- * 🚨 ANDREA'S RULE: ONLY IT (+39), ES (+34), PT (+351) prefixes are supported
- * For ALL OTHER prefixes → returns "" (empty string) → caller uses workspace.defaultLanguage
+ * 🚨 ANDREA'S RULE: ONLY IT (+39), ES (+34), PT (+351) prefixes are mapped
+ * For ALL OTHER prefixes → returns "en" (English) as default language
  */
 
 import { detectLanguageFromPhonePrefix } from "../../../src/utils/language-detector"
@@ -39,29 +39,30 @@ describe("Language Detector - detectLanguageFromPhonePrefix()", () => {
 
   // 🚨 REMOVED: +1 and +44 are NOT supported - caller uses workspace.defaultLanguage
   describe("Unsupported prefix (+1 USA/Canada)", () => {
-    it("should return empty string for +1 prefix → caller uses workspace.defaultLanguage", () => {
-      expect(detectLanguageFromPhonePrefix("+1 555 1234567")).toBe("")
-      expect(detectLanguageFromPhonePrefix("+15551234567")).toBe("")
-      expect(detectLanguageFromPhonePrefix("+1 212 5551234")).toBe("")
+    it("should return 'en' for +1 prefix → English as default", () => {
+      // RULE: Unsupported prefixes default to English
+      expect(detectLanguageFromPhonePrefix("+1 555 1234567")).toBe("en")
+      expect(detectLanguageFromPhonePrefix("+15551234567")).toBe("en")
+      expect(detectLanguageFromPhonePrefix("+1 212 5551234")).toBe("en")
     })
   })
 
   describe("Unsupported prefix (+44 UK)", () => {
-    it("should return empty string for +44 prefix → caller uses workspace.defaultLanguage", () => {
-      expect(detectLanguageFromPhonePrefix("+44 20 12345678")).toBe("")
-      expect(detectLanguageFromPhonePrefix("+442012345678")).toBe("")
+    it("should return 'en' for +44 prefix → English as default", () => {
+      expect(detectLanguageFromPhonePrefix("+44 20 12345678")).toBe("en")
+      expect(detectLanguageFromPhonePrefix("+442012345678")).toBe("en")
     })
   })
 
   describe("Unsupported prefixes (all others)", () => {
-    it("should return empty string for unknown prefixes → caller uses workspace.defaultLanguage", () => {
-      // RULE: Only IT/ES/PT supported, all others return "" so caller uses workspace.defaultLanguage
-      expect(detectLanguageFromPhonePrefix("+81 90 12345678")).toBe("") // Japan
-      expect(detectLanguageFromPhonePrefix("+86 138 12345678")).toBe("") // China
-      expect(detectLanguageFromPhonePrefix("+91 98765 43210")).toBe("") // India
-      expect(detectLanguageFromPhonePrefix("+55 11 98765 4321")).toBe("") // Brazil
-      expect(detectLanguageFromPhonePrefix("+33 6 12345678")).toBe("") // France
-      expect(detectLanguageFromPhonePrefix("+49 170 1234567")).toBe("") // Germany
+    it("should return 'en' for unknown prefixes → English as default", () => {
+      // RULE: Only IT/ES/PT are mapped, all others return "en" (English)
+      expect(detectLanguageFromPhonePrefix("+81 90 12345678")).toBe("en") // Japan
+      expect(detectLanguageFromPhonePrefix("+86 138 12345678")).toBe("en") // China
+      expect(detectLanguageFromPhonePrefix("+91 98765 43210")).toBe("en") // India
+      expect(detectLanguageFromPhonePrefix("+55 11 98765 4321")).toBe("en") // Brazil
+      expect(detectLanguageFromPhonePrefix("+33 6 12345678")).toBe("en") // France
+      expect(detectLanguageFromPhonePrefix("+49 170 1234567")).toBe("en") // Germany
     })
   })
 
@@ -76,16 +77,16 @@ describe("Language Detector - detectLanguageFromPhonePrefix()", () => {
       expect(detectLanguageFromPhonePrefix("+34 (611) 223344")).toBe("es")
     })
 
-    it("should return empty string if no prefix found → caller uses workspace.defaultLanguage", () => {
-      // RULE: No recognizable prefix → return "" → caller uses workspace.defaultLanguage
-      expect(detectLanguageFromPhonePrefix("333 1234567")).toBe("") // No + prefix
-      expect(detectLanguageFromPhonePrefix("invalid")).toBe("")
+    it("should return 'en' if no prefix found → English as default", () => {
+      // RULE: No recognizable prefix → return "en" (English)
+      expect(detectLanguageFromPhonePrefix("333 1234567")).toBe("en") // No + prefix
+      expect(detectLanguageFromPhonePrefix("invalid")).toBe("en")
     })
 
-    it("should return empty string for empty or whitespace inputs → caller uses workspace.defaultLanguage", () => {
-      // RULE: Invalid input → return "" → caller uses workspace.defaultLanguage
-      expect(detectLanguageFromPhonePrefix("")).toBe("")
-      expect(detectLanguageFromPhonePrefix(" ")).toBe("")
+    it("should return 'en' for empty or whitespace inputs → English as default", () => {
+      // RULE: Invalid input → return "en" (English)
+      expect(detectLanguageFromPhonePrefix("")).toBe("en")
+      expect(detectLanguageFromPhonePrefix(" ")).toBe("en")
     })
   })
 

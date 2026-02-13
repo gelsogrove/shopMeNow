@@ -992,7 +992,21 @@ export class WhatsAppWebhookController {
           variables
         )
         
-        const rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
+        // 🔧 FIX: Replace [LINK_REGISTRATION] inline in welcome message template
+        // If template contains [LINK_REGISTRATION], replace it with actual link
+        // Only append registration footer if template does NOT contain [LINK_REGISTRATION]
+        const hasRegistrationToken = welcomeMessage.includes("[LINK_REGISTRATION]")
+        let rawWelcomeMessage: string
+        
+        if (hasRegistrationToken && registrationLink) {
+          // Template has [LINK_REGISTRATION] → replace inline, no footer
+          rawWelcomeMessage = welcomeMessage.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
+        } else if (registrationLink) {
+          // Template does NOT have [LINK_REGISTRATION] → append footer
+          rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
+        } else {
+          rawWelcomeMessage = welcomeMessage
+        }
 
         // 🌍 STEP 4: Pass welcome message through Translation Layer
         let finalMessage = rawWelcomeMessage
@@ -1417,14 +1431,18 @@ export class WhatsAppWebhookController {
         )
 
         // Replace [LINK_REGISTRATION] placeholder with actual link
-        let rawWelcomeMessage = welcomeMessage.replace(
-          /\[LINK_REGISTRATION\]/g,
-          registrationLink || ""
-        )
-
-        // Only append registration footer if customer is not active
-        if (!customer.isActive && registrationLink) {
-          rawWelcomeMessage = `${rawWelcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
+        // 🔧 FIX: Only append footer if template does NOT contain [LINK_REGISTRATION]
+        const hasRegistrationToken = welcomeMessage.includes("[LINK_REGISTRATION]")
+        let rawWelcomeMessage: string
+        
+        if (hasRegistrationToken && registrationLink) {
+          // Template has [LINK_REGISTRATION] → replace inline, no footer
+          rawWelcomeMessage = welcomeMessage.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
+        } else if (!customer.isActive && registrationLink) {
+          // Template does NOT have [LINK_REGISTRATION] → append footer
+          rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
+        } else {
+          rawWelcomeMessage = welcomeMessage
         }
 
         // ✅ STEP 6: Translation Layer
