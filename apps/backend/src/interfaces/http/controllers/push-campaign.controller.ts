@@ -148,15 +148,13 @@ export class PushCampaignController {
       if (!body.message) {
         return res.status(400).json({ error: "Message is required" })
       }
-      if (body.targetingType && !allowedTargeting.includes(String(body.targetingType).toUpperCase())) {
+      const normalizedTargeting = normalizeTargetingType(body.targetingType)
+      if (normalizedTargeting && !allowedTargeting.includes(normalizedTargeting)) {
         return res.status(400).json({ error: "Invalid targeting type" })
       }
       if (body.frequency && !allowedFrequencies.includes(String(body.frequency).toUpperCase())) {
         return res.status(400).json({ error: "Invalid frequency" })
       }
-
-      // Normalize targeting type and strip accidental quotes (observed "\"MANUAL\"")
-      const normalizedTargeting = normalizeTargetingType(body.targetingType)
 
       const payload: any = {
         ...body,
