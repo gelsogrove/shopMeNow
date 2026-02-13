@@ -74,13 +74,30 @@ const RegisterPage = () => {
     )
   }, [langParam])
 
-  // Sync workspace branding from validated token
+  // Sync workspace branding from validated token (supports workspace { name, logoUrl, logoKey })
   useEffect(() => {
-    if (tokenData?.workspaceName) {
-      setWorkspaceName(tokenData.workspaceName)
-    }
-    if (tokenData?.workspaceLogoUrl !== undefined) {
-      setWorkspaceLogoUrl(tokenData.workspaceLogoUrl || null)
+    const wsName =
+      (tokenData as any)?.workspace?.name ||
+      (tokenData as any)?.workspaceName ||
+      ""
+    const wsLogo =
+      (tokenData as any)?.workspace?.logoUrl ||
+      (tokenData as any)?.workspaceLogoUrl ||
+      null
+    const wsLogoKey = (tokenData as any)?.workspace?.logoKey
+
+    if (wsName) setWorkspaceName(wsName)
+
+    if (wsLogo || wsLogoKey) {
+      const finalLogo =
+        wsLogoKey && !wsLogo
+          ? `${IMG_BASE_URL}${wsLogoKey}`
+          : wsLogo?.startsWith("http")
+          ? wsLogo
+          : wsLogo
+          ? `${IMG_BASE_URL}${wsLogo}`
+          : null
+      setWorkspaceLogoUrl(finalLogo)
     }
   }, [tokenData])
 
