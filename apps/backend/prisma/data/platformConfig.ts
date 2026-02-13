@@ -84,7 +84,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "PRICE" as const,
     key: "WIDGET_MESSAGE",
-    value: "0.005",
+    value: "0.05",
     description: "Cost per web widget message (site chat)",
     isActive: true,
   },

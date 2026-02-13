@@ -683,7 +683,7 @@ export class WidgetChatController {
 
             if (billingResult.success) {
               logger.info(
-                `[WIDGET-BILLING] 💰 Widget message charged: $0.005 deducted. New balance: $${billingResult.newBalance.toFixed(3)}`
+                `[WIDGET-BILLING] 💰 Widget message charged: $0.05 deducted. New balance: $${billingResult.newBalance.toFixed(3)}`
               )
             } else {
               logger.error(
