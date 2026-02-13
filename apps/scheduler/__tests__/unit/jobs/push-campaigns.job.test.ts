@@ -624,9 +624,9 @@ describe('Push Campaigns Job', () => {
       expect(__test.normalizeLanguage('IT')).toBe('it')
       expect(__test.normalizeLanguage('fr')).toBe('fr') // French supported
       expect(__test.normalizeLanguage('fr-FR')).toBe('fr')
-      expect(__test.normalizeLanguage(null)).toBe('it') // Default
-      expect(__test.normalizeLanguage(undefined)).toBe('it') // Default
-      expect(__test.normalizeLanguage('de')).toBe('it') // Unsupported fallback (German)
+      expect(__test.normalizeLanguage(null)).toBe('en') // Default → English (system default)
+      expect(__test.normalizeLanguage(undefined)).toBe('en') // Default → English (system default)
+      expect(__test.normalizeLanguage('de')).toBe('en') // Unsupported fallback → English
     })
   })
 

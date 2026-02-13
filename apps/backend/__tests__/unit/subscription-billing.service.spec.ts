@@ -255,10 +255,10 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
     it("should use widget message price from pricing config", async () => {
       mockRepository.getOwnerBilling.mockResolvedValue(mockOwnerBilling)
       mockRepository.getPlanConfiguration.mockResolvedValue(mockPlanLimits)
-      ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(0.005)
+      ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(0.05)
       mockRepository.deductCredit.mockResolvedValue({
         success: true,
-        newBalance: 49.995,
+        newBalance: 49.95,
       })
 
       const result = await service.deductOwnerWidgetMessageCredit(
@@ -270,7 +270,7 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
       expect(platformConfigService.getPrice).toHaveBeenCalledWith("WIDGET_MESSAGE")
       expect(mockRepository.deductCredit).toHaveBeenCalledWith(
         mockUserId,
-        0.005,
+        0.05,
         "MESSAGE",
         "Widget message",
         mockWorkspaceId,

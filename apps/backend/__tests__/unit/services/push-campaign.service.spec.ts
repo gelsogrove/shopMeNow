@@ -224,6 +224,7 @@ describe('PushCampaignService', () => {
         where: {
           workspaceId: 'workspace-1',
           id: { in: ['customer-1', 'customer-3'] },
+          deletedAt: null, // Skip soft-deleted customers
         },
         select: {
           id: true,

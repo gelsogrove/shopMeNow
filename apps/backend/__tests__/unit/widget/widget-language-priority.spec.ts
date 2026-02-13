@@ -9,7 +9,7 @@
  * 2. 📱 Phone number prefix (+39 → it, +34 → es, +351 → pt, +1 → en)
  * 3. 🌐 Browser Accept-Language header
  * 4. 🏢 Workspace default language
- * 5. 🇮🇹 Italian system fallback
+ * 5. �🇧 English system fallback
  * 
  * 🚨 DO NOT CHANGE THESE TESTS WITHOUT APPROVAL!
  * If behavior must change:
@@ -146,20 +146,59 @@ describe("Widget Language Detection Priority (THE BIBLE)", () => {
       
       expect(finalLanguage).toBe("ITA")
     })
+
+    it("should use workspace default over system fallback", () => {
+      // SCENARIO: Workspace configured for Spanish, no other sources
+      // RULE: workspace.defaultLanguage WINS over system fallback ("en")
+      const explicitLang = undefined
+      const phoneNumber = undefined
+      const browserLang = undefined
+      const workspaceDefault = "ESP" // Workspace configured for Spanish
+      const systemFallback = "en"
+
+      const finalLanguage = explicitLang || phoneNumber || browserLang || workspaceDefault || systemFallback
+
+      expect(finalLanguage).toBe("ESP") // Workspace wins, NOT system fallback
+    })
+
+    it("should lose to browser language when both present", () => {
+      // SCENARIO: Browser says French, workspace default is German
+      // RULE: Browser (priority 3) beats workspace default (priority 4)
+      const explicitLang = undefined
+      const phoneNumber = undefined
+      const browserLang = "fr"
+      const workspaceDefault = "DEU"
+
+      const finalLanguage = explicitLang || phoneNumber || browserLang || workspaceDefault
+
+      expect(finalLanguage).toBe("fr") // Browser wins
+    })
+
+    it("should lose to phone prefix when both present", () => {
+      // SCENARIO: Phone is +351 (Portuguese), workspace default is English
+      // RULE: Phone prefix (priority 2) beats workspace default (priority 4)
+      const phonePrefix = "+351"
+      const detectedFromPhone = detectLanguageFromPhonePrefix(phonePrefix)
+      const workspaceDefault = "ENG"
+
+      const finalLanguage = detectedFromPhone || workspaceDefault
+
+      expect(finalLanguage).toBe("pt") // Phone wins
+    })
   })
 
   describe("Priority 5: System Fallback (LOWEST)", () => {
-    it("should fallback to Italian when all sources are missing", () => {
-      // SCENARIO: Complete fallback case
+    it("should fallback to English when all sources are missing", () => {
+      // SCENARIO: Complete fallback case — English is the system default
       const explicitLang = undefined
       const phoneNumber = undefined
       const browserLang = undefined
       const workspaceDefault = undefined
-      const systemFallback = "it"
+      const systemFallback = "en"
       
       const finalLanguage = explicitLang || phoneNumber || browserLang || workspaceDefault || systemFallback
       
-      expect(finalLanguage).toBe("it")
+      expect(finalLanguage).toBe("en")
     })
   })
 
@@ -240,11 +279,11 @@ describe("Widget Language Detection Priority (THE BIBLE)", () => {
       const explicitLang = null
       const phoneNumber = null
       const browserLang = null
-      const fallback = "it"
+      const fallback = "en"
       
       const finalLanguage = explicitLang || phoneNumber || browserLang || fallback
       
-      expect(finalLanguage).toBe("it")
+      expect(finalLanguage).toBe("en")
     })
   })
 })

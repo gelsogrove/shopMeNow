@@ -38,10 +38,10 @@ export class TranslationService {
    * @returns Translated message
    */
   async translateMessage(message: string, targetLanguage: string): Promise<string> {
-    // Normalize language code
-    const normalizedLang = targetLanguage?.toUpperCase() || 'IT'
+    // Normalize language code — default to English when unspecified
+    const normalizedLang = targetLanguage?.toUpperCase() || 'EN'
     
-    // If target is Italian, no translation needed
+    // If target is Italian, no translation needed (catalog content is in Italian)
     if (normalizedLang === 'IT') {
       logger.info('[TRANSLATION] Target language is Italian - no translation needed')
       return message

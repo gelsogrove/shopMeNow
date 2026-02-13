@@ -12,6 +12,13 @@
  * UNIT TEST = MOCK di servizi esterni, NO connessioni reali
  */
 
+// 🔧 Mock @echatbot/database BEFORE any import that transitively requires it
+// (SummaryAgentLLM → PromptProcessorService → prisma from @echatbot/database)
+jest.mock("@echatbot/database", () => ({
+  prisma: {},
+  PrismaClient: jest.fn(),
+}))
+
 import { SummaryAgentLLM } from "../../../src/services/summary-agent-llm.service"
 
 // Mock external dependencies

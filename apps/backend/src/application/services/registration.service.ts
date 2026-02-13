@@ -239,6 +239,132 @@ export class RegistrationService {
   }
 
   /**
+   * Send approval message to customer when admin approves their registration
+   * ✅ USES Security & Translation layer (MANDATORY)
+   * ✅ Sends via WhatsAppQueueService (with dedup)
+   * ✅ Saves to conversationMessage history
+   *
+   * Called when workspace has requireManualApproval=true and admin approves
+   * a customer from PENDING_APPROVAL → ACTIVE.
+   *
+   * @param customerId The customer ID (must already be set to ACTIVE)
+   * @returns True if message was sent/queued successfully
+   */
+  async sendApprovalMessage(customerId: string): Promise<boolean> {
+    try {
+      // Get customer with workspace
+      const customer = await this.prisma.customers.findUnique({
+        where: { id: customerId },
+        include: { workspace: true },
+      })
+
+      if (!customer) {
+        logger.error(`[APPROVAL-MSG] Customer with ID ${customerId} not found`)
+        return false
+      }
+
+      if (!customer.phone) {
+        logger.warn(`[APPROVAL-MSG] Customer ${customerId} has no phone number, skipping WA notification`)
+        return false
+      }
+
+      // Get customer language
+      const customerLanguage = customer.language || "English"
+      const firstName = customer.name?.split(" ")[0] || ""
+
+      // Get ENGLISH approval message from workspace settings or default
+      let approvalMessageEnglish = customer.workspace?.approvalMessage || null
+
+      if (!approvalMessageEnglish) {
+        approvalMessageEnglish =
+          "🎉 Hi [nome], your registration has been approved! You can now access all our products and services. How can I help you?"
+      }
+
+      // Replace placeholders in ENGLISH message
+      approvalMessageEnglish = approvalMessageEnglish.replace(
+        /\[nome\]/gi,
+        firstName
+      )
+
+      // ✅ TRANSLATE via Security & Translation layer (MANDATORY)
+      const { LLMService } = require("../../services/llm.service")
+      const llmService = new LLMService()
+
+      const normalizedLanguage = this.normalizeLanguageCode(customerLanguage)
+
+      const approvalMessage = await llmService.translateSystemMessage(
+        approvalMessageEnglish,
+        customer.workspaceId,
+        normalizedLanguage,
+        undefined,
+        "approval_confirmation" // stage name for Safety layer
+      )
+
+      logger.info(`[APPROVAL-MSG] ✅ Approval message translated via Security & Translation layer`, {
+        customerId,
+        language: normalizedLanguage,
+        stage: "approval_confirmation",
+      })
+
+      // 1. Send via WhatsApp Queue (NOT direct!)
+      const whatsappSent = await this.sendWhatsAppMessage(
+        customer.phone,
+        approvalMessage,
+        customer.workspaceId,
+        customer.id
+      )
+
+      if (!whatsappSent) {
+        logger.warn(`[APPROVAL-MSG] Failed to send via WhatsApp to ${customer.phone}`)
+      }
+
+      // 2. Save to conversationMessage history
+      let chatSession = await this.prisma.chatSession.findFirst({
+        where: {
+          customerId: customer.id,
+          workspaceId: customer.workspaceId,
+          status: "active",
+        },
+      })
+
+      if (!chatSession) {
+        chatSession = await this.prisma.chatSession.create({
+          data: {
+            customerId: customer.id,
+            workspaceId: customer.workspaceId,
+            status: "active",
+          },
+        })
+      }
+
+      await this.prisma.conversationMessage.create({
+        data: {
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          role: "assistant",
+          content: approvalMessage,
+          agentType: "APPROVAL_CONFIRMATION",
+          tokensUsed: 0,
+          debugInfo: JSON.stringify({
+            stage: "approval_confirmation",
+            translatedViaSecurityLayer: true,
+            language: normalizedLanguage,
+            firstName,
+            timestamp: new Date().toISOString(),
+          }),
+        },
+      })
+
+      logger.info(`[APPROVAL-MSG] ✅ Approval message ${whatsappSent ? "sent" : "saved"} for customer ${customerId}`)
+      return whatsappSent
+    } catch (error) {
+      logger.error("[APPROVAL-MSG] Error sending approval message:", error)
+      return false
+    }
+  }
+
+  /**
    * Normalize language code for consistent lookup
    */
   private normalizeLanguageCode(language: string): string {

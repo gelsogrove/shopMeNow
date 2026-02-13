@@ -2,6 +2,7 @@ import { prisma } from "@echatbot/database"
 import { NextFunction, Request, Response } from "express"
 import { BillingService } from "../../../application/services/billing.service"
 import { CustomerService } from "../../../application/services/customer.service"
+import { RegistrationService } from "../../../application/services/registration.service"
 import { pushMessagingService } from "../../../services/push-messaging.service"
 import { websocketService } from "../../../services/websocket.service"
 import { normalizeTags } from "../../../utils/tag-normalizer"
@@ -12,11 +13,13 @@ import logger from "../../../utils/logger"
 export class CustomersController {
   private customerService: CustomerService
   private billingService: BillingService
+  private registrationService: RegistrationService
   private pushMessagingService = pushMessagingService
 
   constructor() {
     this.customerService = new CustomerService()
     this.billingService = new BillingService(prisma)
+    this.registrationService = new RegistrationService()
   }
 
   async getCustomersForWorkspace(
@@ -716,15 +719,6 @@ export class CustomersController {
         })
       }
 
-      // Get workspace settings for approval message
-      const workspace = await prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { 
-          approvalMessage: true,
-          name: true,
-        },
-      })
-
       // Update customer to ACTIVE status
       const updatedCustomer = await prisma.customers.update({
         where: { id },
@@ -734,12 +728,11 @@ export class CustomersController {
         },
       })
 
-      // Send approval message to customer via WhatsApp/Widget
-      const approvalMessage = workspace?.approvalMessage || 
-        "🎉 La tua registrazione è stata approvata! Ora puoi accedere a tutti i nostri prodotti e servizi. Come posso aiutarti?"
-
-      // Queue message for sending (async - don't block response)
-      this.sendApprovalMessage(updatedCustomer, workspaceId, approvalMessage).catch(error => {
+      // Send approval message via RegistrationService
+      // ✅ Goes through WhatsAppQueueService (dedup check)
+      // ✅ Goes through Security & Translation layer
+      // ✅ Saves to conversationMessage history
+      this.registrationService.sendApprovalMessage(id).catch(error => {
         logger.error("Error sending approval message:", error)
       })
 
@@ -756,41 +749,6 @@ export class CustomersController {
     } catch (error) {
       logger.error("Error approving customer:", error)
       next(error)
-    }
-  }
-
-  /**
-   * Send approval message to customer via WhatsApp queue
-   */
-  private async sendApprovalMessage(
-    customer: { id: string; phone: string | null; name: string | null },
-    workspaceId: string,
-    message: string
-  ): Promise<void> {
-    if (!customer.phone) {
-      logger.warn("Cannot send approval message - customer has no phone number:", customer.id)
-      return
-    }
-
-    try {
-      // Add message to WhatsApp queue
-      await prisma.whatsAppQueue.create({
-        data: {
-          workspaceId,
-          customerId: customer.id,
-          phoneNumber: customer.phone,
-          messageContent: message,
-          status: "PENDING",
-        },
-      })
-
-      logger.info("Approval message queued for customer:", {
-        customerId: customer.id,
-        phone: customer.phone,
-      })
-    } catch (error) {
-      logger.error("Failed to queue approval message:", error)
-      throw error
     }
   }
 }

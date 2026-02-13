@@ -9,6 +9,9 @@
 
 import logger from "../../utils/logger"
 import { prisma } from "@echatbot/database"
+import { TranslationAgent } from "../../application/agents/TranslationAgent"
+
+const translationAgent = new TranslationAgent(prisma)
 
 export interface ContactOperatorRequest {
   phoneNumber: string
@@ -424,6 +427,14 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
         // Don't fail the entire operation if email fails
       }
 
+      // ⚠️ Escalation fallback warning: if no contact method is configured, nobody gets notified
+      if (!workspace?.operatorContactMethod) {
+        logger.warn("⚠️ [contactOperator] NO operatorContactMethod configured — operator will NOT be notified!", {
+          workspaceId: request.workspaceId,
+          customerName: customer.name,
+        })
+      }
+
       // Create escalation record (or update existing conversation metadata)
       // For now, we just log and return success
       // Future: Create ticket in CRM, notify operators via email/Slack, etc.
@@ -464,6 +475,29 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
         customerName: customer.name,
         replacedNameUser: responseMessage.includes(customer.name),
       })
+
+      // 🌍 Translate response to customer language via TranslationAgent
+      const customerLanguage = customer.language || "en"
+      try {
+        const translationResult = await translationAgent.process({
+          workspaceId: request.workspaceId,
+          message: responseMessage,
+          targetLanguage: customerLanguage,
+          customerName: customer.name || "Customer",
+          customerId: customer.id,
+          channel: "whatsapp",
+        })
+        if (translationResult.message) {
+          responseMessage = translationResult.message
+        }
+        logger.info("✅ [contactOperator] Response translated to:", { customerLanguage })
+      } catch (translationError) {
+        logger.warn("⚠️ [contactOperator] Translation failed, using untranslated message", {
+          error: translationError,
+          customerLanguage,
+        })
+        // Keep the variable-replaced but untranslated message (graceful degradation)
+      }
 
       return {
         success: true,

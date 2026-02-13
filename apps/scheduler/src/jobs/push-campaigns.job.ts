@@ -96,6 +96,9 @@ export async function pushCampaignsJob(): Promise<void> {
       const costPerMessage = Number(campaign.costPerMessage)
       let availableBalance = 0
 
+      // 💰 CREDIT_MIN_THRESHOLD: Hard cutoff at -$10 (same as backend)
+      const CREDIT_MIN_THRESHOLD = -10
+
       if (recipients.length > 0) {
         const owner = await prisma.user.findUnique({
           where: { id: workspace.ownerId },
@@ -105,10 +108,41 @@ export async function pushCampaignsJob(): Promise<void> {
           throw new Error('Owner not found for credit check')
         }
         availableBalance = Number(owner.creditBalance)
+
+        // Upfront hard cutoff: skip entire campaign if below -$10
+        if (availableBalance < CREDIT_MIN_THRESHOLD) {
+          logger.warn(`[PUSH-CAMPAIGN] Credit exhausted for campaign ${campaign.id} (balance: ${availableBalance})`)
+          await prisma.pushCampaign.update({
+            where: { id: campaign.id },
+            data: {
+              status: 'PAUSED',
+              lastError: `Credit exhausted (balance: $${availableBalance.toFixed(2)}, threshold: $${CREDIT_MIN_THRESHOLD})`,
+            },
+          })
+          continue
+        }
       }
 
       for (const recipient of recipients) {
         if (creditExhausted) break
+
+        // 💰 Refresh credit balance from DB every 10 messages
+        // Prevents overspend if another campaign/widget depleted balance concurrently
+        if (processed > 0 && processed % 10 === 0) {
+          const freshOwner = await prisma.user.findUnique({
+            where: { id: workspace.ownerId },
+            select: { creditBalance: true },
+          })
+          if (freshOwner) {
+            availableBalance = Number(freshOwner.creditBalance)
+            if (availableBalance < CREDIT_MIN_THRESHOLD) {
+              logger.warn(`[PUSH-CAMPAIGN] Credit dropped below threshold during batch (balance: ${availableBalance})`)
+              creditExhausted = true
+              break
+            }
+          }
+        }
+
         try {
           // Load customer for variables, language, consent
           const customer = await prisma.customers.findFirst({
@@ -116,6 +150,7 @@ export async function pushCampaignsJob(): Promise<void> {
               id: recipient.customerId || undefined,
               phone: !recipient.customerId ? recipient.phone : undefined,
               workspaceId: campaign.workspaceId,
+              deletedAt: null, // Skip soft-deleted customers at send time
             },
             select: {
               id: true,
@@ -177,7 +212,7 @@ export async function pushCampaignsJob(): Promise<void> {
             campaign,
             customer,
             workspaceName: workspace.name || 'eChatbot',
-            workspaceLanguage: workspace.defaultLanguage || 'it',
+            workspaceLanguage: workspace.defaultLanguage || 'en',
           })
 
           await prisma.$transaction(async (tx) => {
@@ -522,12 +557,13 @@ function normalizeLanguage(
   customerLang?: string | null,
   workspaceLang?: string | null
 ): string {
-  const lang = (customerLang || workspaceLang || 'it').toLowerCase()
+  const lang = (customerLang || workspaceLang || 'en').toLowerCase()
+  if (lang.startsWith('it')) return 'it'
   if (lang.startsWith('en')) return 'en'
   if (lang.startsWith('es')) return 'es'
   if (lang.startsWith('pt')) return 'pt'
   if (lang.startsWith('fr')) return 'fr'
-  return 'it'
+  return 'en'
 }
 
 // Export helpers for unit testing

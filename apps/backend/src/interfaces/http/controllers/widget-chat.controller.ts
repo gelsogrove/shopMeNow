@@ -18,12 +18,16 @@ import { WorkspaceAccessService } from "../../../application/services/workspace-
 import { detectLanguageFromHeader } from "../../../utils/email-templates"
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { registrationPromptService } from "../../../services/registration-prompt.service"
+import { TranslationAgent } from "../../../application/agents/TranslationAgent"
+import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
 import {
   WIDGET_MESSAGE_SCHEMA,
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
 
 const llmRouterService = new LLMRouterService(prisma)
+const translationAgent = new TranslationAgent(prisma)
+const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
 
 export class WidgetChatController {
   private normalizeLanguage(raw?: string | null): string | null {
@@ -40,22 +44,44 @@ export class WidgetChatController {
     return map[code] || raw
   }
 
-  private resolveWipMessage(
+  /**
+   * Translate WIP message using TranslationAgent (same as WhatsApp flow).
+   * Falls back to raw text if translation fails.
+   */
+  private async translateWipMessage(
     rawMessage: Record<string, string> | string | null | undefined,
-    requestedLanguage: string | null
-  ): string {
-    const wipMessageObj =
-      typeof rawMessage === "object" && rawMessage !== null
-        ? (rawMessage as Record<string, string>)
-        : null
-    const lang = (requestedLanguage || "en").toLowerCase()
-    return (
-      wipMessageObj?.[lang] ||
-      wipMessageObj?.it ||
-      wipMessageObj?.en ||
-      (typeof rawMessage === "string" ? rawMessage : "") ||
-      "Work in progress. Please contact us later."
-    )
+    targetLanguage: string | null,
+    workspaceId: string
+  ): Promise<string> {
+    // Extract raw text from wipMessage (could be JSON object or string)
+    const rawText =
+      typeof rawMessage === "string"
+        ? rawMessage
+        : typeof rawMessage === "object" && rawMessage !== null
+          ? (rawMessage as Record<string, string>).en ||
+            (rawMessage as Record<string, string>).it ||
+            Object.values(rawMessage as Record<string, string>)[0] ||
+            "Work in progress. Please contact us later."
+          : "Work in progress. Please contact us later."
+
+    // Translate via TranslationAgent (matches WhatsApp WIP behavior)
+    try {
+      const translationResult = await translationAgent.process({
+        workspaceId,
+        message: rawText,
+        targetLanguage: targetLanguage || "ENG",
+        customerName: "Customer",
+        customerId: undefined,
+        channel: "widget",
+      })
+      return translationResult.message || rawText
+    } catch (translationError) {
+      logger.warn("[WIDGET] ⚠️ WIP translation failed, using raw message", {
+        error: translationError,
+        workspaceId,
+      })
+      return rawText
+    }
   }
 
   /**
@@ -141,9 +167,10 @@ export class WidgetChatController {
       }
 
       if (workspace.debugMode === true) {
-        const wipMessage = this.resolveWipMessage(
+        const wipMessage = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
-          requestedLanguage
+          requestedLanguage,
+          workspaceId
         )
         return res.status(200).json({
           success: true,
@@ -210,7 +237,7 @@ export class WidgetChatController {
       // 3. Accept-Language HTTP header (browser preference) 🌐
       // 4. Customer's saved language (if exists) 💾
       // 5. Workspace default language 🏢
-      // 6. Italian (system default) 🇮🇹
+      // 6. English (system default) 🇬🇧
       
       // Detect from explicit language parameter
       const explicitLanguage = this.normalizeLanguage(language)
@@ -287,6 +314,7 @@ export class WidgetChatController {
           debugMode: true,
           wipMessage: true, // 🚧 For WIP mode response
           enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
+          welcomeMessage: true, // 👋 For first-visitor welcome message (parity with WhatsApp)
         },
       })
 
@@ -440,10 +468,11 @@ export class WidgetChatController {
           channelStatus: workspace.channelStatus,
         })
 
-        const rawLanguage = (req.body.language as string)?.toLowerCase() || "en"
-        const wipResponse = this.resolveWipMessage(
+        const rawLanguage = requestedLanguage || workspace.defaultLanguage || "ENG"
+        const wipResponse = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
-          rawLanguage
+          rawLanguage,
+          workspaceId
         )
 
         return res.status(200).json({
@@ -550,7 +579,40 @@ export class WidgetChatController {
       }
       logger.info("✅ Chat session ready", { sessionId: chatSession?.id, customerId: customer.id })
 
-      // 🤖 Process message through LLM (no hardcoded welcome logic - LLM handles greetings)
+      // 👋 WELCOME MESSAGE: Check if this is the customer's first message (parity with WhatsApp)
+      try {
+        const welcomeResult = await welcomeMessageHandler.handleWelcomeMessage({
+          customerId: customer.id,
+          workspaceId,
+          customerLanguage: requestedLanguage || undefined,
+          customerMessage: message,
+          conversationId: chatSession.id,
+          channel: "widget",
+        })
+
+        if (welcomeResult.isWelcomeMessage && welcomeResult.welcomeText) {
+          logger.info("👋 [WIDGET] Welcome message sent to first-time visitor", {
+            customerId: customer.id,
+            workspaceId,
+            welcomeTextLength: welcomeResult.welcomeText.length,
+          })
+          // Welcome message was saved by WelcomeMessageHandler — skip LLM and billing
+          return res.status(200).json({
+            response: welcomeResult.welcomeText,
+            messageId: welcomeResult.assistantMessageId || chatSession.id,
+            sessionId: chatSession.id,
+            isWelcomeMessage: true,
+          })
+        }
+      } catch (welcomeError) {
+        // Graceful degradation: if welcome fails, continue with normal LLM flow
+        logger.warn("⚠️ [WIDGET] Welcome message failed, continuing with LLM", {
+          error: welcomeError,
+          customerId: customer.id,
+        })
+      }
+
+      // 🤖 Process message through LLM
       logger.info("🤖 Processing widget message through LLM", {
         workspaceId,
         visitorId,
@@ -707,7 +769,7 @@ export class WidgetChatController {
         success: true,
         messageId: `widget-${visitorId}-${Date.now()}`,
         sessionId: chatSession.id,
-        response: llmResult.response || "Mi dispiace, non ho capito la tua richiesta.",
+        response: llmResult.response || "Sorry, I couldn't understand your request.",
         status: "ready",
       })
     } catch (error) {

@@ -1,5 +1,7 @@
 import { LLMRouterService } from "../../../src/services/llm-router.service"
 
+// 🔧 FIX: jest.mock() is hoisted BEFORE const declarations.
+// We must define mock fns inside the factory or use lazy references.
 const mockTranslationProcess = jest.fn().mockResolvedValue({
   message: "Hola!",
   translated: true,
@@ -14,13 +16,13 @@ const mockSaveAssistantMessage = jest.fn()
 
 jest.mock("../../../src/application/agents/TranslationAgent", () => ({
   TranslationAgent: jest.fn().mockImplementation(() => ({
-    process: mockTranslationProcess,
+    process: (...args: any[]) => mockTranslationProcess(...args),
   })),
 }))
 
 jest.mock("../../../src/application/agents/SecurityAgent", () => ({
   SecurityAgent: jest.fn().mockImplementation(() => ({
-    process: mockSecurityProcess,
+    process: (...args: any[]) => mockSecurityProcess(...args),
   })),
 }))
 

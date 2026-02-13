@@ -53,11 +53,7 @@ export class WelcomeMessageHandler {
     try {
       const inputChannel = input.channel || (await this.getConversationChannel(input.conversationId))
 
-      // 🚫 Widget channel: welcome not applicable
-      if (inputChannel === "widget") {
-        logger.info("👋 [WelcomeMessageHandler] Skipping welcome for widget channel")
-        return { isWelcomeMessage: false }
-      }
+      // Welcome message is now supported on ALL channels (widget + whatsapp)
 
       let conversationFilter: { conversationId?: { in: string[] } } = {}
       if (inputChannel) {

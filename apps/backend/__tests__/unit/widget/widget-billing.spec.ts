@@ -1,9 +1,9 @@
 /**
  * Widget Billing Tests
- * Feature: Widget message billing at $0.005 per message
+ * Feature: Widget message billing at $0.05 per message
  * 
  * Tests:
- * - Widget messages charged at $0.005 (not $0.10 like WhatsApp)
+ * - Widget messages charged at $0.05 (not $0.10 like WhatsApp)
  * - Credit deducted from owner (not workspace)
  * - Billing transaction created with correct amount
  * - Credit limit enforced (-$10 threshold)
@@ -216,12 +216,12 @@ describe("Widget Billing", () => {
     // Default billing success
     mockSubscriptionBillingService.deductOwnerWidgetMessageCredit.mockResolvedValue({
       success: true,
-      newBalance: 49.995, // $50.00 - $0.005 = $49.995
+      newBalance: 49.95, // $50.00 - $0.05 = $49.95
     })
   })
 
-  describe("Widget Message Billing ($0.005)", () => {
-    it("should charge $0.005 for widget message (not $0.10)", async () => {
+  describe("Widget Message Billing ($0.05)", () => {
+    it("should charge $0.05 for widget message (not $0.10)", async () => {
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).toHaveBeenCalledWith(

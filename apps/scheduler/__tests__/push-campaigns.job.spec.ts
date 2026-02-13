@@ -65,10 +65,10 @@ describe('push-campaigns.job helpers', () => {
       expect(normalizeLanguage('it')).toBe('it')
     })
 
-    it('defaults to it on unknown or null', () => {
-      expect(normalizeLanguage('xx')).toBe('it')
-      expect(normalizeLanguage(null)).toBe('it')
-      expect(normalizeLanguage(undefined)).toBe('it')
+    it('defaults to en on unknown or null (system default = English)', () => {
+      expect(normalizeLanguage('xx')).toBe('en')
+      expect(normalizeLanguage(null)).toBe('en')
+      expect(normalizeLanguage(undefined)).toBe('en')
     })
   })
 

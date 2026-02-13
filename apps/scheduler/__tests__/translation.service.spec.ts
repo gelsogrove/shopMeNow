@@ -188,14 +188,23 @@ describe('Translation Service', () => {
       expect(mockFetch).toHaveBeenCalled()
     })
 
-    it('should default to Italian when language is null', async () => {
+    it('should default to English when language is null and trigger translation', async () => {
+      // SCENARIO: Customer has no language set → defaults to EN → translates Italian content to English
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'Hello!' } }],
+        }),
+      })
+
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
       
       const result = await service.translateMessage('Ciao!', null as unknown as string)
       
-      expect(result).toBe('Ciao!')
-      expect(mockFetch).not.toHaveBeenCalled()
+      // RULE: null defaults to EN, and EN is NOT skipped (only IT is skipped, since catalog is in Italian)
+      expect(result).toBe('Hello!')
+      expect(mockFetch).toHaveBeenCalled()
     })
   })
 

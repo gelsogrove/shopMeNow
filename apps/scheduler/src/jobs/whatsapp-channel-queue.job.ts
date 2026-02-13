@@ -561,7 +561,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             const suggestions = await buildWidgetSuggestions({
               workspaceId: workspace.id,
               response: message.messageContent,
-              language: workspace.defaultLanguage || 'it',
+              language: workspace.defaultLanguage || 'en',
               model: workspace.widgetSuggestionsModel || undefined,
             })
 

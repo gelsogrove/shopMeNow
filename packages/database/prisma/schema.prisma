@@ -22,7 +22,7 @@ model Workspace {
   updatedAt                 DateTime  @updatedAt
   deletedAt                 DateTime?
   currency                  String    @default("USD")
-  defaultLanguage           String    @default("it") // Default language for workspace (ISO 639-1: "it", "en", "es", "pt", "de", "fr")
+  defaultLanguage           String    @default("en") // Default language for workspace (ISO 639-1: "en", "it", "es", "pt", "de", "fr")
   channelStatus             Boolean   @default(true) // true = channel active (queue enabled), false = channel disabled
   description               String?
   messageLimit              Int       @default(50)
@@ -42,7 +42,7 @@ model Workspace {
   widgetLogoUrl      String? // Widget logo URL (for customer-facing chat widget)
   widgetLogoKey      String? // 💾 Storage key for cleanup
   widgetTitle        String? // Custom title for chat widget (default: workspace name)
-  widgetLanguage     String? @default("it") // Default language: it, en, es, pt
+  widgetLanguage     String? @default("en") // Default language: en, it, es, pt
   widgetPrimaryColor String? @default("#22c55e") // Primary color in hex format
   widgetTextColor    String? @default("#0f172a") // Text color for widget accents (links, labels)
   widgetIcon         String? @default("chat") // Icon for widget trigger button
@@ -402,7 +402,7 @@ model Customers {
   address                       String?
   company                       String?
   discount                      Float?                  @default(0)
-  language                      String?                 @default("it") // 🌍 Default to Italian (base language) - detects from phone prefix
+  language                      String?                 @default("en") // 🌍 Default to English (base language) - detects from phone prefix
   currency                      String?                 @default("USD")
   notes                         String?
   tags                          String[]                @default([])

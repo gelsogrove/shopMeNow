@@ -11,6 +11,7 @@ import {
   PushCampaignRepository,
   UpdatePushCampaignInput,
 } from "../../repositories/push-campaign.repository"
+import { CREDIT_MIN_THRESHOLD } from "./workspace-access.service"
 import logger from "../../utils/logger"
 
 export interface CreatePushCampaignDTO {
@@ -89,7 +90,8 @@ export class PushCampaignService {
       })
       targetCustomerIds = activeCustomers.map((c) => c.id)
     } else if (targetingType === CampaignTargetType.MANUAL) {
-      targetCustomerIds = manualCustomerIds || []
+      // Deduplicate IDs to prevent duplicate recipients
+      targetCustomerIds = [...new Set(manualCustomerIds || [])]
     } else if (targetingType === CampaignTargetType.TAGS && tagId) {
       const taggedCustomers = await this.prisma.customers.findMany({
         where: {
@@ -120,6 +122,7 @@ export class PushCampaignService {
         where: {
           workspaceId,
           id: { in: targetCustomerIds },
+          deletedAt: null, // Skip soft-deleted customers
         },
         select: {
           id: true,
@@ -266,6 +269,11 @@ export class PushCampaignService {
     })
     if (!owner) {
       throw new AppError(404, "Owner not found for credit check")
+    }
+
+    // 💰 HARD CUTOFF: Block if credit below absolute minimum threshold (-$10)
+    if (Number(owner.creditBalance) < CREDIT_MIN_THRESHOLD) {
+      throw new AppError(402, "Credit exhausted — cannot create campaign")
     }
 
     const estimatedCost = new Prisma.Decimal(costPerMessage).mul(recipients.length)

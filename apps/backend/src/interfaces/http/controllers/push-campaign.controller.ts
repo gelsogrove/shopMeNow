@@ -3,8 +3,10 @@ import { prisma } from "@echatbot/database"
 import logger from "../../../utils/logger"
 import { PushCampaignService } from "../../../application/services/push-campaign.service"
 import { PushCampaignStatus, PushCampaignRecipientStatus } from "@echatbot/database"
+import { WorkspaceAccessService } from "../../../application/services/workspace-access.service"
 
 const service = new PushCampaignService(prisma)
+const workspaceAccessService = new WorkspaceAccessService(prisma)
 
 async function ensureWhatsappEnabled(workspaceId: string): Promise<boolean> {
   const ws = await prisma.workspace.findUnique({
@@ -209,6 +211,19 @@ export class PushCampaignController {
   async schedule(req: Request, res: Response, next: NextFunction) {
     try {
       const { workspaceId, id } = req.params
+
+      // 💰 BILLING GUARD: Block scheduling when credit exhausted
+      const accessCheck = await workspaceAccessService.canProcessMessages(workspaceId, true)
+      if (!accessCheck.canProcess) {
+        logger.warn("[PushCampaignController] Campaign schedule blocked", {
+          workspaceId, campaignId: id, reason: accessCheck.blockReason,
+        })
+        return res.status(402).json({
+          error: "CREDIT_EXHAUSTED",
+          message: `Cannot schedule campaign: ${accessCheck.message || "credit exhausted"}`,
+        })
+      }
+
       const { sendAt } = req.body
       const date = sendAt ? new Date(sendAt) : new Date()
       const ok = await service.updateStatus(workspaceId, id, PushCampaignStatus.SCHEDULED, date)
@@ -223,6 +238,19 @@ export class PushCampaignController {
   async runNow(req: Request, res: Response, next: NextFunction) {
     try {
       const { workspaceId, id } = req.params
+
+      // 💰 BILLING GUARD: Block immediate run when credit exhausted
+      const accessCheck = await workspaceAccessService.canProcessMessages(workspaceId, true)
+      if (!accessCheck.canProcess) {
+        logger.warn("[PushCampaignController] Campaign runNow blocked", {
+          workspaceId, campaignId: id, reason: accessCheck.blockReason,
+        })
+        return res.status(402).json({
+          error: "CREDIT_EXHAUSTED",
+          message: `Cannot run campaign: ${accessCheck.message || "credit exhausted"}`,
+        })
+      }
+
       const now = new Date()
       const ok = await service.updateStatus(workspaceId, id, PushCampaignStatus.SCHEDULED, now)
       if (!ok) return res.status(404).json({ error: "Campaign not found" })
