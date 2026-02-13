@@ -304,11 +304,27 @@ export class PushCampaignService {
     const nextTagId = input.tagId ?? (existing as any).tagId ?? null
 
     const targetingChanged = input.targetingType && input.targetingType !== existing.targetingType
+
     const manualListChanged =
       nextTargetingType === CampaignTargetType.MANUAL && input.targetCustomerIds !== undefined
-    const tagChanged = nextTargetingType === CampaignTargetType.TAGS && input.tagId !== undefined
-    const forceAllRebuild = nextTargetingType === CampaignTargetType.ALL // always refresh ALL snapshot on edit
-    const shouldRebuildRecipients = targetingChanged || manualListChanged || tagChanged || forceAllRebuild
+
+    const manualCountMismatch =
+      nextTargetingType === CampaignTargetType.MANUAL &&
+      nextTargetIds.length > 0 &&
+      nextTargetIds.length !== (existing.targetCustomerIds?.length || existing.expectedRecipients || 0)
+
+    const tagChanged =
+      nextTargetingType === CampaignTargetType.TAGS && input.tagId !== undefined
+
+    // For ALL we always refresh snapshot to keep expectedRecipients in sync with current active customers
+    const forceAllRebuild = nextTargetingType === CampaignTargetType.ALL
+
+    const shouldRebuildRecipients =
+      targetingChanged ||
+      manualListChanged ||
+      manualCountMismatch ||
+      tagChanged ||
+      forceAllRebuild
 
     try {
       if (shouldRebuildRecipients) {

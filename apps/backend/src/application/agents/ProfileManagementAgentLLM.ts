@@ -309,15 +309,19 @@ export class ProfileManagementAgentLLM {
 
         logger.info("✅ Profile link generated", {
           customerId: context.customerId,
-          tokenGenerated: !!result.token,
+          hasProfileLink: !!result.data?.profileLink,
+          hasShortLink: !!result.data?.shortLink,
+          message: result.message,
         })
 
+        // Return the result with correct field mapping
+        // CallingFunctionsService returns: { success, message: "[LINK_PROFILE_WITH_TOKEN]", data: { profileLink, shortLink, expiresAt } }
         return {
-          success: true,
-          token: result.token,
-          link: result.link,
-          expiresAt: result.expiresAt,
-          message: "Profile link generated successfully",
+          success: result.success,
+          profileLink: result.data?.profileLink,
+          shortLink: result.data?.shortLink,
+          expiresAt: result.data?.expiresAt,
+          message: result.message || "[LINK_PROFILE_WITH_TOKEN]", // CRITICAL: Pass the token placeholder so LLM includes it in response
         }
       }
 
