@@ -72,6 +72,7 @@ Use these scenarios to regression-test the flows the team cares about. All steps
 
 - **Refactor scope**: se un file/service supera ~300-400 righe (es. llm-router, translation), split in moduli: language-resolver, billing-guard, delegation-handler, token-replacement, translation-pipeline, campaign-recipient-builder. Frontend: estrarre hook (useCampaigns/useLanguage/useTokenValidation) e componenti (CampaignCard, CampaignForm, RegisterHeader, RegisterButton).  
 - **Lingua**: default en. Ordine: customer.language > phone prefix (+34 es, +39 it, +351 pt, else en) > workspace.defaultLanguage. Passare sempre `customerLanguage` al TranslationAgent, anche WIP/debug. Welcome widget = WhatsApp.  
+- **Multilingua**: nessun testo hardcodato nelle risposte cliente; ogni nuovo messaggio deve passare per TranslationAgent o template localizzati. Evitare stringhe fisse in controller/service/frontend: usare prompt/templating con variabili e traduzione.
 - **Token links**: sempre short link+token per profilo/registrazione; form con logo/widgetPrimaryColor; include delete account. Reminder registrazione ogni 6 messaggi se non registrato.  
 - **Escalation operatore**: intent frustration → `contactOperator`; usare humanSupportInstructions tradotto per cliente; frustrationEscalationInstructions solo come hint; disattivare chatbot; inviare summary (email/WA).  
 - **Billing**: WA $0.10, widget $0.05, push $1.00; blocco totale a credit ≤ -10; blocco push se credito insufficiente prima di schedule/send. Widget disabled/debug → nessuna risposta.  
@@ -95,3 +96,19 @@ Se una regola non è rispettata, refactor e aggiungi test prima di rilasciare.
 - Widget: non inserisce in coda WA, risponde subito; stesse funzionalità/welcome/WIP di WA.
 - WIP message: solo se debugMode=true, comunque tradotto via TranslationAgent.
 - LLM: tutte le variabili sostituite, nessun placeholder residuo.
+
+## Acceptance Criteria (must pass)
+- Nessun placeholder non sostituito (`{{VAR}}`, `[LINK_*]`) nelle risposte inviate a utenti.
+- Language routing corretto: targetLanguage scelto secondo regole; log TranslationAgent coerente.
+- Campagne: creazione/update/delete senza errori enum; pending = PENDING recipients reali; expectedRecipients coerente con recipients salvati; delete rimuove la campagna.
+- Billing: blocco risposte e invii quando credit ≤ -10; push/WA/widget addebitano i costi previsti.
+- Token link profilo/registrazione sempre generati; form mostra logo/widgetPrimaryColor; include delete account.
+- Reminder registrazione ogni 6 messaggi per non registrati.
+- Escalation operatore: chatbot disattivato per cliente, summary inviato, messaggio cliente tradotto da humanSupportInstructions.
+- Widget parity: stesso welcome/WIP di WhatsApp, ma risposta immediata senza enqueue; channel disabled/debug → nessuna risposta.
+- WIP message solo se debugMode=true e comunque tradotto.
+
+## Test come “bibbia”
+- I test (Jest/Vitest) descrivono il comportamento atteso; se un test è sbagliato, lo si corregge dopo attenta analisi del requisito, non lo si disabilita.  
+- Ogni bug fix deve aggiungere/aggiornare il test che lo copre.  
+- I test regressione elencati qui sono la fonte di verità operativa; modificare un test solo se il requisito è cambiato e documentarlo.
