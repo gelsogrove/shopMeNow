@@ -376,7 +376,7 @@ export default function MessageFlowDialog({
     routerSteps[1], // STEP 4: Router iteration 2 (riceve risposta)
     linkReplacementSteps[0], // STEP 5: Link Replacement (BEFORE Translation) ✅
     translationStep, // STEP 6: Translation Layer ✅
-    widgetSecurityStep, // STEP 7: Widget Security Layer (widget only) ✅
+    widgetSecurityStep, // STEP 7: Widget Security Layer ✅
     saveToHistoryStep, // STEP 7: Save to history
     queueStep, // STEP 8: Add to WhatsApp Queue
     ...securityCheckSteps, // STEP 9: Security Check (from scheduler) ✅

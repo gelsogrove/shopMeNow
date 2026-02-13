@@ -546,7 +546,7 @@ export function AgentSettingsPage() {
                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                     <h4 className="font-semibold mb-2 flex items-center gap-2">
                       <Shield className="w-4 h-4" />
-                      Widget Security Layer - Widget Only
+                      Widget Security Layer
                     </h4>
                     <ul className="text-sm space-y-1 text-muted-foreground">
                       <li>• Validates responses before widget delivery</li>

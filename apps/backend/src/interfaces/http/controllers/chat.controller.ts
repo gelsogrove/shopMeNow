@@ -300,7 +300,7 @@ export class ChatController {
    * 
    * OPERATOR MESSAGE FLOW (MUST be represented in timeline):
    * 1. 🎧 Human Operator Input
-   * 2. 🌍 Translation Layer (always) + 🛡️ Widget Security Layer (widget only)
+   * 2. 🌍 Translation Layer (always) + 🛡️ Security Layer
    * 3. 📤 WhatsApp Queue (MANDATORY - always include in debugSteps)
    * 
    * CRITICAL: Update conversationMessage.debugInfo with COMPLETE debugSteps 

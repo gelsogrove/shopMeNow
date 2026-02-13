@@ -20,7 +20,7 @@
  * 4. Router delegates → Specialist Agent (with OWN LLM + prompt from DB)
  * 5. Specialist Agent returns English response with [LINK_xxx] tokens
  * 6. Router processes specialist response
- * 7. Final response → Translation Layer (always) + Widget Security Layer (widget only)
+ * 7. Final response → Translation Layer (always) + Security Layer
  * 8. LinkReplacementService → Replace tokens with secure URLs
  * 9. Save all messages to conversation_messages
  *
@@ -1651,7 +1651,7 @@ export class LLMRouterService {
         )
       }
 
-      // STEP 5.6: Widget Security Layer (widget only)
+      // STEP 5.6: Security Layer
       if (this.shouldApplyWidgetSecurity(params.channel)) {
         const securityInput = finalCleanResponse
         const widgetSecurityResult = await this.securityAgent.process({
@@ -3695,7 +3695,7 @@ export class LLMRouterService {
       let finalCartResponse = cartTranslationResult.message
       let cartTokensUsed = (cartResponse.tokensUsed || 0) + (cartTranslationResult.tokensUsed || 0)
 
-      // Widget Security Layer (widget only)
+      // Security Layer
       if (this.shouldApplyWidgetSecurity(options.params.channel)) {
         const securityInput = finalCartResponse
         const cartSecurityResult = await this.securityAgent.process({

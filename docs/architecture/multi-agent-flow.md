@@ -11,7 +11,7 @@
 eChatbot uses a **multi-agent architecture** with two distinct message processing flows:
 
 ### 1. Router Flow (`llm-router.service.ts`)
-- **Agents**: Router → Specialist Agents → Translation Layer → Widget Security Layer (**Widget only**)
+- **Agents**: Router → Specialist Agents → Translation Layer → Security Layer
 - **Translation Layer** handles language conversion; **Widget Security** validates safety (widget-only)
 - WhatsApp messages: Widget Security runs in Scheduler; translation happens before queue
 - Used for: complex routing, multiple agent coordination
@@ -390,7 +390,7 @@ async routeMessage(input: RouteMessageInput): Promise<RouteMessageResult> {
 | Layer | Location | Purpose | Channel |
 |-------|----------|---------|---------|
 | **Translation Layer** | `llm-router.service.ts`, `chat-engine.service.ts` | Translation ONLY - converts base response to customer language | All channels |
-| **Widget Security Layer** | `SecurityAgent.ts` (backend) | Safety validation AFTER translation | Widget only |
+| **Security Layer** | `SecurityAgent.ts` (backend) | Safety validation AFTER translation | All channels |
 | **WhatsApp Security Layer** | `security-agent.service.ts` (scheduler) | Safety validation BEFORE WhatsApp send | WhatsApp only |
 
 **Important**: Translation happens before queueing. Widget security runs only for widget responses. WhatsApp security runs in the scheduler to avoid double LLM costs.

@@ -799,7 +799,7 @@ export function AgentFlowDiagram({
 
         <ConnectorArrow />
 
-        {/* Widget Security Layer (Widget only) */}
+        {/* Widget Security Layer */}
         <div className="flex flex-col items-center gap-1">
           <AgentNode
             agent={getAgent("WIDGET_SECURITY")}
@@ -809,7 +809,6 @@ export function AgentFlowDiagram({
             onClick={() => handleAgentClick("WIDGET_SECURITY")}
             size="normal"
           />
-          <span className="text-xs text-amber-700">Widget only</span>
         </div>
         
         <ConnectorArrow />
@@ -826,7 +825,6 @@ export function AgentFlowDiagram({
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600">
         <span>Click to edit</span>
         <span>E-commerce only</span>
-        <span>Widget only</span>
       </div>
 
       {/* Enterprise Message */}

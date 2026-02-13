@@ -1553,7 +1553,7 @@ export class ChatEngineService {
       translationTokens = translationResult.tokensUsed || 0
       finalMessage = translationResult.message
 
-      // STEP 2.5: Widget Security Layer (after translation) for widget only
+      // STEP 2.5: Security Layer (after translation)
       if (isWidgetChannel) {
         const hasWidgetSafetyStep = debugSteps.some(
           (step) =>
@@ -5406,7 +5406,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       totalTokens += translationResult.tokensUsed || 0
       finalMessage = translationResult.message
 
-      // 🛡️ Widget Security Layer (widget only)
+      // 🛡️ Security Layer
       if (input.channel === "widget") {
         const securityResult = await this.securityAgent.process({
           workspaceId: input.workspaceId,

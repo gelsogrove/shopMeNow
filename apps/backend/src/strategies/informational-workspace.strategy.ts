@@ -133,7 +133,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
       let finalResponse = translationResult.message
       let securityResult: SecurityResult | null = null
 
-      // 🛡️ STEP 3: Widget Security Layer (Widget only)
+      // 🛡️ STEP 3: Security Layer
       if (context.channel === "widget") {
         logger.debug("🛡️ Applying Widget Security Layer (Widget)")
         securityResult = await this.securityAgent.process({

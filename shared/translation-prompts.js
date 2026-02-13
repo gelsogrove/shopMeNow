@@ -18,7 +18,7 @@ exports.buildSafetyTranslationPrompt = buildSafetyTranslationPrompt;
 exports.buildTranslationOnlyPrompt = buildTranslationOnlyPrompt;
 /**
  * Combined Safety + Translation prompt
- * Used by SafetyTranslationAgent (Widget only) and Scheduler
+ * Used by SafetyTranslationAgent and Scheduler
  *
  * Variables to replace:
  * - {TARGET_LANGUAGE}: "Italian", "English", "Spanish", "Portuguese"

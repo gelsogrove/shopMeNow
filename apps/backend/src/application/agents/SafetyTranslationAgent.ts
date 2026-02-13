@@ -5,7 +5,7 @@
  *
  * ✅ Replaced by:
  * - TranslationAgent (always, all channels)
- * - SecurityAgent (widget only)
+ * - SecurityAgent
  * - Scheduler SecurityAgentService (WhatsApp)
  *
  * Kept for backward compatibility and legacy tests.
