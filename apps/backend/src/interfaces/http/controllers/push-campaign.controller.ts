@@ -162,6 +162,8 @@ export class PushCampaignController {
         message: String(body.message).trim(),
         frequency: body.frequency ? String(body.frequency).toUpperCase() : undefined,
         targetingType: normalizedTargeting,
+        // Always pass targetCustomerIds when provided so manual edits persist
+        targetCustomerIds: body.targetCustomerIds,
       }
 
       // Normalize date

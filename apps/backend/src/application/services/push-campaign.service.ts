@@ -373,6 +373,7 @@ export class PushCampaignService {
             ...input,
             expectedRecipients: recipients.length,
             targetCustomerIds,
+            targetingType: nextTargetingType, // ensure stored targeting matches rebuild
           },
           recipients
         )

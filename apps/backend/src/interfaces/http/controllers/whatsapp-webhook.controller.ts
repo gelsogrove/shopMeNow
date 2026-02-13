@@ -10,6 +10,7 @@ import { ChatEngineService, getChatEngine } from "../../../application/chat-engi
 import { workspaceService } from "../../../services/workspace.service"
 import { websocketService } from "../../../services/websocket.service"
 import { getRegistrationText } from "../../../utils/language-detector"
+import { registrationPromptService } from "../../../services/registration-prompt.service"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { buildPhoneVariants } from "../../../utils/phone"
@@ -2252,6 +2253,41 @@ export class WhatsAppWebhookController {
         logger.info("[WEBHOOK] 🧪 Playground mode - skipping trial/credit checks")
       }
 
+      // 📊 REGISTRATION PROMPT: Calculate level for unregistered users
+      const registrationPromptLevel = registrationPromptService.getPromptLevel(
+        messageCount,
+        customer.isActive // isActive = registered in DB schema
+      )
+
+      logger.info("[WEBHOOK] 📊 Registration prompt level", {
+        customerId: customer.id,
+        messageCount,
+        isRegistered: customer.isActive,
+        promptLevel: registrationPromptLevel,
+      })
+
+      // ⛔ BLOCK: If user sent 15+ messages without registering
+      if (registrationPromptService.shouldBlockUser(messageCount, customer.isActive)) {
+        logger.warn("[WEBHOOK] ⛔ Blocking unregistered user (15+ messages)", {
+          customerId: customer.id,
+          messageCount,
+        })
+
+        await prisma.customers.update({
+          where: { id: customer.id },
+          data: {
+            isBlacklisted: true, // 🚨 TEMP: Using isBlacklisted until migration adds isBlocked
+          },
+        })
+
+        res.status(200).json({
+          status: "blocked",
+          code: "MAX_MESSAGES_UNREGISTERED",
+          message: "Account blocked. Please register to continue chatting.",
+        })
+        return
+      }
+
       // 🤖 Process with ChatEngineService (CODE decides, LLM formats)
       logger.info("[WEBHOOK] 🎯 Calling ChatEngineService", {
         customerId: customer.id,
@@ -2260,6 +2296,7 @@ export class WhatsAppWebhookController {
         customerLanguage: customer.language, // 🔍 DEBUG: What language is in DB?
         customerName: customer.name,
         customerDiscount: customer.discount, // 💰 DEBUG: What discount is configured?
+        registrationPromptLevel,
       })
 
       const chatEngine = getChatEngine(prisma)
@@ -2303,6 +2340,7 @@ export class WhatsAppWebhookController {
         customerDiscount: customer.discount || 0, // 💰 Pass customer discount
         isPlayground, // 🧪 Pass playground flag
         channel: "whatsapp",
+        registrationPromptLevel, // 🆕 Progressive registration invitation
       })
 
       logger.info("[WEBHOOK] ✅ ChatEngineService completed", {

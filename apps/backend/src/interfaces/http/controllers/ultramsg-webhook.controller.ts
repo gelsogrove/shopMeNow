@@ -1186,14 +1186,14 @@ export class UltraMsgWebhookController {
       logger.info('[ULTRAMSG] 📊 Message count check', {
         customerId: customer.id,
         messageCount,
-        isRegistered: customer.isRegistered,
+        isRegistered: customer.isActive, // isActive = registered in DB schema
       })
 
       // Import registration prompt service
       const { registrationPromptService } = require('../../../services/registration-prompt.service')
 
       // Check if user should be blocked (15+ messages without registration)
-      if (registrationPromptService.shouldBlockUser(messageCount, customer.isRegistered)) {
+      if (registrationPromptService.shouldBlockUser(messageCount, customer.isActive)) {
         logger.warn('[ULTRAMSG] ⛔ Blocking unregistered user (15+ messages)', {
           customerId: customer.id,
           messageCount,
@@ -1221,7 +1221,7 @@ export class UltraMsgWebhookController {
       // Get registration prompt level (0-3)
       const registrationPromptLevel = registrationPromptService.getPromptLevel(
         messageCount,
-        customer.isRegistered
+        customer.isActive // isActive = registered in DB schema
       )
 
       logger.info('[ULTRAMSG] 📊 Registration prompt level', {

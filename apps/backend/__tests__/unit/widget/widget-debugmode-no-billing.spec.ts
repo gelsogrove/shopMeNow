@@ -40,6 +40,7 @@ jest.mock("@echatbot/database", () => {
     },
     conversationMessage: {
       create: jest.fn(),
+      count: jest.fn().mockResolvedValue(3), // Mock: user has 3 messages (below registration prompt threshold)
     },
   }
   
@@ -99,6 +100,14 @@ jest.mock("../../../src/utils/welcome-message.handler", () => ({
   WelcomeMessageHandler: jest.fn(() => ({
     handleWelcomeMessage: jest.fn(() => Promise.resolve({ isWelcomeMessage: false })),
   })),
+}))
+
+// Mock registration prompt service (registration prompt feature)
+jest.mock("../../../src/services/registration-prompt.service", () => ({
+  registrationPromptService: {
+    getPromptLevel: jest.fn().mockReturnValue(0), // No registration prompt
+    shouldBlockUser: jest.fn().mockReturnValue(false), // User is NOT blocked
+  },
 }))
 
 import { WidgetChatController } from "../../../src/interfaces/http/controllers/widget-chat.controller"
@@ -255,6 +264,7 @@ describe("Widget Debug Mode - NO Billing", () => {
       phone: null,
       language: "ITA",
       workspaceId: mockWorkspaceId,
+      isActive: false, // Not registered (anonymous widget user)
     })
 
     ;(mockPrisma.chatSession.findFirst as jest.Mock).mockResolvedValue({

@@ -62,6 +62,7 @@ import { getUnifiedChatRouter, UnifiedChatRouter } from "../services/unified-cha
 import { UnifiedRoutingService } from "../services/unified-routing.service"
 import { SimpleIntentHandler, LLMIntentHandler } from "./handlers"
 import { CacheService } from "../services/cache.service"
+import { registrationPromptService } from "../../services/registration-prompt.service"
 
 type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 
@@ -1415,8 +1416,8 @@ export class ChatEngineService {
       "HELP",
       "GREETING", // Sometimes contains product questions
       "ASK_BUSINESS_INFO",
-      "UPDATE_PROFILE", // ✅ FIX: Profile updates should go through Router in informational workspaces
-      "CHANGE_LANGUAGE", // ✅ FIX: Language changes should go through Router in informational workspaces
+      // 🚫 UPDATE_PROFILE and CHANGE_LANGUAGE must NOT be here
+      // They have dedicated handlers (STEP 2.20+) that must run before strategy routing
     ]
 
     return informationalIntents.includes(intentType)
@@ -5330,12 +5331,24 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
     try {
       const customerSupportAgent = new CustomerSupportAgentLLM(this.prisma)
+
+      // 🆕 REGISTRATION PROMPT: Append prompt text to query for informational workspaces
+      let queryForAgent = input.message
+      if (input.registrationPromptLevel && input.registrationPromptLevel > 0) {
+        const registrationPromptText = registrationPromptService.getPromptText(input.registrationPromptLevel)
+        queryForAgent = input.message + "\n\n[SYSTEM INSTRUCTION]\n" + registrationPromptText
+        logger.info("📝 [ChatEngine] Added registration prompt to informational query", {
+          level: input.registrationPromptLevel,
+          promptLength: registrationPromptText.length,
+        })
+      }
+
       agentResponse = await customerSupportAgent.handleQuery({
         workspaceId: input.workspaceId,
         customerId: input.customerId,
         customerName,
         customerLanguage,
-        query: input.message,
+        query: queryForAgent,
         customerData: {
           nameUser: customerName,
           email: customer?.email || "",

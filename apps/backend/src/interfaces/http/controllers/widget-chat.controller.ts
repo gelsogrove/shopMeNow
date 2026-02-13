@@ -17,6 +17,7 @@ import { SubscriptionBillingService } from "../../../application/services/subscr
 import { WorkspaceAccessService } from "../../../application/services/workspace-access.service"
 import { detectLanguageFromHeader } from "../../../utils/email-templates"
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
+import { registrationPromptService } from "../../../services/registration-prompt.service"
 import {
   WIDGET_MESSAGE_SCHEMA,
   type WidgetMessageInput,
@@ -569,6 +570,47 @@ export class WidgetChatController {
         },
       })
 
+      // 📊 REGISTRATION PROMPT: Count messages and calculate prompt level
+      const widgetMessageCount = await prisma.conversationMessage.count({
+        where: {
+          customerId: customer.id,
+          workspaceId,
+          role: "user",
+        },
+      })
+
+      const registrationPromptLevel = registrationPromptService.getPromptLevel(
+        widgetMessageCount,
+        customer.isActive // isActive = registered in DB schema
+      )
+
+      logger.info("[WIDGET] 📊 Registration prompt level", {
+        customerId: customer.id,
+        widgetMessageCount,
+        isRegistered: customer.isActive,
+        promptLevel: registrationPromptLevel,
+      })
+
+      // ⛔ BLOCK: If user sent 15+ messages without registering
+      if (registrationPromptService.shouldBlockUser(widgetMessageCount, customer.isActive)) {
+        logger.warn("[WIDGET] ⛔ Blocking unregistered user (15+ messages)", {
+          customerId: customer.id,
+          widgetMessageCount,
+        })
+
+        await prisma.customers.update({
+          where: { id: customer.id },
+          data: {
+            isBlacklisted: true,
+          },
+        })
+
+        return res.status(403).json({
+          error: "MAX_MESSAGES_UNREGISTERED",
+          message: "Account blocked. Please register to continue chatting.",
+        })
+      }
+
       // 🌍 LANGUAGE PRIORITY for this message:
       // 1) requestedLanguage (explicit/browser/phone) if present
       // 2) customer.language stored in DB
@@ -599,6 +641,7 @@ export class WidgetChatController {
         customerName: customer.name,
         isSystemMessage: false,
         channel: "widget", // 🚫 WIDGET CHANNEL - disables personalized greetings
+        registrationPromptLevel, // 🆕 Progressive registration invitation
       })
 
       logger.info("✅ LLM processing completed", {
