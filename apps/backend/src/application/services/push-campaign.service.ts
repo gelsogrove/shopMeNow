@@ -44,14 +44,22 @@ export class PushCampaignService {
   private normalizeTargetingType(raw?: any): CampaignTargetType | undefined {
     if (raw === undefined || raw === null) return undefined
     let val = String(raw).trim()
-    if (/^".*"$/.test(val) || /^\\?".*\\?"$/.test(val)) {
+    // Remove escape backslashes
+    val = val.replace(/\\+/g, "")
+
+    // Try JSON parse if still quoted
+    if (/^".*"$/.test(val) || /^'.*'$/.test(val)) {
       try {
         val = JSON.parse(val)
       } catch {
-        // ignore parsing errors, continue with stripped quotes
+        // ignore parsing errors, continue
       }
     }
-    val = val.replace(/^"+|"+$/g, "").replace(/^'+|'+$/g, "").toUpperCase()
+
+    // Strip any remaining quotes
+    val = val.replace(/^"+|"+$/g, "").replace(/^'+|'+$/g, "")
+
+    val = val.toUpperCase()
     if (val === "ALL") return CampaignTargetType.ALL
     if (val === "MANUAL") return CampaignTargetType.MANUAL
     if (val === "TAGS") return CampaignTargetType.TAGS

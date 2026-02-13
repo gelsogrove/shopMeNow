@@ -244,25 +244,32 @@ export class RegistrationService {
   private normalizeLanguageCode(language: string): string {
     if (!language) return "en"
 
+    const lowerLang = language.toLowerCase().trim()
+
+    // Direct 2-letter code mapping (most common format stored in DB)
+    const twoLetterMap: Record<string, string> = {
+      "it": "it", "en": "en", "es": "es", "pt": "pt", "fr": "fr", "de": "de",
+    }
+    if (twoLetterMap[lowerLang]) return twoLetterMap[lowerLang]
+
     const upperLanguage = language.toUpperCase()
 
-    // Direct 3-letter code mapping (used by our system)
-    if (upperLanguage === "IT") return "it"
+    // 3-letter code mapping (legacy format)
+    if (upperLanguage === "ITA") return "it"
     if (upperLanguage === "ENG") return "en"
     if (upperLanguage === "ESP") return "es"
     if (upperLanguage === "PRT") return "pt"
-    if (upperLanguage === "FR") return "fr"
-    if (upperLanguage === "DE") return "de"
+    if (upperLanguage === "FRA") return "fr"
+    if (upperLanguage === "DEU") return "de"
 
     // Fallback: partial string matching
     const lowerCaseLanguage = language.toLowerCase()
     if (lowerCaseLanguage.includes("ital")) return "it"
     if (lowerCaseLanguage.includes("engl") || lowerCaseLanguage.includes("ing"))
       return "en"
-    if (lowerCaseLanguage.includes("span") || lowerCaseLanguage.includes("esp"))
+    if (lowerCaseLanguage.includes("span") || lowerCaseLanguage.includes("espa"))
       return "es"
-    if (lowerCaseLanguage.includes("fran") || lowerCaseLanguage.includes("fr"))
-      return "fr"
+    if (lowerCaseLanguage.includes("fran")) return "fr"
     if (
       lowerCaseLanguage.includes("deut") ||
       lowerCaseLanguage.includes("germ")

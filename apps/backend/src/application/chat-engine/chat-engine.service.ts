@@ -5306,6 +5306,94 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     const { input, workspaceConfig, startTime, debugSteps } = params
     const conversationId = input.conversationId || `temp-${input.customerId}`
 
+    // ========================================================================
+    // STEP 0.2.1: Check for UPDATE_PROFILE / CHANGE_LANGUAGE before INFO_AGENT
+    // These intents have dedicated handlers and must NOT go to CustomerSupportAgentLLM
+    // (which would dump the system prompt instead of generating the profile link)
+    // ========================================================================
+    try {
+      const intentResult = await this.intentParser.parse(input.message, {
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+      })
+
+      if (intentResult.intent.type === "UPDATE_PROFILE") {
+        logger.info("📝 [ChatEngine] UPDATE_PROFILE in informational workspace - generating profile link", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        try {
+          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
+          const callingFunctions = new CallingFunctionsService()
+          
+          const profileLinkResult = await callingFunctions.getProfileLink({
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          })
+
+          if (!profileLinkResult.success || !profileLinkResult.data?.profileLink) {
+            throw new Error("Failed to generate profile link")
+          }
+
+          const customerFirstName = input.customerName?.split(" ")[0] || "!"
+          const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
+          let profileMessage = `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+
+          // Translate to customer language
+          const customerLanguage = input.customerLanguage || "en"
+          try {
+            const translationResult = await this.applyTranslation(
+              profileMessage,
+              input.workspaceId,
+              customerLanguage,
+              debugSteps,
+              customerFirstName
+            )
+            profileMessage = translationResult.message
+          } catch (translationError) {
+            logger.warn("⚠️ [ChatEngine] Profile message translation failed, using Italian", {
+              error: (translationError as Error).message,
+            })
+          }
+
+          const processingTimeMs = Date.now() - startTime
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            profileMessage
+          )
+
+          return {
+            message: profileMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "UPDATE_PROFILE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: { steps: debugSteps, totalTokens: 0, executionTimeMs: processingTimeMs },
+            response: profileMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+            _assistantMessageId: savedMessages.assistantMessageId,
+          }
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Failed to generate profile link (informational)", { error })
+          // Fall through to INFO_AGENT on error
+        }
+      }
+    } catch (intentError) {
+      logger.warn("⚠️ [ChatEngine] Intent parsing failed in informational flow, continuing to INFO_AGENT", {
+        error: (intentError as Error).message,
+      })
+    }
+
     const customer = await this.prisma.customers.findFirst({
       where: { id: input.customerId, workspaceId: input.workspaceId },
       select: {

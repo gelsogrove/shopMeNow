@@ -9,7 +9,7 @@ import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../
 import { ChatEngineService, getChatEngine } from "../../../application/chat-engine"
 import { workspaceService } from "../../../services/workspace.service"
 import { websocketService } from "../../../services/websocket.service"
-import { getRegistrationText } from "../../../utils/language-detector"
+import { getRegistrationText, detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { registrationPromptService } from "../../../services/registration-prompt.service"
 import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
@@ -28,24 +28,6 @@ const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
  * See Constitution Principle VI: Chat Isolation & Concurrency Safety
  */
 const customerMessageLocks = new Map<string, Promise<void>>()
-
-/**
- * 🌍 Language Detection Helper
- * Detects language from phone prefix (e.g., +39 → it, +34 → es)
- */
-// 🚨 ONLY supported prefixes: IT, ES, PT (Andrea's rule)
-// For unrecognized prefixes → return "" → caller uses workspace.defaultLanguage
-const detectLanguageFromPhonePrefix = (phone: string): string => {
-  const cleanPhone = phone.replace(/[\s\-()]/g, "")
-  const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
-  if (!prefixMatch) return ""
-  
-  const prefix = prefixMatch[1]
-  const langMap: Record<string, string> = {
-    "+39": "it", "+34": "es", "+351": "pt",
-  }
-  return langMap[prefix] || "" // Unrecognized → caller uses workspace.defaultLanguage
-}
 
 /**
  * WhatsApp Webhook Controller
