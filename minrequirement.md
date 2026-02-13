@@ -61,9 +61,14 @@ Use these scenarios to regression-test the flows the team cares about. All steps
 
 ---
 
-## Execution directive (refactor + best practice)
+## Execution directive (orchestrare tutto, refactor + best practice)
 
 *Obiettivo*: orchestrare end-to-end BE/FE/Scheduler, prendere in pasto l’intero progetto e ridurre errori LLM, lingua, campagne, billing. Se necessario spezzare file lunghi, migliorare servizi e prompt. Prendi decisioni autonomamente se il codice è troppo lungo o poco modulare (split, refactor, servizi dedicati).
+
+**Orchestrazione obbligatoria**
+- Chi prende in carico una feature deve coordinare e verificare tutti i layer (Backend, Frontend, Scheduler, DB, prompt, billing). Ogni modifica con impatto cross-layer (lingua, campagne, billing, escalation) va validata end-to-end prima di chiudere.
+- Se una funzionalità non rispetta queste regole, si fa refactor e si aggiungono/aggiornano i test prima di rilasciare.
+- Se un file è troppo lungo o denso per essere compreso facilmente (oltre ~300-400 righe), va spezzato/modularizzato: la IA fatica a seguire flussi troppo estesi; preferire servizi e moduli piccoli con responsabilità singola.
 
 - **Refactor scope**: se un file/service supera ~300-400 righe (es. llm-router, translation), split in moduli: language-resolver, billing-guard, delegation-handler, token-replacement, translation-pipeline, campaign-recipient-builder. Frontend: estrarre hook (useCampaigns/useLanguage/useTokenValidation) e componenti (CampaignCard, CampaignForm, RegisterHeader, RegisterButton).  
 - **Lingua**: default en. Ordine: customer.language > phone prefix (+34 es, +39 it, +351 pt, else en) > workspace.defaultLanguage. Passare sempre `customerLanguage` al TranslationAgent, anche WIP/debug. Welcome widget = WhatsApp.  
