@@ -27,13 +27,14 @@ export const ECOMMERCE_TEMPLATE_FILES: Record<string, string> = {
   CONVERSATION_HISTORY: "12-conversation-history.template.md",
 }
 
-// 🗂️ INFORMATIONAL TEMPLATE FILES (5 files)
+// 🗂️ INFORMATIONAL TEMPLATE FILES (6 files)
 export const INFORMATIONAL_TEMPLATE_FILES: Record<string, string> = {
   INFO_AGENT: "01-info-agent.template.md",  // Main conversational agent for info-only channels
   SECURITY: "02-security.template.md",
   TRANSLATION: "03-translation.template.md",
   SUMMARY_AGENT: "04-summary.template.md",
   CONVERSATION_HISTORY: "05-conversation-history.template.md",
+  PROFILE_MANAGEMENT: "06-profile-management.template.md",
 }
 
 // Agents available ONLY for e-commerce workspaces
@@ -73,11 +74,11 @@ export function getTemplateFolder(isEcommerce: boolean): string {
 export function getTemplateFilename(agentType: string, isEcommerce: boolean): string {
   const templateMap = isEcommerce ? ECOMMERCE_TEMPLATE_FILES : INFORMATIONAL_TEMPLATE_FILES
   const filename = templateMap[agentType]
-  
+
   if (!filename) {
     throw new Error(`No template defined for agent type: ${agentType} (isEcommerce: ${isEcommerce})`)
   }
-  
+
   return filename
 }
 

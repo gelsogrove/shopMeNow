@@ -2447,7 +2447,8 @@ export class LLMRouterService {
               })
 
               const profileManagementAgent = new ProfileManagementAgentLLM(
-                this.prisma
+                this.prisma,
+                this.promptBuilder
               )
 
               // Extract last 3 messages for context (excluding system prompt)

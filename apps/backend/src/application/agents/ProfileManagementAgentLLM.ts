@@ -15,6 +15,7 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { PROFILE_MANAGEMENT_FUNCTIONS } from "../../config/agent-functions.config"
+import { PromptBuilderService } from "../../services/prompt-builder/prompt-builder.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
 
@@ -44,7 +45,7 @@ export class ProfileManagementAgentLLM {
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
 
-  constructor(private prisma: PrismaClient) {
+  constructor(private prisma: PrismaClient, private promptBuilder: PromptBuilderService) {
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
       throw new Error("OPENROUTER_API_KEY is required")
@@ -64,70 +65,18 @@ export class ProfileManagementAgentLLM {
         query: context.query,
       })
 
-      // Load agent config from database
-      const agentConfig = await this.prisma.agentConfig.findFirst({
-        where: {
+      // 🔨 Build prompt using PromptBuilderService (robust template + DB fallback)
+      const processedPrompt = await this.promptBuilder.buildAgentPrompt(
+        "PROFILE_MANAGEMENT",
+        {
           workspaceId: context.workspaceId,
-          name: { contains: "Profile" },
-        },
-      })
-
-      if (!agentConfig) {
-        throw new Error("Profile Management Agent config not found")
-      }
-
-      // 🆕 Load workspace config for dynamic fields (customAiRules, companyName, etc.)
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: context.workspaceId },
-        select: {
-          name: true,
-          address: true,
-          customAiRules: true,
-          botIdentityResponse: true,
-        },
-      })
-
-      // Get customer data
-      const customer = await this.prisma.customers.findUnique({
-        where: { id: context.customerId },
-      })
-
-      const promptProcessor = new PromptProcessorService()
-
-      // Map customer data
-      const customerData = customer
-        ? {
-          nameUser: customer.name || "Cliente",
-          email: customer.email || "",
-          phone: customer.phone || "",
-          discountUser: customer.discount || 0,
-          companyName: workspace?.name || "",
-          languageUser: customer.language || "ENGLISH",
-          pushNotificationsConsent: customer.push_notifications_consent,
-        }
-        : {}
-
-      // Process prompt (replace variables)
-      const processedPrompt = await promptProcessor.preProcessPrompt(
-        agentConfig.systemPrompt,
-        context.workspaceId,
-        customerData,
-        {
-          faqs: "",
-          products: "",
-          categories: "",
-          services: "",
-          offers: "",
-        },
-        undefined, // workspaceUrl
-        {
-          address: workspace?.address || "",
-          customAiRules: workspace?.customAiRules || "",
-          botIdentityResponse: workspace?.botIdentityResponse || "",
+          customerId: context.customerId,
         }
       )
 
-      logger.info(`📄 Profile Management Agent - Prompt processed`)
+      logger.info(`📄 Profile Management Agent - Prompt built via PromptBuilderService`, {
+        promptLength: processedPrompt.length
+      })
 
       // Get available functions for Profile Management Agent
       // Use PROFILE_MANAGEMENT_FUNCTIONS which includes both handlePushNotifications and getProfileLink
