@@ -1516,6 +1516,23 @@ export class LLMRouterService {
       } catch (registrationReminderError) {
         logger.error("⚠️ Failed to add registration reminder", { error: registrationReminderError })
       }
+      // 🔗 FINAL CATCH-ALL LINK REPLACEMENT
+      // This ensures that any [LINK_XXX] tokens injected by Conversation History Layer,
+      // Translation Agent, or Security Agent are replaced before reaching the user.
+      const finalLinkCheck = finalCleanResponse.includes("[LINK_") || finalCleanResponse.includes("_TOKEN]") || finalCleanResponse.includes("LINK_")
+
+      if (finalLinkCheck) {
+        logger.info("🔗 [LLMRouter] Final link replacement pass triggered")
+        const finalLinkResult = await this.linkReplacementService.replaceTokens(
+          { response: finalCleanResponse },
+          params.customerId,
+          params.workspaceId
+        )
+        if (finalLinkResult.success && finalLinkResult.response) {
+          finalCleanResponse = finalLinkResult.response
+          logger.info("✅ [LLMRouter] Final link replacement successful")
+        }
+      }
 
       // ⚠️ CRITICAL LOG - Verify we reach this point
       logger.info("🏁 [LLMRouter] Routing complete - returning response to orchestrator")

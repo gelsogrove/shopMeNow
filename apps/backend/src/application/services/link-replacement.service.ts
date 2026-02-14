@@ -106,6 +106,23 @@ export class LinkReplacementService {
       const hasCartConfirmToken = response.includes("LINK_CHECKOUT_CONFIRM")
       const hasProfileToken = response.includes("LINK_PROFILE_WITH_TOKEN")
       const hasCatalogToken = response.includes("LINK_CATALOG")
+
+      // 🚨 NORMALIZE REGISTRATION TOKENS
+      const wrongRegistrationPatterns = [
+        /\[registrazione link\]/gi,
+        /\[link registrazione\]/gi,
+        /\[registration link\]/gi,
+        /\[link registration\]/gi,
+        /link registrazione/gi,
+        /link registration/gi,
+      ]
+      wrongRegistrationPatterns.forEach(pattern => {
+        if (pattern.test(response)) {
+          logger.warn(`⚠️ Found wrong registration token pattern, normalizing to [LINK_REGISTRATION]`)
+          response = response.replace(pattern, "[LINK_REGISTRATION]")
+        }
+      })
+
       const hasRegistrationToken = response.includes("LINK_REGISTRATION")
 
       if (
@@ -455,52 +472,52 @@ export class LinkReplacementService {
               /LINK_REGISTRATION/g,
               registrationLink
             )
-        } else {
-          logger.warn("⚠️ Missing customer phone for registration link", {
-            customerId,
-            workspaceId,
-          })
+          } else {
+            logger.warn("⚠️ Missing customer phone for registration link", {
+              customerId,
+              workspaceId,
+            })
 
-          // 🔧 FALLBACK: Use public registration page without token
-          // We still want to show a working link in the widget even if phone is unknown.
-          const { url: workspaceUrl, registrationPage } =
-            await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
+            // 🔧 FALLBACK: Use public registration page without token
+            // We still want to show a working link in the widget even if phone is unknown.
+            const { url: workspaceUrl, registrationPage } =
+              await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
 
-          const baseUrl = (workspaceUrl || config.frontendUrl).replace(/\/$/, "")
-          const fallbackRegistrationLink =
-            registrationPage && registrationPage.trim() !== ""
-              ? registrationPage.startsWith("http")
-                ? registrationPage.trim()
-                : `${baseUrl}/${registrationPage.replace(/^\//, "")}`
-              : `${baseUrl}/registration`
+            const baseUrl = (workspaceUrl || config.frontendUrl).replace(/\/$/, "")
+            const fallbackRegistrationLink =
+              registrationPage && registrationPage.trim() !== ""
+                ? registrationPage.startsWith("http")
+                  ? registrationPage.trim()
+                  : `${baseUrl}/${registrationPage.replace(/^\//, "")}`
+                : `${baseUrl}/registration`
 
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(\[LINK_REGISTRATION\]\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${fallbackRegistrationLink})${punctuation}`
-          )
+            replacedResponse = replacedResponse.replace(
+              /\[([^\]]+)\]\(\[LINK_REGISTRATION\]\)([\.!?,;:]?)/g,
+              (match, text, punctuation) =>
+                `[${text}](${fallbackRegistrationLink})${punctuation}`
+            )
 
-          replacedResponse = replacedResponse.replace(
-            /\[([^\]]+)\]\(LINK_REGISTRATION\)([\.!?,;:]?)/g,
-            (match, text, punctuation) =>
-              `[${text}](${fallbackRegistrationLink})${punctuation}`
-          )
+            replacedResponse = replacedResponse.replace(
+              /\[([^\]]+)\]\(LINK_REGISTRATION\)([\.!?,;:]?)/g,
+              (match, text, punctuation) =>
+                `[${text}](${fallbackRegistrationLink})${punctuation}`
+            )
 
-          replacedResponse = replacedResponse.replace(
-            /\[LINK_REGISTRATION\]([\)\.]?[\.!?,]?)/g,
-            (match, suffix) => {
-              const cleanSuffix = suffix.replace(/\)/g, "")
-              return cleanSuffix
-                ? `${fallbackRegistrationLink}${cleanSuffix}`
-                : fallbackRegistrationLink
-            }
-          )
+            replacedResponse = replacedResponse.replace(
+              /\[LINK_REGISTRATION\]([\)\.]?[\.!?,]?)/g,
+              (match, suffix) => {
+                const cleanSuffix = suffix.replace(/\)/g, "")
+                return cleanSuffix
+                  ? `${fallbackRegistrationLink}${cleanSuffix}`
+                  : fallbackRegistrationLink
+              }
+            )
 
-          replacedResponse = replacedResponse.replace(
-            /LINK_REGISTRATION/g,
-            fallbackRegistrationLink
-          )
-        }
+            replacedResponse = replacedResponse.replace(
+              /LINK_REGISTRATION/g,
+              fallbackRegistrationLink
+            )
+          }
         } catch (error) {
           logger.error("❌ Error generating registration link:", error)
         }
