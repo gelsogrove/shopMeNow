@@ -97,14 +97,14 @@ export class ProfileManagementAgentLLM {
       // Map customer data
       const customerData = customer
         ? {
-            nameUser: customer.name || "Cliente",
-            email: customer.email || "",
-            phone: customer.phone || "",
-            discountUser: customer.discount || 0,
-            companyName: workspace?.name || "",
-            languageUser: customer.language || "ENGLISH",
-            pushNotificationsConsent: customer.push_notifications_consent,
-          }
+          nameUser: customer.name || "Cliente",
+          email: customer.email || "",
+          phone: customer.phone || "",
+          discountUser: customer.discount || 0,
+          companyName: workspace?.name || "",
+          languageUser: customer.language || "ENGLISH",
+          pushNotificationsConsent: customer.push_notifications_consent,
+        }
         : {}
 
       // Process prompt (replace variables)
@@ -159,6 +159,7 @@ export class ProfileManagementAgentLLM {
       let iterations = 0
       const maxIterations = 3
       let finalResponse = ""
+      let getProfileLinkCalled = false // Track if getProfileLink was executed
 
       while (iterations < maxIterations) {
         iterations++
@@ -195,6 +196,11 @@ export class ProfileManagementAgentLLM {
             arguments: functionArgs,
           })
 
+          // Track if getProfileLink was called
+          if (functionName === "getProfileLink") {
+            getProfileLinkCalled = true
+          }
+
           // Execute function
           const functionResult = await this.executeFunction(
             functionName,
@@ -219,6 +225,14 @@ export class ProfileManagementAgentLLM {
             content: JSON.stringify(functionResult),
           } as any)
 
+          // 🔧 FIX: Add explicit instruction to include function result in response
+          if (functionName === "getProfileLink") {
+            messages.push({
+              role: "system" as const,
+              content: "CRITICAL: You MUST include the [LINK_PROFILE_WITH_TOKEN] placeholder in your response to the user. This is required for the link replacement system to work correctly.",
+            } as any)
+          }
+
           // Continue loop to get final response
           continue
         }
@@ -232,6 +246,28 @@ export class ProfileManagementAgentLLM {
         finalResponse =
           "Mi dispiace, non sono riuscito a completare la richiesta."
       }
+
+      // 🔧 FIX: Validate and auto-inject placeholder if missing
+      if (getProfileLinkCalled && !finalResponse.includes("[LINK_PROFILE_WITH_TOKEN]")) {
+        logger.warn(
+          "⚠️ ProfileManagementAgent: getProfileLink was called but [LINK_PROFILE_WITH_TOKEN] is missing from final response. Auto-injecting placeholder.",
+          {
+            originalResponse: finalResponse.substring(0, 200),
+            functionCallsCount: functionCalls.length,
+          }
+        )
+
+        // Auto-inject the placeholder at the end of the response
+        finalResponse = `${finalResponse}\n\n[LINK_PROFILE_WITH_TOKEN]`
+
+        logger.info(
+          "✅ ProfileManagementAgent: Placeholder auto-injected successfully",
+          {
+            updatedResponse: finalResponse.substring(0, 200),
+          }
+        )
+      }
+
 
       const executionTimeMs = Date.now() - startTime
 

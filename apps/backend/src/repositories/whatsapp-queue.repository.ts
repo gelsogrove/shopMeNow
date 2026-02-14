@@ -16,7 +16,7 @@ export interface CreateQueueMessageDto {
 }
 
 export class WhatsAppQueueRepository {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient) { }
 
   /**
    * Find all queue messages for a workspace
@@ -193,29 +193,49 @@ export class WhatsAppQueueRepository {
 
   /**
    * Check for duplicate messages (deduplication)
+   * 🔧 FIX: Strengthened to prevent Meta retry race conditions
+   * - Checks ALL statuses (pending, sent, error) instead of just pending
+   * - Increased time window from 1 to 2 minutes
    * @param customerId Customer ID
    * @param content Message content
-   * @param withinMinutes Time window in minutes (default: 1)
+   * @param withinMinutes Time window in minutes (default: 2)
    * @returns True if duplicate exists
    */
   async checkDuplicate(
     customerId: string,
     content: string,
-    withinMinutes: number = 1
+    withinMinutes: number = 2 // 🔧 Increased from 1 to 2 minutes
   ): Promise<boolean> {
     try {
       const timeThreshold = new Date(Date.now() - withinMinutes * 60 * 1000)
 
+      // 🔧 FIX: Check ALL statuses to prevent Meta retry duplicates
       const existing = await this.prisma.whatsAppQueue.findFirst({
         where: {
           customerId,
           messageContent: content,
-          status: "pending", // 🔥 ONLY check pending messages, allow same message if previous is sent/error
+          // 🔧 REMOVED status filter - now checks pending, sent, AND error
           createdAt: {
             gte: timeThreshold,
           },
         },
+        orderBy: {
+          createdAt: "desc",
+        },
       })
+
+      if (existing) {
+        logger.warn(
+          `[WhatsAppQueueRepository] 🚫 Duplicate message detected`,
+          {
+            customerId,
+            messagePreview: content.substring(0, 50),
+            existingStatus: existing.status,
+            existingCreatedAt: existing.createdAt,
+            timeSinceLastMessage: Date.now() - existing.createdAt.getTime(),
+          }
+        )
+      }
 
       return existing !== null
     } catch (error) {

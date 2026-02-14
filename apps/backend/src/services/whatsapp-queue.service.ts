@@ -106,18 +106,42 @@ export class WhatsAppQueueService {
         throw new Error("Customer ID is required")
       }
 
-      // Check for duplicates (within 1 minute)
+      // 🔧 FIX: Check for duplicate conversationMessageId first (if provided)
+      if (data.conversationMessageId) {
+        const existingByConversationId = await this.prisma.whatsAppQueue.findFirst({
+          where: {
+            conversationMessageId: data.conversationMessageId,
+            createdAt: {
+              gte: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes window
+            },
+          },
+        })
+
+        if (existingByConversationId) {
+          logger.warn(
+            `[WhatsAppQueueService] 🚫 Duplicate conversationMessageId detected, skipping enqueue`,
+            {
+              conversationMessageId: data.conversationMessageId,
+              existingQueueId: existingByConversationId.id,
+              existingStatus: existingByConversationId.status,
+            }
+          )
+          throw new Error("Duplicate message detected (same conversationMessageId)")
+        }
+      }
+
+      // Check for duplicates by content (within 2 minutes)
       const isDuplicate = await this.repository.checkDuplicate(
         data.customerId,
         data.messageContent,
-        1
+        2 // 🔧 Updated from 1 to 2 minutes to match repository default
       )
 
       if (isDuplicate) {
         logger.warn(
-          `[WhatsAppQueueService] Duplicate message detected for customer ${data.customerId}, skipping enqueue`
+          `[WhatsAppQueueService] 🚫 Duplicate message content detected for customer ${data.customerId}, skipping enqueue`
         )
-        throw new Error("Duplicate message detected (within 1 minute window)")
+        throw new Error("Duplicate message detected (within 2 minute window)")
       }
 
       logger.info(
@@ -161,27 +185,27 @@ export class WhatsAppQueueService {
         logger.info(
           `[WhatsAppQueueService] 🔧 DEBUG MODE ENABLED for workspace "${workspace.name}" (${workspaceId}) - sending WIP message`
         )
-        
+
         // Fetch ONE pending message (FIFO) to send WIP response
         const message = await this.repository.findPending(workspaceId, 1)
-        
+
         if (!message) {
           return // No messages to process
         }
 
         // Send WIP message automatically (no LLM, no extra cost)
         const wipMessage = workspace.wipMessage || "We are in maintenance mode. Please try again later."
-        
+
         try {
           // TODO: Replace with actual WhatsApp send when ready
           logger.info(`[WhatsAppQueueService] 🔧 WIP message sent: ${wipMessage}`, {
             customerId: message.customerId,
             phoneNumber: message.phoneNumber,
           })
-          
+
           // Mark as sent (WIP response)
           await this.repository.updateStatus(message.id, "sent")
-          
+
           // Mark as delivered in conversation history
           await this.markDeliveredInHistory(
             message.conversationMessageId,
@@ -192,7 +216,7 @@ export class WhatsAppQueueService {
           logger.error(`[WhatsAppQueueService] ❌ Failed to send WIP message:`, error)
           await this.repository.updateStatus(message.id, "error", "Failed to send WIP message")
         }
-        
+
         return
       }
 
@@ -260,38 +284,38 @@ export class WhatsAppQueueService {
         try {
           const deductResult = workspace?.ownerId
             ? await this.billingService.deductOwnerMessageCredit(
-                workspace.ownerId,
-                message.workspaceId,
-                message.id
-              )
+              workspace.ownerId,
+              message.workspaceId,
+              message.id
+            )
             : await this.billingService.deductMessageCredit(
-                message.workspaceId,
-                message.id
-              )
+              message.workspaceId,
+              message.id
+            )
           if (deductResult.success) {
-              logger.info(
-                `[WhatsAppQueueService] 💰 Credit deducted for message ${message.id}`,
-                {
-                  workspaceId: message.workspaceId,
-                  newBalance: deductResult.newBalance,
-                }
-              )
-            } else {
-              logger.warn(
-                `[WhatsAppQueueService] ⚠️ Failed to deduct credit for message ${message.id}`,
-                {
-                  workspaceId: message.workspaceId,
-                  error: deductResult.error,
-                }
-              )
-            }
-          } catch (billingError) {
-            // Don't fail the message send if billing fails - just log it
-            logger.error(
-              `[WhatsAppQueueService] ⚠️ Billing error for message ${message.id}:`,
-              billingError
+            logger.info(
+              `[WhatsAppQueueService] 💰 Credit deducted for message ${message.id}`,
+              {
+                workspaceId: message.workspaceId,
+                newBalance: deductResult.newBalance,
+              }
+            )
+          } else {
+            logger.warn(
+              `[WhatsAppQueueService] ⚠️ Failed to deduct credit for message ${message.id}`,
+              {
+                workspaceId: message.workspaceId,
+                error: deductResult.error,
+              }
             )
           }
+        } catch (billingError) {
+          // Don't fail the message send if billing fails - just log it
+          logger.error(
+            `[WhatsAppQueueService] ⚠️ Billing error for message ${message.id}:`,
+            billingError
+          )
+        }
 
         // Mark as delivered in conversation history (if exists)
         await this.markDeliveredInHistory(
@@ -715,8 +739,7 @@ export class WhatsAppQueueService {
   ): Promise<{ enabled: boolean }> {
     try {
       logger.info(
-        `[WhatsAppQueueService] Updating channel status for workspace ${workspaceId}: ${
-          enabled ? "ENABLED" : "DISABLED"
+        `[WhatsAppQueueService] Updating channel status for workspace ${workspaceId}: ${enabled ? "ENABLED" : "DISABLED"
         }`
       )
 
@@ -749,8 +772,7 @@ export class WhatsAppQueueService {
   ): Promise<{ debugMode: boolean }> {
     try {
       logger.info(
-        `[WhatsAppQueueService] 🔧 Updating debug mode for workspace ${workspaceId}: ${
-          debugMode ? "ENABLED" : "DISABLED"
+        `[WhatsAppQueueService] 🔧 Updating debug mode for workspace ${workspaceId}: ${debugMode ? "ENABLED" : "DISABLED"
         }`
       )
 
