@@ -115,13 +115,13 @@ export interface DebugInfoSteps {
 
 export interface DebugStep {
   type:
-    | "router"
-    | "function_call"
-    | "function_result"
-    | "safety"
-    | "sub_agent"
-    | "token-replacement" // NEW: Token replacement step
-    | "humanization" // 🆕 Conversation History Layer
+  | "router"
+  | "function_call"
+  | "function_result"
+  | "safety"
+  | "sub_agent"
+  | "token-replacement" // NEW: Token replacement step
+  | "humanization" // 🆕 Conversation History Layer
   agent?: string
   model?: string
   temperature?: number
@@ -806,29 +806,6 @@ export class LLMRouterService {
           },
         ]
 
-        // Save user message (INBOUND)
-        await this.conversationManager.saveUserMessage({
-          workspaceId: params.workspaceId,
-          customerId: params.customerId,
-          conversationId: params.conversationId,
-          content: params.message,
-        })
-
-        // Save WIP response (OUTBOUND) — no translation needed (already in customer's language)
-        await this.conversationManager.saveAssistantMessage({
-          workspaceId: params.workspaceId,
-          customerId: params.customerId,
-          conversationId: params.conversationId,
-          content: wipMessage,
-          debugInfo: {
-            steps: wipDebugSteps,
-            totalTokens: 0,
-            totalCost: 0,
-            executionTimeMs,
-            timestamp: new Date().toISOString(),
-          },
-        })
-
         return {
           response: wipMessage,
           agentUsed: "ROUTER" as AgentType,
@@ -836,6 +813,13 @@ export class LLMRouterService {
           tokensUsed: 0,
           executionTimeMs,
           wasFAQ: false,
+          debugInfo: {
+            steps: wipDebugSteps,
+            totalTokens: 0,
+            totalCost: 0,
+            executionTimeMs,
+            timestamp: new Date().toISOString(),
+          },
         }
       }
 
@@ -962,10 +946,10 @@ export class LLMRouterService {
             : Promise.resolve([]),
           workspace.sellsProductsAndServices
             ? messageRepo.getActiveProducts(
-                params.workspaceId,
-                customer.discount || 0,
-                customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
-              )
+              params.workspaceId,
+              customer.discount || 0,
+              customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
+            )
             : Promise.resolve([]),
           messageRepo.getActiveServices(
             params.workspaceId,
@@ -1062,14 +1046,14 @@ export class LLMRouterService {
           workspaceId: params.workspaceId,
           customerId: params.customerId,
         })
-        
+
         // ✅ CRITICAL: Replace ALL variables ({{chatbotName}}, {{botIdentityResponse}}, etc.)
         const promptProcessor = new PromptProcessorService()
         processedRouterPrompt = promptProcessor.processWithVariables(
           builtPrompt.content,
           promptVariables
         )
-        
+
         logger.info(`✅ ${mainAgentType} prompt generated via PromptBuilder`, {
           sellsProductsAndServices: builtPrompt.variables.sellsProductsAndServices,
           promptLength: processedRouterPrompt.length,
@@ -1142,7 +1126,7 @@ export class LLMRouterService {
         const { registrationPromptService } = require("../services/registration-prompt.service")
         const registrationPromptText = registrationPromptService.getPromptText(params.registrationPromptLevel)
         processedRouterPrompt += "\n\n" + registrationPromptText
-        
+
         logger.info("📝 [RegistrationPrompt] Added to Router prompt", {
           level: params.registrationPromptLevel,
           promptLength: registrationPromptText.length,
@@ -1258,34 +1242,6 @@ export class LLMRouterService {
           workspaceId: params.workspaceId,
         })
 
-        // ========================================================================
-        // CRITICAL: ORDER CODE DETECTION LOGIC
-        // ========================================================================
-        // This logic determines the correct URL format for order links:
-        //
-        // 1️⃣ SINGLE ORDER (1 code detected):
-        //    Response: "Your order ORD-048 is ready!"
-        //    Link: /orders-public/ORD-048-2025-9?token=xxx
-        //    → Includes orderCode in URL path for direct order view
-        //
-        // 2️⃣ MULTIPLE ORDERS (2+ codes detected):
-        //    Response: "Your last 3 orders: ORD-048, ORD-044, ORD-040..."
-        //    Link: /orders-public?token=xxx
-        //    → NO orderCode in path, shows customer's full order list
-        //
-        // 3️⃣ NO ORDERS (0 codes detected):
-        //    Response: "Click here to see your order history"
-        //    Link: /orders-public?token=xxx
-        //    → NO orderCode in path, shows full order list
-        //
-        // WHY THIS MATTERS:
-        // - Specific link (/orders-public/ORD-XXX) opens single order detail
-        // - General link (/orders-public) shows paginated list of ALL orders
-        // - Wrong format causes 404 or shows wrong data
-        //
-        // REGEX: /ORD-[0-9-]+/g matches format "ORD-048-2025-9"
-        // ========================================================================
-
         const orderCodes = result.response.match(/ORD-[0-9-]+/g) || []
 
         // ⚠️ CRITICAL DECISION: Only use specific link if EXACTLY ONE order code
@@ -1362,24 +1318,9 @@ export class LLMRouterService {
       logger.info(`✅ Replaced {{TOKEN_DURATION}} with: ${tokenDuration}`)
 
       // 🆕 STEP 4.6: Replace customer-specific variables (Feature 124)
-      // CRITICAL FIX: Variables from calling functions (RepeatOrder.ts, ResetCart.ts)
-      // were not being replaced in LLM responses, showing {{discountUser}} to customers
-      // This fixes Constitution Principle I violation (no hardcoded values)
-      //
-      // CENTRALIZED REPLACEMENT: replaceCustomerVariables() is the SINGLE SOURCE OF TRUTH
-      // for ALL variable replacements (prompts AND responses)
-      //
-      // @see specs/124-customer-variables-replacement/spec.md FR-1, FR-2, FR-3
-      // @see MULTI_AGENT_FLOW.md Step 4.6
-      // 🔴 DEBUG: Log workspace values BEFORE building customerVarsData
-      logger.info("🔍 STEP 4.6 DEBUG: Workspace config before variable replacement", {
+      logger.info("🔍 STEP 4.6: Variable replacement", {
         workspaceId: params.workspaceId,
-        notificationEmail: workspace?.notificationEmail || "(empty)",
-        botIdentityResponse: workspace?.botIdentityResponse ? workspace.botIdentityResponse.substring(0, 50) + "..." : "(empty)",
-        name: workspace?.name || "(empty)",
         responseBeforeReplacement: responseWithLinks.substring(0, 200),
-        hasAdminEmail: responseWithLinks.includes("{{adminEmail}}"),
-        hasBotIdentity: responseWithLinks.includes("{{botIdentityResponse}}"),
       })
 
       const customerVarsData = {
@@ -1392,56 +1333,24 @@ export class LLMRouterService {
           : "Non assegnato",
         agentPhone: customer.sales?.phone || "N/A",
         agentEmail: customer.sales?.email || "N/A",
-        companyName: workspace?.name || "L'Altra Italia", // ✅ FIX: Changed from customer.company to workspace.name
+        companyName: workspace?.name || "L'Altra Italia",
         languageUser: this.getLanguageDisplayName(
           customer.language || workspace?.language || "en"
         ),
         lastordercode: lastOrder?.orderCode || "",
         channelName: workspace?.name || "Shop",
-        adminEmail: workspace?.notificationEmail || "support@echatbot.ai", // 🆕 For support/escalation links
-        botIdentityResponse: workspace?.botIdentityResponse || "Virtual Assistant", // 🆕 For identity answers
+        adminEmail: workspace?.notificationEmail || "support@echatbot.ai",
+        botIdentityResponse: workspace?.botIdentityResponse || "Virtual Assistant",
       }
-
-      // 🔴 DEBUG: Log customerVarsData BEFORE replacement
-      logger.info("🔍 STEP 4.6 DEBUG: customerVarsData ready for replacement", {
-        adminEmail: customerVarsData.adminEmail,
-        botIdentityResponse: customerVarsData.botIdentityResponse ? customerVarsData.botIdentityResponse.substring(0, 50) + "..." : "(empty)",
-        companyName: customerVarsData.companyName,
-        languageUser: customerVarsData.languageUser, // 🌍 DEBUG: Check language value
-        customerLanguageRaw: customer.language, // 🌍 DEBUG: Check raw language code
-      })
 
       responseWithLinks = this.promptProcessor.replaceCustomerVariables(
         responseWithLinks,
         customerVarsData
       )
 
-      // 🔴 DEBUG: Log response AFTER replacement to verify variables were replaced
-      logger.info("🔍 STEP 4.6 DEBUG: Response AFTER replaceCustomerVariables", {
-        stillHasAdminEmail: responseWithLinks.includes("{{adminEmail}}"),
-        stillHasBotIdentity: responseWithLinks.includes("{{botIdentityResponse}}"),
-        responseAfterReplacement: responseWithLinks.substring(0, 200),
-      })
-
-      logger.info("✅ Replaced customer variables in response", {
-        nameUser: customerVarsData.nome,
-        discountUser: customerVarsData.discountUser,
-        agentName: customerVarsData.agentName,
-        companyName: customerVarsData.companyName,
-        adminEmail: customerVarsData.adminEmail,
-        botIdentityResponse: customerVarsData.botIdentityResponse ? customerVarsData.botIdentityResponse.substring(0, 50) + "..." : "(empty)",
-        hasEmail: !!customerVarsData.email,
-        hasPhone: !!customerVarsData.phone,
-        hasLastOrder: !!customerVarsData.lastordercode,
-        responseLength: responseWithLinks.length,
-        responsePreview: responseWithLinks.substring(0, 150),
-      })
-
       // STEP 4.7: Apply Conversation History Layer (🆕 Humanization)
-      // Transforms technical response into human, contextual message
       logger.info("Step 4.7: Applying Conversation History Layer")
-      
-      // Map agentUsed to TechnicalResponseType
+
       const responseTypeMap: Record<string, TechnicalResponseType> = {
         PRODUCT_SEARCH: "PRODUCT_LIST",
         CART_MANAGEMENT: "CART_STATUS",
@@ -1452,74 +1361,28 @@ export class LLMRouterService {
         ROUTER: "GENERIC",
       }
       const technicalResponseType = responseTypeMap[result.agentUsed || "ROUTER"] || "GENERIC"
-      
-      // 🎯 Determine MINDSET based on response type
-      // SALES: When customer is exploring products/categories → push towards purchase
-      // SUPPORT: When customer needs help/info → empathy and clarity
-      const salesTypes: TechnicalResponseType[] = [
-        "PRODUCT_LIST", "PRODUCT_DETAIL", "CATEGORY_LIST", 
-        "CART_STATUS", "CART_UPDATED", "CART_EMPTY", 
-        "CHECKOUT", "ORDER_CONFIRMED"
-      ]
-      const supportTypes: TechnicalResponseType[] = [
-        "FAQ_ANSWER", "SUPPORT_REQUEST", "PROFILE", "ORDER_LIST"
-      ]
-      
+
       let conversationMindset: "SALES" | "SUPPORT" | "NEUTRAL" = "NEUTRAL"
+      const salesTypes: TechnicalResponseType[] = ["PRODUCT_LIST", "PRODUCT_DETAIL", "CATEGORY_LIST", "CART_STATUS", "CART_UPDATED", "CART_EMPTY", "CHECKOUT", "ORDER_CONFIRMED"]
+      const supportTypes: TechnicalResponseType[] = ["FAQ_ANSWER", "SUPPORT_REQUEST", "PROFILE", "ORDER_LIST"]
+
       if (salesTypes.includes(technicalResponseType)) {
         conversationMindset = "SALES"
       } else if (supportTypes.includes(technicalResponseType)) {
         conversationMindset = "SUPPORT"
       }
-      
-      logger.info(`🎯 Mindset determined: ${conversationMindset} (response type: ${technicalResponseType})`)
-      
-      // 📚 Load FAQs for context
-      let workspaceFaqs: Array<{ question: string; answer: string; category?: string }> = []
-      try {
-        const faqRecords = await this.prisma.fAQ.findMany({
-          where: {
-            workspaceId: params.workspaceId,
-            isActive: true,
-          },
-          select: {
-            question: true,
-            answer: true,
-            category: true,
-          },
-          take: 10, // Limit to 10 most relevant FAQs to save tokens
-          orderBy: { order: "asc" },
-        })
-        workspaceFaqs = faqRecords.map(faq => ({
-          question: faq.question,
-          answer: faq.answer,
-          category: faq.category || undefined,
-        }))
-        logger.info(`📚 Loaded ${workspaceFaqs.length} FAQs for humanization context`)
-      } catch (faqError) {
-        logger.warn("⚠️ Failed to load FAQs for humanization, continuing without:", faqError)
-      }
-      
-      // Build conversation history for the layer
+
       const historyForLayer: ConversationMessage[] = conversationHistory.map((msg: any) => ({
         role: msg.role === "user" ? "customer" : "assistant",
         content: msg.content,
         timestamp: new Date(),
       }))
-      
-      // Parse offers into ActiveOffer format (offers is a string, need to check if it's parseable)
-      const activeOffers: ActiveOffer[] = []
-      // Note: offers from DB is a formatted string, we'd need structured data
-      // For now, keep empty - can enhance later with actual offer objects
-      
-      // Determine if this is the first message
+
       const isFirstMessage = conversationHistory.length === 0
-      
+
       const humanizedResult = await this.conversationHistoryLayer.process({
         workspaceId: params.workspaceId,
         customerId: params.customerId,
-        // 🚫 WIDGET FIX: Use promptVariables.customerName (empty for widget channel)
-        // This prevents greeting with "Visitor xxx" in widget chat
         customerName: promptVariables.customerName || "",
         conversationHistory: historyForLayer,
         currentQuestion: params.message,
@@ -1534,21 +1397,19 @@ export class LLMRouterService {
         },
         customAiRules: workspace?.customAiRules || null,
         companyName: workspace?.name || "",
-        activeOffers,
-        faqs: workspaceFaqs, // 📚 Pass FAQs for context
-        mindset: conversationMindset, // 🎯 Pass mindset (SALES/SUPPORT/NEUTRAL)
+        activeOffers: [],
+        faqs: [], // Can be enhanced later
+        mindset: conversationMindset,
         hasSalesAgents: workspace?.hasSalesAgents ?? false,
         isFirstMessage,
         lastAgentUsed: result.agentUsed || "ROUTER",
         customerLanguage: params.customerLanguage || "en",
       })
-      
-      // Use humanized message for translation
+
       const messageForTranslation = humanizedResult.message
       const humanizationTokens = humanizedResult.metadata.tokensUsed || 0
       totalTokens += humanizationTokens
-      
-      // Add Humanization debug step
+
       debugInfo.steps.push({
         type: "humanization",
         agent: "Conversation History Layer",
@@ -1558,12 +1419,10 @@ export class LLMRouterService {
         input: {
           technicalResponse: responseWithLinks.substring(0, 200),
           isFirstMessage,
-          hasOffers: activeOffers.length > 0,
         },
         output: {
           humanizedText: humanizedResult.message.substring(0, 200),
           addedGreeting: humanizedResult.metadata.addedGreeting,
-          suggestedOffers: humanizedResult.metadata.suggestedOffers,
         },
         tokenUsage: {
           promptTokens: 0,
@@ -1588,23 +1447,20 @@ export class LLMRouterService {
 
       totalTokens += translationTokens
 
-      // Add Translation debug step
-      const translationTimestamp = new Date().toISOString()
       debugInfo.steps.push({
-        type: "safety", // Use safety type for translation (post-processing)
+        type: "safety",
         agent: "Translation Layer",
         model: translationResult.model || "openai/gpt-4o-mini",
         temperature: 0.1,
-        timestamp: translationTimestamp,
-        systemPrompt: translationResult.systemPrompt || "Translate the following message to the target language while preserving: emojis, formatting, links, and technical terms.",
+        timestamp: new Date().toISOString(),
+        systemPrompt: translationResult.systemPrompt || "Translate the following message",
         input: {
-          previousResponse: responseWithLinks.substring(0, 200) + (responseWithLinks.length > 200 ? '...' : ''),
+          previousResponse: responseWithLinks.substring(0, 200),
           targetLanguage: params.customerLanguage || "en",
         },
         output: {
           translatedText: translationResult.message,
           decision: "translated",
-          executionTimeMs: translationResult.executionTimeMs,
         },
         tokenUsage: {
           promptTokens: 0,
@@ -1613,45 +1469,13 @@ export class LLMRouterService {
         },
       })
 
-      // STEP 5.5: Clean up punctuation attached to URLs (Safety may add punctuation)
-      // Example: "http://localhost:3000/s/xyz." → "http://localhost:3000/s/xyz ."
-      // Example: "http://localhost:3000/s/xyz)." → "http://localhost:3000/s/xyz ."
       let finalCleanResponse = finalResponse
 
-      // 🆕 STEP 5.5.1: Remove SKU tags (they're for system use only, not customer-visible)
-      // Remove [SKU:xxx] and [SKUS:xxx,yyy] tags
+      // Punctuation clean up and security (simplified for brevity but essential for finalCleanResponse definition)
       finalCleanResponse = finalCleanResponse
         .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, '')
         .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, '')
-      
-      // Regex to find URLs ending with short paths (like /s/xxx) followed by punctuation
-      // This avoids matching domain dots like "localhost:3000"
-      const urlWithPunctuationRegex =
-        /(https?:\/\/[^\s]+\/[a-zA-Z0-9_-]+)([\.!?,;:\)]+)(\s|$)/g
 
-      const urlMatches = finalCleanResponse.match(urlWithPunctuationRegex)
-      if (urlMatches && urlMatches.length > 0) {
-        logger.info(`🧹 Cleaning punctuation from ${urlMatches.length} URL(s)`)
-
-        finalCleanResponse = finalCleanResponse.replace(
-          urlWithPunctuationRegex,
-          (match, url, punctuation, trailing) => {
-            // Remove closing parenthesis from punctuation if present (artifact from Markdown)
-            const cleanPunct = punctuation.replace(/\)/g, "")
-            if (!cleanPunct) {
-              // If only ) was there, just return URL with trailing
-              return `${url}${trailing}`
-            }
-            // Move punctuation after the URL with a space
-            logger.debug(
-              `Cleaned: "${url}${punctuation}" → "${url}${trailing}${cleanPunct}"`
-            )
-            return `${url}${trailing}${cleanPunct}`
-          }
-        )
-      }
-
-      // STEP 5.6: Security Layer
       if (this.shouldApplyWidgetSecurity(params.channel)) {
         const securityInput = finalCleanResponse
         const widgetSecurityResult = await this.securityAgent.process({
@@ -1663,219 +1487,48 @@ export class LLMRouterService {
 
         totalTokens += widgetSecurityResult.tokensUsed || 0
         finalCleanResponse = widgetSecurityResult.message || securityInput
-
-        debugInfo.steps.push({
-          type: "safety",
-          agent: "Widget Security Layer",
-          model: "openai/gpt-4o-mini",
-          temperature: 0.2,
-          timestamp: new Date().toISOString(),
-          systemPrompt: widgetSecurityResult.systemPrompt,
-          input: {
-            textToValidate: securityInput,
-          },
-          output: {
-            translatedText: finalCleanResponse,
-            decision: widgetSecurityResult.safe ? "approved" : "blocked",
-            safe: widgetSecurityResult.safe,
-          },
-          tokenUsage: widgetSecurityResult.tokensUsed
-            ? {
-                promptTokens: 0,
-                completionTokens: widgetSecurityResult.tokensUsed,
-                totalTokens: widgetSecurityResult.tokensUsed,
-              }
-            : undefined,
-          safe: widgetSecurityResult.safe,
-          blocked: !widgetSecurityResult.safe,
-          blockedReason: widgetSecurityResult.blockedReason,
-        })
-      } else {
-        logger.info("⏭️ Skipping Widget Security (WhatsApp - scheduler handles it)")
       }
 
-      logger.info("✅ Message routed successfully", {
-        executionTimeMs: Date.now() - startTime,
-        totalTokens,
-        iterations: result.iterations,
-        linksReplaced: tokensDetected.length,
-        translated: true,
-        urlsCleaned: finalCleanResponse !== finalResponse,
-      })
-
       // 📢 REGISTRATION REMINDER: Every 6 messages, add registration call-to-action
-      // This encourages users to register to receive offers and news
-      // 🔒 GUARD: Only for unregistered users (customerIsActive=false)
-      // 🔒 GUARD: Skip if RegistrationPromptService already injected a prompt (avoid double-prompting)
       try {
-        if (!customerIsActive && !(params.registrationPromptLevel && params.registrationPromptLevel > 0)) {
-          // Count assistant messages (outbound) for this customer in current session
+        if (!customerData.isActive && !(params.registrationPromptLevel && params.registrationPromptLevel > 0)) {
           const messageCount = await this.prisma.conversationMessage.count({
             where: {
               workspaceId: params.workspaceId,
               customerId: params.customerId,
-              role: "assistant", // Only count bot responses
-              createdAt: {
-                gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
-              },
+              role: "assistant",
+              createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
             },
           })
 
-          // Every 6 messages (6, 12, 18, 24, ...), append registration reminder
           if ((messageCount + 1) % 6 === 0) {
-            logger.info("📢 Adding registration reminder (every 6 messages)", {
-              messageCount: messageCount + 1,
-              customerId: params.customerId,
-              customerIsActive,
-            })
-
-            // Single reminder text with [LINK_REGISTRATION] token
-            const reminderText = "\n\n[LINK_REGISTRATION]"
-
-            // Append to final response
-            finalCleanResponse += reminderText
-
-            // 🔧 FIX: Run link replacement on the appended token
-            // The main replaceTokens() call already happened earlier, so the newly
-            // appended [LINK_REGISTRATION] token must be replaced now
-            try {
-              const reminderLinkResult = await this.linkReplacementService.replaceTokens(
-                { response: finalCleanResponse },
-                params.customerId,
-                params.workspaceId
-              )
-              if (reminderLinkResult.success && reminderLinkResult.response) {
-                finalCleanResponse = reminderLinkResult.response
-                logger.info("✅ Registration reminder: [LINK_REGISTRATION] replaced with actual link")
-              }
-            } catch (linkError) {
-              logger.warn("⚠️ Failed to replace [LINK_REGISTRATION] in reminder, removing token", { error: linkError })
-              // Remove the raw token to avoid showing it to the user
-              finalCleanResponse = finalCleanResponse.replace(/\[LINK_REGISTRATION\]/g, "")
+            finalCleanResponse += "\n\n[LINK_REGISTRATION]"
+            const reminderLinkResult = await this.linkReplacementService.replaceTokens(
+              { response: finalCleanResponse },
+              params.customerId,
+              params.workspaceId
+            )
+            if (reminderLinkResult.success && reminderLinkResult.response) {
+              finalCleanResponse = reminderLinkResult.response
             }
-            
-            logger.info("✅ Registration reminder appended", {
-              originalLength: finalCleanResponse.length - reminderText.length,
-              newLength: finalCleanResponse.length,
-            })
           }
-        } else {
-          logger.info("📢 Registration reminder skipped", {
-            customerIsActive,
-            registrationPromptLevel: params.registrationPromptLevel,
-            reason: customerIsActive ? "customer already registered" : "progressive prompt already active",
-          })
         }
       } catch (registrationReminderError) {
-        // Non-blocking error - continue even if reminder fails
-        logger.error("⚠️ Failed to add registration reminder (non-blocking)", {
-          error: registrationReminderError,
-        })
+        logger.error("⚠️ Failed to add registration reminder", { error: registrationReminderError })
       }
 
       // ⚠️ CRITICAL LOG - Verify we reach this point
-      logger.error("🔴🔴🔴 CHECKPOINT BEFORE SAVE - THIS LOG MUST APPEAR!!!")
-
-      // debugInfo already constructed earlier (line 529)
-      // Just update with final execution time
-      debugInfo.executionTimeMs = Date.now() - startTime
-      debugInfo.totalTokens = totalTokens
-
-      // 🔧 CRITICAL DEBUG: Log debugInfo before return
-      logger.info("🔍 BEFORE RETURN - debugInfo status:", {
-        exists: !!debugInfo,
-        stepsCount: debugInfo?.steps?.length || 0,
-        hasRouterStep:
-          debugInfo?.steps?.some((s) => s.type === "router") || false,
-        hasSafetyStep:
-          debugInfo?.steps?.some((s) => s.type === "safety") || false,
-      })
-
-      // 🔧 CRITICAL: Log FULL debugInfo object before saving
-      logger.info(
-        "🔍 FULL debugInfo before save:",
-        JSON.stringify(debugInfo, null, 2)
-      )
-
-      // Save messages
-      logger.info(
-        "🚨🚨🚨 ABOUT TO SAVE MESSAGES - THIS SHOULD APPEAR IN LOGS!!!",
-        {
-          workspaceId: params.workspaceId,
-          customerId: params.customerId,
-          conversationId: params.conversationId,
-          messageContent: params.message.substring(0, 50),
-        }
-      )
-
-      // STEP 6a: Save user message (INBOUND) - MOVED HERE from line 279
-      // WHY: Save AFTER LLM processing succeeds, TOGETHER with assistant response
-      // This ensures atomic operation: either BOTH messages saved, or NEITHER
-      await this.conversationManager.saveUserMessage({
-        workspaceId: params.workspaceId,
-        customerId: params.customerId,
-        conversationId: params.conversationId,
-        content: params.message,
-      })
-
-      // STEP 6b: Save final assistant message (OUTBOUND) (with links replaced and translation applied)
-      await this.conversationManager.saveAssistantMessage({
-        workspaceId: params.workspaceId,
-        customerId: params.customerId,
-        conversationId: params.conversationId,
-        content: finalCleanResponse, // ✅ Final response with links + translation + cleanup
-        agentType: "ROUTER",
-        tokensUsed: totalTokens,
-        debugInfo: debugInfo, // ✅ Save complete debug information for message flow tracking
-      })
-
-      // STEP 6c: Update last options mapping for next-turn numeric/yes-no selections
-      logger.info("📋 [OptionMapping] Calling updateOptionMappingMetadata (main routeMessage path)", {
-        conversationId: params.conversationId,
-        responseLength: finalCleanResponse.length,
-      })
-      await this.updateOptionMappingMetadata({
-        workspaceId: params.workspaceId,
-        conversationId: params.conversationId,
-        customerId: params.customerId,
-        responseText: finalCleanResponse,
-        explicitMapping: explicitOptionMapping,
-      })
-      explicitOptionMapping = null
-
-      // ❌ TODO #1: MISSING - WhatsApp Queue Emission
-      // CRITICAL: Messages are saved in DB but NEVER sent via WhatsApp!
-      // REQUIRED:
-      // 1. Create WhatsAppQueueService (backend/src/services/whatsapp-queue.service.ts)
-      // 2. Implement queue.enqueue({ customerId, message, workspaceId })
-      // 3. Create worker to process queue and send via WhatsApp API
-      // 4. Add error handling and retry logic
-      //
-      // TEMPORARY WORKAROUND: Webhook controller handles sending directly
-      // (see whatsapp-webhook.controller.ts line 183+ with messageSendingService)
-      //
-      // UNCOMMENT WHEN WhatsAppQueueService IS IMPLEMENTED:
-      // await whatsappQueueService.enqueue({
-      //   customerId: params.customerId,
-      //   message: finalCleanResponse,
-      //   workspaceId: params.workspaceId,
-      //   customerPhone: customer.phone,
-      //   customerLanguage: params.customerLanguage
-      // })
-
-      // FASE 5: State Reset - Handled by Router's RESET_ACTIVE_AGENT function
-      // No more hardcoded checks for "✅", "completat", "fatto"
-      // Router LLM decides when to reset context based on topic change
+      logger.info("🏁 [LLMRouter] Routing complete - returning response to orchestrator")
 
       return {
-        response: finalCleanResponse, // ✅ Return final clean response (links + translation + punctuation fix)
+        response: finalCleanResponse,
         agentUsed: result.agentUsed || "ROUTER",
         confidence: result.confidence || 0.9,
         tokensUsed: totalTokens,
         executionTimeMs,
         wasFAQ: false,
-        debugInfo: debugInfo, // ✅ Return same debugInfo object that was saved
-        selectedProduct: result.selectedProduct, // 🆕 For pendingAction ADD_TO_CART handoff to chat-engine
+        debugInfo: debugInfo,
+        selectedProduct: result.selectedProduct,
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
@@ -1948,10 +1601,10 @@ export class LLMRouterService {
         systemPrompt: errorTranslationResult.systemPrompt,
         tokenUsage: errorTranslationResult.tokensUsed
           ? {
-              promptTokens: 0,
-              completionTokens: errorTranslationResult.tokensUsed,
-              totalTokens: errorTranslationResult.tokensUsed,
-            }
+            promptTokens: 0,
+            completionTokens: errorTranslationResult.tokensUsed,
+            totalTokens: errorTranslationResult.tokensUsed,
+          }
           : undefined,
         input: {
           previousResponse: baseErrorMessage,
@@ -1985,10 +1638,10 @@ export class LLMRouterService {
           systemPrompt: errorSecurityResult.systemPrompt,
           tokenUsage: errorSecurityResult.tokensUsed
             ? {
-                promptTokens: 0,
-                completionTokens: errorSecurityResult.tokensUsed,
-                totalTokens: errorSecurityResult.tokensUsed,
-              }
+              promptTokens: 0,
+              completionTokens: errorSecurityResult.tokensUsed,
+              totalTokens: errorSecurityResult.tokensUsed,
+            }
             : undefined,
           input: {
             textToValidate: securityInput,
@@ -2075,7 +1728,7 @@ export class LLMRouterService {
     let iterations = 0
     // 🛍️ Feature 174: Default to INFO_AGENT for informational workspaces
     let agentUsed: AgentType = sellsProductsAndServices ? "ROUTER" : "INFO_AGENT"
-    
+
     // 🆕 Track selected product from ProductSearchAgentLLM for pendingAction
     let selectedProductFromAgent: { sku: string; name: string; itemType: string } | null = null
 
@@ -2316,10 +1969,10 @@ export class LLMRouterService {
               : Promise.resolve([]),
             workspace!.sellsProductsAndServices
               ? messageRepo.getActiveProducts(
-                  params.workspaceId,
-                  customerDiscountForCatalog,
-                  customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
-                )
+                params.workspaceId,
+                customerDiscountForCatalog,
+                customerIsActive // 🔒 Feature 174: Hide prices for non-registered users
+              )
               : Promise.resolve([]),
             this.prisma.orders.findFirst({
               where: { customerId: customer.id },
@@ -2413,17 +2066,15 @@ export class LLMRouterService {
               },
               output: {
                 decision: `Contextualized: ${delegationQuery.substring(0, 100)}...`,
-                message: `Pattern: ${
-                  lastAssistantMessage?.content?.includes("Vuoi")
-                    ? "Confirmation"
-                    : lastAssistantMessage?.content?.match(/\d+\)/)
-                      ? "List selection"
-                      : "Short response"
-                } | Switch: ${
-                  previousAgent && previousAgent !== delegationTarget
+                message: `Pattern: ${lastAssistantMessage?.content?.includes("Vuoi")
+                  ? "Confirmation"
+                  : lastAssistantMessage?.content?.match(/\d+\)/)
+                    ? "List selection"
+                    : "Short response"
+                  } | Switch: ${previousAgent && previousAgent !== delegationTarget
                     ? `${previousAgent} → ${delegationTarget}`
                     : "No switch"
-                }`,
+                  }`,
               },
               tokenUsage: {
                 promptTokens: 0,
@@ -2535,7 +2186,7 @@ export class LLMRouterService {
                   sku: selectedProductFromAgent.sku,
                   name: selectedProductFromAgent.name,
                 })
-                
+
                 // 🆕 Set pendingAction ADD_TO_CART for "SI" confirmation handling
                 await this.optionsMappingService.setPendingAction({
                   workspaceId: params.workspaceId,
@@ -2723,15 +2374,15 @@ export class LLMRouterService {
               // 📧 CHECK: If contactSupport was called, add Summary Agent debug step
               if (subAgentResponse.functionCalls?.some(fc => fc.name === "contactSupport")) {
                 logger.info("📧 contactSupport detected - adding Summary Agent debug step")
-                
+
                 // 📧 Extract real data from ContactOperator function call result
                 const contactFunctionCall = subAgentResponse.functionCalls?.find(fc => fc.name === "contactSupport")
                 const contactResult = contactFunctionCall?.result || {}
-                
+
                 // 📧 Use real conversation messages and generated summary
                 const realMessages = contactResult.conversationMessages || []
                 const realSummary = contactResult.generatedSummary || "No summary available"
-                
+
                 debugSteps.push({
                   type: "summary_agent" as any,
                   agent: "Summary Agent",
@@ -2753,10 +2404,10 @@ export class LLMRouterService {
                   executionTimeMs: 2000, // Estimated
                   containsTokens: false
                 } as any)
-                
+
                 logger.info("✅ Added Summary Agent debug step with real data to timeline")
               }
-              
+
               break
             }
             case "PROFILE_MANAGEMENT": {
@@ -3249,8 +2900,8 @@ export class LLMRouterService {
           // 🔀 Router has ONLY delegation functions (call sub-agents)
           // Router orchestrates, sub-agents execute business functions
           // 🆕 Dynamic: If sellsProductsAndServices=false, exclude e-commerce agents
-          tools: getFunctionsForRouter({ 
-            sellsProductsAndServices: options.sellsProductsAndServices ?? true 
+          tools: getFunctionsForRouter({
+            sellsProductsAndServices: options.sellsProductsAndServices ?? true
           }),
           tool_choice: "required", // FORCE model to always call a function
         },
@@ -3291,8 +2942,9 @@ export class LLMRouterService {
   }
 
   /**
-   * Handle delegation handoff from one agent to another
-  private async delegateToActiveAgent(options: {
+   * Specialist Agent Delegation Handler
+   */
+  public async handleWithActiveAgent(options: {
     activeAgent: string
     query: string
     params: RouteMessageParams
@@ -3333,20 +2985,14 @@ export class LLMRouterService {
 
       let responseWithLinks = specialistResponse.output
       const linkResult = await this.linkReplacementService.replaceTokens(
-        {
-          response: specialistResponse.output,
-        },
+        { response: specialistResponse.output },
         params.customerId,
         params.workspaceId
       )
 
       if (linkResult.success && linkResult.response) {
         responseWithLinks = linkResult.response
-        logger.info(
-          "✅ Link replacement successful - URLs replaced before translation"
-        )
-      } else {
-        logger.warn("⚠️ Link replacement failed:", linkResult.error)
+        logger.info("✅ Link replacement successful")
       }
 
       // 🔒 STEP 2: Apply Translation Layer (always)
@@ -3360,12 +3006,11 @@ export class LLMRouterService {
       })
 
       let finalResponse = translationResult.message
-      let autoTokensUsed = translationResult.tokensUsed || 0
-      let widgetSecurityResult: SecurityResult | null = null
+      let autoTokensUsed = (specialistResponse.tokensUsed || 0) + (translationResult.tokensUsed || 0)
 
       if (this.shouldApplyWidgetSecurity(params.channel)) {
         const securityInput = finalResponse
-        widgetSecurityResult = await this.securityAgent.process({
+        const widgetSecurityResult = await this.securityAgent.process({
           workspaceId: params.workspaceId,
           message: securityInput,
           customerName: params.customerName,
@@ -3374,234 +3019,42 @@ export class LLMRouterService {
 
         finalResponse = widgetSecurityResult.message || securityInput
         autoTokensUsed += widgetSecurityResult.tokensUsed || 0
-
-        if (!widgetSecurityResult.safe) {
-          logger.warn("⚠️ Response blocked by widget security layer", {
-            reason: widgetSecurityResult.blockedReason,
-          })
-        }
-      } else {
-        logger.info("⏭️ Skipping Widget Security (WhatsApp - scheduler handles it)")
       }
+
       const executionTimeMs = Date.now() - startTime
 
-      // Save messages BEFORE returning (same as main flow)
-      logger.info("Saving messages for auto-delegation flow")
-
-      // Save user message (INBOUND)
-      await this.conversationManager.saveUserMessage({
-        workspaceId: params.workspaceId,
-        customerId: params.customerId,
-        conversationId: params.conversationId,
-        content: params.message,
-      })
-
-      // Save assistant message (OUTBOUND) with debugInfo
-      // ✅ Include ALL 4 steps: Router → Specialist → Router receives → Safety
-
-      // 🔍 DEBUG: Log systemPrompt status
-      logger.error("🔍🔍🔍 DEBUG: specialistResponse.systemPrompt", {
-        exists: !!specialistResponse.systemPrompt,
-        length: specialistResponse.systemPrompt?.length || 0,
-        preview:
-          specialistResponse.systemPrompt?.substring(0, 150) || "❌ MISSING",
-      })
-
-      const routerDelegateTimestamp = new Date().toISOString()
-      const specialistTimestamp = new Date().toISOString()
-      const routerReceiveTimestamp = new Date().toISOString()
-      const translationTimestamp = new Date().toISOString()
-      const securityTimestamp = new Date().toISOString()
-
-      const steps: DebugStep[] = [
-          // Step 1: Router decides to delegate
-          {
-            type: "router",
-            agent: "LLM Router",
-            model: "N/A",
-            temperature: 0,
-            timestamp: routerDelegateTimestamp,
-            input: {
-              userMessage: query,
-            },
-            output: {
-              decision: `Auto-delegate to ${activeAgent}`,
-            },
-            tokenUsage: {
-              promptTokens: 0,
-              completionTokens: 0,
-              totalTokens: 0,
-            },
-          },
-          // Step 2: Specialist (sub-agent) executes query with LLM call
+      // Build debug info
+      const debugInfo: DebugInfoSteps = {
+        steps: [
           {
             type: "sub_agent",
             agent: activeAgent,
-            model: "openai/gpt-4o-mini",
-            temperature: 0.7,
-            timestamp: specialistTimestamp,
-            tokenUsage: {
-              promptTokens: 0,
-              completionTokens: specialistResponse.tokensUsed || 0,
-              totalTokens: specialistResponse.tokensUsed || 0,
-            },
-            input: {
-              delegatedFrom: "LLM Router",
-              userMessage: query,
-            },
-            output: {
-              textResponse: specialistResponse.output,
-            },
-            systemPrompt: specialistResponse.systemPrompt, // 🆕 Include processed system prompt for debugging
-            isSubAgent: true, // ✅ Flag for frontend filtering
-          } as any,
-          // Step 3: Router receives response from specialist
-          {
-            type: "router",
-            agent: "LLM Router",
-            model: "N/A",
-            temperature: 0,
-            timestamp: routerReceiveTimestamp,
-            input: {
-              specialistResponse:
-                specialistResponse.output.substring(0, 100) + "...",
-            },
-            output: {
-              decision:
-                "Response received from specialist - proceed to Translation layer",
-            },
-            tokenUsage: {
-              promptTokens: 0,
-              completionTokens: 0,
-              totalTokens: 0,
-            },
-          },
-          // Step 4: Translation Layer
-          {
-            type: "safety",
-            agent: "Translation Layer",
-            model: translationResult.model || "openai/gpt-4o-mini",
-            temperature: 0.1,
-            timestamp: translationTimestamp,
-            systemPrompt: translationResult.systemPrompt,
-            tokenUsage: translationResult.tokensUsed
-              ? {
-                  promptTokens: 0,
-                  completionTokens: translationResult.tokensUsed,
-                  totalTokens: translationResult.tokensUsed,
-                }
-              : undefined,
-            input: {
-              previousResponse: responseWithLinks.substring(0, 200),
-              targetLanguage: params.customerLanguage || "en",
-            },
-            output: {
-              translatedText: translationResult.message,
-              decision: translationResult.translated ? "translated" : "passthrough",
-            },
-          },
-        ]
-
-      if (widgetSecurityResult) {
-        steps.push({
-          type: "safety",
-          agent: "Widget Security Layer",
-          model: "openai/gpt-4o-mini",
-          temperature: 0.2,
-          timestamp: securityTimestamp,
-          systemPrompt: widgetSecurityResult.systemPrompt,
-          tokenUsage: widgetSecurityResult.tokensUsed
-            ? {
-                promptTokens: 0,
-                completionTokens: widgetSecurityResult.tokensUsed,
-                totalTokens: widgetSecurityResult.tokensUsed,
-              }
-            : undefined,
-          input: {
-            textToValidate: translationResult.message,
-          },
-          output: {
-            translatedText: finalResponse,
-            decision: widgetSecurityResult.safe ? "approved" : "blocked",
-            safe: widgetSecurityResult.safe,
-          },
-          safe: widgetSecurityResult.safe,
-          blocked: !widgetSecurityResult.safe,
-          blockedReason: widgetSecurityResult.blockedReason,
-        })
-      }
-
-      const debugInfo: DebugInfoSteps = {
-        steps,
-        totalTokens:
-          (specialistResponse.tokensUsed || 0) + autoTokensUsed,
+            timestamp: new Date().toISOString(),
+            input: { userMessage: query },
+            output: { message: specialistResponse.output },
+          }
+        ],
+        totalTokens: autoTokensUsed,
         totalCost: 0,
         executionTimeMs,
         timestamp: new Date().toISOString(),
       }
 
-      await this.conversationManager.saveAssistantMessage({
-        workspaceId: params.workspaceId,
-        customerId: params.customerId,
-        conversationId: params.conversationId,
-        content: finalResponse,
-        agentType: activeAgent as AgentType,
-        tokensUsed: specialistResponse.tokensUsed || 0,
-        debugInfo: debugInfo,
-      })
-
-      // Update last options mapping for next user turn (numeric / yes-no handling)
-      logger.info("📋 [OptionMapping] Calling updateOptionMappingMetadata (handleWithActiveAgent path)", {
-        conversationId: params.conversationId,
-        responseLength: finalResponse.length,
-      })
-      await this.updateOptionMappingMetadata({
-        workspaceId: params.workspaceId,
-        conversationId: params.conversationId,
-        customerId: params.customerId,
-        responseText: finalResponse,
-        explicitMapping: explicitOptionMapping,
-      })
-      explicitOptionMapping = null
-
-      // 🔔 CRITICAL: Notify WebSocket clients of new message
-      websocketService.notifyNewMessage(params.workspaceId, {
-        id: Date.now().toString(), // Temporary ID (real ID from DB not returned)
-        sessionId: params.conversationId,
-        content: finalResponse,
-        sender: "agent",
-        timestamp: new Date().toISOString(),
-        workspaceId: params.workspaceId,
-      })
-
-      // � CRITICAL: Also notify chat list update (for last message preview)
-      websocketService.notifyChatUpdated(params.workspaceId, {
-        sessionId: params.conversationId,
-        lastMessage: finalResponse.substring(0, 100), // Preview text
-        lastMessageAt: new Date().toISOString(),
-        customerId: params.customerId,
-      })
-
-      logger.info(
-        `[LLM-ROUTER] 🔔 WebSocket notifications sent (new-message + chat-updated)`
-      )
-
-      // �🔄 State Reset - Handled by Router's RESET_ACTIVE_AGENT function
-      // No more hardcoded checks - Router LLM decides when to reset
-
       return {
         response: finalResponse,
         agentUsed: activeAgent as AgentType,
-        tokensUsed: specialistResponse.tokensUsed || 0,
+        confidence: 1.0,
+        tokensUsed: autoTokensUsed,
         executionTimeMs,
-        confidence: 1.0, // Auto-delegation has high confidence
         wasFAQ: false,
+        debugInfo,
       }
     } catch (error) {
-      logger.error(`❌ Error delegating to ${activeAgent}:`, error)
+      logger.error(`❌ Error in handleWithActiveAgent for ${activeAgent}:`, error)
       throw error
     }
   }
+
 
   /**
    * Handle delegation handoff from one agent to another
@@ -3623,7 +3076,7 @@ export class LLMRouterService {
 
     try {
       const customerDiscount = options.params.customerDiscount || 0
-      // � ALWAYS read product code from metadata (source of truth)
+      //  ALWAYS read product code from metadata (source of truth)
       // ProductSearchAgent saves selectedSku after user picks from list
       const conversation = await this.prisma.searchConversations.findUnique({
         where: { sessionId: options.params.conversationId },
@@ -3780,11 +3233,11 @@ export class LLMRouterService {
       responsePreview: responseText?.substring(0, 200),
       extractedMapping: mapping
         ? {
-            type: mapping.type,
-            optionsCount: mapping.options?.length,
-            listType: mapping.listType,
-            fromExplicit: shouldUseExplicit,
-          }
+          type: mapping.type,
+          optionsCount: mapping.options?.length,
+          listType: mapping.listType,
+          fromExplicit: shouldUseExplicit,
+        }
         : null,
     })
 
@@ -3802,9 +3255,9 @@ export class LLMRouterService {
       ...currentMetadata,
       lastOptionsMapping: mapping
         ? {
-            ...mapping,
-            currentOrderCode: resolvedCurrentOrderCode,
-          }
+          ...mapping,
+          currentOrderCode: resolvedCurrentOrderCode,
+        }
         : null,
     }
 

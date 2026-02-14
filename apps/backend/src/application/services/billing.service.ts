@@ -43,7 +43,7 @@ export class BillingService {
       // Get workspace and owner info before transaction
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { creditBalance: true, ownerId: true, name: true },
+        select: { ownerId: true, name: true },
       })
 
       if (!workspace || !workspace.ownerId) {

@@ -81,7 +81,7 @@ router.post(
       })
     } catch (error: any) {
       logger.error("Error initiating 2FA reset:", error)
-      
+
       const status = error.statusCode || 500
       res.status(status).json({
         success: false,
@@ -145,7 +145,7 @@ router.post(
       })
     } catch (error: any) {
       logger.error("Error sending 2FA setup email:", error)
-      
+
       const status = error.statusCode || 500
       res.status(status).json({
         success: false,
@@ -351,46 +351,50 @@ router.post(
         })
       }
 
-      // Get workspace
+      // Get workspace and owner billing info
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: {
           id: true,
           name: true,
-          planType: true,
-          planStartedAt: true,
           owner: {
-            select: { email: true }
+            select: {
+              id: true,
+              email: true,
+              planType: true,
+              planStartedAt: true,
+            }
           }
         },
       })
 
-      if (!workspace) {
+      if (!workspace || !workspace.owner) {
         return res.status(404).json({
           success: false,
-          error: "Workspace not found",
+          error: "Workspace or owner not found",
         })
       }
 
-      // Check if workspace is on FREE_TRIAL
-      if (workspace.planType !== "FREE_TRIAL") {
+      const owner = workspace.owner
+
+      // Check if owner is on FREE_TRIAL
+      if (owner.planType !== "FREE_TRIAL") {
         return res.status(400).json({
           success: false,
-          error: `Cannot extend trial for workspace on ${workspace.planType} plan. Only FREE_TRIAL workspaces can be extended.`,
+          error: `Cannot extend trial for user on ${owner.planType} plan. Only FREE_TRIAL users can be extended.`,
         })
       }
 
       // Calculate new planStartedAt by subtracting days (moving start date back extends the trial)
-      const currentStartDate = new Date(workspace.planStartedAt)
+      const currentStartDate = new Date(owner.planStartedAt)
       const newStartDate = new Date(currentStartDate.getTime() - (days * 24 * 60 * 60 * 1000))
 
-      // Update workspace
-      const updatedWorkspace = await prisma.workspace.update({
-        where: { id: workspaceId },
+      // Update owner
+      const updatedUser = await prisma.user.update({
+        where: { id: owner.id },
         data: { planStartedAt: newStartDate },
         select: {
           id: true,
-          name: true,
           planStartedAt: true,
           planType: true,
         },
@@ -402,16 +406,16 @@ router.post(
       const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
 
       logger.info(
-        `📅 Admin ${adminUser.email} extended trial for workspace ${workspace.name} by ${days} days. ` +
+        `📅 Admin ${adminUser.email} extended trial for user ${owner.email} (workspace: ${workspace.name}) by ${days} days. ` +
         `New start: ${newStartDate.toISOString()}, Days remaining: ${daysRemaining}. Reason: ${reason || 'Not specified'}`
       )
 
       res.json({
         success: true,
         data: {
-          workspaceId: updatedWorkspace.id,
-          workspaceName: updatedWorkspace.name,
-          ownerEmail: workspace.owner?.email,
+          workspaceId: workspace.id,
+          workspaceName: workspace.name,
+          ownerEmail: owner.email,
           previousStartDate: currentStartDate.toISOString(),
           newStartDate: newStartDate.toISOString(),
           trialEndDate: trialEndDate.toISOString(),

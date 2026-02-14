@@ -62,8 +62,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       afterRegistrationMessages: data.afterRegistrationMessages,
-      planType: data.planType || null,
-      trialEndsAt: data.trialEndsAt || null,
+      planType: data.owner?.planType ?? data.planType ?? null,
+      trialEndsAt: data.owner?.trialEndsAt ?? data.trialEndsAt ?? null,
       allowedExternalLinks: data.allowedExternalLinks || [],
       // 🆕 Channel Configuration (Feature 199)
       channelType: data.channelType ?? "WHATSAPP",
@@ -203,7 +203,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       })
 
       logger.debug(`Found ${workspaces.length} workspaces`)
-      
+
       // 🔍 DEBUG: Log raw sellsProductsAndServices values from Prisma
       workspaces.forEach((ws) => {
         logger.info(`🔍 PRISMA RAW - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
@@ -211,12 +211,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       // Map workspaces to domain entities
       const mappedWorkspaces = workspaces.map((workspace) => this.mapToDomain(workspace))
-      
+
       // 🔍 DEBUG: Log mapped sellsProductsAndServices values
       mappedWorkspaces.forEach((ws) => {
         logger.info(`🔍 MAPPED - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
       })
-      
+
       return mappedWorkspaces
     } catch (error) {
       logger.error("Error finding workspaces:", error)
@@ -234,6 +234,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       const workspace = await this.prisma.workspace.findUnique({
         where: { id },
         include: {
+          owner: {
+            select: {
+              planType: true,
+              trialEndsAt: true,
+            },
+          },
           whatsappSettings: true,
           agentConfigs: true, // 🔧 FIX: Include agentConfigs for LLM settings
         },
@@ -248,8 +254,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       try {
         const domainWorkspace = this.mapToDomain(workspace)
-        // 🔧 FIX: Add agentConfigs to the domain object (temporary fix)
-        ;(domainWorkspace as any).agentConfigs = workspace.agentConfigs || []
+          // 🔧 FIX: Add agentConfigs to the domain object (temporary fix)
+          ; (domainWorkspace as any).agentConfigs = workspace.agentConfigs || []
         return domainWorkspace
       } catch (error) {
         // If mapping fails but it's a deleted workspace, return a simplified version
@@ -361,7 +367,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         `✅ Found workspace: ${workspace.name} (${workspace.id}) for phone: ${normalizedPhone}`
       )
       const domainWorkspace = this.mapToDomain(workspace)
-      ;(domainWorkspace as any).agentConfigs = workspace.agentConfigs || []
+        ; (domainWorkspace as any).agentConfigs = workspace.agentConfigs || []
       return domainWorkspace
     } catch (error) {
       logger.error(
@@ -402,19 +408,19 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       })
 
       logger.debug(`Found ${workspaces.length} workspaces for user ${userId}`)
-      
+
       // 🔍 DEBUG: Log raw sellsProductsAndServices values from Prisma (findByUserId)
       workspaces.forEach((ws) => {
         logger.info(`🔍 PRISMA RAW (findByUserId) - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
       })
 
       const mappedWorkspaces = workspaces.map((workspace) => this.mapToDomain(workspace))
-      
+
       // 🔍 DEBUG: Log mapped sellsProductsAndServices values (findByUserId)
       mappedWorkspaces.forEach((ws) => {
         logger.info(`🔍 MAPPED (findByUserId) - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
       })
-      
+
       return mappedWorkspaces
     } catch (error) {
       logger.error(`Error finding workspaces for user ${userId}:`, error)
@@ -462,7 +468,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         2
       )}`
     )
-    
+
     // 🔍 LOG FEATURE 199
     logger.debug("=== FEATURE 199 REPOSITORY DEBUG ===")
     logger.debug(`sellsProductsAndServices ricevuto: ${data.sellsProductsAndServices} (tipo: ${typeof data.sellsProductsAndServices})`)
@@ -621,9 +627,9 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           const trimmed = dbData.allowedExternalLinks.trim()
           dbData.allowedExternalLinks = trimmed
             ? trimmed
-                .split(/[\n,]+/)
-                .map((link: string) => link.trim())
-                .filter((link: string) => link.length > 0)
+              .split(/[\n,]+/)
+              .map((link: string) => link.trim())
+              .filter((link: string) => link.length > 0)
             : []
         } else {
           dbData.allowedExternalLinks = []
@@ -642,7 +648,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
         )}`
       )
       logger.debug(`📧 AdminEmail to update: ${adminEmail}`)
-      
+
       // 🔍 LOG FEATURE 199 AFTER TRANSFORMATION
       logger.debug("=== FEATURE 199 AFTER TRANSFORMATION ===")
       logger.debug(`sellsProductsAndServices in dbData: ${dbData.sellsProductsAndServices}`)
@@ -708,33 +714,33 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             ...prismaUpdateData,
             whatsappSettings: prismaUpdateData.whatsappSettings
               ? {
-                  ...prismaUpdateData.whatsappSettings,
-                  upsert: {
-                    ...prismaUpdateData.whatsappSettings.upsert,
-                    create: {
-                      ...prismaUpdateData.whatsappSettings.upsert.create,
-                      appSecret:
-                        prismaUpdateData.whatsappSettings.upsert.create.appSecret
-                          ? "****"
-                          : undefined,
-                      webhookToken:
-                        prismaUpdateData.whatsappSettings.upsert.create.webhookToken
-                          ? "****"
-                          : undefined,
-                    },
-                    update: {
-                      ...prismaUpdateData.whatsappSettings.upsert.update,
-                      appSecret:
-                        prismaUpdateData.whatsappSettings.upsert.update.appSecret
-                          ? "****"
-                          : undefined,
-                      webhookToken:
-                        prismaUpdateData.whatsappSettings.upsert.update.webhookToken
-                          ? "****"
-                          : undefined,
-                    },
+                ...prismaUpdateData.whatsappSettings,
+                upsert: {
+                  ...prismaUpdateData.whatsappSettings.upsert,
+                  create: {
+                    ...prismaUpdateData.whatsappSettings.upsert.create,
+                    appSecret:
+                      prismaUpdateData.whatsappSettings.upsert.create.appSecret
+                        ? "****"
+                        : undefined,
+                    webhookToken:
+                      prismaUpdateData.whatsappSettings.upsert.create.webhookToken
+                        ? "****"
+                        : undefined,
                   },
-                }
+                  update: {
+                    ...prismaUpdateData.whatsappSettings.upsert.update,
+                    appSecret:
+                      prismaUpdateData.whatsappSettings.upsert.update.appSecret
+                        ? "****"
+                        : undefined,
+                    webhookToken:
+                      prismaUpdateData.whatsappSettings.upsert.update.webhookToken
+                        ? "****"
+                        : undefined,
+                  },
+                },
+              }
               : undefined,
           },
           null,
@@ -779,8 +785,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           websiteUrl: true,
           createdAt: true,
           updatedAt: true,
-          planType: true,
-          trialEndsAt: true,
           allowedExternalLinks: true,
           logoUrl: true,
           logoKey: true,
@@ -849,7 +853,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           2
         )}`
       )
-      
+
       // 🔍 LOG FEATURE 199 FINAL
       logger.debug("=== FEATURE 199 FINAL DB VALUES ===")
       logger.debug(`sellsProductsAndServices DB finale: ${updatedWorkspace.sellsProductsAndServices}`)

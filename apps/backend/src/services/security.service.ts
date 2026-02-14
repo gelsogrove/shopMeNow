@@ -84,6 +84,30 @@ export class SecurityService {
   ]
 
   /**
+   * Prompt Injection patterns
+   * Detects attempts to bypass AI instructions or reveal system prompts
+   */
+  private static readonly PROMPT_INJECTION_PATTERNS = [
+    /ignore (all )?previous instructions/gi,
+    /system prompt/gi,
+    /reveal (your )?instructions/gi,
+    /you are now/gi,
+    /acting as/gi,
+    /new persona/gi,
+    /disregard/gi,
+    /stop being/gi,
+    /bypass/gi,
+    /jailbreak/gi,
+    /developer mode/gi,
+    /dan mode/gi,
+    /write a story about/gi, // Common distraction technique
+    /tell me (your )?(initial|base) instructions/gi,
+    /don't (ever )?mention/gi,
+    /hidden prompt/gi,
+    /hidden instructions/gi,
+  ]
+
+  /**
    * Main security check - runs FIRST before any message processing
    *
    * @param message - User's raw message text
@@ -99,6 +123,41 @@ export class SecurityService {
     // Skip empty messages
     if (!message || message.trim().length === 0) {
       return { isSafe: true }
+    }
+
+    // 🔒 SECURITY: Normalize input (lowercase and collapsed whitespace) for better regex matching
+    const normalizedMessage = message.toLowerCase().replace(/\s+/g, ' ')
+
+    // Check Prompt Injection
+    for (const pattern of this.PROMPT_INJECTION_PATTERNS) {
+      const match = pattern.exec(normalizedMessage)
+      if (match) {
+        logger.error("🚨 SECURITY ALERT: Prompt Injection detected", {
+          workspaceId,
+          customerId,
+          message,
+          detectedPattern: match[0],
+          severity: "MEDIUM",
+        })
+
+        await this.sendSecurityAlert({
+          workspaceId,
+          customerId,
+          threatType: "PROMPT_INJECTION" as any,
+          message,
+          detectedPattern: match[0],
+          severity: "MEDIUM",
+        })
+
+        return {
+          isSafe: false,
+          threatType: "PROMPT_INJECTION" as any,
+          detectedPattern: match[0],
+          severity: "MEDIUM",
+          message:
+            "I'm sorry, but I cannot fulfill that request. How else can I help you today?",
+        }
+      }
     }
 
     // Check SQL Injection

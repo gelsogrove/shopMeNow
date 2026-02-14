@@ -250,8 +250,8 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
       })
     })
 
-    it("should save user message (INBOUND) when channel is WIP", async () => {
-      await service.routeMessage({
+    it("should return WIP response when channel is WIP (persistence handled by caller)", async () => {
+      const result = await service.routeMessage({
         workspaceId,
         customerId,
         conversationId,
@@ -260,38 +260,9 @@ describe("WIP Channel Handling - P2 Maintenance Mode", () => {
         customerLanguage: "en",
       })
 
-      // Verify user message was saved
-      expect(mockPrisma.conversationMessage.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            content: "Can I order?",
-            role: "user",
-            conversationId,
-          }),
-        })
-      )
-    })
-
-    it("should save WIP response (OUTBOUND) when channel is WIP", async () => {
-      await service.routeMessage({
-        workspaceId,
-        customerId,
-        conversationId,
-        messageId: "msg-123",
-        message: "Can I order?",
-        customerLanguage: "en",
-      })
-
-      // Verify WIP response was saved
-      expect(mockPrisma.conversationMessage.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            content: multiLanguageWipMessages.en,
-            role: "assistant",
-            conversationId,
-          }),
-        })
-      )
+      expect(result.response).toBe(multiLanguageWipMessages.en)
+      // NOTE: persistence (mockPrisma.conversationMessage.create) is no longer expected 
+      // here as it's been delegated to the caller.
     })
   })
 

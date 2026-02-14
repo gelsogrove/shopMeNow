@@ -138,7 +138,7 @@ For privacy inquiries, please contact our support team.`
    */
   async getByUserId(userId: string): Promise<Workspace[]> {
     logger.info(`Getting workspaces for user: ${userId}`)
-    
+
     const workspaces = await this.prisma.workspace.findMany({
       where: {
         deletedAt: null,
@@ -157,6 +157,12 @@ For privacy inquiries, please contact our support team.`
         createdAt: "desc",
       },
       include: {
+        owner: {
+          select: {
+            planType: true,
+            trialEndsAt: true,
+          },
+        },
         whatsappSettings: {
           select: {
             webhookId: true,
@@ -205,8 +211,9 @@ For privacy inquiries, please contact our support team.`
       debugMode: w.debugMode ?? false,
       createdAt: w.createdAt,
       updatedAt: w.updatedAt,
-      planType: w.planType ?? undefined,
-      trialEndsAt: w.trialEndsAt ?? undefined,
+      // 💳 Feature 198: Use owner's billing info
+      planType: w.owner?.planType ?? undefined,
+      trialEndsAt: w.owner?.trialEndsAt ?? undefined,
       // 🆕 Channel Configuration (Feature 199) - CRITICAL: Must include these!
       channelType: (w as any).channelType ?? "WHATSAPP",
       enableWhatsapp: (w as any).enableWhatsapp ?? true,
@@ -308,7 +315,7 @@ For privacy inquiries, please contact our support team.`
     // Widget visitors use temporary visitorId (24h localStorage expiry) 
     // → cannot guarantee cart/order persistence → e-commerce impossible
     // See: .specify/widget-ecommerce-restriction/spec.md
-    
+
     // Enforce channel-specific flags
     const channelType = data.channelType || "WHATSAPP"
     if (channelType === "WIDGET" || data.enableWidget === true) {
@@ -324,7 +331,7 @@ For privacy inquiries, please contact our support team.`
         err.field = "enableWidget"
         throw err
       }
-      
+
       data.enableWidget = true
       data.enableWhatsapp = false
       data.sellsProductsAndServices = false  // Force false for widget
@@ -334,7 +341,7 @@ For privacy inquiries, please contact our support team.`
       data.enableWhatsapp = true
       data.enableWidget = false
     }
-    
+
     // Default human support instructions - use placeholder as default
     if (!data.humanSupportInstructions) {
       if (data.hasHumanSupport) {
@@ -350,7 +357,7 @@ For privacy inquiries, please contact our support team.`
           "Mi dispiace per il disagio. Puoi inviarci una mail a {{adminEmail}} e ti risponderemo il prima possibile."
       }
     }
-    
+
     // Default bot identity
     if (!data.botIdentityResponse) {
       data.botIdentityResponse = "I'm your digital assistant. I can help you find products, answer questions, and manage your orders!"
@@ -361,7 +368,7 @@ For privacy inquiries, please contact our support team.`
     if (!data.planType) {
       data.planType = 'FREE_TRIAL'
     }
-    
+
     if (data.planType === 'FREE_TRIAL' && !data.trialEndsAt) {
       const trialDays = 14 // Free trial duration in days
       const trialEndsAt = new Date()
@@ -470,17 +477,17 @@ For privacy inquiries, please contact our support team.`
       // 4b. 🆕 CREATE FAQs (Feature 199: Use wizard FAQs if provided, otherwise defaults)
       try {
         // Use custom FAQs from wizard if provided, otherwise use default FAQs
-        const faqsToCreate = (customFaqs && customFaqs.length > 0) 
+        const faqsToCreate = (customFaqs && customFaqs.length > 0)
           ? customFaqs.map((faq: { question: string; answer: string }, index: number) => ({
-              question: faq.question,
-              answer: faq.answer,
-              keywords: [], // Will be populated by user later
-              category: 'General',
-              order: index,
-              isActive: true,
-            }))
+            question: faq.question,
+            answer: faq.answer,
+            keywords: [], // Will be populated by user later
+            category: 'General',
+            order: index,
+            isActive: true,
+          }))
           : initialFAQs(createdWorkspace.id)
-        
+
         for (const faq of faqsToCreate) {
           await tx.fAQ.create({
             data: {
@@ -536,19 +543,19 @@ For privacy inquiries, please contact our support team.`
             const freeTrial = await tx.planConfiguration.findFirst({
               where: { planType: 'FREE_TRIAL' }
             })
-            
+
             // Convert Decimal to number (Prisma returns Decimal type)
-            const initialCredit = freeTrial?.initialCredit 
-              ? Number(freeTrial.initialCredit) 
+            const initialCredit = freeTrial?.initialCredit
+              ? Number(freeTrial.initialCredit)
               : 22.00 // Fallback to €22 if not found
-            
+
             if (initialCredit > 0 && createdBy) {
               // Feature 198: Update owner's credit balance (not workspace)
               await tx.user.update({
                 where: { id: createdBy },
                 data: { creditBalance: initialCredit }
               })
-              
+
               // Create the billing transaction record
               // Feature 198: userId is required, workspaceId tracks which channel
               await tx.billingTransaction.create({
@@ -561,7 +568,7 @@ For privacy inquiries, please contact our support team.`
                   description: 'Initial Free Trial credit',
                 }
               })
-              
+
               logger.info(
                 `✅ Created initial credit transaction: €${initialCredit} for workspace ${createdWorkspace.id}`
               )
@@ -640,7 +647,7 @@ For privacy inquiries, please contact our support team.`
     data: Partial<WorkspaceProps>
   ): Promise<Workspace | null> {
     logger.info(`Updating workspace with ID: ${id}`)
-    
+
     // 🔍 DEBUG: Log frustrationEscalationInstructions EXPLICITLY (Andrea debug)
     if (data.frustrationEscalationInstructions !== undefined) {
       logger.warn(`🚨 FRUSTRATION ESCALATION UPDATE:`)
@@ -651,7 +658,7 @@ For privacy inquiries, please contact our support team.`
     } else {
       logger.warn(`⚠️ frustrationEscalationInstructions NOT in update payload`)
     }
-    
+
     // 🔍 DEBUG: Log chatbotName specifically
     if (data.chatbotName !== undefined) {
       logger.info(`🤖 chatbotName in update data: "${data.chatbotName}"`)
@@ -661,7 +668,7 @@ For privacy inquiries, please contact our support team.`
     // Widget visitors use temporary visitorId (24h localStorage expiry) 
     // → cannot guarantee cart/order persistence → e-commerce impossible
     // See: .specify/widget-ecommerce-restriction/spec.md
-    
+
     // Load current workspace to check state
     const currentWorkspace = await this.prisma.workspace.findUnique({
       where: { id },
@@ -673,15 +680,15 @@ For privacy inquiries, please contact our support team.`
         deletedAt: true,
       },
     })
-    
+
     if (!currentWorkspace) {
       throw new Error(`Workspace not found: ${id}`)
     }
-    
+
     // Calculate resulting state
     const willEnableWidget = data.enableWidget ?? currentWorkspace.enableWidget ?? false
     const willSellProducts = data.sellsProductsAndServices ?? currentWorkspace.sellsProductsAndServices ?? false
-    
+
     // Validate: Widget + E-commerce is forbidden
     if (willEnableWidget && willSellProducts) {
       logger.warn(`❌ Attempted to enable widget on e-commerce workspace (or vice versa)`)
@@ -702,10 +709,10 @@ For privacy inquiries, please contact our support team.`
 
     // 🆕 Feature 199: Auto-toggle e-commerce agents based on sellsProductsAndServices
     const ecommerceAgentTypes = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
-    
+
     if (data.sellsProductsAndServices === false) {
       logger.info(`⚠️ sellsProductsAndServices = false → Disabling e-commerce agents`)
-      
+
       for (const agentType of ecommerceAgentTypes) {
         try {
           await this.repository.updateAgentStatus(id, agentType, false)
@@ -716,7 +723,7 @@ For privacy inquiries, please contact our support team.`
       }
     } else if (data.sellsProductsAndServices === true) {
       logger.info(`✅ sellsProductsAndServices = true → Enabling e-commerce agents`)
-      
+
       for (const agentType of ecommerceAgentTypes) {
         try {
           await this.repository.updateAgentStatus(id, agentType, true)
@@ -753,13 +760,13 @@ For privacy inquiries, please contact our support team.`
         // Allow editing other settings (name, logo, etc.) without blocking
         const isChangingWhatsapp = data.enableWhatsapp !== undefined && data.enableWhatsapp !== currentWorkspace.enableWhatsapp
         const isChangingWidget = data.enableWidget !== undefined && data.enableWidget !== currentWorkspace.enableWidget
-        
+
         // If NOT changing channel toggles, skip limit check (allow settings edit)
         if (!isChangingWhatsapp && !isChangingWidget) {
           logger.info(`✅ Allowing settings edit for FREE_TRIAL user (not changing channel toggles)`)
           return this.repository.update(id, data)
         }
-        
+
         // User IS trying to change channel toggles - check limits
         const newEnableWhatsapp = data.enableWhatsapp ?? currentWorkspace.enableWhatsapp ?? false
         const newEnableWidget = data.enableWidget ?? currentWorkspace.enableWidget ?? false
