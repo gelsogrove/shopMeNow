@@ -441,8 +441,9 @@ export function getAgentFunctions(
     case "ORDER_TRACKING":
       return ORDER_TRACKING_FUNCTIONS
     case "CUSTOMER_SUPPORT":
-    case "INFO_AGENT":
       return CUSTOMER_SUPPORT_FUNCTIONS
+    case "INFO_AGENT":
+      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...PROFILE_MANAGEMENT_FUNCTIONS]
     case "SUMMARY_AGENT":
       return SUMMARY_AGENT_FUNCTIONS
     case "PROFILE_MANAGEMENT":
