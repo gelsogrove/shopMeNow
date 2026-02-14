@@ -1735,11 +1735,20 @@ export class LLMRouterService {
       preprocessResult,
     } = options
 
-    let messages = [
+    let messages: any[] = [
       { role: "system" as const, content: routerAgent.systemPrompt },
       ...conversationHistory,
       { role: "user" as const, content: PromptProcessorService.wrapUserInput(userMessage) },
     ]
+
+    // 🛡️ Sofia Fix: In informational workspaces (auto mode), ensure the LLM doesn't skip tools
+    // We inject a final instruction just before the user message to force tool usage for profile/support
+    if (!sellsProductsAndServices) {
+      messages.splice(messages.length - 1, 0, {
+        role: "system",
+        content: "CRITICAL: If the user request matches a function (Profile Management, Support, etc.), YOU MUST call the function. DO NOT answer with text instructions or your identity description if a function is available for the request."
+      })
+    }
 
     let totalTokens = 0
     let iterations = 0

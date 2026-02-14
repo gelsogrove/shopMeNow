@@ -71,9 +71,9 @@ async function debugRouter() {
         const router = new LLMRouterService(prisma)
 
         const messages = [
-            "Mostrami i miei dati",
+            "voglio vedere il mio profilo",
             "Chi sei?",
-            "Voglio cambiare email"
+            "Mostrami i miei dati"
         ]
 
         for (const msg of messages) {
