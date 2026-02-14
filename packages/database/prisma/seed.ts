@@ -79,10 +79,21 @@ async function main() {
   // 🔓 SECURITY: Allow seed in production only with explicit permission
   const allowDestructive = process.env.ALLOW_DESTRUCTIVE_OPERATIONS === 'true'
   const isProduction = process.env.NODE_ENV === 'production'
+  const dangerousSeedProd = process.env.I_KNOW_THIS_IS_DANGEROUS_SEED_PROD === 'true'
 
-  if (isProduction && !allowDestructive) {
-    console.error('❌ Cannot run seed in production!')
-    process.exit(1)
+  if (isProduction) {
+    if (!allowDestructive) {
+      console.error('❌ Cannot run seed in production! (ALLOW_DESTRUCTIVE_OPERATIONS is not true)')
+      process.exit(1)
+    }
+
+    if (!dangerousSeedProd) {
+      console.error('❌ CRITICAL PROTECTION: Attempted to run seed in production without explicit confirmation!')
+      console.error('To run seed in production, you MUST set I_KNOW_THIS_IS_DANGEROUS_SEED_PROD=true')
+      process.exit(1)
+    }
+
+    console.warn('⚠️ WARNING: RUNNING DESTRUCTIVE SEED IN PRODUCTION AS REQUESTED...')
   }
 
   if (isProduction && allowDestructive) {
@@ -170,7 +181,7 @@ async function main() {
 
   const adminEmail = process.env.ADMIN_EMAIL || "gelsogrove@gmail.com"
   const adminPassword = process.env.ADMIN_PASSWORD || "Venezia44"
-  
+
   const hashedPassword = await bcrypt.hash(adminPassword, 10)
 
   // ✅ Use upsert to avoid conflicts if user already exists
@@ -239,22 +250,22 @@ async function main() {
         id: "bellitalia-vip-ecommerce", // Fixed ID for consistent testing
         name: "BellItalia VIP",
         slug: "bell-italia-vip",
-      whatsappPhoneNumber: "+34654728751",
-      whatsappProvider: "meta",
-      metaPhoneNumberId: null,
-      metaAccessToken: null,
-      webhookVerifyToken: null,
-      ultraMsgInstanceId: null,
-      ultraMsgToken: null,
-      notificationEmail: "info@bellitalia.com",
-      language: "ENG",
-      currency: "EUR",
-      description: "Italian Gourmet Food E-commerce - VIP Channel",
-      url: "https://bellitalia.com/vip",
-      channelStatus: true,
-      deletedAt: null,
-      debugMode: true,
-      welcomeMessage: `Ciao, piacere di conoscerti! 👋
+        whatsappPhoneNumber: "+34654728751",
+        whatsappProvider: "meta",
+        metaPhoneNumberId: null,
+        metaAccessToken: null,
+        webhookVerifyToken: null,
+        ultraMsgInstanceId: null,
+        ultraMsgToken: null,
+        notificationEmail: "info@bellitalia.com",
+        language: "ENG",
+        currency: "EUR",
+        description: "Italian Gourmet Food E-commerce - VIP Channel",
+        url: "https://bellitalia.com/vip",
+        channelStatus: true,
+        deletedAt: null,
+        debugMode: false,
+        welcomeMessage: `Ciao, piacere di conoscerti! 👋
 Mi chiamo SofIA e sono l'assistenza virtuale di BellItalia.
 Siamo un importatore di prodotti italiani.
 
@@ -271,21 +282,21 @@ Con questo servizio puoi:
 • verificare la disponibilità dei prodotti in tempo reale
 
 Sono qui per aiutarti 😊`,
-      wipMessage: "Sorry, I'm currently being improved. Please try again later.",
-      ownerId: adminUser.id,
-      // ✅ PREMIUM plan
-      planType: "PREMIUM",
-      creditBalance: 100.0,
-      trialEndsAt: null, // No trial - paid plan
-      planStartedAt: new Date(),
-      // ✅ E-COMMERCE workspace
-      sellsProductsAndServices: true,
-      hasSalesAgents: true,
-      hasHumanSupport: true,
-      humanSupportInstructions:
-        "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝",
-      // 🆕 Feature 203: Custom escalation triggers
-      frustrationEscalationInstructions: `Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
+        wipMessage: "Sorry, I'm currently being improved. Please try again later.",
+        ownerId: adminUser.id,
+        // ✅ PREMIUM plan
+        planType: "PREMIUM",
+        creditBalance: 100.0,
+        trialEndsAt: null, // No trial - paid plan
+        planStartedAt: new Date(),
+        // ✅ E-COMMERCE workspace
+        sellsProductsAndServices: true,
+        hasSalesAgents: true,
+        hasHumanSupport: true,
+        humanSupportInstructions:
+          "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝",
+        // 🆕 Feature 203: Custom escalation triggers
+        frustrationEscalationInstructions: `Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
 - Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)
 - Si lamenta che la MERCE È ARRIVATA ROTTA/DANNEGGIATA (pacco danneggiato, prodotto rotto, bottiglia rotta)
 - Vuole MODIFICARE UN ORDINE già effettuato (cambiare prodotti, cambiare quantità, cambiare indirizzo)
@@ -297,14 +308,14 @@ Sono qui per aiutarti 😊`,
 - Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
 - Chiama l'operatore SOLO per i casi sopra elencati quando NON c'è risposta FAQ
 - Per tutti gli altri casi, rispondi normalmente senza escalation`,
-      operatorContactMethod: "EMAIL",
-      toneOfVoice: "FRIENDLY",
-      botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products! 🇮🇹",
-      chatbotName: "Sofia",
-      businessType: "food",
-      registrationPage: "https://bellitalia.com/registrati", // Custom registration page URL for [LINK_REGISTRATION]
-      requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
-      customAiRules: `# Communication Style
+        operatorContactMethod: "EMAIL",
+        toneOfVoice: "FRIENDLY",
+        botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products! 🇮🇹",
+        chatbotName: "Sofia",
+        businessType: "food",
+        registrationPage: "https://bellitalia.com/registrati", // Custom registration page URL for [LINK_REGISTRATION]
+        requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
+        customAiRules: `# Communication Style
 
 - Keep sentences SHORT - avoid long text blocks
 - Greet the user often using their name: {{customerName}}
@@ -326,8 +337,8 @@ https://echatbot.ai/order/123
 **PAYMENT DUE: 3 DAYS**
 
 Need anything else?"`,
-    },
-  })
+      },
+    })
   } else {
     console.log(`   ✅ Workspace already exists: ${ecommerceWorkspace.name}`)
   }
@@ -383,7 +394,7 @@ Need anything else?"`,
         url: "https://bellitalia.com",
         channelStatus: true,
         deletedAt: null,
-        debugMode: true,
+        debugMode: false,
         welcomeMessage: "Welcome to BellItalia! Ask me anything about our products and services.",
         wipMessage: "Sorry, I'm currently being improved. Please try again later.",
         ownerId: adminUser.id,
@@ -434,9 +445,9 @@ https://echatbot.ai/info/products
 
 **IMPORTANT: Limited time offer**
 
-Would you like details about something specific?"`,  
-    },
-  })
+Would you like details about something specific?"`,
+      },
+    })
   } else {
     console.log(`   ✅ Workspace already exists: ${infoWorkspace.name}`)
   }
@@ -774,7 +785,7 @@ Would you like details about something specific?"`,
     { category: "Products", question: "Quali tipologie di prodotti offre BellItalia?", answer: "Abbiamo a disposizione una vasta gamma di prodotti alimentari italiani e mediterranei — da articoli artigianali realizzati da produttori esclusivi fino a marchi ben noti — ideali per ristoranti, pizzerie, distributori e grande distribuzione." },
     { category: "Customers", question: "Chi può acquistare da BellItalia (ristoranti / negozi / privati)?", answer: "Il nostro catalogo è progettato principalmente per clienti professionali — pizzerie, ristoranti, distributori e GDO (grande distribuzione)." },
     { category: "Products", question: "Quanti prodotti avete nel vostro catalogo?", answer: "Offriamo più di 600 riferimenti nel nostro catalogo di prodotti autentici italiani." },
-    
+
     // English FAQs (fallback in case translation doesn't work)
     { category: "Products", question: "What kinds of products does BellItalia offer?", answer: "We provide a wide variety of Italian and Mediterranean food products — from artisanal items made by exclusive producers to well-known brand names — ideal for restaurants, pizzerias, distributors and large distribution." },
     { category: "Customers", question: "Who can buy from BellItalia (restaurants / shops / individuals)?", answer: "Our catalogue is designed mainly for professional clients — pizzerias, restaurants, distributors and GDO (large retailers)." },
@@ -816,7 +827,7 @@ Would you like details about something specific?"`,
     { category: "Transport", question: "Do you insure shipments against temperature excursions?", answer: "All refrigerated and frozen shipments are insured; if a temperature excursion occurs we trigger a replacement immediately." },
     { category: "Transport", question: "What is the maximum weight per pallet you can ship?", answer: "Standard pallets can reach roughly 900 kg; above that threshold we split the goods into multiple pallets for safety." },
     { category: "Transport", question: "Do you offer dual-compartment trucks for mixed frozen and ambient goods?", answer: "Yes, we collaborate with carriers operating dual-compartment vehicles so frozen and ambient products travel together without risk." },
-    
+
     // ========== CUSTOMIZATION & INTEGRATION FAQs (Andrea's FAQs) ==========
     // Italian Version
     { category: "Integrazioni", question: "Posso integrare il vostro servizio con il mio CRM?", answer: "Sì, certo! È una customizzazione disponibile con la versione Enterprise. Mandaci una email con tutte le specifiche del vostro CRM (API disponibili, formati dati, autenticazione, etc.) a support@echatbot.ai e provvediamo a farti un preventivo dettagliato." },
@@ -826,7 +837,7 @@ Would you like details about something specific?"`,
     { category: "Team", question: "Come ricevono le notifiche gli agenti quando viene assegnata una richiesta?", answer: "Gli agenti ricevono notifiche email con il nome del cliente e il contesto della conversazione. Possono rispondere direttamente dalla dashboard. Se attivi la versione Enterprise, le notifiche possono arrivare anche via WhatsApp. Il sistema traccia tutti gli handover per analytics e feedback di soddisfazione cliente." },
     { category: "FAQ", question: "Ho aggiunto delle FAQs. Puoi metterle nel flusso del chatbot?", answer: "Le FAQs sono già integrate nel flusso! Ecco come funzionano: 1) Aggiungi FAQ in Backoffice → Content → FAQs (Titolo, Risposta, Categorie, Keywords), 2) Quando il cliente chiede qualcosa, il sistema calcola un similarity score (0-100%), 3) Se score > 70% → usa la risposta FAQ istantaneamente (senza LLM latency), 4) Se score < 70% → usa risposta LLM standard. Tutto viene tracciato in analytics." },
     { category: "FAQ", question: "Quali sono i vantaggi di usare le FAQs nel chatbot?", answer: "I vantaggi delle FAQs sono: ✅ Risposte instant (no LLM latency), ✅ Consistenza (stesse risposte sempre), ✅ Risparmio token (meno costo LLM), ✅ Analytics complete (quante volte usata, click rate, fallback rate). Puoi vedere nel dashboard quali FAQ sono più usate e quali hanno il highest satisfaction rate." },
-    
+
     // English Version (Fallback)
     { category: "Integrations", question: "Can I integrate your service with my CRM?", answer: "Yes, of course! It's a customization available with the Enterprise version. Send us an email with all your CRM specifications (available APIs, data formats, authentication, etc.) to support@echatbot.ai and we'll provide you with a detailed quote." },
     { category: "Integrations", question: "Can I launch a webhook when an order is placed?", answer: "Yes, of course! It's a customization available with the Enterprise version. Send us an email with: webhook destination URL, expected data format/structure, timing (immediate or batch?), and required authentication (API key, OAuth, etc.). We implement: Order completed → Scheduler → Security Check → POST webhook to your service → Log and retry on failure." },
@@ -859,40 +870,40 @@ Would you like details about something specific?"`,
   if (!supportWorkspace) {
     console.log("   Creating new workspace...")
     supportWorkspace = await prisma.workspace.create({
-    data: {
-      id: "echatbot-hq-support", // Fixed ID for consistent testing
-      name: "eChatbot HQ",
-      slug: "echatbot-hq",
-      whatsappPhoneNumber: "+34654728753",
-      whatsappProvider: "meta",
-      metaPhoneNumberId: null,
-      metaAccessToken: null,
-      webhookVerifyToken: null,
-      ultraMsgInstanceId: null,
-      ultraMsgToken: null,
-      notificationEmail: "hello@echatbot.ai",
-      language: "ENG",
-      currency: "EUR",
-      description: "eChatbot Enterprise Support - product education channel",
-      url: "https://www.echatbot.ai",
-      channelStatus: true,
-      deletedAt: null,
-      welcomeMessage:
-        "Hi! I'm your eChatbot product assistant. Ask me anything about plans, integrations or onboarding. 🚀",
-      wipMessage:
-        "Our assistants are being updated. If you need immediate help please write to support@echatbot.ai.",
-      ownerId: adminUser.id,
-      planType: "ENTERPRISE",
-      creditBalance: 500,
-      trialEndsAt: null,
-      planStartedAt: new Date(),
-      sellsProductsAndServices: false,
-      hasSalesAgents: false,
-      hasHumanSupport: true,
-      humanSupportInstructions:
-        "Ciao {{nameUser}}, ti metto subito in contatto con un consulente eChatbot. Riceverai risposta entro 15 minuti da {{agentName}} (tel: {{agentPhone}} / email: {{agentEmail}}).",
-      // 🆕 Feature 203: Custom escalation triggers (enterprise support)
-      frustrationEscalationInstructions: `# IMMEDIATE ESCALATION - Contact Human Consultant NOW
+      data: {
+        id: "echatbot-hq-support", // Fixed ID for consistent testing
+        name: "eChatbot HQ",
+        slug: "echatbot-hq",
+        whatsappPhoneNumber: "+34654728753",
+        whatsappProvider: "meta",
+        metaPhoneNumberId: null,
+        metaAccessToken: null,
+        webhookVerifyToken: null,
+        ultraMsgInstanceId: null,
+        ultraMsgToken: null,
+        notificationEmail: "hello@echatbot.ai",
+        language: "ENG",
+        currency: "EUR",
+        description: "eChatbot Enterprise Support - product education channel",
+        url: "https://www.echatbot.ai",
+        channelStatus: true,
+        deletedAt: null,
+        welcomeMessage:
+          "Hi! I'm your eChatbot product assistant. Ask me anything about plans, integrations or onboarding. 🚀",
+        wipMessage:
+          "Our assistants are being updated. If you need immediate help please write to support@echatbot.ai.",
+        ownerId: adminUser.id,
+        planType: "ENTERPRISE",
+        creditBalance: 500,
+        trialEndsAt: null,
+        planStartedAt: new Date(),
+        sellsProductsAndServices: false,
+        hasSalesAgents: false,
+        hasHumanSupport: true,
+        humanSupportInstructions:
+          "Ciao {{nameUser}}, ti metto subito in contatto con un consulente eChatbot. Riceverai risposta entro 15 minuti da {{agentName}} (tel: {{agentPhone}} / email: {{agentEmail}}).",
+        // 🆕 Feature 203: Custom escalation triggers (enterprise support)
+        frustrationEscalationInstructions: `# IMMEDIATE ESCALATION - Contact Human Consultant NOW
 
 Escalate IMMEDIATELY (call contactOperator) when customer:
 - Has TECHNICAL ISSUES with platform (bugs, errors, crashes)
@@ -907,15 +918,15 @@ Escalate IMMEDIATELY (call contactOperator) when customer:
 
 # Example Escalation
 "I understand you need technical assistance. Let me connect you with our specialist team 🔧"`,
-      operatorContactMethod: "EMAIL",
-      toneOfVoice: "PROFESSIONAL",
-      botIdentityResponse:
-        "I'm the eChatbot product specialist. Automate sales, support, and campaigns on WhatsApp — in one platform. 💼 How can I help you today?",
-      chatbotName: "Alex",
-      businessType: "technology",
-      registrationPage: null, // Uses default /registration page
-      requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
-      customAiRules: `# Communication Style
+        operatorContactMethod: "EMAIL",
+        toneOfVoice: "PROFESSIONAL",
+        botIdentityResponse:
+          "I'm the eChatbot product specialist. Automate sales, support, and campaigns on WhatsApp — in one platform. 💼 How can I help you today?",
+        chatbotName: "Alex",
+        businessType: "technology",
+        registrationPage: null, // Uses default /registration page
+        requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
+        customAiRules: `# Communication Style
 
 - Keep sentences SHORT - avoid long text blocks
 - Greet the user often using their name: {{customerName}}
@@ -957,9 +968,9 @@ https://echatbot.ai/docs
 • API reference
 • Pricing plans
 
-Can I help with anything else?"`,  
-    },
-  })
+Can I help with anything else?"`,
+      },
+    })
   } else {
     console.log(`   ✅ Workspace already exists: ${supportWorkspace.name}`)
   }
@@ -2285,21 +2296,21 @@ Can I help with anything else?"`,
 
     // 💬 Create conversation messages - WITH 500 MESSAGES FOR TESTING INFINITE SCROLL
     console.log(`   Creating 500 messages for John Smith to test infinite scroll...`)
-    
+
     const messages = []
     const baseTime = Date.now() - 1000 * 60 * 60 * 24 * 30 // Start from 30 days ago
-    
+
     // Generate 500 messages alternating between user and assistant
     for (let i = 0; i < 500; i++) {
       const isUserMessage = i % 2 === 0
       const messageTime = new Date(baseTime + (i * 1000 * 60 * 5)) // Each message 5 minutes apart
-      
+
       messages.push({
         conversationId: chatSession4.id,
         workspaceId: workspace.id,
         customerId: englishCustomer.id,
         role: isUserMessage ? "user" : "assistant",
-        content: isUserMessage 
+        content: isUserMessage
           ? `Customer message #${i + 1}: Can I ask a question about your products?`
           : `Assistant response #${i + 1}: Of course! Feel free to ask me anything. I'm here to help you with product information, shipping details, and more.`,
         debugInfo: isUserMessage ? undefined : JSON.stringify({
@@ -2309,11 +2320,11 @@ Can I help with anything else?"`,
         createdAt: messageTime,
       })
     }
-    
+
     await prisma.conversationMessage.createMany({
       data: messages,
     })
-    
+
     console.log(`   ✅ Created 500 messages for John Smith`)
 
   } else {
@@ -2353,7 +2364,7 @@ Can I help with anything else?"`,
       // First, calculate actual total from products
       let calculatedTotal = 0
       const itemsData: { productId: string; quantity: number; unitPrice: number; totalPrice: number }[] = []
-      
+
       for (let i = 0; i < productIds.length; i++) {
         const product = await prisma.products.findUnique({
           where: { id: productIds[i] },
@@ -2579,7 +2590,7 @@ Can I help with anything else?"`,
 
           // 💰 BILLING: Removed from seed - workspaces start at €0.00
           // await prisma.billing.create(...)
-          
+
           messageBillingRecords++
           totalMessages += numMessages
         }
@@ -2711,7 +2722,7 @@ Can I help with anything else?"`,
       for (const customerId of campaign.customers) {
         // 💰 BILLING: Removed from seed - workspaces start at €0.00
         // await prisma.billing.create(...)
-        
+
         pushCampaignCount++
       }
     }
@@ -2723,7 +2734,7 @@ Can I help with anything else?"`,
 
   // 10. Create GDPR Content in 4 languages
   console.log("\n📋 Creating GDPR content in 4 languages...")
-  
+
   const fs = require("fs")
   const path = require("path")
   const gdprLanguages = ["it", "en", "es", "pt"]
@@ -2833,7 +2844,7 @@ Can I help with anything else?"`,
     console.log("✅ Created 3 WhatsApp queue test messages:")
     console.log("   - 1 sent message (with deliveredAt)")
     console.log("   - 2 error messages (safety validation + invalid phone)")
-    
+
     // 🆕 Widget test messages (channel="widget")
     await prisma.whatsAppQueue.create({
       data: {
@@ -3241,7 +3252,7 @@ Can I help with anything else?"`,
   // INVOICE_PAID transactions - Monthly plan payments (NOT affecting credit balance!)
   // These show in Transaction History but DON'T change the counter
   // ============================================================================
-  
+
   // October 1: Plan payment for September
   await prisma.billingTransaction.create({
     data: {

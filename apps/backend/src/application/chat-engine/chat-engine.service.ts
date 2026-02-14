@@ -4046,10 +4046,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       }
 
       // ========================================================================
-      // STEP: Handle UPDATE_PROFILE intent - Generate profile edit link
+      // STEP: Handle UPDATE_PROFILE / VIEW_PROFILE intent - Generate profile link
+      // 🐛 FIX: VIEW_PROFILE was missing here, causing it to fall through to wrong agent
       // ========================================================================
-      if (intentResult.intent.type === "UPDATE_PROFILE") {
-        logger.info("📝 [ChatEngine] UPDATE_PROFILE detected - generating profile link", {
+      if (intentResult.intent.type === "UPDATE_PROFILE" || intentResult.intent.type === "VIEW_PROFILE") {
+        logger.info("📝 [ChatEngine] UPDATE_PROFILE/VIEW_PROFILE detected - generating profile link", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
         })
@@ -4071,7 +4072,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           // Format the response with the link (use shortLink if available)
           const customerFirstName = input.customerName?.split(" ")[0] || "!"
           const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
-          const profileMessage = `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+          const isViewProfile = intentResult.intent.type === "VIEW_PROFILE"
+          const profileMessage = isViewProfile
+            ? `Certo ${customerFirstName}! 👤 Per visualizzare i tuoi dati personali clicca qui:\n\n👉 Il mio Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+            : `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
 
           const processingTimeMs = Date.now() - startTime
 
@@ -4087,7 +4091,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           // Clear any pending options
           await this.optionsMappingService.clearMapping(conversationId)
 
-          logger.info("✅ [ChatEngine] UPDATE_PROFILE handled successfully", {
+          logger.info("✅ [ChatEngine] UPDATE_PROFILE/VIEW_PROFILE handled successfully", {
             workspaceId: input.workspaceId,
             customerId: input.customerId,
             linkGenerated: true,
@@ -4097,13 +4101,13 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             message: profileMessage,
             agentType: AgentType.PROFILE_MANAGEMENT,
             wasHandled: true,
-            intent: "UPDATE_PROFILE",
+            intent: intentResult.intent.type,
             confidence: intentResult.confidence,
             source: intentResult.source,
             processingTimeMs,
             debugInfo: {
               loadedDataType: "PROFILE_LINK",
-              responseType: "UPDATE_PROFILE",
+              responseType: intentResult.intent.type,
               llmUsed: false,
             },
             response: profileMessage,
@@ -5307,9 +5311,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     const conversationId = input.conversationId || `temp-${input.customerId}`
 
     // ========================================================================
-    // STEP 0.2.1: Check for UPDATE_PROFILE / CHANGE_LANGUAGE before INFO_AGENT
+    // STEP 0.2.1: Check for UPDATE_PROFILE / VIEW_PROFILE / CHANGE_LANGUAGE before INFO_AGENT
     // These intents have dedicated handlers and must NOT go to CustomerSupportAgentLLM
     // (which would dump the system prompt instead of generating the profile link)
+    // 🐛 FIX: VIEW_PROFILE was missing here, causing system prompt to leak as response
     // ========================================================================
     try {
       const intentResult = await this.intentParser.parse(input.message, {
@@ -5317,8 +5322,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         customerId: input.customerId,
       })
 
-      if (intentResult.intent.type === "UPDATE_PROFILE") {
-        logger.info("📝 [ChatEngine] UPDATE_PROFILE in informational workspace - generating profile link", {
+      if (intentResult.intent.type === "UPDATE_PROFILE" || intentResult.intent.type === "VIEW_PROFILE") {
+        logger.info("📝 [ChatEngine] UPDATE_PROFILE/VIEW_PROFILE in informational workspace - generating profile link", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
         })
@@ -5338,7 +5343,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
           const customerFirstName = input.customerName?.split(" ")[0] || "!"
           const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
-          let profileMessage = `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+          const isViewProfile = intentResult.intent.type === "VIEW_PROFILE"
+          let profileMessage = isViewProfile
+            ? `Certo ${customerFirstName}! 👤 Per visualizzare i tuoi dati personali clicca qui:\n\n👉 Il mio Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+            : `Certo ${customerFirstName}! 📝 Per aggiornare i tuoi dati personali clicca qui:\n\n👉 Modifica Profilo\n${profileLink}\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
 
           // Translate to customer language
           const customerLanguage = input.customerLanguage || "en"
@@ -5370,7 +5378,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             message: profileMessage,
             agentType: AgentType.PROFILE_MANAGEMENT,
             wasHandled: true,
-            intent: "UPDATE_PROFILE",
+            intent: intentResult.intent.type,
             confidence: intentResult.confidence,
             source: intentResult.source,
             processingTimeMs,

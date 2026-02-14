@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react"
-import { Megaphone, Clock, Users, Sparkles, Globe, Pencil, Pause, Play, Trash2 } from "lucide-react"
+import {
+  Megaphone,
+  Clock,
+  Users,
+  Sparkles,
+  Globe,
+  Pencil,
+  Pause,
+  Play,
+  Trash2,
+  Info,
+} from "lucide-react"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { CampaignSheet } from "@/components/shared/CampaignSheet"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +20,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useBilling } from "@/contexts/BillingContext"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface Campaign {
   id: string
@@ -16,6 +28,8 @@ interface Campaign {
   status: string
   frequency: string
   isActive: boolean
+  isExpired?: boolean
+  errorBreakdown?: { status: string; code: string | null; count: number }[]
   targetingType: string
   sendAt?: string | null
   nextRunAt?: string | null
@@ -171,7 +185,7 @@ export default function CampaignsPage() {
   const renderCard = (campaign: Campaign) => {
     const date = campaign.nextRunAt || campaign.sendAt
     const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(campaign.status || "")
-    const isCampaignActive = campaign.isActive !== false && campaign.status !== "PAUSED"
+    const isCampaignActive = campaign.isActive !== false && campaign.status !== "PAUSED" && !campaign.isExpired
 
     const targetingBadge =
       campaign.targetingType === "ALL"
@@ -198,8 +212,13 @@ export default function CampaignsPage() {
                     : "secondary"
                 }
               >
-                {campaign.status}
+                {campaign.isExpired ? "EXPIRED" : campaign.status}
               </Badge>
+              {campaign.isExpired && (
+                <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                  Past scheduled time
+                </span>
+              )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
               <Badge variant="outline" className="flex items-center gap-1">
@@ -261,7 +280,31 @@ export default function CampaignsPage() {
             <div className="mt-1 text-base font-semibold">{campaign.actualSent ?? 0}</div>
           </div>
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Failed / Skipped</div>
+            <div className="flex items-center gap-1 text-xs text-slate-500">
+              Failed / Skipped
+              {(campaign.errorBreakdown?.length || 0) > 0 && (
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3 h-3 text-slate-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs bg-slate-900 text-slate-50 text-xs">
+                      <div className="font-semibold mb-1">Error breakdown</div>
+                      <ul className="space-y-1">
+                        {campaign.errorBreakdown?.map((e, idx) => (
+                          <li key={idx} className="flex justify-between gap-3">
+                            <span className="capitalize">
+                              {e.status.toLowerCase()} {e.code ? `• ${e.code}` : ""}
+                            </span>
+                            <span className="font-semibold">{e.count}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <div className="mt-1 text-base font-semibold">
               {(campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)}
             </div>

@@ -40,7 +40,7 @@ export class TranslationService {
   async translateMessage(message: string, targetLanguage: string): Promise<string> {
     // Normalize language code — default to English when unspecified
     const normalizedLang = targetLanguage?.toUpperCase() || 'EN'
-    
+
     // If target is Italian, no translation needed (catalog content is in Italian)
     if (normalizedLang === 'IT') {
       logger.info('[TRANSLATION] Target language is Italian - no translation needed')
@@ -95,15 +95,36 @@ export class TranslationService {
       const data = await response.json() as {
         choices?: { message?: { content?: string } }[]
       }
-      const translatedText = data.choices?.[0]?.message?.content?.trim()
-
-      if (!translatedText) {
+      const llmResponse = data.choices?.[0]?.message?.content?.trim()
+      if (!llmResponse) {
         logger.warn('[TRANSLATION] Empty response from LLM - using original')
         return message
       }
 
-      logger.info(`[TRANSLATION] Successfully translated to ${languageName}`)
-      return translatedText
+      // 🔍 Try to parse JSON response
+      try {
+        const parsed = JSON.parse(llmResponse)
+        const translatedContent = parsed.translatedText || parsed.message || llmResponse
+
+        logger.info(`[TRANSLATION] Successfully translated to ${languageName}`, {
+          isSafe: parsed.safe !== false,
+          blockedReason: parsed.blockedReason || null
+        })
+
+        return translatedContent
+      } catch (parseError) {
+        logger.error('[TRANSLATION] Failed to parse JSON response - using raw content as fallback', {
+          llmResponse: llmResponse.substring(0, 500)
+        })
+
+        // If it's not valid JSON, it might be the raw translation itself (some LLMs ignore response_format)
+        // Check if it looks like JSON. If not, return as is.
+        if (!llmResponse.startsWith('{')) {
+          return llmResponse
+        }
+
+        return message // Fallback to original if it's broken JSON
+      }
 
     } catch (error) {
       logger.error('[TRANSLATION] Error:', error)

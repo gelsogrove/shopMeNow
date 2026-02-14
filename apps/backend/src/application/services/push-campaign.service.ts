@@ -428,6 +428,27 @@ export class PushCampaignService {
       _count: { _all: true },
     })
 
+    // Aggregate error reasons for FAILED/SKIPPED recipients to show human-friendly breakdowns in the UI
+    const errorGroups = await this.prisma.pushCampaignRecipient.groupBy({
+      where: {
+        campaignId: { in: campaignIds },
+        status: { in: [PushCampaignRecipientStatus.FAILED, PushCampaignRecipientStatus.SKIPPED] },
+      },
+      by: ["campaignId", "status", "errorCode"],
+      _count: { _all: true },
+    })
+
+    const errorMap = new Map<
+      string,
+      { status: PushCampaignRecipientStatus; code: string | null; count: number }[]
+    >()
+
+    for (const row of errorGroups) {
+      const list = errorMap.get(row.campaignId) || []
+      list.push({ status: row.status, code: row.errorCode, count: row._count._all })
+      errorMap.set(row.campaignId, list)
+    }
+
     const statsMap = new Map<
       string,
       { total: number; pending: number; sent: number; failed: number; skipped: number }
@@ -457,13 +478,24 @@ export class PushCampaignService {
         failed: c.actualFailed ?? 0,
         skipped: c.actualSkipped ?? 0,
       }
+
+      const hasExpired =
+        c.status === PushCampaignStatus.SCHEDULED &&
+        !!c.sendAt &&
+        new Date(c.sendAt).getTime() < Date.now() &&
+        (c.actualSent ?? 0) === 0
+
       return {
         ...c,
+        // Keep DB status unchanged, but surface expiration and latest counters for the UI
+        isExpired: hasExpired,
+        isActive: hasExpired ? false : c.isActive,
         recipientsTotal: s.total,
         recipientsPending: s.pending,
         actualSent: s.sent,
         actualFailed: s.failed,
         actualSkipped: s.skipped,
+        errorBreakdown: errorMap.get(c.id) || [],
       }
     })
   }
