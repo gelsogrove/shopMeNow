@@ -569,7 +569,7 @@ export function getFunctionsForRouter(options?: { sellsProductsAndServices?: boo
       "cartManagementAgent",
       "orderTrackingAgent",
     ]
-    
+
     if (!sellsProducts && ecommerceAgents.includes(fn.name)) {
       return false // Exclude e-commerce agents for vetrina mode
     }
@@ -633,7 +633,7 @@ export function getFunctionNamesForAgentType(agentType: string): string[] {
 
     case "CUSTOMER_SUPPORT":
     case "INFO_AGENT":
-      return ["contactSupport"]
+      return ["contactSupport", "profileManagementAgent", "RESET_ACTIVE_AGENT"]
 
     case "NOTIFICATIONS":
       return ["manageNotifications"]

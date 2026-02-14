@@ -30,7 +30,7 @@ model Workspace {
   welcomeMessage            String?   @default("Welcome! I'm {{chatbotName}}, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?") @db.Text
   wipMessage                String?   @default("Work in progress. Please contact us later.") @db.Text
   afterRegistrationMessages String?   @default("Thank you for registering, {{customerName}}! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?") @db.Text
-  debugMode                 Boolean   @default(true)
+  debugMode                 Boolean   @default(false)
   apiKey                    String?
   metadata                  Json?
   allowedExternalLinks      String[]  @default([]) // Security Agent: allowed external domains (e.g., ["shopme.com", "stripe.com"])
