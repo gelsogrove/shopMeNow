@@ -15,7 +15,7 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { PROFILE_MANAGEMENT_FUNCTIONS } from "../../config/agent-functions.config"
-import { PromptBuilderService } from "../../services/prompt-builder/prompt-builder.service"
+import { PromptBuilderService } from "../../application/services/prompt-builder/prompt-builder.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
 
@@ -119,11 +119,11 @@ export class ProfileManagementAgentLLM {
 
         // Call LLM with function calling
         const llmResponse = await this.callLLM({
-          model: agentConfig.model,
+          model: "openai/gpt-4o-mini",
           messages,
           functions: profileFunctions,
-          temperature: agentConfig.temperature,
-          maxTokens: agentConfig.maxTokens,
+          temperature: 0.7,
+          maxTokens: 1000,
         })
 
         totalTokens += llmResponse.tokensUsed
