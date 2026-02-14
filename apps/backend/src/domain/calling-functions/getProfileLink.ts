@@ -121,13 +121,11 @@ export async function getProfileLink(
       const { UrlShortenerService } = require("../../application/services/url-shortener.service")
       const urlShortenerService = new UrlShortenerService()
 
-      shortLink = await urlShortenerService.createShortUrl(
+      shortLink = (await urlShortenerService.createShortUrl(
         profileUrl,
         request.workspaceId,
-        request.customerId,
-        "profile", // Link type
-        expirationHours * 60 * 60 // Convert hours to seconds
-      )
+        new Date(Date.now() + (expirationHours * 60 * 60 * 1000)) // Pass Date object as 3rd arg
+      )).shortUrl
 
       logger.info("✅ Short URL created", {
         customerId: request.customerId,

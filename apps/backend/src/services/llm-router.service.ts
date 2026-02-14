@@ -2921,7 +2921,10 @@ export class LLMRouterService {
           tools: getFunctionsForRouter({
             sellsProductsAndServices: options.sellsProductsAndServices ?? true
           }),
-          tool_choice: "required", // FORCE model to always call a function
+          // 🔀 Strategy:
+          // E-commerce (ROUTER): "required" - Force delegation to specialist agents
+          // Informational (INFO_AGENT): "auto" - Allow direct text response (identity/FAQ) or delegation
+          tool_choice: options.sellsProductsAndServices === false ? "auto" : "required", // FORCE or AUTO based on mode
         },
         {
           headers: {

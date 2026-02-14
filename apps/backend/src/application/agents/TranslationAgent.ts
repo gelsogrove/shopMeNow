@@ -95,7 +95,7 @@ export class TranslationAgent {
     try {
       // 1. Normalize target language
       const normalizedLanguage = this.normalizeLanguage(options.targetLanguage)
-      
+
       // 🆕 ALWAYS translate to target language - input may be mixed Italian/English
       logger.info(`🌍 [TranslationAgent] Normalized language`, {
         input: options.targetLanguage,
@@ -108,7 +108,7 @@ export class TranslationAgent {
 
       // Load workspace translation settings (product/category/service name translation rules)
       const translationSettings = await this.loadTranslationSettings(options.workspaceId)
-      
+
       logger.info("🌍 TranslationAgent settings loaded", {
         translateProductNames: translationSettings.translateProductNames,
         translateCategoryNames: translationSettings.translateCategoryNames,
@@ -163,7 +163,7 @@ export class TranslationAgent {
       // Build preservation rules based on workspace settings
       const targetLanguageName = getLanguageName(normalizedLanguage)
       const preservationRules = this.buildPreservationRules(translationSettings)
-      
+
       const userMessage = `Translate this message to ${targetLanguageName}. The input may be in Italian, English, or mixed. Output must be 100% in ${targetLanguageName}.
 
 ${preservationRules}
@@ -172,7 +172,7 @@ Message to translate:
 "${options.message}"
 
 Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLanguage": "${normalizedLanguage}", "message": "..."}`
-      
+
       // 🔍 DEBUG: Log INPUT to TranslationAgent
       logger.info("🔍 TranslationAgent INPUT", {
         containsImgTag: options.message?.includes('<img'),
@@ -231,7 +231,26 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
         return { llmResponse, tokensUsed }
       }
 
-      const initialCall = await callTranslationLLM(userMessage)
+      let initialCall: { llmResponse: string; tokensUsed: number }
+      try {
+        initialCall = await callTranslationLLM(userMessage)
+      } catch (error: any) {
+        logger.error("🌍 TranslationAgent failed - falling back to passthrough", {
+          error: error.message,
+          status: error.response?.status,
+          data: error.response?.data
+        })
+        return {
+          translated: false,
+          originalLanguage: "unknown",
+          targetLanguage: normalizedLanguage,
+          message: options.message,
+          detectedLanguage: "unknown",
+          confidence: 0,
+          tokensUsed: 0,
+          executionTimeMs: Date.now() - startTime,
+        } as any
+      }
       let totalTokens = initialCall.tokensUsed
       let parsedResult = this.parseTranslationResponse(initialCall.llmResponse)
       let translatedMessage = parsedResult?.message || options.message
@@ -366,14 +385,14 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
       /\bcart\b/i,
       /\bproduct\b/i,
     ]
-    
+
     let matchCount = 0
     for (const pattern of englishIndicators) {
       if (pattern.test(message)) {
         matchCount++
       }
     }
-    
+
     // If 2+ English indicators found, likely English
     return matchCount >= 2
   }
