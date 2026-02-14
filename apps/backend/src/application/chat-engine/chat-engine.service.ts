@@ -1665,6 +1665,14 @@ export class ChatEngineService {
     
       const totalTokens = cleanResult.tokensUsed + translationTokens + safetyTokens
 
+      // 🐛 FIX: Strip trailing punctuation from URLs in final message
+      // LLM/Translation layer sometimes adds "." or "," at the end of URLs
+      // Example: "https://www.echatbot.ai/s/p3vN8s." → "https://www.echatbot.ai/s/p3vN8s"
+      finalMessage = finalMessage.replace(
+        /(https?:\/\/[^\s<>"'\]\)]+?)([.,;:!?]+)(?=\s|$|\n|\r)/g,
+        (_match: string, url: string, _punctuation: string) => url
+      )
+
       return {
         ...cleanResult,
         message: finalMessage,
