@@ -586,6 +586,84 @@ Check if message is safe. Respond with JSON.`,
       expect(result.isSafe).toBe(false)
       process.env.OPENROUTER_API_KEY = originalKey
     })
+
+    // SCENARIO: LLM incorrectly flags a URL that IS in workspace allowedExternalLinks
+    // RULE: Override LLM false-positive when all URLs match allowed domains (not just echatbot.ai)
+    // ROOT CAUSE: LLM (GPT-4o-mini) sometimes fails to match www.youtube.com against youtube.com
+    it('should override LLM UNAUTHORIZED_LINK for workspace allowedExternalLinks domains', async () => {
+      // Setup: Workspace has youtube.com as allowed domain
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        allowedExternalLinks: ['youtube.com', 'paypal.com'],
+        name: 'Test Workspace',
+      })
+
+      // Setup: LLM returns UNAUTHORIZED_LINK false-positive for youtube link
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                safe: false,
+                reason: 'UNAUTHORIZED_LINK',
+                details: 'External URL detected: www.youtube.com',
+              }),
+            },
+          }],
+        }),
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Buongiorno! Ecco il link della canzone https://www.youtube.com/watch?v=Qem0WSJXLCE',
+        customerId: 'cust-456',
+      })
+
+      // RULE: Must be safe — youtube.com is in allowedExternalLinks, LLM is wrong
+      expect(result.isSafe).toBe(true)
+      process.env.OPENROUTER_API_KEY = originalKey
+    })
+
+    // SCENARIO: Mix of allowed external + disallowed URLs should still block
+    // RULE: ALL URLs must be from allowed domains for override to apply
+    it('should NOT override when message has allowed + disallowed URLs mixed', async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        allowedExternalLinks: ['youtube.com'],
+        name: 'Test Workspace',
+      })
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                safe: false,
+                reason: 'UNAUTHORIZED_LINK',
+              }),
+            },
+          }],
+        }),
+      })
+
+      const originalKey = process.env.OPENROUTER_API_KEY
+      process.env.OPENROUTER_API_KEY = 'test-key'
+      service = new SecurityAgentService()
+
+      const result = await service.validateMessage({
+        workspaceId: 'ws-123',
+        messageContent: 'Guarda https://www.youtube.com/watch?v=abc e anche https://malicious.com/steal',
+        customerId: 'cust-456',
+      })
+
+      // RULE: Must remain blocked — malicious.com is NOT allowed
+      expect(result.isSafe).toBe(false)
+      process.env.OPENROUTER_API_KEY = originalKey
+    })
   })
 
   /**

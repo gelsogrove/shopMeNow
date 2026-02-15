@@ -83,6 +83,34 @@ export class SecurityAgentService {
     return urls.every(url => this.isInternalUrl(url))
   }
 
+  /**
+   * Check if a URL matches any allowed domain (internal + workspace allowedExternalLinks).
+   * Used to override LLM false-positives on URLs that ARE in the allowed list.
+   * Handles www. prefix: if 'youtube.com' is allowed, 'www.youtube.com' also matches.
+   */
+  private isAllowedUrl(url: string, allowedDomains: string[]): boolean {
+    try {
+      const parsed = new URL(url)
+      const hostname = parsed.hostname.toLowerCase()
+      return allowedDomains.some(domain => {
+        const d = domain.toLowerCase()
+        return hostname === d || hostname === `www.${d}` || (d.startsWith('www.') && hostname === d.replace('www.', ''))
+      })
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Check if ALL URLs in a message match allowed domains.
+   * Returns true if there are no URLs or all URLs are from allowed domains.
+   */
+  private allUrlsAllowed(messageContent: string, allowedDomains: string[]): boolean {
+    const urls = messageContent.match(/https?:\/\/[^\s)]+/gi) || []
+    if (urls.length === 0) return true
+    return urls.every(url => this.isAllowedUrl(url, allowedDomains))
+  }
+
   private buildSystemPrompt(basePrompt: string, variables: Record<string, string>) {
     // Use Handlebars to process BOTH conditionals ({{#if}}) AND variable replacement ({{var}})
     // in a single pass. noEscape prevents HTML-escaping values (not needed for LLM prompts).
@@ -245,12 +273,13 @@ export class SecurityAgentService {
       const reason = parsed.blockedReason || parsed.reason
 
       // 🛡️ Override LLM false-positive: if reason is UNAUTHORIZED_LINK but ALL URLs
-      // in the message are from internal echatbot.ai domains, allow the message.
-      // The LLM sometimes fails to match URLs against the allowed domain patterns.
-      if (!safe && reason?.includes('UNAUTHORIZED_LINK') && this.allUrlsInternal(messageContent)) {
-        logger.info('✅ Security override: LLM flagged UNAUTHORIZED_LINK but all URLs are internal eChatbot domains — allowing message', {
+      // in the message are from allowed domains (internal + workspace allowedExternalLinks),
+      // allow the message. The LLM sometimes fails to match URLs against the allowed domain patterns.
+      if (!safe && reason?.includes('UNAUTHORIZED_LINK') && this.allUrlsAllowed(messageContent, allAllowedLinks)) {
+        logger.info('✅ Security override: LLM flagged UNAUTHORIZED_LINK but all URLs are from allowed domains — allowing message', {
           workspaceId,
           customerId,
+          allowedDomains: allAllowedLinks,
         })
         return { isSafe: true, debugPrompt: systemPrompt, debugModel: securityAgent.model }
       }

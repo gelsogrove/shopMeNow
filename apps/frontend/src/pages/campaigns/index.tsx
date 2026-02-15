@@ -185,22 +185,24 @@ export default function CampaignsPage() {
   const renderCard = (campaign: Campaign) => {
     const date = campaign.nextRunAt || campaign.sendAt
     const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(campaign.status || "")
-    const isCampaignActive = campaign.isActive !== false && campaign.status !== "PAUSED" && !campaign.isExpired
+    const isCampaignActive = campaign.status === "SCHEDULED" || campaign.status === "RUNNING"
 
     const targetingBadge =
       campaign.targetingType === "ALL"
         ? { icon: <Globe className="w-3 h-3" />, label: "All" }
         : campaign.targetingType === "MANUAL"
-        ? { icon: <Users className="w-3 h-3" />, label: "Manual" }
-        : { icon: <Sparkles className="w-3 h-3" />, label: "By Tag" }
+          ? { icon: <Users className="w-3 h-3" />, label: "Manual" }
+          : { icon: <Sparkles className="w-3 h-3" />, label: "By Tag" }
 
     const errorLabel = (code?: string | null) => {
-      if (!code) return "Unknown"
+      if (!code) return "Sconosciuto"
       const map: Record<string, string> = {
-        OPT_OUT: "No marketing consent",
-        BLACKLISTED: "Blacklisted",
-        CHATBOT_INACTIVE: "Chatbot inactive",
-        INVALID_PHONE: "Invalid phone",
+        OPT_OUT: "Senza consenso marketing",
+        BLACKLISTED: "In blacklist",
+        CHATBOT_INACTIVE: "Chatbot inattivo",
+        INVALID_PHONE: "Telefono non valido",
+        NO_CUSTOMER: "Cliente non trovato",
+        NOT_TARGET: "Non più in target",
       }
       return map[code] || code
     }
@@ -219,15 +221,23 @@ export default function CampaignsPage() {
                   campaign.status === "COMPLETED"
                     ? "default"
                     : campaign.status === "FAILED" || campaign.status === "CANCELLED"
-                    ? "destructive"
-                    : "secondary"
+                      ? "destructive"
+                      : "secondary"
                 }
               >
-                {campaign.isExpired ? "EXPIRED" : campaign.status}
+                {campaign.isExpired ? "SCADUTA" :
+                  campaign.status === "COMPLETED" ? "COMPLETATA" :
+                    campaign.status === "SCHEDULED" ? "PROGRAMMATA" :
+                      campaign.status === "RUNNING" ? "IN CORSO" :
+                        campaign.status === "PAUSED" ? "IN PAUSA" :
+                          campaign.status === "CANCELLED" ? "ANNULLATA" :
+                            campaign.status === "FAILED" ? "FALLITA" :
+                              campaign.status === "DRAFT" ? "BOZZA" :
+                                campaign.status}
               </Badge>
               {campaign.isExpired && (
                 <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                  Past scheduled time
+                  Oltre l'orario previsto
                 </span>
               )}
             </div>
@@ -259,7 +269,6 @@ export default function CampaignsPage() {
               variant="ghost"
               size="icon"
               onClick={() => (isCampaignActive ? handlePause(campaign) : handleResume(campaign))}
-              disabled={isTerminalStatus}
               className="h-8 w-8 p-0"
             >
               {isCampaignActive ? (
@@ -281,18 +290,18 @@ export default function CampaignsPage() {
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Recipients (pending)</div>
+            <div className="text-xs text-slate-500">Destinatari (in attesa)</div>
             <div className="mt-1 text-base font-semibold">
               {(campaign as any).recipientsPending ?? campaign.expectedRecipients ?? 0}
             </div>
           </div>
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Sent</div>
+            <div className="text-xs text-slate-500">Inviati</div>
             <div className="mt-1 text-base font-semibold">{campaign.actualSent ?? 0}</div>
           </div>
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
             <div className="flex items-center gap-1 text-xs text-slate-500">
-              Failed / Skipped
+              Esclusi
               {(campaign.errorBreakdown?.length || 0) > 0 && (
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
@@ -300,12 +309,12 @@ export default function CampaignsPage() {
                       <Info className="w-3 h-3 text-slate-400 cursor-pointer" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs bg-slate-900 text-slate-50 text-xs">
-                      <div className="font-semibold mb-1">Error breakdown</div>
+                      <div className="font-semibold mb-1">Dettaglio esclusioni</div>
                       <ul className="space-y-1">
                         {campaign.errorBreakdown?.map((e, idx) => (
                           <li key={idx} className="flex justify-between gap-3">
                             <span className="capitalize">
-                              {e.status.toLowerCase()} • {errorLabel(e.code)}
+                              {errorLabel(e.code)}
                             </span>
                             <span className="font-semibold">{e.count}</span>
                           </li>

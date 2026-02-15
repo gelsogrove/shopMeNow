@@ -747,14 +747,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowUpgradeDialog(true)}
-                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!canManageBilling}
-                  title={
-                    !canManageBilling
-                      ? "Connect PayPal to change your plan."
-                      : undefined
-                  }
+                  onClick={handleOpenUpgrade}
+                  className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
+                  title={!isPaymentConnected ? "Collega PayPal per cambiare piano." : undefined}
                 >
                   <TrendingUp className="h-4 w-4" />
                   Change Plan
@@ -765,33 +760,30 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Trial Expired Warning */}
-          {billing.isTrialExpired && (
-            <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <div className="flex-1">
-                <p className="font-medium text-red-800 dark:text-red-200">
-                  ⚠️ Your trial has expired - Chatbot is DISABLED
-                </p>
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  Choose a plan to reactivate your chatbot
-                </p>
-              </div>
-              {isSuperAdmin && (
-                <Button
-                  onClick={() => setShowUpgradeDialog(true)}
-                  variant="destructive"
-                  disabled={!canManageBilling}
-                  className="disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={
-                    !canManageBilling
-                      ? "Connect PayPal to change your plan."
-                      : undefined
-                  }
-                >
-                  Choose a Plan
-                </Button>
-              )}
-            </div>
+              {billing.isTrialExpired && (
+                <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <div className="flex-1">
+                    <p className="font-medium text-red-800 dark:text-red-200">
+                      ⚠️ Your trial has expired - Chatbot is DISABLED
+                    </p>
+                    <p className="text-sm text-red-600 dark:text-red-400">
+                      {isPaymentConnected
+                        ? "Choose a plan to reactivate your chatbot."
+                        : "Collega PayPal e scegli un piano per riattivare il chatbot."}
+                    </p>
+                  </div>
+                  {isSuperAdmin && (
+                    <Button
+                      onClick={handleOpenUpgrade}
+                      variant="destructive"
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={!isPaymentConnected ? "Collega PayPal per cambiare piano." : undefined}
+                    >
+                      Choose a Plan
+                    </Button>
+                  )}
+                </div>
           )}
 
           {/* Credit & Plan Info */}
@@ -1776,3 +1768,16 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 }
 
 export default BillingSection
+  const handleOpenUpgrade = () => {
+    if (!isSuperAdmin) return
+    if (!isPaymentConnected) {
+      toast.error("Collega PayPal per scegliere o cambiare piano.")
+      // scroll al box PayPal se presente
+      const target = document.querySelector('[id*=\"paypal\"]')
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+      return
+    }
+    setShowUpgradeDialog(true)
+  }

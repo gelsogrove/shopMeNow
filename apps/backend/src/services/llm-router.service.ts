@@ -375,12 +375,23 @@ export class LLMRouterService {
         params.customerId
       )
 
-      // 🔒 Feature 174: Get customer registration status for function-level guard
-      const customerForGuard = await this.prisma.customers.findFirst({
-        where: { id: params.customerId, workspaceId: params.workspaceId },
-        select: { isActive: true },
+      // 🔒 Feature 174: Get customer full info early for guards and delegation
+      const customer = await this.prisma.customers.findFirst({
+        where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔐 Workspace isolation
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          discount: true,
+          isActive: true, // 🔒 Feature 174: Must include for price visibility control
+          language: true,
+          company: true,
+          push_notifications_consent: true,
+          sales: { select: { firstName: true, lastName: true, phone: true, email: true } }, // Include sales via select
+        }
       })
-      customerIsActive = customerForGuard?.isActive ?? false
+      customerIsActive = customer?.isActive ?? false
 
       logger.info("🎯 Routing message", {
         workspaceId: params.workspaceId,
@@ -904,24 +915,7 @@ export class LLMRouterService {
         isInformational,
       })
 
-      // STEP 4.5: Load customer data and dynamic content for Router prompt
-      logger.info("Step 4.5: Loading customer data and dynamic content")
-      const customer = await this.prisma.customers.findFirst({
-        where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔒 Workspace isolation
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          discount: true,
-          isActive: true, // 🔒 Feature 174: Must include for price visibility control
-          language: true,
-          company: true,
-          push_notifications_consent: true,
-          sales: { select: { firstName: true, lastName: true, phone: true, email: true } }, // Include sales via select
-        }
-      })
-
+      // 🛍️ Customer already loaded at the top of routeMessage
       if (!customer) {
         throw new Error(`Customer ${params.customerId} not found in workspace ${params.workspaceId}`)
       }
@@ -1170,6 +1164,7 @@ export class LLMRouterService {
         sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
         workspace: workspace!, // 🛍️ Pass workspace for catalog filtering
         preprocessResult, // 🆕 FASE 2: Pass for deterministic fast-path delegation
+        customer, // 👤 Pass customer for identifed user checks
       })
 
       totalTokens = result.tokensUsed
@@ -1714,6 +1709,7 @@ export class LLMRouterService {
     sellsProductsAndServices: boolean
     workspace: any // 🛍️ Workspace object for catalog filtering
     preprocessResult?: PreprocessResult // 🆕 FASE 2: Deterministic delegation
+    customer?: any // 👤 Identified customer data
   }): Promise<{
     response: string
     tokensUsed: number
@@ -1733,6 +1729,7 @@ export class LLMRouterService {
       sellsProductsAndServices,
       workspace,
       preprocessResult,
+      customer,
     } = options
 
     let messages: any[] = [
@@ -1953,11 +1950,11 @@ export class LLMRouterService {
           const delegationTarget = functionResult.data.delegateTo
           const delegationQuery = functionResult.data.query
 
-          // 🚫 WIDGET: Skip PROFILE_MANAGEMENT delegation
+          // 🚫 WIDGET: Skip PROFILE_MANAGEMENT delegation for anonymous visitors
           // Widget visitors are anonymous (no phone) — profile link generation fails.
           // Let the LLM respond naturally instead of triggering calling functions.
-          if (params.channel === "widget" && delegationTarget === "PROFILE_MANAGEMENT") {
-            logger.info("🚫 [WIDGET] Skipping PROFILE_MANAGEMENT delegation — not supported for widget", {
+          if (params.channel === "widget" && delegationTarget === "PROFILE_MANAGEMENT" && !customer?.phone) {
+            logger.info("🚫 [WIDGET] Skipping PROFILE_MANAGEMENT delegation for anonymous visitor", {
               delegationTarget,
               query: delegationQuery,
             })
@@ -1972,27 +1969,30 @@ export class LLMRouterService {
             }
           }
 
+          // 🚫 WIDGET: Skip CUSTOMER_SUPPORT delegation for anonymous visitors
+          // Widget visitors are anonymous (no phone) — contactOperator requires phone number
+          // and fails with "Customer phone number is missing", causing "System error" on widget.
+          // Return a helpful message instead.
+          if (params.channel === "widget" && delegationTarget === "CUSTOMER_SUPPORT" && !customer?.phone) {
+            logger.info("🚫 [WIDGET] Skipping CUSTOMER_SUPPORT delegation for anonymous visitor (no phone)", {
+              delegationTarget,
+              query: delegationQuery,
+            })
+            return {
+              response: "Per parlare con un operatore, registrati prima attraverso il link di registrazione oppure contattaci via email. Una volta registrato potrai richiedere assistenza diretta.",
+              agentUsed: "ROUTER",
+              confidence: 0.9,
+              tokensUsed: totalTokens,
+              iterations: 0,
+              debugSteps: [],
+            }
+          }
+
           logger.info(`🔀 Delegation detected to: ${delegationTarget}`, {
             query: delegationQuery,
           })
 
           // Get customer full info with sales agent
-          const customer = await this.prisma.customers.findFirst({
-            where: { id: params.customerId, workspaceId: params.workspaceId }, // 🔐 Workspace isolation
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
-              discount: true,
-              isActive: true, // 🔒 Feature 174: Must include for price visibility control
-              language: true,
-              company: true,
-              push_notifications_consent: true,
-              sales: { select: { firstName: true, lastName: true, phone: true, email: true } }, // Include sales via select
-            }
-          })
-
           if (!customer) {
             throw new Error(`Customer not found: ${params.customerId} in workspace ${params.workspaceId}`)
           }

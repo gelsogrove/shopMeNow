@@ -1,0 +1,1538 @@
+[dotenv@17.2.3] injecting env (0) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.3] injecting env (30) from ../../.env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+2026-02-15T21:21:00.853Z [[32minfo[39m]: OpenAI API key status: Missing 
+2026-02-15T21:21:00.941Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:00.942Z [[32minfo[39m]: ✅ TranslationAgent initialized with OpenRouter API key 
+🚀 Starting WhatsApp User Simulation...
+📍 Testing with Workspace: BellItalia VIP (bellitalia-vip-ecommerce)
+📍 Testing with Customer: Mario Rossi (883c7023-c3fa-4912-9f8d-b55f5a956275)
+2026-02-15T21:21:01.019Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2026-02-15T21:21:01.019Z [[32minfo[39m]: ✅ ConversationManager initialized (history window: 10 minutes) 
+2026-02-15T21:21:01.019Z [[32minfo[39m]: ✅ FunctionExecutor initialized with all agents 
+2026-02-15T21:21:01.019Z [[32minfo[39m]: ✅ SecurityAgent initialized with OpenRouter API key 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ TranslationAgent initialized with OpenRouter API key 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ VariableResolverService initialized 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ PromptBuilderService initialized 
+2026-02-15T21:21:01.020Z [[32minfo[39m]: ✅ LLMRouterService initialized with Function Calling support 
+
+--- Sending Message: "voglio vedere il profilo" ---
+2026-02-15T21:21:01.021Z [[32minfo[39m]: 🔥 ROUTER ENTRY DEBUG: voglio vedere il profilo {
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "workspaceId": "bellitalia-vip-ecommerce"
+}
+2026-02-15T21:21:01.031Z [[32minfo[39m]: 🎯 Routing message {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "conversationId": "sim-1771190461020",
+  "isSystemMessage": false,
+  "customerDiscount": 10,
+  "customerIsActive": true,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:01.035Z [[32minfo[39m]: Step 2: Loading conversation history 
+2026-02-15T21:21:01.036Z [[32minfo[39m]: 📖 Loading conversation history {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "conversationId": "sim-1771190461020",
+  "windowMinutes": 10
+}
+2026-02-15T21:21:01.040Z [[32minfo[39m]: ✅ Loaded 0 messages from last 10 minutes 
+2026-02-15T21:21:01.043Z [[32minfo[39m]: 📋 [OptionMapping] Loaded mapping for preprocessing {
+  "conversationId": "sim-1771190461020",
+  "hasMapping": false
+}
+2026-02-15T21:21:01.046Z [[32minfo[39m]: 📋 Loaded ROUTER template from files {
+  "promptLength": 2304,
+  "isInformational": false
+}
+2026-02-15T21:21:01.046Z [[32minfo[39m]: 🔍 getActiveServices called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerIsActive": true
+}
+2026-02-15T21:21:01.062Z [[32minfo[39m]: 🔍 getActiveServices result {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "servicesFound": 2,
+  "serviceNames": [
+    "Confezione Regalo",
+    "Spedizione Express"
+  ]
+}
+2026-02-15T21:21:01.066Z [[32minfo[39m]: Calculating prices for workspace bellitalia-vip-ecommerce with customer discount 10% 
+2026-02-15T21:21:01.071Z [[32minfo[39m]: Found 1 active offers 
+2026-02-15T21:21:01.074Z [[32minfo[39m]: 📊 {{PRODUCTS}} token estimation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "productsCount": 49,
+  "charactersCount": 10614,
+  "estimatedTokens": 2654,
+  "tokenLimit": 50000,
+  "utilizationPercent": "5.3"
+}
+2026-02-15T21:21:01.074Z [[32minfo[39m]: 📦 Catalog data loaded {
+  "productsCount": 10614,
+  "categoriesCount": 655,
+  "offersCount": 54,
+  "servicesCount": 388,
+  "faqsCount": 8977,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:01.074Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:01.074Z [[32minfo[39m]: 🔒 DEBUG customerData construction: {
+  "rawCustomerIsActive": true,
+  "promptVariablesCustomerIsActive": true,
+  "finalCustomerDataIsActive": true,
+  "customerName": "Mario Rossi",
+  "customerEmail": "mario.rossi@test.com"
+}
+2026-02-15T21:21:01.074Z [[32minfo[39m]: 📦 PromptVariables built for Router and sub-agents: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:01.074Z [[32minfo[39m]: 🔨 Building prompt for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:01.075Z [[32minfo[39m]: 🔍 Resolving variables for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:01.077Z [[32minfo[39m]: 🤖 DEBUG - chatbotName from workspace: {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "chatbotName": "Sofia",
+  "resolved": "Sofia"
+}
+2026-02-15T21:21:01.085Z [[32minfo[39m]: ✅ Resolved 40 variables for ROUTER 
+2026-02-15T21:21:01.085Z [[32minfo[39m]: ✅ Prompt built for ROUTER in 11ms {
+  "templateLength": 2304,
+  "contentLength": 3836,
+  "variablesCount": 40,
+  "hasCustomRules": true
+}
+2026-02-15T21:21:01.085Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:01.085Z [[32minfo[39m]: ✅ ROUTER prompt generated via PromptBuilder {
+  "sellsProductsAndServices": true,
+  "promptLength": 3804
+}
+2026-02-15T21:21:01.085Z [[32minfo[39m]: ✅ Router prompt processed with variables replaced (no products/categories) 
+2026-02-15T21:21:01.085Z [[32minfo[39m]: 📝 [RegistrationPrompt] Skipped (level 0 or not set) 
+prisma:error 
+Invalid `this.prisma.offers.findMany()` invocation in
+/Users/gelso/workspace/shopME/apps/backend/src/services/system-context.service.ts:329:47
+
+  326 private async loadActiveOffers(workspaceId: string): Promise<SystemContext["activeOffers"]> {
+  327   try {
+  328     const now = new Date()
+→ 329     const offers = await this.prisma.offers.findMany({
+            where: {
+              workspaceId: "bellitalia-vip-ecommerce",
+              isActive: true,
+              OR: [
+                {
+                  startDate: null
+                },
+                {
+                  startDate: {
+                    lte: new Date("2026-02-15T21:21:01.090Z")
+                  }
+                }
+              ],
+              AND: [
+                {
+                  OR: [
+                    {
+                      endDate: null
+                    },
+                    {
+                      endDate: {
+                        gte: new Date("2026-02-15T21:21:01.090Z")
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            select: {
+              name: true,
+              discountPercent: true
+            },
+            take: 5
+          })
+
+Argument `startDate` is missing.
+2026-02-15T21:21:01.096Z [[32minfo[39m]: 📋 [SystemContext] Added to Router prompt {
+  "contextLength": 105,
+  "contextPreview": "\n---\nCONTEXT (use this to understand user selections and cart state):\n{\n  \"customerDiscount\": \"10%\"\n}\n---"
+}
+2026-02-15T21:21:01.096Z [[32minfo[39m]: Step 3: Starting Function Calling loop 
+2026-02-15T21:21:01.096Z [[32minfo[39m]: Function Calling iteration 1/8 
+2026-02-15T21:21:01.096Z [[32minfo[39m]: *******FULL SYSTEM PROMPT SENT TO ROUTER LLM******* 
+2026-02-15T21:21:01.096Z [[32minfo[39m]: # ROUTER AGENT
+
+## 🤖 IDENTITY
+
+You are **Sofia**, the assistant for BellItalia VIP.
+
+**Tone of Voice**: FRIENDLY
+
+## 🏢 BUSINESS CONTEXT
+
+- **Company**: BellItalia VIP
+- **Chatbot**: Sofia
+- **Address**: 
+- **Website**: https://bellitalia.com/vip
+- **Support Email**: info@bellitalia.com
+
+### Human Support Available
+- **Contact Method**: EMAIL
+- **WhatsApp**: 
+- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 333 890 1234 / email: gelsogrove@gmail.com). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝
+
+### ⚡ CUSTOM RULES (PRIORITY)
+# Communication Style
+
+- Keep sentences SHORT - avoid long text blocks
+- Greet the user often using their name: 
+- Use emoticons to make tone friendly 😊
+- When appropriate, end with a question to keep conversation flowing
+- For lists, ALWAYS use bullet points
+- If there's a link, add a line break after it
+- For important concepts, use **bold**
+- For SUPER important concepts, use **BOLD AND UPPERCASE**
+
+# Example Communication
+"Hi ! 👋
+
+Here's your order:
+https://echatbot.ai/order/123
+
+**Total: €45.50**
+
+**PAYMENT DUE: 3 DAYS**
+
+Need anything else?"
+
+## 🚨 CUSTOM ESCALATION TRIGGERS (CHECK FIRST)
+
+The admin has configured these situations to escalate to human operator:
+Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
+- Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)
+- Si lamenta che la MERCE È ARRIVATA ROTTA/DANNEGGIATA (pacco danneggiato, prodotto rotto, bottiglia rotta)
+- Vuole MODIFICARE UN ORDINE già effettuato (cambiare prodotti, cambiare quantità, cambiare indirizzo)
+- Vuole CANCELLARE UN ORDINE (annullare ordine, disdire ordine)
+- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO (operatore, assistenza umana, persona reale)
+
+⚠️ IMPORTANTE: 
+- Prima controlla SEMPRE nelle FAQ se esiste una risposta predefinita
+- Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
+- Chiama l'operatore SOLO per i casi sopra elencati quando NON c'è risposta FAQ
+- Per tutti gli altri casi, rispondi normalmente senza escalation
+
+If customer message matches ANY of the above → classify as ESCALATION intent
+
+## 🎯 YOUR ROLE
+
+Classify user intent ONLY. The CODE handles everything else:
+- Intent detection → IntentParser
+- Product/Category search → DataLoader + Semantic Search  
+- Cart operations → CartManagementAgent
+- Orders → OrderTrackingAgent
+- Identity/FAQ/Support → CUSTOMER_SUPPORT agent
+- Numeric selections ("1", "2", "3") → FAST-PATH
+
+**DO NOT answer questions directly.** Your job is to classify, not respond.
+
+## 📊 INTENT CLASSIFICATION OUTPUT
+
+Return intent type only. Examples:
+
+**🤝 Greetings (ANY language) → CUSTOMER_SUPPORT:**
+- "ciao", "ciao!", "hello", "hi", "hola", "olá", "buongiorno", "buonasera" → CUSTOMER_SUPPORT
+- Simple greetings in ANY language should go to CUSTOMER_SUPPORT (which handles greetings naturally)
+- **NEVER** call RESET_ACTIVE_AGENT for greetings - they are NOT topic changes!
+
+**Identity & General Information:**
+- "who are you?" → ASK_IDENTITY
+- "where are you located?" → ASK_LOCATION
+- "How long does onboarding take?" → CUSTOMER_SUPPORT
+- "What are your pricing plans?" → CUSTOMER_SUPPORT
+- "Do you support X feature?" → CUSTOMER_SUPPORT
+- "Can I integrate with...?" → CUSTOMER_SUPPORT
+- "Tell me about your service" → CUSTOMER_SUPPORT
+- "How does the trial work?" → CUSTOMER_SUPPORT
+- "What is included in Starter plan?" → CUSTOMER_SUPPORT
+
+**Products & Catalog:**
+- "I want a product" → SEARCH_PRODUCTS
+- "show me categories" → SEARCH_PRODUCTS
+
+**Cart:**
+- "show cart" → VIEW_CART
+- "add to cart" → ADD_TO_CART
+
+**Orders:**
+- "my orders" → LIST_ORDERS
+- "where is my order?" → TRACK_ORDER
+---
+CONTEXT (use this to understand user selections and cart state):
+{
+  "customerDiscount": "10%"
+}
+--- 
+2026-02-15T21:21:01.096Z [[32minfo[39m]: *******END SYSTEM PROMPT******* 
+2026-02-15T21:21:01.096Z [[32minfo[39m]: 🔍 DEBUG - Messages sent to Router LLM: {
+  "systemPromptPreview": "# ROUTER AGENT\n\n## 🤖 IDENTITY\n\nYou are **Sofia**, the assistant for BellItalia VIP.\n\n**Tone of Voice**: FRIENDLY\n\n## 🏢 BUSINESS CONTEXT\n\n- **Company**: BellItalia VIP\n- **Chatbot**: Sofia\n- **Address**: \n- **Website**: https://bellitalia.com/vip\n- **Support Email**: info@bellitalia.com\n\n### Human Support Available\n- **Contact Method**: EMAIL\n- **WhatsApp**: \n- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 33",
+  "conversationHistoryCount": 0,
+  "userMessagePreview": "<user_input>\nvoglio vedere il profilo\n</user_input>",
+  "userMessage": "<user_input>\nvoglio vedere il profilo\n</user_input>"
+}
+2026-02-15T21:21:02.177Z [[32minfo[39m]: 🔍 RAW OpenRouter Response: {
+  "hasContent": false,
+  "contentPreview": "",
+  "hasToolCalls": true,
+  "toolCallsCount": 1,
+  "toolCallName": "profileManagementAgent",
+  "toolCallArgs": "{\"query\":\"mostrami il profilo\"}",
+  "finishReason": "tool_calls"
+}
+2026-02-15T21:21:02.177Z [[32minfo[39m]: 🔍 DEBUG - LLM Response: {
+  "hasFunction": true,
+  "functionName": "profileManagementAgent",
+  "functionArgs": "{\"query\":\"mostrami il profilo\"}",
+  "textResponse": ""
+}
+2026-02-15T21:21:02.178Z [[32minfo[39m]: ⚙️ LLM requested function: profileManagementAgent {
+  "args": {
+    "query": "mostrami il profilo"
+  }
+}
+2026-02-15T21:21:02.188Z [[32minfo[39m]: ⚙️ Executing function: profileManagementAgent {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "args": {
+    "query": "mostrami il profilo"
+  },
+  "customerIsActive": true
+}
+2026-02-15T21:21:02.188Z [[32minfo[39m]: 👤 Delegating to Profile Management Agent {
+  "args": {
+    "query": "mostrami il profilo"
+  },
+  "context": {
+    "workspaceId": "bellitalia-vip-ecommerce",
+    "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+    "customerName": "Mario Rossi",
+    "customerDiscount": 10,
+    "customerIsActive": true,
+    "sellsProductsAndServices": true
+  }
+}
+2026-02-15T21:21:02.188Z [[32minfo[39m]: ✅ Function executed successfully: profileManagementAgent {
+  "executionTimeMs": 0
+}
+2026-02-15T21:21:02.188Z [[32minfo[39m]: 🔍 Function result structure: {
+  "hasData": true,
+  "hasDelegateTo": true,
+  "functionResult": "{\"success\":true,\"data\":{\"delegateTo\":\"PROFILE_MANAGEMENT\",\"query\":\"mostrami il profilo\",\"message\":\"Delegating to Profile Management Agent for: mostrami il profilo\"},\"executionTimeMs\":0}"
+}
+2026-02-15T21:21:02.195Z [[32minfo[39m]: Logged agent interaction: ROUTER (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:02.195Z [[32minfo[39m]: Logged ROUTER interaction (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:02.196Z [[32minfo[39m]: 🌍 [TranslationAgent] RECEIVED targetLanguage parameter {
+  "targetLanguage": "en",
+  "targetLanguageType": "string",
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerName": "Mario Rossi",
+  "messagePreview": "System error - please try again"
+}
+2026-02-15T21:21:02.196Z [[32minfo[39m]: 🌍 [TranslationAgent] Normalized language {
+  "input": "en",
+  "inputType": "string",
+  "normalized": "en",
+  "normalizedType": "string",
+  "willTranslateTo": "EN",
+  "mappingResult": "en"
+}
+2026-02-15T21:21:02.198Z [[32minfo[39m]: 🌍 TranslationAgent settings loaded {
+  "translateProductNames": false,
+  "translateCategoryNames": false,
+  "translateServiceNames": true,
+  "catalogBaseLanguage": "it"
+}
+2026-02-15T21:21:02.203Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": false,
+  "hasCategories": false
+}
+2026-02-15T21:21:02.203Z [[32minfo[39m]: ✅ Using custom TRANSLATION prompt from database {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "promptLength": 3117
+}
+2026-02-15T21:21:02.203Z [[32minfo[39m]: 🔍 TranslationAgent INPUT {
+  "containsImgTag": false,
+  "messagePreview": "System error - please try again",
+  "preservationRules": "IMPORTANT PRESERVATION RULES:\n- DO NOT translate product names. Keep them EXACTLY as they appear in Italian (e.g., \"Pecorino Romano\" stays \"Pecorino Romano\", \"Prosciutto di Parma\" stays \"Prosciutto di Parma\")\n- DO NOT translate category names. Keep them EXACTLY as they appear in Italian\n- ALWAYS translate supporting descriptions, ingredients, flavors or textures even when they follow product/service names; only the official name itself can stay unchanged.\n- ALWAYS preserve: prices (€X.XX), order codes (ORD-xxxxx), product codes, HTML tags (<img>, <b>, etc.)\n- ALWAYS preserve: emojis, bullet points, numbered lists formatting"
+}
+2026-02-15T21:21:02.204Z [[32minfo[39m]: 🌍 Calling TranslationAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini",
+  "targetLanguage": "en",
+  "usingCustomPrompt": true
+}
+2026-02-15T21:21:03.438Z [[32minfo[39m]: 🌍 TranslationAgent forcing re-translation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "targetLanguage": "en"
+}
+2026-02-15T21:21:04.503Z [[32minfo[39m]: 🔍 TranslationAgent OUTPUT {
+  "containsImgTag": false,
+  "llmResponsePreview": "System error - please try again"
+}
+2026-02-15T21:21:04.504Z [[32minfo[39m]: ✅ TranslationAgent completed {
+  "translated": false,
+  "targetLanguage": "en",
+  "tokensUsed": 2166,
+  "executionTimeMs": 2307
+}
+2026-02-15T21:21:04.504Z [[32minfo[39m]: 🔍 AgentConfigRepository.findByType() called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "type": "SECURITY",
+  "searchingForActive": true
+}
+2026-02-15T21:21:04.507Z [[32minfo[39m]: ✅ Agent type SECURITY FOUND {
+  "id": "3bb20452-b672-493a-8f7b-47c5cca19847",
+  "name": "Security Agent",
+  "isActive": true,
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:04.509Z [[32minfo[39m]: 🛡️ Calling SecurityAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:05.639Z [[32minfo[39m]: ✅ SecurityAgent completed {
+  "safe": true,
+  "blocked": false,
+  "blockedReason": "The message indicates a common technical issue and does not contain harmful or malicious content.",
+  "tokensUsed": 84,
+  "executionTimeMs": 1135
+}
+✅ Response (4619ms):
+🤖 Agent: ROUTER
+📝 Message: System error - please try again
+🔍 Debug Steps: Router Agent -> Translation Layer -> Widget Security Layer
+
+--- Sending Message: "quanto costa?" ---
+2026-02-15T21:21:05.639Z [[32minfo[39m]: 🔥 ROUTER ENTRY DEBUG: quanto costa? {
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "workspaceId": "bellitalia-vip-ecommerce"
+}
+2026-02-15T21:21:05.650Z [[32minfo[39m]: 🎯 Routing message {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "conversationId": "sim-1771190461020",
+  "isSystemMessage": false,
+  "customerDiscount": 10,
+  "customerIsActive": true,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:05.654Z [[32minfo[39m]: Step 2: Loading conversation history 
+2026-02-15T21:21:05.654Z [[32minfo[39m]: 📖 Loading conversation history {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "conversationId": "sim-1771190461020",
+  "windowMinutes": 10
+}
+2026-02-15T21:21:05.657Z [[32minfo[39m]: ✅ Loaded 1 messages from last 10 minutes 
+2026-02-15T21:21:05.659Z [[32minfo[39m]: 📋 [OptionMapping] Loaded mapping for preprocessing {
+  "conversationId": "sim-1771190461020",
+  "hasMapping": false
+}
+2026-02-15T21:21:05.659Z [[32minfo[39m]: 📋 Loaded ROUTER template from files {
+  "promptLength": 2304,
+  "isInformational": false
+}
+2026-02-15T21:21:05.659Z [[32minfo[39m]: 🔍 getActiveServices called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerIsActive": true
+}
+2026-02-15T21:21:05.666Z [[32minfo[39m]: 🔍 getActiveServices result {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "servicesFound": 2,
+  "serviceNames": [
+    "Confezione Regalo",
+    "Spedizione Express"
+  ]
+}
+2026-02-15T21:21:05.669Z [[32minfo[39m]: Calculating prices for workspace bellitalia-vip-ecommerce with customer discount 10% 
+2026-02-15T21:21:05.673Z [[32minfo[39m]: Found 1 active offers 
+2026-02-15T21:21:05.675Z [[32minfo[39m]: 📊 {{PRODUCTS}} token estimation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "productsCount": 49,
+  "charactersCount": 10614,
+  "estimatedTokens": 2654,
+  "tokenLimit": 50000,
+  "utilizationPercent": "5.3"
+}
+2026-02-15T21:21:05.675Z [[32minfo[39m]: 📦 Catalog data loaded {
+  "productsCount": 10614,
+  "categoriesCount": 655,
+  "offersCount": 54,
+  "servicesCount": 388,
+  "faqsCount": 8977,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:05.676Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:05.676Z [[32minfo[39m]: 🔒 DEBUG customerData construction: {
+  "rawCustomerIsActive": true,
+  "promptVariablesCustomerIsActive": true,
+  "finalCustomerDataIsActive": true,
+  "customerName": "Mario Rossi",
+  "customerEmail": "mario.rossi@test.com"
+}
+2026-02-15T21:21:05.676Z [[32minfo[39m]: 📦 PromptVariables built for Router and sub-agents: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:05.676Z [[32minfo[39m]: 🔨 Building prompt for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:05.676Z [[32minfo[39m]: 🔍 Resolving variables for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:05.678Z [[32minfo[39m]: 🤖 DEBUG - chatbotName from workspace: {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "chatbotName": "Sofia",
+  "resolved": "Sofia"
+}
+2026-02-15T21:21:05.685Z [[32minfo[39m]: ✅ Resolved 40 variables for ROUTER 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: ✅ Prompt built for ROUTER in 9ms {
+  "templateLength": 2304,
+  "contentLength": 3836,
+  "variablesCount": 40,
+  "hasCustomRules": true
+}
+2026-02-15T21:21:05.685Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: ✅ ROUTER prompt generated via PromptBuilder {
+  "sellsProductsAndServices": true,
+  "promptLength": 3804
+}
+2026-02-15T21:21:05.685Z [[32minfo[39m]: ✅ Router prompt processed with variables replaced (no products/categories) 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: 📝 [RegistrationPrompt] Skipped (level 0 or not set) 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: 📋 [SystemContext] Added to Router prompt {
+  "contextLength": 105,
+  "contextPreview": "\n---\nCONTEXT (use this to understand user selections and cart state):\n{\n  \"customerDiscount\": \"10%\"\n}\n---"
+}
+2026-02-15T21:21:05.685Z [[32minfo[39m]: Step 3: Starting Function Calling loop 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: Function Calling iteration 1/8 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: *******FULL SYSTEM PROMPT SENT TO ROUTER LLM******* 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: # ROUTER AGENT
+
+## 🤖 IDENTITY
+
+You are **Sofia**, the assistant for BellItalia VIP.
+
+**Tone of Voice**: FRIENDLY
+
+## 🏢 BUSINESS CONTEXT
+
+- **Company**: BellItalia VIP
+- **Chatbot**: Sofia
+- **Address**: 
+- **Website**: https://bellitalia.com/vip
+- **Support Email**: info@bellitalia.com
+
+### Human Support Available
+- **Contact Method**: EMAIL
+- **WhatsApp**: 
+- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 333 890 1234 / email: gelsogrove@gmail.com). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝
+
+### ⚡ CUSTOM RULES (PRIORITY)
+# Communication Style
+
+- Keep sentences SHORT - avoid long text blocks
+- Greet the user often using their name: 
+- Use emoticons to make tone friendly 😊
+- When appropriate, end with a question to keep conversation flowing
+- For lists, ALWAYS use bullet points
+- If there's a link, add a line break after it
+- For important concepts, use **bold**
+- For SUPER important concepts, use **BOLD AND UPPERCASE**
+
+# Example Communication
+"Hi ! 👋
+
+Here's your order:
+https://echatbot.ai/order/123
+
+**Total: €45.50**
+
+**PAYMENT DUE: 3 DAYS**
+
+Need anything else?"
+
+## 🚨 CUSTOM ESCALATION TRIGGERS (CHECK FIRST)
+
+The admin has configured these situations to escalate to human operator:
+Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
+- Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)
+- Si lamenta che la MERCE È ARRIVATA ROTTA/DANNEGGIATA (pacco danneggiato, prodotto rotto, bottiglia rotta)
+- Vuole MODIFICARE UN ORDINE già effettuato (cambiare prodotti, cambiare quantità, cambiare indirizzo)
+- Vuole CANCELLARE UN ORDINE (annullare ordine, disdire ordine)
+- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO (operatore, assistenza umana, persona reale)
+
+⚠️ IMPORTANTE: 
+- Prima controlla SEMPRE nelle FAQ se esiste una risposta predefinita
+- Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
+- Chiama l'operatore SOLO per i casi sopra elencati quando NON c'è risposta FAQ
+- Per tutti gli altri casi, rispondi normalmente senza escalation
+
+If customer message matches ANY of the above → classify as ESCALATION intent
+
+## 🎯 YOUR ROLE
+
+Classify user intent ONLY. The CODE handles everything else:
+- Intent detection → IntentParser
+- Product/Category search → DataLoader + Semantic Search  
+- Cart operations → CartManagementAgent
+- Orders → OrderTrackingAgent
+- Identity/FAQ/Support → CUSTOMER_SUPPORT agent
+- Numeric selections ("1", "2", "3") → FAST-PATH
+
+**DO NOT answer questions directly.** Your job is to classify, not respond.
+
+## 📊 INTENT CLASSIFICATION OUTPUT
+
+Return intent type only. Examples:
+
+**🤝 Greetings (ANY language) → CUSTOMER_SUPPORT:**
+- "ciao", "ciao!", "hello", "hi", "hola", "olá", "buongiorno", "buonasera" → CUSTOMER_SUPPORT
+- Simple greetings in ANY language should go to CUSTOMER_SUPPORT (which handles greetings naturally)
+- **NEVER** call RESET_ACTIVE_AGENT for greetings - they are NOT topic changes!
+
+**Identity & General Information:**
+- "who are you?" → ASK_IDENTITY
+- "where are you located?" → ASK_LOCATION
+- "How long does onboarding take?" → CUSTOMER_SUPPORT
+- "What are your pricing plans?" → CUSTOMER_SUPPORT
+- "Do you support X feature?" → CUSTOMER_SUPPORT
+- "Can I integrate with...?" → CUSTOMER_SUPPORT
+- "Tell me about your service" → CUSTOMER_SUPPORT
+- "How does the trial work?" → CUSTOMER_SUPPORT
+- "What is included in Starter plan?" → CUSTOMER_SUPPORT
+
+**Products & Catalog:**
+- "I want a product" → SEARCH_PRODUCTS
+- "show me categories" → SEARCH_PRODUCTS
+
+**Cart:**
+- "show cart" → VIEW_CART
+- "add to cart" → ADD_TO_CART
+
+**Orders:**
+- "my orders" → LIST_ORDERS
+- "where is my order?" → TRACK_ORDER
+---
+CONTEXT (use this to understand user selections and cart state):
+{
+  "customerDiscount": "10%"
+}
+--- 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: *******END SYSTEM PROMPT******* 
+2026-02-15T21:21:05.685Z [[32minfo[39m]: 🔍 DEBUG - Messages sent to Router LLM: {
+  "systemPromptPreview": "# ROUTER AGENT\n\n## 🤖 IDENTITY\n\nYou are **Sofia**, the assistant for BellItalia VIP.\n\n**Tone of Voice**: FRIENDLY\n\n## 🏢 BUSINESS CONTEXT\n\n- **Company**: BellItalia VIP\n- **Chatbot**: Sofia\n- **Address**: \n- **Website**: https://bellitalia.com/vip\n- **Support Email**: info@bellitalia.com\n\n### Human Support Available\n- **Contact Method**: EMAIL\n- **WhatsApp**: \n- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 33",
+  "conversationHistoryCount": 1,
+  "userMessagePreview": "<user_input>\nquanto costa?\n</user_input>",
+  "userMessage": "<user_input>\nquanto costa?\n</user_input>"
+}
+2026-02-15T21:21:06.555Z [[32minfo[39m]: 🔍 RAW OpenRouter Response: {
+  "hasContent": false,
+  "contentPreview": "",
+  "hasToolCalls": true,
+  "toolCallsCount": 1,
+  "toolCallName": "customerSupportAgent",
+  "toolCallArgs": "{\"query\":\"quanto costa?\"}",
+  "finishReason": "tool_calls"
+}
+2026-02-15T21:21:06.556Z [[32minfo[39m]: 🔍 DEBUG - LLM Response: {
+  "hasFunction": true,
+  "functionName": "customerSupportAgent",
+  "functionArgs": "{\"query\":\"quanto costa?\"}",
+  "textResponse": ""
+}
+2026-02-15T21:21:06.556Z [[32minfo[39m]: ⚙️ LLM requested function: customerSupportAgent {
+  "args": {
+    "query": "quanto costa?"
+  }
+}
+2026-02-15T21:21:06.561Z [[32minfo[39m]: ⚙️ Executing function: customerSupportAgent {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "args": {
+    "query": "quanto costa?"
+  },
+  "customerIsActive": true
+}
+2026-02-15T21:21:06.562Z [[32minfo[39m]: 💬 Delegating to Customer Support Agent {
+  "args": {
+    "query": "quanto costa?"
+  },
+  "context": {
+    "workspaceId": "bellitalia-vip-ecommerce",
+    "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+    "customerName": "Mario Rossi",
+    "customerDiscount": 10,
+    "customerIsActive": true,
+    "sellsProductsAndServices": true
+  }
+}
+2026-02-15T21:21:06.562Z [[32minfo[39m]: ✅ Function executed successfully: customerSupportAgent {
+  "executionTimeMs": 1
+}
+2026-02-15T21:21:06.562Z [[32minfo[39m]: 🔍 Function result structure: {
+  "hasData": true,
+  "hasDelegateTo": true,
+  "functionResult": "{\"success\":true,\"data\":{\"delegateTo\":\"CUSTOMER_SUPPORT\",\"query\":\"quanto costa?\",\"message\":\"Delegating to Customer Support Agent for: quanto costa?\"},\"executionTimeMs\":1}"
+}
+2026-02-15T21:21:06.569Z [[32minfo[39m]: Logged agent interaction: ROUTER (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:06.569Z [[32minfo[39m]: Logged ROUTER interaction (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:06.569Z [[32minfo[39m]: 🌍 [TranslationAgent] RECEIVED targetLanguage parameter {
+  "targetLanguage": "en",
+  "targetLanguageType": "string",
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerName": "Mario Rossi",
+  "messagePreview": "System error - please try again"
+}
+2026-02-15T21:21:06.569Z [[32minfo[39m]: 🌍 [TranslationAgent] Normalized language {
+  "input": "en",
+  "inputType": "string",
+  "normalized": "en",
+  "normalizedType": "string",
+  "willTranslateTo": "EN",
+  "mappingResult": "en"
+}
+2026-02-15T21:21:06.571Z [[32minfo[39m]: 🌍 TranslationAgent settings loaded {
+  "translateProductNames": false,
+  "translateCategoryNames": false,
+  "translateServiceNames": true,
+  "catalogBaseLanguage": "it"
+}
+2026-02-15T21:21:06.575Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": false,
+  "hasCategories": false
+}
+2026-02-15T21:21:06.576Z [[32minfo[39m]: ✅ Using custom TRANSLATION prompt from database {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "promptLength": 3117
+}
+2026-02-15T21:21:06.576Z [[32minfo[39m]: 🔍 TranslationAgent INPUT {
+  "containsImgTag": false,
+  "messagePreview": "System error - please try again",
+  "preservationRules": "IMPORTANT PRESERVATION RULES:\n- DO NOT translate product names. Keep them EXACTLY as they appear in Italian (e.g., \"Pecorino Romano\" stays \"Pecorino Romano\", \"Prosciutto di Parma\" stays \"Prosciutto di Parma\")\n- DO NOT translate category names. Keep them EXACTLY as they appear in Italian\n- ALWAYS translate supporting descriptions, ingredients, flavors or textures even when they follow product/service names; only the official name itself can stay unchanged.\n- ALWAYS preserve: prices (€X.XX), order codes (ORD-xxxxx), product codes, HTML tags (<img>, <b>, etc.)\n- ALWAYS preserve: emojis, bullet points, numbered lists formatting"
+}
+2026-02-15T21:21:06.576Z [[32minfo[39m]: 🌍 Calling TranslationAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini",
+  "targetLanguage": "en",
+  "usingCustomPrompt": true
+}
+2026-02-15T21:21:07.475Z [[32minfo[39m]: 🌍 TranslationAgent forcing re-translation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "targetLanguage": "en"
+}
+2026-02-15T21:21:08.519Z [[32minfo[39m]: 🔍 TranslationAgent OUTPUT {
+  "containsImgTag": false,
+  "llmResponsePreview": "System error - please try again"
+}
+2026-02-15T21:21:08.519Z [[32minfo[39m]: ✅ TranslationAgent completed {
+  "translated": false,
+  "targetLanguage": "en",
+  "tokensUsed": 2166,
+  "executionTimeMs": 1950
+}
+2026-02-15T21:21:08.519Z [[32minfo[39m]: 🔍 AgentConfigRepository.findByType() called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "type": "SECURITY",
+  "searchingForActive": true
+}
+2026-02-15T21:21:08.522Z [[32minfo[39m]: ✅ Agent type SECURITY FOUND {
+  "id": "3bb20452-b672-493a-8f7b-47c5cca19847",
+  "name": "Security Agent",
+  "isActive": true,
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:08.524Z [[32minfo[39m]: 🛡️ Calling SecurityAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:09.528Z [[32minfo[39m]: ✅ SecurityAgent completed {
+  "safe": true,
+  "blocked": false,
+  "blockedReason": "The message indicates a common technical issue without any harmful content or intent.",
+  "tokensUsed": 82,
+  "executionTimeMs": 1009
+}
+✅ Response (3889ms):
+🤖 Agent: ROUTER
+📝 Message: System error - please try again
+🔍 Debug Steps: Router Agent -> Translation Layer -> Widget Security Layer
+
+--- Sending Message: "che piani avete" ---
+2026-02-15T21:21:09.528Z [[32minfo[39m]: 🔥 ROUTER ENTRY DEBUG: che piani avete {
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "workspaceId": "bellitalia-vip-ecommerce"
+}
+2026-02-15T21:21:09.538Z [[32minfo[39m]: 🎯 Routing message {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "conversationId": "sim-1771190461020",
+  "isSystemMessage": false,
+  "customerDiscount": 10,
+  "customerIsActive": true,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:09.543Z [[32minfo[39m]: Step 2: Loading conversation history 
+2026-02-15T21:21:09.543Z [[32minfo[39m]: 📖 Loading conversation history {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "conversationId": "sim-1771190461020",
+  "windowMinutes": 10
+}
+2026-02-15T21:21:09.545Z [[32minfo[39m]: ✅ Loaded 2 messages from last 10 minutes 
+2026-02-15T21:21:09.546Z [[32minfo[39m]: 📋 [OptionMapping] Loaded mapping for preprocessing {
+  "conversationId": "sim-1771190461020",
+  "hasMapping": false
+}
+2026-02-15T21:21:09.546Z [[32minfo[39m]: 📋 Loaded ROUTER template from files {
+  "promptLength": 2304,
+  "isInformational": false
+}
+2026-02-15T21:21:09.547Z [[32minfo[39m]: 🔍 getActiveServices called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerIsActive": true
+}
+2026-02-15T21:21:09.552Z [[32minfo[39m]: 🔍 getActiveServices result {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "servicesFound": 2,
+  "serviceNames": [
+    "Confezione Regalo",
+    "Spedizione Express"
+  ]
+}
+2026-02-15T21:21:09.557Z [[32minfo[39m]: Calculating prices for workspace bellitalia-vip-ecommerce with customer discount 10% 
+2026-02-15T21:21:09.561Z [[32minfo[39m]: Found 1 active offers 
+2026-02-15T21:21:09.563Z [[32minfo[39m]: 📊 {{PRODUCTS}} token estimation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "productsCount": 49,
+  "charactersCount": 10614,
+  "estimatedTokens": 2654,
+  "tokenLimit": 50000,
+  "utilizationPercent": "5.3"
+}
+2026-02-15T21:21:09.563Z [[32minfo[39m]: 📦 Catalog data loaded {
+  "productsCount": 10614,
+  "categoriesCount": 655,
+  "offersCount": 54,
+  "servicesCount": 388,
+  "faqsCount": 8977,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:09.564Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:09.564Z [[32minfo[39m]: 🔒 DEBUG customerData construction: {
+  "rawCustomerIsActive": true,
+  "promptVariablesCustomerIsActive": true,
+  "finalCustomerDataIsActive": true,
+  "customerName": "Mario Rossi",
+  "customerEmail": "mario.rossi@test.com"
+}
+2026-02-15T21:21:09.564Z [[32minfo[39m]: 📦 PromptVariables built for Router and sub-agents: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:09.564Z [[32minfo[39m]: 🔨 Building prompt for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:09.564Z [[32minfo[39m]: 🔍 Resolving variables for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:09.566Z [[32minfo[39m]: 🤖 DEBUG - chatbotName from workspace: {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "chatbotName": "Sofia",
+  "resolved": "Sofia"
+}
+2026-02-15T21:21:09.572Z [[32minfo[39m]: ✅ Resolved 40 variables for ROUTER 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: ✅ Prompt built for ROUTER in 9ms {
+  "templateLength": 2304,
+  "contentLength": 3836,
+  "variablesCount": 40,
+  "hasCustomRules": true
+}
+2026-02-15T21:21:09.573Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: ✅ ROUTER prompt generated via PromptBuilder {
+  "sellsProductsAndServices": true,
+  "promptLength": 3804
+}
+2026-02-15T21:21:09.573Z [[32minfo[39m]: ✅ Router prompt processed with variables replaced (no products/categories) 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: 📝 [RegistrationPrompt] Skipped (level 0 or not set) 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: 📋 [SystemContext] Added to Router prompt {
+  "contextLength": 105,
+  "contextPreview": "\n---\nCONTEXT (use this to understand user selections and cart state):\n{\n  \"customerDiscount\": \"10%\"\n}\n---"
+}
+2026-02-15T21:21:09.573Z [[32minfo[39m]: Step 3: Starting Function Calling loop 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: Function Calling iteration 1/8 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: *******FULL SYSTEM PROMPT SENT TO ROUTER LLM******* 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: # ROUTER AGENT
+
+## 🤖 IDENTITY
+
+You are **Sofia**, the assistant for BellItalia VIP.
+
+**Tone of Voice**: FRIENDLY
+
+## 🏢 BUSINESS CONTEXT
+
+- **Company**: BellItalia VIP
+- **Chatbot**: Sofia
+- **Address**: 
+- **Website**: https://bellitalia.com/vip
+- **Support Email**: info@bellitalia.com
+
+### Human Support Available
+- **Contact Method**: EMAIL
+- **WhatsApp**: 
+- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 333 890 1234 / email: gelsogrove@gmail.com). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝
+
+### ⚡ CUSTOM RULES (PRIORITY)
+# Communication Style
+
+- Keep sentences SHORT - avoid long text blocks
+- Greet the user often using their name: 
+- Use emoticons to make tone friendly 😊
+- When appropriate, end with a question to keep conversation flowing
+- For lists, ALWAYS use bullet points
+- If there's a link, add a line break after it
+- For important concepts, use **bold**
+- For SUPER important concepts, use **BOLD AND UPPERCASE**
+
+# Example Communication
+"Hi ! 👋
+
+Here's your order:
+https://echatbot.ai/order/123
+
+**Total: €45.50**
+
+**PAYMENT DUE: 3 DAYS**
+
+Need anything else?"
+
+## 🚨 CUSTOM ESCALATION TRIGGERS (CHECK FIRST)
+
+The admin has configured these situations to escalate to human operator:
+Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
+- Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)
+- Si lamenta che la MERCE È ARRIVATA ROTTA/DANNEGGIATA (pacco danneggiato, prodotto rotto, bottiglia rotta)
+- Vuole MODIFICARE UN ORDINE già effettuato (cambiare prodotti, cambiare quantità, cambiare indirizzo)
+- Vuole CANCELLARE UN ORDINE (annullare ordine, disdire ordine)
+- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO (operatore, assistenza umana, persona reale)
+
+⚠️ IMPORTANTE: 
+- Prima controlla SEMPRE nelle FAQ se esiste una risposta predefinita
+- Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
+- Chiama l'operatore SOLO per i casi sopra elencati quando NON c'è risposta FAQ
+- Per tutti gli altri casi, rispondi normalmente senza escalation
+
+If customer message matches ANY of the above → classify as ESCALATION intent
+
+## 🎯 YOUR ROLE
+
+Classify user intent ONLY. The CODE handles everything else:
+- Intent detection → IntentParser
+- Product/Category search → DataLoader + Semantic Search  
+- Cart operations → CartManagementAgent
+- Orders → OrderTrackingAgent
+- Identity/FAQ/Support → CUSTOMER_SUPPORT agent
+- Numeric selections ("1", "2", "3") → FAST-PATH
+
+**DO NOT answer questions directly.** Your job is to classify, not respond.
+
+## 📊 INTENT CLASSIFICATION OUTPUT
+
+Return intent type only. Examples:
+
+**🤝 Greetings (ANY language) → CUSTOMER_SUPPORT:**
+- "ciao", "ciao!", "hello", "hi", "hola", "olá", "buongiorno", "buonasera" → CUSTOMER_SUPPORT
+- Simple greetings in ANY language should go to CUSTOMER_SUPPORT (which handles greetings naturally)
+- **NEVER** call RESET_ACTIVE_AGENT for greetings - they are NOT topic changes!
+
+**Identity & General Information:**
+- "who are you?" → ASK_IDENTITY
+- "where are you located?" → ASK_LOCATION
+- "How long does onboarding take?" → CUSTOMER_SUPPORT
+- "What are your pricing plans?" → CUSTOMER_SUPPORT
+- "Do you support X feature?" → CUSTOMER_SUPPORT
+- "Can I integrate with...?" → CUSTOMER_SUPPORT
+- "Tell me about your service" → CUSTOMER_SUPPORT
+- "How does the trial work?" → CUSTOMER_SUPPORT
+- "What is included in Starter plan?" → CUSTOMER_SUPPORT
+
+**Products & Catalog:**
+- "I want a product" → SEARCH_PRODUCTS
+- "show me categories" → SEARCH_PRODUCTS
+
+**Cart:**
+- "show cart" → VIEW_CART
+- "add to cart" → ADD_TO_CART
+
+**Orders:**
+- "my orders" → LIST_ORDERS
+- "where is my order?" → TRACK_ORDER
+---
+CONTEXT (use this to understand user selections and cart state):
+{
+  "customerDiscount": "10%"
+}
+--- 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: *******END SYSTEM PROMPT******* 
+2026-02-15T21:21:09.573Z [[32minfo[39m]: 🔍 DEBUG - Messages sent to Router LLM: {
+  "systemPromptPreview": "# ROUTER AGENT\n\n## 🤖 IDENTITY\n\nYou are **Sofia**, the assistant for BellItalia VIP.\n\n**Tone of Voice**: FRIENDLY\n\n## 🏢 BUSINESS CONTEXT\n\n- **Company**: BellItalia VIP\n- **Chatbot**: Sofia\n- **Address**: \n- **Website**: https://bellitalia.com/vip\n- **Support Email**: info@bellitalia.com\n\n### Human Support Available\n- **Contact Method**: EMAIL\n- **WhatsApp**: \n- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 33",
+  "conversationHistoryCount": 2,
+  "userMessagePreview": "<user_input>\nche piani avete\n</user_input>",
+  "userMessage": "<user_input>\nche piani avete\n</user_input>"
+}
+2026-02-15T21:21:10.447Z [[32minfo[39m]: 🔍 RAW OpenRouter Response: {
+  "hasContent": false,
+  "contentPreview": "",
+  "hasToolCalls": true,
+  "toolCallsCount": 1,
+  "toolCallName": "customerSupportAgent",
+  "toolCallArgs": "{\"query\":\"che piani avete\"}",
+  "finishReason": "tool_calls"
+}
+2026-02-15T21:21:10.447Z [[32minfo[39m]: 🔍 DEBUG - LLM Response: {
+  "hasFunction": true,
+  "functionName": "customerSupportAgent",
+  "functionArgs": "{\"query\":\"che piani avete\"}",
+  "textResponse": ""
+}
+2026-02-15T21:21:10.447Z [[32minfo[39m]: ⚙️ LLM requested function: customerSupportAgent {
+  "args": {
+    "query": "che piani avete"
+  }
+}
+2026-02-15T21:21:10.450Z [[32minfo[39m]: ⚙️ Executing function: customerSupportAgent {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "args": {
+    "query": "che piani avete"
+  },
+  "customerIsActive": true
+}
+2026-02-15T21:21:10.451Z [[32minfo[39m]: 💬 Delegating to Customer Support Agent {
+  "args": {
+    "query": "che piani avete"
+  },
+  "context": {
+    "workspaceId": "bellitalia-vip-ecommerce",
+    "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+    "customerName": "Mario Rossi",
+    "customerDiscount": 10,
+    "customerIsActive": true,
+    "sellsProductsAndServices": true
+  }
+}
+2026-02-15T21:21:10.451Z [[32minfo[39m]: ✅ Function executed successfully: customerSupportAgent {
+  "executionTimeMs": 1
+}
+2026-02-15T21:21:10.451Z [[32minfo[39m]: 🔍 Function result structure: {
+  "hasData": true,
+  "hasDelegateTo": true,
+  "functionResult": "{\"success\":true,\"data\":{\"delegateTo\":\"CUSTOMER_SUPPORT\",\"query\":\"che piani avete\",\"message\":\"Delegating to Customer Support Agent for: che piani avete\"},\"executionTimeMs\":1}"
+}
+2026-02-15T21:21:10.454Z [[32minfo[39m]: Logged agent interaction: ROUTER (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:10.454Z [[32minfo[39m]: Logged ROUTER interaction (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:10.454Z [[32minfo[39m]: 🌍 [TranslationAgent] RECEIVED targetLanguage parameter {
+  "targetLanguage": "en",
+  "targetLanguageType": "string",
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerName": "Mario Rossi",
+  "messagePreview": "System error - please try again"
+}
+2026-02-15T21:21:10.454Z [[32minfo[39m]: 🌍 [TranslationAgent] Normalized language {
+  "input": "en",
+  "inputType": "string",
+  "normalized": "en",
+  "normalizedType": "string",
+  "willTranslateTo": "EN",
+  "mappingResult": "en"
+}
+2026-02-15T21:21:10.456Z [[32minfo[39m]: 🌍 TranslationAgent settings loaded {
+  "translateProductNames": false,
+  "translateCategoryNames": false,
+  "translateServiceNames": true,
+  "catalogBaseLanguage": "it"
+}
+2026-02-15T21:21:10.460Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": false,
+  "hasCategories": false
+}
+2026-02-15T21:21:10.460Z [[32minfo[39m]: ✅ Using custom TRANSLATION prompt from database {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "promptLength": 3117
+}
+2026-02-15T21:21:10.460Z [[32minfo[39m]: 🔍 TranslationAgent INPUT {
+  "containsImgTag": false,
+  "messagePreview": "System error - please try again",
+  "preservationRules": "IMPORTANT PRESERVATION RULES:\n- DO NOT translate product names. Keep them EXACTLY as they appear in Italian (e.g., \"Pecorino Romano\" stays \"Pecorino Romano\", \"Prosciutto di Parma\" stays \"Prosciutto di Parma\")\n- DO NOT translate category names. Keep them EXACTLY as they appear in Italian\n- ALWAYS translate supporting descriptions, ingredients, flavors or textures even when they follow product/service names; only the official name itself can stay unchanged.\n- ALWAYS preserve: prices (€X.XX), order codes (ORD-xxxxx), product codes, HTML tags (<img>, <b>, etc.)\n- ALWAYS preserve: emojis, bullet points, numbered lists formatting"
+}
+2026-02-15T21:21:10.460Z [[32minfo[39m]: 🌍 Calling TranslationAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini",
+  "targetLanguage": "en",
+  "usingCustomPrompt": true
+}
+2026-02-15T21:21:11.373Z [[32minfo[39m]: 🌍 TranslationAgent forcing re-translation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "targetLanguage": "en"
+}
+2026-02-15T21:21:12.503Z [[32minfo[39m]: 🔍 TranslationAgent OUTPUT {
+  "containsImgTag": false,
+  "llmResponsePreview": "System error - please try again"
+}
+2026-02-15T21:21:12.503Z [[32minfo[39m]: ✅ TranslationAgent completed {
+  "translated": false,
+  "targetLanguage": "en",
+  "tokensUsed": 2166,
+  "executionTimeMs": 2049
+}
+2026-02-15T21:21:12.503Z [[32minfo[39m]: 🔍 AgentConfigRepository.findByType() called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "type": "SECURITY",
+  "searchingForActive": true
+}
+2026-02-15T21:21:12.506Z [[32minfo[39m]: ✅ Agent type SECURITY FOUND {
+  "id": "3bb20452-b672-493a-8f7b-47c5cca19847",
+  "name": "Security Agent",
+  "isActive": true,
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:12.509Z [[32minfo[39m]: 🛡️ Calling SecurityAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:13.582Z [[32minfo[39m]: ✅ SecurityAgent completed {
+  "safe": true,
+  "blocked": false,
+  "blockedReason": "The message indicates a common technical issue and does not contain any harmful or malicious content.",
+  "tokensUsed": 85,
+  "executionTimeMs": 1079
+}
+✅ Response (4054ms):
+🤖 Agent: ROUTER
+📝 Message: System error - please try again
+🔍 Debug Steps: Router Agent -> Translation Layer -> Widget Security Layer
+
+--- Sending Message: "voglio parlare con un operatore?" ---
+2026-02-15T21:21:13.582Z [[32minfo[39m]: 🔥 ROUTER ENTRY DEBUG: voglio parlare con un operatore? {
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "workspaceId": "bellitalia-vip-ecommerce"
+}
+2026-02-15T21:21:13.591Z [[32minfo[39m]: 🎯 Routing message {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "conversationId": "sim-1771190461020",
+  "isSystemMessage": false,
+  "customerDiscount": 10,
+  "customerIsActive": true,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:13.595Z [[32minfo[39m]: Step 2: Loading conversation history 
+2026-02-15T21:21:13.595Z [[32minfo[39m]: 📖 Loading conversation history {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "conversationId": "sim-1771190461020",
+  "windowMinutes": 10
+}
+2026-02-15T21:21:13.597Z [[32minfo[39m]: ✅ Loaded 3 messages from last 10 minutes 
+2026-02-15T21:21:13.599Z [[32minfo[39m]: 📋 [OptionMapping] Loaded mapping for preprocessing {
+  "conversationId": "sim-1771190461020",
+  "hasMapping": false
+}
+2026-02-15T21:21:13.600Z [[32minfo[39m]: 📋 Loaded ROUTER template from files {
+  "promptLength": 2304,
+  "isInformational": false
+}
+2026-02-15T21:21:13.600Z [[32minfo[39m]: 🔍 getActiveServices called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerIsActive": true
+}
+2026-02-15T21:21:13.604Z [[32minfo[39m]: 🔍 getActiveServices result {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "servicesFound": 2,
+  "serviceNames": [
+    "Confezione Regalo",
+    "Spedizione Express"
+  ]
+}
+2026-02-15T21:21:13.609Z [[32minfo[39m]: Calculating prices for workspace bellitalia-vip-ecommerce with customer discount 10% 
+2026-02-15T21:21:13.614Z [[32minfo[39m]: Found 1 active offers 
+2026-02-15T21:21:13.617Z [[32minfo[39m]: 📊 {{PRODUCTS}} token estimation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "productsCount": 49,
+  "charactersCount": 10614,
+  "estimatedTokens": 2654,
+  "tokenLimit": 50000,
+  "utilizationPercent": "5.3"
+}
+2026-02-15T21:21:13.617Z [[32minfo[39m]: 📦 Catalog data loaded {
+  "productsCount": 10614,
+  "categoriesCount": 655,
+  "offersCount": 54,
+  "servicesCount": 388,
+  "faqsCount": 8977,
+  "sellsProductsAndServices": true
+}
+2026-02-15T21:21:13.617Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:13.617Z [[32minfo[39m]: 🔒 DEBUG customerData construction: {
+  "rawCustomerIsActive": true,
+  "promptVariablesCustomerIsActive": true,
+  "finalCustomerDataIsActive": true,
+  "customerName": "Mario Rossi",
+  "customerEmail": "mario.rossi@test.com"
+}
+2026-02-15T21:21:13.617Z [[32minfo[39m]: 📦 PromptVariables built for Router and sub-agents: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": true,
+  "hasCategories": true
+}
+2026-02-15T21:21:13.617Z [[32minfo[39m]: 🔨 Building prompt for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:13.617Z [[32minfo[39m]: 🔍 Resolving variables for ROUTER {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275"
+}
+2026-02-15T21:21:13.620Z [[32minfo[39m]: 🤖 DEBUG - chatbotName from workspace: {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "chatbotName": "Sofia",
+  "resolved": "Sofia"
+}
+2026-02-15T21:21:13.628Z [[32minfo[39m]: ✅ Resolved 40 variables for ROUTER 
+2026-02-15T21:21:13.628Z [[32minfo[39m]: ✅ Prompt built for ROUTER in 11ms {
+  "templateLength": 2304,
+  "contentLength": 3836,
+  "variablesCount": 40,
+  "hasCustomRules": true
+}
+2026-02-15T21:21:13.628Z [[32minfo[39m]: ✅ TemplateEngineService initialized 
+2026-02-15T21:21:13.628Z [[32minfo[39m]: ✅ ROUTER prompt generated via PromptBuilder {
+  "sellsProductsAndServices": true,
+  "promptLength": 3804
+}
+2026-02-15T21:21:13.628Z [[32minfo[39m]: ✅ Router prompt processed with variables replaced (no products/categories) 
+2026-02-15T21:21:13.629Z [[32minfo[39m]: 📝 [RegistrationPrompt] Skipped (level 0 or not set) 
+2026-02-15T21:21:13.629Z [[32minfo[39m]: 📋 [SystemContext] Added to Router prompt {
+  "contextLength": 105,
+  "contextPreview": "\n---\nCONTEXT (use this to understand user selections and cart state):\n{\n  \"customerDiscount\": \"10%\"\n}\n---"
+}
+2026-02-15T21:21:13.629Z [[32minfo[39m]: Step 3: Starting Function Calling loop 
+2026-02-15T21:21:13.629Z [[32minfo[39m]: Function Calling iteration 1/8 
+2026-02-15T21:21:13.629Z [[32minfo[39m]: *******FULL SYSTEM PROMPT SENT TO ROUTER LLM******* 
+2026-02-15T21:21:13.629Z [[32minfo[39m]: # ROUTER AGENT
+
+## 🤖 IDENTITY
+
+You are **Sofia**, the assistant for BellItalia VIP.
+
+**Tone of Voice**: FRIENDLY
+
+## 🏢 BUSINESS CONTEXT
+
+- **Company**: BellItalia VIP
+- **Chatbot**: Sofia
+- **Address**: 
+- **Website**: https://bellitalia.com/vip
+- **Support Email**: info@bellitalia.com
+
+### Human Support Available
+- **Contact Method**: EMAIL
+- **WhatsApp**: 
+- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 333 890 1234 / email: gelsogrove@gmail.com). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝
+
+### ⚡ CUSTOM RULES (PRIORITY)
+# Communication Style
+
+- Keep sentences SHORT - avoid long text blocks
+- Greet the user often using their name: 
+- Use emoticons to make tone friendly 😊
+- When appropriate, end with a question to keep conversation flowing
+- For lists, ALWAYS use bullet points
+- If there's a link, add a line break after it
+- For important concepts, use **bold**
+- For SUPER important concepts, use **BOLD AND UPPERCASE**
+
+# Example Communication
+"Hi ! 👋
+
+Here's your order:
+https://echatbot.ai/order/123
+
+**Total: €45.50**
+
+**PAYMENT DUE: 3 DAYS**
+
+Need anything else?"
+
+## 🚨 CUSTOM ESCALATION TRIGGERS (CHECK FIRST)
+
+The admin has configured these situations to escalate to human operator:
+Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
+- Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)
+- Si lamenta che la MERCE È ARRIVATA ROTTA/DANNEGGIATA (pacco danneggiato, prodotto rotto, bottiglia rotta)
+- Vuole MODIFICARE UN ORDINE già effettuato (cambiare prodotti, cambiare quantità, cambiare indirizzo)
+- Vuole CANCELLARE UN ORDINE (annullare ordine, disdire ordine)
+- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO (operatore, assistenza umana, persona reale)
+
+⚠️ IMPORTANTE: 
+- Prima controlla SEMPRE nelle FAQ se esiste una risposta predefinita
+- Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
+- Chiama l'operatore SOLO per i casi sopra elencati quando NON c'è risposta FAQ
+- Per tutti gli altri casi, rispondi normalmente senza escalation
+
+If customer message matches ANY of the above → classify as ESCALATION intent
+
+## 🎯 YOUR ROLE
+
+Classify user intent ONLY. The CODE handles everything else:
+- Intent detection → IntentParser
+- Product/Category search → DataLoader + Semantic Search  
+- Cart operations → CartManagementAgent
+- Orders → OrderTrackingAgent
+- Identity/FAQ/Support → CUSTOMER_SUPPORT agent
+- Numeric selections ("1", "2", "3") → FAST-PATH
+
+**DO NOT answer questions directly.** Your job is to classify, not respond.
+
+## 📊 INTENT CLASSIFICATION OUTPUT
+
+Return intent type only. Examples:
+
+**🤝 Greetings (ANY language) → CUSTOMER_SUPPORT:**
+- "ciao", "ciao!", "hello", "hi", "hola", "olá", "buongiorno", "buonasera" → CUSTOMER_SUPPORT
+- Simple greetings in ANY language should go to CUSTOMER_SUPPORT (which handles greetings naturally)
+- **NEVER** call RESET_ACTIVE_AGENT for greetings - they are NOT topic changes!
+
+**Identity & General Information:**
+- "who are you?" → ASK_IDENTITY
+- "where are you located?" → ASK_LOCATION
+- "How long does onboarding take?" → CUSTOMER_SUPPORT
+- "What are your pricing plans?" → CUSTOMER_SUPPORT
+- "Do you support X feature?" → CUSTOMER_SUPPORT
+- "Can I integrate with...?" → CUSTOMER_SUPPORT
+- "Tell me about your service" → CUSTOMER_SUPPORT
+- "How does the trial work?" → CUSTOMER_SUPPORT
+- "What is included in Starter plan?" → CUSTOMER_SUPPORT
+
+**Products & Catalog:**
+- "I want a product" → SEARCH_PRODUCTS
+- "show me categories" → SEARCH_PRODUCTS
+
+**Cart:**
+- "show cart" → VIEW_CART
+- "add to cart" → ADD_TO_CART
+
+**Orders:**
+- "my orders" → LIST_ORDERS
+- "where is my order?" → TRACK_ORDER
+---
+CONTEXT (use this to understand user selections and cart state):
+{
+  "customerDiscount": "10%"
+}
+--- 
+2026-02-15T21:21:13.629Z [[32minfo[39m]: *******END SYSTEM PROMPT******* 
+2026-02-15T21:21:13.629Z [[32minfo[39m]: 🔍 DEBUG - Messages sent to Router LLM: {
+  "systemPromptPreview": "# ROUTER AGENT\n\n## 🤖 IDENTITY\n\nYou are **Sofia**, the assistant for BellItalia VIP.\n\n**Tone of Voice**: FRIENDLY\n\n## 🏢 BUSINESS CONTEXT\n\n- **Company**: BellItalia VIP\n- **Chatbot**: Sofia\n- **Address**: \n- **Website**: https://bellitalia.com/vip\n- **Support Email**: info@bellitalia.com\n\n### Human Support Available\n- **Contact Method**: EMAIL\n- **WhatsApp**: \n- **Instructions**: Hello , I'm connecting you with our agent Alessandro Romano. They will contact you as soon as possible (phone: +39 33",
+  "conversationHistoryCount": 3,
+  "userMessagePreview": "<user_input>\nvoglio parlare con un operatore?\n</user_input>",
+  "userMessage": "<user_input>\nvoglio parlare con un operatore?\n</user_input>"
+}
+2026-02-15T21:21:14.355Z [[32minfo[39m]: 🔍 RAW OpenRouter Response: {
+  "hasContent": false,
+  "contentPreview": "",
+  "hasToolCalls": true,
+  "toolCallsCount": 1,
+  "toolCallName": "customerSupportAgent",
+  "toolCallArgs": "{\"query\":\"voglio parlare con un operatore\"}",
+  "finishReason": "tool_calls"
+}
+2026-02-15T21:21:14.355Z [[32minfo[39m]: 🔍 DEBUG - LLM Response: {
+  "hasFunction": true,
+  "functionName": "customerSupportAgent",
+  "functionArgs": "{\"query\":\"voglio parlare con un operatore\"}",
+  "textResponse": ""
+}
+2026-02-15T21:21:14.355Z [[32minfo[39m]: ⚙️ LLM requested function: customerSupportAgent {
+  "args": {
+    "query": "voglio parlare con un operatore"
+  }
+}
+2026-02-15T21:21:14.360Z [[32minfo[39m]: ⚙️ Executing function: customerSupportAgent {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+  "args": {
+    "query": "voglio parlare con un operatore"
+  },
+  "customerIsActive": true
+}
+2026-02-15T21:21:14.360Z [[32minfo[39m]: 💬 Delegating to Customer Support Agent {
+  "args": {
+    "query": "voglio parlare con un operatore"
+  },
+  "context": {
+    "workspaceId": "bellitalia-vip-ecommerce",
+    "customerId": "883c7023-c3fa-4912-9f8d-b55f5a956275",
+    "customerName": "Mario Rossi",
+    "customerDiscount": 10,
+    "customerIsActive": true,
+    "sellsProductsAndServices": true
+  }
+}
+2026-02-15T21:21:14.360Z [[32minfo[39m]: ✅ Function executed successfully: customerSupportAgent {
+  "executionTimeMs": 0
+}
+2026-02-15T21:21:14.360Z [[32minfo[39m]: 🔍 Function result structure: {
+  "hasData": true,
+  "hasDelegateTo": true,
+  "functionResult": "{\"success\":true,\"data\":{\"delegateTo\":\"CUSTOMER_SUPPORT\",\"query\":\"voglio parlare con un operatore\",\"message\":\"Delegating to Customer Support Agent for: voglio parlare con un operatore\"},\"executionTimeMs\":0}"
+}
+2026-02-15T21:21:14.365Z [[32minfo[39m]: Logged agent interaction: ROUTER (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:14.365Z [[32minfo[39m]: Logged ROUTER interaction (step 0) for conversation sim-1771190461020 
+2026-02-15T21:21:14.365Z [[32minfo[39m]: 🌍 [TranslationAgent] RECEIVED targetLanguage parameter {
+  "targetLanguage": "en",
+  "targetLanguageType": "string",
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "customerName": "Mario Rossi",
+  "messagePreview": "System error - please try again"
+}
+2026-02-15T21:21:14.365Z [[32minfo[39m]: 🌍 [TranslationAgent] Normalized language {
+  "input": "en",
+  "inputType": "string",
+  "normalized": "en",
+  "normalizedType": "string",
+  "willTranslateTo": "EN",
+  "mappingResult": "en"
+}
+2026-02-15T21:21:14.366Z [[32minfo[39m]: 🌍 TranslationAgent settings loaded {
+  "translateProductNames": false,
+  "translateCategoryNames": false,
+  "translateServiceNames": true,
+  "catalogBaseLanguage": "it"
+}
+2026-02-15T21:21:14.372Z [[32minfo[39m]: 📦 PromptVariableBuilder.build() completed: {
+  "companyName": "BellItalia VIP",
+  "customerName": "",
+  "hasBotIdentity": true,
+  "hasProducts": false,
+  "hasCategories": false
+}
+2026-02-15T21:21:14.372Z [[32minfo[39m]: ✅ Using custom TRANSLATION prompt from database {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "promptLength": 3117
+}
+2026-02-15T21:21:14.372Z [[32minfo[39m]: 🔍 TranslationAgent INPUT {
+  "containsImgTag": false,
+  "messagePreview": "System error - please try again",
+  "preservationRules": "IMPORTANT PRESERVATION RULES:\n- DO NOT translate product names. Keep them EXACTLY as they appear in Italian (e.g., \"Pecorino Romano\" stays \"Pecorino Romano\", \"Prosciutto di Parma\" stays \"Prosciutto di Parma\")\n- DO NOT translate category names. Keep them EXACTLY as they appear in Italian\n- ALWAYS translate supporting descriptions, ingredients, flavors or textures even when they follow product/service names; only the official name itself can stay unchanged.\n- ALWAYS preserve: prices (€X.XX), order codes (ORD-xxxxx), product codes, HTML tags (<img>, <b>, etc.)\n- ALWAYS preserve: emojis, bullet points, numbered lists formatting"
+}
+2026-02-15T21:21:14.372Z [[32minfo[39m]: 🌍 Calling TranslationAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini",
+  "targetLanguage": "en",
+  "usingCustomPrompt": true
+}
+2026-02-15T21:21:15.484Z [[32minfo[39m]: 🌍 TranslationAgent forcing re-translation {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "targetLanguage": "en"
+}
+2026-02-15T21:21:16.375Z [[32minfo[39m]: 🔍 TranslationAgent OUTPUT {
+  "containsImgTag": false,
+  "llmResponsePreview": "System error - please try again"
+}
+2026-02-15T21:21:16.375Z [[32minfo[39m]: ✅ TranslationAgent completed {
+  "translated": false,
+  "targetLanguage": "en",
+  "tokensUsed": 2166,
+  "executionTimeMs": 2010
+}
+2026-02-15T21:21:16.375Z [[32minfo[39m]: 🔍 AgentConfigRepository.findByType() called {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "type": "SECURITY",
+  "searchingForActive": true
+}
+2026-02-15T21:21:16.380Z [[32minfo[39m]: ✅ Agent type SECURITY FOUND {
+  "id": "3bb20452-b672-493a-8f7b-47c5cca19847",
+  "name": "Security Agent",
+  "isActive": true,
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:16.385Z [[32minfo[39m]: 🛡️ Calling SecurityAgent LLM {
+  "workspaceId": "bellitalia-vip-ecommerce",
+  "model": "openai/gpt-4o-mini"
+}
+2026-02-15T21:21:17.516Z [[32minfo[39m]: ✅ SecurityAgent completed {
+  "safe": true,
+  "blocked": false,
+  "blockedReason": "The message is a common error notification and does not contain any harmful content.",
+  "tokensUsed": 83,
+  "executionTimeMs": 1141
+}
+✅ Response (3934ms):
+🤖 Agent: ROUTER
+📝 Message: System error - please try again
+🔍 Debug Steps: Router Agent -> Translation Layer -> Widget Security Layer
+
+✨ Simulation complete!

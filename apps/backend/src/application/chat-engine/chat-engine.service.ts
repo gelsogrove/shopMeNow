@@ -5319,10 +5319,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     const conversationId = input.conversationId || `temp-${input.customerId}`
 
     // ========================================================================
-    // STEP 0.2.1: Check for UPDATE_PROFILE / VIEW_PROFILE / CHANGE_LANGUAGE before INFO_AGENT
-    // These intents have dedicated handlers and must NOT go to CustomerSupportAgentLLM
-    // (which would dump the system prompt instead of generating the profile link)
-    // 🐛 FIX: VIEW_PROFILE was missing here, causing system prompt to leak as response
+    // STEP 0.2.1: Intercept intents with DEDICATED handlers BEFORE they reach CustomerSupportAgentLLM
+    // Without these checks, intents fall through to CustomerSupportAgentLLM → if agent fails → 
+    // fallback leaks botIdentityResponse (internal admin config) as customer message.
+    // ✅ Intercepted: REQUEST_HUMAN, UPDATE_PROFILE, VIEW_PROFILE, CHANGE_LANGUAGE
+    // ⚠️ All other intents go to CustomerSupportAgentLLM (which is OK for ASK_FAQ, ASK_IDENTITY etc.)
     // ========================================================================
     try {
       const intentResult = await this.intentParser.parse(input.message, {
@@ -5330,11 +5331,36 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         customerId: input.customerId,
       })
 
+      // ========================================================================
+      // INTERCEPT: REQUEST_HUMAN → reuse existing handleHumanSupportRequest
+      // Without this, "voglio parlare con un operatore" falls through to
+      // CustomerSupportAgentLLM which dumps the system prompt
+      // ========================================================================
+      if (intentResult.intent.type === "REQUEST_HUMAN") {
+        logger.info("📞 [ChatEngine] REQUEST_HUMAN in informational workspace - routing to human support handler", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        return await this.handleHumanSupportRequest({
+          input,
+          workspaceConfig,
+          conversationId: input.conversationId || `temp-${input.customerId}`,
+          debugSteps,
+          totalTokens: 0,
+          startTime,
+          requestIntent: intentResult.intent as RequestHumanIntent,
+          intentConfidence: intentResult.confidence,
+          intentSource: intentResult.source,
+        })
+      }
+
       if (intentResult.intent.type === "UPDATE_PROFILE" || intentResult.intent.type === "VIEW_PROFILE") {
         logger.info("📝 [ChatEngine] UPDATE_PROFILE/VIEW_PROFILE in informational workspace - generating profile link", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
         })
+
 
         try {
           const { CallingFunctionsService } = await import("../../services/calling-functions.service")
@@ -5401,6 +5427,83 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           }
         } catch (error) {
           logger.error("❌ [ChatEngine] Failed to generate profile link (informational)", { error })
+          // Fall through to INFO_AGENT on error
+        }
+      }
+
+      // ========================================================================
+      // INTERCEPT: CHANGE_LANGUAGE → reuse profile link logic for language change
+      // Without this, CHANGE_LANGUAGE in informational workspaces falls through
+      // to CustomerSupportAgentLLM which may fail and leak the system prompt
+      // ========================================================================
+      if (intentResult.intent.type === "CHANGE_LANGUAGE") {
+        logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE in informational workspace - generating profile link", {
+          workspaceId: input.workspaceId,
+          customerId: input.customerId,
+        })
+
+        try {
+          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
+          const callingFunctions = new CallingFunctionsService()
+
+          const profileLinkResult = await callingFunctions.getProfileLink({
+            customerId: input.customerId,
+            workspaceId: input.workspaceId,
+          })
+
+          if (!profileLinkResult.success || !profileLinkResult.data?.profileLink) {
+            throw new Error("Failed to generate profile link for language change")
+          }
+
+          const customerFirstName = input.customerName?.split(" ")[0] || "!"
+          const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
+          let languageMessage = `Certo ${customerFirstName}! 🌍 Per cambiare la lingua di conversazione, puoi modificarla nel tuo profilo:\n\n👉 Modifica Lingua\n${profileLink}\n\n📌 Lingue supportate:\n• 🇮🇹 Italiano\n• 🇬🇧 English\n• 🇪🇸 Español\n• 🇵🇹 Português\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+
+          // Translate to customer language
+          const customerLanguage = input.customerLanguage || "en"
+          try {
+            const translationResult = await this.applyTranslation(
+              languageMessage,
+              input.workspaceId,
+              customerLanguage,
+              debugSteps,
+              customerFirstName
+            )
+            languageMessage = translationResult.message
+          } catch (translationError) {
+            logger.warn("⚠️ [ChatEngine] Language change message translation failed, using Italian", {
+              error: (translationError as Error).message,
+            })
+          }
+
+          const processingTimeMs = Date.now() - startTime
+          const savedMessages = await this.saveMessages(
+            input.workspaceId,
+            input.customerId,
+            conversationId,
+            input.message,
+            languageMessage
+          )
+
+          return {
+            message: languageMessage,
+            agentType: AgentType.PROFILE_MANAGEMENT,
+            wasHandled: true,
+            intent: "CHANGE_LANGUAGE",
+            confidence: intentResult.confidence,
+            source: intentResult.source,
+            processingTimeMs,
+            debugInfo: { steps: debugSteps, totalTokens: 0, executionTimeMs: processingTimeMs },
+            response: languageMessage,
+            agentUsed: AgentType.PROFILE_MANAGEMENT,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: false,
+            _assistantMessageId: savedMessages.assistantMessageId,
+          }
+        } catch (error) {
+          logger.error("❌ [ChatEngine] Failed to generate profile link for language change (informational)", { error })
           // Fall through to INFO_AGENT on error
         }
       }
@@ -5480,14 +5583,22 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     let finalMessage = agentResponse.output
 
     if (!agentResponse.success || !finalMessage) {
-      const fallbackIdentity =
-        workspaceConfig.botIdentityResponse ||
-        "Sono l'assistente virtuale di questo canale."
-      const fallbackSupport = workspaceConfig.hasHumanSupport
-        ? `Se preferisci supporto umano, puoi contattarci a ${workspaceConfig.adminEmail || "support@echatbot.ai"}.`
-        : "Al momento il supporto umano non è disponibile."
-      finalMessage = `${fallbackIdentity} Come posso aiutarti? ${fallbackSupport}`
+      // 🔒 SECURITY FIX: NEVER expose botIdentityResponse in fallback!
+      // botIdentityResponse is internal admin config — leaking it is a prompt injection vector.
+      // Use a safe generic message instead. Log the error details for debugging.
+      logger.warn("⚠️ [ChatEngine] Informational agent returned no output — using safe fallback", {
+        workspaceId: input.workspaceId,
+        customerId: input.customerId,
+        agentSuccess: agentResponse.success,
+        hadOutput: !!agentResponse.output,
+        message: input.message,
+      })
 
+      const agentName = workspaceConfig.name || "eChatbot"
+      const fallbackSupport = workspaceConfig.hasHumanSupport && workspaceConfig.adminEmail
+        ? `\n\nSe preferisci, puoi contattarci a ${workspaceConfig.adminEmail}.`
+        : ""
+      finalMessage = `Ciao! Sono l'assistente di ${agentName}. Al momento non sono riuscito a elaborare la tua richiesta. Puoi riformulare la domanda?${fallbackSupport}`
     }
 
     debugSteps.push({

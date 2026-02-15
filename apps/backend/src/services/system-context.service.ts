@@ -43,20 +43,20 @@ export interface SystemContext {
     type: "products" | "categories" | "groupings" | "orders"
     items: ListItem[]
   }
-  
+
   /** Cart summary for dialogue context */
   cartSummary?: CartSummary
-  
+
   /** Customer's personal discount percentage */
   customerDiscount?: number
-  
+
   /** Active offers for this workspace */
   activeOffers?: Array<{
     name: string
     discount: number
     applicableSkus?: string[]
   }>
-  
+
   /** Last action context (for confirmations) */
   pendingAction?: {
     type: "ADD_TO_CART" | "CONFIRM_ORDER" | "CLEAR_CART"
@@ -84,7 +84,7 @@ const lastAccess = new Map<string, number>()
 // ================================================================================
 
 export class SystemContextService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient) { }
 
   /**
    * Get cache key for workspace + customer
@@ -99,24 +99,24 @@ export class SystemContextService {
   async getContext(workspaceId: string, customerId: string): Promise<SystemContext> {
     const key = this.getCacheKey(workspaceId, customerId)
     lastAccess.set(key, Date.now())
-    
+
     // Return cached if exists
     if (contextCache.has(key)) {
       return contextCache.get(key)!
     }
-    
+
     // Initialize new context
     const context: SystemContext = {}
-    
+
     // Load cart summary from DB
     context.cartSummary = await this.loadCartSummary(workspaceId, customerId)
-    
+
     // Load customer discount
     context.customerDiscount = await this.loadCustomerDiscount(workspaceId, customerId)
-    
+
     // Load active offers
     context.activeOffers = await this.loadActiveOffers(workspaceId)
-    
+
     contextCache.set(key, context)
     return context
   }
@@ -125,16 +125,16 @@ export class SystemContextService {
    * Update context with new list (for selection tracking)
    */
   async setCurrentList(
-    workspaceId: string, 
-    customerId: string, 
+    workspaceId: string,
+    customerId: string,
     list: SystemContext["currentList"]
   ): Promise<void> {
     const context = await this.getContext(workspaceId, customerId)
     context.currentList = list
-    
+
     const key = this.getCacheKey(workspaceId, customerId)
     contextCache.set(key, context)
-    
+
     logger.info("📋 [SystemContext] List updated", {
       workspaceId,
       customerId,
@@ -153,10 +153,10 @@ export class SystemContextService {
   ): Promise<void> {
     const context = await this.getContext(workspaceId, customerId)
     context.pendingAction = action
-    
+
     const key = this.getCacheKey(workspaceId, customerId)
     contextCache.set(key, context)
-    
+
     logger.info("⏳ [SystemContext] Pending action set", {
       workspaceId,
       customerId,
@@ -171,7 +171,7 @@ export class SystemContextService {
   async clearPendingAction(workspaceId: string, customerId: string): Promise<void> {
     const context = await this.getContext(workspaceId, customerId)
     context.pendingAction = undefined
-    
+
     const key = this.getCacheKey(workspaceId, customerId)
     contextCache.set(key, context)
   }
@@ -182,7 +182,7 @@ export class SystemContextService {
   async refreshCartSummary(workspaceId: string, customerId: string): Promise<void> {
     const context = await this.getContext(workspaceId, customerId)
     context.cartSummary = await this.loadCartSummary(workspaceId, customerId)
-    
+
     const key = this.getCacheKey(workspaceId, customerId)
     contextCache.set(key, context)
   }
@@ -192,34 +192,34 @@ export class SystemContextService {
    */
   async formatForSystemMessage(workspaceId: string, customerId: string): Promise<string> {
     const context = await this.getContext(workspaceId, customerId)
-    
+
     // Only include non-empty fields
     const systemData: Record<string, unknown> = {}
-    
+
     if (context.currentList?.items.length) {
       systemData.currentList = context.currentList
     }
-    
+
     if (context.cartSummary && context.cartSummary.itemCount > 0) {
       systemData.cart = context.cartSummary
     }
-    
+
     if (context.customerDiscount && context.customerDiscount > 0) {
       systemData.customerDiscount = `${context.customerDiscount}%`
     }
-    
+
     if (context.activeOffers?.length) {
       systemData.activeOffers = context.activeOffers
     }
-    
+
     if (context.pendingAction) {
       systemData.pendingAction = context.pendingAction
     }
-    
+
     if (Object.keys(systemData).length === 0) {
       return ""
     }
-    
+
     return `
 ---
 CONTEXT (use this to understand user selections and cart state):
@@ -232,21 +232,21 @@ ${JSON.stringify(systemData, null, 2)}
    * Returns null if selection not found
    */
   async resolveSelection(
-    workspaceId: string, 
-    customerId: string, 
+    workspaceId: string,
+    customerId: string,
     selectionIndex: number
   ): Promise<{ type: string; sku?: string; skus?: string[]; label: string } | null> {
     const context = await this.getContext(workspaceId, customerId)
-    
+
     if (!context.currentList?.items.length) {
       return null
     }
-    
+
     const item = context.currentList.items.find(i => i.index === selectionIndex)
     if (!item) {
       return null
     }
-    
+
     return {
       type: item.type,
       sku: item.sku,
@@ -277,7 +277,7 @@ ${JSON.stringify(systemData, null, 2)}
           },
         },
       })
-      
+
       if (cartItems.length === 0) {
         return {
           itemCount: 0,
@@ -286,13 +286,13 @@ ${JSON.stringify(systemData, null, 2)}
           totalValue: "€0.00",
         }
       }
-      
+
       const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0)
       const totalValue = cartItems.reduce((sum, item) => {
         const price = item.product?.price || 0
         return sum + (Number(price) * item.quantity)
       }, 0)
-      
+
       return {
         itemCount: cartItems.length,
         totalQuantity,
@@ -330,18 +330,8 @@ ${JSON.stringify(systemData, null, 2)}
         where: {
           workspaceId,
           isActive: true,
-          OR: [
-            { startDate: null },
-            { startDate: { lte: now } },
-          ],
-          AND: [
-            {
-              OR: [
-                { endDate: null },
-                { endDate: { gte: now } },
-              ],
-            },
-          ],
+          startDate: { lte: now },
+          endDate: { gte: now },
         },
         select: {
           name: true,
@@ -349,7 +339,7 @@ ${JSON.stringify(systemData, null, 2)}
         },
         take: 5, // Limit to avoid token overload
       })
-      
+
       return offers.map(o => ({
         name: o.name,
         discount: o.discountPercent || 0,
