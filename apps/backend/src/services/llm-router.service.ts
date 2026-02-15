@@ -1967,7 +1967,6 @@ export class LLMRouterService {
               agentUsed: "ROUTER",
               confidence: 0.9,
               tokensUsed: totalTokens,
-              executionTimeMs: Date.now() - startTime,
             }
           }
 
