@@ -196,7 +196,7 @@ describe("ChatEngine - Informational Flow Fallback Safety", () => {
     // SCENARIO: WhatsApp channel should NOT skip any delegations
     // RULE: WhatsApp users are authenticated with phone number
     it("should NOT skip CUSTOMER_SUPPORT delegation for WhatsApp channel", () => {
-      const channel = "whatsapp"
+      const channel: string = "whatsapp"
       const delegationTarget = "CUSTOMER_SUPPORT"
       const shouldSkip = channel === "widget" && WIDGET_SKIP_TARGETS.includes(delegationTarget)
 
