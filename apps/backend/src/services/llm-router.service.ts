@@ -1967,6 +1967,8 @@ export class LLMRouterService {
               agentUsed: "ROUTER",
               confidence: 0.9,
               tokensUsed: totalTokens,
+              iterations: 0,
+              debugSteps: [],
             }
           }
 
