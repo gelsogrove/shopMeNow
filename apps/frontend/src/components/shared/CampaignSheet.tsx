@@ -118,7 +118,7 @@ export function CampaignSheet({
       setTargetingType(inferredTargeting)
       setTargetCustomerIds(campaign.targetCustomerIds || [])
       setTagId(campaign.tagId || null)
-      setSendAt(campaign.sendAt ? campaign.sendAt.slice(0, 16) : "")
+      setSendAt(campaign.sendAt ? toLocalInputValue(campaign.sendAt) : "")
     } else {
       // Reset form for new campaign
       setName("")
@@ -131,6 +131,14 @@ export function CampaignSheet({
       setSendAt("")
     }
   }, [campaign])
+
+  // Convert an ISO date string to a local datetime-local input value (yyyy-MM-ddTHH:mm)
+  const toLocalInputValue = (isoString: string) => {
+    const d = new Date(isoString)
+    if (Number.isNaN(d.getTime())) return ""
+    const pad = (n: number) => String(n).padStart(2, "0")
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
 
   const availableTags = Array.from(
     new Set(

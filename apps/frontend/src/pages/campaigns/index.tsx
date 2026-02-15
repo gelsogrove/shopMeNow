@@ -194,6 +194,17 @@ export default function CampaignsPage() {
         ? { icon: <Users className="w-3 h-3" />, label: "Manual" }
         : { icon: <Sparkles className="w-3 h-3" />, label: "By Tag" }
 
+    const errorLabel = (code?: string | null) => {
+      if (!code) return "Unknown"
+      const map: Record<string, string> = {
+        OPT_OUT: "No marketing consent",
+        BLACKLISTED: "Blacklisted",
+        CHATBOT_INACTIVE: "Chatbot inactive",
+        INVALID_PHONE: "Invalid phone",
+      }
+      return map[code] || code
+    }
+
     return (
       <div
         key={campaign.id}
@@ -294,7 +305,7 @@ export default function CampaignsPage() {
                         {campaign.errorBreakdown?.map((e, idx) => (
                           <li key={idx} className="flex justify-between gap-3">
                             <span className="capitalize">
-                              {e.status.toLowerCase()} {e.code ? `• ${e.code}` : ""}
+                              {e.status.toLowerCase()} • {errorLabel(e.code)}
                             </span>
                             <span className="font-semibold">{e.count}</span>
                           </li>

@@ -579,38 +579,13 @@ export class WidgetChatController {
       }
       logger.info("✅ Chat session ready", { sessionId: chatSession?.id, customerId: customer.id })
 
-      // 👋 WELCOME MESSAGE: Check if this is the customer's first message (parity with WhatsApp)
-      try {
-        const welcomeResult = await welcomeMessageHandler.handleWelcomeMessage({
-          customerId: customer.id,
-          workspaceId,
-          customerLanguage: requestedLanguage || undefined,
-          customerMessage: message,
-          conversationId: chatSession.id,
-          channel: "widget",
-        })
-
-        if (welcomeResult.isWelcomeMessage && welcomeResult.welcomeText) {
-          logger.info("👋 [WIDGET] Welcome message sent to first-time visitor", {
-            customerId: customer.id,
-            workspaceId,
-            welcomeTextLength: welcomeResult.welcomeText.length,
-          })
-          // Welcome message was saved by WelcomeMessageHandler — skip LLM and billing
-          return res.status(200).json({
-            response: welcomeResult.welcomeText,
-            messageId: welcomeResult.assistantMessageId || chatSession.id,
-            sessionId: chatSession.id,
-            isWelcomeMessage: true,
-          })
-        }
-      } catch (welcomeError) {
-        // Graceful degradation: if welcome fails, continue with normal LLM flow
-        logger.warn("⚠️ [WIDGET] Welcome message failed, continuing with LLM", {
-          error: welcomeError,
-          customerId: customer.id,
-        })
-      }
+      // 👋 WELCOME MESSAGE: DISABLED for widget channel
+      // Widget uses llmRouterService.routeMessage() which handles [LINK_REGISTRATION]
+      // replacement correctly (with final catch-all link replacement pass).
+      // WelcomeMessageHandler was failing to replace [LINK_REGISTRATION] for anonymous
+      // visitors (no phone → raw token leaked to user).
+      // All widget messages go through the full LLM pipeline instead.
+      logger.info("👋 [WIDGET] Welcome message DISABLED - using LLM flow for all messages")
 
       // 🤖 Process message through LLM
       logger.info("🤖 Processing widget message through LLM", {

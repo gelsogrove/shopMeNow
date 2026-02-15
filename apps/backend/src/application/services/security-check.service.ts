@@ -27,6 +27,11 @@ export interface SecurityCheckContext {
   visitorId: string
   message: string
   channel: "widget" | "whatsapp"
+  /**
+   * When true, skip message-specific checks (Channel Validation, Anti-Spam).
+   * Used by tokenValidationMiddleware for page access validation (not chat messages).
+   */
+  accessValidationOnly?: boolean
 }
 
 export class SecurityCheckService {
@@ -80,30 +85,35 @@ export class SecurityCheckService {
       return results // Fail fast
     }
 
-    // Step 4: Channel Validation
-    const channelValidationResult = await this.checkChannelValidation(context)
-    results.push(channelValidationResult)
-    if (!channelValidationResult.passed) {
-      logger.warn("❌ Security Step 4 FAILED: Channel Validation", {
-        visitorId: context.visitorId,
-        reason: channelValidationResult.reason,
-      })
-      return results // Fail fast
+    // Step 4: Channel Validation (skip for page access validation - no message to check)
+    if (!context.accessValidationOnly) {
+      const channelValidationResult = await this.checkChannelValidation(context)
+      results.push(channelValidationResult)
+      if (!channelValidationResult.passed) {
+        logger.warn("❌ Security Step 4 FAILED: Channel Validation", {
+          visitorId: context.visitorId,
+          reason: channelValidationResult.reason,
+        })
+        return results // Fail fast
+      }
     }
 
-    // Step 5: Anti-Spam
-    const antiSpamResult = await this.checkAntiSpam(context)
-    results.push(antiSpamResult)
-    if (!antiSpamResult.passed) {
-      logger.warn("❌ Security Step 5 FAILED: Anti-Spam", {
-        visitorId: context.visitorId,
-        reason: antiSpamResult.reason,
+    // Step 5: Anti-Spam (skip for page access validation - no message to check)
+    if (!context.accessValidationOnly) {
+      const antiSpamResult = await this.checkAntiSpam(context)
+      results.push(antiSpamResult)
+      if (!antiSpamResult.passed) {
+        logger.warn("❌ Security Step 5 FAILED: Anti-Spam", {
+          visitorId: context.visitorId,
+          reason: antiSpamResult.reason,
       })
-      return results // Fail fast
+        return results // Fail fast
+      }
     }
 
-    logger.info("✅ All 5 security checks passed", {
+    logger.info("✅ All security checks passed", {
       visitorId: context.visitorId,
+      accessValidationOnly: context.accessValidationOnly || false,
     })
 
     return results

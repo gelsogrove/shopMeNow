@@ -1953,6 +1953,24 @@ export class LLMRouterService {
           const delegationTarget = functionResult.data.delegateTo
           const delegationQuery = functionResult.data.query
 
+          // 🚫 WIDGET: Skip PROFILE_MANAGEMENT delegation
+          // Widget visitors are anonymous (no phone) — profile link generation fails.
+          // Let the LLM respond naturally instead of triggering calling functions.
+          if (params.channel === "widget" && delegationTarget === "PROFILE_MANAGEMENT") {
+            logger.info("🚫 [WIDGET] Skipping PROFILE_MANAGEMENT delegation — not supported for widget", {
+              delegationTarget,
+              query: delegationQuery,
+            })
+            // Return a simple text response instead of delegating
+            return {
+              response: "Per gestire il tuo profilo, registrati prima attraverso il link di registrazione. Una volta registrato potrai accedere a tutte le funzionalità del profilo.",
+              agentUsed: "ROUTER",
+              confidence: 0.9,
+              tokensUsed: totalTokens,
+              executionTimeMs: Date.now() - startTime,
+            }
+          }
+
           logger.info(`🔀 Delegation detected to: ${delegationTarget}`, {
             query: delegationQuery,
           })

@@ -367,7 +367,8 @@ export class PushCampaignService {
       manualListChanged ||
       manualCountMismatch ||
       tagChanged ||
-      forceAllRebuild
+      forceAllRebuild ||
+      input.targetCustomerIds !== undefined // always rebuild when manual list is provided to drop stale rows
 
     try {
       if (shouldRebuildRecipients) {
@@ -420,54 +421,55 @@ export class PushCampaignService {
     const campaigns = await this.repo.listByWorkspace(workspaceId)
     if (campaigns.length === 0) return []
 
-    const campaignIds = campaigns.map((c: any) => c.id)
-
-    const grouped = await this.prisma.pushCampaignRecipient.groupBy({
-      where: { campaignId: { in: campaignIds } },
-      by: ["campaignId", "status"],
-      _count: { _all: true },
-    })
-
-    // Aggregate error reasons for FAILED/SKIPPED recipients to show human-friendly breakdowns in the UI
-    const errorGroups = await this.prisma.pushCampaignRecipient.groupBy({
-      where: {
-        campaignId: { in: campaignIds },
-        status: { in: [PushCampaignRecipientStatus.FAILED, PushCampaignRecipientStatus.SKIPPED] },
-      },
-      by: ["campaignId", "status", "errorCode"],
-      _count: { _all: true },
-    })
-
+    // Stats and errors are computed per campaign for the latest send only
+    const statsMap = new Map<
+      string,
+      { total: number; pending: number; sent: number; failed: number; skipped: number }
+    >()
     const errorMap = new Map<
       string,
       { status: PushCampaignRecipientStatus; code: string | null; count: number }[]
     >()
 
-    for (const row of errorGroups) {
-      const list = errorMap.get(row.campaignId) || []
-      list.push({ status: row.status, code: row.errorCode, count: row._count._all })
-      errorMap.set(row.campaignId, list)
-    }
+    for (const c of campaigns) {
+      // Show counts based on the current recipient set for the campaign (latest definition)
+      const baseWhere = { campaignId: c.id }
 
-    const statsMap = new Map<
-      string,
-      { total: number; pending: number; sent: number; failed: number; skipped: number }
-    >()
+      const grouped = await this.prisma.pushCampaignRecipient.groupBy({
+        where: baseWhere,
+        by: ["status"],
+        _count: { _all: true },
+      })
 
-    for (const row of grouped) {
-      const entry = statsMap.get(row.campaignId) || {
-        total: 0,
-        pending: 0,
-        sent: 0,
-        failed: 0,
-        skipped: 0,
+      const entry = { total: 0, pending: 0, sent: 0, failed: 0, skipped: 0 }
+      for (const row of grouped) {
+        entry.total += row._count._all
+        if (row.status === PushCampaignRecipientStatus.PENDING) entry.pending += row._count._all
+        if (row.status === PushCampaignRecipientStatus.SENT) entry.sent += row._count._all
+        if (row.status === PushCampaignRecipientStatus.FAILED) entry.failed += row._count._all
+        if (row.status === PushCampaignRecipientStatus.SKIPPED) entry.skipped += row._count._all
       }
-      entry.total += row._count._all
-      if (row.status === "PENDING") entry.pending += row._count._all
-      if (row.status === "SENT") entry.sent += row._count._all
-      if (row.status === "FAILED") entry.failed += row._count._all
-      if (row.status === "SKIPPED") entry.skipped += row._count._all
-      statsMap.set(row.campaignId, entry)
+      statsMap.set(c.id, entry)
+
+      const errorGroups = await this.prisma.pushCampaignRecipient.groupBy({
+        where: {
+          ...baseWhere,
+          status: { in: [PushCampaignRecipientStatus.FAILED, PushCampaignRecipientStatus.SKIPPED] },
+        },
+        by: ["status", "errorCode"],
+        _count: { _all: true },
+      })
+
+      if (errorGroups.length > 0) {
+        errorMap.set(
+          c.id,
+          errorGroups.map((row) => ({
+            status: row.status,
+            code: row.errorCode,
+            count: row._count._all,
+          }))
+        )
+      }
     }
 
     return campaigns.map((c: any) => {
