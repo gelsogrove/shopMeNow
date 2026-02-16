@@ -525,4 +525,43 @@ export class PushCampaignService {
   ) {
     return this.repo.listRecipients(campaignId, workspaceId, skip, take, status)
   }
+
+  async performSecurityCheck(workspaceId: string, id: string) {
+    const campaign = await this.repo.findById(id, workspaceId)
+    if (!campaign) throw new AppError(404, "Campaign not found")
+
+    // Use the SecurityAgent or similar logic
+    const { SecurityAgent } = require("../agents/SecurityAgent")
+    const securityAgent = new SecurityAgent(this.prisma)
+
+    const result = await securityAgent.process({
+      workspaceId,
+      message: campaign.message || "",
+      customerId: "CAMPAIGN_CHECK", // Dummy ID for campaign-level check
+      customerName: "Campaign",
+    })
+
+    return result
+  }
+
+  async getSentMessages(workspaceId: string, campaignId: string) {
+    // Find all WhatsAppQueue entries linked to this campaign that are 'sent' or 'delivered'
+    return this.prisma.whatsAppQueue.findMany({
+      where: {
+        workspaceId,
+        pushCampaignId: campaignId,
+        status: { in: ["sent", "delivered"] },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 100, // Limit to recent 100 messages for the popup
+      select: {
+        id: true,
+        phoneNumber: true,
+        messageContent: true,
+        status: true,
+        createdAt: true,
+        deliveredAt: true,
+      },
+    })
+  }
 }

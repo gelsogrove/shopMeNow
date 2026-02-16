@@ -318,6 +318,28 @@ export class PushCampaignController {
       next(error)
     }
   }
+
+  async securityCheck(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId, id } = req.params
+      const result = await service.performSecurityCheck(workspaceId, id)
+      res.json(result)
+    } catch (error) {
+      logger.error("[PushCampaignController] securityCheck error", error)
+      next(error)
+    }
+  }
+
+  async sentMessages(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { workspaceId, id } = req.params
+      const messages = await service.getSentMessages(workspaceId, id)
+      res.json({ data: messages })
+    } catch (error) {
+      logger.error("[PushCampaignController] sentMessages error", error)
+      next(error)
+    }
+  }
 }
 // Utility: normalize targeting type (handles values like "\"MANUAL\"" coming from buggy clients)
 function normalizeTargetingType(raw: any): string | undefined {

@@ -487,7 +487,7 @@ router.get(
       // Get workspace info
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { id: true, name: true, logoUrl: true },
+        select: { id: true, name: true, logoUrl: true, sellsProductsAndServices: true },
       })
 
       // Parse customer addresses using utility

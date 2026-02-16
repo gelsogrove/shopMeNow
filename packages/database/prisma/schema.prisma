@@ -361,6 +361,8 @@ model WhatsAppQueue {
   // 🧪 Playground Mode
   isPlayground Boolean @default(false) // true for test messages (skip billing & real sending)
 
+  skipSecurityCheck Boolean @default(false) // 🔐 Skip security validation for trusted messages (e.g., operator notification)
+
   workspace               Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer                Customers               @relation(fields: [customerId], references: [id], onDelete: Cascade)
   conversationMessage     ConversationMessage?    @relation(fields: [conversationMessageId], references: [id], onDelete: SetNull)

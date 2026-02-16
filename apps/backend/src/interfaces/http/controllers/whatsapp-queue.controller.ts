@@ -260,6 +260,93 @@ export class WhatsAppQueueController {
 
   /**
    * @swagger
+   * /api/workspaces/{workspaceId}/whatsapp-queue/clear:
+   *   delete:
+   *     summary: Clear messages from queue by status
+   *     tags: [WhatsApp Queue]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               statuses:
+   *                 type: array
+   *                 items:
+   *                   type: string
+   *                 description: Array of statuses to clear (e.g., ['error', 'pending'])
+   *             required:
+   *               - statuses
+   *     responses:
+   *       200:
+   *         description: Queue cleared successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 count:
+   *                   type: number
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Invalid workspace
+   */
+  async clearQueue(req: Request, res: Response): Promise<Response> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { statuses } = req.body
+
+      if (!Array.isArray(statuses) || statuses.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request",
+          message: "statuses must be a non-empty array",
+        })
+      }
+
+      // Security Check: Ensure 'sent' is NOT in the statuses array for bulk delete
+      if (statuses.includes("sent")) {
+        return res.status(400).json({
+          success: false,
+          error: "Forbidden",
+          message: "Sent messages cannot be cleared bulk",
+        })
+      }
+
+      logger.info(
+        `[WhatsAppQueueController] Clearing queue for workspace ${workspaceId} with statuses: ${statuses.join(", ")}`
+      )
+
+      const count = await this.service.clearQueue(workspaceId, statuses)
+
+      return res.json({
+        success: true,
+        count,
+      })
+    } catch (error) {
+      logger.error("[WhatsAppQueueController] Error in clearQueue:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Failed to clear queue",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    }
+  }
+
+  /**
+   * @swagger
    * /api/workspaces/{workspaceId}/whatsapp-queue/status:
    *   get:
    *     summary: Get queue enabled/disabled status and debug mode
@@ -370,8 +457,7 @@ export class WhatsAppQueueController {
       }
 
       logger.info(
-        `[WhatsAppQueueController] Updating queue status for workspace ${workspaceId}: ${
-          enabled ? "ENABLED" : "DISABLED"
+        `[WhatsAppQueueController] Updating queue status for workspace ${workspaceId}: ${enabled ? "ENABLED" : "DISABLED"
         }`
       )
 
@@ -452,8 +538,7 @@ export class WhatsAppQueueController {
       }
 
       logger.info(
-        `[WhatsAppQueueController] Updating debug mode for workspace ${workspaceId}: ${
-          debugMode ? "ENABLED" : "DISABLED"
+        `[WhatsAppQueueController] Updating debug mode for workspace ${workspaceId}: ${debugMode ? "ENABLED" : "DISABLED"
         }`
       )
 

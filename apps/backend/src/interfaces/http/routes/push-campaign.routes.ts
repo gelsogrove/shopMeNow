@@ -15,6 +15,7 @@ export const pushCampaignRoutes = () => {
   router.get("/", controller.list.bind(controller))
   router.get("/:id", controller.get.bind(controller))
   router.get("/:id/recipients", controller.recipients.bind(controller))
+  router.get("/:id/sent-messages", controller.sentMessages.bind(controller))
 
   router.post("/", checkTrialValid, controller.create.bind(controller))
   router.put("/:id", controller.update.bind(controller))
@@ -24,6 +25,7 @@ export const pushCampaignRoutes = () => {
   router.post("/:id/pause", controller.pause.bind(controller))
   router.post("/:id/resume", controller.resume.bind(controller))
   router.post("/:id/cancel", controller.cancel.bind(controller))
+  router.post("/:id/security-check", controller.securityCheck.bind(controller))
 
   return router
 }

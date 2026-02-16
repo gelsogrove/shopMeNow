@@ -10,6 +10,8 @@ import {
   Play,
   Trash2,
   Info,
+  ShieldCheck,
+  Eye,
 } from "lucide-react"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { CampaignSheet } from "@/components/shared/CampaignSheet"
@@ -21,6 +23,13 @@ import { useBilling } from "@/contexts/BillingContext"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 interface Campaign {
   id: string
@@ -51,6 +60,15 @@ export default function CampaignsPage() {
   const [searchValue, setSearchValue] = useState("")
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
   const [campaignSheetOpen, setCampaignSheetOpen] = useState(false)
+
+  // Message History State
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [sentMessages, setSentMessages] = useState<any[]>([])
+  const [activeHistoryCampaign, setActiveHistoryCampaign] = useState<string | null>(null)
+
+  // Security Check State
+  const [securityLoading, setSecurityLoading] = useState<string | null>(null)
 
   useEffect(() => {
     if (workspace?.id) {
@@ -113,6 +131,36 @@ export default function CampaignsPage() {
       loadCampaigns()
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Error deleting campaign")
+    }
+  }
+
+  const handleSecurityCheck = async (campaign: Campaign) => {
+    try {
+      setSecurityLoading(campaign.id)
+      const { data } = await api.post(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/security-check`)
+      if (data.safe) {
+        toast.success("✅ Content safety check passed!")
+      } else {
+        toast.error(`🚫 Restricted: ${data.blockedReason}`, { duration: 5000 })
+      }
+    } catch (error) {
+      toast.error("Failed to perform security check")
+    } finally {
+      setSecurityLoading(null)
+    }
+  }
+
+  const handleViewHistory = async (campaign: Campaign) => {
+    try {
+      setHistoryOpen(true)
+      setHistoryLoading(true)
+      setActiveHistoryCampaign(campaign.name)
+      const { data } = await api.get(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/sent-messages`)
+      setSentMessages(data.data || [])
+    } catch (error) {
+      toast.error("Failed to load message history")
+    } finally {
+      setHistoryLoading(false)
     }
   }
 
@@ -195,14 +243,14 @@ export default function CampaignsPage() {
           : { icon: <Sparkles className="w-3 h-3" />, label: "By Tag" }
 
     const errorLabel = (code?: string | null) => {
-      if (!code) return "Sconosciuto"
+      if (!code) return "Unknown"
       const map: Record<string, string> = {
-        OPT_OUT: "Senza consenso marketing",
-        BLACKLISTED: "In blacklist",
-        CHATBOT_INACTIVE: "Chatbot inattivo",
-        INVALID_PHONE: "Telefono non valido",
-        NO_CUSTOMER: "Cliente non trovato",
-        NOT_TARGET: "Non più in target",
+        OPT_OUT: "No marketing consent",
+        BLACKLISTED: "Blacklisted",
+        CHATBOT_INACTIVE: "Chatbot inactive",
+        INVALID_PHONE: "Invalid phone",
+        NO_CUSTOMER: "Customer not found",
+        NOT_TARGET: "No longer in target",
       }
       return map[code] || code
     }
@@ -225,19 +273,19 @@ export default function CampaignsPage() {
                       : "secondary"
                 }
               >
-                {campaign.isExpired ? "SCADUTA" :
-                  campaign.status === "COMPLETED" ? "COMPLETATA" :
-                    campaign.status === "SCHEDULED" ? "PROGRAMMATA" :
-                      campaign.status === "RUNNING" ? "IN CORSO" :
-                        campaign.status === "PAUSED" ? "IN PAUSA" :
-                          campaign.status === "CANCELLED" ? "ANNULLATA" :
-                            campaign.status === "FAILED" ? "FALLITA" :
-                              campaign.status === "DRAFT" ? "BOZZA" :
+                {campaign.isExpired ? "EXPIRED" :
+                  campaign.status === "COMPLETED" ? "COMPLETED" :
+                    campaign.status === "SCHEDULED" ? "SCHEDULED" :
+                      campaign.status === "RUNNING" ? "RUNNING" :
+                        campaign.status === "PAUSED" ? "PAUSED" :
+                          campaign.status === "CANCELLED" ? "CANCELLED" :
+                            campaign.status === "FAILED" ? "FAILED" :
+                              campaign.status === "DRAFT" ? "DRAFT" :
                                 campaign.status}
               </Badge>
               {campaign.isExpired && (
                 <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                  Oltre l'orario previsto
+                  Past scheduled time
                 </span>
               )}
             </div>
@@ -257,6 +305,16 @@ export default function CampaignsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleSecurityCheck(campaign)}
+              disabled={securityLoading === campaign.id}
+              className="h-8 w-8 p-0"
+              title="Security Check"
+            >
+              <ShieldCheck className={`h-4 w-4 ${securityLoading === campaign.id ? 'animate-pulse text-slate-400' : 'text-slate-700'}`} />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -290,18 +348,26 @@ export default function CampaignsPage() {
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Destinatari (in attesa)</div>
+            <div className="text-xs text-slate-500">Pending Recipients</div>
             <div className="mt-1 text-base font-semibold">
               {(campaign as any).recipientsPending ?? campaign.expectedRecipients ?? 0}
             </div>
           </div>
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="text-xs text-slate-500">Inviati</div>
+          <div
+            className={`rounded-lg border border-slate-100 bg-slate-50 p-3 ${campaign.actualSent && campaign.actualSent > 0 ? "cursor-pointer hover:bg-slate-100 transition-colors" : ""}`}
+            onClick={() => campaign.actualSent && campaign.actualSent > 0 && handleViewHistory(campaign)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-slate-500">Sent</div>
+              {campaign.actualSent && campaign.actualSent > 0 && (
+                <Eye className="w-3 h-3 text-slate-400" />
+              )}
+            </div>
             <div className="mt-1 text-base font-semibold">{campaign.actualSent ?? 0}</div>
           </div>
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
             <div className="flex items-center gap-1 text-xs text-slate-500">
-              Esclusi
+              Excluded Contacts
               {(campaign.errorBreakdown?.length || 0) > 0 && (
                 <TooltipProvider delayDuration={0}>
                   <Tooltip>
@@ -309,7 +375,7 @@ export default function CampaignsPage() {
                       <Info className="w-3 h-3 text-slate-400 cursor-pointer" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs bg-slate-900 text-slate-50 text-xs">
-                      <div className="font-semibold mb-1">Dettaglio esclusioni</div>
+                      <div className="font-semibold mb-1">Exclusion details</div>
                       <ul className="space-y-1">
                         {campaign.errorBreakdown?.map((e, idx) => (
                           <li key={idx} className="flex justify-between gap-3">
@@ -390,6 +456,42 @@ export default function CampaignsPage() {
         mode="edit"
         workspaceId={workspace?.id}
       />
+
+      <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Message History</DialogTitle>
+            <DialogDescription>
+              Recent 100 messages sent for campaign: <strong>{activeHistoryCampaign}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto mt-4 pr-2">
+            {historyLoading ? (
+              <div className="py-10 text-center text-slate-500">Loading history...</div>
+            ) : sentMessages.length === 0 ? (
+              <div className="py-10 text-center text-slate-500">No messages found in history</div>
+            ) : (
+              <div className="space-y-3">
+                {sentMessages.map((msg) => (
+                  <div key={msg.id} className="p-3 rounded-lg border border-slate-100 bg-slate-50">
+                    <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                      <span className="font-medium text-slate-700">{msg.phoneNumber}</span>
+                      <span>{new Date(msg.createdAt).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm text-slate-700 line-clamp-3 italic">"{msg.messageContent}"</p>
+                    <div className="mt-2 flex justify-end">
+                      <Badge variant="outline" className="text-[10px] h-4">
+                        {msg.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   )
 }

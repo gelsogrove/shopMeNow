@@ -33,7 +33,7 @@ describe('Translation Service', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.resetModules()
-    
+
     // Setup environment
     process.env = {
       ...originalEnv,
@@ -51,16 +51,16 @@ describe('Translation Service', () => {
     it('should initialize with API key from env', () => {
       const { TranslationService } = require('../src/services/translation.service')
       new TranslationService()
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith('✅ [TRANSLATION] Service initialized (shared prompt)')
     })
 
     it('should warn if API key is missing', () => {
       delete process.env.OPENROUTER_API_KEY
-      
+
       const { TranslationService } = require('../src/services/translation.service')
       new TranslationService()
-      
+
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('OPENROUTER_API_KEY not found')
       )
@@ -71,9 +71,9 @@ describe('Translation Service', () => {
     it('should return original message when target is Italian (IT)', async () => {
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao mondo!', 'IT')
-      
+
       expect(result).toBe('Ciao mondo!')
       expect(mockFetch).not.toHaveBeenCalled()
       expect(mockLogger.info).toHaveBeenCalledWith(
@@ -84,9 +84,9 @@ describe('Translation Service', () => {
     it('should handle lowercase language codes', async () => {
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao!', 'it')
-      
+
       expect(result).toBe('Ciao!')
       expect(mockFetch).not.toHaveBeenCalled()
     })
@@ -105,9 +105,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao Mondo!', 'EN')
-      
+
       expect(result).toBe('Hello World!')
       expect(mockFetch).toHaveBeenCalled()
     })
@@ -126,9 +126,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao Mondo!', 'ES')
-      
+
       expect(result).toBe('¡Hola Mundo!')
     })
 
@@ -146,9 +146,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao Mondo!', 'PT')
-      
+
       expect(result).toBe('Olá Mundo!')
     })
 
@@ -164,9 +164,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       await service.translateMessage('Ciao!', 'ENG')
-      
+
       expect(mockFetch).toHaveBeenCalled()
     })
 
@@ -182,9 +182,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       await service.translateMessage('Ciao!', 'XX')
-      
+
       expect(mockFetch).toHaveBeenCalled()
     })
 
@@ -199,9 +199,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao!', null as unknown as string)
-      
+
       // RULE: null defaults to EN, and EN is NOT skipped (only IT is skipped, since catalog is in Italian)
       expect(result).toBe('Hello!')
       expect(mockFetch).toHaveBeenCalled()
@@ -219,9 +219,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       await service.translateMessage('Test message', 'EN')
-      
+
       expect(mockFetch).toHaveBeenCalledWith(
         'https://test.openrouter.ai/api/v1/chat/completions',
         expect.objectContaining({
@@ -246,9 +246,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       await service.translateMessage('Test', 'EN')
-      
+
       const callBody = JSON.parse(mockFetch.mock.calls[0][1].body)
       expect(callBody.model).toBe('openai/gpt-4o-mini')
       expect(callBody.temperature).toBe(0.3) // Low temp for consistent translations
@@ -265,9 +265,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       await service.translateMessage('Promo speciale 50%!', 'EN')
-      
+
       const callBody = JSON.parse(mockFetch.mock.calls[0][1].body)
       expect(callBody.messages[0].content).toContain('Promo speciale 50%!')
       expect(callBody.messages[0].content).toContain('English') // Target language name
@@ -284,9 +284,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao!', 'EN')
-      
+
       expect(result).toBe('Ciao!') // Fallback to original
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.stringContaining('API error: 500')
@@ -298,9 +298,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao!', 'EN')
-      
+
       expect(result).toBe('Ciao!') // Fallback to original
       expect(mockLogger.error).toHaveBeenCalledWith(
         '[TRANSLATION] Error:',
@@ -318,9 +318,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao!', 'EN')
-      
+
       expect(result).toBe('Ciao!') // Fallback to original
       expect(mockLogger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Empty response from LLM')
@@ -337,20 +337,20 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao!', 'EN')
-      
+
       expect(result).toBe('Ciao!') // Fallback to original
     })
 
     it('should return original message when no API key', async () => {
       delete process.env.OPENROUTER_API_KEY
-      
+
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao!', 'EN')
-      
+
       expect(result).toBe('Ciao!') // Fallback to original
       expect(mockFetch).not.toHaveBeenCalled()
       expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -372,9 +372,9 @@ describe('Translation Service', () => {
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       const result = await service.translateMessage('Ciao Mondo!', 'EN')
-      
+
       expect(result).toBe('Hello World!')
     })
   })
@@ -384,18 +384,19 @@ describe('Translation Service', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          choices: [{ message: { content: 'Hello!' } }],
+          choices: [{ message: { content: JSON.stringify({ translatedText: 'Hello!', safe: true }) } }],
         }),
       })
 
       const { TranslationService } = require('../src/services/translation.service')
       const service = new TranslationService()
-      
+
       await service.translateMessage('Ciao!', 'EN')
-      
+
       expect(mockLogger.info).toHaveBeenCalledWith('[TRANSLATION] Translating to English...')
       expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('Successfully translated to English')
+        expect.stringContaining('Successfully translated to English'),
+        expect.any(Object)
       )
     })
   })
@@ -404,7 +405,7 @@ describe('Translation Service', () => {
     it('should export a singleton instance', () => {
       const { translationService } = require('../src/services/translation.service')
       const { translationService: secondImport } = require('../src/services/translation.service')
-      
+
       expect(translationService).toBeDefined()
       expect(translationService).toBe(secondImport)
     })

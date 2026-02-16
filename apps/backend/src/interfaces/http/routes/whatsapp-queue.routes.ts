@@ -32,6 +32,14 @@ router.delete(
   controller.deleteQueueMessage.bind(controller)
 )
 
+// Clear queue by status (bulk delete) - must come before GET /:id
+router.delete(
+  "/workspaces/:workspaceId/whatsapp-queue/clear",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  controller.clearQueue.bind(controller)
+)
+
 // Get queue status (enabled/disabled)
 router.get(
   "/workspaces/:workspaceId/whatsapp-queue/status",

@@ -118,6 +118,7 @@ export class WhatsAppQueueRepository {
           status: data.status || "pending",
           errorMessage: data.errorMessage,
           conversationMessageId: data.conversationMessageId,
+          skipSecurityCheck: data.skipSecurityCheck || false,
         },
       })
 
@@ -187,6 +188,30 @@ export class WhatsAppQueueRepository {
       })
     } catch (error) {
       logger.error(`[WhatsAppQueueRepository] Error in delete:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Delete messages by status for a workspace
+   * @param workspaceId Workspace ID
+   * @param statuses Array of statuses to delete
+   * @returns Number of deleted messages
+   */
+  async deleteByStatus(
+    workspaceId: string,
+    statuses: string[]
+  ): Promise<number> {
+    try {
+      const result = await this.prisma.whatsAppQueue.deleteMany({
+        where: {
+          workspaceId,
+          status: { in: statuses },
+        },
+      })
+      return result.count
+    } catch (error) {
+      logger.error(`[WhatsAppQueueRepository] Error in deleteByStatus:`, error)
       throw error
     }
   }

@@ -91,6 +91,13 @@ Return intent type only. Examples:
 - "my orders" → LIST_ORDERS
 - "where is my order?" → TRACK_ORDER
 
+**Profile & Notifications → PROFILE_MANAGEMENT:**
+- "non voglio più ricevere notifiche" → PROFILE_MANAGEMENT
+- "disattiva notifiche" → PROFILE_MANAGEMENT
+- "unsubscribe" → PROFILE_MANAGEMENT
+- "cambia email" → PROFILE_MANAGEMENT
+- "modifica profilo" → PROFILE_MANAGEMENT
+
 {{#if faqs}}
 ## 📚 FREQUENTLY ASKED QUESTIONS
 

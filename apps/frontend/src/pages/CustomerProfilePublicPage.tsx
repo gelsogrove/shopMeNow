@@ -41,6 +41,7 @@ interface CustomerProfile {
     id: string
     name: string
     logoUrl?: string | null
+    sellsProductsAndServices?: boolean
   }
 }
 
@@ -69,7 +70,7 @@ const CustomerProfilePublicPage: React.FC = () => {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
-  const [customerLanguage, setCustomerLanguage] = useState<string>("IT") // Default to IT until loaded
+  const [customerLanguage, setCustomerLanguage] = useState<string>("it") // Default to it until loaded
 
   // 📋 Fetch profile data when token is validated
   useEffect(() => {
@@ -138,7 +139,7 @@ const CustomerProfilePublicPage: React.FC = () => {
           }
 
           // 🌐 Set customer language immediately for correct translations
-          setCustomerLanguage(profileData.language || "IT")
+          setCustomerLanguage(profileData.language || "it")
 
           setProfileData(profileData)
           logger.info(
@@ -329,6 +330,7 @@ const CustomerProfilePublicPage: React.FC = () => {
         currentPage="profile"
         logoUrl={profileData?.workspace?.logoUrl}
         icon={profileIcon}
+        isEcommerce={profileData?.workspace?.sellsProductsAndServices ?? true}
       />
 
       <div className="pt-16">
@@ -340,6 +342,7 @@ const CustomerProfilePublicPage: React.FC = () => {
                 profileData={profileData}
                 onSave={handleSaveProfile}
                 saving={saving}
+                isEcommerce={profileData.workspace?.sellsProductsAndServices ?? true}
               />
             </div>
           )}

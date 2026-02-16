@@ -410,4 +410,104 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     expect(billingSpy).not.toHaveBeenCalled()
     expect(axios.post).not.toHaveBeenCalled()
   })
+
+  it('sends system notifications (no conversationMessageId) even in WIP-only mode (channelStatus=false)', async () => {
+    // SCENARIO: contactOperator creates a WhatsApp queue entry for the OPERATOR without
+    // conversationMessageId (it's a system notification, not a conversation reply).
+    // When channelStatus is false (wipOnly mode), this message should STILL be sent
+    // because operator notifications are critical and should never be blocked by WIP mode.
+    // RULE: Messages without conversationMessageId bypass wipOnly filter.
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      apiKey: 'token',
+    })
+
+    setWorkspace({
+      id: 'w1',
+      name: 'W',
+      whatsappApiKey: 'token',
+      whatsappPhoneNumber: '19999999999',
+      channelStatus: false, // WIP-only mode enabled
+      debugMode: false,
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token',
+    })
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'operator-notification-1',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+34654728753', // Operator's phone number
+        messageContent: '🔔 *RICHIESTA ASSISTENZA OPERATORE*\n\nCliente: Mario Rossi ha richiesto supporto.',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: null, // No conversationMessageId = system notification
+      },
+    ])
+
+    queueModel.update.mockResolvedValue({})
+    ;(axios.post as jest.Mock).mockResolvedValue({
+      data: { messages: [{ id: 'wa-operator-1' }] },
+    })
+
+    await whatsappChannelQueueJob()
+
+    // ASSERT: Message was sent despite WIP-only mode
+    expect(axios.post).toHaveBeenCalled()
+    const sentCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'sent')
+    expect(sentCall).toBeDefined()
+    expect(sentCall?.[0].data.status).toBe('sent')
+  })
+
+  it('sends system notifications (no conversationMessageId) even when debugMode is true', async () => {
+    // SCENARIO: Workspace has debugMode=true (another condition that activates wipOnly mode).
+    // Operator notifications should STILL be delivered.
+    // RULE: System notifications bypass wipOnly regardless of whether it was triggered by
+    // channelStatus=false or debugMode=true.
+    mockedGetConfig.mockResolvedValue({
+      workspaceId: 'w1',
+      phoneNumber: '19999999999',
+      apiKey: 'token',
+    })
+
+    setWorkspace({
+      id: 'w1',
+      name: 'W',
+      whatsappApiKey: 'token',
+      whatsappPhoneNumber: '19999999999',
+      channelStatus: true,
+      debugMode: true, // debugMode activates wipOnly mode
+      whatsappProvider: 'meta',
+      metaPhoneNumberId: '19999999999',
+      metaAccessToken: 'token',
+    })
+
+    queueModel.findMany.mockResolvedValue([
+      {
+        id: 'operator-notification-2',
+        workspaceId: 'w1',
+        customerId: 'c1',
+        phoneNumber: '+34654728753',
+        messageContent: '🔔 *RICHIESTA ASSISTENZA OPERATORE*',
+        status: 'pending',
+        channel: 'whatsapp',
+        conversationMessageId: undefined, // undefined also means no conversationMessageId
+      },
+    ])
+
+    queueModel.update.mockResolvedValue({})
+    ;(axios.post as jest.Mock).mockResolvedValue({
+      data: { messages: [{ id: 'wa-operator-2' }] },
+    })
+
+    await whatsappChannelQueueJob()
+
+    // ASSERT: Message was sent despite debugMode wipOnly
+    expect(axios.post).toHaveBeenCalled()
+    const sentCall = queueModel.update.mock.calls.find((call: any) => call[0]?.data?.status === 'sent')
+    expect(sentCall).toBeDefined()
+  })
 })

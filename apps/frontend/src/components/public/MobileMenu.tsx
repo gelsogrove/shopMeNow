@@ -12,6 +12,7 @@ interface MobileMenuProps {
   token?: string | null
   currentPage?: "cart" | "orders" | "profile"
   customerLanguage?: string
+  isEcommerce?: boolean
 }
 
 interface MenuItem {
@@ -35,6 +36,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   token,
   currentPage = "cart",
   customerLanguage = "it",
+  isEcommerce = true,
 }) => {
   const navigate = useNavigate()
 
@@ -43,8 +45,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
     "IT") as SupportedLanguage
   const t = publicPageTranslations[langCode] || publicPageTranslations.IT
 
-  // Menu items configuration
-  const menuItems: MenuItem[] = [
+  // Menu items configuration - cart only for e-commerce workspaces
+  const allMenuItems: MenuItem[] = [
     {
       icon: "🛒",
       label: t.cart,
@@ -58,6 +60,10 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
       page: "profile",
     },
   ]
+
+  const menuItems = isEcommerce
+    ? allMenuItems
+    : allMenuItems.filter((item) => item.page !== "cart")
 
   const handleMenuItemClick = (path: string) => {
     onClose()

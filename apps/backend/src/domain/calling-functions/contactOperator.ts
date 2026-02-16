@@ -42,10 +42,10 @@ export async function contactOperator(
   request: ContactOperatorRequest
 ): Promise<ContactOperatorResult> {
   // Use imported prisma singleton from @echatbot/database
-  
+
   // 📧 Track email sending status (accessible in all scopes)
   let emailSentSuccessfully = false
-  
+
   // 📧 Track Summary Agent data for debug timeline
   let generatedSummary = ""
   let conversationMessages: any[] = []
@@ -122,7 +122,7 @@ export async function contactOperator(
 
       // �📧 SEND EMAIL TO AGENT with summary of last hour conversation
       let chatSummary = "" // 📧 Declare chatSummary in outer scope
-      
+
       try {
         // Get active chat session
         const session = await prisma.chatSession.findFirst({
@@ -160,7 +160,8 @@ export async function contactOperator(
           }))
 
           // Generate summary using SummaryAgentLLM
-          let chatSummary: string
+          // NOTE: We assign to the OUTER chatSummary variable (declared at line 131)
+          // so that both email AND WhatsApp notifications can use the generated summary.
 
           if (messages.length > 0) {
             try {
@@ -203,11 +204,11 @@ export async function contactOperator(
                 // contactOperator is WhatsApp-only feature (human operator request)
                 // The summary is internal (for operator) so no need for customer-facing translation
                 const finalSummary = summaryResult.summary
-                
+
                 logger.info(
                   "⏭️ [contactOperator] Skipping Translation/Security (internal summary for operator)"
                 )
-                
+
                 // If summary is empty, throw error to trigger fallback
                 if (!finalSummary || finalSummary.trim().length === 0) {
                   throw new Error("Summary generated but empty")
@@ -347,7 +348,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           // PRIORITY LOGIC (Andrea's spec):
           // 1. If customer has salesId → send to agent's phone
           // 2. Otherwise → send to workspace.operatorWhatsappNumber
-          
+
           let targetPhoneNumber: string | null = null
           let targetName = "Operatore"
 
@@ -372,7 +373,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           if (targetPhoneNumber) {
             try {
               // Create WhatsApp message with AI summary
-              const chatLink = session?.id 
+              const chatLink = session?.id
                 ? `${process.env.FRONTEND_URL || "http://localhost:5173"}/chat/${session.id}`
                 : null
 
@@ -397,7 +398,7 @@ ${chatLink ? `📱 Visualizza chat completa: ${chatLink}` : ""}
 ---
 _Questa notifica è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore._
               `.trim()
-              
+
               await prisma.whatsAppQueue.create({
                 data: {
                   workspaceId: request.workspaceId,
@@ -406,6 +407,7 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
                   messageContent: whatsappMessage,
                   status: "pending",
                   channel: "whatsapp",
+                  skipSecurityCheck: true, // 🔐 Skip security check for internal operator notification
                 },
               })
 
@@ -452,15 +454,15 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
 
       // 📝 Build response message with variable replacement (Andrea's spec)
       // Use humanSupportInstructions (message to send) NOT frustrationEscalationInstructions (triggers)
-      let responseMessage = workspace?.humanSupportInstructions || 
+      let responseMessage = workspace?.humanSupportInstructions ||
         "Hello {{nameUser}}, I'm connecting you with our support team. They will contact you as soon as possible. We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝"
 
       // 🔧 Replace {{nameUser}} variable (Andrea's requirement)
       responseMessage = responseMessage.replace(/\{\{nameUser\}\}/g, customer.name)
-      
+
       // 🔧 Replace other common variables if present
-      const agentName = customer.sales 
-        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim() 
+      const agentName = customer.sales
+        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
         : "Support Team"
       const agentPhone = customer.sales?.phone || workspace?.operatorWhatsappNumber || "N/A"
       const agentEmail = customer.sales?.email || workspace?.operatorEmail || workspace?.whatsappSettings?.adminEmail || "N/A"
@@ -469,7 +471,7 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
         .replace(/\{\{agentName\}\}/g, agentName)
         .replace(/\{\{agentPhone\}\}/g, agentPhone)
         .replace(/\{\{agentEmail\}\}/g, agentEmail)
-      
+
       logger.info("✅ [contactOperator] Response message prepared:", {
         hasCustomMessage: !!workspace?.humanSupportInstructions,
         customerName: customer.name,

@@ -155,6 +155,7 @@ export class WhatsAppQueueService {
         messageContent: data.messageContent,
         status: "pending",
         conversationMessageId: data.conversationMessageId,
+        skipSecurityCheck: data.skipSecurityCheck || false,
       })
 
       logger.info(`[WhatsAppQueueService] Message queued with ID: ${result.id}`, {
@@ -453,14 +454,26 @@ export class WhatsAppQueueService {
 
       // 🆕 STEP 1: Run message through Security Agent (Feature 181)
       logger.info("🛡️ Step 1: Running Security Agent before WhatsApp send")
-      const securityStartTime = Date.now()
-      const securityResult = await this.securityAgent.process({
-        workspaceId: message.workspaceId,
-        message: message.messageContent,
-        customerId: message.customerId,
-        customerName: "", // Not always available from queue record
-      })
-      const securityDuration = Date.now() - securityStartTime
+
+      let securityResult = { safe: true, blockedReason: undefined as string | undefined };
+      let securityDuration = 0;
+
+      if (message.skipSecurityCheck) {
+        logger.info("⏩ Skipping Security Agent check (trusted message)", {
+          messageId: message.id,
+          workspaceId: message.workspaceId
+        })
+      } else {
+        const securityStartTime = Date.now()
+        const result = await this.securityAgent.process({
+          workspaceId: message.workspaceId,
+          message: message.messageContent,
+          customerId: message.customerId,
+          customerName: "", // Not always available from queue record
+        })
+        securityResult = { safe: result.safe, blockedReason: result.blockedReason };
+        securityDuration = Date.now() - securityStartTime
+      }
 
       // 📊 Append Security Check step to timeline
       await this.appendTimelineStep(message.conversationMessageId, {
@@ -696,6 +709,24 @@ export class WhatsAppQueueService {
     } catch (error) {
       logger.error(`[WhatsAppQueueService] Error in deleteMessage:`, error)
       throw new Error("Failed to delete message")
+    }
+  }
+
+  /**
+   * Clear multiple messages from queue by status
+   * @param workspaceId Workspace ID
+   * @param statuses Array of statuses to clear
+   * @returns Number of messages cleared
+   */
+  async clearQueue(workspaceId: string, statuses: string[]): Promise<number> {
+    try {
+      logger.info(
+        `[WhatsAppQueueService] Clearing queue for workspace ${workspaceId} with statuses: ${statuses.join(", ")}`
+      )
+      return await this.repository.deleteByStatus(workspaceId, statuses)
+    } catch (error) {
+      logger.error(`[WhatsAppQueueService] Error in clearQueue:`, error)
+      throw new Error("Failed to clear queue")
     }
   }
 

@@ -497,7 +497,18 @@ export async function whatsappChannelQueueJob(): Promise<void> {
         try {
           let isWipMessage = false
           if (wipOnly) {
-            isWipMessage = await isWipConversationMessage(message.conversationMessageId)
+            // 🔧 FIX: Messages without conversationMessageId are system/operator notifications
+            // (e.g., contactOperator WhatsApp notifications). These should ALWAYS be sent,
+            // regardless of WIP-only mode. Only filter regular conversation messages.
+            if (!message.conversationMessageId) {
+              logger.info('[WhatsApp Queue] WIP-only mode - allowing system notification (no conversationMessageId)', {
+                queueId: message.id,
+                workspaceId: workspace.id,
+              })
+              isWipMessage = true // Treat as allowed
+            } else {
+              isWipMessage = await isWipConversationMessage(message.conversationMessageId)
+            }
 
             if (!isWipMessage) {
               logger.info('[WhatsApp Queue] WIP-only mode - skipping non-WIP message', {

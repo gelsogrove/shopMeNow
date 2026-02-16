@@ -21,7 +21,7 @@ export async function pushCampaignsJob(): Promise<void> {
       status: PushCampaignStatus.SCHEDULED,
       isActive: true,
       OR: [
-        { sendAt: { lte: now } },
+        { sendAt: { lte: now }, lastRunAt: null },
         { nextRunAt: { lte: now } },
       ],
     },

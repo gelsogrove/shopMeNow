@@ -59,6 +59,11 @@ export function QueuePage() {
   const [debugMode, setDebugMode] = useState(false)
   const [isUpdatingDebugMode, setIsUpdatingDebugMode] = useState(false)
 
+  // Bulk cleanup states
+  const [showClearQueueDialog, setShowClearQueueDialog] = useState(false)
+  const [clearMode, setClearMode] = useState<"error" | "pending" | null>(null)
+  const [isClearing, setIsClearing] = useState(false)
+
   // Fetch debug mode status on mount
   useEffect(() => {
     if (!workspace?.id) {
@@ -203,6 +208,33 @@ export function QueuePage() {
     }
   }
 
+  // Handle clearing multiple messages by status
+  const handleClearQueue = async (statuses: string[]) => {
+    if (!workspace?.id) return
+
+    try {
+      setIsClearing(true)
+      const response = await api.delete(
+        `/workspaces/${workspace.id}/whatsapp-queue/clear`,
+        { data: { statuses } }
+      )
+
+      if (response.data.success) {
+        setMessages(messages.filter((m) => !statuses.includes(m.status)))
+        setShowClearQueueDialog(false)
+        setClearMode(null)
+        toast.success(`Cleared ${response.data.count} messages`, { duration: 2000 })
+      } else {
+        toast.error(response.data.error || "Failed to clear queue", { duration: 2000 })
+      }
+    } catch (error) {
+      logger.error("Error clearing queue:", error)
+      toast.error("Failed to clear queue", { duration: 2000 })
+    } finally {
+      setIsClearing(false)
+    }
+  }
+
   // Show message if no workspace selected
   if (!workspace?.id) {
     return (
@@ -280,31 +312,65 @@ export function QueuePage() {
               />
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex gap-2">
-              <Button
-                variant={filterMode === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterMode("all")}
-              >
-                All ({messages.length})
-              </Button>
-              <Button
-                variant={filterMode === "pending" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterMode("pending")}
-                className={filterMode === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
-              >
-                Pending ({pendingCount})
-              </Button>
-              <Button
-                variant={filterMode === "error" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setFilterMode("error")}
-                className={filterMode === "error" ? "bg-red-600 hover:bg-red-700" : ""}
-              >
-                Error ({errorCount})
-              </Button>
+            {/* Filter Tabs and Clear Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex gap-2">
+                <Button
+                  variant={filterMode === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterMode("all")}
+                >
+                  All ({messages.length})
+                </Button>
+                <Button
+                  variant={filterMode === "pending" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterMode("pending")}
+                  className={filterMode === "pending" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                >
+                  Pending ({pendingCount})
+                </Button>
+                <Button
+                  variant={filterMode === "error" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setFilterMode("error")}
+                  className={filterMode === "error" ? "bg-red-600 hover:bg-red-700" : ""}
+                >
+                  Error ({errorCount})
+                </Button>
+              </div>
+
+              {/* Bulk Actions */}
+              <div className="flex gap-2">
+                {errorCount > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setClearMode("error")
+                      setShowClearQueueDialog(true)
+                    }}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All Errors
+                  </Button>
+                )}
+                {pendingCount > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setClearMode("pending")
+                      setShowClearQueueDialog(true)
+                    }}
+                    className="text-yellow-600 border-yellow-200 hover:bg-yellow-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear All Pending
+                  </Button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -388,11 +454,16 @@ export function QueuePage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={msg.status === "sent"}
                           onClick={() => {
+                            if (msg.status === "sent") return
                             setMessageToDelete(msg)
                             setShowDeleteMessageDialog(true)
                           }}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className={`${msg.status === "sent"
+                              ? "text-gray-300 pointer-events-none"
+                              : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                            }`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -437,6 +508,39 @@ export function QueuePage() {
             className="bg-red-600 hover:bg-red-700"
           >
             {isDeleting ? "Deleting..." : "Delete Message"}
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Clear Dialog */}
+      <AlertDialog open={showClearQueueDialog} onOpenChange={setShowClearQueueDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${clearMode === "error" ? "bg-red-100" : "bg-yellow-100"}`}>
+                <AlertTriangle className={`h-6 w-6 ${clearMode === "error" ? "text-red-600" : "text-yellow-600"}`} />
+              </div>
+              <AlertDialogTitle>
+                Clear all {clearMode === "error" ? "Error" : "Pending"} messages?
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="mt-4">
+              You are about to delete <strong>{clearMode === "error" ? errorCount : pendingCount}</strong> messages with <strong>{clearMode === "error" ? "Error/Blocked" : "Pending"}</strong> status.
+              <br />
+              <br />
+              <strong>⚠️ This cannot be undone.</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              const statuses = clearMode === "error" ? ["error", "blocked"] : ["pending"]
+              handleClearQueue(statuses)
+            }}
+            disabled={isClearing}
+            className={clearMode === "error" ? "bg-red-600 hover:bg-red-700" : "bg-yellow-600 hover:bg-yellow-700"}
+          >
+            {isClearing ? "Clearing..." : `Clear All ${clearMode === "error" ? "Errors" : "Pending"}`}
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>

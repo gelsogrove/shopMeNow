@@ -72,7 +72,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "customerSupportAgent",
     description:
-      "Delegate to Customer Support Agent for complaints, refunds, issues, human operator contact. Use when customer is frustrated, has problems, or explicitly asks for human support.",
+      "Delegate to Customer Support Agent for complaints, refunds, issues, human operator contact. Use when customer is frustrated, has problems, or explicitly asks for human support. NOT for notification/subscription management — use profileManagementAgent instead.",
     parameters: {
       type: "object",
       properties: {
@@ -88,7 +88,7 @@ export const AGENT_FUNCTIONS: FunctionDefinition[] = [
   {
     name: "profileManagementAgent",
     description:
-      "Delegate to Profile Management Agent for email updates, notification preferences, profile data changes. Use when customer wants to change email, manage notifications, or update personal info.",
+      "Delegate to Profile Management Agent for email updates, notification preferences, push notification subscribe/unsubscribe, profile data changes. Use when customer wants to change email, manage notifications, disable/enable notifications, unsubscribe from messages, or update personal info. Examples: 'non voglio più ricevere notifiche', 'disattiva notifiche', 'unsubscribe', 'stop notifications', 'cambia email', 'modifica profilo'.",
     parameters: {
       type: "object",
       properties: {

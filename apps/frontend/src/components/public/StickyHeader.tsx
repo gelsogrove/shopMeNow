@@ -11,6 +11,7 @@ interface StickyHeaderProps {
   token?: string | null
   currentPage?: "cart" | "orders" | "profile"
   customerLanguage?: string
+  isEcommerce?: boolean
 }
 
 /**
@@ -30,6 +31,7 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
   token,
   currentPage,
   customerLanguage,
+  isEcommerce = true,
 }) => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -205,6 +207,7 @@ export const StickyHeader: React.FC<StickyHeaderProps> = ({
           token={token}
           currentPage={currentPage}
           customerLanguage={customerLanguage}
+          isEcommerce={isEcommerce}
         />
       )}
     </>

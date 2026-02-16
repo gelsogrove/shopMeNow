@@ -29,12 +29,14 @@ interface ProfileFormProps {
   profileData: CustomerProfile
   onSave: (data: Partial<CustomerProfile>) => Promise<void>
   saving: boolean
+  isEcommerce?: boolean
 }
 
 export const ProfileForm: React.FC<ProfileFormProps> = ({
   profileData,
   onSave,
-  saving
+  saving,
+  isEcommerce = true
 }) => {
   // Form state
   const [name, setName] = useState('')
@@ -255,10 +257,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                 onChange={(e) => setLanguage(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="ENG">English</option>
-                <option value="IT">Italiano</option>
-                <option value="ES">Español</option>
-                <option value="PT">Português</option>
+                <option value="en">English</option>
+                <option value="it">Italiano</option>
+                <option value="es">Español</option>
+                <option value="pt">Português</option>
               </select>
             </div>
 
@@ -283,7 +285,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         </CardContent>
       </Card>
 
-      {/* Shipping Address Card */}
+      {/* Shipping Address Card - Only for e-commerce workspaces */}
+      {isEcommerce && (
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-semibold flex items-center gap-2">
@@ -354,16 +357,19 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           </div>
         </CardContent>
       </Card>
+      )}
 
-      {/* Billing Address Card */}
+      {/* Billing Address / Company Card */}
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-semibold flex items-center gap-2">
-            🧾 Billing Address
+            {isEcommerce ? '🧾 Billing Address' : '🏢 Company'}
           </CardTitle>
+          {isEcommerce && (
           <p className="text-sm text-gray-600 mt-2">
             If different from the shipping address
           </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -485,14 +491,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           {/* Info Box */}
           <div className="flex items-start gap-3 p-4 bg-blue-100/50 rounded-lg border border-blue-200">
             <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">Stay updated!</p>
-              <p className="text-blue-700">
-                Enable push notifications to receive real-time updates about your orders, 
-                special offers, and important messages directly on your device. 
-                You can disable this at any time.
-              </p>
-            </div>
+             
           </div>
 
           {/* Toggle Switch */}
