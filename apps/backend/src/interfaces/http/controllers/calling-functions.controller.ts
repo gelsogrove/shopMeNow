@@ -41,7 +41,7 @@ export class CallingFunctionsController {
     async createFunction(req: Request, res: Response) {
         try {
             const workspaceId = (req as any).workspaceId
-            const { functionName, description, responseInstructions, parameters, executionType, isActive } = req.body
+            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl } = req.body
 
             if (!functionName || !description || !executionType) {
                 return res.status(400).json({ error: "Missing required fields" })
@@ -61,7 +61,8 @@ export class CallingFunctionsController {
                 parameters: parameters || {},
                 executionType,
                 isActive: isActive !== undefined ? isActive : true,
-                isSystemFunction: false // Custom functions are never system functions
+                isSystemFunction: false, // Custom functions are never system functions
+                webhookUrl: webhookUrl || null
             })
 
             logger.info(`✅ Custom function created: ${functionName} for workspace ${workspaceId}`)
@@ -149,18 +150,16 @@ export class CallingFunctionsController {
 
             const workspace = await this.prisma.workspace.findUnique({
                 where: { id: workspaceId },
-                select: { webhookSecret: true, webhookTimeout: true }
+                select: { id: true }
             })
 
-            // Use provided secret/timeout or fallback to workspace defaults
-            const finalSecret = secret !== undefined ? secret : (workspace?.webhookSecret || undefined)
-            const finalTimeout = timeout || (workspace?.webhookTimeout || 10000)
+            // Use provided timeout or default
+            const finalTimeout = timeout || 10000
 
             logger.info(`🧪 Testing webhook connection for workspace ${workspaceId} to ${url}`)
 
             const result = await this.webhookService.dispatch({
                 url,
-                secret: finalSecret,
                 timeout: finalTimeout,
                 payload: {
                     function: "test_connection",

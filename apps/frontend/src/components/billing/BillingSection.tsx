@@ -182,10 +182,10 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   // Use prop workspaceId if provided, otherwise fall back to context workspace
   const effectiveWorkspaceId = propWorkspaceId || workspace?.id
   const { isSuperAdmin } = useWorkspaceRole(effectiveWorkspaceId)
-  
+
   // Use context billing if no prop workspaceId, otherwise use local state
   const contextBilling = useBilling()
-  
+
   // Get prices from database for dynamic pricing
   const { getPriceWithOriginal } = usePlatformConfig()
   const requiredPlanPrices = {
@@ -199,11 +199,11 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const missingPriceKeys = Object.entries(requiredPlanPrices)
     .filter(([, value]) => !value)
     .map(([key]) => key)
-  
+
   // Local billing state (used when workspaceId prop is provided)
   const [localBillingOverview, setLocalBillingOverview] = useState<BillingOverview | null>(null)
   const [localIsLoading, setLocalIsLoading] = useState(false)
-  
+
   // Determine which billing data to use
   const billingOverview = propWorkspaceId ? localBillingOverview : contextBilling.billingOverview
   const isLoadingOverview = propWorkspaceId ? localIsLoading : contextBilling.isLoadingOverview
@@ -309,7 +309,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   // Refresh overview function - uses local or context depending on prop
   const refreshOverview = async () => {
     if (!effectiveWorkspaceId) return
-    
+
     if (propWorkspaceId) {
       // Load directly when using prop workspaceId
       setLocalIsLoading(true)
@@ -334,12 +334,12 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
       const currentTotalRecharges = localBillingOverview.billing.totalRecharges || 0
       setLocalBillingOverview({
         ...localBillingOverview,
-        billing: { 
-          ...localBillingOverview.billing, 
+        billing: {
+          ...localBillingOverview.billing,
           creditBalance: newBalance,
           // Update totalRecharges if rechargeAmount is provided
-          totalRecharges: rechargeAmount 
-            ? currentTotalRecharges + rechargeAmount 
+          totalRecharges: rechargeAmount
+            ? currentTotalRecharges + rechargeAmount
             : currentTotalRecharges
         }
       })
@@ -364,11 +364,11 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   // Check if there are billable transactions (not just INITIAL_CREDIT)
   // Also show Invoices button if user has an active paid subscription
-  const hasPaidSubscription = billingOverview?.billing?.planType && 
+  const hasPaidSubscription = billingOverview?.billing?.planType &&
     billingOverview.billing.planType !== "FREE_TRIAL"
-  
-  const hasInvoiceableTransactions = hasPaidSubscription || transactions.some(tx => 
-    tx.type !== "INITIAL_CREDIT" && 
+
+  const hasInvoiceableTransactions = hasPaidSubscription || transactions.some(tx =>
+    tx.type !== "INITIAL_CREDIT" &&
     (tx.type === "RECHARGE" || tx.type === "MONTHLY_FEE" || tx.type === "UPGRADE_FEE" || tx.amount < 0)
   )
 
@@ -613,6 +613,20 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
     isCustomerLimitReached && `Customers limit reached (${usage.customersCount}/${limits.maxCustomers}).`,
   ].filter(Boolean) as string[]
 
+  const handleOpenUpgrade = () => {
+    if (!isSuperAdmin) return
+    if (!isPaymentConnected) {
+      toast.error("Collega PayPal per scegliere o cambiare piano.")
+      // scroll al box PayPal se presente
+      const target = document.querySelector('[id*="paypal"]')
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+      return
+    }
+    setShowUpgradeDialog(true)
+  }
+
   return (
     <div className="space-y-6">
       {/* 🔶 PAUSED: Subscription is paused */}
@@ -760,30 +774,30 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Trial Expired Warning */}
-              {billing.isTrialExpired && (
-                <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <div className="flex-1">
-                    <p className="font-medium text-red-800 dark:text-red-200">
-                      ⚠️ Your trial has expired - Chatbot is DISABLED
-                    </p>
-                    <p className="text-sm text-red-600 dark:text-red-400">
-                      {isPaymentConnected
-                        ? "Choose a plan to reactivate your chatbot."
-                        : "Collega PayPal e scegli un piano per riattivare il chatbot."}
-                    </p>
-                  </div>
-                  {isSuperAdmin && (
-                    <Button
-                      onClick={handleOpenUpgrade}
-                      variant="destructive"
-                      className="disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={!isPaymentConnected ? "Collega PayPal per cambiare piano." : undefined}
-                    >
-                      Choose a Plan
-                    </Button>
-                  )}
-                </div>
+          {billing.isTrialExpired && (
+            <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950 rounded-lg border border-red-200 dark:border-red-800">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <div className="flex-1">
+                <p className="font-medium text-red-800 dark:text-red-200">
+                  ⚠️ Your trial has expired - Chatbot is DISABLED
+                </p>
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {isPaymentConnected
+                    ? "Choose a plan to reactivate your chatbot."
+                    : "Collega PayPal e scegli un piano per riattivare il chatbot."}
+                </p>
+              </div>
+              {isSuperAdmin && (
+                <Button
+                  onClick={handleOpenUpgrade}
+                  variant="destructive"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={!isPaymentConnected ? "Collega PayPal per cambiare piano." : undefined}
+                >
+                  Choose a Plan
+                </Button>
+              )}
+            </div>
           )}
 
           {/* Credit & Plan Info */}
@@ -965,7 +979,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 {/* Right: What happens */}
                 <div className="space-y-4">
                   <h4 className="font-semibold text-gray-900">What will happen:</h4>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
                       <X className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
@@ -1067,7 +1081,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 {/* Right: What happens */}
                 <div className="space-y-4">
                   <h4 className="font-semibold text-gray-900">What will happen:</h4>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
@@ -1164,157 +1178,156 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   const hasMissingPrices = missingPriceKeys.length > 0
                   const canSelect = !isFreePlan && !isCurrentPlan && !hasMissingPrices && (isDowngrade ? downgradeCheck.canDowngrade : true)
                   const features = getPlanFeaturesWithText(planKey)
-                  
+
                   // Get dynamic price from database (Free plan has no price key)
                   const priceKey = isFreePlan ? null : `${planKey}_MONTHLY`
-              const priceInfo = priceKey ? requiredPlanPrices[priceKey as keyof typeof requiredPlanPrices] : null
-              const isPriceMissing = !!priceKey && !priceInfo
-              
-              return (
-                <div
-                  key={planKey}
-                  className={`relative rounded-2xl border-2 p-6 flex flex-col ${
-                    isCurrentPlan
-                      ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl"
-                      : isFreePlan
-                        ? "border-gray-200 bg-gray-50 opacity-75"
-                        : "border-gray-200 bg-white hover:border-blue-300 transition-all"
-                  }`}
-                >
-                  {isCurrentPlan && (
-                    <Badge className={`absolute -top-3 left-1/2 -translate-x-1/2 ${isSubscriptionPaused ? "bg-orange-500" : "bg-blue-500"}`}>
-                      {isSubscriptionPaused ? "PAUSED" : "Current Plan"}
-                    </Badge>
-                  )}
-                  <div className="text-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{planConfig.name}</h3>
-                    <div className="mb-2">
-                      {isFreePlan ? (
-                        <>
-                          <span className="text-3xl font-bold text-gray-900">$0</span>
-                          <span className="text-gray-600">/14 days</span>
-                        </>
-                      ) : (
-                        <>
-                          {/* Show strikethrough original price if different from current */}
-                          {priceInfo?.original && priceInfo.original !== priceInfo.current && (
-                            <span className="text-lg text-gray-400 line-through mr-2">
-                              ${priceInfo.original}
-                            </span>
-                          )}
-                          {isPriceMissing ? (
-                            <span className="text-sm text-red-600">
-                              Pricing not configured
-                            </span>
+                  const priceInfo = priceKey ? requiredPlanPrices[priceKey as keyof typeof requiredPlanPrices] : null
+                  const isPriceMissing = !!priceKey && !priceInfo
+
+                  return (
+                    <div
+                      key={planKey}
+                      className={`relative rounded-2xl border-2 p-6 flex flex-col ${isCurrentPlan
+                        ? "border-blue-500 bg-gradient-to-br from-blue-50 to-green-50 shadow-xl"
+                        : isFreePlan
+                          ? "border-gray-200 bg-gray-50 opacity-75"
+                          : "border-gray-200 bg-white hover:border-blue-300 transition-all"
+                        }`}
+                    >
+                      {isCurrentPlan && (
+                        <Badge className={`absolute -top-3 left-1/2 -translate-x-1/2 ${isSubscriptionPaused ? "bg-orange-500" : "bg-blue-500"}`}>
+                          {isSubscriptionPaused ? "PAUSED" : "Current Plan"}
+                        </Badge>
+                      )}
+                      <div className="text-center mb-4">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{planConfig.name}</h3>
+                        <div className="mb-2">
+                          {isFreePlan ? (
+                            <>
+                              <span className="text-3xl font-bold text-gray-900">$0</span>
+                              <span className="text-gray-600">/14 days</span>
+                            </>
                           ) : (
                             <>
-                              <span className={`text-3xl font-bold ${priceInfo?.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
-                                ${priceInfo?.current}
-                              </span>
-                              <span className="text-gray-600">/month</span>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">{planConfig.description}</p>
-                  </div>
-
-                  <div className="flex-grow space-y-3 mb-6">
-                    {features.map((feature) => (
-                      <div key={feature.name} className="flex items-start gap-2">
-                        {feature.included ? (
-                          <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
-                        ) : (
-                          <X className="h-5 w-5 text-gray-300 flex-shrink-0" />
-                        )}
-                        <span className={`text-sm ${feature.included ? "text-gray-700" : "text-gray-400"}`}>
-                          {feature.name}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Pause/Resume section for current plan */}
-                  {isCurrentPlan && !isFreePlan && (
-                    <div className="space-y-2">
-                      {isSubscriptionPaused ? (
-                        /* Resume flow - opens confirmation view */
-                        <Button
-                          className="w-full bg-orange-500 hover:bg-orange-600"
-                          onClick={() => setShowResumeConfirmView(true)}
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          Resume Subscription
-                        </Button>
-                      ) : (
-                        /* Pause flow - opens confirmation view */
-                        <Button
-                          variant="outline"
-                          className="w-full text-orange-600 border-orange-300 hover:bg-orange-50"
-                          onClick={() => setShowPauseConfirmView(true)}
-                        >
-                          <Pause className="h-4 w-4 mr-2" />
-                          Pause Subscription
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {!isCurrentPlan && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div>
-                            <Button
-                              className={`w-full ${canSelect ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
-                              onClick={() => canSelect && initiatePlanChange(planKey)}
-                              disabled={isUpgrading || !canSelect}
-                            >
-                              {isUpgrading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : isFreePlan ? (
-                                "Only for new users"
-                              ) : isDowngrade ? (
-                                <>
-                                  <TrendingDown className="h-4 w-4 mr-2" />
-                                  Downgrade to {planConfig.name}
-                                </>
+                              {/* Show strikethrough original price if different from current */}
+                              {priceInfo?.original && priceInfo.original !== priceInfo.current && (
+                                <span className="text-lg text-gray-400 line-through mr-2">
+                                  ${priceInfo.original}
+                                </span>
+                              )}
+                              {isPriceMissing ? (
+                                <span className="text-sm text-red-600">
+                                  Pricing not configured
+                                </span>
                               ) : (
                                 <>
-                                  <TrendingUp className="h-4 w-4 mr-2" />
-                                  Upgrade to {planConfig.name}
+                                  <span className={`text-3xl font-bold ${priceInfo?.original && priceInfo.original !== priceInfo.current ? "text-green-600" : "text-gray-900"}`}>
+                                    ${priceInfo?.current}
+                                  </span>
+                                  <span className="text-gray-600">/month</span>
                                 </>
                               )}
-                            </Button>
+                            </>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600">{planConfig.description}</p>
+                      </div>
+
+                      <div className="flex-grow space-y-3 mb-6">
+                        {features.map((feature) => (
+                          <div key={feature.name} className="flex items-start gap-2">
+                            {feature.included ? (
+                              <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <X className="h-5 w-5 text-gray-300 flex-shrink-0" />
+                            )}
+                            <span className={`text-sm ${feature.included ? "text-gray-700" : "text-gray-400"}`}>
+                              {feature.name}
+                            </span>
                           </div>
-                        </TooltipTrigger>
-                        {isFreePlan && (
-                          <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="text-sm">
-                              The Free Trial is only available for new registrations.
-                            </p>
-                          </TooltipContent>
-                        )}
-                        {isDowngrade && !downgradeCheck.canDowngrade && (
-                          <TooltipContent side="bottom" className="max-w-xs">
-                            <p className="font-medium text-red-600">Cannot downgrade</p>
-                            <ul className="text-sm mt-1">
-                              {downgradeCheck.reasons.map((reason, i) => (
-                                <li key={i}>• {reason}</li>
-                              ))}
-                            </ul>
-                            <p className="text-xs mt-2 text-muted-foreground">
-                              Reduce your usage first to downgrade.
-                            </p>
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-              )
-            })}
+                        ))}
+                      </div>
+
+                      {/* Pause/Resume section for current plan */}
+                      {isCurrentPlan && !isFreePlan && (
+                        <div className="space-y-2">
+                          {isSubscriptionPaused ? (
+                            /* Resume flow - opens confirmation view */
+                            <Button
+                              className="w-full bg-orange-500 hover:bg-orange-600"
+                              onClick={() => setShowResumeConfirmView(true)}
+                            >
+                              <Play className="h-4 w-4 mr-2" />
+                              Resume Subscription
+                            </Button>
+                          ) : (
+                            /* Pause flow - opens confirmation view */
+                            <Button
+                              variant="outline"
+                              className="w-full text-orange-600 border-orange-300 hover:bg-orange-50"
+                              onClick={() => setShowPauseConfirmView(true)}
+                            >
+                              <Pause className="h-4 w-4 mr-2" />
+                              Pause Subscription
+                            </Button>
+                          )}
+                        </div>
+                      )}
+
+                      {!isCurrentPlan && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                <Button
+                                  className={`w-full ${canSelect ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed"}`}
+                                  onClick={() => canSelect && initiatePlanChange(planKey)}
+                                  disabled={isUpgrading || !canSelect}
+                                >
+                                  {isUpgrading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : isFreePlan ? (
+                                    "Only for new users"
+                                  ) : isDowngrade ? (
+                                    <>
+                                      <TrendingDown className="h-4 w-4 mr-2" />
+                                      Downgrade to {planConfig.name}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <TrendingUp className="h-4 w-4 mr-2" />
+                                      Upgrade to {planConfig.name}
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </TooltipTrigger>
+                            {isFreePlan && (
+                              <TooltipContent side="bottom" className="max-w-xs">
+                                <p className="text-sm">
+                                  The Free Trial is only available for new registrations.
+                                </p>
+                              </TooltipContent>
+                            )}
+                            {isDowngrade && !downgradeCheck.canDowngrade && (
+                              <TooltipContent side="bottom" className="max-w-xs">
+                                <p className="font-medium text-red-600">Cannot downgrade</p>
+                                <ul className="text-sm mt-1">
+                                  {downgradeCheck.reasons.map((reason, i) => (
+                                    <li key={i}>• {reason}</li>
+                                  ))}
+                                </ul>
+                                <p className="text-xs mt-2 text-muted-foreground">
+                                  Reduce your usage first to downgrade.
+                                </p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </>
           )}
@@ -1349,35 +1362,35 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                 {(() => {
                   // Include transactions with amount != 0 OR plan change transactions
                   const filteredTx = transactions.filter(tx => tx.amount !== 0 || tx.type === "UPGRADE_FEE" || tx.type === "MONTHLY_FEE" || tx.type === "INVOICE_PAID")
-                  
+
                   // Types that should be aggregated by day AND channel
                   const AGGREGATABLE_TYPES = ["MESSAGE", "PUSH_NOTIFICATION"]
-                  
+
                   const aggregateTransactionsByDay = (txList: Transaction[]) => {
                     // Group by type+day+channel: { "MESSAGE-2025-11-27-workspace123": {...} }
-                    const groupedByTypeDayChannel: Record<string, { 
+                    const groupedByTypeDayChannel: Record<string, {
                       type: string
                       workspaceName: string
                       count: number
                       totalAmount: number
                       lastDate: Date
-                      lastBalance: number 
+                      lastBalance: number
                     }> = {}
                     const otherTransactions: Transaction[] = []
-                    
+
                     txList.forEach(tx => {
                       if (AGGREGATABLE_TYPES.includes(tx.type)) {
                         const dayKey = new Date(tx.createdAt).toISOString().split('T')[0]
                         const groupKey = `${tx.type}-${dayKey}-${tx.workspaceId || 'unknown'}`
                         const txDate = new Date(tx.createdAt)
                         if (!groupedByTypeDayChannel[groupKey]) {
-                          groupedByTypeDayChannel[groupKey] = { 
+                          groupedByTypeDayChannel[groupKey] = {
                             type: tx.type,
                             workspaceName: tx.workspaceName || 'Unknown',
-                            count: 0, 
-                            totalAmount: 0, 
-                            lastDate: txDate, 
-                            lastBalance: tx.balanceAfter 
+                            count: 0,
+                            totalAmount: 0,
+                            lastDate: txDate,
+                            lastBalance: tx.balanceAfter
                           }
                         }
                         groupedByTypeDayChannel[groupKey].count++
@@ -1391,7 +1404,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                         otherTransactions.push(tx)
                       }
                     })
-                    
+
                     // Get description based on type, including channel name
                     const getAggregatedDescription = (type: string, count: number, channelName: string) => {
                       const channelSuffix = channelName ? ` (${channelName})` : ''
@@ -1404,7 +1417,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                           return `${count} ${type}${count > 1 ? 's' : ''}${channelSuffix}`
                       }
                     }
-                    
+
                     // Convert aggregated items to pseudo-transactions
                     const aggregatedTransactions = Object.entries(groupedByTypeDayChannel).map(([groupKey, data]) => ({
                       id: `agg-${groupKey}`,
@@ -1416,21 +1429,21 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       workspaceId: '',
                       workspaceName: data.workspaceName,
                     }))
-                    
+
                     // Combine and sort by date, with MONTHLY_FEE invoices always last
                     return [...otherTransactions, ...aggregatedTransactions].sort((a, b) => {
                       // Monthly plan invoices (MONTHLY_FEE, UPGRADE_FEE, INVOICE_PAID) always last
                       const aIsInvoice = a.type === 'MONTHLY_FEE' || a.type === 'UPGRADE_FEE' || a.type === 'INVOICE_PAID'
                       const bIsInvoice = b.type === 'MONTHLY_FEE' || b.type === 'UPGRADE_FEE' || b.type === 'INVOICE_PAID'
-                      
+
                       if (aIsInvoice && !bIsInvoice) return 1  // a goes after b
                       if (!aIsInvoice && bIsInvoice) return -1 // a goes before b
-                      
+
                       // Both invoices or both non-invoices: sort by date descending
                       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     })
                   }
-                  
+
                   const grouped = filteredTx.reduce((acc, tx) => {
                     const date = new Date(tx.createdAt)
                     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -1454,62 +1467,63 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   return sortedMonths.map(([monthKey, data]) => {
                     // Aggregate transactions by day for this month
                     const displayTransactions = aggregateTransactionsByDay(data.transactions)
-                    
-                    return (
-                    <div key={monthKey} className="border rounded-lg overflow-hidden">
-                      {/* Month Header */}
-                      <div className="bg-gray-50 px-4 py-3 border-b">
-                        <h3 className="font-semibold text-lg capitalize">{data.label}</h3>
-                      </div>
 
-                      {/* Transactions Table */}
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[130px]">Date</TableHead>
-                            <TableHead className="w-[200px]">Type</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="text-right w-[100px]"></TableHead>
-                            <TableHead className="text-right w-[100px]"></TableHead>
-                            <TableHead className="text-right w-[100px]"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {displayTransactions.map((tx) => {
-                            const typeInfo = getTransactionTypeInfo(tx.type)
-                            return (
-                              <TableRow key={tx.id}>
-                                <TableCell className="whitespace-nowrap text-sm">
-                                  {new Date(tx.createdAt).toLocaleDateString("en-US", {
-                                    day: "2-digit",
-                                    month: "short",
-                                  })}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className="gap-1 text-xs">
-                                    <span>{typeInfo.icon}</span>
-                                    {typeInfo.label}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="max-w-[300px] truncate text-sm">
-                                  {tx.description}
-                                </TableCell>
-                                <TableCell className="text-right font-medium text-emerald-600">
-                                  {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `+${formatUsd(tx.amount)}` : ""}
-                                </TableCell>
-                                <TableCell className="text-right font-medium text-red-600">
-                                  {tx.amount < 0 && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `-${formatUsd(Math.abs(tx.amount))}` : ""}
-                                </TableCell>
-                                <TableCell className="text-right text-sm font-medium">
-                                  {tx.type !== "INVOICE_PAID" && tx.balanceAfter > 0 ? formatUsd(tx.balanceAfter) : ""}
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )})
+                    return (
+                      <div key={monthKey} className="border rounded-lg overflow-hidden">
+                        {/* Month Header */}
+                        <div className="bg-gray-50 px-4 py-3 border-b">
+                          <h3 className="font-semibold text-lg capitalize">{data.label}</h3>
+                        </div>
+
+                        {/* Transactions Table */}
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[130px]">Date</TableHead>
+                              <TableHead className="w-[200px]">Type</TableHead>
+                              <TableHead>Description</TableHead>
+                              <TableHead className="text-right w-[100px]"></TableHead>
+                              <TableHead className="text-right w-[100px]"></TableHead>
+                              <TableHead className="text-right w-[100px]"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {displayTransactions.map((tx) => {
+                              const typeInfo = getTransactionTypeInfo(tx.type)
+                              return (
+                                <TableRow key={tx.id}>
+                                  <TableCell className="whitespace-nowrap text-sm">
+                                    {new Date(tx.createdAt).toLocaleDateString("en-US", {
+                                      day: "2-digit",
+                                      month: "short",
+                                    })}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="gap-1 text-xs">
+                                      <span>{typeInfo.icon}</span>
+                                      {typeInfo.label}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="max-w-[300px] truncate text-sm">
+                                    {tx.description}
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium text-emerald-600">
+                                    {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `+${formatUsd(tx.amount)}` : ""}
+                                  </TableCell>
+                                  <TableCell className="text-right font-medium text-red-600">
+                                    {tx.amount < 0 && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `-${formatUsd(Math.abs(tx.amount))}` : ""}
+                                  </TableCell>
+                                  <TableCell className="text-right text-sm font-medium">
+                                    {tx.type !== "INVOICE_PAID" && tx.balanceAfter > 0 ? formatUsd(tx.balanceAfter) : ""}
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )
+                  })
                 })()}
               </div>
             )}
@@ -1628,60 +1642,60 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                                 </TableCell>
                               </TableRow>
                             )}
-                        <TableRow>
-                          <TableCell className="font-medium">Taxes (22%)</TableCell>
-                          <TableCell className="text-right font-medium text-emerald-600">
-                            {invoice.taxAmount > 0 ? `+${formatUsd(invoice.taxAmount)}` : '—'}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow className="bg-gray-50 font-bold">
-                          <TableCell>Monthly Balance</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatUsd(invoice.totalAmount)}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                            <TableRow>
+                              <TableCell className="font-medium">Taxes (22%)</TableCell>
+                              <TableCell className="text-right font-medium text-emerald-600">
+                                {invoice.taxAmount > 0 ? `+${formatUsd(invoice.taxAmount)}` : '—'}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow className="bg-gray-50 font-bold">
+                              <TableCell>Monthly Balance</TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatUsd(invoice.totalAmount)}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
 
-                    <div className="border-t bg-white px-4 py-3">
-                      <div className="text-xs font-semibold uppercase text-muted-foreground">
-                        Documents
+                        <div className="border-t bg-white px-4 py-3">
+                          <div className="text-xs font-semibold uppercase text-muted-foreground">
+                            Documents
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              aria-label="Download invoice PDF"
+                              title="Invoice PDF"
+                              className="text-slate-700"
+                              onClick={() => handleDownloadInvoice(invoice)}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                            {(invoice.creditNotes || []).map((note) => (
+                              <Button
+                                key={note.id}
+                                variant="secondary"
+                                size="icon"
+                                aria-label="Download credit note PDF"
+                                title="Credit note PDF"
+                                className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                onClick={() =>
+                                  handleDownloadCreditNote(
+                                    invoice.id,
+                                    note.id,
+                                    invoice.invoiceNumber
+                                  )
+                                }
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          aria-label="Download invoice PDF"
-                          title="Invoice PDF"
-                          className="text-slate-700"
-                          onClick={() => handleDownloadInvoice(invoice)}
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        {(invoice.creditNotes || []).map((note) => (
-                          <Button
-                            key={note.id}
-                            variant="secondary"
-                            size="icon"
-                            aria-label="Download credit note PDF"
-                            title="Credit note PDF"
-                            className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                            onClick={() =>
-                              handleDownloadCreditNote(
-                                invoice.id,
-                                note.id,
-                                invoice.invoiceNumber
-                              )
-                            }
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
+                    )
+                  })
                 })()}
               </div>
             )}
@@ -1725,7 +1739,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     <p className="font-medium">{PLAN_CONFIGS[pendingPlanChange as keyof typeof PLAN_CONFIGS]?.name || pendingPlanChange}</p>
                   </div>
                 </div>
-                
+
                 <div className="text-sm text-muted-foreground space-y-2">
                   <p>• The new plan will be applied immediately</p>
                   <p>• Your credit balance will remain unchanged</p>
@@ -1768,16 +1782,3 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 }
 
 export default BillingSection
-  const handleOpenUpgrade = () => {
-    if (!isSuperAdmin) return
-    if (!isPaymentConnected) {
-      toast.error("Collega PayPal per scegliere o cambiare piano.")
-      // scroll al box PayPal se presente
-      const target = document.querySelector('[id*=\"paypal\"]')
-      if (target instanceof HTMLElement) {
-        target.scrollIntoView({ behavior: "smooth", block: "center" })
-      }
-      return
-    }
-    setShowUpgradeDialog(true)
-  }

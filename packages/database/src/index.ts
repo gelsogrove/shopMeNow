@@ -45,8 +45,8 @@ const adapter = new PrismaPg(pool)
 
 export const prisma = new PrismaClient({
   adapter,
-  log: process.env.NODE_ENV === 'development' 
-    ? ['error', 'warn'] 
+  log: process.env.NODE_ENV === 'development'
+    ? ['error', 'warn']
     : ['error'],
 })
 
@@ -152,6 +152,7 @@ export type {
   // Push Campaign Types
   PushCampaign,
   PushCampaignRecipient,
+  WorkspaceCallingFunction, // 🆕 Dynamic calling functions from DB
 } from './generated/prisma/index.js'
 
 // Export prisma as default

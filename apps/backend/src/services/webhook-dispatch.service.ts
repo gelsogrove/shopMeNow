@@ -27,22 +27,11 @@ export class WebhookDispatchService {
         const timestamp = Date.now().toString()
         const body = JSON.stringify(payload)
 
+        // Generate headers
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             'X-Echatbot-Event': 'function_call',
             'X-Echatbot-Timestamp': timestamp,
-        }
-
-        // Generate HMAC signature if secret is provided
-        if (secret) {
-            // Signature includes timestamp to prevent replay attacks
-            const signaturePayload = `${timestamp}.${body}`
-            const signature = crypto
-                .createHmac('sha256', secret)
-                .update(signaturePayload)
-                .digest('hex')
-
-            headers['X-Hub-Signature-256'] = `sha256=${signature}`
         }
 
         try {

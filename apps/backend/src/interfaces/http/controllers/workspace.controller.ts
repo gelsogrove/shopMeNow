@@ -39,7 +39,7 @@ export class WorkspaceController {
       }
 
       logger.info(`Getting workspaces for user: ${userId}`)
-      
+
       // WORKSPACE ISOLATION: Fetch ONLY workspaces this user has access to
       const workspaces = await this.workspaceService.getByUserId(userId)
 
@@ -283,7 +283,7 @@ export class WorkspaceController {
   createWorkspace = async (req: Request, res: Response, next: NextFunction) => {
     try {
       logger.info("Creating new workspace")
-      
+
       // CRITICAL SECURITY: Get userId from authenticated request
       const userId = (req as any).user?.id
       if (!userId) {
@@ -294,12 +294,12 @@ export class WorkspaceController {
       // 🔒 SECURITY CHECK: Verify user can create workspaces
       // Only SUPER_ADMIN (owners) or first-time users can create channels
       const { canCreate, reason, isFirstTimeOwner } = await workspaceMemberService.canUserCreateWorkspace(userId)
-      
+
       if (!canCreate) {
         logger.warn(`❌ User ${userId} attempted to create workspace but is not authorized: ${reason}`)
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: "Not authorized to create channels",
-          message: reason 
+          message: reason
         })
       }
 
@@ -334,7 +334,7 @@ export class WorkspaceController {
         if (existingWorkspaces && existingWorkspaces.length > 0) {
           const firstWorkspaceId = existingWorkspaces[0].id
           const limitCheck = await this.billingService.checkPlanLimits(firstWorkspaceId, "channels")
-          
+
           if (!limitCheck.withinLimits) {
             logger.warn(`❌ User ${userId} exceeded channels limit: ${limitCheck.current}/${limitCheck.max}`)
             return res.status(403).json({
@@ -355,10 +355,11 @@ export class WorkspaceController {
         ...workspaceData,
         createdBy: userId, // Pass userId to service
       })
-      
+
       logger.info(`✅ Workspace created: ${workspace.id} for user ${userId}`)
       return res.status(201).json(workspace)
-    } catch (error) {      logger.error("❌ Error creating workspace:", {
+    } catch (error) {
+      logger.error("❌ Error creating workspace:", {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         userId: (req as any).user?.id,
@@ -382,7 +383,7 @@ export class WorkspaceController {
       logger.error("Authorization header:", req.headers.authorization ? "✅ PRESENT" : "❌ MISSING")
       logger.error("Workspace ID from token:", (req as any).workspaceId)
       logger.error("Route called:", req.path)
-      
+
       if (!(req as any).user) {
         logger.error("🚨 SECURITY BREACH: Update called without authentication!")
         return res.status(401).json({ message: "Unauthorized - No user in request" })
@@ -406,7 +407,7 @@ export class WorkspaceController {
       logger.info("ultraMsgInstanceId:", workspaceData.ultraMsgInstanceId || "NOT SET")
       logger.info("ultraMsgToken:", workspaceData.ultraMsgToken ? "***SET***" : "NOT SET")
       logger.info("ultraMsgApiUrl:", workspaceData.ultraMsgApiUrl || "NOT SET")
-      
+
       // 🔍 LOG SPECIFICO per whatsappApiKey
       logger.info("=== WHATSAPP API KEY DEBUG ===")
       logger.info(
@@ -432,7 +433,7 @@ export class WorkspaceController {
       logger.info("operatorContactMethod nel body:", workspaceData.operatorContactMethod)
 
       const workspace = await this.workspaceService.update(id, workspaceData)
-      
+
       // 🐞 DEBUG: Log what service returned
       logger.info("=== SERVICE RESPONSE DEBUG ===")
       logger.info("whatsappProvider returned:", workspace?.whatsappProvider || "NOT IN RESPONSE")
@@ -563,12 +564,12 @@ export class WorkspaceController {
 
       // 🔒 SECURITY CHECK: Only SUPER_ADMIN (owner) can delete workspace
       const isSuperAdmin = await workspaceMemberService.isSuperAdmin(id, userId)
-      
+
       if (!isSuperAdmin) {
         logger.warn(`❌ User ${userId} attempted to delete workspace ${id} but is not the owner`)
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: "Not authorized to delete this channel",
-          message: "Only workspace owners (SUPER_ADMIN) can delete channels" 
+          message: "Only workspace owners (SUPER_ADMIN) can delete channels"
         })
       }
 
@@ -632,7 +633,7 @@ export class WorkspaceController {
       const uploadedUrl = await storageService.uploadImage(file, 'users')
 
       // Update workspace with new logo URL and key
-      const workspace = await this.workspaceService.update(id, { 
+      const workspace = await this.workspaceService.update(id, {
         logoUrl: uploadedUrl,
         logoKey: uploadedUrl // Store URL as key for compatibility
       })
@@ -854,7 +855,7 @@ export class WorkspaceController {
         data: {
           whatsappProvider: ws.whatsappProvider,
           ultraMsgApiUrl: ws.ultraMsgApiUrl || '',
-          webhookUrl: whatsappProvider === 'meta' 
+          webhookUrl: whatsappProvider === 'meta'
             ? `https://www.echatbot.ai/api/whatsapp/webhook/${webhookId}`
             : `https://www.echatbot.ai/api/whatsapp/ultramsg/${webhookId}`,
         },
@@ -889,7 +890,7 @@ export class WorkspaceController {
       })
 
       const ws = workspace as any
-      
+
       // Get webhookId from whatsappSettings
       const settings = await prisma.whatsappSettings.findUnique({
         where: { workspaceId: id },

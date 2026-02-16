@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,6 +36,7 @@ interface Channel {
 }
 
 export default function ChannelsPage() {
+  const navigate = useNavigate()
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null)
@@ -221,7 +223,7 @@ export default function ChannelsPage() {
                           title="Click to test widget"
                         >
                           {channel.logoUrl ? (
-                            <img 
+                            <img
                               src={channel.logoUrl.startsWith('http') ? channel.logoUrl : `${IMG_BASE_URL}${channel.logoUrl}`}
                               alt={`${channel.name} logo`}
                               className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
@@ -389,12 +391,10 @@ export default function ChannelsPage() {
                       Test Widget
                     </button>
                     <button
-                      onClick={() => {
-                        handleLogoClick(channel, true)
-                      }}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                      onClick={() => navigate(`/workspaces/${workspaceId}/functions`)}
+                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
                     >
-                      Open in Playground
+                      Manage Functions
                     </button>
                   </div>
                 </div>
@@ -422,8 +422,8 @@ export default function ChannelsPage() {
               <ChatWidget
                 key={`${selectedWorkspaceId}-${widgetAutoOpen ? "open" : "closed"}`}
                 workspaceId={selectedWorkspaceId}
-                logoUrl={selectedWorkspace.logoUrl ? 
-                  (selectedWorkspace.logoUrl.startsWith('http') ? selectedWorkspace.logoUrl : `${IMG_BASE_URL}${selectedWorkspace.logoUrl}`) 
+                logoUrl={selectedWorkspace.logoUrl ?
+                  (selectedWorkspace.logoUrl.startsWith('http') ? selectedWorkspace.logoUrl : `${IMG_BASE_URL}${selectedWorkspace.logoUrl}`)
                   : undefined
                 }
                 title={selectedWorkspace.name}

@@ -835,6 +835,7 @@ export class LLMRouterService {
 
       // STEP 2: Load conversation history
       logger.info("Step 2: Loading conversation history")
+      const isInformational = workspace?.sellsProductsAndServices === false
       const conversationHistoryRaw = await this.conversationManager.loadHistory(
         params.workspaceId,
         params.conversationId
@@ -861,9 +862,18 @@ export class LLMRouterService {
 
         return {
           response: limitMessage,
+          agentUsed: "ROUTER" as AgentType,
+          confidence: 0,
           tokensUsed: 0,
-          iterations: 0,
-          debugSteps: []
+          executionTimeMs: Date.now() - startTime,
+          wasFAQ: false,
+          debugInfo: {
+            steps: [],
+            totalTokens: 0,
+            totalCost: 0,
+            executionTimeMs: Date.now() - startTime,
+            timestamp: new Date().toISOString()
+          }
         }
       }
 
@@ -922,7 +932,6 @@ export class LLMRouterService {
 
       // STEP 4: Load Router/Info Agent template from files
       // 🛍️ Feature 174: Informational workspaces use INFO_AGENT template instead of ROUTER
-      const isInformational = workspace?.sellsProductsAndServices === false
       const mainAgentType = isInformational ? "INFO_AGENT" : "ROUTER"
       const routerSystemPrompt = await this.templateLoader.loadAndRenderTemplate(
         mainAgentType,

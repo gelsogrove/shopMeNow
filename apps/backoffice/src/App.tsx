@@ -14,6 +14,7 @@ import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { QueuePage } from '@/pages/QueuePage'
 import { LawsDocumentsPage } from '@/pages/LawsDocumentsPage'
 import ChannelsPage from '@/pages/ChannelsPage'
+import CallingFunctionsPage from '@/pages/CallingFunctionsPage'
 import SupportTicketsAdminPage from '@/pages/SupportTicketsAdminPage'
 
 // 🌐 Base path for production deployment
@@ -22,12 +23,12 @@ const basename = ''
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
-  
+
   if (!isAuthenticated) {
     // Redirect to access denied page (no login form - must come from Frontend)
     return <Navigate to="/access-denied" replace />
   }
-  
+
   return <>{children}</>
 }
 
@@ -37,18 +38,18 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Access Denied - shown when not authenticated */}
-      <Route 
-        path="/access-denied" 
-        element={isAuthenticated ? <Navigate to="/platforms" replace /> : <AccessDeniedPage />} 
+      <Route
+        path="/access-denied"
+        element={isAuthenticated ? <Navigate to="/platforms" replace /> : <AccessDeniedPage />}
       />
       {/* Auth Callback - receives token from Frontend redirect */}
-      <Route 
-        path="/auth/callback" 
-        element={<AuthCallbackPage />} 
+      <Route
+        path="/auth/callback"
+        element={<AuthCallbackPage />}
       />
       {/* Protected Routes */}
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <ProtectedRoute>
             <Layout />
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route index element={<Navigate to="/platforms" replace />} />
         <Route path="platforms" element={<PlatformsPage />} />
         <Route path="channels" element={<ChannelsPage />} />
+        <Route path="workspaces/:workspaceId/functions" element={<CallingFunctionsPage />} />
         <Route path="queue" element={<QueuePage />} />
         <Route path="collections" element={<CollectionsPage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
@@ -65,22 +67,22 @@ function AppRoutes() {
         <Route path="clients" element={<ClientsPage />} />
         <Route path="laws-documents" element={<LawsDocumentsPage />} />
         <Route path="support-tickets" element={<SupportTicketsAdminPage />} />
-        <Route 
-          path="gdpr" 
+        <Route
+          path="gdpr"
           element={
-            <ComingSoonPage 
-              title="GDPR" 
+            <ComingSoonPage
+              title="GDPR"
               description="GDPR compliance tools coming soon. Manage data retention, consent, and privacy settings."
             />
-          } 
+          }
         />
-        <Route 
-          path="schedulers" 
-          element={<SchedulersPage />} 
+        <Route
+          path="schedulers"
+          element={<SchedulersPage />}
         />
-        <Route 
-          path="trash" 
-          element={<TrashPage />} 
+        <Route
+          path="trash"
+          element={<TrashPage />}
         />
       </Route>
       {/* Catch all - redirect to access denied if not authenticated */}

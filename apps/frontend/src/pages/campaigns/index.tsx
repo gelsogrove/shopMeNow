@@ -76,8 +76,11 @@ export default function CampaignsPage() {
       if (!billingOverview && !isLoadingOverview) {
         void refreshOverview()
       }
+    } else if (!workspace) {
+      // If workspace is explicitly null/undefined, stop loading
+      setLoading(false)
     }
-  }, [workspace?.id])
+  }, [workspace?.id, workspace])
 
   const pushCost = billingOverview?.limits.pushCost ?? 1.0
   const hasEnoughCreditForPush = creditBalance >= pushCost
@@ -397,6 +400,30 @@ export default function CampaignsPage() {
           </div>
         </div>
       </div>
+    )
+  }
+
+  // Show message if no workspace selected
+  if (!workspace?.id) {
+    return (
+      <PageLayout>
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <Megaphone className="h-6 w-6 text-green-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-green-600">WhatsApp Campaigns</h1>
+              <p className="text-sm text-gray-500">No workspace selected</p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+            <p className="text-slate-600">
+              Please select a workspace to view and manage your campaigns.
+            </p>
+          </div>
+        </div>
+      </PageLayout>
     )
   }
 

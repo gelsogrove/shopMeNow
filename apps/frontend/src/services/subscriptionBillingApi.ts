@@ -304,7 +304,7 @@ export const upgradePlan = async (
     throw new Error("Workspace ID is required")
   }
 
-  const response = await api.post(`/workspaces/${workspaceId}/subscription-billing/upgrade`, {
+  const response = await api.post(`/workspaces/${workspaceId}/billing/upgrade`, {
     planType,
   })
   return response.data.data
@@ -327,7 +327,7 @@ export const changePlan = async (
     throw new Error("Workspace ID is required")
   }
 
-  const response = await api.post(`/workspaces/${workspaceId}/subscription-billing/change-plan`, {
+  const response = await api.post(`/workspaces/${workspaceId}/billing/change-plan`, {
     planType,
   })
   return response.data.data
@@ -652,7 +652,7 @@ export const getOwnerTransactions = async (
 
   const queryString = params.toString()
   const url = queryString ? `/subscription-billing/transactions?${queryString}` : "/subscription-billing/transactions"
-  
+
   const response = await api.get(url)
   return {
     transactions: response.data.transactions || [],

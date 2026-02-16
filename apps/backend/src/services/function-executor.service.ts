@@ -73,6 +73,8 @@ export class FunctionExecutor {
   private cartManagementAgent: CartManagementAgent
   private productRepo: ProductRepository
   private orderRepo: OrderRepository
+  private cartRepo: CartRepository
+  private serviceRepo: ServiceRepository
   private callingFunctionRepo: WorkspaceCallingFunctionRepository
   private webhookDispatcher: WebhookDispatchService
 
@@ -163,24 +165,30 @@ export class FunctionExecutor {
       // 🆕 Load function from DB to check executionType
       const dbFunction = await this.callingFunctionRepo.findByName(context.workspaceId, functionName)
 
+      // 🛍️ Load workspace for webhook settings/isolation
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: context.workspaceId },
+      })
+
       // Route to correct implementation
       let result: any
       const executionType = dbFunction?.executionType || "INTERNAL"
 
       if (executionType === "WEBHOOK" && dbFunction) {
         // Load workspace for webhook settings
-        const workspace = await this.prisma.workspace.findUnique({
-          where: { id: context.workspaceId },
-          select: { webhookUrl: true, webhookSecret: true, webhookTimeout: true }
-        })
+        if (!workspace) {
+          throw new Error(`Workspace not found: ${context.workspaceId}`)
+        }
 
-        if (!workspace?.webhookUrl) {
-          throw new Error(`Webhook URL not configured for workspace ${context.workspaceId}`)
+        // 🆕 Priority: 1. Function-specific URL, 2. Global Workspace URL
+        const finalUrl = dbFunction.webhookUrl || workspace.webhookUrl
+
+        if (!finalUrl) {
+          throw new Error(`Webhook URL not configured for function ${functionName} or workspace ${context.workspaceId}`)
         }
 
         result = await this.webhookDispatcher.dispatch({
-          url: workspace.webhookUrl,
-          secret: workspace.webhookSecret || undefined,
+          url: finalUrl,
           timeout: workspace.webhookTimeout || undefined,
           payload: {
             function: functionName,

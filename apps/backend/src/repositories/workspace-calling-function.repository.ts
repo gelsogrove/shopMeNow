@@ -46,89 +46,93 @@ export class WorkspaceCallingFunctionRepository {
             logger.error(`Error finding calling function ${functionName} in workspace ${workspaceId}:`, error)
             throw error
         }
+    }
+
     /**
      * Find all functions for a workspace (including inactive)
      * @param workspaceId - Workspace ID
      */
-    async findAllByWorkspace(workspaceId: string): Promise < WorkspaceCallingFunction[] > {
-            try {
-                return await this.prisma.workspaceCallingFunction.findMany({
-                    where: {
-                        workspaceId,
-                    },
-                    orderBy: {
-                        functionName: 'asc'
-                    }
-                })
-            } catch(error) {
-                logger.error(`Error finding all calling functions for workspace ${workspaceId}:`, error)
-                throw error
-            }
+    async findAllByWorkspace(workspaceId: string): Promise<WorkspaceCallingFunction[]> {
+        try {
+            return await this.prisma.workspaceCallingFunction.findMany({
+                where: {
+                    workspaceId,
+                },
+                orderBy: {
+                    functionName: 'asc'
+                }
+            })
+        } catch (error) {
+            logger.error(`Error finding all calling functions for workspace ${workspaceId}:`, error)
+            throw error
         }
+    }
 
     /**
      * Create a new calling function
      */
     async create(data: {
-            workspaceId: string
+        workspaceId: string
         functionName: string
         description: string
-        responseInstructions: string
         parameters: any
         executionType: string
         isActive?: boolean
         isSystemFunction?: boolean
-        }): Promise < WorkspaceCallingFunction > {
-            try {
-                return await this.prisma.workspaceCallingFunction.create({
-                    data: {
-                        ...data,
-                        isActive: data.isActive !== undefined ? data.isActive : true,
-                        isSystemFunction: data.isSystemFunction || false
-                    }
-                })
-            } catch(error) {
-                logger.error(`Error creating calling function ${data.functionName} for workspace ${data.workspaceId}:`, error)
-                throw error
-            }
+        webhookUrl?: string | null
+        responseInstructions?: string | null
+    }): Promise<WorkspaceCallingFunction> {
+        try {
+            return await this.prisma.workspaceCallingFunction.create({
+                data: {
+                    ...data,
+                    isActive: data.isActive !== undefined ? data.isActive : true,
+                    isSystemFunction: data.isSystemFunction || false,
+                    webhookUrl: data.webhookUrl || null
+                }
+            })
+        } catch (error) {
+            logger.error(`Error creating calling function ${data.functionName} for workspace ${data.workspaceId}:`, error)
+            throw error
         }
+    }
 
     /**
      * Update an existing calling function
      */
-    async update(workspaceId: string, functionName: string, data: Partial<WorkspaceCallingFunction>): Promise < WorkspaceCallingFunction > {
-            try {
-                return await this.prisma.workspaceCallingFunction.update({
-                    where: {
-                        workspaceId_functionName: {
-                            workspaceId,
-                            functionName
-                        }
-                    },
-                    data
-                })
-            } catch(error) {
-                logger.error(`Error updating calling function ${functionName} for workspace ${workspaceId}:`, error)
-                throw error
-            }
+    async update(workspaceId: string, functionName: string, data: Partial<WorkspaceCallingFunction>): Promise<WorkspaceCallingFunction> {
+        try {
+            return await this.prisma.workspaceCallingFunction.update({
+                where: {
+                    workspaceId_functionName: {
+                        workspaceId,
+                        functionName
+                    }
+                },
+                data
+            })
+        } catch (error) {
+            logger.error(`Error updating calling function ${functionName} for workspace ${workspaceId}:`, error)
+            throw error
         }
+    }
 
     /**
      * Delete a calling function
      */
-    async delete (workspaceId: string, functionName: string): Promise < WorkspaceCallingFunction > {
-            try {
-                return await this.prisma.workspaceCallingFunction.delete({
-                    where: {
-                        workspaceId_functionName: {
-                            workspaceId,
-                            functionName
-                        }
+    async delete(workspaceId: string, functionName: string): Promise<WorkspaceCallingFunction> {
+        try {
+            return await this.prisma.workspaceCallingFunction.delete({
+                where: {
+                    workspaceId_functionName: {
+                        workspaceId,
+                        functionName
                     }
-                })
-            } catch(error) {
-                logger.error(`Error deleting calling function ${functionName} from workspace ${workspaceId}:`, error)
-                throw error
-            }
+                }
+            })
+        } catch (error) {
+            logger.error(`Error deleting calling function ${functionName} from workspace ${workspaceId}:`, error)
+            throw error
         }
     }
+}

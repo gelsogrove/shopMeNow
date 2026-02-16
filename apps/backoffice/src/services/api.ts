@@ -80,6 +80,18 @@ class BackofficeApi {
       }),
   }
 
+  // Workspaces - Admin/Owner endpoints
+  workspaces = {
+    get: async (workspaceId: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}`),
+
+    update: async (workspaceId: string, payload: any): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
+  }
+
   clearToken() {
     this.token = null
   }
