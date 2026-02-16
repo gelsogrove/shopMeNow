@@ -87,6 +87,7 @@ import { memberRoutes } from "../interfaces/http/routes/member.routes"
 import { cartRouter } from "../interfaces/http/routes/cart.routes"
 import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
 import certificationRoutes from "../interfaces/http/routes/certification.routes"
+import { createCallingFunctionsRouter } from "../interfaces/http/routes/calling-functions.routes"
 import creditNoteRoutes from "../interfaces/http/routes/credit-note.routes"
 import typeRoutes from "../interfaces/http/routes/type.routes"
 import { chatRouter } from "../interfaces/http/routes/chat.routes"
@@ -117,9 +118,9 @@ import { servicesRouter } from "../interfaces/http/routes/services.routes"
 import { cartTokenLimiter } from "../config/rate-limiters"
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
 import { billingRouter } from "../interfaces/http/routes/billing.routes"
-import { 
-  publicBillingRoutes, 
-  billingRoutes as subscriptionBillingRoutes 
+import {
+  publicBillingRoutes,
+  billingRoutes as subscriptionBillingRoutes
 } from "../interfaces/http/routes/subscription-billing.routes"
 import { ownerBillingRoutes } from "../interfaces/http/routes/owner-billing.routes"
 import debugRoutes from "../interfaces/http/routes/debug.routes"
@@ -642,6 +643,12 @@ logger.info("✅ Registered PROTECTED file routes: /api/v1/files/private/:catego
 // Workspace-scoped routes (require workspaceId in path)
 router.use("/workspaces/:workspaceId/invitations", invitationRoutes)
 router.use("/workspaces/:workspaceId/members", memberRoutes)
+router.use(
+  "/workspaces/:workspaceId/functions",
+  authMiddleware,
+  workspaceValidationMiddleware,
+  createCallingFunctionsRouter(prisma as any)
+)
 logger.info(
   "✅ Registered PROTECTED team management routes: /api/workspaces/:workspaceId/invitations, /api/workspaces/:workspaceId/members"
 )

@@ -21,6 +21,8 @@ import { OrderRepository } from "../repositories/order.repository"
 import { ProductRepository } from "../repositories/product.repository"
 import { ServiceRepository } from "../repositories/service.repository"
 import { contactOperator } from "../domain/calling-functions/contactOperator"
+import { WorkspaceCallingFunctionRepository } from "../repositories/workspace-calling-function.repository"
+import { WebhookDispatchService } from "./webhook-dispatch.service"
 import logger from "../utils/logger"
 
 /**
@@ -35,7 +37,7 @@ const FUNCTIONS_REQUIRING_REGISTRATION = [
   'addToCart',
   'viewCart',
   'clearCart',
-  
+
   // Order Tracking (5)
   'getLinkOrderByCode',
   'repeatOrder',
@@ -43,7 +45,7 @@ const FUNCTIONS_REQUIRING_REGISTRATION = [
   'getOrderDetails',
   'confirmOrder',
   'showCheckout',
-  
+
   // Profile Management (2)
   'handlePushNotifications',
   'getProfileLink',
@@ -70,16 +72,17 @@ export class FunctionExecutor {
   // NOTE: productSearchAgent removed - LLM uses {{products}} from prompt only
   private cartManagementAgent: CartManagementAgent
   private productRepo: ProductRepository
-  private serviceRepo: ServiceRepository
-  private cartRepo: CartRepository
   private orderRepo: OrderRepository
+  private callingFunctionRepo: WorkspaceCallingFunctionRepository
+  private webhookDispatcher: WebhookDispatchService
 
   constructor(private prisma: PrismaClient) {
     // Initialize repositories
     this.productRepo = new ProductRepository()
-    this.serviceRepo = new ServiceRepository()
     this.cartRepo = new CartRepository()
     this.orderRepo = new OrderRepository()
+    this.callingFunctionRepo = new WorkspaceCallingFunctionRepository(prisma)
+    this.webhookDispatcher = new WebhookDispatchService()
 
     // Initialize agents
     // NOTE: ProductSearchAgent removed - no database search needed
@@ -125,7 +128,7 @@ export class FunctionExecutor {
               customerId: context.customerId,
               workspaceId: context.workspaceId,
             })
-            
+
             return {
               success: false,
               error: 'REGISTRATION_REQUIRED',
@@ -142,7 +145,7 @@ export class FunctionExecutor {
               customerId: context.customerId,
               workspaceId: context.workspaceId,
             })
-            
+
             return {
               success: false,
               error: 'FEATURE_NOT_AVAILABLE',
@@ -157,114 +160,149 @@ export class FunctionExecutor {
         }
       }
 
+      // 🆕 Load function from DB to check executionType
+      const dbFunction = await this.callingFunctionRepo.findByName(context.workspaceId, functionName)
+
       // Route to correct implementation
       let result: any
+      const executionType = dbFunction?.executionType || "INTERNAL"
 
-      switch (functionName) {
-        // Delegation functions (Router → Sub-Agent)
-        case "productSearchAgent":
-          result = await this.delegateToProductSearch(args, context)
-          break
+      if (executionType === "WEBHOOK" && dbFunction) {
+        // Load workspace for webhook settings
+        const workspace = await this.prisma.workspace.findUnique({
+          where: { id: context.workspaceId },
+          select: { webhookUrl: true, webhookSecret: true, webhookTimeout: true }
+        })
 
-        case "cartManagementAgent":
-          result = await this.delegateToCartManagement(args, context)
-          break
+        if (!workspace?.webhookUrl) {
+          throw new Error(`Webhook URL not configured for workspace ${context.workspaceId}`)
+        }
 
-        case "orderTrackingAgent":
-          result = await this.delegateToOrderTracking(args, context)
-          break
+        result = await this.webhookDispatcher.dispatch({
+          url: workspace.webhookUrl,
+          secret: workspace.webhookSecret || undefined,
+          timeout: workspace.webhookTimeout || undefined,
+          payload: {
+            function: functionName,
+            parameters: args,
+            context: {
+              workspaceId: context.workspaceId,
+              customerId: context.customerId,
+              customerLanguage: context.customerLanguage
+            }
+          }
+        })
 
-        case "customerSupportAgent":
-          result = await this.delegateToCustomerSupport(args, context)
-          break
+        logger.info(`✅ Webhook function ${functionName} executed successfully`)
+      } else {
+        // Handle INTERNAL or DELEGATE_TO_AGENT
+        switch (functionName) {
+          // Delegation functions (Router → Sub-Agent)
+          case "productSearchAgent":
+            result = await this.delegateToProductSearch(args, context)
+            break
 
-        case "profileManagementAgent":
-          result = await this.delegateToProfileManagement(args, context)
-          break
+          case "cartManagementAgent":
+            result = await this.delegateToCartManagement(args, context)
+            break
 
-        // Website scraping function
-        case "fetchWebsitePage":
-          result = await this.fetchWebsitePage(args, context)
-          break
+          case "orderTrackingAgent":
+            result = await this.delegateToOrderTracking(args, context)
+            break
 
-        // Direct function calls (Sub-Agents)
-        // NOTE: searchProducts removed - LLM uses {{products}} from prompt
+          case "customerSupportAgent":
+            result = await this.delegateToCustomerSupport(args, context)
+            break
 
-        case "addItemToCart":
-        case "addToCart": // backward compatibility
-          result = await this.addToCart(args, context)
-          break
+          case "profileManagementAgent":
+            result = await this.delegateToProfileManagement(args, context)
+            break
 
-        case "viewCart":
-          result = await this.viewCart(context)
-          break
+          // Website scraping function
+          case "fetchWebsitePage":
+            result = await this.fetchWebsitePage(args, context)
+            break
 
-        case "removeFromCart":
-          result = await this.removeFromCart(args, context)
-          break
+          // Direct function calls (Sub-Agents)
+          case "addItemToCart":
+          case "addToCart": // backward compatibility
+            result = await this.addToCart(args, context)
+            break
 
-        case "updateCartItem":
-        case "updateCartQuantity": // backward compatibility
-          result = await this.updateCartQuantity(args, context)
-          break
+          case "viewCart":
+            result = await this.viewCart(context)
+            break
 
-        case "clearCart":
-          result = await this.clearCart(context)
-          break
+          case "removeFromCart":
+            result = await this.removeFromCart(args, context)
+            break
 
-        case "repeatLastOrder":
-          result = await this.repeatLastOrder(context)
-          break
+          case "updateCartItem":
+          case "updateCartQuantity": // backward compatibility
+            result = await this.updateCartQuantity(args, context)
+            break
 
-        // Order Tracking Functions (aligned naming)
-        case "getOrderHistory":
-          result = await this.getOrderHistory(args, context)
-          break
+          case "clearCart":
+            result = await this.clearCart(context)
+            break
 
-        case "getLastOrders":
-          result = await this.getLastOrders(args, context)
-          break
+          case "repeatLastOrder":
+            result = await this.repeatLastOrder(context)
+            break
 
-        case "getOrderDetails":
-          result = await this.getOrderDetails(args, context)
-          break
+          // Order Tracking Functions (aligned naming)
+          case "getOrderHistory":
+            result = await this.getOrderHistory(args, context)
+            break
 
-        case "trackOrderStatus":
-          result = await this.trackOrderStatus(args, context)
-          break
+          case "getLastOrders":
+            result = await this.getLastOrders(args, context)
+            break
 
-        // Backward compatibility aliases (deprecated)
-        case "getOrders":
-          logger.warn("⚠️ DEPRECATED: Use getOrderHistory instead of getOrders")
-          result = await this.getOrderHistory(args, context)
-          break
+          case "getOrderDetails":
+            result = await this.getOrderDetails(args, context)
+            break
 
-        case "getOrder":
-          logger.warn("⚠️ DEPRECATED: Use getOrderDetails instead of getOrder")
-          result = await this.getOrderDetails(args, context)
-          break
+          case "trackOrderStatus":
+            result = await this.trackOrderStatus(args, context)
+            break
 
-        case "trackOrder":
-          logger.warn(
-            "⚠️ DEPRECATED: Use trackOrderStatus instead of trackOrder"
-          )
-          result = await this.trackOrderStatus(args, context)
-          break
+          // Backward compatibility aliases (deprecated)
+          case "getOrders":
+            logger.warn("⚠️ DEPRECATED: Use getOrderHistory instead of getOrders")
+            result = await this.getOrderHistory(args, context)
+            break
 
-        case "contactSupport":
-          result = await this.contactSupport(args, context)
-          break
+          case "getOrder":
+            logger.warn("⚠️ DEPRECATED: Use getOrderDetails instead of getOrder")
+            result = await this.getOrderDetails(args, context)
+            break
 
-        case "getProfileLink":
-          result = await this.getProfileLink(context)
-          break
+          case "trackOrder":
+            logger.warn(
+              "⚠️ DEPRECATED: Use trackOrderStatus instead of trackOrder"
+            )
+            result = await this.trackOrderStatus(args, context)
+            break
 
-        case "contactOperator":
-          result = await this.contactOperator(args, context)
-          break
+          case "contactSupport":
+            result = await this.contactSupport(args, context)
+            break
 
-        default:
-          throw new Error(`Unknown function: ${functionName}`)
+          case "getProfileLink":
+            result = await this.getProfileLink(context)
+            break
+
+          case "contactOperator":
+            result = await this.contactOperator(args, context)
+            break
+
+          default:
+            if (executionType === "DELEGATE_TO_AGENT") {
+              throw new Error(`Sub-agent handler for "${functionName}" not implemented`)
+            }
+            throw new Error(`Unknown internal function: ${functionName}`)
+        }
       }
 
       const executionTimeMs = Date.now() - startTime

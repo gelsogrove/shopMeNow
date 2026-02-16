@@ -17,6 +17,8 @@ model Workspace {
   whatsappVerifyToken       String?
   notificationEmail         String?
   webhookUrl                String?
+  webhookSecret             String?   // 🆕 HMAC secret for signing custom function payloads
+  webhookTimeout            Int?      @default(10000) // 🆕 Timeout in ms (default 10s)
   language                  String    @default("ENG")
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
@@ -1550,15 +1552,19 @@ enum BillingType {
 enum CampaignFrequency {
   ONCE
   WEEKLY
+  BIWEEKLY
   MONTHLY
+  BIMONTHLY
   QUARTERLY
   SEMIANNUAL
+  ANNUAL
 }
 
 enum CampaignTargetType {
   ALL
   MANUAL
   TAGS
+  SELECTED
 }
 
 enum PushCampaignStatus {
@@ -1798,11 +1804,17 @@ model WorkspaceCallingFunction {
   id           String    @id @default(cuid())
   workspaceId  String
   workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  functionName String // camelCase function name: "addToCart", "contactOperator", etc.
-  description  String? // Optional description override for this workspace
-  isActive     Boolean   @default(true) // Toggle ON/OFF for this workspace
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  functionName          String    // camelCase: "productSearchAgent", "cercaPrecedentiLegali"
+  description           String?   @db.Text // QUANDO chiamarla (per LLM)
+  responseInstructions  String?   @db.Text // COME presentare il risultato (per LLM)
+  parameters            Json?     // Schema parametri (formato OpenAI function calling)
+  
+  isSystemFunction      Boolean   @default(false)  // true = core, non cancellabile
+  executionType         String    @default("WEBHOOK")  // "DELEGATE_TO_AGENT" | "WEBHOOK" | "INTERNAL"
+  
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@unique([workspaceId, functionName]) // One record per function per workspace
   @@index([workspaceId, isActive])

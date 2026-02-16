@@ -100,18 +100,18 @@ class BackofficeApi {
       })
 
       const data = await response.json()
-      
+
       // If response already has success property, return as-is
       // Otherwise wrap it in { success: true, data: ... }
       if ('success' in data) {
         return data
       }
-      
+
       // Check if it's an error response
       if (!response.ok || data.error) {
         return { success: false, error: data.error || data.message || 'Request failed' }
       }
-      
+
       return { success: true, data }
     } catch (error) {
       console.error('❌ [API] Error:', error)
@@ -238,7 +238,7 @@ class BackofficeApi {
     planType: string,
     field: string,
     value: number | string | null
-  ): Promise<ApiResponse<{ planType: string; [key: string]: any }>> {
+  ): Promise<ApiResponse<{ planType: string;[key: string]: any }>> {
     return this.fetch(`/platform-config/plans/${planType}`, {
       method: 'PUT',
       body: JSON.stringify({ field, value }),
@@ -284,8 +284,8 @@ class BackofficeApi {
         // Set token for future requests
         this.setToken(data.token)
 
-        return { 
-          success: true, 
+        return {
+          success: true,
           data: {
             token: data.token,
             user: data.user,
@@ -370,7 +370,7 @@ class BackofficeApi {
      * Update user permissions (isPlatformAdmin, isDeveloperUser)
      */
     updatePermissions: async (
-      userId: string, 
+      userId: string,
       permissions: { isPlatformAdmin?: boolean; isDeveloperUser?: boolean }
     ): Promise<ApiResponse<{ success: boolean }>> => {
       return this.fetch(`/users/admin/${userId}/permissions`, {
@@ -954,7 +954,7 @@ class BackofficeApi {
         method: 'POST',
       })
     },
-    
+
     /**
      * Enable 2FA for a user (Feature 189)
      * Sends email with link to set up 2FA for users who don't have it
@@ -995,8 +995,37 @@ class BackofficeApi {
         body: JSON.stringify({ days, reason }),
       })
     },
-    
 
+
+  }
+
+  // Calling Functions - Admin endpoints for custom functions
+  callingFunctions = {
+    list: async (workspaceId: string): Promise<ApiResponse<any[]>> =>
+      this.fetch(`/workspaces/${workspaceId}/functions`),
+
+    create: async (workspaceId: string, payload: any): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/functions`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+
+    update: async (workspaceId: string, functionName: string, payload: any): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/functions/${functionName}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
+
+    delete: async (workspaceId: string, functionName: string): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/functions/${functionName}`, {
+        method: 'DELETE',
+      }),
+
+    testWebhook: async (workspaceId: string, payload: any): Promise<ApiResponse<any>> =>
+      this.fetch(`/workspaces/${workspaceId}/functions/test-webhook`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
   }
 
   // Scheduler Jobs - Admin endpoints for managing cron jobs
@@ -1023,7 +1052,7 @@ class BackofficeApi {
      * Update a scheduler job (toggle isActive)
      */
     update: async (
-      jobName: string, 
+      jobName: string,
       data: { isActive: boolean }
     ): Promise<ApiResponse<{
       id: string
@@ -1109,8 +1138,8 @@ class BackofficeApi {
      * Permanently delete an item (requires confirmation text)
      */
     permanentlyDelete: async (
-      id: string, 
-      type: string, 
+      id: string,
+      type: string,
       confirmationText: string
     ): Promise<ApiResponse<{
       success: boolean
@@ -1119,9 +1148,9 @@ class BackofficeApi {
     }>> => {
       return this.fetch(`/admin/trash/${id}/permanently-delete`, {
         method: 'POST',
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           entityType: type.toUpperCase(),
-          confirmationText 
+          confirmationText
         }),
       })
     },

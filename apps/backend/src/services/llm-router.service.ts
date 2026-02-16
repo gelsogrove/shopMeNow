@@ -60,6 +60,7 @@ import logger from "../utils/logger"
 import { AgentLoggerService } from "./agent-logger.service"
 import { ConversationManager } from "./conversation-manager.service"
 import { FunctionExecutor } from "./function-executor.service"
+import { WorkspaceCallingFunctionRepository } from "../repositories/workspace-calling-function.repository"
 import { messagePreprocessorService, PreprocessResult } from "./message-preprocessor.service" // 🆕 FASE 2: Deterministic preprocessing
 import { OptionsMappingService } from "../application/chat-engine/options-mapping.service" // 🆕 For pendingAction ADD_TO_CART
 import { PromptProcessorService } from "./prompt-processor.service" // 🆕 Feature 124: Customer variables replacement
@@ -213,6 +214,7 @@ export class LLMRouterService {
   private conversationHistoryLayer: ConversationHistoryLayer // 🆕 Humanization layer (saluti, contesto, offerte)
   private systemContextService: SystemContextService // 🆕 System Context for hidden SKU mappings
   private optionsMappingService: OptionsMappingService // 🆕 For pendingAction ADD_TO_CART
+  private callingFunctionRepo: WorkspaceCallingFunctionRepository // 🆕 Dynamic functions from DB
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
   private maxFunctionIterations = 8 // FR-13: Increased from 5 to support repeat order confirmation flow (6-7 iterations needed)
@@ -233,6 +235,7 @@ export class LLMRouterService {
     this.templateLoader = TemplateLoaderService.getInstance(prisma) // 🆕 Load templates from files
     this.systemContextService = getSystemContextService(prisma) // 🆕 System Context for SKU mappings
     this.optionsMappingService = new OptionsMappingService(prisma) // 🆕 For pendingAction ADD_TO_CART
+    this.callingFunctionRepo = new WorkspaceCallingFunctionRepository(prisma) // 🆕 Dynamic functions from DB
 
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
@@ -837,6 +840,33 @@ export class LLMRouterService {
         params.conversationId
       )
 
+      // 🛑 Session Rate Limit: Prevent infinite loops or abuse (max 30 calls in history window)
+      const recentFunctionCallsCount = conversationHistoryRaw.filter(msg => msg.role === "function").length
+      if (recentFunctionCallsCount > 30) {
+        logger.warn(`🛑 Session function rate limit reached: ${params.conversationId} (${recentFunctionCallsCount} calls)`)
+        const limitMessage = workspace.language === "it"
+          ? "Spiacenti, hai raggiunto il limite massimo di operazioni per questa sessione. Riprova tra qualche minuto."
+          : "Sorry, you've reached the maximum number of operations for this session. Please try again in a few minutes."
+
+        // Save assistant response atomically so user sees why it's blocked
+        await this.conversationManager.saveUserAndAssistantAtomic({
+          workspaceId: params.workspaceId,
+          customerId: params.customerId,
+          conversationId: params.conversationId,
+          userContent: params.message,
+          assistantContent: limitMessage,
+          agentType: isInformational ? "INFO_AGENT" : "ROUTER",
+          debugInfo: { error: "SESSION_RATE_LIMIT_EXCEEDED", callCount: recentFunctionCallsCount }
+        })
+
+        return {
+          response: limitMessage,
+          tokensUsed: 0,
+          iterations: 0,
+          debugSteps: []
+        }
+      }
+
       // 🚦 If the current message is clearly asking for catalog/categories/products,
       // drop prior history to avoid misrouting into identity flows when an old
       // "Identità non configurata" was the last assistant message.
@@ -1160,16 +1190,42 @@ export class LLMRouterService {
 
       // STEP 5: Function Calling Loop
       logger.info("Step 3: Starting Function Calling loop")
+      // 🆕 Feature: Load all active functions from DB (System + Custom)
+      const dbFunctions = await this.callingFunctionRepo.findActiveByWorkspace(params.workspaceId)
+
+      // Filter out e-commerce functions if workspace is in informational mode
+      const ecommerceFunctions = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
+      const filteredDbFunctions = dbFunctions.filter(fn => {
+        if (!workspace.sellsProductsAndServices && ecommerceFunctions.includes(fn.functionName)) {
+          return false
+        }
+        return true
+      })
+
+      // Convert to OpenRouter/OpenAI format
+      const tools = filteredDbFunctions.map(fn => ({
+        type: "function" as const,
+        function: {
+          name: fn.functionName,
+          description: fn.description || "",
+          parameters: (fn.parameters as any) || { type: "object", properties: {} }
+        }
+      }))
+
+      logger.info(`🛠️ Loaded ${tools.length} dynamic tools for workspace ${params.workspaceId}`)
+
+      // Pass tools to functionCallingLoop
       const result = await this.functionCallingLoop({
         routerAgent: processedRouterAgent,
         conversationHistory: conversationHistoryForRouter,
         userMessage: userMessageForRouter,
         params,
         customerDiscount,
-        customerIsActive, // 🔒 Feature 174: Pass registration status
+        customerIsActive,
         sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
-        workspace: workspace!, // 🛍️ Pass workspace for catalog filtering
-        preprocessResult, // 🆕 FASE 2: Pass for deterministic fast-path delegation
+        workspace: workspace!,
+        preprocessResult,
+        tools
       })
 
       totalTokens = result.tokensUsed
@@ -1714,6 +1770,7 @@ export class LLMRouterService {
     sellsProductsAndServices: boolean
     workspace: any // 🛍️ Workspace object for catalog filtering
     preprocessResult?: PreprocessResult // 🆕 FASE 2: Deterministic delegation
+    tools?: any[] // 🆕 Dynamic tools from DB
   }): Promise<{
     response: string
     tokensUsed: number
@@ -1733,6 +1790,7 @@ export class LLMRouterService {
       sellsProductsAndServices,
       workspace,
       preprocessResult,
+      tools,
     } = options
 
     let messages: any[] = [
@@ -1797,16 +1855,19 @@ export class LLMRouterService {
       // ✅ LLM is intelligent enough to understand "chi sei?" in any language
       // ✅ botIdentityResponse is in system prompt for bot to respond naturally
       const routerCallStart = Date.now()
-      llmResponse = await this.callRouterLLM({
+      // 🆕 Run LLM with dynamic tools
+      const routerResponse = await this.callRouterLLM({
         model: routerAgent.model,
         messages,
         temperature: routerAgent.temperature,
         maxTokens: routerAgent.maxTokens,
         sellsProductsAndServices, // 🆕 Dynamic function routing
+        tools, // 🆕 Pass dynamic tools
       })
       routerCallDuration = Date.now() - routerCallStart
 
-      totalTokens += llmResponse.tokensUsed
+      totalTokens += routerResponse.tokensUsed
+      llmResponse = routerResponse
 
       // 🔧 IMPROVED: Capture Router Agent step with REAL INPUT and OUTPUT
       // 🔧 DEBUG: Log LLM decision
@@ -2949,6 +3010,7 @@ export class LLMRouterService {
     temperature: number
     maxTokens: number
     sellsProductsAndServices?: boolean // 🆕 Dynamic function routing
+    tools?: any[] // 🆕 Dynamic tools from DB
   }): Promise<{
     content?: string
     function_call?: { name: string; arguments: string }
@@ -2965,12 +3027,13 @@ export class LLMRouterService {
           // 🔀 Router has ONLY delegation functions (call sub-agents)
           // Router orchestrates, sub-agents execute business functions
           // 🆕 Dynamic: If sellsProductsAndServices=false, exclude e-commerce agents
-          tools: getFunctionsForRouter({
-            sellsProductsAndServices: options.sellsProductsAndServices ?? true
-          }),
           // 🔀 Strategy:
           // E-commerce (ROUTER): "required" - Force delegation to specialist agents
           // Informational (INFO_AGENT): "auto" - Allow direct text response (identity/FAQ) or delegation
+          // 🆕 Use provided tools (from DB) or fallback to hardcoded ones
+          tools: options.tools || getFunctionsForRouter({
+            sellsProductsAndServices: options.sellsProductsAndServices ?? true
+          }),
           tool_choice: options.sellsProductsAndServices === false ? "auto" : "required", // FORCE or AUTO based on mode
         },
         {
