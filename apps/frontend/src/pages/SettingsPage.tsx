@@ -44,9 +44,10 @@ import { WebsiteWidgetSection } from "@/components/settings/sections/WebsiteWidg
 import { SecuritySection } from "@/components/settings/sections/SecuritySection"
 import { WidgetSupportSection } from "@/components/settings/sections/WidgetSupportSection"
 import { SubscriptionSection } from "@/components/settings/sections/SubscriptionSection"
+import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
 
 // Types
-type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "subscription"
+type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "subscription" | "functions"
 
 // Section definitions for dropdown
 const SECTIONS: SettingsSection[] = [
@@ -56,6 +57,7 @@ const SECTIONS: SettingsSection[] = [
   { key: "widget", label: "Website Widget", description: "Chat widget for your website" },
   { key: "widget-support", label: "Human Support", description: "Escalation to human operators" },
   { key: "security", label: "Security", description: "Access control and domains" },
+  { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
   { key: "subscription", label: "Subscription", description: "Plan and payment settings" },
 ]
 
@@ -67,6 +69,7 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "widget": "widgetTitle",
   "widget-support": "humanSupportEnabled",
   "security": "allowedDomains",
+  "functions": "webhookUrl",
   "subscription": "subscription",
 }
 
@@ -127,6 +130,9 @@ interface FormData {
   address: string
   registrationPage: string
   requireManualApproval: boolean
+  // Webhooks
+  webhookUrl: string
+  webhookTimeout: number
 }
 
 export function SettingsPage() {
@@ -219,6 +225,8 @@ export function SettingsPage() {
     address: "",
     registrationPage: "",
     requireManualApproval: false,
+    webhookUrl: "",
+    webhookTimeout: 10000,
   })
 
   // Load workspace data
@@ -291,6 +299,8 @@ export function SettingsPage() {
         address: currentWorkspace.address || "",
         registrationPage: currentWorkspace.registrationPage || "",
         requireManualApproval: currentWorkspace.requireManualApproval || false,
+        webhookUrl: currentWorkspace.webhookUrl || "",
+        webhookTimeout: currentWorkspace.webhookTimeout || 10000,
       })
     }
   }, [currentWorkspace])
@@ -334,19 +344,19 @@ export function SettingsPage() {
   // Handle Debug Mode toggle - immediate save (like workspace selection)
   const handleToggleDebugMode = useCallback(async (checked: boolean) => {
     if (!currentWorkspace?.id) return
-    
+
     try {
       // Update immediately
       const updatedWorkspace = await updateWorkspace(currentWorkspace.id, {
         debugMode: checked,
       })
-      
+
       // Update context
       setCurrentWorkspace(updatedWorkspace)
-      
+
       // Update local form
       setFormData((prev) => ({ ...prev, debugMode: checked }))
-      
+
       toast.success(checked ? "Debug mode enabled" : "Debug mode disabled")
     } catch (error) {
       console.error("Error updating debug mode:", error)
@@ -426,7 +436,7 @@ export function SettingsPage() {
     // Check if workspace type changed (sellsProductsAndServices)
     const currentValue = currentWorkspace?.sellsProductsAndServices ?? true
     const newValue = formData.sellsProductsAndServices
-    
+
     if (currentValue !== newValue) {
       // Store pending data and show confirmation dialog
       setPendingFormData(formData)
@@ -516,10 +526,10 @@ export function SettingsPage() {
         ...currentWorkspace!,
         ...updatedWorkspace,
       })
-      
+
       console.log("🐞 [SettingsPage] AFTER MERGE:", {
-        provider: {...currentWorkspace!, ...updatedWorkspace}.whatsappProvider,
-        ultraMsgInstanceId: {...currentWorkspace!, ...updatedWorkspace}.ultraMsgInstanceId,
+        provider: { ...currentWorkspace!, ...updatedWorkspace }.whatsappProvider,
+        ultraMsgInstanceId: { ...currentWorkspace!, ...updatedWorkspace }.ultraMsgInstanceId,
       })
 
       setIsDirty(false)
@@ -535,11 +545,11 @@ export function SettingsPage() {
   // Handle workspace type change confirmation
   const handleConfirmWorkspaceTypeChange = async () => {
     if (!pendingFormData) return
-    
+
     try {
       // First save the workspace changes
       await performSave(pendingFormData, { suppressToast: true })
-      
+
       // Then reset agent prompts to new template type
       const newType = pendingFormData.sellsProductsAndServices ? "e-commerce" : "informational"
       await resetAgentPromptsToDefaults(currentWorkspace!.id, true)
@@ -730,6 +740,17 @@ export function SettingsPage() {
             onFieldFocus={handleFieldFocus}
           />
         )
+      case "functions":
+        return (
+          <CallingFunctionsSection
+            workspaceId={currentWorkspace?.id || ""}
+            webhookUrl={formData.webhookUrl}
+            webhookTimeout={formData.webhookTimeout}
+            canEdit={canEdit}
+            onFieldChange={handleFieldChange}
+            onFieldFocus={handleFieldFocus}
+          />
+        )
       default:
         return null
     }
@@ -753,12 +774,11 @@ export function SettingsPage() {
           <div className="flex items-center gap-4">
             {/* Debug Mode Toggle */}
             {canEdit && (
-              <div 
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                  formData.debugMode 
-                    ? "bg-amber-50 border-amber-200" 
+              <div
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.debugMode
+                    ? "bg-amber-50 border-amber-200"
                     : "bg-gray-100 border-gray-200"
-                }`}
+                  }`}
               >
                 <span className={`text-sm font-medium ${formData.debugMode ? "text-amber-700" : "text-gray-500"}`}>
                   Debug
@@ -775,11 +795,10 @@ export function SettingsPage() {
             {canEdit && (
               <div
                 data-focus-key="channelStatus"
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                  formData.channelStatus 
-                    ? "bg-green-50 border-green-200" 
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.channelStatus
+                    ? "bg-green-50 border-green-200"
                     : "bg-gray-100 border-gray-200"
-                }`}
+                  }`}
               >
                 <Power className={`h-4 w-4 ${formData.channelStatus ? "text-green-600" : "text-gray-400"}`} />
                 <span className={`text-sm font-medium ${formData.channelStatus ? "text-green-700" : "text-gray-500"}`}>

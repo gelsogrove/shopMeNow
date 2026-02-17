@@ -2042,25 +2042,6 @@ export class LLMRouterService {
             }
           }
 
-          // 🚫 WIDGET: Skip CUSTOMER_SUPPORT delegation
-          // Widget visitors are anonymous (no phone) — contactOperator requires phone number
-          // and fails with "Customer phone number is missing", causing "System error" on widget.
-          // Return a helpful message instead.
-          if (params.channel === "widget" && delegationTarget === "CUSTOMER_SUPPORT") {
-            logger.info("🚫 [WIDGET] Skipping CUSTOMER_SUPPORT delegation — not supported for widget (no phone)", {
-              delegationTarget,
-              query: delegationQuery,
-            })
-            return {
-              response: "Per parlare con un operatore, registrati prima attraverso il link di registrazione oppure contattaci via email. Una volta registrato potrai richiedere assistenza diretta.",
-              agentUsed: "ROUTER",
-              confidence: 0.9,
-              tokensUsed: totalTokens,
-              iterations: 0,
-              debugSteps: [],
-            }
-          }
-
           logger.info(`🔀 Delegation detected to: ${delegationTarget}`, {
             query: delegationQuery,
           })

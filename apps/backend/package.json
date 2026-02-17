@@ -87,6 +87,7 @@
   "optionalDependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
     "axios": "^1.13.4",
-    "cheerio": "^1.2.0"
+    "cheerio": "^1.2.0",
+    "handlebars": "^4.7.8"
   }
 }

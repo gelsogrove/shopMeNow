@@ -14,9 +14,9 @@ import { TranslationAgent } from "../../application/agents/TranslationAgent"
 const translationAgent = new TranslationAgent(prisma)
 
 export interface ContactOperatorRequest {
-  phoneNumber: string
+  phoneNumber?: string // 🔧 Optional for web/widget
   workspaceId: string
-  customerId?: string
+  customerId?: string // 🔧 Primary lookup for web visitors
   reason?: string // Motivo della richiesta (opzionale)
 }
 
@@ -59,23 +59,35 @@ export async function contactOperator(
     })
 
     try {
-      // Find customer by phone and workspace WITH sales agent
-      const customer = await prisma.customers.findFirst({
-        where: {
-          phone: request.phoneNumber,
-          workspaceId: request.workspaceId,
-        },
-        include: {
-          sales: true, // Include sales agent data (name, email, phone)
-        },
-      })
+      // 🔧 IMPROVED LOOKUP: Use customerId if available, fall back to phone
+      let customer = null
+
+      if (request.customerId) {
+        customer = await prisma.customers.findUnique({
+          where: { id: request.customerId },
+          include: { sales: true }
+        })
+      }
+
+      if (!customer && request.phoneNumber) {
+        // Find customer by phone and workspace WITH sales agent
+        customer = await prisma.customers.findFirst({
+          where: {
+            phone: request.phoneNumber,
+            workspaceId: request.workspaceId,
+          },
+          include: {
+            sales: true, // Include sales agent data (name, email, phone)
+          },
+        })
+      }
 
       if (!customer) {
         logger.warn(
           "⚠️ Customer not found for ContactOperator:",
-          request.phoneNumber
+          request.phoneNumber || request.customerId
         )
-        await prisma.$disconnect()
+        // For anonymous visitors, we still want to record the attempt or provide a message
         return {
           success: true,
           message:
@@ -189,7 +201,7 @@ export async function contactOperator(
                 customerName: customer.name,
                 agentName: customer.sales
                   ? `${customer.sales.firstName} ${customer.sales.lastName}`
-                  : "Agente",
+                  : "Operator",
               })
 
               if (summaryResult.success && summaryResult.summary) {
@@ -216,7 +228,7 @@ export async function contactOperator(
 
                 chatSummary = `
 Cliente: ${customer.name}
-Telefono: ${customer.phone}
+Telefono: ${customer.phone || "N/A (Web Visitor)"}
 Email: ${customer.email || "N/A"}
 Data richiesta: ${new Date().toLocaleString("it-IT")}
 ${request.reason ? `\nMotivo: ${request.reason}` : ""}
@@ -255,7 +267,7 @@ ${finalSummary}
 
               chatSummary = `
 Cliente: ${customer.name}
-Telefono: ${customer.phone}
+Telefono: ${customer.phone || "N/A (Web Visitor)"}
 Email: ${customer.email || "N/A"}
 Data richiesta: ${new Date().toLocaleString("it-IT")}
 ${request.reason ? `\nMotivo: ${request.reason}` : ""}
@@ -272,7 +284,7 @@ ${messageList || "Nessun messaggio disponibile"}
             )
             chatSummary = `
 Cliente: ${customer.name}
-Telefono: ${customer.phone}
+Telefono: ${customer.phone || "N/A (Web Visitor)"}
 Email: ${customer.email || "N/A"}
 Data richiesta: ${new Date().toLocaleString("it-IT")}
 ${request.reason ? `\nMotivo: ${request.reason}` : ""}
@@ -384,7 +396,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 
 📋 *Dettagli della richiesta*:
 • Cliente: ${customer.name}
-• Telefono: ${customer.phone}
+• Telefono: ${customer.phone || "N/A (Web Visitor)"}
 • Email: ${customer.email || "N/A"}
 • Data/Ora: ${new Date().toLocaleString("it-IT")}
 ${request.reason ? `• Motivo: ${request.reason}` : ""}
@@ -446,11 +458,9 @@ _Questa notifica è stata generata automaticamente dal sistema eChatbot quando u
       logger.info("✅ contactOperator escalation registered:", {
         ticketId,
         customerId: customer?.id,
-        phoneNumber: request.phoneNumber,
+        phoneNumber: customer?.phone || "N/A",
         activeChatbot: false,
       })
-
-      await prisma.$disconnect()
 
       // 📝 Build response message with variable replacement (Andrea's spec)
       // Use humanSupportInstructions (message to send) NOT frustrationEscalationInstructions (triggers)

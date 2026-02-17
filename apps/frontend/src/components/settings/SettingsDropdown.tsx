@@ -2,7 +2,7 @@
  * SettingsDropdown - Menu a tendina per navigare tra le sezioni
  * Stile coerente con il profile dropdown
  */
-import { ChevronDown, Check, Bot, Store, Shield, Headphones, Smartphone, Monitor, CreditCard } from "lucide-react"
+import { ChevronDown, Check, Bot, Store, Shield, Headphones, Smartphone, Monitor, CreditCard, Wrench } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -31,6 +31,7 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
   "widget": <Monitor className="h-4 w-4 text-indigo-500" />,
   "widget-support": <Headphones className="h-4 w-4 text-purple-600" />,
   "security": <Shield className="h-4 w-4 text-red-500" />,
+  "functions": <Wrench className="h-4 w-4 text-blue-600" />,
   "subscription": <CreditCard className="h-4 w-4 text-amber-500" />,
 }
 

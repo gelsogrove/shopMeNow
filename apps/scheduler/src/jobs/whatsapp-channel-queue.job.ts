@@ -394,7 +394,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
   try {
     const securityAgent = new SecurityAgentService()
     const billingService = new BillingService()
-    
+
     // Find workspaces with active channel or WIP-only delivery modes
     const workspaces = await prisma.workspace.findMany({
       where: {
@@ -423,7 +423,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
     for (const workspace of workspaces) {
       const wipOnly = workspace.debugMode === true || workspace.channelStatus === false
-      
+
       logger.info(`[WhatsApp Queue] 📬 Processing workspace "${workspace.name}" (${workspace.id})`, {
         debugMode: workspace.debugMode,
         channelStatus: workspace.channelStatus,
@@ -531,14 +531,23 @@ export async function whatsappChannelQueueJob(): Promise<void> {
           }
 
           // 🔒 SECURITY CHECK: Pass through Security Agent LLM before sending
-          const securityCheck = await securityAgent.validateMessage({
-            workspaceId: workspace.id,
-            messageContent: message.messageContent,
-            customerId: message.customerId,
-          })
+          // 🛡️ Skip if skipSecurityCheck is true (trusted internal messages, operator notifications)
+          let securityCheck = { isSafe: true, reason: 'Skipped (Trusted)', debugModel: 'internal-policy', debugPrompt: 'Bypassed by skipSecurityCheck=true flag' }
+
+          if (!message.skipSecurityCheck) {
+            securityCheck = await securityAgent.validateMessage({
+              workspaceId: workspace.id,
+              messageContent: message.messageContent,
+              customerId: message.customerId,
+            })
+          } else {
+            logger.info(`🛡️ [WhatsApp Queue] Skipping Security Check (skipSecurityCheck=true)`, {
+              queueId: message.id,
+              workspaceId: workspace.id,
+            })
+          }
 
           // 📊 Append Security Check step to timeline
-          // Show the REAL compiled prompt and model from the LLM security check (not hardcoded descriptions)
           const securityTimestamp = new Date()
           await appendTimelineStep(message.conversationMessageId, {
             type: 'sub_agent',
@@ -565,7 +574,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
           // ✅ Message passed security - proceed with delivery
           const deliveryStartTime = Date.now()
           let deliveryNote: string | undefined
-          
+
           // 🔀 CHANNEL-SPECIFIC DELIVERY
           if (message.channel === 'widget') {
             // Widget: save response + AI suggestions
@@ -578,7 +587,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
             await prisma.whatsAppQueue.update({
               where: { id: message.id },
-              data: { 
+              data: {
                 status: 'sent',
                 deliveredAt: new Date(),
                 responsePayload: {
@@ -588,7 +597,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                 },
               },
             })
-            
+
             logger.info(`✅ Widget message delivered (response + suggestions saved)`, {
               messageId: message.id,
               visitorId: message.visitorId,
@@ -626,14 +635,14 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
             await prisma.whatsAppQueue.update({
               where: { id: message.id },
-              data: { 
+              data: {
                 status: 'sent',
                 deliveredAt: new Date(),
               },
             })
             deliveryNote = `✅ Message delivered to ${message.phoneNumber}${sendResult.messageId ? ` (waId: ${sendResult.messageId})` : ''}`
           }
-          
+
           const deliveryDuration = Date.now() - deliveryStartTime
 
           // 📊 Append delivery step to timeline
@@ -649,7 +658,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
               queueId: message.id,
             },
             output: {
-              textResponse: message.channel === 'widget' 
+              textResponse: message.channel === 'widget'
                 ? `✅ Response saved for polling by visitor ${message.visitorId}\n\n${message.messageContent}`
                 : `${deliveryNote || '✅ Message delivered to WhatsApp'}\n\n${message.messageContent}`,
             },
@@ -659,7 +668,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
           if (message.conversationMessageId) {
             await prisma.conversationMessage.update({
               where: { id: message.conversationMessageId },
-              data: { 
+              data: {
                 deliveryStatus: 'sent',
                 deliveredAt: new Date(),
               },

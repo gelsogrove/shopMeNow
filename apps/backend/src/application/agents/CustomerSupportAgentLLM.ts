@@ -144,7 +144,7 @@ export class CustomerSupportAgentLLM {
       // Informational workspaces use INFO_AGENT template, ecommerce uses CUSTOMER_SUPPORT
       const isEcommerce = workspace?.sellsProductsAndServices ?? true
       const templateAgentType = isEcommerce ? "CUSTOMER_SUPPORT" : "INFO_AGENT"
-      
+
       let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
         templateAgentType,
         context.workspaceId,
@@ -533,16 +533,6 @@ export class CustomerSupportAgentLLM {
             select: { phone: true },
           })
 
-          const phoneNumber =
-            customer?.phone || context.customerData?.phone || ""
-
-          if (!phoneNumber) {
-            return {
-              success: false,
-              error: "Customer phone number is missing",
-            }
-          }
-
           const { contactOperator } = require("../../domain/calling-functions/contactOperator")
 
           const contactResult = await contactOperator({
@@ -689,60 +679,60 @@ export class CustomerSupportAgentLLM {
         required: string[]
       }
     }> = [
-      {
-        name: "searchFAQ",
-        description: "Search FAQ database for answers to customer questions",
-        parameters: {
-          type: "object",
-          properties: {
-            query: {
-              type: "string",
-              description: "Search query for FAQ",
+        {
+          name: "searchFAQ",
+          description: "Search FAQ database for answers to customer questions",
+          parameters: {
+            type: "object",
+            properties: {
+              query: {
+                type: "string",
+                description: "Search query for FAQ",
+              },
             },
+            required: ["query"],
           },
-          required: ["query"],
         },
-      },
-      {
-        name: "getFAQByCategory",
-        description:
-          "Get FAQ entries by category (e.g., 'shipping', 'returns', 'payment')",
-        parameters: {
-          type: "object",
-          properties: {
-            category: {
-              type: "string",
-              description: "FAQ category name",
+        {
+          name: "getFAQByCategory",
+          description:
+            "Get FAQ entries by category (e.g., 'shipping', 'returns', 'payment')",
+          parameters: {
+            type: "object",
+            properties: {
+              category: {
+                type: "string",
+                description: "FAQ category name",
+              },
             },
+            required: ["category"],
           },
-          required: ["category"],
         },
-      },
-      {
-        name: "createSupportTicket",
-        description:
-          "Create a support ticket for issues that require manual attention",
-        parameters: {
-          type: "object",
-          properties: {
-            subject: {
-              type: "string",
-              description: "Ticket subject/title",
+        {
+          name: "createSupportTicket",
+          description:
+            "Create a support ticket for issues that require manual attention",
+          parameters: {
+            type: "object",
+            properties: {
+              subject: {
+                type: "string",
+                description: "Ticket subject/title",
+              },
+              description: {
+                type: "string",
+                description: "Detailed description of the issue",
+              },
+              priority: {
+                type: "string",
+                enum: ["LOW", "MEDIUM", "HIGH", "URGENT"],
+                description: "Ticket priority level",
+              },
             },
-            description: {
-              type: "string",
-              description: "Detailed description of the issue",
-            },
-            priority: {
-              type: "string",
-              enum: ["LOW", "MEDIUM", "HIGH", "URGENT"],
-              description: "Ticket priority level",
-            },
+            required: ["subject", "description"],
           },
-          required: ["subject", "description"],
         },
-      },
-    ]
+      ]
 
     if (options?.includeContactOperator ?? true) {
       functions.push({

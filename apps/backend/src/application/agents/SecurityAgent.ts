@@ -13,6 +13,7 @@
 
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
+import Handlebars from "handlebars"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import logger from "../../utils/logger"
 
@@ -48,6 +49,41 @@ export class SecurityAgent {
     } else {
       logger.info("✅ SecurityAgent initialized with OpenRouter API key")
     }
+  }
+
+  /**
+   * Check if a URL matches any allowed domain (internal + workspace allowedExternalLinks).
+   * Used to override LLM false-positives on URLs that ARE in the allowed list.
+   * Handles www. prefix: if 'youtube.com' is allowed, 'www.youtube.com' also matches.
+   */
+  private isAllowedUrl(url: string, allowedDomains: string[]): boolean {
+    try {
+      const parsed = new URL(url)
+      const hostname = parsed.hostname.toLowerCase()
+      return allowedDomains.some((domain) => {
+        const d = domain.toLowerCase()
+        return (
+          hostname === d ||
+          hostname === `www.${d}` ||
+          (d.startsWith("www.") && hostname === d.replace("www.", ""))
+        )
+      })
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Check if ALL URLs in a message match allowed domains.
+   * Returns true if there are no URLs or all URLs are from allowed domains.
+   */
+  private allUrlsAllowed(
+    messageContent: string,
+    allowedDomains: string[]
+  ): boolean {
+    const urls = messageContent.match(/https?:\/\/[^\s)]+/gi) || []
+    if (urls.length === 0) return true
+    return urls.every((url) => this.isAllowedUrl(url, allowedDomains))
   }
 
   /**
@@ -93,12 +129,12 @@ export class SecurityAgent {
         }
       }
 
-      // 🛡️ Load workspace to get allowedExternalLinks
+      // 🛡️ Load workspace to get allowedExternalLinks and name
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: options.workspaceId },
-        select: { allowedExternalLinks: true },
+        select: { allowedExternalLinks: true, name: true },
       })
-      
+
       // 🛡️ ALWAYS allow internal domains (short links, registration, etc.)
       const internalDomains = [
         "echatbot.ai",
@@ -114,23 +150,22 @@ export class SecurityAgent {
         "echatbot.ai/customer-profile*", // Profile links
         "www.echatbot.ai/customer-profile*", // Profile links
       ]
-      
+
       // 🛡️ Merge internal domains with workspace-configured external links
       const allAllowedLinks = [
         ...internalDomains,
-        ...(workspace?.allowedExternalLinks || [])
+        ...(workspace?.allowedExternalLinks || []),
       ]
-      
+
       // 🛡️ Build allowed links string (comma-separated)
-      const allowedLinks = allAllowedLinks.length > 0
-        ? allAllowedLinks.join(", ")
-        : internalDomains.join(", ") // Fallback: at least internal domains
+      const allowedLinks = allAllowedLinks.join(", ")
 
       // 2. Build system prompt with dynamic variables
       const systemPrompt = this.buildSystemPrompt(securityAgent.systemPrompt, {
         nameUser: options.customerName || "Customer",
         workspaceId: options.workspaceId,
-        ALLOWED_EXTERNAL_LINKS: allowedLinks, // 🛡️ Pass to prompt
+        companyName: workspace?.name || options.workspaceId,
+        allowedExternalLinks: allowedLinks, // 🛡️ Pass to prompt (lowercase to match template)
       })
 
       // 3. Build user message
@@ -203,8 +238,34 @@ export class SecurityAgent {
 
       // 6. Extract result
       const safe = parsed.safe !== false
-      const userMessage2 = parsed.message || parsed.userMessage || options.message
+      const userMessage2 =
+        parsed.message || parsed.userMessage || options.message
       const blockedReason = parsed.blockedReason || parsed.reason
+
+      // 🛡️ Override LLM false-positive: if reason is UNAUTHORIZED_LINK but ALL URLs
+      // in the message are from allowed domains (internal + workspace allowedExternalLinks),
+      // allow the message. The LLM sometimes fails to match URLs against the allowed domain patterns.
+      if (
+        !safe &&
+        blockedReason?.includes("UNAUTHORIZED_LINK") &&
+        this.allUrlsAllowed(options.message, allAllowedLinks)
+      ) {
+        logger.info(
+          "✅ Security override: LLM flagged UNAUTHORIZED_LINK but all URLs are from allowed domains — allowing message",
+          {
+            workspaceId: options.workspaceId,
+            customerId: options.customerId,
+            allowedDomains: allAllowedLinks,
+          }
+        )
+        return {
+          safe: true,
+          message: options.message,
+          tokensUsed,
+          executionTimeMs,
+          systemPrompt,
+        }
+      }
 
       // 7. If BLOCKED, call sendAlertEmail to notify admin
       if (!safe && blockedReason) {
@@ -252,7 +313,8 @@ export class SecurityAgent {
       return {
         safe: true,
         message: options.message,
-        blockedReason: `Security check error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        blockedReason: `Security check error: ${error instanceof Error ? error.message : "Unknown error"
+          }`,
         tokensUsed: 0,
         executionTimeMs: Date.now() - startTime,
       }
@@ -270,13 +332,9 @@ export class SecurityAgent {
     basePrompt: string,
     variables: Record<string, string>
   ): string {
-    let prompt = basePrompt
-
-    for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`{{${key}}}`, "g")
-      prompt = prompt.replace(regex, value)
-    }
-
-    return prompt
+    // Use Handlebars to process BOTH conditionals ({{#if}}) AND variable replacement ({{var}})
+    // in a single pass. noEscape prevents HTML-escaping values (not needed for LLM prompts).
+    const template = Handlebars.compile(basePrompt, { noEscape: true })
+    return template(variables)
   }
 }
