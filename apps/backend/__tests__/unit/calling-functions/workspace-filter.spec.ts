@@ -23,7 +23,7 @@ const mockOrdersCount = jest.fn()
 const mockWorkspaceFindUnique = jest.fn()
 
 const mockPrisma = {
-  customers: { findFirst: mockCustomersFindFirst, update: jest.fn() },
+  customers: { findFirst: mockCustomersFindFirst, findUnique: jest.fn(), update: jest.fn() },
   carts: { findFirst: mockCartsFindFirst, create: mockCartsCreate },
   cartItems: { create: mockCartItemsCreate, deleteMany: mockCartItemsDeleteMany },
   products: { findFirst: mockProductsFindFirst, findMany: jest.fn() },
@@ -340,7 +340,6 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       await contactOperator({
         phoneNumber: "+393331234567",
         workspaceId,
-        customerId,
       })
 
       expect(mockCustomersFindFirst).toHaveBeenCalledWith(

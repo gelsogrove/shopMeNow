@@ -536,7 +536,7 @@ export class CustomerSupportAgentLLM {
           const { contactOperator } = require("../../domain/calling-functions/contactOperator")
 
           const contactResult = await contactOperator({
-            phoneNumber,
+            phoneNumber: customer?.phone || "",
             workspaceId: context.workspaceId,
             customerId: context.customerId,
             reason: args?.reason || "Customer requested operator assistance",

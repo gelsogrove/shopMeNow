@@ -2,7 +2,7 @@ import { prisma } from '../config/database'
 import logger from '../utils/logger'
 import Handlebars from 'handlebars'
 
-interface SecurityCheckResult {
+export interface SecurityCheckResult {
   isSafe: boolean
   reason?: string
   /** Debug: the actual compiled prompt sent to LLM (for debug view) */
@@ -34,27 +34,27 @@ export class SecurityAgentService {
     // SQL Injection patterns
     { pattern: /(\bSELECT\b.*\bFROM\b|\bDROP\b.*\bTABLE\b|\bUNION\b.*\bSELECT\b)/i, reason: 'SQL injection detected' },
     { pattern: /(\bINSERT\b.*\bINTO\b|\bUPDATE\b.*\bSET\b|\bDELETE\b.*\bFROM\b)/i, reason: 'SQL modification attempt' },
-    
+
     // XSS patterns  
     { pattern: /<script[\s\S]*?>[\s\S]*?<\/script>/i, reason: 'Script injection detected' },
     { pattern: /javascript:/i, reason: 'JavaScript protocol detected' },
     { pattern: /on(load|error|click|mouse|focus|blur|submit|change)=/i, reason: 'Event handler injection' },
     { pattern: /<iframe[\s\S]*?>/i, reason: 'Iframe injection detected' },
-    
+
     // Command injection
     { pattern: /[;&|`$].*?(rm|cat|wget|curl|chmod|chown|sudo|bash|sh|nc|netcat)\b/i, reason: 'Command injection detected' },
     // Command substitution - only match actual shell patterns, not markdown backticks
     // $(command) or `command` with actual command-like content inside
     { pattern: /\$\([^)]*[a-z_][a-z0-9_]*\s/i, reason: 'Command substitution detected' },
-    
+
     // Path traversal
     { pattern: /\.\.\/|\.\.\\|%2e%2e%2f/i, reason: 'Path traversal detected' },
     { pattern: /\/etc\/passwd|\/etc\/shadow/i, reason: 'Sensitive file access attempt' },
-    
+
     // Sensitive data patterns (prevent accidental exposure)
     { pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/, reason: 'Credit card number detected' },
     { pattern: /\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}([A-Z0-9]?){0,16}\b/i, reason: 'IBAN detected' },
-    
+
     // Spam/abuse patterns
     { pattern: /(viagra|cialis|casino|lottery|winner|congratulations.*won|claim.*prize)/i, reason: 'Spam content detected' },
   ]
@@ -133,7 +133,7 @@ export class SecurityAgentService {
     let customerName = 'Customer'
     try {
       const customer = await prisma.customers.findUnique({
-        where: { 
+        where: {
           id: customerId,
           workspaceId, // Workspace isolation
         },
@@ -223,7 +223,7 @@ export class SecurityAgentService {
         promptPreview: systemPrompt.substring(0, 300),
       })
 
-      const userMessage = `Check if this message is safe:\n\n"${messageContent}"\n\nRespond with JSON: {"safe": true/false, "message": "...", "reason": "..."}` 
+      const userMessage = `Check if this message is safe:\n\n"${messageContent}"\n\nRespond with JSON: {"safe": true/false, "message": "...", "reason": "..."}`
 
       const response = await fetch(`${this.openRouterBaseUrl}/chat/completions`, {
         method: 'POST',

@@ -45,6 +45,7 @@ jest.mock("../../../src/utils/logger", () => ({
 const mockPrisma = {
   customers: {
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
     update: jest.fn(),
   },
   chatSession: {
@@ -101,7 +102,7 @@ describe("ContactOperator Email Notifications", () => {
   const mockWorkspace = {
     id: workspaceId,
     name: "BellItalia Foods",
-    operatorContactMethod: "email", // 🆕 Test email method
+    operatorContactMethod: "email", //  Test email method
     operatorEmail: "support@bellitalia.com",
     operatorWhatsappNumber: null,
     hasHumanSupport: true,
@@ -135,6 +136,7 @@ describe("ContactOperator Email Notifications", () => {
     jest.clearAllMocks()
 
     mockPrisma.customers.findFirst.mockResolvedValue(mockCustomer)
+    mockPrisma.customers.findUnique.mockResolvedValue(mockCustomer)
     mockPrisma.customers.update.mockResolvedValue(mockCustomer)
     mockPrisma.chatSession.findFirst.mockResolvedValue({
       id: sessionId,
@@ -190,7 +192,7 @@ describe("ContactOperator Email Notifications", () => {
 
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
       const emailCallArgs = mockEmailService.sendOperatorNotificationEmail.mock.calls[0][0]
-      
+
       // chatSummary must contain the generated summary text, NOT be empty ""
       expect(emailCallArgs.chatSummary).toBeDefined()
       expect(emailCallArgs.chatSummary.length).toBeGreaterThan(50)
@@ -208,7 +210,8 @@ describe("ContactOperator Email Notifications", () => {
         sales: { ...mockSalesAgent, email: "" },
       }
       mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgentEmail)
-      
+      mockPrisma.customers.findUnique.mockResolvedValue(mockCustomerNoAgentEmail)
+
       const request: ContactOperatorRequest = {
         phoneNumber,
         workspaceId,
@@ -233,7 +236,8 @@ describe("ContactOperator Email Notifications", () => {
         sales: { ...mockSalesAgent, email: "" },
       }
       mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgentEmail)
-      
+      mockPrisma.customers.findUnique.mockResolvedValue(mockCustomerNoAgentEmail)
+
       const mockWorkspaceNoOperatorEmail = {
         ...mockWorkspace,
         operatorEmail: null,
@@ -249,7 +253,7 @@ describe("ContactOperator Email Notifications", () => {
       }
 
       await contactOperator(request)
-      
+
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledTimes(1)
       expect(mockEmailService.sendOperatorNotificationEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -261,12 +265,13 @@ describe("ContactOperator Email Notifications", () => {
 
     it("should NOT send email when agent email, operatorEmail, and adminEmail are null", async () => {
       // SCENARIO: No email configured anywhere
-      
+
       const mockCustomerNoAgentEmail = {
         ...mockCustomer,
         sales: { ...mockSalesAgent, email: "" },
       }
       mockPrisma.customers.findFirst.mockResolvedValue(mockCustomerNoAgentEmail)
+      mockPrisma.customers.findUnique.mockResolvedValue(mockCustomerNoAgentEmail)
 
       const mockWorkspaceNoEmails = {
         ...mockWorkspace,
@@ -285,7 +290,7 @@ describe("ContactOperator Email Notifications", () => {
       }
 
       await contactOperator(request)
-      
+
       // ❌ No email sent (no target)
       expect(mockEmailService.sendOperatorNotificationEmail).not.toHaveBeenCalled()
     })
@@ -344,7 +349,6 @@ describe("ContactOperator Email Notifications", () => {
       const request: ContactOperatorRequest = {
         phoneNumber,
         workspaceId,
-        customerId,
       }
 
       await contactOperator(request)

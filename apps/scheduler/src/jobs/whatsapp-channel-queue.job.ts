@@ -1,6 +1,6 @@
 import { prisma, Prisma } from '../config/database'
 import logger from '../utils/logger'
-import { SecurityAgentService } from '../services/security-agent.service'
+import { SecurityAgentService, SecurityCheckResult } from '../services/security-agent.service'
 import { BillingService } from '../services/billing.service'
 import { getWorkspaceWhatsAppConfig, WorkspaceWhatsAppConfig } from '../services/whatsapp-config.service'
 import { whatsAppInteractiveConverter, WhatsAppMessage } from '../services/whatsapp-interactive-converter.service'
@@ -532,7 +532,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
           // 🔒 SECURITY CHECK: Pass through Security Agent LLM before sending
           // 🛡️ Skip if skipSecurityCheck is true (trusted internal messages, operator notifications)
-          let securityCheck = { isSafe: true, reason: 'Skipped (Trusted)', debugModel: 'internal-policy', debugPrompt: 'Bypassed by skipSecurityCheck=true flag' }
+          let securityCheck: SecurityCheckResult = { isSafe: true, reason: 'Skipped (Trusted)', debugModel: 'internal-policy', debugPrompt: 'Bypassed by skipSecurityCheck=true flag' }
 
           if (!message.skipSecurityCheck) {
             securityCheck = await securityAgent.validateMessage({
