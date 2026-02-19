@@ -30,10 +30,11 @@ async function testWebChatEscalation() {
     console.log(`📝 Testing with Customer: ${customer.name} (${customer.id}), Phone: ${customer.phone || "MISSING"}`);
 
     // 2. Mock a web chat request (no phoneNumber, just customerId)
-    console.log("\n📞 Calling contactOperator with customerId and NO phoneNumber...");
+    console.log("\n📞 Calling contactOperator with customerId and phoneNumber (web visitor)...");
     const result = await contactOperator({
         workspaceId: workspace.id,
         customerId: customer.id,
+        phoneNumber: customer.phone || "MISSING_PHONE",
         reason: "Test escalation from automated script"
     });
 
