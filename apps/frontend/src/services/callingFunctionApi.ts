@@ -16,7 +16,8 @@ export interface CallingFunction {
 export const callingFunctionsApi = {
     list: async (workspaceId: string): Promise<CallingFunction[]> => {
         const response = await api.get(`/workspaces/${workspaceId}/functions`)
-        return response.data
+        // API returns { functions: [...] }
+        return response.data?.functions ?? []
     },
 
     create: async (workspaceId: string, data: Partial<CallingFunction>): Promise<CallingFunction> => {

@@ -5,6 +5,8 @@ import {
   Users,
   Sparkles,
   Globe,
+  ListChecks,
+  History,
   Pencil,
   Pause,
   Play,
@@ -30,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useNavigate } from "react-router-dom"
 
 interface Campaign {
   id: string
@@ -69,6 +72,8 @@ export default function CampaignsPage() {
 
   // Security Check State
   const [securityLoading, setSecurityLoading] = useState<string | null>(null)
+
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (workspace?.id) {
@@ -238,6 +243,30 @@ export default function CampaignsPage() {
     const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(campaign.status || "")
     const isCampaignActive = campaign.status === "SCHEDULED" || campaign.status === "RUNNING"
 
+    const nextRunLabel = date
+      ? new Date(date).toLocaleString("it-IT", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Not scheduled"
+
+    const lastRunLabel = campaign.lastRunAt
+      ? new Date(campaign.lastRunAt).toLocaleString("it-IT", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Never run"
+
+    const frequencyLabel = (campaign.frequency || "").toLowerCase() === "once"
+      ? "One-shot"
+      : campaign.frequency?.toLowerCase()
+
     const targetingBadge =
       campaign.targetingType === "ALL"
         ? { icon: <Globe className="w-3 h-3" />, label: "All" }
@@ -286,6 +315,11 @@ export default function CampaignsPage() {
                               campaign.status === "DRAFT" ? "DRAFT" :
                                 campaign.status}
               </Badge>
+              {campaign.isActive === false && (
+                <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
+                  Scheduler off
+                </Badge>
+              )}
               {campaign.isExpired && (
                 <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                   Past scheduled time
@@ -298,7 +332,7 @@ export default function CampaignsPage() {
                 {targetingBadge.label}
               </Badge>
               <Badge variant="outline" className="capitalize">
-                {campaign.frequency.toLowerCase()}
+                {frequencyLabel}
               </Badge>
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4 text-gray-400" />
@@ -308,6 +342,15 @@ export default function CampaignsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/queue')}
+              className="h-8 w-8 p-0"
+              title="Open WhatsApp queue"
+            >
+              <ListChecks className="h-4 w-4 text-slate-700" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -346,6 +389,39 @@ export default function CampaignsPage() {
             >
               <Trash2 className="h-4 w-4 text-red-600" />
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>Schedule</span>
+              <Badge variant="outline" className="uppercase tracking-wide">
+                {campaign.status === "RUNNING" ? "ACTIVE" : campaign.status}
+              </Badge>
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">Next: {nextRunLabel}</div>
+            <div className="text-[11px] text-slate-500">Last run: {lastRunLabel}</div>
+          </div>
+
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>Error queue & retention</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/queue')}
+                className="h-7 px-2 text-slate-700"
+              >
+                <History className="w-3.5 h-3.5 mr-1" /> Queue
+              </Button>
+            </div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">
+              {(campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)} exclusions (last run)
+            </div>
+            <div className="text-[11px] text-slate-500">
+              Details kept in queue logs; auto-clean every 30 days.
+            </div>
           </div>
         </div>
 
@@ -394,8 +470,11 @@ export default function CampaignsPage() {
                 </TooltipProvider>
               )}
             </div>
-            <div className="mt-1 text-base font-semibold">
+              <div className="mt-1 text-base font-semibold">
               {(campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)}
+            </div>
+            <div className="mt-1 text-[11px] text-slate-500">
+              Based on the latest dispatch. Open queue for per-contact reasons.
             </div>
           </div>
         </div>
