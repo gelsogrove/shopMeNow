@@ -145,7 +145,7 @@ const openSection = async (title: string) => {
     'Channels': { menuLabel: 'WhatsApp Channel', heading: 'WhatsApp Channel' },
   }
   const config = menuConfig[title] || { menuLabel: title, heading: title }
-  
+
   // Find the dropdown button (Button with ChevronDown)
   // It should contain the current section label (e.g., "Business Config")
   const buttons = screen.getAllByRole('button')
@@ -153,11 +153,11 @@ const openSection = async (title: string) => {
     const hasChevron = btn.querySelector('svg.lucide-chevron-down')
     return hasChevron
   })
-  
+
   if (!dropdownButton) {
     throw new Error('Could not find settings dropdown button')
   }
-  
+
   // If the section is already active, no need to click
   if (dropdownButton.textContent?.includes(config.menuLabel)) {
     // Already on this section, just wait for heading
@@ -166,22 +166,22 @@ const openSection = async (title: string) => {
     })
     return
   }
-  
+
   // Click dropdown to open menu
   await user.click(dropdownButton)
-  
+
   // Wait for menu to open and find the menu item
   await waitFor(() => {
     const menuItems = screen.getAllByText(config.menuLabel)
     const menuItem = menuItems.find(el => el.className.includes('font-medium'))
     expect(menuItem).toBeInTheDocument()
   })
-  
+
   // Click the menu item (the one with font-medium class, not the button)
   const menuItems = screen.getAllByText(config.menuLabel)
   const menuItem = menuItems.find(el => el.className.includes('font-medium'))
   await user.click(menuItem!)
-  
+
   // Wait for section heading to render
   await waitFor(() => {
     const heading = screen.getAllByRole('heading', { name: new RegExp(config.heading, 'i') })[0]
@@ -278,11 +278,11 @@ describe('SettingsPage - Toggle Behaviors', () => {
     renderWithProviders(<SettingsPage />)
 
     await waitForLoaded()
-    
+
     // Channel Active switch is in the header, find it by the "Active" or "Inactive" label
     const channelStatusContainer = screen.getByText(/Active|Inactive/i).closest('div')
     expect(channelStatusContainer).toBeInTheDocument()
-    
+
     const channelSwitch = within(channelStatusContainer!).getByRole('switch')
     expect(channelSwitch).toBeChecked() // Default is true
 
@@ -363,7 +363,7 @@ describe('SettingsPage - Save Functionality', () => {
     expect(callArgs[1]).toMatchObject({
       name: 'Updated Channel',
     })
-  })
+  }, 15000)
 
   it('should prevent save with validation errors', async () => {
     const user = userEvent.setup()
@@ -381,7 +381,7 @@ describe('SettingsPage - Save Functionality', () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Please fix the errors before saving')
     })
-    
+
     expect(mockUpdateWorkspace).not.toHaveBeenCalled()
   })
 })

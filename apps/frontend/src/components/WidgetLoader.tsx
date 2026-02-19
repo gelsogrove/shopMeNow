@@ -39,7 +39,7 @@ export function WidgetLoader() {
   // Load widget script dynamically from platform config
   useEffect(() => {
     const clearWidgetConfig = () => {
-      if ((window as any).eChatbotConfig) {
+      if (typeof window !== 'undefined' && (window as any).eChatbotConfig) {
         delete (window as any).eChatbotConfig
       }
     }
@@ -53,7 +53,7 @@ export function WidgetLoader() {
       try {
         const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
         const response = await fetch(`${apiBaseUrl}/platform-config/widget-config`)
-        
+
         if (!response.ok) {
           console.error("❌ Failed to fetch widget config:", response.status)
           return
@@ -118,7 +118,7 @@ export function WidgetLoader() {
         // script.src = "https://www.echatbot.ai/widget.js"
         // script.async = true
         // document.body.appendChild(script)
-        
+
       } catch (error) {
         console.error("❌ Failed to load widget:", error)
         clearWidgetConfig()

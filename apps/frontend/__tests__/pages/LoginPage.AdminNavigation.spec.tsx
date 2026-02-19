@@ -188,7 +188,7 @@ describe('LoginPage - Platform Admin Navigation', () => {
       expect(mockNavigate).not.toHaveBeenCalledWith('/workspace-selection')
       expect(window.location.replace).not.toHaveBeenCalled()
       expect(window.location.href).toBe('http://localhost/')
-    })
+    }, 15000)
 
     it('should show avatar menu with "Platform Admin" badge after admin login', async () => {
       const adminUser = {

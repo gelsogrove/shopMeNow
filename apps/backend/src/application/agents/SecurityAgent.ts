@@ -95,6 +95,20 @@ export class SecurityAgent {
   async process(options: ProcessOptions): Promise<SecurityResult> {
     const startTime = Date.now()
 
+    // 🛡️ Fail-safe: Skip security check for internal operator notifications
+    // Even if skipSecurityCheck flag is missing from DB (sync issues), we trust the pattern
+    if (options.message.includes('🔔 *RICHIESTA ASSISTENZA OPERATORE*')) {
+      logger.info(`🛡️ [SecurityAgent] Trusted operator notification detected - bypassing LLM`, {
+        workspaceId: options.workspaceId,
+      })
+      return {
+        safe: true,
+        message: options.message,
+        tokensUsed: 0,
+        executionTimeMs: Date.now() - startTime
+      }
+    }
+
     try {
       // 1. Load SECURITY agent config from database
       const securityAgent = await this.agentConfigRepo.findByType(

@@ -302,7 +302,7 @@ export default function CampaignsPage() {
               </Badge>
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4 text-gray-400" />
-                {date ? new Date(date).toLocaleString() : "Asap"}
+                {date ? new Date(date).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Asap"}
               </div>
             </div>
           </div>
@@ -504,7 +504,7 @@ export default function CampaignsPage() {
                   <div key={msg.id} className="p-3 rounded-lg border border-slate-100 bg-slate-50">
                     <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
                       <span className="font-medium text-slate-700">{msg.phoneNumber}</span>
-                      <span>{new Date(msg.createdAt).toLocaleString()}</span>
+                      <span>{new Date(msg.createdAt).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p className="text-sm text-slate-700 line-clamp-3 italic">"{msg.messageContent}"</p>
                     <div className="mt-2 flex justify-end">

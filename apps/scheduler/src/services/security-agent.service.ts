@@ -129,6 +129,20 @@ export class SecurityAgentService {
       return { isSafe: false, reason: 'Empty message' }
     }
 
+    // 🛡️ Fail-safe: Skip security check for internal operator notifications
+    // Even if skipSecurityCheck flag is missing from DB (sync issues), we trust the pattern
+    if (messageContent.includes('🔔 *RICHIESTA ASSISTENZA OPERATORE*')) {
+      logger.info(`🛡️ [Security Agent] Trusted operator notification detected - bypassing LLM`, {
+        workspaceId,
+      })
+      return {
+        isSafe: true,
+        reason: 'Skipped (Trusted Operator Notification)',
+        debugModel: 'internal-policy',
+        debugPrompt: 'Bypassed by content-based signature check'
+      }
+    }
+
     // 2. Check customer is not blacklisted
     let customerName = 'Customer'
     try {
