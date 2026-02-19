@@ -252,8 +252,19 @@ export class PushCampaignController {
       }
 
       const now = new Date()
-      const ok = await service.updateStatus(workspaceId, id, PushCampaignStatus.SCHEDULED, now)
-      if (!ok) return res.status(404).json({ error: "Campaign not found" })
+      const result = await prisma.pushCampaign.updateMany({
+        where: { id, workspaceId },
+        data: {
+          status: PushCampaignStatus.SCHEDULED,
+          sendAt: now,
+          nextRunAt: now,
+          lastRunAt: null, // important: allow re-run
+          isActive: true,
+        },
+      })
+      if (result.count === 0) {
+        return res.status(404).json({ error: "Campaign not found" })
+      }
       res.json({ message: "Campaign queued for immediate run", sendAt: now })
     } catch (error) {
       logger.error("[PushCampaignController] runNow error", error)
