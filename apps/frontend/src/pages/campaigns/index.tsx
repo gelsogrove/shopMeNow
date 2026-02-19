@@ -242,11 +242,10 @@ export default function CampaignsPage() {
     const date = campaign.nextRunAt || campaign.sendAt
     const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(campaign.status || "")
     const isCampaignActive = campaign.status === "SCHEDULED" || campaign.status === "RUNNING"
-    const excludedCount = (campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)
     const totalRecipients =
       (campaign as any).recipientsTotal ??
       campaign.expectedRecipients ??
-      ((campaign as any).recipientsPending ?? 0) + excludedCount + (campaign.actualSent ?? 0)
+      ((campaign as any).recipientsPending ?? 0) + (campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0) + (campaign.actualSent ?? 0)
     const schedulerOff =
       campaign.isActive === false &&
       campaign.status !== "SCHEDULED" &&
@@ -401,37 +400,15 @@ export default function CampaignsPage() {
           </div>
         </div>
 
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Schedule</span>
-              <Badge variant="outline" className="uppercase tracking-wide">
-                {campaign.status === "RUNNING" ? "ACTIVE" : campaign.status}
-              </Badge>
-            </div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">Next: {nextRunLabel}</div>
-            <div className="text-[11px] text-slate-500">Last run: {lastRunLabel}</div>
+        <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 p-3">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span>Schedule</span>
+            <Badge variant="outline" className="uppercase tracking-wide">
+              {campaign.status === "RUNNING" ? "ACTIVE" : campaign.status}
+            </Badge>
           </div>
-
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Error queue & retention</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/queue')}
-                className="h-7 px-2 text-slate-700"
-              >
-                <History className="w-3.5 h-3.5 mr-1" /> Queue
-              </Button>
-            </div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">
-              {(campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)} exclusions (last run)
-            </div>
-            <div className="text-[11px] text-slate-500">
-              Details kept in queue logs; auto-clean every 30 days.
-            </div>
-          </div>
+          <div className="mt-1 text-sm font-semibold text-slate-900">Next: {nextRunLabel}</div>
+          <div className="text-[11px] text-slate-500">Last run: {lastRunLabel}</div>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
@@ -459,39 +436,6 @@ export default function CampaignsPage() {
               )}
             </div>
             <div className="mt-1 text-base font-semibold">{campaign.actualSent ?? 0}</div>
-          </div>
-          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              Excluded Contacts
-              {(campaign.errorBreakdown?.length || 0) > 0 && (
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3 h-3 text-slate-400 cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs bg-slate-900 text-slate-50 text-xs">
-                      <div className="font-semibold mb-1">Exclusion details</div>
-                      <ul className="space-y-1">
-                        {campaign.errorBreakdown?.map((e, idx) => (
-                          <li key={idx} className="flex justify-between gap-3">
-                            <span className="capitalize">
-                              {errorLabel(e.code)}
-                            </span>
-                            <span className="font-semibold">{e.count}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-            <div className="mt-1 text-base font-semibold">
-              {excludedCount}
-            </div>
-            <div className="mt-1 text-[11px] text-slate-500">
-              Excluded = failed + skipped (opt-out/blacklist/invalid). Open queue for per-contact reasons.
-            </div>
           </div>
         </div>
       </div>
