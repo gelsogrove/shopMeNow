@@ -261,10 +261,11 @@ export default function CampaignsPage() {
     const date = campaign.nextRunAt || campaign.sendAt
     const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(campaign.status || "")
     const isCampaignActive = campaign.status === "SCHEDULED" || campaign.status === "RUNNING"
+    const excludedCount = (campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)
     const totalRecipients =
       (campaign as any).recipientsTotal ??
       campaign.expectedRecipients ??
-      ((campaign as any).recipientsPending ?? 0) + (campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0) + (campaign.actualSent ?? 0)
+      ((campaign as any).recipientsPending ?? 0) + excludedCount + (campaign.actualSent ?? 0)
     const schedulerOff =
       campaign.isActive === false &&
       campaign.status !== "SCHEDULED" &&
