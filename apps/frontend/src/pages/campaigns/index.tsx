@@ -242,6 +242,15 @@ export default function CampaignsPage() {
     const date = campaign.nextRunAt || campaign.sendAt
     const isTerminalStatus = ["COMPLETED", "CANCELLED", "FAILED"].includes(campaign.status || "")
     const isCampaignActive = campaign.status === "SCHEDULED" || campaign.status === "RUNNING"
+    const excludedCount = (campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)
+    const totalRecipients =
+      (campaign as any).recipientsTotal ??
+      campaign.expectedRecipients ??
+      ((campaign as any).recipientsPending ?? 0) + excludedCount + (campaign.actualSent ?? 0)
+    const schedulerOff =
+      campaign.isActive === false &&
+      campaign.status !== "SCHEDULED" &&
+      campaign.status !== "RUNNING"
 
     const nextRunLabel = date
       ? new Date(date).toLocaleString("it-IT", {
@@ -315,7 +324,7 @@ export default function CampaignsPage() {
                               campaign.status === "DRAFT" ? "DRAFT" :
                                 campaign.status}
               </Badge>
-              {campaign.isActive === false && (
+              {schedulerOff && (
                 <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50">
                   Scheduler off
                 </Badge>
@@ -427,6 +436,13 @@ export default function CampaignsPage() {
 
         <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+            <div className="text-xs text-slate-500">Total Recipients</div>
+            <div className="mt-1 text-base font-semibold">{totalRecipients}</div>
+            <div className="text-[11px] text-slate-500">
+              Pending + Sent + Excluded = { (campaign as any).recipientsPending ?? 0 } / {campaign.actualSent ?? 0} / {excludedCount}
+            </div>
+          </div>
+          <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Pending Recipients</div>
             <div className="mt-1 text-base font-semibold">
               {(campaign as any).recipientsPending ?? campaign.expectedRecipients ?? 0}
@@ -470,11 +486,11 @@ export default function CampaignsPage() {
                 </TooltipProvider>
               )}
             </div>
-              <div className="mt-1 text-base font-semibold">
-              {(campaign.actualFailed ?? 0) + (campaign.actualSkipped ?? 0)}
+            <div className="mt-1 text-base font-semibold">
+              {excludedCount}
             </div>
             <div className="mt-1 text-[11px] text-slate-500">
-              Based on the latest dispatch. Open queue for per-contact reasons.
+              Excluded = failed + skipped (opt-out/blacklist/invalid). Open queue for per-contact reasons.
             </div>
           </div>
         </div>
