@@ -10,6 +10,7 @@ import {
   Pencil,
   Pause,
   Play,
+  Rocket,
   Trash2,
   Info,
   ShieldCheck,
@@ -129,6 +130,24 @@ export default function CampaignsPage() {
       loadCampaigns()
     } catch {
       toast.error("Error cancelling campaign")
+    }
+  }
+
+  const handleRunNow = async (campaign: Campaign) => {
+    if (!hasEnoughCreditForPush) {
+      toast.error(
+        `Insufficient credit to run this campaign. Need $${pushCost.toFixed(
+          2
+        )}, balance $${creditBalance.toFixed(2)}.`
+      )
+      return
+    }
+    try {
+      await api.post(`/workspaces/${workspace?.id}/push-campaigns/${campaign.id}/run-now`)
+      toast.success("Campaign forced to run")
+      loadCampaigns()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to run campaign")
     }
   }
 
@@ -358,6 +377,15 @@ export default function CampaignsPage() {
               title="Open WhatsApp queue"
             >
               <ListChecks className="h-4 w-4 text-slate-700" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleRunNow(campaign)}
+              className="h-8 w-8 p-0"
+              title="Run now"
+            >
+              <Rocket className="h-4 w-4 text-emerald-600" />
             </Button>
             <Button
               variant="ghost"
