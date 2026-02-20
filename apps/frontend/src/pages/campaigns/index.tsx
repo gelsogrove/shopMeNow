@@ -444,9 +444,7 @@ export default function CampaignsPage() {
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Total Recipients</div>
             <div className="mt-1 text-base font-semibold">{totalRecipients}</div>
-            <div className="text-[11px] text-slate-500">
-              Pending + Sent + Excluded = { (campaign as any).recipientsPending ?? 0 } / {campaign.actualSent ?? 0} / {excludedCount}
-            </div>
+
           </div>
           <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
             <div className="text-xs text-slate-500">Pending Recipients</div>
