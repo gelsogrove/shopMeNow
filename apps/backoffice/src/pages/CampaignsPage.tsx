@@ -215,13 +215,29 @@ export default function CampaignsPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-4 text-sm text-gray-700">
-              <div>
-                Expected: {c.expectedRecipients} · Sent: {c.actualSent} · Failed: {c.actualFailed} · Skipped:{' '}
-                {c.actualSkipped}
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <div className="text-gray-500 text-xs mb-1">Total Recipients</div>
+                  <div className="font-semibold text-lg">{c.expectedRecipients}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs mb-1">Sent</div>
+                  <div className="font-semibold text-lg text-green-600">{c.actualSent}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs mb-1">Failed</div>
+                  <div className="font-semibold text-lg text-red-600">{c.actualFailed}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500 text-xs mb-1">Skipped</div>
+                  <div className="font-semibold text-lg text-gray-600">{c.actualSkipped}</div>
+                </div>
               </div>
-              <div>Cost/message: ${Number(c.costPerMessage).toFixed(2)}</div>
-              <div>Created: {new Date(c.createdAt).toLocaleString()}</div>
+              <div className="mt-4 pt-4 border-t flex justify-between text-xs text-gray-500">
+                <div>Cost/message: ${Number(c.costPerMessage).toFixed(2)}</div>
+                <div>Created: {new Date(c.createdAt).toLocaleString()}</div>
+              </div>
             </CardContent>
           </Card>
         ))}

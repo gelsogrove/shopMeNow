@@ -898,6 +898,13 @@ export class ChatEngineService {
   ): Promise<{ message: string; tokensUsed: number }> {
     const startTime = Date.now()
     
+    logger.info("🌍 [applyTranslation] Called", {
+      messageLength: message.length,
+      messagePreview: message.substring(0, 80),
+      targetLanguage,
+      workspaceId: workspaceId.substring(0, 8),
+    })
+    
     try {
       // Call TranslationAgent to translate message
       const result = await this.translationAgent.process({
@@ -908,6 +915,12 @@ export class ChatEngineService {
       })
       
       const executionTimeMs = Date.now() - startTime
+      
+      logger.info("🌍 [applyTranslation] TranslationAgent result", {
+        translated: result.translated,
+        tokensUsed: result.tokensUsed,
+        outputPreview: result.message.substring(0, 80),
+      })
       
       // Add debug step for Message Flow Timeline
       this.pushTranslationDebugStep(debugSteps, {
@@ -1543,6 +1556,14 @@ export class ChatEngineService {
       let safetyTokens = 0
 
       // STEP 2: Apply Translation Layer (ALWAYS)
+      logger.info("🌍 [ChatEngine] Before translation", {
+        originalMessage: result.message.substring(0, 100),
+        rawTargetLanguage,
+        normalizedLanguage,
+        customerLanguage: input.customerLanguage,
+        channel: input.channel,
+      })
+      
       const translationResult = await this.applyTranslation(
         result.message,
         input.workspaceId,
@@ -1553,6 +1574,11 @@ export class ChatEngineService {
 
       translationTokens = translationResult.tokensUsed || 0
       finalMessage = translationResult.message
+      
+      logger.info("🌍 [ChatEngine] After translation", {
+        translatedMessage: finalMessage.substring(0, 100),
+        tokensUsed: translationTokens,
+      })
 
       // STEP 2.5: Security Layer (after translation)
       if (isWidgetChannel) {
