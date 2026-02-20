@@ -56,6 +56,7 @@ export async function pushCampaignsJob(): Promise<void> {
       }
 
       // Ensure we have recipients for this run
+      let noEligibleRecipientsWarning: string | undefined
       {
         const pendingCount = await prisma.pushCampaignRecipient.count({
           where: { campaignId: campaign.id, status: 'PENDING' },
@@ -66,6 +67,32 @@ export async function pushCampaignsJob(): Promise<void> {
           // For dynamic targeting, we always repopulate.
           // For manual, we repopulate if this is a new run (lastRunAt updated recently).
           await populateRecipientsForRun(campaign)
+
+          // Re-check: if STILL 0 PENDING after populate, recipients likely lack push_notifications_consent
+          const recheckCount = await prisma.pushCampaignRecipient.count({
+            where: { campaignId: campaign.id, status: 'PENDING' },
+          })
+
+          if (recheckCount === 0) {
+            const skippedCount = await prisma.pushCampaignRecipient.count({
+              where: { campaignId: campaign.id, status: 'SKIPPED' },
+            })
+            noEligibleRecipientsWarning = `No eligible recipients found (${skippedCount} skipped). Verify push_notifications_consent is enabled for target customers.`
+            logger.warn(`[PUSH-CAMPAIGN] Campaign ${campaign.id}: ${noEligibleRecipientsWarning}`)
+
+            // ONCE campaigns with 0 eligible recipients → FAILED immediately (will never succeed without re-activation)
+            if (campaign.frequency === CampaignFrequency.ONCE) {
+              await prisma.pushCampaign.update({
+                where: { id: campaign.id },
+                data: {
+                  status: 'FAILED',
+                  isActive: false,
+                  lastError: noEligibleRecipientsWarning,
+                },
+              })
+              continue
+            }
+          }
         }
       }
 
@@ -340,6 +367,8 @@ export async function pushCampaignsJob(): Promise<void> {
           nextRunAt,
           actualSent: { increment: processed },
           ...(shouldDeactivate ? { isActive: false } : {}),
+          // Persist warning for visibility in the UI when no eligible recipients were found
+          ...(noEligibleRecipientsWarning ? { lastError: noEligibleRecipientsWarning } : {}),
         },
       })
 
@@ -410,7 +439,10 @@ async function populateRecipientsForRun(campaign: any) {
       select: { id: true, phone: true },
     })
 
-    if (customers.length === 0) return
+    if (customers.length === 0) {
+      logger.warn(`[PUSH-CAMPAIGN] populateRecipientsForRun: no customers with push_notifications_consent=true found for campaign ${campaign.id} (targeting: ${campaign.targetingType})`)
+      return
+    }
 
     const eligibleIds = new Set(customers.map((c) => c.id))
 

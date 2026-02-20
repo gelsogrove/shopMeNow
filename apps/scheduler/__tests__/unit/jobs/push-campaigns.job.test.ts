@@ -948,21 +948,25 @@ describe('Push Campaigns Job', () => {
         enableWhatsapp: true,
       })
       mockPrisma.pushCampaignRecipient.count
-        .mockResolvedValueOnce(0) // No pending recipients initially
-        .mockResolvedValueOnce(0) // Still no pending after processing
+        .mockResolvedValueOnce(0) // No pending recipients initially → triggers populateRecipientsForRun
+        .mockResolvedValueOnce(0) // Re-check after populate: still 0 → noEligibleRecipientsWarning set
+        .mockResolvedValueOnce(0) // Skipped count query
+        .mockResolvedValueOnce(0) // Final stillPending check after processing loop
       mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([])
       mockPrisma.customers.findMany.mockResolvedValue([])
       mockPrisma.pushCampaign.update.mockResolvedValue(mockCampaign)
 
       await pushCampaignsJob()
 
-      // Verify nextRunAt was calculated and status is SCHEDULED
+      // RULE: Recurring campaigns with 0 recipients keep SCHEDULED with nextRunAt,
+      // but also set lastError so the user sees the issue in the UI
       expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'campaign-1' },
           data: expect.objectContaining({
             status: 'SCHEDULED',
             nextRunAt: expect.any(Date),
+            lastError: expect.stringContaining('No eligible recipients'),
           }),
         })
       )
@@ -1336,6 +1340,152 @@ describe('Push Campaigns Job', () => {
       expect(mockPrisma.workspace.findUnique).not.toHaveBeenCalled()
       expect(mockLogger.info).not.toHaveBeenCalledWith(
         expect.stringContaining('Found')
+      )
+    })
+  })
+
+  describe('No Eligible Recipients (push_notifications_consent missing)', () => {
+    it('should mark ONCE campaign as FAILED and log warning when all recipients lack push consent', async () => {
+      // SCENARIO: ONCE campaign where all target customers have push_notifications_consent=false
+      // RULE: Job must NOT silently complete. Campaign must be marked FAILED with a clear lastError
+      // so the user can see WHY nothing was sent in the campaign dashboard.
+      // ROOT CAUSE this test protects against: silent failure where campaign goes to COMPLETED
+      // with 0 messages sent and no visible error, leaving the user confused.
+
+      const mockCampaign = {
+        id: 'campaign-silent',
+        workspaceId: 'ws-1',
+        status: 'SCHEDULED',
+        isActive: true,
+        frequency: 'ONCE',
+        batchSize: 50,
+        throttlePerSecond: 10,
+        costPerMessage: new Prisma.Decimal(1.0),
+        message: 'Hello {{name}}',
+        targetingType: 'ALL',
+      }
+
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([mockCampaign])
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: 'ws-1',
+        ownerId: 'owner-1',
+        name: 'Test',
+        enableWhatsapp: true,
+      })
+      mockPrisma.pushCampaignRecipient.count
+        .mockResolvedValueOnce(0)  // Initial check: 0 PENDING → triggers populateRecipientsForRun
+        .mockResolvedValueOnce(0)  // Re-check after populate: still 0 PENDING → warning triggered
+        .mockResolvedValueOnce(3)  // Skipped count: 3 customers skipped (no consent)
+      // populateRecipientsForRun finds no eligible customers (all lack consent)
+      mockPrisma.customers.findMany.mockResolvedValue([]) // No consent customers found
+      mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([]) // No existing recipients to reset
+      mockPrisma.pushCampaign.update.mockResolvedValue(mockCampaign)
+
+      await pushCampaignsJob()
+
+      // RULE: ONCE campaign with 0 eligible recipients → FAILED (not COMPLETED)
+      expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith({
+        where: { id: 'campaign-silent' },
+        data: {
+          status: 'FAILED',
+          isActive: false,
+          lastError: expect.stringContaining('No eligible recipients'),
+        },
+      })
+
+      // RULE: Warning must be logged so Heroku logs show the root cause
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('campaign-silent'),
+        // Message must mention push_notifications_consent for diagnosability
+      )
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('push_notifications_consent')
+      )
+    })
+
+    it('should keep WEEKLY campaign SCHEDULED but set lastError when no eligible recipients', async () => {
+      // SCENARIO: Recurring WEEKLY campaign where all customers lack push consent
+      // RULE: Recurring campaigns should NOT be failed permanently (consent may be granted later)
+      // But lastError MUST be set so user sees the problem in the dashboard.
+
+      const mockCampaign = {
+        id: 'campaign-weekly-no-consent',
+        workspaceId: 'ws-1',
+        status: 'SCHEDULED',
+        isActive: true,
+        frequency: 'WEEKLY',
+        batchSize: 50,
+        throttlePerSecond: 10,
+        costPerMessage: new Prisma.Decimal(1.0),
+        message: 'Weekly promo',
+        targetingType: 'ALL',
+      }
+
+      mockPrisma.pushCampaign.findMany.mockResolvedValue([mockCampaign])
+      mockPrisma.workspace.findUnique.mockResolvedValue({
+        id: 'ws-1',
+        ownerId: 'owner-1',
+        name: 'Test',
+        enableWhatsapp: true,
+      })
+      mockPrisma.pushCampaignRecipient.count
+        .mockResolvedValueOnce(0)  // Initial check: 0 PENDING
+        .mockResolvedValueOnce(0)  // Re-check after populate: still 0
+        .mockResolvedValueOnce(5)  // Skipped count: 5 customers without consent
+        .mockResolvedValueOnce(0)  // Final stillPending check after processing loop
+      mockPrisma.customers.findMany.mockResolvedValue([]) // No eligible
+      mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([])
+      mockPrisma.pushCampaign.update.mockResolvedValue(mockCampaign)
+
+      await pushCampaignsJob()
+
+      // RULE: Recurring campaign keeps SCHEDULED with nextRunAt for retry next week
+      // AND sets lastError to make the issue visible in the UI
+      expect(mockPrisma.pushCampaign.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'campaign-weekly-no-consent' },
+          data: expect.objectContaining({
+            status: 'SCHEDULED',
+            nextRunAt: expect.any(Date),
+            lastError: expect.stringContaining('No eligible recipients'),
+          }),
+        })
+      )
+
+      // RULE: Must NOT be marked as FAILED (recurring can recover when consent is granted)
+      const failedCall = mockPrisma.pushCampaign.update.mock.calls.find(
+        (call) => call[0].data.status === 'FAILED'
+      )
+      expect(failedCall).toBeUndefined()
+    })
+
+    it('should log warning in populateRecipientsForRun when no customers have push consent', async () => {
+      // SCENARIO: populateRecipientsForRun is called but all customers have push_notifications_consent=false
+      // RULE: Must log a warning to make Heroku logs diagnosable — silent return is not acceptable
+      // This is the key diagnostic log that allows understanding WHY a campaign sends 0 messages
+
+      const campaign = {
+        id: 'camp-no-consent',
+        workspaceId: 'ws-1',
+        targetingType: 'ALL',
+        targetCustomerIds: [],
+      }
+
+      // ALL targeting: customers found but NONE have consent
+      mockPrisma.customers.findMany
+        .mockResolvedValueOnce([{ id: 'c1' }, { id: 'c2' }]) // First query: active customers (no consent filter)
+        .mockResolvedValueOnce([])                            // Second query: consent filter → empty
+
+      mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([])
+
+      await __test.populateRecipientsForRun(campaign)
+
+      // RULE: Must log warning with campaign ID and targeting type
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('camp-no-consent'),
+      )
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('push_notifications_consent')
       )
     })
   })
