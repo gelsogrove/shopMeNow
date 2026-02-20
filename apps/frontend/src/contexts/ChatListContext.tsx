@@ -81,7 +81,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
             customerId: chat.customerId,
             customerName: chat.customer?.name || "Unknown Customer",
             customerPhone: chat.customer?.phone || "",
-            language: chat.customer?.language || chat.context?.language || "en", // Map to 'language' field
+            language: chat.customer?.language || navigator.language.split('-')[0] || "en", // Map to 'language' field
             companyName: chat.customer?.company || null,
             lastMessage: chat.lastMessage || "",
             lastMessageTime: chat.updatedAt || chat.createdAt,

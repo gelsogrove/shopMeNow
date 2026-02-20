@@ -3612,9 +3612,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       }
 
       // ========================================================================
-      // STEP 2.20: Handle GREETING intent - Simple greeting response
+      // STEP 2.20: Handle GREETING intent - Simple greeting response (WIDGET ONLY)
       // ========================================================================
-      if (intentResult.intent.type === "GREETING") {
+      // ⚠️ CRITICAL: Hardcoded greeting ONLY for widget channel
+      // WhatsApp uses natural LLM routing, widget needs quick hardcoded response
+      if (intentResult.intent.type === "GREETING" && input.channel === "widget") {
         const processingTimeMs = Date.now() - startTime
         
         // Get workspace name for personalized greeting
@@ -3632,10 +3634,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           greetingResponse
         )
         
-        logger.info("👋 [ChatEngine] Greeting handled", {
+        logger.info("👋 [ChatEngine] Greeting handled (WIDGET)", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
           responseLength: greetingResponse.length,
+          channel: input.channel,
         })
         
         return {
