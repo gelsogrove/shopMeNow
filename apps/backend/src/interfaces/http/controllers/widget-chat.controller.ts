@@ -416,9 +416,27 @@ export class WidgetChatController {
         where: { workspaceId: resolvedWorkspaceId, phone: normalizedPhone },
       })
 
+      // Fallback: look up by customId (visitorId) across ALL workspaces
+      // Handles case where customer was created with old slug-based workspaceId
+      if (!customer) {
+        customer = await prisma.customers.findFirst({
+          where: { customId: visitorId },
+        })
+        if (customer) {
+          logger.info("[WIDGET-REGISTER] 👤 Found customer by customId (potential slug→UUID migration)", {
+            customerId: customer.id,
+            existingWorkspaceId: customer.workspaceId,
+            resolvedWorkspaceId,
+          })
+        }
+      }
+
       if (customer) {
         // ✅ RETURNING USER: Update existing customer with latest data
-        const updateData: Record<string, unknown> = { customId: visitorId }
+        const updateData: Record<string, unknown> = {
+          customId: visitorId,
+          workspaceId: resolvedWorkspaceId, // migrate slug→UUID if needed
+        }
         if (name && name !== customer.name) updateData.name = name
         if (email && email.length > 0 && email !== customer.email) updateData.email = email
         if (normalizedLanguage && normalizedLanguage !== customer.language) {
@@ -483,20 +501,48 @@ export class WidgetChatController {
                 where: { workspaceId: resolvedWorkspaceId, phone: normalizedPhone },
               })
             } else if (isCustomIdConflict) {
-              logger.warn("[WIDGET-REGISTER] visitorId already linked to another customer, creating without it", {
-                workspaceId: resolvedWorkspaceId,
-                visitorId
+              // visitorId already exists (e.g. customer was created with old slug-based workspaceId)
+              // → find that existing customer and update it with resolved UUID workspaceId + latest data
+              logger.warn("[WIDGET-REGISTER] visitorId already linked to existing customer, updating it", {
+                resolvedWorkspaceId,
+                visitorId,
               })
-              customer = await prisma.customers.create({
-                data: {
+              const existingByCustomId = await prisma.customers.findFirst({
+                where: { customId: visitorId },
+              })
+              if (existingByCustomId) {
+                customer = await prisma.customers.update({
+                  where: { id: existingByCustomId.id },
+                  data: {
+                    workspaceId: resolvedWorkspaceId, // migrate from slug → UUID
+                    name: name || existingByCustomId.name,
+                    phone: normalizedPhone || existingByCustomId.phone,
+                    email:
+                      email && email.length > 0
+                        ? email
+                        : existingByCustomId.email,
+                    isActive: true,
+                    language: normalizedLanguage || existingByCustomId.language,
+                  },
+                })
+                isNewCustomer = false
+                logger.info("[WIDGET-REGISTER] 👤 Migrated customer to resolved workspaceId", {
+                  customerId: customer.id,
+                  resolvedWorkspaceId,
+                })
+              } else {
+                // Truly orphaned customId with no matching record → create fresh without customId
+                customer = await prisma.customers.create({
+                  data: {
                     workspaceId: resolvedWorkspaceId,
                     name,
                     phone: normalizedPhone,
                     email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
                     isActive: true,
                     language: normalizedLanguage,
-                }
-              })
+                  },
+                })
+              }
             } else {
               throw createError
             }
