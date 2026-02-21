@@ -256,6 +256,9 @@ export class WidgetChatController {
 
       const { visitorId, name, phone, email, language, firstMessage } = validation.data
 
+      // Normalize phone (strip spaces/dashes) for lookup + creation
+      const normalizedPhone = phone.replace(/[\s-]/g, "")
+
       // 2. Validate visitorId format + expiry
       if (!VisitorIdService.validate(visitorId)) {
         return res.status(400).json({
@@ -356,7 +359,7 @@ export class WidgetChatController {
       // 7. Deduplication: find or create customer by phone within workspace
       let isNewCustomer = false
       let customer = await prisma.customers.findFirst({
-        where: { workspaceId, phone },
+        where: { workspaceId, phone: normalizedPhone },
       })
 
       if (customer) {
@@ -380,17 +383,32 @@ export class WidgetChatController {
       } else {
         // ✅ NEW USER: Create new registered customer
         isNewCustomer = true
-        customer = await prisma.customers.create({
-          data: {
-            workspaceId,
-            customId: visitorId,
-            name,
-            phone,
-            email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
-            isActive: true, // Registered user
-            language: normalizedLanguage,
-          },
-        })
+        try {
+          customer = await prisma.customers.create({
+            data: {
+              workspaceId,
+              customId: visitorId,
+              name,
+              phone: normalizedPhone,
+              email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
+              isActive: true, // Registered user
+              language: normalizedLanguage,
+            },
+          })
+        } catch (createError: any) {
+          // Unique constraint (phone) → race/format mismatch: reuse existing
+          if (createError?.code === "P2002") {
+            logger.warn("[WIDGET-REGISTER] Duplicate phone, reusing existing customer", {
+              workspaceId,
+              phone: normalizedPhone,
+            })
+            customer = await prisma.customers.findFirst({
+              where: { workspaceId, phone: normalizedPhone },
+            })
+          } else {
+            throw createError
+          }
+        }
         logger.info("[WIDGET-REGISTER] 👤 NEW USER - Created customer", {
           customerId: customer.id,
           phone,
