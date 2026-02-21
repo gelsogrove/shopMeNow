@@ -294,10 +294,24 @@ export class AuthController {
         gdprAccepted: new Date(), // Store the timestamp of GDPR acceptance
       })
 
-      // Return success response with userId for 2FA setup
+      // 🔐 Generate 2FA secret and QR code for new user
+      const { secret, qrCode } = await this.authService.generate2FASecret(
+        user.email,
+        user.id
+      )
+
+      logger.info(`✅ Registration successful for user ${user.id}, 2FA secret generated`)
+
+      // Return success response with user info and QR code for 2FA setup
       res.status(201).json({
         message: "Registration successful",
-        userId: user.id,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
+        qrCode, // 🔐 QR code for 2FA setup
       })
     } catch (error) {
       logger.error("Registration error:", error)

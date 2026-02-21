@@ -416,6 +416,12 @@ export function ChatWidget({
     setFormError(null)
 
     try {
+      console.log("🔄 [REGISTER] Starting registration...", {
+        workspaceId: resolvedWorkspaceId,
+        phone: formPhone.trim(),
+        language: formLanguage,
+      })
+
       const result = await registerAndStartChat({
         apiUrl: resolvedApiUrl,
         workspaceId: resolvedWorkspaceId,
@@ -427,7 +433,14 @@ export function ChatWidget({
         firstMessage: formFirstMessage.trim(),
       })
 
-      // Persist customerId - identifies this user on return visits (no form again)
+      console.log("✅ [REGISTER] Registration API success", {
+        customerId: result.customerId,
+        sessionId: result.sessionId,
+        isNewCustomer: result.isNewCustomer,
+      })
+
+      // ✅ CRITICAL: Save customerId ONLY after successful registration
+      // This prevents showing "Registration failed" on refresh if API failed
       saveCustomerId(localStorage, resolvedWorkspaceId, result.customerId)
       saveWidgetSessionId(localStorage, resolvedWorkspaceId, result.sessionId)
       setCustomerId(result.customerId)
@@ -451,17 +464,25 @@ export function ChatWidget({
       saveWidgetMessages(localStorage, resolvedWorkspaceId, initialMessages)
 
       setShowRegistrationForm(false)
-      console.log("✅ Registration complete, chat started", {
+      console.log("✅ [REGISTER] Lifecycle complete - user registered", {
         customerId: result.customerId,
         isNewCustomer: result.isNewCustomer,
       })
     } catch (error) {
-      console.error("Registration failed:", error)
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "Registration failed. Please try again."
-      )
+      console.error("❌ [REGISTER] Registration failed:", {
+        error: error instanceof Error ? error.message : String(error),
+        phone: formPhone.trim(),
+        workspaceId: resolvedWorkspaceId,
+      })
+
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Registration failed. Please try again."
+
+      setFormError(errorMessage)
+
+      // Don't save anything to localStorage on error - user will see form again
     } finally {
       setIsLoading(false)
     }
@@ -954,32 +975,43 @@ export function ChatWidget({
 
               {/* AI Suggestions from last bot message (widget only) */}
               {(() => {
-                const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
-                const suggestions =
-                  resolvedAutoSuggestionsEnabled && (lastBot?.suggestions?.length
-                    ? lastBot.suggestions
-                    : resolvedQuickReplies)
+                if (!resolvedAutoSuggestionsEnabled) return null
 
-                return suggestions && suggestions.length > 0 ? (
-                  <div className="px-4 py-3 bg-white border-t border-slate-200 flex flex-wrap gap-2">
-                    {suggestions.slice(0, 4).map((qr: string, idx: number) => (
-                      <button
-                        key={`${qr}-${idx}`}
-                        className="text-sm px-3 py-2 rounded-full border transition shadow-sm"
-                        style={{
-                          borderColor: borderColor,
-                          background: "linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.8))",
-                          color: resolvedPrimaryColor,
-                          boxShadow: `0 6px 12px -6px ${borderColor}`,
-                        }}
-                        onClick={() => handleQuickReply(qr)}
-                        disabled={isLoading}
-                      >
-                        {qr}
-                      </button>
-                    ))}
+                const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
+                const suggestions = lastBot?.suggestions?.length
+                  ? lastBot.suggestions
+                  : resolvedQuickReplies
+
+                if (!suggestions || suggestions.length === 0) return null
+
+                return (
+                  <div className="px-4 py-3 bg-white border-t border-slate-200">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {suggestions.slice(0, 4).map((qr: string, idx: number) => (
+                        <button
+                          key={`${qr}-${idx}`}
+                          className="text-sm px-3 py-2 rounded-full border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
+                          style={{
+                            borderColor: borderColor,
+                            background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9))",
+                            color: resolvedPrimaryColor,
+                            boxShadow: `0 6px 14px -8px ${borderColor}`,
+                          }}
+                          onClick={() => handleQuickReply(qr)}
+                          disabled={isLoading}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${resolvedPrimaryColor}1a`
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9))"
+                          }}
+                        >
+                          {qr}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ) : null
+                )
               })()}
 
               {/* Footer with Input */}

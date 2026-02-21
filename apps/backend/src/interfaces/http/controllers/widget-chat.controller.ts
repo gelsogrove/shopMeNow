@@ -360,7 +360,7 @@ export class WidgetChatController {
       })
 
       if (customer) {
-        // Update existing customer with latest data
+        // ✅ RETURNING USER: Update existing customer with latest data
         const updateData: Record<string, unknown> = { customId: visitorId }
         if (name && name !== customer.name) updateData.name = name
         if (email && email.length > 0 && email !== customer.email) updateData.email = email
@@ -371,12 +371,14 @@ export class WidgetChatController {
           where: { id: customer.id },
           data: updateData,
         })
-        logger.info("[WIDGET-REGISTER] 👤 Found existing customer, updated visitorId link", {
+        logger.info("[WIDGET-REGISTER] 👤 RETURNING USER - Updated profile", {
           customerId: customer.id,
           phone,
+          isNewCustomer: false,
+          updatedFields: Object.keys(updateData),
         })
       } else {
-        // Create new registered customer
+        // ✅ NEW USER: Create new registered customer
         isNewCustomer = true
         customer = await prisma.customers.create({
           data: {
@@ -389,9 +391,10 @@ export class WidgetChatController {
             language: normalizedLanguage,
           },
         })
-        logger.info("[WIDGET-REGISTER] 👤 Created new registered customer", {
+        logger.info("[WIDGET-REGISTER] 👤 NEW USER - Created customer", {
           customerId: customer.id,
           phone,
+          isNewCustomer: true,
         })
       }
 
