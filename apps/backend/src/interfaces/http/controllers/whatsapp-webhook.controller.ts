@@ -2302,7 +2302,11 @@ export class WhatsAppWebhookController {
       
       const normalizedCustomerLang = normalizeLanguage(customer.language)
       const detectedLang = detectLanguageFromPhonePrefix(customer.phone)
-      const customerLanguage = normalizedCustomerLang || detectedLang || customer.workspace?.defaultLanguage // NOT nullable
+      const customerLanguage =
+        normalizedCustomerLang ||
+        detectedLang ||
+        normalizeLanguage(customer.workspace?.defaultLanguage || "") ||
+        "en" // Fallback to workspace default; final safety is English
       
       logger.info("🌍 [ULTRAMSG] Language resolution", {
         customerLanguageRaw: customer.language,

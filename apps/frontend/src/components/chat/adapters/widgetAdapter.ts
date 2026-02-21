@@ -14,18 +14,32 @@ type WidgetSendInput = {
   message: string
   language?: string
   sessionId?: string | null
+  customerId?: string | null
+}
+
+export type WidgetRegisterInput = {
+  apiUrl: string
+  workspaceId: string
+  visitorId: string
+  name: string
+  phone: string
+  email?: string
+  language: string
+  firstMessage: string
 }
 
 const STORAGE_PREFIX = {
   visitorId: "echatbot-visitor-id",
   sessionId: "echatbot-session-id",
   messages: "echatbot-messages",
+  customerId: "echatbot-customer-id", // Persists across visitorId expiry
 }
 
 export const buildWidgetStorageKeys = (workspaceId: string) => ({
   visitorId: `${STORAGE_PREFIX.visitorId}:${workspaceId}`,
   sessionId: `${STORAGE_PREFIX.sessionId}:${workspaceId}`,
   messages: `${STORAGE_PREFIX.messages}:${workspaceId}`,
+  customerId: `${STORAGE_PREFIX.customerId}:${workspaceId}`, // No expiry - identifies returning users
 })
 
 export const mapWidgetMessages = (
@@ -61,6 +75,23 @@ export const saveWidgetMessages = (
   storage.setItem(keys.messages, JSON.stringify(messages))
 }
 
+export const loadCustomerId = (
+  storage: Storage,
+  workspaceId: string
+): string | null => {
+  const keys = buildWidgetStorageKeys(workspaceId)
+  return storage.getItem(keys.customerId)
+}
+
+export const saveCustomerId = (
+  storage: Storage,
+  workspaceId: string,
+  customerId: string
+) => {
+  const keys = buildWidgetStorageKeys(workspaceId)
+  storage.setItem(keys.customerId, customerId)
+}
+
 export const getOrCreateVisitorId = (
   storage: Storage,
   workspaceId: string,
@@ -69,7 +100,7 @@ export const getOrCreateVisitorId = (
 ) => {
   const keys = buildWidgetStorageKeys(workspaceId)
   const existing = storage.getItem(keys.visitorId)
-  
+
   // Check if existing visitor ID is expired (older than 24 hours)
   if (existing) {
     const parts = existing.split("_")
@@ -78,21 +109,23 @@ export const getOrCreateVisitorId = (
       if (!isNaN(timestamp)) {
         const ageMs = now() - timestamp
         const ageHours = ageMs / (1000 * 60 * 60)
-        
+
         // If less than 24 hours old, reuse it
         if (ageHours < 24) {
           return existing
         }
-        
-        // If expired, clear old data
-        console.log("🧹 Visitor ID expired, generating new one")
+
+        // If expired, clear session data but NOT customerId
+        // Registered users remain recognized across visitorId refresh cycles
+        console.log("🧹 Visitor ID expired, generating new one (keeping customerId)")
         storage.removeItem(keys.visitorId)
         storage.removeItem(keys.sessionId)
         storage.removeItem(keys.messages)
+        // keys.customerId intentionally kept → returning registered user is still recognized
       }
     }
   }
-  
+
   // Generate new visitor ID
   const hash = random().toString(36).slice(2, 10)
   const visitorId = `visitor_${now()}_${hash}`
@@ -124,6 +157,7 @@ export const sendWidgetMessage = async ({
   message,
   language,
   sessionId,
+  customerId,
 }: WidgetSendInput) => {
   const payload: Record<string, unknown> = {
     visitorId,
@@ -134,6 +168,9 @@ export const sendWidgetMessage = async ({
   }
   if (typeof sessionId === "string" && sessionId.length > 0) {
     payload.sessionId = sessionId
+  }
+  if (customerId) {
+    payload.customerId = customerId
   }
 
   const response = await fetch(`${apiUrl}/widget/chat/${workspaceId}`, {
@@ -156,5 +193,43 @@ export const sendWidgetMessage = async ({
     response: data.response as string,
     sessionId: data.sessionId as string | undefined,
     messageId: data.messageId as string | undefined,
+  }
+}
+
+export const registerAndStartChat = async (input: WidgetRegisterInput) => {
+  const { apiUrl, workspaceId, visitorId, name, phone, email, language, firstMessage } = input
+
+  const payload: Record<string, unknown> = {
+    visitorId,
+    name,
+    phone,
+    language,
+    firstMessage,
+  }
+  if (email && email.length > 0) {
+    payload.email = email
+  }
+
+  const response = await fetch(`${apiUrl}/widget/register/${workspaceId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const messageText = data?.message || "Registration failed"
+    throw new Error(messageText)
+  }
+
+  if (!data?.customerId || !data?.sessionId) {
+    throw new Error("Registration response missing customerId or sessionId")
+  }
+
+  return {
+    customerId: data.customerId as string,
+    sessionId: data.sessionId as string,
+    response: data.response as string,
+    isNewCustomer: data.isNewCustomer as boolean,
   }
 }

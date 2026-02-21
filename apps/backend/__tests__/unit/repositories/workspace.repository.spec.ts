@@ -44,6 +44,7 @@ const buildWorkspace = (overrides: Partial<any> = {}) => ({
   translateCategoryNames: false,
   translateServiceNames: true,
   catalogBaseLanguage: "it",
+  defaultLanguage: "it",
   whatsappSettings: null,
   agentConfigs: [],
   ...overrides,
@@ -108,5 +109,24 @@ describe("WorkspaceRepository", () => {
     expect(result?.whatsappWebhookUrl).toBe(settings.webhookUrl)
     expect(result?.whatsappVerifyToken).toBe(settings.webhookToken)
     expect(result?.adminEmail).toBe(settings.adminEmail)
+  })
+
+  it("should map defaultLanguage from db into domain entity", async () => {
+    const workspace = buildWorkspace({
+      id: "ws-lang",
+      language: "it",
+      defaultLanguage: "en",
+    })
+
+    const mockPrisma = {
+      workspace: {
+        findUnique: jest.fn().mockResolvedValue(workspace),
+      },
+    } as unknown as PrismaClient
+
+    const repository = new WorkspaceRepository(mockPrisma)
+    const result = await repository.findById("ws-lang")
+
+    expect(result?.defaultLanguage).toBe("en")
   })
 })

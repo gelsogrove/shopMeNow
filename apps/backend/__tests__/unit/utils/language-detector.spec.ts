@@ -31,10 +31,19 @@ describe("Language Detector - detectLanguageFromPhonePrefix()", () => {
 
   describe("Portuguese prefix (+351)", () => {
     it("should detect Portuguese for +351 prefix", () => {
-      expect(detectLanguageFromPhonePrefix("+351 912 777777")).toBe("pt")
-      expect(detectLanguageFromPhonePrefix("+351912777777")).toBe("pt")
-      expect(detectLanguageFromPhonePrefix("+351 21 1234567")).toBe("pt")
-    })
+    expect(detectLanguageFromPhonePrefix("+351 912 777777")).toBe("pt")
+    expect(detectLanguageFromPhonePrefix("+351912777777")).toBe("pt")
+    expect(detectLanguageFromPhonePrefix("+351 21 1234567")).toBe("pt")
+  })
+
+  it("should detect Spanish without leading +", () => {
+    expect(detectLanguageFromPhonePrefix("34654728753")).toBe("es")
+    expect(detectLanguageFromPhonePrefix("0034654728753")).toBe("es")
+  })
+
+  it("should default to English for unknown prefixes", () => {
+    expect(detectLanguageFromPhonePrefix("9991234567")).toBe("en")
+  })
   })
 
   // 🚨 REMOVED: +1 and +44 are NOT supported - caller uses workspace.defaultLanguage

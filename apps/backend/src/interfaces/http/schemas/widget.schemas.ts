@@ -49,11 +49,38 @@ export const WIDGET_MESSAGE_SCHEMA = z
     language: z.string().optional().describe("Optional visitor language"),
     sessionId: SESSION_ID_SCHEMA,
     isPlayground: z.boolean().optional().describe("If true, skip billing/queue and just respond"),
+    customerId: z.string().uuid().optional().describe("Registered customer ID (from localStorage) - skip visitorId lookup"),
   })
   .strict() // Reject unknown properties
   .describe("Widget chat message")
 
 export type WidgetMessageInput = z.infer<typeof WIDGET_MESSAGE_SCHEMA>
+
+// ============================================================================
+// 📝 WIDGET REGISTRATION SCHEMA
+// ============================================================================
+// Used for first-time visitor registration form
+// Deduplicates by phone number within workspace
+
+export const WIDGET_REGISTER_SCHEMA = z
+  .object({
+    visitorId: VISITOR_ID_SCHEMA,
+    name: z.string().min(1, "Name is required").max(100).trim(),
+    phone: z
+      .string()
+      .regex(/^\+\d{1,4}\d{6,14}$/, "Invalid phone format. Expected: +[country_code][number]"),
+    email: z.union([z.string().email("Invalid email format"), z.literal("")]).optional(),
+    language: z.string().min(2).max(10).describe("Language code: it, en, es, pt, fr, de"),
+    firstMessage: z
+      .string()
+      .min(1, "Message cannot be empty")
+      .max(5000)
+      .trim(),
+  })
+  .strict()
+  .describe("Widget visitor registration with first message")
+
+export type WidgetRegisterInput = z.infer<typeof WIDGET_REGISTER_SCHEMA>
 
 // ============================================================================
 // 🔄 WIDGET POLLING SCHEMA

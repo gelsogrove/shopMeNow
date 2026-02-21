@@ -22,6 +22,7 @@ import { TranslationAgent } from "../../../application/agents/TranslationAgent"
 import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
 import {
   WIDGET_MESSAGE_SCHEMA,
+  WIDGET_REGISTER_SCHEMA,
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
 
@@ -202,6 +203,273 @@ export class WidgetChatController {
   }
 
   /**
+   * POST /api/v1/widget/register/:workspaceId
+   * Register visitor with first message (deduplicates by phone)
+   */
+  async registerAndStart(req: Request, res: Response): Promise<Response> {
+    try {
+      const { workspaceId } = req.params
+
+      // 1. Validate schema
+      const validation = WIDGET_REGISTER_SCHEMA.safeParse(req.body)
+      if (!validation.success) {
+        logger.error("[WIDGET-REGISTER] ❌ Validation failed", {
+          errors: validation.error.errors,
+        })
+        return res.status(400).json({
+          error: "INVALID_INPUT",
+          message: "Invalid registration data",
+          details: validation.error.errors,
+        })
+      }
+
+      const { visitorId, name, phone, email, language, firstMessage } = validation.data
+
+      // 2. Validate visitorId format + expiry
+      if (!VisitorIdService.validate(visitorId)) {
+        return res.status(400).json({
+          error: "INVALID_VISITOR_ID",
+          message: "Invalid visitor ID format",
+        })
+      }
+      if (VisitorIdService.isExpired(visitorId)) {
+        return res.status(400).json({
+          error: "EXPIRED_VISITOR_ID",
+          message: "Visitor ID expired. Please refresh the page.",
+        })
+      }
+
+      // 3. Verify workspace
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          id: true,
+          deletedAt: true,
+          channelStatus: true,
+          ownerId: true,
+          enableWidget: true,
+          defaultLanguage: true,
+          debugMode: true,
+          wipMessage: true,
+        },
+      })
+
+      if (!workspace) {
+        return res.status(404).json({
+          error: "WORKSPACE_NOT_FOUND",
+          message: "Workspace not found",
+        })
+      }
+
+      if (workspace.deletedAt !== null) {
+        return res.status(503).json({
+          error: "SERVICE_UNAVAILABLE",
+          message: "Service temporarily unavailable",
+          retryAfter: 3600000,
+        })
+      }
+
+      if (workspace.enableWidget !== true) {
+        return res.status(403).json({
+          error: "WIDGET_DISABLED",
+          message: "Widget chat is disabled for this workspace",
+        })
+      }
+
+      if (workspace.channelStatus === false) {
+        return res.status(403).json({
+          error: "CHANNEL_DISABLED",
+          message: "Channel is disabled",
+        })
+      }
+
+      // 4. Check owner status
+      if (workspace.ownerId) {
+        const owner = await prisma.user.findUnique({
+          where: { id: workspace.ownerId },
+          select: { status: true },
+        })
+        if (owner?.status === "INACTIVE") {
+          return res.status(503).json({
+            error: "SERVICE_UNAVAILABLE",
+            message: "Service temporarily unavailable",
+            retryAfter: 3600000,
+          })
+        }
+      }
+
+      // 5. Billing access check
+      const workspaceAccessService = new WorkspaceAccessService(prisma)
+      const accessResult = await workspaceAccessService.canProcessMessages(workspaceId, true)
+      if (!accessResult.canProcess) {
+        logger.warn("[WIDGET-REGISTER] 🚫 Workspace blocked by billing", {
+          workspaceId,
+          blockReason: accessResult.blockReason,
+        })
+        const isBillingBlock =
+          accessResult.blockReason === "PAUSED" ||
+          accessResult.blockReason === "PAYMENT_FAILED" ||
+          accessResult.blockReason === "CREDIT_EXHAUSTED"
+        return res.status(isBillingBlock ? 402 : 403).json({
+          error: accessResult.blockReason || "WORKSPACE_BLOCKED",
+          message: accessResult.message || "Workspace blocked",
+        })
+      }
+
+      // 6. Normalize language
+      const normalizedLanguage =
+        this.normalizeLanguage(language) || workspace.defaultLanguage || "ENG"
+
+      // 7. Deduplication: find or create customer by phone within workspace
+      let isNewCustomer = false
+      let customer = await prisma.customers.findFirst({
+        where: { workspaceId, phone },
+      })
+
+      if (customer) {
+        // Update existing customer with latest data
+        const updateData: Record<string, unknown> = { customId: visitorId }
+        if (name && name !== customer.name) updateData.name = name
+        if (email && email.length > 0 && email !== customer.email) updateData.email = email
+        if (normalizedLanguage && normalizedLanguage !== customer.language) {
+          updateData.language = normalizedLanguage
+        }
+        customer = await prisma.customers.update({
+          where: { id: customer.id },
+          data: updateData,
+        })
+        logger.info("[WIDGET-REGISTER] 👤 Found existing customer, updated visitorId link", {
+          customerId: customer.id,
+          phone,
+        })
+      } else {
+        // Create new registered customer
+        isNewCustomer = true
+        customer = await prisma.customers.create({
+          data: {
+            workspaceId,
+            customId: visitorId,
+            name,
+            phone,
+            email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
+            isActive: true, // Registered user
+            language: normalizedLanguage,
+          },
+        })
+        logger.info("[WIDGET-REGISTER] 👤 Created new registered customer", {
+          customerId: customer.id,
+          phone,
+        })
+      }
+
+      // 8. Find or create chat session
+      let chatSession = await prisma.chatSession.findFirst({
+        where: { customerId: customer.id, status: "active" },
+      })
+
+      if (!chatSession) {
+        chatSession = await prisma.chatSession.create({
+          data: {
+            workspaceId,
+            customerId: customer.id,
+            status: "active",
+            isAnonymous: false,
+            visitorId,
+            channel: "widget",
+            expiresAt: VisitorIdService.getExpiryDate(visitorId),
+          },
+        })
+        logger.info("[WIDGET-REGISTER] 💬 Created chat session", {
+          sessionId: chatSession.id,
+        })
+      }
+
+      // 9. Save user's first message to conversation history
+      await prisma.conversationMessage.create({
+        data: {
+          workspaceId,
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          role: "user",
+          content: firstMessage,
+          agentType: AgentType.ROUTER,
+          tokensUsed: 0,
+        },
+      })
+
+      // 10. Process first message through LLM (registrationPromptLevel=0: user is registered)
+      logger.info("[WIDGET-REGISTER] 🤖 Processing first message through LLM", {
+        customerId: customer.id,
+        language: normalizedLanguage,
+      })
+
+      const llmResult = await llmRouterService.routeMessage({
+        workspaceId,
+        customerId: customer.id,
+        conversationId: chatSession.id,
+        messageId: `widget-reg-${visitorId}-${Date.now()}`,
+        message: firstMessage,
+        customerLanguage: normalizedLanguage,
+        customerName: customer.name,
+        isSystemMessage: false,
+        channel: "widget",
+        registrationPromptLevel: 0, // Registered user - no registration prompts
+      })
+
+      logger.info("[WIDGET-REGISTER] ✅ LLM response received", {
+        agentUsed: llmResult.agentUsed,
+        tokensUsed: llmResult.tokensUsed,
+      })
+
+      // 11. Save LLM response to conversation history
+      await prisma.conversationMessage.create({
+        data: {
+          workspaceId,
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          role: "assistant",
+          content: llmResult.response || "Response unavailable",
+          agentType: llmResult.agentUsed || AgentType.ROUTER,
+          tokensUsed: llmResult.tokensUsed || 0,
+        },
+      })
+
+      // 12. Billing: deduct widget message credit
+      if (workspace.ownerId) {
+        try {
+          const billingService = new SubscriptionBillingService(prisma)
+          await billingService.deductOwnerWidgetMessageCredit(
+            workspace.ownerId,
+            workspaceId,
+            `widget-reg-${visitorId}-${Date.now()}`
+          )
+        } catch (billingError) {
+          logger.error("[WIDGET-REGISTER] ❌ Billing error (non-fatal):", billingError)
+          // Don't fail the response - billing failure shouldn't break registration UX
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        customerId: customer.id,
+        sessionId: chatSession.id,
+        response: llmResult.response || "Welcome! How can I help you?",
+        isNewCustomer,
+      })
+    } catch (error) {
+      logger.error("[WIDGET-REGISTER] ❌ Registration error", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        workspaceId: req.params.workspaceId,
+      })
+      return res.status(500).json({
+        error: "INTERNAL_ERROR",
+        message: "Registration failed",
+      })
+    }
+  }
+
+  /**
    * POST /api/v1/widget/chat/:workspaceId
    * Send a message from widget
    */
@@ -229,7 +497,7 @@ export class WidgetChatController {
         })
       }
 
-      const { visitorId, message, sessionId, language, phoneNumber, isPlayground } = validation.data
+      const { visitorId, message, sessionId, language, phoneNumber, isPlayground, customerId } = validation.data
       
       // 🌍 Language detection priority:
       // 1. Explicit language from widget body/API (if provided) - HIGHEST PRIORITY! ✅
@@ -483,13 +751,37 @@ export class WidgetChatController {
       }
 
       // Find or create customer for this visitor
-      logger.info("🔍 Finding or creating customer for visitor", { visitorId, workspaceId })
-      let customer = await prisma.customers.findFirst({
-        where: {
-          workspaceId,
-          customId: visitorId,
-        },
-      })
+      // Priority: customerId (registered returning user) > visitorId (anonymous/new)
+      logger.info("🔍 Finding customer", { visitorId, customerId: customerId || "(none)", workspaceId })
+      let customer = null
+
+      // If customerId provided (registered returning user from localStorage), look up by ID first
+      if (customerId) {
+        customer = await prisma.customers.findFirst({
+          where: { workspaceId, id: customerId },
+        })
+        if (customer) {
+          // Update visitorId link for this session (visitor session may have refreshed)
+          if (customer.customId !== visitorId) {
+            await prisma.customers.update({
+              where: { id: customer.id },
+              data: { customId: visitorId },
+            })
+            customer = { ...customer, customId: visitorId }
+          }
+          logger.info("👤 Found registered returning customer", {
+            customerId: customer.id,
+            visitorId,
+          })
+        }
+      }
+
+      // Fallback: lookup by visitorId (anonymous user or customerId not found)
+      if (!customer) {
+        customer = await prisma.customers.findFirst({
+          where: { workspaceId, customId: visitorId },
+        })
+      }
 
       if (!customer) {
         // Create anonymous customer

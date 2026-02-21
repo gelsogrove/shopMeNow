@@ -9,13 +9,13 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { 
-  Loader2, 
-  Send, 
-  X, 
-  MessageCircle, 
-  Sparkles, 
-  Bot, 
+import {
+  Loader2,
+  Send,
+  X,
+  MessageCircle,
+  Sparkles,
+  Bot,
   LifeBuoy,
   Brain,
   Zap,
@@ -30,6 +30,7 @@ import {
   Heart,
   Bell,
   Shield,
+  Globe,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -78,11 +79,26 @@ import {
   getOrCreateVisitorId,
   loadWidgetMessages,
   loadWidgetSessionId,
+  loadCustomerId,
   saveWidgetMessages,
   saveWidgetSessionId,
+  saveCustomerId,
   sendWidgetMessage,
+  registerAndStartChat,
   type WidgetStoredMessage,
 } from "@/components/chat/adapters/widgetAdapter"
+
+// Language options for registration form
+const WIDGET_LANGUAGES = [
+  { code: "it", flag: "🇮🇹", name: "Italiano" },
+  { code: "en", flag: "🇬🇧", name: "English" },
+  { code: "es", flag: "🇪🇸", name: "Español" },
+  { code: "pt", flag: "🇵🇹", name: "Português" },
+  { code: "fr", flag: "🇫🇷", name: "Français" },
+  { code: "de", flag: "🇩🇪", name: "Deutsch" },
+]
+
+const SUPPORTED_LANG_CODES = WIDGET_LANGUAGES.map((l) => l.code)
 
 interface Message {
   role: "user" | "bot"
@@ -229,9 +245,20 @@ export function ChatWidget({
   const [isLoading, setIsLoading] = useState(false)
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [customerId, setCustomerId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize visitor ID
+  // Registration form state
+  // showRegistrationForm=true by default; set to false if customerId found in localStorage
+  const [showRegistrationForm, setShowRegistrationForm] = useState(true)
+  const [formName, setFormName] = useState("")
+  const [formPhone, setFormPhone] = useState("")
+  const [formEmail, setFormEmail] = useState("")
+  const [formLanguage, setFormLanguage] = useState("en")
+  const [formFirstMessage, setFormFirstMessage] = useState("")
+  const [formError, setFormError] = useState<string | null>(null)
+
+  // Initialize visitor ID, customerId, and registration form state
   useEffect(() => {
     if (!resolvedWorkspaceId) {
       return
@@ -241,6 +268,18 @@ export function ChatWidget({
 
     const id = getOrCreateVisitorId(localStorage, resolvedWorkspaceId)
     setVisitorId(id)
+
+    // Check if returning registered user (customerId persists across visitorId expiry)
+    const storedCustomerId = loadCustomerId(localStorage, resolvedWorkspaceId)
+    if (storedCustomerId) {
+      setCustomerId(storedCustomerId)
+      setShowRegistrationForm(false) // Skip form for returning registered users
+      console.log("👤 Returning registered user, skipping registration form")
+    }
+
+    // Pre-select language from widget config
+    const normalizedLang = resolvedLanguage?.slice(0, 2).toLowerCase() || "en"
+    setFormLanguage(SUPPORTED_LANG_CODES.includes(normalizedLang) ? normalizedLang : "en")
 
     // Load stored messages
     const storedMessages = loadWidgetMessages(localStorage, resolvedWorkspaceId)
@@ -257,7 +296,7 @@ export function ChatWidget({
       setSessionId(session)
       console.log("📋 Loaded session ID:", session)
     }
-  }, [resolvedWorkspaceId])
+  }, [resolvedWorkspaceId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -307,6 +346,7 @@ export function ChatWidget({
         message,
         language: resolvedLanguage, // Use language from window.eChatbotConfig (set by LanguageSelector)
         sessionId,
+        customerId: customerId || undefined, // Pass registered customer ID if available
       })
 
       // Save session ID if provided
@@ -346,6 +386,83 @@ export function ChatWidget({
 
   const handleSendMessage = async () => {
     await sendMessage(inputValue)
+  }
+
+  /**
+   * Handle registration form submit
+   * Creates/finds customer by phone, sends first message through LLM
+   */
+  const handleRegistrationSubmit = async () => {
+    // Basic client-side validation
+    if (!formName.trim()) {
+      setFormError("Name is required")
+      return
+    }
+    if (!formPhone.trim()) {
+      setFormError("Phone number is required")
+      return
+    }
+    if (!/^\+\d{1,4}\d{6,14}$/.test(formPhone.trim())) {
+      setFormError("Phone must be in international format (e.g. +39 1234567890)")
+      return
+    }
+    if (!formFirstMessage.trim()) {
+      setFormError("Please write your first message")
+      return
+    }
+
+    setIsLoading(true)
+    setFormError(null)
+
+    try {
+      const result = await registerAndStartChat({
+        apiUrl: resolvedApiUrl,
+        workspaceId: resolvedWorkspaceId,
+        visitorId,
+        name: formName.trim(),
+        phone: formPhone.trim(),
+        email: formEmail.trim() || undefined,
+        language: formLanguage,
+        firstMessage: formFirstMessage.trim(),
+      })
+
+      // Persist customerId - identifies this user on return visits (no form again)
+      saveCustomerId(localStorage, resolvedWorkspaceId, result.customerId)
+      saveWidgetSessionId(localStorage, resolvedWorkspaceId, result.sessionId)
+      setCustomerId(result.customerId)
+      setSessionId(result.sessionId)
+
+      // Populate chat with first exchange
+      const initialMessages: Message[] = [
+        {
+          role: "user",
+          content: formFirstMessage.trim(),
+          timestamp: new Date().toISOString(),
+        },
+        {
+          role: "bot",
+          content: result.response,
+          timestamp: new Date().toISOString(),
+        },
+      ]
+      setMessages(initialMessages)
+      saveWidgetMessages(localStorage, resolvedWorkspaceId, initialMessages)
+
+      setShowRegistrationForm(false)
+      console.log("✅ Registration complete, chat started", {
+        customerId: result.customerId,
+        isNewCustomer: result.isNewCustomer,
+      })
+    } catch (error) {
+      console.error("Registration failed:", error)
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Registration failed. Please try again."
+      )
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleQuickReply = async (reply: string) => {
@@ -645,139 +762,269 @@ export function ChatWidget({
             </button>
           </div>
 
-          {/* Messages Container */}
-          <ScrollArea 
-            className="flex-1 bg-slate-50 px-5 py-4 widget-scroll-area overscroll-contain"
-          >
-            <style>{`
-              .widget-scroll-area {
-                overscroll-behavior: contain;
-              }
-              .widget-scroll-area > div > div:first-child {
-                scrollbar-width: none !important;
-                -ms-overflow-style: none !important;
-                overscroll-behavior: contain !important;
-              }
-              .widget-scroll-area > div > div:first-child::-webkit-scrollbar {
-                display: none !important;
-              }
-              .widget-scroll-area [data-radix-scroll-area-scrollbar] {
-                display: flex !important;
-                width: 8px !important;
-                padding: 2px !important;
-                background: transparent !important;
-              }
-              .widget-scroll-area [data-radix-scroll-area-thumb] {
-                background-color: ${resolvedPrimaryColor} !important;
-                border-radius: 4px !important;
-              }
-            `}</style>
-            <ChatSurface
-              messages={messages}
-              endRef={messagesEndRef}
-              emptyState={
-                <div className="text-gray-400 text-sm text-center py-12">
-                  <p>Start a conversation! 👋</p>
+          {showRegistrationForm ? (
+            /* ── Registration Form ── */
+            <>
+              <ScrollArea className="flex-1 bg-slate-50 px-5 py-5">
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-500 text-center">
+                    Introduce yourself to start chatting
+                  </p>
+
+                  {/* Name */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                      <User className="w-3.5 h-3.5" /> Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      placeholder="Your name"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
+                      style={{ "--tw-ring-color": resolvedPrimaryColor } as React.CSSProperties}
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                      <Phone className="w-3.5 h-3.5" /> Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={formPhone}
+                      onChange={(e) => setFormPhone(e.target.value)}
+                      placeholder="+39 123 456 7890"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
+                    />
+                  </div>
+
+                  {/* Email (optional) */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                      <Mail className="w-3.5 h-3.5" /> Email{" "}
+                      <span className="text-slate-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={formEmail}
+                      onChange={(e) => setFormEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
+                    />
+                  </div>
+
+                  {/* Language */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                      <Globe className="w-3.5 h-3.5" /> Language
+                    </label>
+                    <select
+                      value={formLanguage}
+                      onChange={(e) => setFormLanguage(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 text-slate-700"
+                    >
+                      {WIDGET_LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code}>
+                          {lang.flag} {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* First message */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                      <MessageCircle className="w-3.5 h-3.5" /> Message
+                    </label>
+                    <textarea
+                      value={formFirstMessage}
+                      onChange={(e) => setFormFirstMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleRegistrationSubmit()
+                        }
+                      }}
+                      placeholder="How can we help you?"
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
+                    />
+                  </div>
+
+                  {/* Error message */}
+                  {formError && (
+                    <p className="text-xs text-red-500 text-center">{formError}</p>
+                  )}
                 </div>
-              }
-              getAlignment={(msg) => (msg.role === "user" ? "right" : "left")}
-              getBubbleClassName={(msg) =>
-                cn(
-                  "rounded-2xl px-4 py-3 max-w-[85%] sm:max-w-[360px] mb-3 shadow-sm",
-                  "word-wrap break-words overflow-wrap-anywhere relative text-[15px] leading-relaxed",
-                  msg.role === "user"
-                    ? "text-white rounded-br-md"
-                    : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
-                )
-              }
-              getBubbleStyle={(msg) =>
-                msg.role === "user" ? { backgroundColor: resolvedPrimaryColor } : undefined
-              }
-              getContainerClassName={(msg) =>
-                msg.role === "user" ? "widget-user-message" : undefined
-              }
-            />
-            {/* Show typing indicator when waiting for bot response */}
-            {isLoading && (
-              <div className="flex items-start gap-2 mb-3">
-                <TypingIndicator primaryColor={resolvedPrimaryColor} />
-              </div>
-            )}
-          </ScrollArea>
+              </ScrollArea>
 
-          {/* AI Suggestions from last bot message (widget only) */}
-          {resolvedAutoSuggestionsEnabled && (() => {
-            const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
-            const suggestions = lastBot?.suggestions || resolvedQuickReplies
-            return suggestions && suggestions.length > 0 ? (
-              <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap gap-2">
-                {suggestions.slice(0, 4).map((qr: string, idx: number) => (
-                  <button
-                    key={`${qr}-${idx}`}
-                    className="text-sm px-3 py-2 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
-                    onClick={() => handleQuickReply(qr)}
-                    disabled={isLoading}
+              {/* Registration submit footer */}
+              <div className="border-t border-gray-200 p-4 space-y-3">
+                <button
+                  onClick={handleRegistrationSubmit}
+                  disabled={isLoading}
+                  className="w-full py-3 rounded-2xl text-white text-sm font-semibold flex items-center justify-center gap-2 hover:brightness-95 active:scale-[0.98] transition-all disabled:opacity-60"
+                  style={{ backgroundColor: resolvedPrimaryColor }}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>Start Chat <Send className="w-4 h-4" /></>
+                  )}
+                </button>
+                <div className="text-xs text-gray-400 text-center">
+                  Powered by{" "}
+                  <a
+                    href="https://www.echatbot.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-600 hover:text-green-700 hover:underline"
                   >
-                    {qr}
-                  </button>
-                ))}
+                    echatbot.ai
+                  </a>
+                </div>
               </div>
-            ) : null
-          })()}
-
-          {/* Footer with Input */}
-          <div className="border-t border-gray-200 p-5 space-y-3">
-            <div className="flex gap-3">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSendMessage()
-                }
-              }}
-              placeholder={placeholder}
-              disabled={isLoading}
-              rows={2}
-              className={cn(
-                "flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-300",
-                "focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600",
-                "text-[15px] placeholder-gray-400 leading-relaxed",
-                "disabled:bg-gray-50 disabled:text-gray-400"
-              )}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={isLoading || !inputValue.trim()}
-              className={cn(
-                "w-12 h-12 rounded-full flex items-center justify-center",
-                "disabled:bg-gray-300 hover:brightness-95",
-                "text-white transition-colors",
-                "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
-              )}
-              style={{ backgroundColor: resolvedPrimaryColor }}
-              aria-label="Send message"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </button>
-            </div>
-            <div className="text-xs text-gray-400 text-center">
-              Powered by{" "}
-              <a
-                href="https://www.echatbot.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-green-600 hover:text-green-700 hover:underline"
+            </>
+          ) : (
+            /* ── Normal Chat ── */
+            <>
+              {/* Messages Container */}
+              <ScrollArea
+                className="flex-1 bg-slate-50 px-5 py-4 widget-scroll-area overscroll-contain"
               >
-                echatbot.ai
-              </a>
-            </div>
-          </div>
+                <style>{`
+                  .widget-scroll-area {
+                    overscroll-behavior: contain;
+                  }
+                  .widget-scroll-area > div > div:first-child {
+                    scrollbar-width: none !important;
+                    -ms-overflow-style: none !important;
+                    overscroll-behavior: contain !important;
+                  }
+                  .widget-scroll-area > div > div:first-child::-webkit-scrollbar {
+                    display: none !important;
+                  }
+                  .widget-scroll-area [data-radix-scroll-area-scrollbar] {
+                    display: flex !important;
+                    width: 8px !important;
+                    padding: 2px !important;
+                    background: transparent !important;
+                  }
+                  .widget-scroll-area [data-radix-scroll-area-thumb] {
+                    background-color: ${resolvedPrimaryColor} !important;
+                    border-radius: 4px !important;
+                  }
+                `}</style>
+                <ChatSurface
+                  messages={messages}
+                  endRef={messagesEndRef}
+                  emptyState={
+                    <div className="text-gray-400 text-sm text-center py-12">
+                      <p>Start a conversation! 👋</p>
+                    </div>
+                  }
+                  getAlignment={(msg) => (msg.role === "user" ? "right" : "left")}
+                  getBubbleClassName={(msg) =>
+                    cn(
+                      "rounded-2xl px-4 py-3 max-w-[85%] sm:max-w-[360px] mb-3 shadow-sm",
+                      "word-wrap break-words overflow-wrap-anywhere relative text-[15px] leading-relaxed",
+                      msg.role === "user"
+                        ? "text-white rounded-br-md"
+                        : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
+                    )
+                  }
+                  getBubbleStyle={(msg) =>
+                    msg.role === "user" ? { backgroundColor: resolvedPrimaryColor } : undefined
+                  }
+                  getContainerClassName={(msg) =>
+                    msg.role === "user" ? "widget-user-message" : undefined
+                  }
+                />
+                {/* Show typing indicator when waiting for bot response */}
+                {isLoading && (
+                  <div className="flex items-start gap-2 mb-3">
+                    <TypingIndicator primaryColor={resolvedPrimaryColor} />
+                  </div>
+                )}
+              </ScrollArea>
+
+              {/* AI Suggestions from last bot message (widget only) */}
+              {resolvedAutoSuggestionsEnabled && (() => {
+                const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
+                const suggestions = lastBot?.suggestions || resolvedQuickReplies
+                return suggestions && suggestions.length > 0 ? (
+                  <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap gap-2">
+                    {suggestions.slice(0, 4).map((qr: string, idx: number) => (
+                      <button
+                        key={`${qr}-${idx}`}
+                        className="text-sm px-3 py-2 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
+                        onClick={() => handleQuickReply(qr)}
+                        disabled={isLoading}
+                      >
+                        {qr}
+                      </button>
+                    ))}
+                  </div>
+                ) : null
+              })()}
+
+              {/* Footer with Input */}
+              <div className="border-t border-gray-200 p-5 space-y-3">
+                <div className="flex gap-3">
+                  <textarea
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSendMessage()
+                      }
+                    }}
+                    placeholder={placeholder}
+                    disabled={isLoading}
+                    rows={2}
+                    className={cn(
+                      "flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-300",
+                      "focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600",
+                      "text-[15px] placeholder-gray-400 leading-relaxed",
+                      "disabled:bg-gray-50 disabled:text-gray-400"
+                    )}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={isLoading || !inputValue.trim()}
+                    className={cn(
+                      "w-12 h-12 rounded-full flex items-center justify-center",
+                      "disabled:bg-gray-300 hover:brightness-95",
+                      "text-white transition-colors",
+                      "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
+                    )}
+                    style={{ backgroundColor: resolvedPrimaryColor }}
+                    aria-label="Send message"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+                <div className="text-xs text-gray-400 text-center">
+                  Powered by{" "}
+                  <a
+                    href="https://www.echatbot.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-600 hover:text-green-700 hover:underline"
+                  >
+                    echatbot.ai
+                  </a>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </>

@@ -965,6 +965,41 @@ export class ChatEngineService {
     }
   }
 
+  /**
+   * Deterministically append registration reminder (bypasses LLM obedience).
+   * Avoids duplicates if the placeholder is already present.
+   */
+  private appendRegistrationReminder(
+    message: string,
+    registrationPromptLevel?: number,
+    debugSteps?: DebugStep[]
+  ): string {
+    if (!registrationPromptLevel || registrationPromptLevel <= 0) {
+      return message
+    }
+
+    const reminder =
+      "Se vuoi ricevere le nostre offerte o notizie registrati a questo link [LINK_REGISTRATION]."
+
+    if (message.includes("[LINK_REGISTRATION]")) {
+      return message
+    }
+
+    const updated = `${message.trim()}\n\n${reminder}`
+
+    if (debugSteps) {
+      debugSteps.push({
+        type: "token-replacement",
+        agent: "RegistrationReminder",
+        timestamp: new Date().toISOString(),
+        input: { textContent: message.substring(0, 120) },
+        output: { textContent: reminder },
+      })
+    }
+
+    return updated
+  }
+
   private getTransportEmoji(label?: string): string {
     const normalized = (label || "").toLowerCase()
     if (normalized.includes("congel") || normalized.includes("frozen")) {
@@ -1551,7 +1586,11 @@ export class ChatEngineService {
       const normalizedLanguage = this.normalizeLanguageCode(rawTargetLanguage)
       const isWidgetChannel = input.channel === "widget"
 
-      let finalMessage = result.message
+      let finalMessage = this.appendRegistrationReminder(
+        result.message,
+        input.registrationPromptLevel,
+        debugSteps
+      )
       let translationTokens = 0
       let safetyTokens = 0
 
@@ -1565,7 +1604,7 @@ export class ChatEngineService {
       })
       
       const translationResult = await this.applyTranslation(
-        result.message,
+        finalMessage,
         input.workspaceId,
         normalizedLanguage, // Pass normalized code (pt, en, es, it)
         debugSteps,
@@ -5649,6 +5688,13 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       },
       executionTimeMs: agentResponse.executionTimeMs || 0,
     })
+
+    // Append deterministic registration reminder BEFORE translation
+    finalMessage = this.appendRegistrationReminder(
+      finalMessage,
+      input.registrationPromptLevel,
+      debugSteps
+    )
 
     try {
       // 🌍 Apply Translation Layer (ALWAYS)

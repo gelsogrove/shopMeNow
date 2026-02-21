@@ -426,6 +426,9 @@ For privacy inquiries, please contact our support team.`
     if (data.sellsProductsAndServices === undefined) data.sellsProductsAndServices = true
     if (data.toneOfVoice === undefined) data.toneOfVoice = "FRIENDLY"
     if (data.operatorContactMethod === undefined) data.operatorContactMethod = "EMAIL"
+    // 🌍 Default languages: force English as baseline for new workspaces
+    if (!data.defaultLanguage) data.defaultLanguage = "en"
+    if (!data.language) data.language = "en"
 
     // 🚨 CRITICAL: Widget + E-commerce Validation (Andrea's Rule)
     // Widget visitors use temporary visitorId (24h localStorage expiry) 

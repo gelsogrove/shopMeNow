@@ -29,9 +29,67 @@ const widgetRateLimiter = rateLimit({
 })
 
 /**
+ * POST /api/v1/widget/register/:workspaceId
+ * Register visitor and send first message (deduplicates by phone number)
+ *
+ * @swagger
+ * /api/v1/widget/register/{workspaceId}:
+ *   post:
+ *     summary: Register visitor with first message
+ *     tags: [Widget]
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - visitorId
+ *               - name
+ *               - phone
+ *               - language
+ *               - firstMessage
+ *             properties:
+ *               visitorId:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               language:
+ *                 type: string
+ *               firstMessage:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Registration successful with LLM response
+ *       400:
+ *         description: Invalid input
+ *       403:
+ *         description: Widget disabled
+ *       503:
+ *         description: Service unavailable
+ */
+router.post(
+  "/register/:workspaceId",
+  widgetRateLimiter,
+  controller.registerAndStart.bind(controller)
+)
+
+logger.info("🔧 Widget POST /register/:workspaceId route registered")
+
+/**
  * POST /api/v1/widget/chat/:workspaceId
  * Send a message from widget
- * 
+ *
  * @swagger
  * /api/v1/widget/chat/{workspaceId}:
  *   post:

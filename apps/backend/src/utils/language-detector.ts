@@ -43,8 +43,16 @@ export function detectLanguageFromPhonePrefix(phone: string): string {
   // Clean phone number (remove spaces, dashes, etc.)
   const cleanPhone = phone.replace(/[\s\-()]/g, "")
 
+  // Ensure string starts with +
+  const normalizedPhone =
+    cleanPhone.startsWith("+")
+      ? cleanPhone
+      : cleanPhone.startsWith("00")
+        ? `+${cleanPhone.slice(2)}`
+        : `+${cleanPhone}`
+
   // Extract prefix (first 1-4 digits after +)
-  const prefixMatch = cleanPhone.match(/^(\+\d{1,4})/)
+  const prefixMatch = normalizedPhone.match(/^(\+\d{1,4})/)
   if (!prefixMatch) {
     return "en" // No prefix found → default to English
   }
