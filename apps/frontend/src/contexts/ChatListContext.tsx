@@ -81,7 +81,8 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
             customerId: chat.customerId,
             customerName: chat.customer?.name || "Unknown Customer",
             customerPhone: chat.customer?.phone || "",
-            language: chat.customer?.language || navigator.language.split('-')[0] || "en", // Map to 'language' field
+            // Keep language from backend if present; avoid browser fallback so we can infer country from phone
+            language: chat.customer?.language || undefined,
             companyName: chat.customer?.company || null,
             lastMessage: chat.lastMessage || "",
             lastMessageTime: chat.updatedAt || chat.createdAt,

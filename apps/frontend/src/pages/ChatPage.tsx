@@ -34,6 +34,7 @@ import {
   ShieldX,
   Trash2,
 } from "lucide-react"
+import { parsePhoneNumberFromString } from "libphonenumber-js"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import {
@@ -80,9 +81,19 @@ const formatDate = (dateString: string | null | undefined): string => {
   }
 }
 
-// Helper function to get language flag emoji
-const getLanguageFlag = (language?: string): string => {
-  const normalizedLang = language?.toUpperCase() // Normalize to uppercase
+// Convert ISO country code to flag emoji (e.g., ES -> 🇪🇸)
+const countryCodeToFlag = (countryCode?: string | null) => {
+  if (!countryCode || countryCode.length !== 2) return null
+  const codePoints = [...countryCode.toUpperCase()].map(
+    (char) => char.codePointAt(0)! + 0x1f1a5
+  )
+  return String.fromCodePoint(...codePoints)
+}
+
+// Helper: prefer explicit language flag, otherwise derive from phone number country
+const getFlagForChat = (language?: string, phone?: string): string => {
+  // 1) Explicit language (from backend/customer)
+  const normalizedLang = language?.toUpperCase()
   switch (normalizedLang) {
     case "IT":
       return "🇮🇹"
@@ -95,9 +106,26 @@ const getLanguageFlag = (language?: string): string => {
     case "PT":
     case "PRT":
       return "🇵🇹"
+    case "FR":
+    case "FRA":
+      return "🇫🇷"
+    case "DE":
+    case "DEU":
+      return "🇩🇪"
     default:
-      return "🌐"
+      break
   }
+
+  // 2) Derive from phone number using libphonenumber-js
+  if (phone) {
+    const parsed = parsePhoneNumberFromString(phone)
+    const country = parsed?.country
+    const flag = countryCodeToFlag(country)
+    if (flag) return flag
+  }
+
+  // 3) Fallback
+  return "🌐"
 }
 
 export function ChatPage() {
@@ -1258,7 +1286,7 @@ export function ChatPage() {
                             className="text-sm flex-shrink-0"
                             title={`Language: ${chat.language || "Unknown"}`}
                           >
-                            {getLanguageFlag(chat.language)}
+                            {getFlagForChat(chat.language, chat.customerPhone)}
                           </span>
                           <div className="font-semibold text-green-700 text-sm truncate">
                             {chat.customerName}

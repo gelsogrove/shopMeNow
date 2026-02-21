@@ -1874,58 +1874,6 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* How It Works Section */}
-      <motion.section
-        id="features"
-        className="py-16 bg-white"
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        viewport={{ once: true, amount: 0.2 }}
-      >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-12">
-            
-            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">
-              {t("howItWorks.title")}
-            </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-              {t("howItWorks.subtitle")}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {howItWorksCards.map((card, index) => (
-              <div className="relative" key={card.step}>
-                <motion.div
-                  className={`bg-gradient-to-br ${card.gradient} rounded-2xl p-8 border-2 ${card.border} h-full shadow-lg hover:shadow-xl transition-all duration-500 flex flex-col`}
-                  initial={{ opacity: 0, y: 60, scale: 0.98 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true, amount: 0.35 }}
-                  transition={{ duration: 0.65, ease: "easeOut", delay: index * 0.08 }}
-                >
-                  <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6 shadow-lg shadow-emerald-200/40">
-                    {card.step}
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-4">{card.title}</h3>
-                  <p className="text-slate-600 leading-relaxed flex-1">
-                    {card.description}
-                  </p>
-                </motion.div>
-
-                {card.showArrow && (
-                  <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
-                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
       {/* Smart Push AI Section */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
