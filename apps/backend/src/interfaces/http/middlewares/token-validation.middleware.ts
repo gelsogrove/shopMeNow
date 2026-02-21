@@ -70,7 +70,28 @@ export const tokenValidationMiddleware = async (
     // Try to get customerId from multiple sources (payload has priority)
     let customerId =
       payload?.customerId || tokenData?.customerId || tokenData?.userId
-    const workspaceId = tokenData?.workspaceId
+    let workspaceId = tokenData?.workspaceId
+
+    // 3b. Resolve workspaceId slug → UUID (tokens may have been generated with slug)
+    if (workspaceId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(workspaceId)) {
+      logger.info(
+        `[TOKEN-VALIDATION-MIDDLEWARE] workspaceId '${workspaceId}' looks like slug – resolving to UUID`
+      )
+      const ws = await prisma.workspace.findFirst({
+        where: { slug: workspaceId },
+        select: { id: true },
+      })
+      if (ws) {
+        logger.info(
+          `[TOKEN-VALIDATION-MIDDLEWARE] Resolved slug '${workspaceId}' → UUID '${ws.id}'`
+        )
+        workspaceId = ws.id
+      } else {
+        logger.warn(
+          `[TOKEN-VALIDATION-MIDDLEWARE] Could not resolve slug '${workspaceId}' to UUID`
+        )
+      }
+    }
 
     // 4. ULTIMATE FALLBACK: If no customerId, try to find customer by phone number
     if (!customerId && tokenData?.phoneNumber && workspaceId) {

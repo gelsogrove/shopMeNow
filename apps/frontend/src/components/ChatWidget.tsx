@@ -1001,12 +1001,12 @@ export function ChatWidget({
 
               {/* AI Suggestions from last bot message (widget only) */}
               {(() => {
-                if (!resolvedAutoSuggestionsEnabled) return null
-
                 const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
                 const suggestions = lastBot?.suggestions?.length
                   ? lastBot.suggestions
-                  : resolvedQuickReplies
+                  : resolvedAutoSuggestionsEnabled
+                    ? resolvedQuickReplies
+                    : []
 
                 if (!suggestions || suggestions.length === 0) return null
 

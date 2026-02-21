@@ -3021,7 +3021,8 @@ export class LLMRouterService {
           // E-commerce (ROUTER): "required" - Force delegation to specialist agents
           // Informational (INFO_AGENT): "auto" - Allow direct text response (identity/FAQ) or delegation
           // 🆕 Use provided tools (from DB) or fallback to hardcoded ones
-          tools: options.tools || getFunctionsForRouter({
+          // ⚠️ FIX: empty array [] is truthy in JS → must check .length > 0 to use fallback correctly
+          tools: (options.tools && options.tools.length > 0) ? options.tools : getFunctionsForRouter({
             sellsProductsAndServices: options.sellsProductsAndServices ?? true
           }),
           tool_choice: options.sellsProductsAndServices === false ? "auto" : "required", // FORCE or AUTO based on mode

@@ -392,7 +392,7 @@ export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "getProfileLink",
       description:
-        "🔗 PRIORITY 1 - HIGHEST. Genera link sicuro per accedere/modificare profilo cliente. QUANDO USARE: Cliente vuole: 1) 📦 Modificare indirizzo/email/telefono/nome, 2) 🔔 Gestire notifiche push/newsletter (SUBSCRIBE/UNSUBSCRIBE), 3) 🌐 Cambiare lingua, 4) 👁️ Vedere il proprio profilo, 5) 🗑️ Cancellare il proprio account (DELETE). ESEMPI TRIGGER: 'cambia indirizzo', 'modifica email', 'voglio cambiare lingua', 'disattiva notifiche', 'cancella account', 'voglio vedere il mio profilo', 'non voglio più ricevere messaggi', 'unsubscribe'. Link ha validità 1 ora con token JWT. DOPO chiamata: mostrare SEMPRE [LINK_PROFILE_WITH_TOKEN] token nel response.",
+        "🔗 PRIORITY 1 - HIGHEST. Genera link sicuro per accedere/modificare profilo cliente. QUANDO USARE: Cliente vuole: 1) 📦 Modificare indirizzo/email/telefono/nome, 2) 🔔 Gestire notifiche push/newsletter (SUBSCRIBE/UNSUBSCRIBE), 3) 🌐 Cambiare lingua, 4) 👁️ Vedere il proprio profilo, 5) 🗑️ Cancellare il proprio account (DELETE). ESEMPI TRIGGER: 'cambia indirizzo', 'modifica email', 'voglio cambiare lingua', 'disattiva notifiche', 'cancella account', 'voglio vedere il mio profilo', 'non voglio più ricevere messaggi', 'unsubscribe'. Link ha validità 1 ora con token JWT. DOPO chiamata: mostrare SEMPRE [LINK_PROFILE_WITH_TOKEN] token nel response. ❌ NON USARE PER: domande su metodi di pagamento ('come si paga', 'come pago', 'metodi di pagamento', 'how to pay', 'payment methods'), domande su prezzi o costi generali, domande informative su prodotti/servizi - per queste usa le FAQ.",
       parameters: {
         type: "object",
         properties: {},

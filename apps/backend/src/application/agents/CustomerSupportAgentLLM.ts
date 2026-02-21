@@ -757,7 +757,7 @@ export class CustomerSupportAgentLLM {
         {
           name: "getProfileLink",
           description:
-            "Generate a secure profile link for customers who want to update personal data (email, phone, address, name).",
+            "Generate a secure profile link ONLY when customer explicitly wants to: view/edit personal data (email, phone, address, name), manage push notification preferences (subscribe/unsubscribe), change language, delete their account. DO NOT use for payment questions, pricing questions, 'come si paga', 'how to pay', 'payment methods', or any general informational questions — answer those from FAQ.",
           parameters: {
             type: "object",
             properties: {},

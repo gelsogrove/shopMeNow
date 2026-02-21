@@ -82,30 +82,39 @@ function isEcommerceChannel() {
   return workspace?.sellsProductsAndServices ?? false
 }
 
+// Fallback languages when workspace has no languages configured
+const FALLBACK_LANGUAGES = ["Italiano", "English", "Español", "Português"]
+
 // Helper function to convert language code to name
 function convertLanguageCodeToName(code: string): string {
   const languageMap: { [key: string]: string } = {
-    // Lowercase format (legacy)
+    // Lowercase format (standard ISO 639-1)
     it: "Italiano",
     en: "English",
     es: "Español",
     pt: "Português",
-    // Uppercase format (database)
+    // Uppercase 2-letter format
     IT: "Italiano",
+    EN: "English",
+    ES: "Español",
+    PT: "Português",
+    // Uppercase 3-letter format (legacy DB values)
     ENG: "English",
+    ITA: "Italiano",
     ESP: "Español",
     PRT: "Português",
+    POR: "Português",
   }
   return languageMap[code] || code
 }
 
-// Helper function to convert language name to code
+// Helper function to convert language name to code (returns lowercase ISO 639-1)
 function convertLanguageNameToCode(name: string): string {
   const languageMap: { [key: string]: string } = {
-    Italiano: "IT", // Use uppercase to match database
-    English: "ENG",
-    Español: "ESP",
-    Português: "PRT",
+    Italiano: "it",
+    English: "en",
+    Español: "es",
+    Português: "pt",
   }
   return languageMap[name] || name
 }
@@ -275,7 +284,7 @@ export function ClientSheet({
       setEmail("")
       setCompany("")
       setPhone("")
-      setLanguage(availableLanguages[0] || "")
+      setLanguage((availableLanguages.length > 0 ? availableLanguages : FALLBACK_LANGUAGES)[0] || "")
       setDiscount("0")
       setNotes("")
       setTagsInput("")
@@ -465,14 +474,12 @@ export function ClientSheet({
   // Make sure to render even if not open
   logger.info("ClientSheet render", { open, mode, client })
 
-  // Set default language if languages are available but current language is empty
+  // Set default language if current language is empty
   useEffect(() => {
-    if (availableLanguages && availableLanguages.length > 0 && !language) {
-      logger.info(
-        "Setting default language from availableLanguages",
-        availableLanguages[0]
-      )
-      setLanguage(availableLanguages[0])
+    const opts = availableLanguages.length > 0 ? availableLanguages : FALLBACK_LANGUAGES
+    if (!language) {
+      logger.info("Setting default language from available options", opts[0])
+      setLanguage(opts[0])
     }
   }, [availableLanguages, language])
 
@@ -589,7 +596,7 @@ export function ClientSheet({
                           <SelectValue placeholder="Select language" />
                         </SelectTrigger>
                         <SelectContent>
-                          {availableLanguages.map((lang) => (
+                          {(availableLanguages.length > 0 ? availableLanguages : FALLBACK_LANGUAGES).map((lang) => (
                             <SelectItem key={lang} value={lang}>
                               {lang}
                             </SelectItem>

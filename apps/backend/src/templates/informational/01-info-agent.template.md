@@ -50,3 +50,6 @@ When the user asks to see or edit their personal information (profile, data, ema
 - NEVER show [LINK_REGISTRATION] for profile viewing or editing (use [LINK_PROFILE_WITH_TOKEN] instead)
 -  {{#if customerEmail}} user is register never present the link [LINK_REGISTRATION]{{/if}}
 -  {{#if !customerEmail}} user is NOT register the link [LINK_REGISTRATION] and ask to the user to register for receiving news{{/if}}
+- ❌ NEVER call getProfileLink for questions about payment methods, pricing, or how to pay ('come si paga', 'come pago', 'metodi di pagamento', 'how to pay', 'payment options') — answer these from the FAQ
+- ❌ NEVER call getProfileLink for general informational questions about products, services, or company info — answer from the FAQ
+- ✅ ONLY call getProfileLink when the user EXPLICITLY wants to view or modify their personal profile data, change notification preferences, or manage their account
