@@ -85,6 +85,7 @@ import {
   saveCustomerId,
   sendWidgetMessage,
   registerAndStartChat,
+  getWidgetStatus,
   type WidgetStoredMessage,
 } from "@/components/chat/adapters/widgetAdapter"
 
@@ -274,7 +275,32 @@ export function ChatWidget({
     if (storedCustomerId) {
       setCustomerId(storedCustomerId)
       setShowRegistrationForm(false) // Skip form for returning registered users
-      console.log("👤 Returning registered user, skipping registration form")
+      console.log("👤 Returning registered user (from localStorage), skipping registration form")
+    } else {
+      // 🕵️ RECONCILIATION: Check server if visitorId is already linked (handles refresh after Step 7 success but partial 500 error)
+      const reconcileVisitor = async () => {
+        try {
+          const statusResp = await getWidgetStatus({
+            apiUrl: resolvedApiUrl,
+            workspaceId: resolvedWorkspaceId,
+            visitorId: id,
+            language: resolvedLanguage,
+          })
+
+          if (statusResp?.customer?.id) {
+            console.log("👤 Visitor recognized from server! Skipping registration form", {
+              customerId: statusResp.customer.id
+            })
+            const cId = statusResp.customer.id
+            setCustomerId(cId)
+            saveCustomerId(localStorage, resolvedWorkspaceId, cId)
+            setShowRegistrationForm(false)
+          }
+        } catch (err) {
+          console.debug("🕵️ Reconcile skipped (server status unavailable)", err)
+        }
+      }
+      reconcileVisitor()
     }
 
     // Pre-select language from widget config

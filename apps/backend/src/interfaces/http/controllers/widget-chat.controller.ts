@@ -124,9 +124,15 @@ export class WidgetChatController {
     try {
       const { workspaceId } = req.params
       const requestedLanguage = (req.query.language as string | undefined) || null
+      const visitorId = (req.query.visitorId as string | undefined) || null
 
-      const workspace = await prisma.workspace.findUnique({
-        where: { id: workspaceId },
+      const workspace = await prisma.workspace.findFirst({
+        where: {
+          OR: [
+            { id: workspaceId },
+            { slug: workspaceId }
+          ]
+        },
         select: {
           id: true,
           deletedAt: true,
@@ -148,6 +154,34 @@ export class WidgetChatController {
           status: "disabled",
           message: "Workspace not found",
         })
+      }
+
+      const resolvedWorkspaceId = workspace.id
+
+      // 👤 LIFECYCLE CHECK: If visitorId is provided, check if already registered
+      let registeredCustomer = null
+      if (visitorId) {
+        registeredCustomer = await prisma.customers.findFirst({
+          where: {
+            workspaceId: resolvedWorkspaceId,
+            customId: visitorId,
+            isActive: true, // Only recognized if fully registered
+            deletedAt: null
+          },
+          select: {
+            id: true,
+            name: true,
+            language: true
+          }
+        })
+
+        if (registeredCustomer) {
+          logger.info("[WIDGET-STATUS] 👤 Recognizing returning visitor", {
+            visitorId,
+            customerId: registeredCustomer.id,
+            workspaceId: resolvedWorkspaceId
+          })
+        }
       }
 
       if (workspace.deletedAt !== null) {
@@ -202,7 +236,7 @@ export class WidgetChatController {
         const wipMessage = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
           requestedLanguage,
-          workspaceId
+          resolvedWorkspaceId
         )
         return res.status(200).json({
           success: true,
@@ -210,6 +244,11 @@ export class WidgetChatController {
           channelStatus: workspace.channelStatus ?? false,
           debugMode: workspace.debugMode ?? false,
           wipMessage,
+          customer: registeredCustomer ? {
+            id: registeredCustomer.id,
+            name: registeredCustomer.name,
+            language: registeredCustomer.language
+          } : null
         })
       }
 
@@ -222,6 +261,12 @@ export class WidgetChatController {
         primaryColor: workspace.widgetPrimaryColor || "#22c55e", // 🎨 Widget color
         icon: workspace.widgetIcon || "sparkles", // 🎨 Widget icon
         useChannelLogo: workspace.widgetUseChannelLogo ?? false,
+        workspaceId: resolvedWorkspaceId,
+        customer: registeredCustomer ? {
+          id: registeredCustomer.id,
+          name: registeredCustomer.name,
+          language: registeredCustomer.language
+        } : null
       })
     } catch (error) {
       logger.error("❌ Error getting widget status", error)
@@ -273,9 +318,14 @@ export class WidgetChatController {
         })
       }
 
-      // 3. Verify workspace
-      const workspace = await prisma.workspace.findUnique({
-        where: { id: workspaceId },
+      // 3. Verify workspace (Resolved by ID or Slug)
+      const workspace = await prisma.workspace.findFirst({
+        where: {
+          OR: [
+            { id: workspaceId },
+            { slug: workspaceId }
+          ]
+        },
         select: {
           id: true,
           deletedAt: true,
@@ -291,11 +341,15 @@ export class WidgetChatController {
       })
 
       if (!workspace) {
+        logger.error("[WIDGET-REGISTER] ❌ Workspace not found", { workspaceId })
         return res.status(404).json({
           error: "WORKSPACE_NOT_FOUND",
           message: "Workspace not found",
         })
       }
+
+      // Use the resolved DB ID for all downstream operations
+      const resolvedWorkspaceId = workspace.id
 
       if (workspace.deletedAt !== null) {
         return res.status(503).json({
@@ -336,10 +390,10 @@ export class WidgetChatController {
 
       // 5. Billing access check
       const workspaceAccessService = new WorkspaceAccessService(prisma)
-      const accessResult = await workspaceAccessService.canProcessMessages(workspaceId, true)
+      const accessResult = await workspaceAccessService.canProcessMessages(resolvedWorkspaceId, true)
       if (!accessResult.canProcess) {
         logger.warn("[WIDGET-REGISTER] 🚫 Workspace blocked by billing", {
-          workspaceId,
+          workspaceId: resolvedWorkspaceId,
           blockReason: accessResult.blockReason,
         })
         const isBillingBlock =
@@ -359,7 +413,7 @@ export class WidgetChatController {
       // 7. Deduplication: find or create customer by phone within workspace
       let isNewCustomer = false
       let customer = await prisma.customers.findFirst({
-        where: { workspaceId, phone: normalizedPhone },
+        where: { workspaceId: resolvedWorkspaceId, phone: normalizedPhone },
       })
 
       if (customer) {
@@ -370,10 +424,29 @@ export class WidgetChatController {
         if (normalizedLanguage && normalizedLanguage !== customer.language) {
           updateData.language = normalizedLanguage
         }
-        customer = await prisma.customers.update({
-          where: { id: customer.id },
-          data: updateData,
-        })
+        
+        try {
+          customer = await prisma.customers.update({
+            where: { id: customer.id },
+            data: updateData,
+          })
+        } catch (updateError: any) {
+          // Handle unique constraint violation on customId (visitorId already linked to another phone)
+          if (updateError?.code === "P2002" && updateError?.meta?.target?.includes("customId")) {
+            logger.warn("[WIDGET-REGISTER] 👤 visitorId already linked to another customer, stripping for update", {
+              customerId: customer.id,
+              visitorId
+            })
+            delete updateData.customId
+            customer = await prisma.customers.update({
+              where: { id: customer.id },
+              data: updateData,
+            })
+          } else {
+            throw updateError
+          }
+        }
+
         logger.info("[WIDGET-REGISTER] 👤 RETURNING USER - Updated profile", {
           customerId: customer.id,
           phone,
@@ -386,7 +459,7 @@ export class WidgetChatController {
         try {
           customer = await prisma.customers.create({
             data: {
-              workspaceId,
+              workspaceId: resolvedWorkspaceId,
               customId: visitorId,
               name,
               phone: normalizedPhone,
@@ -398,17 +471,44 @@ export class WidgetChatController {
         } catch (createError: any) {
           // Unique constraint (phone) → race/format mismatch: reuse existing
           if (createError?.code === "P2002") {
-            logger.warn("[WIDGET-REGISTER] Duplicate phone, reusing existing customer", {
-              workspaceId,
-              phone: normalizedPhone,
-            })
-            customer = await prisma.customers.findFirst({
-              where: { workspaceId, phone: normalizedPhone },
-            })
+            const isPhoneConflict = createError?.meta?.target?.includes("phone")
+            const isCustomIdConflict = createError?.meta?.target?.includes("customId")
+
+            if (isPhoneConflict) {
+              logger.warn("[WIDGET-REGISTER] Duplicate phone, reusing existing customer", {
+                workspaceId: resolvedWorkspaceId,
+                phone: normalizedPhone,
+              })
+              customer = await prisma.customers.findFirst({
+                where: { workspaceId: resolvedWorkspaceId, phone: normalizedPhone },
+              })
+            } else if (isCustomIdConflict) {
+              logger.warn("[WIDGET-REGISTER] visitorId already linked to another customer, creating without it", {
+                workspaceId: resolvedWorkspaceId,
+                visitorId
+              })
+              customer = await prisma.customers.create({
+                data: {
+                    workspaceId: resolvedWorkspaceId,
+                    name,
+                    phone: normalizedPhone,
+                    email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
+                    isActive: true,
+                    language: normalizedLanguage,
+                }
+              })
+            } else {
+              throw createError
+            }
           } else {
             throw createError
           }
         }
+        
+        if (!customer) {
+          throw new Error("Failed to resolve or create customer")
+        }
+
         logger.info("[WIDGET-REGISTER] 👤 NEW USER - Created customer", {
           customerId: customer.id,
           phone,
@@ -424,7 +524,7 @@ export class WidgetChatController {
       if (!chatSession) {
         chatSession = await prisma.chatSession.create({
           data: {
-            workspaceId,
+            workspaceId: resolvedWorkspaceId,
             customerId: customer.id,
             status: "active",
             isAnonymous: false,
@@ -441,7 +541,7 @@ export class WidgetChatController {
       // 9. Save user's first message to conversation history
       await prisma.conversationMessage.create({
         data: {
-          workspaceId,
+          workspaceId: resolvedWorkspaceId,
           customerId: customer.id,
           conversationId: chatSession.id,
           role: "user",
@@ -455,10 +555,11 @@ export class WidgetChatController {
       logger.info("[WIDGET-REGISTER] 🤖 Processing first message through LLM", {
         customerId: customer.id,
         language: normalizedLanguage,
+        workspaceId: resolvedWorkspaceId,
       })
 
       const llmResult = await llmRouterService.routeMessage({
-        workspaceId,
+        workspaceId: resolvedWorkspaceId,
         customerId: customer.id,
         conversationId: chatSession.id,
         messageId: `widget-reg-${visitorId}-${Date.now()}`,
@@ -483,7 +584,7 @@ export class WidgetChatController {
       // 11. Save LLM response to conversation history
       await prisma.conversationMessage.create({
         data: {
-          workspaceId,
+          workspaceId: resolvedWorkspaceId,
           customerId: customer.id,
           conversationId: chatSession.id,
           role: "assistant",
@@ -499,7 +600,7 @@ export class WidgetChatController {
           const billingService = new SubscriptionBillingService(prisma)
           await billingService.deductOwnerWidgetMessageCredit(
             workspace.ownerId,
-            workspaceId,
+            resolvedWorkspaceId,
             `widget-reg-${visitorId}-${Date.now()}`
           )
         } catch (billingError) {
@@ -629,9 +730,14 @@ export class WidgetChatController {
         })
       }
 
-      // Verify workspace exists and is active
-      const workspace = await prisma.workspace.findUnique({
-        where: { id: workspaceId },
+      // Verify workspace exists and is active (supports both ID and slug)
+      const workspace = await prisma.workspace.findFirst({
+        where: {
+          OR: [
+            { id: workspaceId },
+            { slug: workspaceId }
+          ]
+        },
         select: {
           id: true,
           deletedAt: true,
@@ -654,6 +760,9 @@ export class WidgetChatController {
           message: "Workspace not found",
         })
       }
+
+      // Use resolved workspace ID for all downstream operations
+      const resolvedWorkspaceId = workspace.id
 
 
       if (workspace.deletedAt !== null) {

@@ -239,3 +239,19 @@ export const registerAndStartChat = async (input: WidgetRegisterInput) => {
       : undefined,
   }
 }
+
+export const getWidgetStatus = async (input: {
+  apiUrl: string
+  workspaceId: string
+  visitorId: string
+  language?: string
+}) => {
+  const { apiUrl, workspaceId, visitorId, language } = input
+  const query = new URLSearchParams({ visitorId })
+  if (language) query.append("language", language)
+
+  const response = await fetch(`${apiUrl}/widget/status/${workspaceId}?${query.toString()}`)
+  if (!response.ok) throw new Error("Failed to fetch widget status")
+  
+  return await response.json()
+}

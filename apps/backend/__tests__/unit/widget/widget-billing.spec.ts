@@ -18,6 +18,7 @@ jest.mock("@echatbot/database", () => {
   const mockPrismaInstance = {
     workspace: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(), // Added for new slug/id resolution logic
     },
     user: {
       findUnique: jest.fn(),
@@ -158,18 +159,24 @@ describe("Widget Billing", () => {
     }
 
     // Default workspace mock (active, with owner)
-    ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+    ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
       id: mockWorkspaceId,
       deletedAt: null,
       channelStatus: true,
       ownerId: mockOwnerId,
       language: "ITA",
+      defaultLanguage: "it", // Added for widget register
       debugMode: false,
       wipMessage: null,
       enableWidget: true,
+      defaultLanguage: "it",
+      widgetAutoSuggestionsEnabled: false,
+      widgetQuickReplies: [],
       widgetLanguage: "it",
       widgetPrimaryColor: "#22c55e",
       widgetIcon: "sparkles",
+      widgetAutoSuggestionsEnabled: false, // Added for widget register
+      widgetQuickReplies: [], // Added for widget register
       owner: {
         subscriptionStatus: "ACTIVE",
         creditBalance: new Prisma.Decimal(50.0),
@@ -287,7 +294,7 @@ describe("Widget Billing", () => {
     })
 
     it("should block message if workspace has no owner", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: null, // No owner
@@ -296,6 +303,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: null,
       })
 
@@ -315,7 +325,7 @@ describe("Widget Billing", () => {
 
   describe("Credit Limit Enforcement (-$10 threshold)", () => {
     it("should allow message when balance is positive", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -324,6 +334,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "ACTIVE",
           creditBalance: new Prisma.Decimal(100.0),
@@ -345,7 +358,7 @@ describe("Widget Billing", () => {
     })
 
     it("should allow message when balance is negative but above -$10", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -354,6 +367,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "ACTIVE",
           creditBalance: new Prisma.Decimal(-5.0),
@@ -375,7 +391,7 @@ describe("Widget Billing", () => {
     })
 
     it("should allow message when balance is exactly -$10", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -384,6 +400,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "ACTIVE",
           creditBalance: new Prisma.Decimal(-10.0),
@@ -405,7 +424,7 @@ describe("Widget Billing", () => {
     })
 
     it("should block message when balance below -$10", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -414,6 +433,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "ACTIVE",
           creditBalance: new Prisma.Decimal(-10.01),
@@ -443,7 +465,7 @@ describe("Widget Billing", () => {
     })
 
     it("should block message when balance is -$15 (far below threshold)", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -452,6 +474,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "ACTIVE",
           creditBalance: new Prisma.Decimal(-15.0),
@@ -475,7 +500,7 @@ describe("Widget Billing", () => {
 
   describe("Subscription Status Enforcement", () => {
     it("should block when subscriptionStatus=PAUSED", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -484,6 +509,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "PAUSED",
           creditBalance: new Prisma.Decimal(50.0),
@@ -504,7 +532,7 @@ describe("Widget Billing", () => {
     })
 
     it("should block when subscriptionStatus=PAYMENT_FAILED with failure count >= 3", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -513,6 +541,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: null,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "PAYMENT_FAILED",
           creditBalance: new Prisma.Decimal(50.0),
@@ -535,7 +566,7 @@ describe("Widget Billing", () => {
 
   describe("Channel Status & Debug Mode", () => {
     it("should return WIP message when debugMode=true", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -544,6 +575,9 @@ describe("Widget Billing", () => {
         debugMode: true, // Debug mode ON
         wipMessage: { it: "Siamo in manutenzione" },
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "ACTIVE",
           creditBalance: new Prisma.Decimal(50.0),
@@ -577,7 +611,7 @@ describe("Widget Billing", () => {
     })
 
     it("should block message when channelStatus=false", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -586,6 +620,9 @@ describe("Widget Billing", () => {
         debugMode: false,
         wipMessage: { it: "Canale temporaneamente offline" },
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         owner: {
           subscriptionStatus: "ACTIVE",
           creditBalance: new Prisma.Decimal(50.0),
@@ -611,7 +648,7 @@ describe("Widget Billing", () => {
     })
 
     it("should block message when widget disabled (enableWidget=false)", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -668,7 +705,7 @@ describe("Widget Billing", () => {
 
   describe("Widget Status Endpoint", () => {
     it("should return 'disabled' when channelStatus=false", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -702,7 +739,7 @@ describe("Widget Billing", () => {
     })
 
     it("should return 'wip' when debugMode=true", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
@@ -736,13 +773,16 @@ describe("Widget Billing", () => {
     })
 
     it("should return 'active' when workspace is fully operational", async () => {
-      ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+      ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
         id: mockWorkspaceId,
         deletedAt: null,
         ownerId: mockOwnerId,
         channelStatus: true,
         debugMode: false,
         enableWidget: true,
+        defaultLanguage: "it",
+        widgetAutoSuggestionsEnabled: false,
+        widgetQuickReplies: [],
         widgetLanguage: "it",
         widgetPrimaryColor: "#22c55e",
         widgetIcon: "sparkles",
