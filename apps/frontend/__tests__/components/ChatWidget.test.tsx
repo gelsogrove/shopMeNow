@@ -405,6 +405,7 @@ describe('ChatWidget', () => {
     localStorageMock.getItem.mockImplementation((key) => {
       if (key === 'echatbot-messages:test-workspace') return storedMessages
       if (key === 'echatbot-visitor-id:test-workspace') return 'visitor_1700000000000_test123'
+      if (key === 'echatbot-customer-id:test-workspace') return 'customer-abc' // skip registration form
       return null
     })
 
