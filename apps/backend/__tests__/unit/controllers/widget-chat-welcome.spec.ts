@@ -4,7 +4,7 @@ import { SecurityCheckService } from "../../../src/application/services/security
 
 jest.mock("@echatbot/database", () => {
   const mockPrisma = {
-    workspace: { findUnique: jest.fn() },
+    workspace: { findUnique: jest.fn(), findFirst: jest.fn() },
     user: { findUnique: jest.fn() },
     customers: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
     chatSession: { findFirst: jest.fn(), create: jest.fn() },
@@ -41,20 +41,51 @@ jest.mock("../../../src/services/llm-router.service", () => ({
   })),
 }))
 
+jest.mock("../../../src/utils/welcome-message.handler", () => ({
+  WelcomeMessageHandler: jest.fn(() => ({
+    handleWelcomeMessage: jest.fn(() => Promise.resolve({ isWelcomeMessage: false })),
+  })),
+}))
+
+jest.mock("../../../src/services/registration-prompt.service", () => ({
+  registrationPromptService: {
+    getPromptLevel: jest.fn().mockReturnValue(0),
+    shouldBlockUser: jest.fn().mockReturnValue(false),
+  },
+}))
+
+jest.mock("../../../src/application/services/subscription-billing.service", () => ({
+  SubscriptionBillingService: jest.fn(() => ({
+    deductOwnerWidgetMessageCredit: jest.fn().mockResolvedValue({ success: true, newBalance: 50 }),
+  })),
+}))
+
+const mockWorkspaceAccessService = { canProcessMessages: jest.fn() }
+jest.mock("../../../src/application/services/workspace-access.service", () => ({
+  WorkspaceAccessService: jest.fn(() => mockWorkspaceAccessService),
+}))
+
 describe("WidgetChatController - LLM direct flow (no welcome handler)", () => {
   const controller = new WidgetChatController()
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+
+    // Default: allow processing
+    mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({ canProcess: true, blockReason: null })
+
+    ;(prisma.workspace.findFirst as jest.Mock).mockResolvedValue({
       id: "ws-1",
       deletedAt: null,
       channelStatus: true,
       ownerId: "owner-1",
       language: "it",
+      defaultLanguage: "it",
       debugMode: false,
       wipMessage: null,
       enableWidget: true,
+      widgetAutoSuggestionsEnabled: false,
+      widgetQuickReplies: [],
       owner: {
         subscriptionStatus: "ACTIVE",
         creditBalance: 0,

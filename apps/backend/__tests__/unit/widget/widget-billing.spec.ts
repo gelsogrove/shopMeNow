@@ -100,6 +100,14 @@ jest.mock("../../../src/application/services/security-check.service", () => ({
   },
 }))
 
+// Mock WorkspaceAccessService (billing/access control)
+const mockWorkspaceAccessService = {
+  canProcessMessages: jest.fn(),
+}
+jest.mock("../../../src/application/services/workspace-access.service", () => ({
+  WorkspaceAccessService: jest.fn(() => mockWorkspaceAccessService),
+}))
+
 jest.mock("../../../src/utils/welcome-message.handler", () => ({
   WelcomeMessageHandler: jest.fn(() => ({
     handleWelcomeMessage: jest.fn(() => Promise.resolve({ isWelcomeMessage: false })),
@@ -157,6 +165,12 @@ describe("Widget Billing", () => {
       status: statusMock,
       json: jsonMock,
     }
+
+    // Default: Allow message processing (billing check passes)
+    mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+      canProcess: true,
+      blockReason: null,
+    })
 
     // Default workspace mock (active, with owner)
     ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
@@ -309,6 +323,13 @@ describe("Widget Billing", () => {
         owner: null,
       })
 
+      // Override: workspace access service should block (no owner = no billing)
+      mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+        canProcess: false,
+        blockReason: "NO_OWNER",
+        message: "Workspace has no owner",
+      })
+
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       // Should block before LLM/billing
@@ -449,6 +470,18 @@ describe("Widget Billing", () => {
         creditBalance: new Prisma.Decimal(-10.01), // Below -$10 threshold
         subscriptionStatus: "ACTIVE",
       })
+      // Override: workspace access service should block due to credit exhaustion
+      mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+        canProcess: false,
+        blockReason: "CREDIT_EXHAUSTED",
+        message: "Insufficient credit",
+      })
+      // Override: workspace access service should block due to credit exhaustion
+      mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+        canProcess: false,
+        blockReason: "CREDIT_EXHAUSTED",
+        message: "Insufficient credit",
+      })
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
@@ -491,6 +524,13 @@ describe("Widget Billing", () => {
         subscriptionStatus: "ACTIVE",
       })
 
+      // Override: workspace access service should block due to credit exhaustion
+      mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+        canProcess: false,
+        blockReason: "CREDIT_EXHAUSTED",
+        message: "Insufficient credit",
+      })
+
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
@@ -518,6 +558,13 @@ describe("Widget Billing", () => {
           paymentFailureCount: 0,
           deletedAt: null,
         },
+      })
+
+      // Override: workspace access service should block due to paused subscription
+      mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+        canProcess: false,
+        blockReason: "PAUSED",
+        message: "Workspace paused",
       })
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
@@ -550,6 +597,13 @@ describe("Widget Billing", () => {
           paymentFailureCount: 3,
           deletedAt: null,
         },
+      })
+
+      // Override: workspace access service should block due to payment failure
+      mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+        canProcess: false,
+        blockReason: "PAYMENT_FAILED",
+        message: "Payment failed",
       })
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)

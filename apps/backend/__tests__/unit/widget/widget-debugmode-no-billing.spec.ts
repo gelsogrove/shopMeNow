@@ -26,6 +26,7 @@ jest.mock("@echatbot/database", () => {
   const mockPrismaInstance = {
     workspace: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
     },
     user: {
       findUnique: jest.fn(),
@@ -110,6 +111,14 @@ jest.mock("../../../src/services/registration-prompt.service", () => ({
   },
 }))
 
+// Mock WorkspaceAccessService (billing/access control)
+const mockWorkspaceAccessService = {
+  canProcessMessages: jest.fn(),
+}
+jest.mock("../../../src/application/services/workspace-access.service", () => ({
+  WorkspaceAccessService: jest.fn(() => mockWorkspaceAccessService),
+}))
+
 import { WidgetChatController } from "../../../src/interfaces/http/controllers/widget-chat.controller"
 import { Request, Response } from "express"
 
@@ -134,6 +143,12 @@ describe("Widget Debug Mode - NO Billing", () => {
     jsonMock = jest.fn()
     statusMock = jest.fn(() => ({ json: jsonMock }))
 
+    // Default: allow message processing
+    mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
+      canProcess: true,
+      blockReason: null,
+    })
+
     mockReq = {
       params: { workspaceId: mockWorkspaceId },
       body: {
@@ -154,7 +169,7 @@ describe("Widget Debug Mode - NO Billing", () => {
 
   it("should NOT bill when debugMode=true (exits before billing)", async () => {
     // Mock workspace with debugMode=true
-    ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+    ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
       id: mockWorkspaceId,
       deletedAt: null,
       ownerId: mockOwnerId,
@@ -163,6 +178,9 @@ describe("Widget Debug Mode - NO Billing", () => {
       debugMode: true, // 🔴 DEBUG MODE ON
       wipMessage: { it: "Sistema in manutenzione. Test in corso." },
       enableWidget: true,
+      defaultLanguage: "it",
+      widgetAutoSuggestionsEnabled: false,
+      widgetQuickReplies: [],
       owner: {
         subscriptionStatus: "ACTIVE",
         creditBalance: new Prisma.Decimal(50.0),
@@ -196,7 +214,7 @@ describe("Widget Debug Mode - NO Billing", () => {
   })
 
   it("should NOT bill when channelStatus=false (blocked before billing)", async () => {
-    ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+    ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
       id: mockWorkspaceId,
       deletedAt: null,
       ownerId: mockOwnerId,
@@ -205,6 +223,9 @@ describe("Widget Debug Mode - NO Billing", () => {
       debugMode: false,
       wipMessage: { it: "Canale temporaneamente offline" },
       enableWidget: true,
+      defaultLanguage: "it",
+      widgetAutoSuggestionsEnabled: false,
+      widgetQuickReplies: [],
       owner: {
         subscriptionStatus: "ACTIVE",
         creditBalance: new Prisma.Decimal(50.0),
@@ -235,7 +256,7 @@ describe("Widget Debug Mode - NO Billing", () => {
   })
 
   it("should bill normally when debugMode=false AND channelStatus=true", async () => {
-    ;(mockPrisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+    ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
       id: mockWorkspaceId,
       deletedAt: null,
       ownerId: mockOwnerId,
@@ -244,6 +265,9 @@ describe("Widget Debug Mode - NO Billing", () => {
       debugMode: false, // ✅ DEBUG OFF
       wipMessage: null,
       enableWidget: true,
+      defaultLanguage: "it",
+      widgetAutoSuggestionsEnabled: false,
+      widgetQuickReplies: [],
       owner: {
         subscriptionStatus: "ACTIVE",
         creditBalance: new Prisma.Decimal(50.0),
