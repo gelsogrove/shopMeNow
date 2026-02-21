@@ -397,7 +397,7 @@ describe('ChatWidget', () => {
   // STORAGE TESTS
   // ========================================
 
-  it('should load stored messages on mount', () => {
+  it('should load stored messages on mount', async () => {
     const storedMessages = JSON.stringify([
       { role: 'user', content: 'Hello' },
       { role: 'bot', content: 'Hi there' },
@@ -412,8 +412,11 @@ describe('ChatWidget', () => {
 
     // Messages should be displayed
     fireEvent.click(screen.getByRole('button', { name: /open chat/i }))
-    expect(screen.getByText(/Hello/)).toBeInTheDocument()
-    expect(screen.getByText(/Hi there/)).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hello/)).toBeInTheDocument()
+      expect(screen.getByText(/Hi there/)).toBeInTheDocument()
+    })
   })
 
   // ========================================
