@@ -120,7 +120,7 @@ const customerProcessingLocks = new Map<string, Promise<void>>()
 // ================================================================================
 
 export interface DebugStep {
-  type: "router" | "sub_agent" | "function_call" | "function_result" | "safety" | "link-replacement" | "intent-parser" | "data-loader" | "llm-formatter" | "save-history" | "whatsapp-queue"
+  type: "router" | "sub_agent" | "function_call" | "function_result" | "safety" | "link-replacement" | "intent-parser" | "data-loader" | "llm-formatter" | "save-history" | "whatsapp-queue" | "token-replacement"
   agent: string
   model?: string
   temperature?: number

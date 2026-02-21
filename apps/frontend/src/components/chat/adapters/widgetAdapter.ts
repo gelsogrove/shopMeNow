@@ -193,6 +193,9 @@ export const sendWidgetMessage = async ({
     response: data.response as string,
     sessionId: data.sessionId as string | undefined,
     messageId: data.messageId as string | undefined,
+    suggestions: Array.isArray(data.suggestions)
+      ? (data.suggestions as string[]).slice(0, 4)
+      : undefined,
   }
 }
 
@@ -231,5 +234,8 @@ export const registerAndStartChat = async (input: WidgetRegisterInput) => {
     sessionId: data.sessionId as string,
     response: data.response as string,
     isNewCustomer: data.isNewCustomer as boolean,
+    suggestions: Array.isArray(data.suggestions)
+      ? (data.suggestions as string[]).slice(0, 4)
+      : undefined,
   }
 }

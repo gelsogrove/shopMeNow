@@ -360,6 +360,7 @@ export function ChatWidget({
         role: "bot",
         content: data.response,
         timestamp: new Date().toISOString(),
+        suggestions: data.suggestions,
       }
       const finalMessages = [...updatedMessages, botMessage]
       setMessages(finalMessages)
@@ -443,6 +444,7 @@ export function ChatWidget({
           role: "bot",
           content: result.response,
           timestamp: new Date().toISOString(),
+          suggestions: result.suggestions,
         },
       ]
       setMessages(initialMessages)
@@ -951,15 +953,25 @@ export function ChatWidget({
               </ScrollArea>
 
               {/* AI Suggestions from last bot message (widget only) */}
-              {resolvedAutoSuggestionsEnabled && (() => {
+              {(() => {
                 const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
-                const suggestions = lastBot?.suggestions || resolvedQuickReplies
+                const suggestions =
+                  resolvedAutoSuggestionsEnabled && (lastBot?.suggestions?.length
+                    ? lastBot.suggestions
+                    : resolvedQuickReplies)
+
                 return suggestions && suggestions.length > 0 ? (
-                  <div className="px-4 py-2 bg-white border-t border-slate-200 flex flex-wrap gap-2">
+                  <div className="px-4 py-3 bg-white border-t border-slate-200 flex flex-wrap gap-2">
                     {suggestions.slice(0, 4).map((qr: string, idx: number) => (
                       <button
                         key={`${qr}-${idx}`}
-                        className="text-sm px-3 py-2 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 transition"
+                        className="text-sm px-3 py-2 rounded-full border transition shadow-sm"
+                        style={{
+                          borderColor: borderColor,
+                          background: "linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.8))",
+                          color: resolvedPrimaryColor,
+                          boxShadow: `0 6px 12px -6px ${borderColor}`,
+                        }}
                         onClick={() => handleQuickReply(qr)}
                         disabled={isLoading}
                       >

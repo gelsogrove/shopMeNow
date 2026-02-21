@@ -30,6 +30,37 @@ const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
 const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
 
+// Quick, deterministic auto-suggestions for widget replies
+export function buildWidgetSuggestions(responseText: string, quickReplies?: string[]): string[] {
+  const baseQuickReplies = (quickReplies || []).filter(
+    (q) => typeof q === "string" && q.trim().length > 0
+  )
+  if (baseQuickReplies.length) {
+    return Array.from(new Set(baseQuickReplies)).slice(0, 4)
+  }
+
+  if (!responseText || responseText.trim().length < 8) return []
+
+  const lower = responseText.toLowerCase()
+  const suggestions: string[] = []
+
+  const yes = "Sì, va bene"
+  const no = "No, grazie"
+  const more = "Dimmi di più"
+  const human = "Parla con un operatore"
+  const price = "Mostrami i prezzi"
+
+  if (lower.includes("?")) {
+    suggestions.push(yes, no)
+  }
+  if (lower.includes("prezzo") || lower.includes("costo") || lower.includes("price")) {
+    suggestions.push(price)
+  }
+  suggestions.push(more, human)
+
+  return Array.from(new Set(suggestions)).slice(0, 4)
+}
+
 export class WidgetChatController {
   private normalizeLanguage(raw?: string | null): string | null {
     if (!raw) return null
@@ -251,6 +282,8 @@ export class WidgetChatController {
           defaultLanguage: true,
           debugMode: true,
           wipMessage: true,
+          widgetAutoSuggestionsEnabled: true,
+          widgetQuickReplies: true,
         },
       })
 
@@ -421,6 +454,11 @@ export class WidgetChatController {
         tokensUsed: llmResult.tokensUsed,
       })
 
+      const suggestions =
+        workspace.widgetAutoSuggestionsEnabled === true
+          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any)
+          : []
+
       // 11. Save LLM response to conversation history
       await prisma.conversationMessage.create({
         data: {
@@ -455,6 +493,7 @@ export class WidgetChatController {
         sessionId: chatSession.id,
         response: llmResult.response || "Welcome! How can I help you?",
         isNewCustomer,
+        suggestions,
       })
     } catch (error) {
       logger.error("[WIDGET-REGISTER] ❌ Registration error", {
@@ -583,6 +622,8 @@ export class WidgetChatController {
           wipMessage: true, // 🚧 For WIP mode response
           enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
           welcomeMessage: true, // 👋 For first-visitor welcome message (parity with WhatsApp)
+          widgetAutoSuggestionsEnabled: true,
+          widgetQuickReplies: true,
         },
       })
 
@@ -980,6 +1021,11 @@ export class WidgetChatController {
         responseLength: llmResult.response?.length,
       })
 
+      const suggestions =
+        workspace.widgetAutoSuggestionsEnabled === true
+          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any)
+          : []
+
       // 📝 Save assistant message to conversation history
       await prisma.conversationMessage.create({
         data: {
@@ -1038,6 +1084,7 @@ export class WidgetChatController {
         sessionId: chatSession.id,
         response: llmResult.response || "Sorry, I couldn't understand your request.",
         status: "ready",
+        suggestions,
       })
     } catch (error) {
       logger.error("❌ Error sending widget message", {
