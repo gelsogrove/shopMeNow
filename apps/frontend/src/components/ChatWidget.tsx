@@ -24,13 +24,11 @@ import {
   Phone,
   Cpu,
   MessagesSquare,
-  Mail,
   User,
   Star,
   Heart,
   Bell,
   Shield,
-  Globe,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -263,10 +261,7 @@ export function ChatWidget({
   const [showRegistrationForm, setShowRegistrationForm] = useState(true)
   const [formName, setFormName] = useState("")
   const [formPhone, setFormPhone] = useState("")
-  const [formEmail, setFormEmail] = useState("")
   const [formLanguage, setFormLanguage] = useState("en")
-  const [formFirstMessage, setFormFirstMessage] = useState("")
-  const [formPushConsent, setFormPushConsent] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [workspaceConfig, setWorkspaceConfig] = useState<{ debugMode?: boolean; channelStatus?: boolean } | null>(null)
 
@@ -455,13 +450,19 @@ export function ChatWidget({
       setFormError("Phone must be in international format (e.g. +39 1234567890)")
       return
     }
-    if (!formFirstMessage.trim()) {
-      setFormError("Please write your first message")
-      return
-    }
-
     setIsLoading(true)
     setFormError(null)
+
+    // Silent greeting used as first message trigger — language-aware, not shown in chat
+    const silentGreetings: Record<string, string> = {
+      it: "Ciao",
+      en: "Hello",
+      es: "Hola",
+      pt: "Olá",
+      fr: "Bonjour",
+      de: "Hallo",
+    }
+    const autoFirstMessage = silentGreetings[formLanguage] || "Hello"
 
     try {
       console.log("🔄 [REGISTER] Starting registration...", {
@@ -476,10 +477,10 @@ export function ChatWidget({
         visitorId,
         name: formName.trim(),
         phone: formPhone.trim(),
-        email: formEmail.trim() || undefined,
+        email: undefined,
         language: formLanguage,
-        firstMessage: formFirstMessage.trim(),
-        pushNotificationsConsent: formPushConsent,
+        firstMessage: autoFirstMessage,
+        pushNotificationsConsent: false,
       })
 
       console.log("✅ [REGISTER] Registration API success", {
@@ -489,19 +490,13 @@ export function ChatWidget({
       })
 
       // ✅ CRITICAL: Save customerId ONLY after successful registration
-      // This prevents showing "Registration failed" on refresh if API failed
       saveCustomerId(localStorage, resolvedWorkspaceId, result.customerId)
       saveWidgetSessionId(localStorage, resolvedWorkspaceId, result.sessionId)
       setCustomerId(result.customerId)
       setSessionId(result.sessionId)
 
-      // Populate chat with first exchange
+      // Show only the bot welcome response — the silent greeting is not shown in chat
       const initialMessages: Message[] = [
-        {
-          role: "user",
-          content: formFirstMessage.trim(),
-          timestamp: new Date().toISOString(),
-        },
         {
           role: "bot",
           content: result.response,
@@ -856,6 +851,7 @@ export function ChatWidget({
                       type="text"
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleRegistrationSubmit()}
                       placeholder="Your name"
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
                       style={{ "--tw-ring-color": resolvedPrimaryColor } as React.CSSProperties}
@@ -871,77 +867,11 @@ export function ChatWidget({
                       type="tel"
                       value={formPhone}
                       onChange={(e) => setFormPhone(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleRegistrationSubmit()}
                       placeholder="+39 123 456 7890"
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
                     />
                   </div>
-
-                  {/* Email (optional) */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <Mail className="w-3.5 h-3.5" /> Email{" "}
-                      <span className="text-slate-400 font-normal">(optional)</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={formEmail}
-                      onChange={(e) => setFormEmail(e.target.value)}
-                      placeholder="your@email.com"
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
-                    />
-                  </div>
-
-                  {/* Language */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <Globe className="w-3.5 h-3.5" /> Language
-                    </label>
-                    <select
-                      value={formLanguage}
-                      onChange={(e) => setFormLanguage(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 text-slate-700"
-                    >
-                      {WIDGET_LANGUAGES.map((lang) => (
-                        <option key={lang.code} value={lang.code}>
-                          {lang.flag} {lang.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* First message */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <MessageCircle className="w-3.5 h-3.5" /> Message
-                    </label>
-                    <textarea
-                      value={formFirstMessage}
-                      onChange={(e) => setFormFirstMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault()
-                          handleRegistrationSubmit()
-                        }
-                      }}
-                      placeholder="How can we help you?"
-                      rows={3}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
-                    />
-                  </div>
-
-                  {/* Push consent */}
-                  <label className="flex items-start gap-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-3 shadow-sm">
-                    <input
-                      type="checkbox"
-                      checked={formPushConsent}
-                      onChange={(e) => setFormPushConsent(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="leading-snug">
-                      {pushLabelByLang[formLanguage as keyof typeof pushLabelByLang] ||
-                        pushLabelByLang.en}
-                    </span>
-                  </label>
 
                   {/* Error message */}
                   {formError && (
