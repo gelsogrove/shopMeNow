@@ -791,7 +791,15 @@ export function ChatWidget({
             className="text-white px-6 py-4 flex items-center justify-between"
             style={{ backgroundColor: resolvedPrimaryColor }}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <span
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full shadow-sm transition-colors",
+                  workspaceConfig?.debugMode === true || workspaceConfig?.channelStatus === false
+                    ? "bg-red-400"
+                    : "bg-emerald-300"
+                )}
+              />
               <h2 className="font-semibold text-lg">{resolvedTitle}</h2>
             </div>
             <button

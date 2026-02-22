@@ -8,6 +8,7 @@
  */
 
 import { Request, Response } from "express"
+import axios from "axios"
 import { prisma, PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../../../utils/logger"
 import { VisitorIdService } from "../../../application/services/visitor-id.service"
@@ -29,6 +30,91 @@ import {
 const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
 const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
+
+/**
+ * Ask a cheap LLM to generate 2-3 contextually-relevant, language-correct
+ * follow-up suggestions for the last bot message.
+ *
+ * - Model: gpt-4o-mini (cheapest / fastest on OpenRouter, ~$0.000015 / call)
+ * - Timeout: 2.5 s — falls back silently to heuristic on any error
+ * - Input: bot response truncated to 500 chars to keep tokens minimal
+ * - Output: string[] of 2-3 short replies (≤40 chars each)
+ */
+async function buildWidgetSuggestionsWithAI(
+  response: string,
+  language: string,
+  fallbackQuickReplies?: string[]
+): Promise<string[]> {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) return buildWidgetSuggestions(response, fallbackQuickReplies, language)
+
+  // Static quick replies take priority — no LLM call needed
+  const base = (fallbackQuickReplies || []).filter((q) => typeof q === "string" && q.trim().length > 0)
+  if (base.length) return Array.from(new Set(base)).slice(0, 4)
+
+  if (!response || response.trim().length < 10) return []
+
+  const lang = normLang(language)
+  const langName: Record<string, string> = { it: "Italian", en: "English", es: "Spanish", pt: "Portuguese" }
+  const truncated = response.slice(0, 500)
+
+  try {
+    const res = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model: "openai/gpt-4o-mini",
+        max_tokens: 80,
+        temperature: 0.4,
+        messages: [
+          {
+            role: "system",
+            content:
+              `You are a UX assistant. Given a chatbot reply, produce 2-3 short follow-up suggestions the USER could click next.\n` +
+              `Rules:\n` +
+              `- Language: ${langName[lang] || "same as the reply"}\n` +
+              `- Max 38 characters per suggestion\n` +
+              `- Natural, conversational, NO links or emoji\n` +
+              `- Return ONLY a raw JSON array of strings, e.g. ["opt1","opt2"]\n` +
+              `- If no logical follow-up exists, return []`,
+          },
+          {
+            role: "user",
+            content: `Chatbot reply:\n"${truncated}"`,
+          },
+        ],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.FRONTEND_URL || "https://echatbot.ai",
+          "X-Title": "eChatbot Widget Suggestions",
+        },
+        timeout: 2500,
+      }
+    )
+
+    const raw: string = res.data?.choices?.[0]?.message?.content?.trim() || "[]"
+    // Strip markdown code fences if model wraps in ```json ... ```
+    const cleaned = raw.replace(/^```[\w]*\n?/, "").replace(/```$/, "").trim()
+    const parsed: unknown = JSON.parse(cleaned)
+
+    if (Array.isArray(parsed)) {
+      const valid = (parsed as unknown[])
+        .filter((s): s is string => typeof s === "string" && s.trim().length > 0 && s.length <= 45)
+        .slice(0, 3)
+      if (valid.length > 0) return valid
+    }
+  } catch (err) {
+    // Timeout or parse error → fall through to heuristic silently
+    logger.warn("[WIDGET-SUGGESTIONS-AI] Fallback to heuristic", {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+
+  // Fallback: heuristic
+  return buildWidgetSuggestions(response, undefined, language)
+}
 
 // Suggestion labels per language for each context key
 const SUGGESTIONS_I18N: Record<string, Record<string, string[]>> = {
@@ -717,7 +803,7 @@ export class WidgetChatController {
 
       const suggestions =
         workspace.widgetAutoSuggestionsEnabled === true
-          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any, normalizedLanguage)
+          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", normalizedLanguage || "it", workspace.widgetQuickReplies as any)
           : []
 
       // 11. Save LLM response to conversation history
@@ -1292,7 +1378,7 @@ export class WidgetChatController {
 
       const suggestions =
         workspace.widgetAutoSuggestionsEnabled === true
-          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any, customerLanguage)
+          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "it", workspace.widgetQuickReplies as any)
           : []
 
       // 📝 Save assistant message to conversation history
