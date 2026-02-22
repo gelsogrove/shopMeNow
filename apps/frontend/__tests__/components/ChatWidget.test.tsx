@@ -188,7 +188,26 @@ describe('ChatWidget', () => {
     const user = userEvent.setup()
     localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
-    ;(global.fetch as any).mockResolvedValueOnce({
+    ;(global.fetch as any)
+      // First call: widget status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          status: 'active',
+          channelStatus: true,
+          debugMode: false,
+          workspaceId: 'test-workspace',
+          workspace: {
+            channelStatus: true,
+            debugMode: false,
+            whatsappPhoneNumber: '+391234',
+            name: 'Test Workspace',
+          },
+        }),
+      })
+      // Second call: send message
+      .mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         success: true,
@@ -330,13 +349,32 @@ describe('ChatWidget', () => {
   it('should clear visitor ID after conversion', async () => {
     localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
-    ;(global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        customerId: 'customer-123',
-      }),
-    })
+    ;(global.fetch as any)
+      // status
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          status: 'active',
+          channelStatus: true,
+          debugMode: false,
+          workspaceId: 'test-workspace',
+          workspace: {
+            channelStatus: true,
+            debugMode: false,
+            whatsappPhoneNumber: '+391234',
+            name: 'Test Workspace',
+          },
+        }),
+      })
+      // convertVisitor
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          customerId: 'customer-123',
+        }),
+      })
 
     renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 

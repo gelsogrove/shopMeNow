@@ -139,6 +139,7 @@ import twoFactorResetRoutes from "../interfaces/http/routes/two-factor-reset.rou
 import { createTrashRoutes } from "../interfaces/http/routes/trash.routes"
 import { supportRouter } from "../interfaces/http/routes/support.routes"
 import { adminSupportRouter } from "../interfaces/http/routes/admin-support.routes"
+import { supportChatRoutes } from "../interfaces/http/routes/support-chat.routes"
 import { paypalRoutes } from "../interfaces/http/routes/paypal.routes"
 import { pushCampaignRoutes } from "../interfaces/http/routes/push-campaign.routes"
 
@@ -839,6 +840,10 @@ logger.info("Registered support ticket routes for customer support")
 // Mount admin support ticket routes
 router.use("/admin/support", adminSupportRouter)
 logger.info("Registered admin support ticket routes for backoffice")
+
+// Mount operator handoff support-chat routes (PUBLIC, token-authenticated)
+router.use("/support-chat", supportChatRoutes)
+logger.info("Registered operator support-chat routes (token-auth, no login)")
 
 // Health check
 router.get("/health", (req, res) => {

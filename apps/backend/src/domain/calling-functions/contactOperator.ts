@@ -10,14 +10,17 @@
 import logger from "../../utils/logger"
 import { prisma } from "@echatbot/database"
 import { TranslationAgent } from "../../application/agents/TranslationAgent"
+import { SecureTokenService } from "../../application/services/secure-token.service"
 
 const translationAgent = new TranslationAgent(prisma)
+const secureTokenService = new SecureTokenService()
 
 export interface ContactOperatorRequest {
   phoneNumber: string
   workspaceId: string
   customerId?: string
   reason?: string // Motivo della richiesta (opzionale)
+  channel?: string // "widget" | "whatsapp" — routing canale risposta operatore
 }
 
 export interface ContactOperatorResult {
@@ -84,13 +87,46 @@ export async function contactOperator(
         }
       }
 
-      // 🚨 DISABLE CHATBOT - Set activeChatbot = false
+      // 🚨 DISABLE CHATBOT - Set activeChatbot = false + record handoff metadata
+      const originChannel = request.channel || "whatsapp"
       await prisma.customers.update({
         where: { id: customer.id },
-        data: { activeChatbot: false },
+        data: {
+          activeChatbot: false,
+          operatorRequestedAt: new Date(),
+          originChannel,
+        },
       })
 
       logger.info("✅ Chatbot disabled for customer:", customer.id)
+
+      // 🔑 Generate support-chat token (48h, no-login link for operator)
+      let supportChatUrl: string | null = null
+      try {
+        const activeSession = await prisma.chatSession.findFirst({
+          where: { customerId: customer.id, status: "active" },
+          orderBy: { createdAt: "desc" },
+        })
+        const supportToken = await secureTokenService.createToken(
+          "support_chat",
+          request.workspaceId,
+          {
+            customerId: customer.id,
+            sessionId: activeSession?.id,
+            channel: originChannel,
+          },
+          "48h",
+          undefined,
+          undefined,
+          undefined,
+          customer.id
+        )
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173"
+        supportChatUrl = `${frontendUrl}/support-chat?token=${supportToken}`
+        logger.info("✅ [contactOperator] Support chat URL generated:", { supportChatUrl })
+      } catch (tokenError) {
+        logger.warn("⚠️ [contactOperator] Failed to generate support chat token:", tokenError)
+      }
 
       // 🆕 GET WORKSPACE (needed for both email and WhatsApp)
       const workspace = await prisma.workspace.findUnique({
@@ -317,7 +353,9 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
                 const emailResult = await emailService.sendOperatorNotificationEmail({
                   to: targetEmail,
                   customerName: customer.name,
-                  chatSummary: chatSummary,
+                  chatSummary: supportChatUrl
+                    ? `${chatSummary}\n\n🔗 LINK DIRETTO CHAT (no login, valido 48h):\n${supportChatUrl}`
+                    : chatSummary,
                   chatId: session?.id,
                   workspaceName: workspace.name,
                   subject: `🚨 Richiesta Operatore - ${customer.name}`,
@@ -373,10 +411,6 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           if (targetPhoneNumber) {
             try {
               // Create WhatsApp message with AI summary
-              const chatLink = session?.id 
-                ? `${process.env.FRONTEND_URL || "http://localhost:5173"}/chat/${session.id}`
-                : null
-
               const whatsappMessage = `
 🔔 *RICHIESTA ASSISTENZA OPERATORE*
 
@@ -393,7 +427,7 @@ ${request.reason ? `• Motivo: ${request.reason}` : ""}
 
 ${chatSummary}
 
-${chatLink ? `📱 Visualizza chat completa: ${chatLink}` : ""}
+${supportChatUrl ? `💬 *Rispondi direttamente (link diretto, no login, valido 48h)*:\n${supportChatUrl}` : ""}
 
 ---
 _Questa notifica è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore._

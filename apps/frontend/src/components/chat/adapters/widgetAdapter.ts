@@ -23,7 +23,6 @@ export type WidgetRegisterInput = {
   visitorId: string
   name: string
   phone: string
-  email?: string
   language: string
   firstMessage: string
   pushNotificationsConsent?: boolean
@@ -201,7 +200,7 @@ export const sendWidgetMessage = async ({
 }
 
 export const registerAndStartChat = async (input: WidgetRegisterInput) => {
-  const { apiUrl, workspaceId, visitorId, name, phone, email, language, firstMessage, pushNotificationsConsent } = input
+  const { apiUrl, workspaceId, visitorId, name, phone, language, firstMessage, pushNotificationsConsent } = input
 
   const payload: Record<string, unknown> = {
     visitorId,
@@ -209,9 +208,6 @@ export const registerAndStartChat = async (input: WidgetRegisterInput) => {
     phone,
     language,
     firstMessage,
-  }
-  if (email && email.length > 0) {
-    payload.email = email
   }
   if (typeof pushNotificationsConsent === "boolean") {
     payload.pushNotificationsConsent = pushNotificationsConsent

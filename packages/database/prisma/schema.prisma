@@ -423,6 +423,8 @@ model Customers {
   push_notifications_consent    Boolean                 @default(false)
   push_notifications_consent_at DateTime?
   activeChatbot                 Boolean                 @default(true)
+  operatorRequestedAt           DateTime?               // 🧑‍💼 When customer requested human operator (null = not pending)
+  originChannel                 String?                 // 🔀 Channel: "widget" | "whatsapp" — used to route operator replies
   invoiceAddress                Json?
   salesId                       String?
   cart                          Carts?

@@ -6,7 +6,7 @@
  * <ChatWidget workspaceId="your-workspace-id" position="bottom-right" />
  */
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -29,6 +29,7 @@ import {
   Heart,
   Bell,
   Shield,
+  Mail,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -130,6 +131,124 @@ const getApiUrl = () => {
 const DEFAULT_API_URL = getApiUrl()
 const DEFAULT_PRIMARY_COLOR = "#22c55e"
 
+type LangCode = "it" | "en" | "es" | "pt" | "fr" | "de"
+
+const UI_STRINGS: Record<
+  LangCode,
+  {
+    intro: string
+    name: string
+    phone: string
+    message: string
+    namePh: string
+    phonePh: string
+    messagePh: string
+    start: string
+    termsLabel: string
+    viewTerms: string
+    back: string
+    termsTitle: string
+    termsBody: string
+  }
+> = {
+  it: {
+    intro: "Presentati per iniziare a chattare",
+    name: "Nome",
+    phone: "Telefono",
+    message: "Messaggio",
+    namePh: "Il tuo nome",
+    phonePh: "+39 312 345 6789",
+    messagePh: "Come possiamo aiutarti?",
+    start: "Inizia chat",
+    termsLabel: "Accetto Termini e Condizioni e ricevere comunicazioni su WhatsApp",
+    viewTerms: "Leggi Termini",
+    back: "Indietro",
+    termsTitle: "Termini e Condizioni",
+    termsBody:
+      "Accettando, autorizzi eChatbot a contattarti su WhatsApp per assistenza, notifiche e offerte. Puoi revocare il consenso in qualsiasi momento rispondendo STOP o scrivendo al supporto.",
+  },
+  en: {
+    intro: "Introduce yourself to start chatting",
+    name: "Name",
+    phone: "Phone",
+    message: "Message",
+    namePh: "Your name",
+    phonePh: "+1 415 555 1212",
+    messagePh: "How can we help you?",
+    start: "Start Chat",
+    termsLabel: "I accept Terms & Conditions and WhatsApp updates",
+    viewTerms: "View Terms",
+    back: "Back",
+    termsTitle: "Terms & Conditions",
+    termsBody:
+      "By accepting you allow eChatbot to message you on WhatsApp for support, notifications, and offers. You can revoke anytime by replying STOP or contacting support.",
+  },
+  es: {
+    intro: "Preséntate para comenzar a chatear",
+    name: "Nombre",
+    phone: "Teléfono",
+    message: "Mensaje",
+    namePh: "Tu nombre",
+    phonePh: "+34 612 345 678",
+    messagePh: "¿Cómo podemos ayudarte?",
+    start: "Iniciar chat",
+    termsLabel: "Acepto Términos y recibir novedades por WhatsApp",
+    viewTerms: "Ver Términos",
+    back: "Volver",
+    termsTitle: "Términos y Condiciones",
+    termsBody:
+      "Al aceptar, autorizas a eChatbot a contactarte por WhatsApp para soporte, notificaciones y ofertas. Puedes revocar el consentimiento en cualquier momento respondiendo STOP o escribiendo al soporte.",
+  },
+  pt: {
+    intro: "Apresente-se para começar a conversar",
+    name: "Nome",
+    phone: "Telefone",
+    message: "Mensagem",
+    namePh: "Seu nome",
+    phonePh: "+55 11 91234-5678",
+    messagePh: "Como podemos ajudar?",
+    start: "Iniciar chat",
+    termsLabel: "Aceito Termos e receber novidades no WhatsApp",
+    viewTerms: "Ver Termos",
+    back: "Voltar",
+    termsTitle: "Termos e Condições",
+    termsBody:
+      "Ao aceitar, você autoriza a eChatbot a contatá-lo pelo WhatsApp para suporte, notificações e ofertas. Você pode revogar a qualquer momento respondendo STOP ou falando com o suporte.",
+  },
+  fr: {
+    intro: "Présentez-vous pour commencer à discuter",
+    name: "Nom",
+    phone: "Téléphone",
+    message: "Message",
+    namePh: "Votre nom",
+    phonePh: "+33 6 12 34 56 78",
+    messagePh: "Comment pouvons-nous vous aider ?",
+    start: "Commencer",
+    termsLabel: "J'accepte les Conditions et les mises à jour WhatsApp",
+    viewTerms: "Voir les Conditions",
+    back: "Retour",
+    termsTitle: "Conditions Générales",
+    termsBody:
+      "En acceptant, vous autorisez eChatbot à vous contacter sur WhatsApp pour support, notifications et offres. Vous pouvez retirer votre consentement à tout moment en répondant STOP ou en contactant le support.",
+  },
+  de: {
+    intro: "Stell dich vor, um zu chatten",
+    name: "Name",
+    phone: "Telefon",
+    message: "Nachricht",
+    namePh: "Dein Name",
+    phonePh: "+49 170 1234567",
+    messagePh: "Wie können wir helfen?",
+    start: "Chat starten",
+    termsLabel: "Ich akzeptiere AGB und WhatsApp-Updates",
+    viewTerms: "AGB ansehen",
+    back: "Zurück",
+    termsTitle: "Allgemeine Bedingungen",
+    termsBody:
+      "Mit der Zustimmung erlaubst du eChatbot, dich über WhatsApp für Support, Benachrichtigungen und Angebote zu kontaktieren. Du kannst dies jederzeit widerrufen, indem du STOP antwortest oder den Support kontaktierst.",
+  },
+}
+
 export function ChatWidget({
   workspaceId,
   position = "bottom-right",
@@ -202,6 +321,8 @@ export function ChatWidget({
   
   // Resolve language: window config > prop > header > "en"
   const resolvedLanguage = widgetConfig?.language || language || headerLanguage || "en"
+  const resolvedLangKey = (resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en"
+  const ui = UI_STRINGS[resolvedLangKey] || UI_STRINGS.en
   
   // Resolve other props from window config
   const resolvedTitle = widgetConfig?.title || title
@@ -219,21 +340,17 @@ export function ChatWidget({
   const resolvedQuickReplies = Array.isArray((widgetConfig as any)?.quickReplies)
     ? (widgetConfig as any)?.quickReplies.slice(0, 4)
     : []
-  const resolvedPlaceholder = (() => {
-    const map: Record<string, string> = {
+  const resolvedPlaceholder =
+    widgetConfig?.placeholder ||
+    {
       it: "Scrivi un messaggio...",
       en: "Type a message...",
       es: "Escribe un mensaje...",
       pt: "Digite uma mensagem...",
       fr: "Écrivez un message...",
       de: "Nachricht schreiben...",
-    }
-    return (
-      widgetConfig?.placeholder ||
-      map[resolvedLanguage as keyof typeof map] ||
-      "Type a message..."
-    )
-  })()
+    }[resolvedLangKey] ||
+    "Type a message..."
   
   console.log("✅ Resolved widget config:", {
     workspaceId: resolvedWorkspaceId,
@@ -251,6 +368,9 @@ export function ChatWidget({
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [customerId, setCustomerId] = useState<string | null>(null)
+  // Operator handoff: when chatbot is disabled, poll for operator replies
+  const [botDisabled, setBotDisabled] = useState(false)
+  const lastOperatorMsgAt = useRef<string>(new Date().toISOString())
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Registration form state
@@ -258,8 +378,10 @@ export function ChatWidget({
   const [showRegistrationForm, setShowRegistrationForm] = useState(true)
   const [formName, setFormName] = useState("")
   const [formPhone, setFormPhone] = useState("")
-  const [formLanguage, setFormLanguage] = useState("en")
+  const [formLanguage, setFormLanguage] = useState<LangCode>("en")
   const [formFirstMessage, setFormFirstMessage] = useState("")
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [showTermsContent, setShowTermsContent] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [workspaceConfig, setWorkspaceConfig] = useState<{
     debugMode?: boolean
@@ -344,7 +466,7 @@ export function ChatWidget({
     }
 
     // Pre-select language from widget config
-    const normalizedLang = resolvedLanguage?.slice(0, 2).toLowerCase() || "en"
+    const normalizedLang = (resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en"
     setFormLanguage(SUPPORTED_LANG_CODES.includes(normalizedLang) ? normalizedLang : "en")
 
     // Load stored messages
@@ -380,6 +502,54 @@ export function ChatWidget({
       }
     })
   }, [isOpen])
+
+  // ── Operator handoff polling ────────────────────────────────────────────
+  // When the chatbot is disabled (operator mode), poll every 5s for new
+  // messages sent by the operator and check if the chatbot was re-enabled.
+  useEffect(() => {
+    if (!botDisabled || !visitorId || !resolvedWorkspaceId) return
+
+    const poll = async () => {
+      try {
+        const resp = await fetch(
+          `${resolvedApiUrl}/widget/operator-messages?visitorId=${encodeURIComponent(visitorId)}&workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&since=${encodeURIComponent(lastOperatorMsgAt.current)}`
+        )
+        if (!resp.ok) return
+        const data = await resp.json()
+
+        // Check if chatbot was re-enabled by operator
+        if (data.activeChatbot === true) {
+          setBotDisabled(false)
+          return
+        }
+
+        // Append new operator messages
+        if (Array.isArray(data.messages) && data.messages.length > 0) {
+          const newMsgs = (
+            data.messages as { id: string; content: string; createdAt: string }[]
+          ).map((m) => ({
+            role: "bot" as const,
+            content: m.content,
+            timestamp: m.createdAt,
+          }))
+          setMessages((prev) => {
+            const updated = [...prev, ...newMsgs]
+            if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+            return updated
+          })
+          // Update since timestamp to the latest message
+          const latest = data.messages[data.messages.length - 1].createdAt
+          lastOperatorMsgAt.current = latest
+        }
+      } catch {
+        // Silently ignore network errors during polling
+      }
+    }
+
+    const interval = setInterval(poll, 5000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [botDisabled, visitorId, resolvedWorkspaceId, resolvedApiUrl])
 
   /**
    * Send message to API
@@ -436,6 +606,25 @@ export function ChatWidget({
       if (resolvedWorkspaceId) {
         saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
       }
+
+      // Check if chatbot was disabled by operator handoff
+      // (one-shot check — if disabled, polling loop takes over)
+      if (!botDisabled && visitorId && resolvedWorkspaceId) {
+        try {
+          const checkResp = await fetch(
+            `${resolvedApiUrl}/widget/operator-messages?visitorId=${encodeURIComponent(visitorId)}&workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&since=9999-12-31`
+          )
+          if (checkResp.ok) {
+            const checkData = await checkResp.json()
+            if (checkData.activeChatbot === false) {
+              setBotDisabled(true)
+              lastOperatorMsgAt.current = new Date().toISOString()
+            }
+          }
+        } catch {
+          // Ignore — this is a best-effort check
+        }
+      }
     } catch (error) {
       console.error("Failed to send message:", error)
       const errorMessage: Message = {
@@ -480,6 +669,10 @@ export function ChatWidget({
       setFormError("Please write your first message")
       return
     }
+    if (!termsAccepted) {
+      setFormError(ui.termsLabel)
+      return
+    }
     setIsLoading(true)
     setFormError(null)
 
@@ -496,10 +689,9 @@ export function ChatWidget({
         visitorId,
         name: formName.trim(),
         phone: formPhone.trim(),
-        email: undefined,
         language: formLanguage,
         firstMessage: formFirstMessage.trim(),
-        pushNotificationsConsent: false,
+        pushNotificationsConsent: termsAccepted,
       })
 
       console.log("✅ [REGISTER] Registration API success", {
@@ -827,23 +1019,36 @@ export function ChatWidget({
         >
           {/* Header */}
           <div
-            className="text-white px-6 py-4 flex items-center justify-between"
+            className="text-white px-6 py-4 flex items-center justify-between gap-3"
             style={{ backgroundColor: resolvedPrimaryColor }}
           >
-            <div className="flex items-center gap-3">
               <span
                 className={cn(
-                  "h-2.5 w-2.5 rounded-full shadow-sm transition-colors",
+                  "h-2.5 w-2.5 rounded-full shadow-sm transition-colors flex-shrink-0",
                   workspaceConfig?.debugMode === true || workspaceConfig?.channelStatus === false
                     ? "bg-red-400"
                     : "bg-emerald-300"
                 )}
               />
-              <h2 className="font-semibold text-lg">
-                {resolvedTitle}
-                {workspaceConfig?.name ? ` · ${workspaceConfig.name}` : ""}
-              </h2>
-            </div>
+              <div className="flex flex-col leading-tight flex-1">
+                <h2 className="font-semibold text-lg">
+                  {resolvedTitle}
+                  {workspaceConfig?.name ? ` · ${workspaceConfig.name}` : ""}
+                </h2>
+                {workspaceConfig?.whatsappPhoneNumber && (
+                  <div className="flex items-center gap-1 text-xs text-white/80">
+                    <span>WhatsApp:</span>
+                    <a
+                      className="underline-offset-2 hover:underline"
+                      href={`https://wa.me/${workspaceConfig.whatsappPhoneNumber.replace(/\\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {workspaceConfig.whatsappPhoneNumber}
+                    </a>
+                  </div>
+                )}
+              </div>
             <button
               onClick={() => {
                 setIsOpen(false)
@@ -861,101 +1066,123 @@ export function ChatWidget({
             /* ── Registration Form ── */
             <>
               <ScrollArea className="flex-1 bg-slate-50 px-5 py-5">
-                <div className="space-y-4">
-                  <p className="text-sm text-slate-500 text-center">
-                    Introduce yourself to start chatting
-                  </p>
-
-                  {/* Name */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <User className="w-3.5 h-3.5" /> Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleRegistrationSubmit()}
-                      placeholder="Your name"
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
-                      style={{ "--tw-ring-color": resolvedPrimaryColor } as React.CSSProperties}
-                    />
+                {showTermsContent ? (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-slate-800">{ui.termsTitle}</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                      {ui.termsBody}
+                    </p>
+                    <button
+                      onClick={() => setShowTermsContent(false)}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all"
+                      style={{ borderColor: borderColor, color: resolvedPrimaryColor }}
+                    >
+                      ← {ui.back}
+                    </button>
                   </div>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-slate-500 text-center">
+                      {ui.intro}
+                    </p>
 
-                  {/* Phone */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <Phone className="w-3.5 h-3.5" /> Phone
-                    </label>
-                    <input
-                      type="tel"
-                      value={formPhone}
-                      onChange={(e) => setFormPhone(e.target.value)}
-                      placeholder="+39 123 456 7890"
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
-                    />
-                  </div>
-
-                  {/* First message */}
-                  <div className="space-y-1">
-                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                      <MessageCircle className="w-3.5 h-3.5" /> Message
-                    </label>
-                    <textarea
-                      value={formFirstMessage}
-                      onChange={(e) => setFormFirstMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault()
-                          handleRegistrationSubmit()
-                        }
-                      }}
-                      placeholder="How can we help you?"
-                      rows={3}
-                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
-                    />
-                  </div>
-
-                  {/* Push consent */}
-                  <label className="flex items-start gap-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-3 shadow-sm">
-                    <input
-                      type="checkbox"
-                      checked={formPushConsent}
-                      onChange={(e) => setFormPushConsent(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div className="leading-snug">
-                      <div>
-                        {pushLabelByLang[formLanguage as keyof typeof pushLabelByLang] ||
-                          pushLabelByLang.en}
-                      </div>
-                      {workspaceConfig?.whatsappPhoneNumber && (
-                        <div className="text-xs text-slate-500 mt-0.5">
-                          WhatsApp: {workspaceConfig.whatsappPhoneNumber}
-                        </div>
-                      )}
+                    {/* Name */}
+                    <div className="space-y-1">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <User className="w-3.5 h-3.5" /> {ui.name}
+                      </label>
+                      <input
+                        type="text"
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleRegistrationSubmit()}
+                        placeholder={ui.namePh}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
+                        style={{ "--tw-ring-color": resolvedPrimaryColor } as CSSProperties}
+                      />
                     </div>
-                  </label>
 
-                  {/* Error message */}
-                  {formError && (
-                    <p className="text-xs text-red-500 text-center">{formError}</p>
-                  )}
-                </div>
+                    {/* Phone */}
+                    <div className="space-y-1">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <Phone className="w-3.5 h-3.5" /> {ui.phone}
+                      </label>
+                      <input
+                        type="tel"
+                        value={formPhone}
+                        onChange={(e) => setFormPhone(e.target.value)}
+                        placeholder={ui.phonePh}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
+                      />
+                    </div>
+
+                    {/* First message */}
+                    <div className="space-y-1">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <MessageCircle className="w-3.5 h-3.5" /> {ui.message}
+                      </label>
+                      <textarea
+                        value={formFirstMessage}
+                        onChange={(e) => setFormFirstMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault()
+                            handleRegistrationSubmit()
+                          }
+                        }}
+                        placeholder={ui.messagePh}
+                        rows={3}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
+                      />
+                    </div>
+
+                    {/* Terms & consent */}
+                    <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                      <input
+                        id="terms-consent"
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <div className="text-xs text-slate-600 leading-snug">
+                        <label htmlFor="terms-consent" className="cursor-pointer font-medium">
+                          {ui.termsLabel}
+                        </label>
+                        <div>
+                          <button
+                            type="button"
+                            className="text-emerald-600 hover:underline font-semibold"
+                            onClick={() => setShowTermsContent(true)}
+                          >
+                            {ui.viewTerms}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Error message */}
+                    {formError && (
+                      <p className="text-xs text-red-500 text-center">{formError}</p>
+                    )}
+                  </div>
+                )}
               </ScrollArea>
 
               {/* Registration submit footer */}
               <div className="border-t border-gray-200 p-4 space-y-3">
                 <button
                   onClick={handleRegistrationSubmit}
-                  disabled={isLoading}
+                  disabled={isLoading || !termsAccepted}
                   className="w-full py-3 rounded-2xl text-white text-sm font-semibold flex items-center justify-center gap-2 hover:brightness-95 active:scale-[0.98] transition-all disabled:opacity-60"
                   style={{ backgroundColor: resolvedPrimaryColor }}
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <>Start Chat <Send className="w-4 h-4" /></>
+                    <>
+                      {ui.start} <Send className="w-4 h-4" />
+                    </>
                   )}
                 </button>
                 <div className="text-xs text-gray-400 text-center">
@@ -1082,6 +1309,14 @@ export function ChatWidget({
                   </div>
                 )
               })()}
+
+              {/* Operator handoff banner — shown when chatbot is disabled */}
+              {botDisabled && (
+                <div className="mx-4 mb-2 px-4 py-2 rounded-xl text-sm text-center font-medium"
+                  style={{ backgroundColor: `${resolvedPrimaryColor}18`, color: resolvedPrimaryColor, border: `1px solid ${resolvedPrimaryColor}33` }}>
+                  👤 Connecting you with our team — replies coming shortly
+                </div>
+              )}
 
               {/* Footer with Input */}
               <div className="border-t border-gray-200 p-5 space-y-3">

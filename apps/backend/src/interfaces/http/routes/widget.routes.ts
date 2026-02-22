@@ -222,4 +222,15 @@ router.get(
   controller.pollMessage.bind(controller)
 )
 
+/**
+ * GET /api/v1/widget/operator-messages
+ * Poll for operator replies while activeChatbot=false
+ * Query: visitorId, workspaceId, since (ISO)
+ */
+router.get(
+  "/operator-messages",
+  widgetRateLimiter,
+  controller.getOperatorMessages.bind(controller)
+)
+
 export default router

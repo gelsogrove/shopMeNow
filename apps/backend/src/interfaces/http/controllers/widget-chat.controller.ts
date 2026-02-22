@@ -24,12 +24,58 @@ import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
 import {
   WIDGET_MESSAGE_SCHEMA,
   WIDGET_REGISTER_SCHEMA,
+  WIDGET_PUSH_CONSENT_SCHEMA,
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
 
 const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
 const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
+
+/**
+ * Validate that widget requests originate from allowed domains.
+ * - If an allow-list is provided, match against it; otherwise fallback to websiteUrl.
+ * - Origin/Referer is mandatory when any domain is configured.
+ * - Accept exact host or subdomains.
+ */
+function isOriginAllowed(
+  req: Request,
+  websiteUrl?: string | null,
+  allowedOrigins?: string[] | null
+): boolean {
+  const originsList = (allowedOrigins || []).filter(Boolean)
+  const fallback = websiteUrl ? [websiteUrl] : []
+  const domainPool = originsList.length ? originsList : fallback
+
+  if (domainPool.length === 0) return true // nothing configured → allow (legacy)
+
+  const originHeader = req.headers.origin || req.headers.referer
+  if (!originHeader || typeof originHeader !== "string") return false
+
+  const incomingHost = (() => {
+    try {
+      return new URL(originHeader).host.toLowerCase()
+    } catch {
+      return null
+    }
+  })()
+  if (!incomingHost) return false
+
+  const normalizeHost = (url: string) => {
+    try {
+      const host = new URL(url.startsWith("http") ? url : `https://${url}`).host.toLowerCase()
+      return host
+    } catch {
+      return null
+    }
+  }
+
+  return domainPool.some((entry) => {
+    const allowedHost = normalizeHost(entry)
+    if (!allowedHost) return false
+    return incomingHost === allowedHost || incomingHost.endsWith(`.${allowedHost}`)
+  })
+}
 
 /**
  * Ask a cheap LLM to generate 2-3 contextually-relevant, language-correct
@@ -352,6 +398,8 @@ export class WidgetChatController {
           enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
           whatsappPhoneNumber: true,
           name: true,
+          websiteUrl: true,
+          allowedExternalLinks: true, // reuse as allow-list for widget origins
         },
       })
 
@@ -364,6 +412,15 @@ export class WidgetChatController {
       }
 
       const resolvedWorkspaceId = workspace.id
+
+      // 🔒 Origin allow-list: only allow requests coming from configured domains
+      if (!isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
+        return res.status(403).json({
+          success: false,
+          status: "forbidden",
+          message: "Origin not allowed for this widget",
+        })
+      }
 
       // 👤 LIFECYCLE CHECK: If visitorId is provided, check if already registered
       let registeredCustomer = null
@@ -397,14 +454,16 @@ export class WidgetChatController {
           status: "disabled",
           channelStatus: workspace.channelStatus ?? false,
           debugMode: workspace.debugMode ?? false,
-          workspace: {
-            channelStatus: workspace.channelStatus ?? false,
-            debugMode: workspace.debugMode ?? false,
-            whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-            name: workspace.name,
-          },
-        })
-      }
+        workspace: {
+          channelStatus: workspace.channelStatus ?? false,
+          debugMode: workspace.debugMode ?? false,
+          whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+          name: workspace.name,
+          websiteUrl: workspace.websiteUrl,
+          allowedOrigins: workspace.allowedExternalLinks,
+        },
+      })
+    }
 
       if (workspace.ownerId) {
         const owner = await prisma.user.findUnique({
@@ -469,16 +528,19 @@ export class WidgetChatController {
           channelStatus: workspace.channelStatus ?? false,
           debugMode: workspace.debugMode ?? false,
           wipMessage,
-          workspace: {
-            channelStatus: workspace.channelStatus ?? false,
-            debugMode: workspace.debugMode ?? false,
-            whatsappPhoneNumber: workspace.whatsappPhoneNumber,
-            name: workspace.name,
-          },
-          customer: registeredCustomer ? {
-            id: registeredCustomer.id,
-            name: registeredCustomer.name,
-            language: registeredCustomer.language
+        workspace: {
+          channelStatus: workspace.channelStatus ?? false,
+          debugMode: workspace.debugMode ?? false,
+          whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+          name: workspace.name,
+          websiteUrl: workspace.websiteUrl,
+          allowedOrigins: workspace.allowedExternalLinks,
+        },
+        customer: registeredCustomer ? {
+          id: registeredCustomer.id,
+          name: registeredCustomer.name,
+          language: registeredCustomer.language,
+            pushNotificationsConsent: registeredCustomer.push_notifications_consent ?? false,
           } : null
         })
       }
@@ -498,11 +560,14 @@ export class WidgetChatController {
           debugMode: workspace.debugMode ?? false,
           whatsappPhoneNumber: workspace.whatsappPhoneNumber,
           name: workspace.name,
+          websiteUrl: workspace.websiteUrl,
+          allowedOrigins: workspace.allowedExternalLinks,
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
           name: registeredCustomer.name,
-          language: registeredCustomer.language
+          language: registeredCustomer.language,
+          pushNotificationsConsent: registeredCustomer.push_notifications_consent ?? false,
         } : null
       })
     } catch (error) {
@@ -543,7 +608,7 @@ export class WidgetChatController {
         email,
         language,
         firstMessage,
-        pushNotificationsConsent = false,
+        pushNotificationsConsent,
       } = validation.data
 
       // Normalize phone (strip spaces/dashes) for lookup + creation
@@ -582,6 +647,8 @@ export class WidgetChatController {
           wipMessage: true,
           widgetAutoSuggestionsEnabled: true,
           widgetQuickReplies: true,
+          websiteUrl: true,
+          allowedExternalLinks: true,
         },
       })
 
@@ -615,6 +682,14 @@ export class WidgetChatController {
         return res.status(403).json({
           error: "CHANNEL_DISABLED",
           message: "Channel is disabled",
+        })
+      }
+
+      // 🔒 Origin allow-list: only allow requests coming from configured domains
+      if (!isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
+        return res.status(403).json({
+          error: "FORBIDDEN_ORIGIN",
+          message: "Origin not allowed for this widget",
         })
       }
 
@@ -687,9 +762,9 @@ export class WidgetChatController {
         if (normalizedLanguage && normalizedLanguage !== customer.language) {
           updateData.language = normalizedLanguage
         }
-        if (typeof pushNotificationsConsent === "boolean") {
-          updateData.push_notifications_consent = pushNotificationsConsent
-          updateData.push_notifications_consent_at = pushNotificationsConsent ? new Date() : null
+        if (pushNotificationsConsent === true) {
+          updateData.push_notifications_consent = true
+          updateData.push_notifications_consent_at = new Date()
         }
         
         try {
@@ -733,8 +808,8 @@ export class WidgetChatController {
               email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
               isActive: true, // Registered user
               language: normalizedLanguage,
-              push_notifications_consent: pushNotificationsConsent,
-              push_notifications_consent_at: pushNotificationsConsent ? new Date() : null,
+              push_notifications_consent: pushNotificationsConsent === true,
+              push_notifications_consent_at: pushNotificationsConsent === true ? new Date() : undefined,
             },
           })
         } catch (createError: any) {
@@ -774,6 +849,14 @@ export class WidgetChatController {
                         : existingByCustomId.email,
                     isActive: true,
                     language: normalizedLanguage || existingByCustomId.language,
+                    push_notifications_consent:
+                      pushNotificationsConsent === true
+                        ? true
+                        : existingByCustomId.push_notifications_consent,
+                    push_notifications_consent_at:
+                      pushNotificationsConsent === true
+                        ? new Date()
+                        : existingByCustomId.push_notifications_consent_at,
                   },
                 })
                 isNewCustomer = false
@@ -791,6 +874,8 @@ export class WidgetChatController {
                     email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
                     isActive: true,
                     language: normalizedLanguage,
+                    push_notifications_consent: pushNotificationsConsent === true,
+                    push_notifications_consent_at: pushNotificationsConsent === true ? new Date() : undefined,
                   },
                 })
               }
@@ -1048,6 +1133,8 @@ export class WidgetChatController {
           welcomeMessage: true, // 👋 For first-visitor welcome message (parity with WhatsApp)
           widgetAutoSuggestionsEnabled: true,
           widgetQuickReplies: true,
+          websiteUrl: true,
+          allowedExternalLinks: true,
         },
       })
 
@@ -1113,6 +1200,14 @@ export class WidgetChatController {
             retryAfter: 3600000, // 1 hour
           })
         }
+      }
+
+      // 🔒 Origin allow-list: only allow requests coming from the configured website domain
+      if (!isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
+        return res.status(403).json({
+          error: "FORBIDDEN_ORIGIN",
+          message: "Origin not allowed for this widget",
+        })
       }
 
       // Execute 5-step security validation
@@ -1546,6 +1641,75 @@ export class WidgetChatController {
         error: "INTERNAL_ERROR",
         message: "Failed to poll message",
       })
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  GET /api/v1/widget/operator-messages
+  //  Poll for operator messages while activeChatbot=false
+  //  Query params: visitorId, workspaceId, since (ISO string)
+  // ─────────────────────────────────────────────────────────────
+  async getOperatorMessages(req: Request, res: Response): Promise<Response> {
+    try {
+      const { visitorId, workspaceId, since } = req.query as {
+        visitorId?: string
+        workspaceId?: string
+        since?: string
+      }
+
+      if (!visitorId || !workspaceId) {
+        return res.status(400).json({ error: "visitorId and workspaceId required" })
+      }
+
+      // Find customer by visitorId or phone
+      const customer = await prisma.customers.findFirst({
+        where: {
+          OR: [
+            { id: visitorId },
+            { phone: visitorId.replace(/\D/g, "") || visitorId },
+          ],
+          workspaceId,
+        },
+        select: { id: true, activeChatbot: true },
+      })
+
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" })
+      }
+
+      // Find active session
+      const session = await prisma.chatSession.findFirst({
+        where: { customerId: customer.id, status: "active" },
+        orderBy: { createdAt: "desc" },
+      })
+
+      if (!session) {
+        return res.json({ messages: [], activeChatbot: customer.activeChatbot })
+      }
+
+      // Return new assistant messages since `since`
+      const sinceDate = since ? new Date(since) : new Date(0)
+      const messages = await prisma.conversationMessage.findMany({
+        where: {
+          conversationId: session.id,
+          role: "assistant",
+          createdAt: { gt: sinceDate },
+        },
+        orderBy: { createdAt: "asc" },
+        take: 20,
+      })
+
+      return res.json({
+        messages: messages.map((m) => ({
+          id: m.id,
+          content: m.content,
+          createdAt: m.createdAt,
+        })),
+        activeChatbot: customer.activeChatbot,
+      })
+    } catch (error) {
+      logger.error("❌ Error getting operator messages", error)
+      return res.status(500).json({ error: "INTERNAL_ERROR" })
     }
   }
 }

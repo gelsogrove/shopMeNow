@@ -76,12 +76,25 @@ export const WIDGET_REGISTER_SCHEMA = z
       .min(1, "Message cannot be empty")
       .max(5000)
       .trim(),
-    pushNotificationsConsent: z.boolean().optional().describe("Customer consent to receive WhatsApp push notifications"),
+    pushNotificationsConsent: z
+      .boolean()
+      .optional()
+      .describe("Customer consent to receive WhatsApp push notifications (mirrors T&C acceptance)"),
   })
   .strict()
   .describe("Widget visitor registration with first message")
 
 export type WidgetRegisterInput = z.infer<typeof WIDGET_REGISTER_SCHEMA>
+
+export const WIDGET_PUSH_CONSENT_SCHEMA = z
+  .object({
+    visitorId: VISITOR_ID_SCHEMA,
+    consent: z.boolean(),
+  })
+  .strict()
+  .describe("Update push notifications consent for a widget visitor")
+
+export type WidgetPushConsentInput = z.infer<typeof WIDGET_PUSH_CONSENT_SCHEMA>
 
 // ============================================================================
 // 🔄 WIDGET POLLING SCHEMA

@@ -744,6 +744,7 @@ export class ChatEngineService {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
           reason: requestIntent.reason || input.message,
+          channel: "widget",
         })
 
         // 🔧 FIX: Use the message returned by contactOperator (with variables replaced)

@@ -63,7 +63,8 @@ export class SecureTokenService {
       | "orders"
       | "profile"
       | "any"
-      | "universal",
+      | "universal"
+      | "support_chat",
     workspaceId: string,
     payload?: any,
     expiresIn?: string,
