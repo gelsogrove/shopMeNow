@@ -45,37 +45,41 @@ async function buildWidgetSuggestionsWithAI(
   language: string,
   fallbackQuickReplies?: string[]
 ): Promise<string[]> {
-  const apiKey = process.env.OPENROUTER_API_KEY
-  if (!apiKey) return buildWidgetSuggestions(response, fallbackQuickReplies, language)
-
-  // Static quick replies take priority — no LLM call needed
+  // Static workspace quick replies take priority — no LLM call needed
   const base = (fallbackQuickReplies || []).filter((q) => typeof q === "string" && q.trim().length > 0)
   if (base.length) return Array.from(new Set(base)).slice(0, 4)
 
   if (!response || response.trim().length < 10) return []
 
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) return [] // No key → no suggestions (never generic fallback)
+
   const lang = normLang(language)
   const langName: Record<string, string> = { it: "Italian", en: "English", es: "Spanish", pt: "Portuguese" }
-  const truncated = response.slice(0, 500)
+  const truncated = response.slice(0, 600)
 
   try {
     const res = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         model: "openai/gpt-4o-mini",
-        max_tokens: 80,
-        temperature: 0.4,
+        max_tokens: 100,
+        temperature: 0.3,
         messages: [
           {
             role: "system",
             content:
-              `You are a UX assistant. Given a chatbot reply, produce 2-3 short follow-up suggestions the USER could click next.\n` +
-              `Rules:\n` +
-              `- Language: ${langName[lang] || "same as the reply"}\n` +
-              `- Max 38 characters per suggestion\n` +
-              `- Natural, conversational, NO links or emoji\n` +
-              `- Return ONLY a raw JSON array of strings, e.g. ["opt1","opt2"]\n` +
-              `- If no logical follow-up exists, return []`,
+              `You generate short clickable reply suggestions for a chat widget.\n` +
+              `Language: ${langName[lang] || "same as the reply"}.\n` +
+              `\n` +
+              `STRICT RULES:\n` +
+              `- Write in FIRST PERSON (e.g. "Voglio sapere i prezzi", "Come posso pagare?", "Vorrei parlare con un operatore")\n` +
+              `- Each suggestion must be DIRECTLY relevant to the chatbot reply content — no generic phrases\n` +
+              `- Max 40 characters per suggestion\n` +
+              `- No links, no emoji, no punctuation at the end\n` +
+              `- If the reply is a short confirmation, greeting, or thank-you → return []\n` +
+              `- If you cannot generate at least one truly relevant suggestion → return []\n` +
+              `- Return ONLY a raw JSON array of strings, nothing else. Example: ["Voglio sapere di più","Come mi iscrivo?"]`,
           },
           {
             role: "user",
@@ -103,17 +107,16 @@ async function buildWidgetSuggestionsWithAI(
       const valid = (parsed as unknown[])
         .filter((s): s is string => typeof s === "string" && s.trim().length > 0 && s.length <= 45)
         .slice(0, 3)
-      if (valid.length > 0) return valid
+      return valid // may be empty — that's fine
     }
   } catch (err) {
-    // Timeout or parse error → fall through to heuristic silently
-    logger.warn("[WIDGET-SUGGESTIONS-AI] Fallback to heuristic", {
+    // Timeout or parse error → return nothing (no generic fallback)
+    logger.warn("[WIDGET-SUGGESTIONS-AI] Failed, returning no suggestions", {
       error: err instanceof Error ? err.message : String(err),
     })
   }
 
-  // Fallback: heuristic
-  return buildWidgetSuggestions(response, undefined, language)
+  return []
 }
 
 // Suggestion labels per language for each context key

@@ -1034,17 +1034,23 @@ export function ChatWidget({
                           className="w-full text-left text-sm px-4 py-2 rounded-full border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
                           style={{
                             borderColor: borderColor,
-                            background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9))",
+                            backgroundColor: "rgba(255,255,255,0.95)",
                             color: resolvedPrimaryColor,
-                            boxShadow: `0 4px 10px -6px ${borderColor}`,
+                            boxShadow: `0 3px 10px -6px ${borderColor}`,
                           }}
                           onClick={() => handleQuickReply(qr)}
                           disabled={isLoading}
                           onMouseEnter={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.backgroundColor = `${resolvedPrimaryColor}1a`
+                            const btn = e.currentTarget as HTMLButtonElement
+                            btn.style.backgroundColor = `${resolvedPrimaryColor}14`
+                            btn.style.boxShadow = `0 6px 14px -6px ${resolvedPrimaryColor}55`
+                            btn.style.transform = "translateY(-1px)"
                           }}
                           onMouseLeave={(e) => {
-                            (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9))"
+                            const btn = e.currentTarget as HTMLButtonElement
+                            btn.style.backgroundColor = "rgba(255,255,255,0.95)"
+                            btn.style.boxShadow = `0 3px 10px -6px ${borderColor}`
+                            btn.style.transform = "translateY(0px)"
                           }}
                         >
                           {qr}
