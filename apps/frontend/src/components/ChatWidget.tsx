@@ -556,7 +556,8 @@ export function ChatWidget({
    */
   const sendMessage = async (text: string) => {
     const message = text.trim()
-    if (!message || isLoading || !visitorId) return
+    // RULE: Block all LLM messages when operator handoff is active
+    if (!message || isLoading || !visitorId || botDisabled) return
 
     // Add user message — also clear any suggestions from prior bot messages immediately
     const userMessage: Message = {
@@ -1263,6 +1264,9 @@ export function ChatWidget({
 
               {/* AI Suggestions from last bot message (widget only) */}
               {(() => {
+                // RULE: Never show suggestions when operator handoff is active
+                if (botDisabled) return null
+
                 // If there are conversation messages, only show LLM-provided suggestions (dynamic per response)
                 // If no messages yet, fall back to static quick replies
                 const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
@@ -1330,8 +1334,8 @@ export function ChatWidget({
                         handleSendMessage()
                       }
                     }}
-                    placeholder={resolvedPlaceholder}
-                    disabled={isLoading}
+                    placeholder={botDisabled ? "Waiting for operator reply..." : resolvedPlaceholder}
+                    disabled={isLoading || botDisabled}
                     rows={2}
                     className={cn(
                       "flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-300",
@@ -1342,7 +1346,7 @@ export function ChatWidget({
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={isLoading || !inputValue.trim()}
+                    disabled={isLoading || !inputValue.trim() || botDisabled}
                     className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center",
                       "disabled:bg-gray-300 hover:brightness-95",

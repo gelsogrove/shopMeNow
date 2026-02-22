@@ -530,12 +530,17 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             continue
           }
 
-          // 🔒 SECURITY CHECK: Pass through Security Agent LLM before sending
-          const securityCheck = await securityAgent.validateMessage({
-            workspaceId: workspace.id,
-            messageContent: message.messageContent,
-            customerId: message.customerId,
-          })
+          // 🔒 SECURITY CHECK: Skip for system/operator notifications (no conversationMessageId)
+          // These messages are generated internally (e.g., contactOperator WA notifications)
+          // and contain customer data that would trigger false positives in security patterns.
+          const isSystemNotification = !message.conversationMessageId && !message.pushCampaignId
+          const securityCheck = isSystemNotification
+            ? { isSafe: true as const, debugModel: 'bypass/system-notification', debugPrompt: 'Skipped: system-generated operator notification' }
+            : await securityAgent.validateMessage({
+                workspaceId: workspace.id,
+                messageContent: message.messageContent,
+                customerId: message.customerId,
+              })
 
           // 📊 Append Security Check step to timeline
           // Show the REAL compiled prompt and model from the LLM security check (not hardcoded descriptions)

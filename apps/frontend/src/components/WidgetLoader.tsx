@@ -89,11 +89,12 @@ export function WidgetLoader() {
         }
 
         // Inject window.eChatbotConfig with widget config (fallback to header language)
+        // RULE: Header language (explicit user selection) takes priority over workspace defaultLanguage
         (window as any).eChatbotConfig = {
           workspaceId: config.workspaceId,
           apiUrl: apiBaseUrl,
           title: config.title,
-          language: config.language || language,
+          language: language || config.language,
           primaryColor: config.primaryColor,
           logoUrl: config.logoUrl,
           useChannelLogo: config.useChannelLogo ?? false,
@@ -105,7 +106,7 @@ export function WidgetLoader() {
 
         console.log("✅ Widget config injected:", {
           workspaceId: config.workspaceId,
-          language: config.language || language,
+          language: language || config.language,
           title: config.title,
           icon: config.icon || "chat",
           primaryColor: config.primaryColor,

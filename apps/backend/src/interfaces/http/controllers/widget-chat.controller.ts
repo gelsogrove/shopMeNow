@@ -1674,7 +1674,8 @@ export class WidgetChatController {
       })
 
       if (!customer) {
-        return res.status(404).json({ error: "Customer not found" })
+        // Anonymous visitor with no account yet — no handoff possible, chatbot is active
+        return res.json({ messages: [], activeChatbot: true })
       }
 
       // Find active session
