@@ -258,6 +258,7 @@ export function ChatWidget({
   const [formLanguage, setFormLanguage] = useState("en")
   const [formFirstMessage, setFormFirstMessage] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
+  const [workspaceConfig, setWorkspaceConfig] = useState<{ debugMode?: boolean; channelStatus?: boolean } | null>(null)
 
   // Initialize visitor ID, customerId, and registration form state
   useEffect(() => {
@@ -286,6 +287,14 @@ export function ChatWidget({
             visitorId: id,
             language: resolvedLanguage,
           })
+
+          // Capture workspace config flags (debugMode, channelStatus) for the status indicator
+          if (statusResp?.workspace) {
+            setWorkspaceConfig({
+              debugMode: statusResp.workspace.debugMode,
+              channelStatus: statusResp.workspace.channelStatus,
+            })
+          }
 
           if (statusResp?.customer?.id) {
             console.log("👤 Visitor recognized from server! Skipping registration form", {
