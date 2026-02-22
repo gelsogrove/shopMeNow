@@ -30,11 +30,76 @@ const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
 const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
 
-// Quick, deterministic auto-suggestions for widget replies
-// Analyzes LLM response text to generate contextually relevant suggestions.
-// Returns [] when response needs no follow-up (e.g. simple confirmations).
-export function buildWidgetSuggestions(responseText: string, quickReplies?: string[]): string[] {
-  // 1. If workspace has static quick replies configured, use them directly
+// Suggestion labels per language for each context key
+const SUGGESTIONS_I18N: Record<string, Record<string, string[]>> = {
+  profile: {
+    it: ["Apri il mio profilo", "Non riesco ad aprire il link", "Grazie!"],
+    en: ["Open my profile", "Link not working", "Thank you!"],
+    es: ["Abrir mi perfil", "El link no funciona", "¡Gracias!"],
+    pt: ["Abrir meu perfil", "Link não funciona", "Obrigado!"],
+  },
+  order: {
+    it: ["Dov'è il mio ordine?", "Voglio modificare l'ordine", "Contatta corriere"],
+    en: ["Where's my order?", "Modify my order", "Contact courier"],
+    es: ["¿Dónde está mi pedido?", "Modificar pedido", "Contactar mensajero"],
+    pt: ["Onde está meu pedido?", "Modificar pedido", "Contatar entregador"],
+  },
+  price: {
+    it: ["Voglio acquistare", "Ci sono sconti?", "Altre info sui prodotti"],
+    en: ["I want to buy", "Any discounts?", "More product info"],
+    es: ["Quiero comprar", "¿Hay descuentos?", "Más info sobre productos"],
+    pt: ["Quero comprar", "Tem descontos?", "Mais info sobre produtos"],
+  },
+  products: {
+    it: ["Vedi il catalogo", "Qual è il prezzo?", "Come ordino?"],
+    en: ["View catalog", "What's the price?", "How do I order?"],
+    es: ["Ver catálogo", "¿Cuál es el precio?", "¿Cómo compro?"],
+    pt: ["Ver catálogo", "Qual é o preço?", "Como faço um pedido?"],
+  },
+  payment: {
+    it: ["Come pago?", "Altre modalità di pagamento", "Problema col pagamento"],
+    en: ["How do I pay?", "Other payment methods", "Payment issue"],
+    es: ["¿Cómo pago?", "Otros métodos de pago", "Problema con el pago"],
+    pt: ["Como pago?", "Outros métodos de pagamento", "Problema com pagamento"],
+  },
+  shipping: {
+    it: ["Quando arriva?", "Traccia la spedizione", "Modifica indirizzo"],
+    en: ["When will it arrive?", "Track shipment", "Change address"],
+    es: ["¿Cuándo llega?", "Rastrear envío", "Cambiar dirección"],
+    pt: ["Quando chega?", "Rastrear envio", "Alterar endereço"],
+  },
+  yesno: {
+    it: ["Sì, esatto", "No, grazie", "Dimmi di più"],
+    en: ["Yes, exactly", "No, thank you", "Tell me more"],
+    es: ["Sí, exacto", "No, gracias", "Cuéntame más"],
+    pt: ["Sim, exato", "Não, obrigado", "Me diga mais"],
+  },
+  greeting: {
+    it: ["Vedi i prodotti", "Stato del mio ordine", "Parla con un operatore"],
+    en: ["View products", "My order status", "Talk to an agent"],
+    es: ["Ver productos", "Estado de mi pedido", "Hablar con un agente"],
+    pt: ["Ver produtos", "Status do meu pedido", "Falar com um agente"],
+  },
+  fallback: {
+    it: ["Dimmi di più", "Parla con un operatore"],
+    en: ["Tell me more", "Talk to an agent"],
+    es: ["Cuéntame más", "Hablar con un agente"],
+    pt: ["Me diga mais", "Falar com um agente"],
+  },
+}
+
+/** Normalise language code: "ENG" | "ITA" | "ESP" | "POR" | "en" | "it" | … → "en" | "it" | "es" | "pt" */
+function normLang(raw?: string): string {
+  if (!raw) return "it"
+  const l = raw.toLowerCase().slice(0, 3)
+  const map: Record<string, string> = { eng: "en", ita: "it", esp: "es", por: "pt", por2: "pt", en: "en", it: "it", es: "es", pt: "pt" }
+  return map[l] || map[l.slice(0, 2)] || "it"
+}
+
+// Quick, deterministic auto-suggestions for widget replies.
+// Returns [] when response needs no follow-up (e.g. short confirmations).
+export function buildWidgetSuggestions(responseText: string, quickReplies?: string[], language?: string): string[] {
+  // 1. Static workspace quick replies take priority
   const baseQuickReplies = (quickReplies || []).filter(
     (q) => typeof q === "string" && q.trim().length > 0
   )
@@ -44,67 +109,49 @@ export function buildWidgetSuggestions(responseText: string, quickReplies?: stri
 
   if (!responseText || responseText.trim().length < 10) return []
 
+  const lang = normLang(language)
   const lower = responseText.toLowerCase()
-  const suggestions: string[] = []
+  const get = (key: string) => (SUGGESTIONS_I18N[key][lang] || SUGGESTIONS_I18N[key]["en"] || [])
 
-  // 2. Context-aware suggestion generation based on response content
-
+  // 2. Context detection (language-agnostic keywords + response text)
   // Profile / account link
-  if (lower.includes("profil") || lower.includes("dati") && lower.includes("link")) {
-    suggestions.push("Apri il mio profilo", "Non riesco ad aprire il link", "Grazie!")
-    return suggestions.slice(0, 3)
+  if (/profil|dati.*link|account.*link|link.*profil/i.test(lower)) {
+    return get("profile")
   }
-
   // Order tracking
-  if (lower.includes("ordin") && (lower.includes("spediz") || lower.includes("traccia") || lower.includes("conseg"))) {
-    suggestions.push("Dove è il mio ordine?", "Voglio modificare l'ordine", "Contatta corriere")
-    return suggestions.slice(0, 3)
+  if (/ordin|order|pedido|encomenda/.test(lower) && /spediz|track|conseg|deliver|envio|entrega/.test(lower)) {
+    return get("order")
   }
-
-  // Pricing / costs
-  if (lower.includes("prezzo") || lower.includes("costo") || lower.includes("€") || lower.includes("price")) {
-    suggestions.push("Voglio acquistare", "Ci sono sconti?", "Altre info sui prodotti")
-    return suggestions.slice(0, 3)
+  // Price / cost
+  if (/prezzo|costo|€|\$|price|precio|preço|discount|sconto/.test(lower)) {
+    return get("price")
   }
-
   // Products / catalog
-  if (lower.includes("prodott") || lower.includes("catalog") || lower.includes("articol")) {
-    suggestions.push("Vedi il catalogo", "Qual è il prezzo?", "Come ordino?")
-    return suggestions.slice(0, 3)
+  if (/prodott|catalog|articol|product|produto|artículo/.test(lower)) {
+    return get("products")
   }
-
-  // Payment methods
-  if (lower.includes("pagamento") || lower.includes("pagar") || lower.includes("payment") || lower.includes("pay")) {
-    suggestions.push("Come pago?", "Altre modalità di pagamento", "Ho un problema col pagamento")
-    return suggestions.slice(0, 3)
+  // Payment
+  if (/pagament|payment|pago|pagamento|pay /.test(lower)) {
+    return get("payment")
   }
-
   // Shipping / delivery
-  if (lower.includes("spediz") || lower.includes("consegna") || lower.includes("shipping")) {
-    suggestions.push("Quando arriva?", "Traccia la spedizione", "Modifica indirizzo")
-    return suggestions.slice(0, 3)
+  if (/spediz|consegna|shipping|delivery|envío|envio/.test(lower)) {
+    return get("shipping")
   }
-
-  // Direct question in response (yes/no context)
+  // Generic greeting / "how can I help" → show action shortcuts, NOT yes/no
+  if (/assist|help|aiut|ayud|ajud|come posso|how can|cómo puedo|how may/.test(lower)) {
+    return get("greeting")
+  }
+  // Question without greeting context → yes/no
   if (lower.includes("?")) {
-    suggestions.push("Sì, esatto", "No, grazie", "Dimmi di più")
-    return suggestions.slice(0, 3)
+    return get("yesno")
   }
-
-  // Generic assistant response / FAQ
-  if (lower.includes("posso aiutarti") || lower.includes("hai bisogno") || lower.includes("fammi sapere")) {
-    suggestions.push("Voglio vedere i prodotti", "Stato del mio ordine", "Parla con un operatore")
-    return suggestions.slice(0, 3)
-  }
-
-  // Short confirmation / acknowledgment → no suggestions needed
+  // Short acknowledgment → no suggestions
   if (responseText.trim().length < 60) {
     return []
   }
-
-  // Default fallback: generic useful actions
-  suggestions.push("Dimmi di più", "Parla con un operatore")
-  return suggestions.slice(0, 3)
+  // Default
+  return get("fallback")
 }
 
 export class WidgetChatController {
@@ -670,7 +717,7 @@ export class WidgetChatController {
 
       const suggestions =
         workspace.widgetAutoSuggestionsEnabled === true
-          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any)
+          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any, normalizedLanguage)
           : []
 
       // 11. Save LLM response to conversation history
@@ -1245,7 +1292,7 @@ export class WidgetChatController {
 
       const suggestions =
         workspace.widgetAutoSuggestionsEnabled === true
-          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any)
+          ? buildWidgetSuggestions(llmResult.response || "", workspace.widgetQuickReplies as any, customerLanguage)
           : []
 
       // 📝 Save assistant message to conversation history

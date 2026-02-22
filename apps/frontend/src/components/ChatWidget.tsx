@@ -348,13 +348,16 @@ export function ChatWidget({
     const message = text.trim()
     if (!message || isLoading || !visitorId) return
 
-    // Add user message
+    // Add user message — also clear any suggestions from prior bot messages immediately
     const userMessage: Message = {
       role: "user",
       content: message,
       timestamp: new Date().toISOString(),
     }
-    const updatedMessages = [...messages, userMessage]
+    const updatedMessages = [
+      ...messages.map((m) => (m.role === "bot" && m.suggestions ? { ...m, suggestions: undefined } : m)),
+      userMessage,
+    ]
     setMessages(updatedMessages)
     if (resolvedWorkspaceId) {
       saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
@@ -515,15 +518,8 @@ export function ChatWidget({
   }
 
   const handleQuickReply = async (reply: string) => {
+    // sendMessage already clears all bot suggestions before adding the user message
     await sendMessage(reply)
-    // After sending a quick reply, hide suggestions from previous bot message
-    setMessages((prev) =>
-      prev.map((m, idx) =>
-        idx === prev.length - 1 && m.role === "bot"
-          ? { ...m, suggestions: undefined }
-          : m
-      )
-    )
   }
 
   /**
