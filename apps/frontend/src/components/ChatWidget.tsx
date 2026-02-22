@@ -101,6 +101,15 @@ const WIDGET_LANGUAGES = [
 
 const SUPPORTED_LANG_CODES = WIDGET_LANGUAGES.map((l) => l.code)
 
+const pushLabelByLang: Record<string, string> = {
+  it: "Ricevi novità su WhatsApp",
+  en: "Receive updates on WhatsApp",
+  es: "Recibe novedades por WhatsApp",
+  pt: "Receba novidades no WhatsApp",
+  fr: "Recevoir des nouveautés sur WhatsApp",
+  de: "Updates per WhatsApp erhalten",
+}
+
 interface Message {
   role: "user" | "bot"
   content: string
@@ -257,6 +266,7 @@ export function ChatWidget({
   const [formEmail, setFormEmail] = useState("")
   const [formLanguage, setFormLanguage] = useState("en")
   const [formFirstMessage, setFormFirstMessage] = useState("")
+  const [formPushConsent, setFormPushConsent] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [workspaceConfig, setWorkspaceConfig] = useState<{ debugMode?: boolean; channelStatus?: boolean } | null>(null)
 
@@ -469,6 +479,7 @@ export function ChatWidget({
         email: formEmail.trim() || undefined,
         language: formLanguage,
         firstMessage: formFirstMessage.trim(),
+        pushNotificationsConsent: formPushConsent,
       })
 
       console.log("✅ [REGISTER] Registration API success", {
@@ -809,7 +820,10 @@ export function ChatWidget({
                     : "bg-emerald-300"
                 )}
               />
-              <h2 className="font-semibold text-lg">{resolvedTitle}</h2>
+              <h2 className="font-semibold text-lg">
+                {resolvedTitle}
+                {workspaceConfig?.name ? ` · ${workspaceConfig.name}` : ""}
+              </h2>
             </div>
             <button
               onClick={() => {
@@ -914,6 +928,20 @@ export function ChatWidget({
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
                     />
                   </div>
+
+                  {/* Push consent */}
+                  <label className="flex items-start gap-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-3 shadow-sm">
+                    <input
+                      type="checkbox"
+                      checked={formPushConsent}
+                      onChange={(e) => setFormPushConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <span className="leading-snug">
+                      {pushLabelByLang[formLanguage as keyof typeof pushLabelByLang] ||
+                        pushLabelByLang.en}
+                    </span>
+                  </label>
 
                   {/* Error message */}
                   {formError && (

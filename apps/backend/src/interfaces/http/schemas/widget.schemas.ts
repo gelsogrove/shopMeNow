@@ -76,6 +76,7 @@ export const WIDGET_REGISTER_SCHEMA = z
       .min(1, "Message cannot be empty")
       .max(5000)
       .trim(),
+    pushNotificationsConsent: z.boolean().optional().describe("Customer consent to receive WhatsApp push notifications"),
   })
   .strict()
   .describe("Widget visitor registration with first message")

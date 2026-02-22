@@ -43,7 +43,8 @@ const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
 async function buildWidgetSuggestionsWithAI(
   response: string,
   language: string,
-  fallbackQuickReplies?: string[]
+  fallbackQuickReplies?: string[],
+  workspaceId?: string
 ): Promise<string[]> {
   // Static workspace quick replies take priority — no LLM call needed
   const base = (fallbackQuickReplies || []).filter((q) => typeof q === "string" && q.trim().length > 0)
@@ -52,38 +53,62 @@ async function buildWidgetSuggestionsWithAI(
   if (!response || response.trim().length < 10) return []
 
   const apiKey = process.env.OPENROUTER_API_KEY
-  if (!apiKey) return [] // No key → no suggestions (never generic fallback)
+  if (!apiKey) return []
+
+  // 📚 Fetch active FAQ questions from DB to ground suggestions in real knowledge
+  // If no FAQs exist → no suggestions (we refuse to invent things the bot might not answer)
+  let faqQuestions: string[] = []
+  if (workspaceId) {
+    try {
+      const faqs = await prisma.fAQ.findMany({
+        where: { workspaceId, isActive: true },
+        select: { question: true },
+        orderBy: { createdAt: "asc" },
+        take: 40, // cap to avoid huge prompts
+      })
+      faqQuestions = faqs.map((f: { question: string }) => f.question.trim()).filter(Boolean)
+    } catch (err) {
+      logger.warn("[WIDGET-SUGGESTIONS-AI] Failed to load FAQs, returning no suggestions", {
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return []
+    }
+  }
+
+  // No FAQ knowledge base → no suggestions (never invent)
+  if (faqQuestions.length === 0) return []
 
   const lang = normLang(language)
   const langName: Record<string, string> = { it: "Italian", en: "English", es: "Spanish", pt: "Portuguese" }
   const truncated = response.slice(0, 600)
+  const faqList = faqQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")
 
   try {
     const res = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
         model: "openai/gpt-4o-mini",
-        max_tokens: 100,
-        temperature: 0.3,
+        max_tokens: 150,
+        temperature: 0.1,
         messages: [
           {
             role: "system",
             content:
-              `You generate short clickable reply suggestions for a chat widget.\n` +
-              `Language: ${langName[lang] || "same as the reply"}.\n` +
+              `You select clickable follow-up suggestions for a chat widget from a fixed FAQ list.\n` +
+              `Language for output: ${langName[lang] || "same as the chatbot reply"}.\n` +
               `\n` +
               `STRICT RULES:\n` +
-              `- Write in FIRST PERSON (e.g. "Voglio sapere i prezzi", "Come posso pagare?", "Vorrei parlare con un operatore")\n` +
-              `- Each suggestion must be DIRECTLY relevant to the chatbot reply content — no generic phrases\n` +
-              `- Max 40 characters per suggestion\n` +
+              `- You MUST only pick questions from the FAQ LIST below — NEVER invent new ones\n` +
+              `- Pick 1-3 FAQ questions that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
+              `- Write each suggestion in FIRST PERSON (e.g. "Voglio sapere i prezzi" not "Prezzi")\n` +
+              `- Max 40 characters per suggestion — shorten if the FAQ question is longer\n` +
               `- No links, no emoji, no punctuation at the end\n` +
-              `- If the reply is a short confirmation, greeting, or thank-you → return []\n` +
-              `- If you cannot generate at least one truly relevant suggestion → return []\n` +
-              `- Return ONLY a raw JSON array of strings, nothing else. Example: ["Voglio sapere di più","Come mi iscrivo?"]`,
+              `- If no FAQ is relevant to the chatbot reply → return []\n` +
+              `- Return ONLY a raw JSON array of strings, nothing else. Example: ["Come posso pagare?","Dove è il mio ordine?"]`,
           },
           {
             role: "user",
-            content: `Chatbot reply:\n"${truncated}"`,
+            content: `Chatbot reply:\n"${truncated}"\n\nFAQ LIST:\n${faqList}`,
           },
         ],
       },
@@ -99,7 +124,6 @@ async function buildWidgetSuggestionsWithAI(
     )
 
     const raw: string = res.data?.choices?.[0]?.message?.content?.trim() || "[]"
-    // Strip markdown code fences if model wraps in ```json ... ```
     const cleaned = raw.replace(/^```[\w]*\n?/, "").replace(/```$/, "").trim()
     const parsed: unknown = JSON.parse(cleaned)
 
@@ -107,10 +131,9 @@ async function buildWidgetSuggestionsWithAI(
       const valid = (parsed as unknown[])
         .filter((s): s is string => typeof s === "string" && s.trim().length > 0 && s.length <= 45)
         .slice(0, 3)
-      return valid // may be empty — that's fine
+      return valid
     }
   } catch (err) {
-    // Timeout or parse error → return nothing (no generic fallback)
     logger.warn("[WIDGET-SUGGESTIONS-AI] Failed, returning no suggestions", {
       error: err instanceof Error ? err.message : String(err),
     })
@@ -481,7 +504,15 @@ export class WidgetChatController {
         })
       }
 
-      const { visitorId, name, phone, email, language, firstMessage } = validation.data
+      const {
+        visitorId,
+        name,
+        phone,
+        email,
+        language,
+        firstMessage,
+        pushNotificationsConsent = false,
+      } = validation.data
 
       // Normalize phone (strip spaces/dashes) for lookup + creation
       const normalizedPhone = phone.replace(/[\s-]/g, "")
@@ -624,6 +655,10 @@ export class WidgetChatController {
         if (normalizedLanguage && normalizedLanguage !== customer.language) {
           updateData.language = normalizedLanguage
         }
+        if (typeof pushNotificationsConsent === "boolean") {
+          updateData.push_notifications_consent = pushNotificationsConsent
+          updateData.push_notifications_consent_at = pushNotificationsConsent ? new Date() : null
+        }
         
         try {
           customer = await prisma.customers.update({
@@ -666,6 +701,8 @@ export class WidgetChatController {
               email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
               isActive: true, // Registered user
               language: normalizedLanguage,
+              push_notifications_consent: pushNotificationsConsent,
+              push_notifications_consent_at: pushNotificationsConsent ? new Date() : null,
             },
           })
         } catch (createError: any) {
@@ -806,7 +843,7 @@ export class WidgetChatController {
 
       const suggestions =
         workspace.widgetAutoSuggestionsEnabled === true
-          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", normalizedLanguage || "it", workspace.widgetQuickReplies as any)
+          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", normalizedLanguage || "it", workspace.widgetQuickReplies as any, resolvedWorkspaceId)
           : []
 
       // 11. Save LLM response to conversation history
@@ -1381,7 +1418,7 @@ export class WidgetChatController {
 
       const suggestions =
         workspace.widgetAutoSuggestionsEnabled === true
-          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "it", workspace.widgetQuickReplies as any)
+          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "it", workspace.widgetQuickReplies as any, workspaceId)
           : []
 
       // 📝 Save assistant message to conversation history
