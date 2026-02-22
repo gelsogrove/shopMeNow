@@ -223,12 +223,21 @@ export class ConversationHistoryLayer {
 
     // 6. Context flags
     parts.push("## CONTESTO")
-    parts.push(`- Primo messaggio: ${input.isFirstMessage ? "SÌ (vai dritto al punto)" : "NO"}`)
     // 🚫 WIDGET FIX: Don't show "Nome cliente" if empty (anonymous widget visitors)
     if (input.customerName && input.customerName.trim() !== "") {
       parts.push(`- Nome cliente: ${input.customerName}`)
+      if (input.isFirstMessage) {
+        parts.push(`- Primo messaggio: SÌ — aggiungi un saluto BREVE e PERSONALIZZATO (es. "Ciao ${input.customerName}!" nella lingua corretta) PRIMA della risposta, poi vai al punto`)
+      } else {
+        parts.push(`- Primo messaggio: NO — NON aggiungere saluti`)
+      }
     } else {
       parts.push(`- Nome cliente: (non disponibile - NON usare nomi nei saluti)`)
+      if (input.isFirstMessage) {
+        parts.push(`- Primo messaggio: SÌ — NON aggiungere saluti generici ("Ciao!", "Benvenuto!"), vai DRITTO alla risposta`)
+      } else {
+        parts.push(`- Primo messaggio: NO — NON aggiungere saluti`)
+      }
     }
     parts.push(`- Ha agenti commerciali: ${input.hasSalesAgents ? "SÌ" : "NO"}`)
     parts.push(`- Mindset: ${input.mindset}`)
