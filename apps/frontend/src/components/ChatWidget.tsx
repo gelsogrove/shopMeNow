@@ -1059,7 +1059,7 @@ export function ChatWidget({
                       {suggestions.slice(0, 4).map((qr: string, idx: number) => (
                         <button
                           key={`${qr}-${idx}`}
-                          className="w-full text-left text-sm px-4 py-2 rounded-full border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
+                        className="w-full text-left text-sm px-4 py-2 rounded-xl border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
                           style={{
                             borderColor: borderColor,
                             backgroundColor: "rgba(255,255,255,0.95)",
