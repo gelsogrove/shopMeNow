@@ -39,7 +39,7 @@ export function buildWidgetSuggestions(responseText: string, quickReplies?: stri
     (q) => typeof q === "string" && q.trim().length > 0
   )
   if (baseQuickReplies.length) {
-    return Array.from(new Set(baseQuickReplies)).slice(0, 3)
+    return Array.from(new Set(baseQuickReplies)).slice(0, 4)
   }
 
   if (!responseText || responseText.trim().length < 10) return []
