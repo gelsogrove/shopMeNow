@@ -33,6 +33,7 @@ jest.mock("@echatbot/database", () => {
     },
     customers: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       create: jest.fn(),
     },
     chatSession: {
@@ -290,6 +291,9 @@ describe("Widget Debug Mode - NO Billing", () => {
       workspaceId: mockWorkspaceId,
       isActive: false, // Not registered (anonymous widget user)
     })
+
+    // RULE: freshCustomer check after LLM — activeChatbot:true means no handoff triggered
+    ;(mockPrisma.customers.findUnique as jest.Mock).mockResolvedValue({ activeChatbot: true })
 
     ;(mockPrisma.chatSession.findFirst as jest.Mock).mockResolvedValue({
       id: "session-123",

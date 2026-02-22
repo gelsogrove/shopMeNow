@@ -196,6 +196,8 @@ export const sendWidgetMessage = async ({
     suggestions: Array.isArray(data.suggestions)
       ? (data.suggestions as string[]).slice(0, 4)
       : undefined,
+    // Operator handoff: backend sets activeChatbot=false when contactOperator CF was triggered
+    activeChatbot: data.activeChatbot as boolean | undefined,
   }
 }
 

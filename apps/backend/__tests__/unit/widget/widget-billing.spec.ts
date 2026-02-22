@@ -26,6 +26,7 @@ jest.mock("@echatbot/database", () => {
     },
     customers: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
     },
@@ -225,6 +226,9 @@ describe("Widget Billing", () => {
       customerId: mockCustomerId,
       status: "active",
     })
+
+    // RULE: freshCustomer check after LLM — activeChatbot:true means no handoff triggered
+    ;(mockPrisma.customers.findUnique as jest.Mock).mockResolvedValue({ activeChatbot: true })
 
     // Default LLM response
     mockLLMRouterService.routeMessage.mockResolvedValue({

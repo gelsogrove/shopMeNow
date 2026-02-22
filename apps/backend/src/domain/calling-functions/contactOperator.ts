@@ -379,9 +379,13 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           }
         }
 
-        // 📱 WHATSAPP NOTIFICATION (if method = "whatsapp")
-        if (workspace?.operatorContactMethod === "whatsapp") {
-          logger.info("📱 [contactOperator] WhatsApp notification enabled")
+// 📱 WHATSAPP NOTIFICATION — sent whenever operatorWhatsappNumber is configured
+        // (independent of operatorContactMethod: if a WA number is set, we always notify)
+        if (workspace?.operatorWhatsappNumber || (customer.salesId && customer.sales?.phone)) {
+          logger.info("📱 [contactOperator] WhatsApp notification enabled", {
+            hasWorkspaceNumber: !!workspace?.operatorWhatsappNumber,
+            hasSalesPhone: !!(customer.salesId && customer.sales?.phone),
+          })
 
           // PRIORITY LOGIC (Andrea's spec):
           // 1. If customer has salesId → send to agent's phone

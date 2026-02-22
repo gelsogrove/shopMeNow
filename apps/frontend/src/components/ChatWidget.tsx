@@ -319,8 +319,9 @@ export function ChatWidget({
   // Resolve workspaceId: window config > prop > fallback
   const resolvedWorkspaceId = widgetConfig?.workspaceId || workspaceId || (typeof localStorage !== "undefined" && localStorage.getItem("echatbot-workspace-id"))
   
-  // Resolve language: window config > prop > header > "en"
-  const resolvedLanguage = widgetConfig?.language || language || headerLanguage || "en"
+  // Resolve language: header selection (user) > prop > window config > "en"
+  // RULE: headerLanguage is the user's explicit in-widget selection → ALWAYS wins over workspace config
+  const resolvedLanguage = headerLanguage || language || widgetConfig?.language || "en"
   const resolvedLangKey = (resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en"
   const ui = UI_STRINGS[resolvedLangKey] || UI_STRINGS.en
   

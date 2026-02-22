@@ -6,7 +6,7 @@ jest.mock("@echatbot/database", () => {
   const mockPrisma = {
     workspace: { findUnique: jest.fn(), findFirst: jest.fn() },
     user: { findUnique: jest.fn() },
-    customers: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
+    customers: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     chatSession: { findFirst: jest.fn(), create: jest.fn() },
     conversationMessage: { count: jest.fn(), create: jest.fn() },
   }
@@ -115,6 +115,8 @@ describe("WidgetChatController - LLM direct flow (no welcome handler)", () => {
     })
     ;(prisma.conversationMessage.count as jest.Mock).mockResolvedValue(0)
     ;(prisma.conversationMessage.create as jest.Mock).mockResolvedValue({})
+    // RULE: operator handoff check — activeChatbot:true means no handoff triggered
+    ;(prisma.customers.findUnique as jest.Mock).mockResolvedValue({ activeChatbot: true })
   })
 
   it("processes all messages directly through LLM (greetings handled by AI)", async () => {

@@ -265,6 +265,7 @@ export class CallingFunctionsService {
         phoneNumber: phoneNumber,
         workspaceId: request.workspaceId,
         customerId: request.customerId,
+        channel: (request as any).channel || "widget",
       })
 
       logger.info("✅ contactOperator result:", result)
