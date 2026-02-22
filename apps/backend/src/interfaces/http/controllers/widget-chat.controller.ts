@@ -31,34 +31,80 @@ const translationAgent = new TranslationAgent(prisma)
 const welcomeMessageHandler = new WelcomeMessageHandler(prisma)
 
 // Quick, deterministic auto-suggestions for widget replies
+// Analyzes LLM response text to generate contextually relevant suggestions.
+// Returns [] when response needs no follow-up (e.g. simple confirmations).
 export function buildWidgetSuggestions(responseText: string, quickReplies?: string[]): string[] {
+  // 1. If workspace has static quick replies configured, use them directly
   const baseQuickReplies = (quickReplies || []).filter(
     (q) => typeof q === "string" && q.trim().length > 0
   )
   if (baseQuickReplies.length) {
-    return Array.from(new Set(baseQuickReplies)).slice(0, 4)
+    return Array.from(new Set(baseQuickReplies)).slice(0, 3)
   }
 
-  if (!responseText || responseText.trim().length < 8) return []
+  if (!responseText || responseText.trim().length < 10) return []
 
   const lower = responseText.toLowerCase()
   const suggestions: string[] = []
 
-  const yes = "Sì, va bene"
-  const no = "No, grazie"
-  const more = "Dimmi di più"
-  const human = "Parla con un operatore"
-  const price = "Mostrami i prezzi"
+  // 2. Context-aware suggestion generation based on response content
 
+  // Profile / account link
+  if (lower.includes("profil") || lower.includes("dati") && lower.includes("link")) {
+    suggestions.push("Apri il mio profilo", "Non riesco ad aprire il link", "Grazie!")
+    return suggestions.slice(0, 3)
+  }
+
+  // Order tracking
+  if (lower.includes("ordin") && (lower.includes("spediz") || lower.includes("traccia") || lower.includes("conseg"))) {
+    suggestions.push("Dove è il mio ordine?", "Voglio modificare l'ordine", "Contatta corriere")
+    return suggestions.slice(0, 3)
+  }
+
+  // Pricing / costs
+  if (lower.includes("prezzo") || lower.includes("costo") || lower.includes("€") || lower.includes("price")) {
+    suggestions.push("Voglio acquistare", "Ci sono sconti?", "Altre info sui prodotti")
+    return suggestions.slice(0, 3)
+  }
+
+  // Products / catalog
+  if (lower.includes("prodott") || lower.includes("catalog") || lower.includes("articol")) {
+    suggestions.push("Vedi il catalogo", "Qual è il prezzo?", "Come ordino?")
+    return suggestions.slice(0, 3)
+  }
+
+  // Payment methods
+  if (lower.includes("pagamento") || lower.includes("pagar") || lower.includes("payment") || lower.includes("pay")) {
+    suggestions.push("Come pago?", "Altre modalità di pagamento", "Ho un problema col pagamento")
+    return suggestions.slice(0, 3)
+  }
+
+  // Shipping / delivery
+  if (lower.includes("spediz") || lower.includes("consegna") || lower.includes("shipping")) {
+    suggestions.push("Quando arriva?", "Traccia la spedizione", "Modifica indirizzo")
+    return suggestions.slice(0, 3)
+  }
+
+  // Direct question in response (yes/no context)
   if (lower.includes("?")) {
-    suggestions.push(yes, no)
+    suggestions.push("Sì, esatto", "No, grazie", "Dimmi di più")
+    return suggestions.slice(0, 3)
   }
-  if (lower.includes("prezzo") || lower.includes("costo") || lower.includes("price")) {
-    suggestions.push(price)
-  }
-  suggestions.push(more, human)
 
-  return Array.from(new Set(suggestions)).slice(0, 4)
+  // Generic assistant response / FAQ
+  if (lower.includes("posso aiutarti") || lower.includes("hai bisogno") || lower.includes("fammi sapere")) {
+    suggestions.push("Voglio vedere i prodotti", "Stato del mio ordine", "Parla con un operatore")
+    return suggestions.slice(0, 3)
+  }
+
+  // Short confirmation / acknowledgment → no suggestions needed
+  if (responseText.trim().length < 60) {
+    return []
+  }
+
+  // Default fallback: generic useful actions
+  suggestions.push("Dimmi di più", "Parla con un operatore")
+  return suggestions.slice(0, 3)
 }
 
 export class WidgetChatController {

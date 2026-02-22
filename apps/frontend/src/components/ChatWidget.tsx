@@ -1001,27 +1001,29 @@ export function ChatWidget({
 
               {/* AI Suggestions from last bot message (widget only) */}
               {(() => {
+                // If there are conversation messages, only show LLM-provided suggestions (dynamic per response)
+                // If no messages yet, fall back to static quick replies
                 const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
                 const suggestions = lastBot?.suggestions?.length
                   ? lastBot.suggestions
-                  : resolvedAutoSuggestionsEnabled
+                  : messages.length === 0 && resolvedAutoSuggestionsEnabled
                     ? resolvedQuickReplies
                     : []
 
                 if (!suggestions || suggestions.length === 0) return null
 
                 return (
-                  <div className="px-4 py-3 bg-white border-t border-slate-200">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="px-4 py-2 bg-white border-t border-slate-200">
+                    <div className="flex flex-col gap-1.5">
                       {suggestions.slice(0, 4).map((qr: string, idx: number) => (
                         <button
                           key={`${qr}-${idx}`}
-                          className="text-sm px-3 py-2 rounded-full border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
+                          className="w-full text-left text-sm px-4 py-2 rounded-full border font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-1"
                           style={{
                             borderColor: borderColor,
                             background: "linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.9))",
                             color: resolvedPrimaryColor,
-                            boxShadow: `0 6px 14px -8px ${borderColor}`,
+                            boxShadow: `0 4px 10px -6px ${borderColor}`,
                           }}
                           onClick={() => handleQuickReply(qr)}
                           disabled={isLoading}
