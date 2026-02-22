@@ -1543,8 +1543,16 @@ export class WidgetChatController {
         responseLength: llmResult.response?.length,
       })
 
+      // Check if operator handoff was triggered by this LLM call (contactOperator CF sets activeChatbot=false)
+      const freshCustomer = await prisma.customers.findUnique({
+        where: { id: customer.id },
+        select: { activeChatbot: true },
+      })
+      const operatorHandoffTriggered = freshCustomer?.activeChatbot === false
+
+      // RULE: Never generate suggestions when operator handoff was just triggered
       const suggestions =
-        workspace.widgetAutoSuggestionsEnabled === true
+        !operatorHandoffTriggered && workspace.widgetAutoSuggestionsEnabled === true
           ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "it", workspace.widgetQuickReplies as any, workspaceId)
           : []
 
@@ -1607,6 +1615,8 @@ export class WidgetChatController {
         response: llmResult.response || "Sorry, I couldn't understand your request.",
         status: "ready",
         suggestions,
+        // Tell widget immediately if operator handoff was triggered (no separate poll needed)
+        ...(operatorHandoffTriggered && { activeChatbot: false }),
       })
     } catch (error) {
       logger.error("❌ Error sending widget message", {

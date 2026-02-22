@@ -608,22 +608,29 @@ export function ChatWidget({
         saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
       }
 
-      // Check if chatbot was disabled by operator handoff
-      // (one-shot check — if disabled, polling loop takes over)
-      if (!botDisabled && visitorId && resolvedWorkspaceId) {
-        try {
-          const checkResp = await fetch(
-            `${resolvedApiUrl}/widget/operator-messages?visitorId=${encodeURIComponent(visitorId)}&workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&since=9999-12-31`
-          )
-          if (checkResp.ok) {
-            const checkData = await checkResp.json()
-            if (checkData.activeChatbot === false) {
-              setBotDisabled(true)
-              lastOperatorMsgAt.current = new Date().toISOString()
+      // Check if chatbot was disabled by operator handoff.
+      // Backend now returns activeChatbot:false directly in the chat response when
+      // the contactOperator CF was triggered — use that immediately (no separate poll).
+      if (!botDisabled) {
+        if (data.activeChatbot === false) {
+          setBotDisabled(true)
+          lastOperatorMsgAt.current = new Date().toISOString()
+        } else if (visitorId && resolvedWorkspaceId) {
+          // Fallback: backend didn't include flag — do a one-shot poll check
+          try {
+            const checkResp = await fetch(
+              `${resolvedApiUrl}/widget/operator-messages?visitorId=${encodeURIComponent(visitorId)}&workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&since=9999-12-31`
+            )
+            if (checkResp.ok) {
+              const checkData = await checkResp.json()
+              if (checkData.activeChatbot === false) {
+                setBotDisabled(true)
+                lastOperatorMsgAt.current = new Date().toISOString()
+              }
             }
+          } catch {
+            // Ignore — this is a best-effort check
           }
-        } catch {
-          // Ignore — this is a best-effort check
         }
       }
     } catch (error) {
@@ -1270,11 +1277,21 @@ export function ChatWidget({
                 // If there are conversation messages, only show LLM-provided suggestions (dynamic per response)
                 // If no messages yet, fall back to static quick replies
                 const lastBot = [...messages].reverse().find((m) => m.role === "bot" && m.suggestions?.length)
-                const suggestions = lastBot?.suggestions?.length
+                const rawSuggestions = lastBot?.suggestions?.length
                   ? lastBot.suggestions
                   : messages.length === 0 && resolvedAutoSuggestionsEnabled
                     ? resolvedQuickReplies
                     : []
+
+                // RULE: Never suggest a question the user already asked
+                const askedMessages = new Set(
+                  messages
+                    .filter((m) => m.role === "user")
+                    .map((m) => m.content.trim().toLowerCase())
+                )
+                const suggestions = rawSuggestions.filter(
+                  (s: string) => !askedMessages.has(s.trim().toLowerCase())
+                )
 
                 if (!suggestions || suggestions.length === 0) return null
 

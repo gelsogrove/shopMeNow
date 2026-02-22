@@ -336,10 +336,12 @@ export function SettingsPage() {
   const handleFieldChange = useCallback((field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     setIsDirty(true)
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
-    }
-  }, [errors])
+    // Use functional update to avoid stale closure on errors state
+    setErrors((prev) => {
+      if (!prev[field]) return prev // No change needed — avoid unnecessary re-render
+      return { ...prev, [field]: "" }
+    })
+  }, []) // No dependency on errors — functional update reads latest state
 
   // Handle Debug Mode toggle - immediate save (like workspace selection)
   const handleToggleDebugMode = useCallback(async (checked: boolean) => {
