@@ -87,26 +87,8 @@ import {
   type WidgetStoredMessage,
 } from "@/components/chat/adapters/widgetAdapter"
 
-// Language options for registration form
-const WIDGET_LANGUAGES = [
-  { code: "it", flag: "🇮🇹", name: "Italiano" },
-  { code: "en", flag: "🇬🇧", name: "English" },
-  { code: "es", flag: "🇪🇸", name: "Español" },
-  { code: "pt", flag: "🇵🇹", name: "Português" },
-  { code: "fr", flag: "🇫🇷", name: "Français" },
-  { code: "de", flag: "🇩🇪", name: "Deutsch" },
-]
-
-const SUPPORTED_LANG_CODES = WIDGET_LANGUAGES.map((l) => l.code)
-
-const pushLabelByLang: Record<string, string> = {
-  it: "Ricevi novità su WhatsApp",
-  en: "Receive updates on WhatsApp",
-  es: "Recibe novedades por WhatsApp",
-  pt: "Receba novidades no WhatsApp",
-  fr: "Recevoir des nouveautés sur WhatsApp",
-  de: "Updates per WhatsApp erhalten",
-}
+// Supported language codes (browser language detection)
+const SUPPORTED_LANG_CODES = ["it", "en", "es", "pt", "fr", "de"]
 
 interface Message {
   role: "user" | "bot"
