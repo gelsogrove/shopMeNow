@@ -350,6 +350,8 @@ export class WidgetChatController {
           widgetIcon: true, // 🎨 Widget icon
           widgetUseChannelLogo: true,
           enableWidget: true, // 🚫 CRITICAL: Check if widget is enabled in workspace settings
+          whatsappPhoneNumber: true,
+          name: true,
         },
       })
 
@@ -395,6 +397,12 @@ export class WidgetChatController {
           status: "disabled",
           channelStatus: workspace.channelStatus ?? false,
           debugMode: workspace.debugMode ?? false,
+          workspace: {
+            channelStatus: workspace.channelStatus ?? false,
+            debugMode: workspace.debugMode ?? false,
+            whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+            name: workspace.name,
+          },
         })
       }
 
@@ -422,6 +430,12 @@ export class WidgetChatController {
           status: "disabled",
           channelStatus: false,
           debugMode: workspace.debugMode ?? false,
+          workspace: {
+            channelStatus: workspace.channelStatus ?? false,
+            debugMode: workspace.debugMode ?? false,
+            whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+            name: workspace.name,
+          },
           message: "Widget is disabled",
         })
       }
@@ -433,6 +447,12 @@ export class WidgetChatController {
           status: "disabled",
           channelStatus: false,
           debugMode: workspace.debugMode ?? false,
+          workspace: {
+            channelStatus: workspace.channelStatus ?? false,
+            debugMode: workspace.debugMode ?? false,
+            whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+            name: workspace.name,
+          },
           message: "Channel is disabled",
         })
       }
@@ -449,6 +469,12 @@ export class WidgetChatController {
           channelStatus: workspace.channelStatus ?? false,
           debugMode: workspace.debugMode ?? false,
           wipMessage,
+          workspace: {
+            channelStatus: workspace.channelStatus ?? false,
+            debugMode: workspace.debugMode ?? false,
+            whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+            name: workspace.name,
+          },
           customer: registeredCustomer ? {
             id: registeredCustomer.id,
             name: registeredCustomer.name,
@@ -467,6 +493,12 @@ export class WidgetChatController {
         icon: workspace.widgetIcon || "sparkles", // 🎨 Widget icon
         useChannelLogo: workspace.widgetUseChannelLogo ?? false,
         workspaceId: resolvedWorkspaceId,
+        workspace: {
+          channelStatus: workspace.channelStatus ?? true,
+          debugMode: workspace.debugMode ?? false,
+          whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+          name: workspace.name,
+        },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
           name: registeredCustomer.name,

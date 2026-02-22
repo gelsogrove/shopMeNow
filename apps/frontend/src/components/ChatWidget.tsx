@@ -219,6 +219,21 @@ export function ChatWidget({
   const resolvedQuickReplies = Array.isArray((widgetConfig as any)?.quickReplies)
     ? (widgetConfig as any)?.quickReplies.slice(0, 4)
     : []
+  const resolvedPlaceholder = (() => {
+    const map: Record<string, string> = {
+      it: "Scrivi un messaggio...",
+      en: "Type a message...",
+      es: "Escribe un mensaje...",
+      pt: "Digite uma mensagem...",
+      fr: "Écrivez un message...",
+      de: "Nachricht schreiben...",
+    }
+    return (
+      widgetConfig?.placeholder ||
+      map[resolvedLanguage as keyof typeof map] ||
+      "Type a message..."
+    )
+  })()
   
   console.log("✅ Resolved widget config:", {
     workspaceId: resolvedWorkspaceId,
@@ -244,8 +259,14 @@ export function ChatWidget({
   const [formName, setFormName] = useState("")
   const [formPhone, setFormPhone] = useState("")
   const [formLanguage, setFormLanguage] = useState("en")
+  const [formFirstMessage, setFormFirstMessage] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
-  const [workspaceConfig, setWorkspaceConfig] = useState<{ debugMode?: boolean; channelStatus?: boolean } | null>(null)
+  const [workspaceConfig, setWorkspaceConfig] = useState<{
+    debugMode?: boolean
+    channelStatus?: boolean
+    whatsappPhoneNumber?: string | null
+    name?: string | null
+  } | null>(null)
 
   // Initialize visitor ID, customerId, and registration form state
   useEffect(() => {
@@ -264,6 +285,27 @@ export function ChatWidget({
       setCustomerId(storedCustomerId)
       setShowRegistrationForm(false) // Skip form for returning registered users
       console.log("👤 Returning registered user (from localStorage), skipping registration form")
+      // Still fetch workspace status to get debug/phone info
+      ;(async () => {
+        try {
+          const statusResp = await getWidgetStatus({
+            apiUrl: resolvedApiUrl,
+            workspaceId: resolvedWorkspaceId,
+            visitorId: id,
+            language: resolvedLanguage,
+          })
+          if (statusResp?.workspace) {
+            setWorkspaceConfig({
+              debugMode: statusResp.workspace.debugMode,
+              channelStatus: statusResp.workspace.channelStatus,
+              whatsappPhoneNumber: statusResp.workspace.whatsappPhoneNumber,
+              name: statusResp.workspace.name,
+            })
+          }
+        } catch (err) {
+          console.debug("Workspace status fetch skipped (returning user path)", err)
+        }
+      })()
     } else {
       // 🕵️ RECONCILIATION: Check server if visitorId is already linked (handles refresh after Step 7 success but partial 500 error)
       const reconcileVisitor = async () => {
@@ -275,11 +317,13 @@ export function ChatWidget({
             language: resolvedLanguage,
           })
 
-          // Capture workspace config flags (debugMode, channelStatus) for the status indicator
+          // Capture workspace config flags (debugMode, channelStatus, phone) for UI
           if (statusResp?.workspace) {
             setWorkspaceConfig({
               debugMode: statusResp.workspace.debugMode,
               channelStatus: statusResp.workspace.channelStatus,
+              whatsappPhoneNumber: statusResp.workspace.whatsappPhoneNumber,
+              name: statusResp.workspace.name,
             })
           }
 
@@ -432,19 +476,12 @@ export function ChatWidget({
       setFormError("Phone must be in international format (e.g. +39 1234567890)")
       return
     }
+    if (!formFirstMessage.trim()) {
+      setFormError("Please write your first message")
+      return
+    }
     setIsLoading(true)
     setFormError(null)
-
-    // Silent greeting used as first message trigger — language-aware, not shown in chat
-    const silentGreetings: Record<string, string> = {
-      it: "Ciao",
-      en: "Hello",
-      es: "Hola",
-      pt: "Olá",
-      fr: "Bonjour",
-      de: "Hallo",
-    }
-    const autoFirstMessage = silentGreetings[formLanguage] || "Hello"
 
     try {
       console.log("🔄 [REGISTER] Starting registration...", {
@@ -461,7 +498,7 @@ export function ChatWidget({
         phone: formPhone.trim(),
         email: undefined,
         language: formLanguage,
-        firstMessage: autoFirstMessage,
+        firstMessage: formFirstMessage.trim(),
         pushNotificationsConsent: false,
       })
 
@@ -477,8 +514,13 @@ export function ChatWidget({
       setCustomerId(result.customerId)
       setSessionId(result.sessionId)
 
-      // Show only the bot welcome response — the silent greeting is not shown in chat
+      // Show user message + bot response in chat
       const initialMessages: Message[] = [
+        {
+          role: "user",
+          content: formFirstMessage.trim(),
+          timestamp: new Date().toISOString(),
+        },
         {
           role: "bot",
           content: result.response,
@@ -849,11 +891,51 @@ export function ChatWidget({
                       type="tel"
                       value={formPhone}
                       onChange={(e) => setFormPhone(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleRegistrationSubmit()}
                       placeholder="+39 123 456 7890"
                       className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
                     />
                   </div>
+
+                  {/* First message */}
+                  <div className="space-y-1">
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                      <MessageCircle className="w-3.5 h-3.5" /> Message
+                    </label>
+                    <textarea
+                      value={formFirstMessage}
+                      onChange={(e) => setFormFirstMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleRegistrationSubmit()
+                        }
+                      }}
+                      placeholder="How can we help you?"
+                      rows={3}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
+                    />
+                  </div>
+
+                  {/* Push consent */}
+                  <label className="flex items-start gap-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-3 py-3 shadow-sm">
+                    <input
+                      type="checkbox"
+                      checked={formPushConsent}
+                      onChange={(e) => setFormPushConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="leading-snug">
+                      <div>
+                        {pushLabelByLang[formLanguage as keyof typeof pushLabelByLang] ||
+                          pushLabelByLang.en}
+                      </div>
+                      {workspaceConfig?.whatsappPhoneNumber && (
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          WhatsApp: {workspaceConfig.whatsappPhoneNumber}
+                        </div>
+                      )}
+                    </div>
+                  </label>
 
                   {/* Error message */}
                   {formError && (
@@ -1013,7 +1095,7 @@ export function ChatWidget({
                         handleSendMessage()
                       }
                     }}
-                    placeholder={placeholder}
+                    placeholder={resolvedPlaceholder}
                     disabled={isLoading}
                     rows={2}
                     className={cn(
