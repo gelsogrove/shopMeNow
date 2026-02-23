@@ -596,6 +596,20 @@ export function ChatWidget({
         saveWidgetSessionId(localStorage, resolvedWorkspaceId, data.sessionId)
       }
 
+      // RULE: activeChatbot=false means the operator has taken over.
+      // Backend blocked the LLM — do NOT show any bot reply.
+      // Just enable waiting mode immediately and discard the empty response.
+      if (data.activeChatbot === false) {
+        setBotDisabled(true)
+        lastOperatorMsgAt.current = new Date().toISOString()
+        // Keep only the user message (no bot reply to add)
+        setMessages(updatedMessages)
+        if (resolvedWorkspaceId) {
+          saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
+        }
+        return
+      }
+
       // Add bot message
       const botMessage: Message = {
         role: "bot",
@@ -609,9 +623,8 @@ export function ChatWidget({
         saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
       }
 
-      // Check if chatbot was disabled by operator handoff.
-      // Backend now returns activeChatbot:false directly in the chat response when
-      // the contactOperator CF was triggered — use that immediately (no separate poll).
+      // Check if chatbot was JUST disabled by contactOperator CF in this very response.
+      // Backend sets activeChatbot:false + suggestions:[] when handoff is triggered.
       if (!botDisabled) {
         if (data.activeChatbot === false) {
           setBotDisabled(true)

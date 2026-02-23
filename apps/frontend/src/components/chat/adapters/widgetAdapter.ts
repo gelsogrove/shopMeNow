@@ -185,6 +185,18 @@ export const sendWidgetMessage = async ({
     throw new Error(messageText)
   }
 
+  // RULE: operator handoff active — backend blocked the LLM intentionally.
+  // Return activeChatbot:false so the widget switches to waiting mode silently.
+  if (data?.activeChatbot === false && data?.blocked === true) {
+    return {
+      response: "",
+      sessionId: undefined,
+      messageId: undefined,
+      suggestions: undefined,
+      activeChatbot: false as boolean | undefined,
+    }
+  }
+
   if (!data?.response) {
     throw new Error("Widget response missing")
   }

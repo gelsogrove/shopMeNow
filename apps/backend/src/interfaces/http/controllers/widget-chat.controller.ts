@@ -1405,6 +1405,20 @@ export class WidgetChatController {
 
       logger.info("✅ Customer ready", { customerId: customer.id, visitorId })
 
+      // 🚫 OPERATOR HANDOFF GUARD: If activeChatbot=false an operator is handling the chat.
+      // NEVER call LLM — return a silent signal so the widget knows to stay in waiting mode.
+      // RULE: operator takes over → LLM is completely disabled until operator re-enables it.
+      if (customer.activeChatbot === false) {
+        logger.info("[WIDGET] 🚫 LLM blocked — operator handoff active", {
+          customerId: customer.id,
+          visitorId,
+        })
+        return res.status(200).json({
+          activeChatbot: false,
+          blocked: true,
+        })
+      }
+
       // Find or create chat session
       logger.info("🔍 Finding or creating chat session", { customerId: customer.id })
       let chatSession = await prisma.chatSession.findFirst({
