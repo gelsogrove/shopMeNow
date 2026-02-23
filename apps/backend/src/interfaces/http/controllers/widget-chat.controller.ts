@@ -1406,13 +1406,41 @@ export class WidgetChatController {
       logger.info("✅ Customer ready", { customerId: customer.id, visitorId })
 
       // 🚫 OPERATOR HANDOFF GUARD: If activeChatbot=false an operator is handling the chat.
-      // NEVER call LLM — return a silent signal so the widget knows to stay in waiting mode.
+      // NEVER call LLM — but DO save the user message so the operator can read it in backoffice.
       // RULE: operator takes over → LLM is completely disabled until operator re-enables it.
       if (customer.activeChatbot === false) {
-        logger.info("[WIDGET] 🚫 LLM blocked — operator handoff active", {
+        logger.info("[WIDGET] 🚫 LLM blocked — operator handoff active, saving customer message", {
           customerId: customer.id,
           visitorId,
         })
+
+        // Save customer message to conversation so operator can see it in backoffice
+        try {
+          const operatorSession = await prisma.chatSession.findFirst({
+            where: { customerId: customer.id, status: "active" },
+            orderBy: { createdAt: "desc" },
+            select: { id: true },
+          })
+          if (operatorSession) {
+            await prisma.conversationMessage.create({
+              data: {
+                workspaceId,
+                customerId: customer.id,
+                conversationId: operatorSession.id,
+                role: "user",
+                content: message,
+              },
+            })
+            logger.info("[WIDGET] 💬 Customer message saved (operator mode)", {
+              customerId: customer.id,
+              sessionId: operatorSession.id,
+            })
+          }
+        } catch (saveError) {
+          // Non-blocking — log but don't fail the request
+          logger.error("[WIDGET] ⚠️ Could not save customer message in operator mode", saveError)
+        }
+
         return res.status(200).json({
           activeChatbot: false,
           blocked: true,
@@ -1685,10 +1713,12 @@ export class WidgetChatController {
         return res.status(400).json({ error: "visitorId and workspaceId required" })
       }
 
-      // Find customer by visitorId or phone
+      // Find customer by customId (widget visitorId) — primary lookup path for widget visitors.
+      // Also check id directly (backoffice/playground) and phone as last resort.
       const customer = await prisma.customers.findFirst({
         where: {
           OR: [
+            { customId: visitorId },
             { id: visitorId },
             { phone: visitorId.replace(/\D/g, "") || visitorId },
           ],

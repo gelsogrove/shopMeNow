@@ -145,7 +145,7 @@ const UI_STRINGS: Record<
     messagePh: string
     start: string
     termsLabel: string
-    viewTerms: string
+    termsError: string
     back: string
     termsTitle: string
     termsBody: string
@@ -160,8 +160,8 @@ const UI_STRINGS: Record<
     phonePh: "+39 312 345 6789",
     messagePh: "Come possiamo aiutarti?",
     start: "Inizia chat",
-    termsLabel: "Accetto Termini e Condizioni e ricevere comunicazioni su WhatsApp",
-    viewTerms: "Leggi Termini",
+    termsLabel: "Termini e Condizioni",
+    termsError: "Accetta i Termini e Condizioni per continuare",
     back: "Indietro",
     termsTitle: "Termini e Condizioni",
     termsBody:
@@ -176,8 +176,8 @@ const UI_STRINGS: Record<
     phonePh: "+1 415 555 1212",
     messagePh: "How can we help you?",
     start: "Start Chat",
-    termsLabel: "I accept Terms & Conditions and WhatsApp updates",
-    viewTerms: "View Terms",
+    termsLabel: "Terms & Conditions",
+    termsError: "Please accept Terms & Conditions to continue",
     back: "Back",
     termsTitle: "Terms & Conditions",
     termsBody:
@@ -192,8 +192,8 @@ const UI_STRINGS: Record<
     phonePh: "+34 612 345 678",
     messagePh: "¿Cómo podemos ayudarte?",
     start: "Iniciar chat",
-    termsLabel: "Acepto Términos y recibir novedades por WhatsApp",
-    viewTerms: "Ver Términos",
+    termsLabel: "Términos y Condiciones",
+    termsError: "Acepta los Términos y Condiciones para continuar",
     back: "Volver",
     termsTitle: "Términos y Condiciones",
     termsBody:
@@ -208,8 +208,8 @@ const UI_STRINGS: Record<
     phonePh: "+55 11 91234-5678",
     messagePh: "Como podemos ajudar?",
     start: "Iniciar chat",
-    termsLabel: "Aceito Termos e receber novidades no WhatsApp",
-    viewTerms: "Ver Termos",
+    termsLabel: "Termos e Condições",
+    termsError: "Aceite os Termos e Condições para continuar",
     back: "Voltar",
     termsTitle: "Termos e Condições",
     termsBody:
@@ -224,8 +224,8 @@ const UI_STRINGS: Record<
     phonePh: "+33 6 12 34 56 78",
     messagePh: "Comment pouvons-nous vous aider ?",
     start: "Commencer",
-    termsLabel: "J'accepte les Conditions et les mises à jour WhatsApp",
-    viewTerms: "Voir les Conditions",
+    termsLabel: "Conditions Générales",
+    termsError: "Veuillez accepter les Conditions Générales pour continuer",
     back: "Retour",
     termsTitle: "Conditions Générales",
     termsBody:
@@ -240,8 +240,8 @@ const UI_STRINGS: Record<
     phonePh: "+49 170 1234567",
     messagePh: "Wie können wir helfen?",
     start: "Chat starten",
-    termsLabel: "Ich akzeptiere AGB und WhatsApp-Updates",
-    viewTerms: "AGB ansehen",
+    termsLabel: "AGB",
+    termsError: "Bitte akzeptiere die AGB um fortzufahren",
     back: "Zurück",
     termsTitle: "Allgemeine Bedingungen",
     termsBody:
@@ -371,6 +371,8 @@ export function ChatWidget({
   const [customerId, setCustomerId] = useState<string | null>(null)
   // Operator handoff: when chatbot is disabled, poll for operator replies
   const [botDisabled, setBotDisabled] = useState(false)
+  // operatorHasReplied: true when operator sent at least one message — unlocks input so customer can reply
+  const [operatorHasReplied, setOperatorHasReplied] = useState(false)
   const lastOperatorMsgAt = useRef<string>(new Date().toISOString())
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -466,6 +468,30 @@ export function ChatWidget({
       reconcileVisitor()
     }
 
+    // Restore operator handoff state in case of page reload / widget reopen.
+    // RULE: botDisabled is NOT persisted — we re-check from BE on every init.
+    const restoreOperatorState = async (currentVisitorId: string) => {
+      try {
+        const resp = await fetch(
+          `${resolvedApiUrl}/widget/operator-messages?visitorId=${encodeURIComponent(currentVisitorId)}&workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&since=${encodeURIComponent("1970-01-01T00:00:00.000Z")}`
+        )
+        if (!resp.ok) return
+        const data = await resp.json()
+        if (data.activeChatbot === false) {
+          setBotDisabled(true)
+          if (Array.isArray(data.messages) && data.messages.length > 0) {
+            setOperatorHasReplied(true)
+          }
+          console.log("🔒 [WIDGET] Restored operator handoff state on init", {
+            operatorHasReplied: Array.isArray(data.messages) && data.messages.length > 0,
+          })
+        }
+      } catch {
+        // Best-effort — ignore network errors during init
+      }
+    }
+    restoreOperatorState(id)
+
     // Pre-select language from widget config
     const normalizedLang = (resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en"
     setFormLanguage(SUPPORTED_LANG_CODES.includes(normalizedLang) ? normalizedLang : "en")
@@ -521,11 +547,13 @@ export function ChatWidget({
         // Check if chatbot was re-enabled by operator
         if (data.activeChatbot === true) {
           setBotDisabled(false)
+          setOperatorHasReplied(false)
           return
         }
 
-        // Append new operator messages
+        // Append new operator messages — also unlock input so customer can reply
         if (Array.isArray(data.messages) && data.messages.length > 0) {
+          setOperatorHasReplied(true)
           const newMsgs = (
             data.messages as { id: string; content: string; createdAt: string }[]
           ).map((m) => ({
@@ -557,8 +585,10 @@ export function ChatWidget({
    */
   const sendMessage = async (text: string) => {
     const message = text.trim()
-    // RULE: Block all LLM messages when operator handoff is active
-    if (!message || isLoading || !visitorId || botDisabled) return
+    // RULE: Block when bot is disabled AND operator hasn't replied yet (customer is waiting).
+    // When operator has replied (operatorHasReplied=true), allow sending — message goes to BE
+    // which saves it without calling LLM, so the operator can read the customer's reply.
+    if (!message || isLoading || !visitorId || (botDisabled && !operatorHasReplied)) return
 
     // Add user message — also clear any suggestions from prior bot messages immediately
     const userMessage: Message = {
@@ -692,7 +722,7 @@ export function ChatWidget({
       return
     }
     if (!termsAccepted) {
-      setFormError(ui.termsLabel)
+      setFormError(ui.termsError)
       return
     }
     setIsLoading(true)
@@ -1168,18 +1198,13 @@ export function ChatWidget({
                         className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                       />
                       <div className="text-xs text-slate-600 leading-snug">
-                        <label htmlFor="terms-consent" className="cursor-pointer font-medium">
+                        <button
+                          type="button"
+                          className="cursor-pointer font-semibold text-emerald-600 hover:underline"
+                          onClick={() => setShowTermsContent(true)}
+                        >
                           {ui.termsLabel}
-                        </label>
-                        <div>
-                          <button
-                            type="button"
-                            className="text-emerald-600 hover:underline font-semibold"
-                            onClick={() => setShowTermsContent(true)}
-                          >
-                            {ui.viewTerms}
-                          </button>
-                        </div>
+                        </button>
                       </div>
                     </div>
 
@@ -1349,7 +1374,9 @@ export function ChatWidget({
               {botDisabled && (
                 <div className="mx-4 mb-2 px-4 py-2 rounded-xl text-sm text-center font-medium"
                   style={{ backgroundColor: `${resolvedPrimaryColor}18`, color: resolvedPrimaryColor, border: `1px solid ${resolvedPrimaryColor}33` }}>
-                  👤 Connecting you with our team — replies coming shortly
+                  {operatorHasReplied
+                    ? "🧑‍💼 Operator active — you can reply directly"
+                    : "👤 Connecting you with our team — replies coming shortly"}
                 </div>
               )}
 
@@ -1365,8 +1392,14 @@ export function ChatWidget({
                         handleSendMessage()
                       }
                     }}
-                    placeholder={botDisabled ? "Waiting for operator reply..." : resolvedPlaceholder}
-                    disabled={isLoading || botDisabled}
+                    placeholder={
+                      botDisabled && !operatorHasReplied
+                        ? "Waiting for operator reply..."
+                        : botDisabled && operatorHasReplied
+                        ? "Reply to operator..."
+                        : resolvedPlaceholder
+                    }
+                    disabled={isLoading || (botDisabled && !operatorHasReplied)}
                     rows={2}
                     className={cn(
                       "flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-300",
@@ -1377,7 +1410,7 @@ export function ChatWidget({
                   />
                   <button
                     onClick={handleSendMessage}
-                    disabled={isLoading || !inputValue.trim() || botDisabled}
+                    disabled={isLoading || !inputValue.trim() || (botDisabled && !operatorHasReplied)}
                     className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center",
                       "disabled:bg-gray-300 hover:brightness-95",
