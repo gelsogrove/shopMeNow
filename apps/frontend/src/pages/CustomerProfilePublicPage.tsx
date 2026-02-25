@@ -16,6 +16,7 @@ import {
 } from "../components/ui/alert-dialog"
 import { ProfileForm } from "../components/profile/ProfileForm"
 import { StickyHeader } from "../components/public/StickyHeader"
+import { PublicMobileShell } from "@/components/public/PublicMobileShell"
 import { TokenError } from "../components/ui/TokenError"
 import UnifiedLoading from "../components/ui/UnifiedLoading"
 import { useTokenValidation } from "../hooks/useTokenValidation"
@@ -321,7 +322,7 @@ const CustomerProfilePublicPage: React.FC = () => {
   const profileIcon = <User className="h-8 w-8" />
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <PublicMobileShell accentColor="#0ea5e9" tone="slate" maxWidth="wide">
       <StickyHeader
         title={profileData?.workspace?.name || texts.personalData}
         subtitle={texts.contactInfo}
@@ -334,10 +335,10 @@ const CustomerProfilePublicPage: React.FC = () => {
       />
 
       <div className="pt-16">
-        <div className="max-w-md mx-auto px-3 sm:max-w-2xl sm:px-4 lg:max-w-5xl lg:px-8 xl:max-w-6xl py-4 sm:py-6 lg:py-8">
+        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl border border-gray-100 px-3 sm:px-6 lg:px-8 py-5 sm:py-7">
           {/* Profile Form */}
           {profileData && (
-            <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6">
+            <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:p-6 border border-gray-100">
               <ProfileForm
                 profileData={profileData}
                 onSave={handleSaveProfile}
@@ -365,7 +366,7 @@ const CustomerProfilePublicPage: React.FC = () => {
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <button
-                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                         disabled={deleting}
                       >
                         {deleting ? texts.deleteAccountDeleting : texts.deleteAccountButton}
@@ -397,7 +398,7 @@ const CustomerProfilePublicPage: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </PublicMobileShell>
   )
 }
 

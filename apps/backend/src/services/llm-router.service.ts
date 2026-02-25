@@ -2007,6 +2007,7 @@ export class LLMRouterService {
             customerDiscount: customerDiscount, // 💰 Pass customer discount for cart price calculations
             customerIsActive: customerIsActive, // 🔒 Feature 174: Registration status for function-level guard
             sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true, // 🛍️ Registration link only if workspace sells products
+            channel: params.channel, // 🌐 "widget" | "whatsapp" — required for contactOperator routing
           }
         )
         const functionExecutionTime = Date.now() - functionExecutionStart

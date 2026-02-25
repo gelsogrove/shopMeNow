@@ -41,6 +41,18 @@ jest.mock("@echatbot/database", () => ({
 let mockValidateToken: jest.Mock
 let mockRevokeToken: jest.Mock
 
+// Mock OperatorRelayService — the done endpoint now delegates to this service
+// instead of calling prisma.customers.updateMany directly.
+const mockReleaseCustomerAndProcessNext = jest.fn()
+jest.mock(
+  "../../../src/application/services/operator-relay.service",
+  () => ({
+    OperatorRelayService: jest.fn().mockImplementation(() => ({
+      releaseCustomerAndProcessNext: mockReleaseCustomerAndProcessNext,
+    })),
+  })
+)
+
 jest.mock(
   "../../../src/application/services/secure-token.service",
   () => ({
@@ -126,6 +138,8 @@ describe("SupportChatController", () => {
     // Initialize mocks here (after jest.clearAllMocks to clear previous calls)
     mockValidateToken = jest.fn()
     mockRevokeToken = jest.fn()
+    // Reset relay service mock (module-level jest.fn — must be cleared per test)
+    mockReleaseCustomerAndProcessNext.mockReset()
     controller = new SupportChatController()
   })
 
@@ -289,9 +303,11 @@ describe("SupportChatController", () => {
 
     it("should re-enable chatbot and revoke token", async () => {
       // SCENARIO: Operator finishes and clicks "Riattiva chatbot"
-      // RULE: Must set activeChatbot=true, clear operatorRequestedAt, revoke token
+      // RULE: Must call OperatorRelayService.releaseCustomerAndProcessNext (re-enables chatbot,
+      //        clears queue fields, notifies next customer) and revoke the token.
+      // NOTE: The direct updateMany call was replaced by the relay service (queue-aware release).
       mockValidateToken.mockResolvedValue(tokenValidationData)
-      ;(prisma.customers.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+      mockReleaseCustomerAndProcessNext.mockResolvedValue(undefined)
       mockRevokeToken.mockResolvedValue(true)
 
       const req = buildReq({ body: { token: VALID_TOKEN } })
@@ -299,14 +315,11 @@ describe("SupportChatController", () => {
 
       await controller.done(req, res)
 
-      expect(prisma.customers.updateMany).toHaveBeenCalledWith({
-        where: { id: CUSTOMER_ID, workspaceId: WORKSPACE_ID },
-        data: {
-          activeChatbot: true,
-          operatorRequestedAt: null,
-          originChannel: null,
-        },
-      })
+      // ASSERT: relay service called with correct workspace + customer IDs
+      expect(mockReleaseCustomerAndProcessNext).toHaveBeenCalledWith(
+        WORKSPACE_ID,
+        CUSTOMER_ID
+      )
       expect(mockRevokeToken).toHaveBeenCalledWith(VALID_TOKEN)
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true })

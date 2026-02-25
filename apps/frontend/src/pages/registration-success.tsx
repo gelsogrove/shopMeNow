@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { getPublicPageTexts } from "@/utils/publicPageTranslations"
+import { PublicMobileShell } from "@/components/public/PublicMobileShell"
 
 const RegistrationSuccess = () => {
   const navigate = useNavigate()
@@ -18,8 +19,8 @@ const RegistrationSuccess = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg overflow-hidden">
+    <PublicMobileShell accentColor="#10b981" tone="emerald">
+      <div className="w-full max-w-xl mx-auto bg-white/95 backdrop-blur rounded-2xl shadow-2xl overflow-hidden">
         {/* Success header */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-10 text-center">
           <svg
@@ -119,7 +120,7 @@ const RegistrationSuccess = () => {
           <div className="mt-8 space-y-3">
             <button
               onClick={goToWhatsApp}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center"
+              className="w-full px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 flex items-center justify-center"
             >
               <svg
                 className="h-5 w-5 mr-2"
@@ -132,14 +133,14 @@ const RegistrationSuccess = () => {
             </button>
             <button
               onClick={goToHome}
-              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               {texts.goToHomepage}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </PublicMobileShell>
   )
 }
 

@@ -59,6 +59,7 @@ export interface ExecutionContext {
   customerDiscount?: number // Customer's discount percentage (e.g., 10 for 10%)
   customerIsActive?: boolean // NEW: Customer registration status
   sellsProductsAndServices?: boolean // NEW: Workspace sells products/services (enables registration)
+  channel?: string // "widget" | "whatsapp" — needed for contactOperator routing
 }
 
 export interface FunctionResult {
@@ -681,11 +682,15 @@ export class FunctionExecutor {
     }
 
     // Call the actual contactOperator function
+    // CRITICAL: pass channel so contactOperator sets originChannel correctly.
+    // widget → replies saved as ConversationMessage (polled by widget)
+    // whatsapp → replies queued via WhatsApp
     const result = await contactOperator({
       phoneNumber: customer.phone,
       workspaceId: context.workspaceId,
       customerId: context.customerId,
       reason: args.reason || "Customer requested operator assistance",
+      channel: context.channel || "whatsapp", // default to whatsapp for backward compat
     })
 
     logger.info("✅ contactOperator completed", {

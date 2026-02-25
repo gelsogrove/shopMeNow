@@ -100,6 +100,26 @@ export async function contactOperator(
 
       logger.info("✅ Chatbot disabled for customer:", customer.id)
 
+      // 📋 QUEUE POSITION — assign next position in the operator relay queue
+      // Position 1 = served immediately (operator notified below)
+      // Position >1 = customer waits; they will be notified when their turn arrives
+      let queuePosition = 1
+      try {
+        const { OperatorRelayService } = require("../../application/services/operator-relay.service")
+        const operatorRelayService = new OperatorRelayService(prisma)
+        const queueResult = await operatorRelayService.assignQueuePosition(
+          request.workspaceId,
+          customer.id
+        )
+        queuePosition = queueResult.position
+        logger.info("✅ [contactOperator] Queue position assigned:", {
+          customerId: customer.id,
+          position: queuePosition,
+        })
+      } catch (queueError) {
+        logger.warn("⚠️ [contactOperator] Failed to assign queue position:", queueError)
+      }
+
       // 🔑 Generate support-chat token (48h, no-login link for operator)
       let supportChatUrl: string | null = null
       try {
@@ -121,7 +141,7 @@ export async function contactOperator(
           undefined,
           customer.id
         )
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173"
+        const frontendUrl = process.env.FRONTEND_URL || "https://www.echatbot.ai"
         supportChatUrl = `${frontendUrl}/support-chat?token=${supportToken}`
         logger.info("✅ [contactOperator] Support chat URL generated:", { supportChatUrl })
       } catch (tokenError) {
@@ -425,6 +445,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 • Telefono: ${customer.phone}
 • Email: ${customer.email || "N/A"}
 • Data/Ora: ${new Date().toLocaleString("it-IT")}
+• Posizione in coda: *#${queuePosition}*
 ${request.reason ? `• Motivo: ${request.reason}` : ""}
 
 🤖 *Riassunto AI della conversazione* (ultima ora):
@@ -432,6 +453,10 @@ ${request.reason ? `• Motivo: ${request.reason}` : ""}
 ${chatSummary}
 
 ${supportChatUrl ? `💬 *Rispondi direttamente (link diretto, no login, valido 48h)*:\n${supportChatUrl}` : ""}
+
+💬 *I messaggi del cliente ti saranno inoltrati qui direttamente.*
+Rispondi a questo numero per rispondere al cliente.
+Scrivi *END* quando la conversazione è terminata.
 
 ---
 _Questa notifica è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore._

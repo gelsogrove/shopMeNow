@@ -425,6 +425,8 @@ model Customers {
   activeChatbot                 Boolean                 @default(true)
   operatorRequestedAt           DateTime?               // 🧑‍💼 When customer requested human operator (null = not pending)
   originChannel                 String?                 // 🔀 Channel: "widget" | "whatsapp" — used to route operator replies
+  operatorQueuePosition         Int?                    // 📋 Position in operator queue (null = not queued; 1 = currently being served)
+  operatorQueueEnteredAt        DateTime?               // 🕐 When customer entered the operator queue (used to order by FIFO when positions tie)
   invoiceAddress                Json?
   salesId                       String?
   cart                          Carts?

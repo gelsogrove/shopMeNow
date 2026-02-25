@@ -228,19 +228,36 @@ export class SupportChatController {
         workspaceId: string
       }
 
-      await prisma.customers.updateMany({
-        where: { id: customerId, workspaceId },
-        data: {
-          activeChatbot: true,
-          operatorRequestedAt: null,
-          originChannel: null,
-        },
-      })
+      // 🔀 RELAY TUNNEL: use OperatorRelayService to re-enable chatbot,
+      // clear queue fields, and process the next customer in queue.
+      // This replaces the previous direct updateMany call.
+      try {
+        const { OperatorRelayService } = require("../../../application/services/operator-relay.service")
+        const operatorRelayService = new OperatorRelayService(prisma)
+        await operatorRelayService.releaseCustomerAndProcessNext(workspaceId, customerId)
+      } catch (relayError) {
+        // Fallback: manually re-enable chatbot if relay service fails
+        logger.warn("[SupportChat] ⚠️ OperatorRelayService failed in done — falling back to manual update", {
+          error: relayError,
+          customerId,
+          workspaceId,
+        })
+        await prisma.customers.updateMany({
+          where: { id: customerId, workspaceId },
+          data: {
+            activeChatbot: true,
+            operatorRequestedAt: null,
+            operatorQueuePosition: null,
+            operatorQueueEnteredAt: null,
+            originChannel: null,
+          },
+        })
+      }
 
       // Revoke token so it can't be reused
       await secureTokenService.revokeToken(token)
 
-      logger.info("[SupportChat] chatbot re-enabled for customer:", customerId)
+      logger.info("[SupportChat] chatbot re-enabled and queue processed for customer:", customerId)
       res.json({ success: true, message: "Chatbot riabilitato con successo" })
     } catch (error) {
       logger.error("[SupportChat] done error:", error)

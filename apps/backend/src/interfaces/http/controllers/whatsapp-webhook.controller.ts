@@ -349,6 +349,7 @@ export class WhatsAppWebhookController {
                 channelStatus: true,
                 deletedAt: true,
                 ownerId: true,
+                operatorWhatsappNumber: true, // 🔀 Relay tunnel: detect operator messages
                 owner: { select: { status: true } },
               },
             },
@@ -369,6 +370,7 @@ export class WhatsAppWebhookController {
                 channelStatus: true,
                 deletedAt: true,
                 ownerId: true,
+                operatorWhatsappNumber: true, // 🔀 Relay tunnel: detect operator messages
                 owner: { select: { status: true } },
               },
             },
@@ -491,7 +493,39 @@ export class WhatsAppWebhookController {
         }
       }
 
-      // 🔍 DEBUG: Log phone lookup
+      // � OPERATOR RELAY TUNNEL: Check if the sender is the workspace operator
+      // If the inbound phone matches Workspace.operatorWhatsappNumber, route ALL messages
+      // to OperatorRelayService instead of the normal customer/LLM pipeline.
+      const operatorPhone = whatsappSettings.workspace.operatorWhatsappNumber
+      if (operatorPhone) {
+        const operatorVariants = buildPhoneVariants(operatorPhone)
+        const isOperator = phoneVariants.some((v) => operatorVariants.includes(v))
+
+        if (isOperator) {
+          logger.info("[WEBHOOK] 🔀 Operator message detected — routing to OperatorRelayService", {
+            workspaceId,
+            senderPhone: phoneNumber,
+            operatorPhone,
+          })
+
+          try {
+            const { OperatorRelayService } = require("../../../application/services/operator-relay.service")
+            const operatorRelayService = new OperatorRelayService(prisma)
+            await operatorRelayService.handleOperatorMessage(workspaceId, messageText)
+          } catch (relayError) {
+            logger.error("[WEBHOOK] ❌ OperatorRelayService.handleOperatorMessage failed", {
+              error: relayError,
+              workspaceId,
+            })
+          }
+
+          // Always return 200 to WhatsApp (regardless of relay outcome)
+          res.status(200).json({ status: "ok", source: "operator_relay" })
+          return
+        }
+      }
+
+      // �🔍 DEBUG: Log phone lookup
       logger.info("[WEBHOOK] 📞 Phone lookup debug", {
         phoneNumber: phoneNumber,
         workspaceId,
@@ -1794,6 +1828,25 @@ export class WhatsAppWebhookController {
             error: wsError,
             workspaceId: customer.workspaceId,
             customerId: customer.id,
+          })
+        }
+
+        // 🔀 RELAY TUNNEL: Forward customer message to operator via WhatsApp
+        // Only relay if the customer has a queue position (actively in operator mode)
+        try {
+          const { OperatorRelayService } = require("../../../application/services/operator-relay.service")
+          const operatorRelayService = new OperatorRelayService(prisma)
+          await operatorRelayService.relayCustomerMessageToOperator(
+            customer.workspaceId,
+            { id: customer.id, name: customer.name, phone: customer.phone },
+            messageMarkdown
+          )
+        } catch (relayError) {
+          // Non-critical: relay failure should not prevent the response
+          logger.warn("[WEBHOOK] ⚠️ Failed to relay customer message to operator", {
+            error: relayError,
+            customerId: customer.id,
+            workspaceId: customer.workspaceId,
           })
         }
 
