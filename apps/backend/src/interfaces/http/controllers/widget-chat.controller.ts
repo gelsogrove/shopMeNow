@@ -92,17 +92,19 @@ async function buildWidgetSuggestionsWithAI(
   fallbackQuickReplies?: string[],
   workspaceId?: string
 ): Promise<string[]> {
-  // Static workspace quick replies take priority — no LLM call needed
-  const base = (fallbackQuickReplies || []).filter((q) => typeof q === "string" && q.trim().length > 0)
-  if (base.length) return Array.from(new Set(base)).slice(0, 4)
+  // Prepare static quick replies as fallback
+  const staticReplies = (fallbackQuickReplies || [])
+    .filter((q) => typeof q === "string" && q.trim().length > 0)
+    .slice(0, 4)
 
-  if (!response || response.trim().length < 10) return []
-
+  // If no valid response or API key, use static fallback
+  if (!response || response.trim().length < 10) return staticReplies
+  
   const apiKey = process.env.OPENROUTER_API_KEY
-  if (!apiKey) return []
+  if (!apiKey) return staticReplies
 
   // 📚 Fetch active FAQ questions from DB to ground suggestions in real knowledge
-  // If no FAQs exist → no suggestions (we refuse to invent things the bot might not answer)
+  // If no FAQs exist → use static quick replies as fallback
   let faqQuestions: string[] = []
   if (workspaceId) {
     try {
@@ -114,15 +116,15 @@ async function buildWidgetSuggestionsWithAI(
       })
       faqQuestions = faqs.map((f: { question: string }) => f.question.trim()).filter(Boolean)
     } catch (err) {
-      logger.warn("[WIDGET-SUGGESTIONS-AI] Failed to load FAQs, returning no suggestions", {
+      logger.warn("[WIDGET-SUGGESTIONS-AI] Failed to load FAQs, using static fallback", {
         error: err instanceof Error ? err.message : String(err),
       })
-      return []
+      return staticReplies
     }
   }
 
-  // No FAQ knowledge base → no suggestions (never invent)
-  if (faqQuestions.length === 0) return []
+  // No FAQ knowledge base → use static quick replies as fallback
+  if (faqQuestions.length === 0) return staticReplies
 
   const lang = normLang(language)
   const langName: Record<string, string> = { it: "Italian", en: "English", es: "Spanish", pt: "Portuguese" }
@@ -177,15 +179,17 @@ async function buildWidgetSuggestionsWithAI(
       const valid = (parsed as unknown[])
         .filter((s): s is string => typeof s === "string" && s.trim().length > 0 && s.length <= 45)
         .slice(0, 3)
-      return valid
+      // Return LLM suggestions if valid, otherwise fallback to static
+      return valid.length > 0 ? valid : staticReplies
     }
   } catch (err) {
-    logger.warn("[WIDGET-SUGGESTIONS-AI] Failed, returning no suggestions", {
+    logger.warn("[WIDGET-SUGGESTIONS-AI] Failed, using static fallback", {
       error: err instanceof Error ? err.message : String(err),
     })
   }
 
-  return []
+  // Final fallback to static quick replies
+  return staticReplies
 }
 
 // Suggestion labels per language for each context key

@@ -112,13 +112,39 @@ function ProtectedAnalyticsRoute() {
 
 export function App() {
   return (
+    <BrowserRouter>
+      <Toaster position="top-right" duration={800} />
+      <Routes>
+        {/* Operator Support Chat — token-based, NO PROVIDERS (public, standalone) */}
+        <Route
+          path="/support-chat"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <SupportChatPage />
+            </Suspense>
+          }
+        />
+        
+        {/* ALL OTHER ROUTES (with providers) */}
+        <Route path="*" element={<AppWithProviders />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+function AppWithProviders() {
+  return (
     <WorkspaceProvider>
       <BillingProvider>
         <CustomerEditProvider>
           <ChatProvider>
             <ChatListProvider>
-              <BrowserRouter>
-              <Toaster position="top-right" duration={800} />
               <Routes>
                 {/* ROOT: Login is the homepage */}
                 <Route path="/" element={<LoginPage />} />
@@ -333,22 +359,6 @@ export function App() {
                   }
                 />
 
-                {/* Operator Support Chat — token-based, no login */}
-                <Route
-                  path="/support-chat"
-                  element={
-                    <Suspense
-                      fallback={
-                        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                          <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
-                        </div>
-                      }
-                    >
-                      <SupportChatPage />
-                    </Suspense>
-                  }
-                />
-
                 {/* Legacy login redirect */}
                 <Route
                   path="/login"
@@ -431,10 +441,9 @@ export function App() {
               
               {/* Chat Widget - Appears on all pages */}
               <WidgetLoader />
-            </BrowserRouter>
-          </ChatListProvider>
-        </ChatProvider>
-      </CustomerEditProvider>
+            </ChatListProvider>
+          </ChatProvider>
+        </CustomerEditProvider>
       </BillingProvider>
     </WorkspaceProvider>
   )
