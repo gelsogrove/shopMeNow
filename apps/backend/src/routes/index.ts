@@ -417,6 +417,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/analytics", // Analytics routes (JWT-based authentication)
   "/pricing", // PUBLIC pricing configuration endpoint (no auth required)
   "/subscription/plans", // PUBLIC subscription plans endpoint (Feature 185)
+  "/support-chat", // 🆘 PUBLIC operator handoff routes (token-authenticated)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {

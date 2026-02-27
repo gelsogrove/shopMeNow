@@ -58,9 +58,13 @@ export class SupportChatController {
         return
       }
 
-      // Fetch customer (workspace-isolated)
+      // Fetch customer (workspace-isolated, exclude soft-deleted)
       const customer = await prisma.customers.findFirst({
-        where: { id: customerId, workspaceId },
+        where: { 
+          id: customerId, 
+          workspaceId,
+          deletedAt: null // Exclude soft-deleted customers
+        },
         select: {
           id: true,
           name: true,
@@ -74,7 +78,10 @@ export class SupportChatController {
       })
 
       if (!customer) {
-        res.status(404).json({ error: "Customer non trovato" })
+        res.status(404).json({ 
+          error: "CUSTOMER_NOT_FOUND",
+          message: "Customer non trovato o è stato eliminato" 
+        })
         return
       }
 
@@ -146,13 +153,20 @@ export class SupportChatController {
         channel?: string
       } | null
 
-      // Get customer + channel
+      // Get customer + channel (exclude soft-deleted)
       const customer = await prisma.customers.findFirst({
-        where: { id: customerId, workspaceId },
+        where: { 
+          id: customerId, 
+          workspaceId,
+          deletedAt: null // Exclude soft-deleted customers
+        },
         select: { id: true, phone: true, originChannel: true },
       })
       if (!customer) {
-        res.status(404).json({ error: "Customer non trovato" })
+        res.status(404).json({ 
+          error: "CUSTOMER_NOT_FOUND",
+          message: "Customer non trovato o è stato eliminato" 
+        })
         return
       }
 
@@ -227,7 +241,23 @@ export class SupportChatController {
         customerId: string
         workspaceId: string
       }
+      // Verify customer exists and is not deleted
+      const customer = await prisma.customers.findFirst({
+        where: {
+          id: customerId,
+          workspaceId,
+          deletedAt: null
+        },
+        select: { id: true }
+      })
 
+      if (!customer) {
+        res.status(404).json({ 
+          error: "CUSTOMER_NOT_FOUND",
+          message: "Customer non trovato o è stato eliminato" 
+        })
+        return
+      }
       // 🔀 RELAY TUNNEL: use OperatorRelayService to re-enable chatbot,
       // clear queue fields, and process the next customer in queue.
       // This replaces the previous direct updateMany call.

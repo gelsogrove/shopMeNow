@@ -36,7 +36,15 @@ const API_BASE = "/api/v1/support-chat"
 
 async function fetchSession(token: string) {
   const res = await fetch(`${API_BASE}/session?token=${encodeURIComponent(token)}`)
-  if (!res.ok) throw new Error(await res.text())
+  if (!res.ok) {
+    const errorData = await res.text()
+    try {
+      const json = JSON.parse(errorData)
+      throw new Error(JSON.stringify(json))
+    } catch {
+      throw new Error(errorData)
+    }
+  }
   return res.json() as Promise<{
     customer: CustomerInfo
     session: { id: string } | null
@@ -98,8 +106,28 @@ export default function SupportChatPage() {
         setTokenExpiry(data.tokenMeta?.expiresAt ?? null)
         setLoading(false)
       })
-      .catch((e) => {
-        setError(e.message.includes("401") || e.message.includes("Token") ? "Link scaduto o non valido." : "Errore caricamento sessione.")
+      .catch(async (e) => {
+        // Parse error message
+        let errorText = e.message
+        try {
+          const errorJson = JSON.parse(errorText)
+          if (errorJson.error === "CUSTOMER_NOT_FOUND") {
+            setError("Customer non trovato o è stato eliminato. La conversazione non è più disponibile.")
+          } else if (errorJson.message) {
+            errorText = errorJson.message
+          }
+        } catch {
+          // Not JSON, use as-is
+        }
+        
+        // Set appropriate error message
+        if (errorText.includes("404") || errorText.includes("CUSTOMER_NOT_FOUND")) {
+          setError("Customer non trovato o è stato eliminato. La conversazione non è più disponibile.")
+        } else if (errorText.includes("401") || errorText.includes("Token")) {
+          setError("Link scaduto o non valido.")
+        } else {
+          setError("Errore caricamento sessione.")
+        }
         setLoading(false)
       })
   }, [token])
