@@ -434,32 +434,40 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 
           if (targetPhoneNumber) {
             try {
-              // Create WhatsApp message with AI summary
+              // Create compact summary (max 3 lines) for WhatsApp
+              let compactSummary = ""
+              if (chatSummary) {
+                // Extract just the summary part (skip customer details header)
+                const summaryMatch = chatSummary.match(/📋 Riassunto.*:\n([\s\S]+)/) || 
+                                   chatSummary.match(/📜 Messaggi.*:\n([\s\S]+)/)
+                if (summaryMatch && summaryMatch[1]) {
+                  const fullSummary = summaryMatch[1].trim()
+                  // Take first 200 chars or first 3 lines, whichever is shorter
+                  const lines = fullSummary.split('\n').slice(0, 3)
+                  compactSummary = lines.join('\n').slice(0, 250) + (fullSummary.length > 250 ? '...' : '')
+                } else {
+                  compactSummary = chatSummary.slice(0, 250) + '...'
+                }
+              }
+
               const whatsappMessage = `
 🔔 *RICHIESTA ASSISTENZA OPERATORE*
 
-⚠️ *ATTENZIONE*: Il cliente *${customer.name}* ha richiesto di parlare con un operatore.
+⚠️ Cliente *${customer.name}* richiede assistenza
 
-📋 *Dettagli della richiesta*:
-• Cliente: ${customer.name}
-• Telefono: ${customer.phone}
-• Email: ${customer.email || "N/A"}
-• Data/Ora: ${new Date().toLocaleString("it-IT")}
-• Posizione in coda: *#${queuePosition}*
-${request.reason ? `• Motivo: ${request.reason}` : ""}
+📋 *Dettagli*:
+• Nome: ${customer.name}
+• Tel: ${customer.phone}
+• Coda: #${queuePosition}
 
-🤖 *Riassunto AI della conversazione* (ultima ora):
+💬 *Riassunto* (ultima ora):
+${compactSummary || 'Nessuna conversazione recente'}
 
-${chatSummary}
+${supportChatUrl ? `🔗 *Link chat diretta* (48h):\n${supportChatUrl}\n` : ''}
+💬 I messaggi del cliente arriveranno qui.
+Rispondi per rispondergli.
 
-${supportChatUrl ? `💬 *Rispondi direttamente (link diretto, no login, valido 48h)*:\n${supportChatUrl}` : ""}
-
-💬 *I messaggi del cliente ti saranno inoltrati qui direttamente.*
-Rispondi a questo numero per rispondere al cliente.
-Scrivi *END* quando la conversazione è terminata.
-
----
-_Questa notifica è stata generata automaticamente dal sistema eChatbot quando un cliente ha richiesto assistenza operatore._
+✅ *Scrivi END quando hai finito per riattivare il chatbot.*
               `.trim()
               
               await prisma.whatsAppQueue.create({

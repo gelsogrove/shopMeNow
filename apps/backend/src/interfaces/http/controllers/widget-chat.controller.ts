@@ -147,12 +147,11 @@ async function buildWidgetSuggestionsWithAI(
               `\n` +
               `STRICT RULES:\n` +
               `- You MUST only pick questions from the FAQ LIST below — NEVER invent new ones\n` +
-              `- Pick 1-3 FAQ questions that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
+              `- Pick EXACTLY 3 FAQ questions that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
               `- Write each suggestion in FIRST PERSON (e.g. "Voglio sapere i prezzi" not "Prezzi")\n` +
               `- Max 40 characters per suggestion — shorten if the FAQ question is longer\n` +
               `- No links, no emoji, no punctuation at the end\n` +
-              `- If no FAQ is relevant to the chatbot reply → return []\n` +
-              `- Return ONLY a raw JSON array of strings, nothing else. Example: ["Come posso pagare?","Dove è il mio ordine?"]`,
+              `- Return ONLY a raw JSON array of EXACTLY 3 strings. Example: ["Come posso pagare?","Dove è il mio ordine?","Posso modificare?"]`,
           },
           {
             role: "user",
@@ -178,9 +177,16 @@ async function buildWidgetSuggestionsWithAI(
     if (Array.isArray(parsed)) {
       const valid = (parsed as unknown[])
         .filter((s): s is string => typeof s === "string" && s.trim().length > 0 && s.length <= 45)
-        .slice(0, 3)
-      // Return LLM suggestions if valid, otherwise fallback to static
-      return valid.length > 0 ? valid : staticReplies
+      
+      // RULE: We need EXACTLY 3 suggestions. If LLM returned <3, use static fallback
+      if (valid.length >= 3) {
+        return valid.slice(0, 3)
+      } else {
+        logger.warn("[WIDGET-SUGGESTIONS-AI] LLM returned <3 suggestions, using static fallback", {
+          returnedCount: valid.length
+        })
+        return staticReplies
+      }
     }
   } catch (err) {
     logger.warn("[WIDGET-SUGGESTIONS-AI] Failed, using static fallback", {
@@ -962,10 +968,8 @@ export class WidgetChatController {
         tokensUsed: llmResult.tokensUsed,
       })
 
-      const suggestions =
-        workspace.widgetAutoSuggestionsEnabled === true
-          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", normalizedLanguage || "it", workspace.widgetQuickReplies as any, resolvedWorkspaceId)
-          : []
+      // RULE: First message (welcome) has NO suggestions
+      const suggestions: string[] = []
 
       // 11. Save LLM response to conversation history
       await prisma.conversationMessage.create({

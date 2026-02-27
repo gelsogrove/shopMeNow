@@ -188,8 +188,10 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     expect(messageContent).toContain("+393331234567")
     // The message should NOT be just the template with empty summary
     expect(messageContent).not.toBe("")
-    // Verify the summary section is populated (not empty after "Riassunto AI")
-    expect(messageContent).toContain("Riassunto AI")
+    // Verify the summary section is populated (new compact format)
+    expect(messageContent).toContain("*Riassunto*")
+    // Verify END instruction is present
+    expect(messageContent).toContain("Scrivi END quando hai finito")
   })
 
   it("should include fallback message list when summary generation fails", async () => {
@@ -208,11 +210,14 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     const createCall = mockCreate.mock.calls[0][0]
     const messageContent = createCall.data.messageContent
 
-    // Should contain fallback message list
+    // Should contain fallback message list (first 3 lines, max 250 chars)
     expect(messageContent).toContain("Ho un problema con il mio ordine")
-    expect(messageContent).toContain("Voglio parlare con un operatore umano")
+    expect(messageContent).toContain("Capisco, posso aiutarti")
     // Should NOT be empty
     expect(messageContent.length).toBeGreaterThan(100)
+    // Verify compact format structure
+    expect(messageContent).toContain("*Riassunto*")
+    expect(messageContent).toContain("Scrivi END quando hai finito")
   })
 
   it("should include 'no messages' text when session has no recent messages", async () => {
