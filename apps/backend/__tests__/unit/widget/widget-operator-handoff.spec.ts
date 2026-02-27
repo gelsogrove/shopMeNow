@@ -1,12 +1,17 @@
 /**
  * Widget Operator Handoff — LLM Block Tests
  *
- * RULE: When activeChatbot=false (operator has taken over), the backend MUST
+ * RULE 1: When activeChatbot=false (operator has taken over), the backend MUST
  * block the LLM entirely and return { activeChatbot: false, blocked: true }.
  * The widget must NOT show any bot response while an operator is active.
  *
+ * RULE 2: Widget messages when activeChatbot=false MUST be relayed to the
+ * operator's WhatsApp number via OperatorRelayService.relayCustomerMessageToOperator().
+ * This closes the gap where widget customers' messages wouldn't reach the operator.
+ *
  * SCENARIO: Customer asks for human operator → CF contactOperator fires →
- *   activeChatbot=false in DB. Customer sends another message → LLM must NOT respond.
+ *   activeChatbot=false in DB. Customer sends another message → LLM must NOT respond,
+ *   but message IS saved and relayed to operator WhatsApp.
  */
 
 import { WidgetChatController } from "../../../src/interfaces/http/controllers/widget-chat.controller"
@@ -91,6 +96,15 @@ jest.mock("../../../src/services/registration-prompt.service", () => ({
   },
 }))
 
+// RELAY TUNNEL: Mock OperatorRelayService to verify widget messages are relayed
+let mockRelayCustomerMessageToOperator: jest.Mock
+jest.mock("../../../src/application/services/operator-relay.service", () => ({
+  OperatorRelayService: jest.fn().mockImplementation(() => ({
+    relayCustomerMessageToOperator: (...args: any[]) =>
+      mockRelayCustomerMessageToOperator(...args),
+  })),
+}))
+
 // ─── Test setup ──────────────────────────────────────────────────────────────
 const { prisma: mockPrisma } = jest.requireMock("@echatbot/database")
 
@@ -143,6 +157,7 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
 
     mockRouteMessage = jest.fn()
     mockCanProcessMessages = jest.fn().mockResolvedValue({ canProcess: true })
+    mockRelayCustomerMessageToOperator = jest.fn().mockResolvedValue(undefined)
   })
 
   it("BLOCKS LLM when activeChatbot=false (operator has taken over)", async () => {
@@ -236,5 +251,43 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
       expect(mockRouteMessage).not.toHaveBeenCalled()
       expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({ activeChatbot: false, blocked: true }))
     }
+  })
+
+  it("RELAYS widget message to operator WhatsApp when activeChatbot=false", async () => {
+    // SCENARIO: Widget customer sends message while operator has taken over
+    // RULE: Message saved to ConversationMessage (so operator sees it in backoffice)
+    //       AND relayed to operator's WhatsApp number (gap fix — widget was missing this)
+    // WHY THIS MATTERS: Without relay, widget customers' messages only appear in backoffice
+    //   but the operator on WhatsApp would miss them entirely
+
+    ;(mockPrisma.customers.findFirst as jest.Mock).mockResolvedValue({
+      id: CUSTOMER_ID,
+      workspaceId: WORKSPACE_ID,
+      customId: VISITOR_ID,
+      name: "Widget User",
+      language: "en",
+      isActive: false,
+      activeChatbot: false, // Operator has taken over
+    })
+
+    // Active session exists so message can be saved
+    ;(mockPrisma.chatSession.findFirst as jest.Mock).mockResolvedValue({
+      id: "session-op-mode",
+      customerId: CUSTOMER_ID,
+      status: "active",
+    })
+    ;(mockPrisma.conversationMessage.create as jest.Mock).mockResolvedValue({})
+
+    await controller.sendMessage(mockReq as Request, mockRes as Response)
+
+    // RULE: LLM must NOT be called
+    expect(mockRouteMessage).not.toHaveBeenCalled()
+
+    // RULE: Relay to operator WhatsApp must be called
+    expect(mockRelayCustomerMessageToOperator).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      expect.objectContaining({ id: CUSTOMER_ID }),
+      "ciao" // message from mockReq.body
+    )
   })
 })

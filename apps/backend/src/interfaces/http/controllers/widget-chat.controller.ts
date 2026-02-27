@@ -1444,6 +1444,17 @@ export class WidgetChatController {
               sessionId: operatorSession.id,
             })
           }
+
+          // Relay customer message to operator's WhatsApp number (same as WhatsApp channel)
+          // This fills the gap: widget customers' messages must reach the operator on WhatsApp
+          try {
+            const { OperatorRelayService } = require("../../../application/services/operator-relay.service")
+            const operatorRelayService = new OperatorRelayService(prisma)
+            await operatorRelayService.relayCustomerMessageToOperator(workspaceId, customer, message)
+          } catch (relayError) {
+            // Non-blocking — if relay fails, operator can still read messages in backoffice
+            logger.error("[WIDGET] ⚠️ Could not relay customer message to operator WhatsApp", relayError)
+          }
         } catch (saveError) {
           // Non-blocking — log but don't fail the request
           logger.error("[WIDGET] ⚠️ Could not save customer message in operator mode", saveError)

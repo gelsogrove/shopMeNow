@@ -44,6 +44,9 @@ import { PrismaClient } from "@echatbot/database"
 
 // Internal
 import logger from "../../utils/logger"
+import { SecureTokenService } from "./secure-token.service"
+
+const secureTokenService = new SecureTokenService()
 
 // ============================================================================
 // TYPES
@@ -236,12 +239,13 @@ export class OperatorRelayService {
     // 3. Reorder remaining queue
     await this.reorderQueue(workspaceId)
 
-    // 4. Notify operator about next customer in queue
-    const nextCustomer = await this.getActiveCustomer(workspaceId)
-    if (nextCustomer) {
-      await this.notifyOperatorNextCustomer(workspaceId, nextCustomer)
-    } else {
+    // 4. Notify operator about queue status (empty or dashboard link)
+    const remaining = await this.getQueuedCustomers(workspaceId)
+    if (remaining.length === 0) {
       logger.info("[OperatorRelay] Queue empty after web app done", { workspaceId })
+      await this.sendMessageToOperator(workspaceId, "✅ All done! Queue empty.", customerId)
+    } else {
+      await this.sendDashboardLinkToOperator(workspaceId, remaining.length, customerId)
     }
   }
 
@@ -353,17 +357,13 @@ export class OperatorRelayService {
       logger.info("[OperatorRelay] 🎉 Queue empty — all customers served", {
         workspaceId,
       })
+      await this.sendMessageToOperator(workspaceId, "✅ All done! Queue empty.", activeCustomer.id)
       return
     }
 
-    // 4. Reorder positions (1, 2, 3...) and notify operator of the next customer
+    // 4. Reorder positions (1, 2, 3...) and send dashboard link to operator
     await this.reorderQueue(workspaceId)
-
-    // Get the new position-1 customer (re-fetch after reordering)
-    const nextCustomer = await this.getActiveCustomer(workspaceId)
-    if (nextCustomer) {
-      await this.notifyOperatorNextCustomer(workspaceId, nextCustomer)
-    }
+    await this.sendDashboardLinkToOperator(workspaceId, remaining.length, activeCustomer.id)
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -533,15 +533,16 @@ export class OperatorRelayService {
   }
 
   /**
-   * Sends a WhatsApp notification to the operator when the next customer
-   * becomes active (after END).
+   * Sends a WhatsApp message directly to the operator's phone number.
+   * Reads operatorWhatsappNumber from workspace (with agentPhone fallback if available).
    *
-   * @param workspaceId  - Workspace scope
-   * @param nextCustomer - The customer who just became position 1
+   * @param workspaceId - Workspace scope
+   * @param message     - Text to send to operator
    */
-  private async notifyOperatorNextCustomer(
+  private async sendMessageToOperator(
     workspaceId: string,
-    nextCustomer: QueuedCustomer
+    message: string,
+    customerId: string
   ): Promise<void> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
@@ -550,41 +551,71 @@ export class OperatorRelayService {
 
     if (!workspace?.operatorWhatsappNumber) {
       logger.warn(
-        "[OperatorRelay] ⚠️ Cannot notify operator for next customer — number not configured",
+        "[OperatorRelay] ⚠️ Cannot send message to operator — operatorWhatsappNumber not configured",
         { workspaceId }
       )
       return
     }
 
-    const notification = [
-      "🔔 *NEXT CUSTOMER IN QUEUE*",
-      "",
-      `👤 Customer: *${nextCustomer.name}*`,
-      `📱 Contact: ${nextCustomer.phone ?? "Widget user"}`,
-      `📋 Queue position: #${nextCustomer.operatorQueuePosition ?? 1}`,
-      "",
-      "💬 Their messages are now being forwarded to you.",
-      "Reply here to respond directly to them.",
-      "",
-      "Send *END* when this conversation is finished.",
-    ].join("\n")
-
     await this.prisma.whatsAppQueue.create({
       data: {
         workspaceId,
-        customerId: nextCustomer.id,
+        customerId,
         phoneNumber: workspace.operatorWhatsappNumber,
-        messageContent: notification,
+        messageContent: message,
         status: "pending",
         channel: "whatsapp",
         skipSecurityCheck: true,
       },
     })
 
-    logger.info("[OperatorRelay] 📣 Operator notified about next customer", {
+    logger.info("[OperatorRelay] 📤 Message sent to operator", {
       workspaceId,
-      customerId: nextCustomer.id,
       operatorPhone: workspace.operatorWhatsappNumber,
     })
+  }
+
+  /**
+   * Generates an operator_dashboard token and sends the dashboard URL to the operator.
+   * Called after END or done when there are still customers waiting in queue.
+   *
+   * @param workspaceId  - Workspace scope
+   * @param queueLength  - Number of customers still waiting
+   */
+  private async sendDashboardLinkToOperator(
+    workspaceId: string,
+    queueLength: number,
+    customerId: string
+  ): Promise<void> {
+    try {
+      const dashboardToken = await secureTokenService.createToken(
+        "operator_dashboard",
+        workspaceId,
+        { workspaceId },
+        "48h"
+      )
+
+      const frontendUrl = process.env.FRONTEND_URL || "https://www.echatbot.ai"
+      const dashboardUrl = `${frontendUrl}/operator-dashboard?token=${dashboardToken}`
+
+      const message = [
+        "✅ Chat closed.",
+        `👥 ${queueLength} customer(s) waiting.`,
+        `Choose next: ${dashboardUrl}`,
+      ].join("\n")
+
+      await this.sendMessageToOperator(workspaceId, message, customerId)
+
+      logger.info("[OperatorRelay] 📊 Dashboard link sent to operator", {
+        workspaceId,
+        queueLength,
+        dashboardUrl,
+      })
+    } catch (error) {
+      logger.error("[OperatorRelay] ❌ Failed to send dashboard link to operator", {
+        workspaceId,
+        error,
+      })
+    }
   }
 }

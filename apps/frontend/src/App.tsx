@@ -74,6 +74,7 @@ const OrdersPublicPage = lazy(() => import("./pages/OrdersPublicPage"))
 const FeedbackPage = lazy(() => import("./pages/feedback"))
 const RegisterPage = lazy(() => import("./pages/register"))
 const SupportChatPage = lazy(() => import("./pages/SupportChatPage"))
+const OperatorDashboardPage = lazy(() => import("./pages/OperatorDashboardPage"))
 
 function AuthLoginRedirect() {
   const location = useLocation()
@@ -127,6 +128,22 @@ export function App() {
               }
             >
               <SupportChatPage />
+            </Suspense>
+          }
+        />
+
+        {/* Operator Dashboard — token-based, NO PROVIDERS (public, standalone) */}
+        <Route
+          path="/operator-dashboard"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <OperatorDashboardPage />
             </Suspense>
           }
         />

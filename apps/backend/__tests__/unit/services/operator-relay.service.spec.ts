@@ -7,12 +7,28 @@
  *  - Operator sends messages via WhatsApp → relayed to active customer
  *  - Customer sends messages while chatbot disabled → relayed to operator
  *  - Sequential queue: one operator serves one customer at a time
- *  - "END" from operator → re-enables chatbot, moves to next customer
+ *  - "END" from operator → re-enables chatbot, sends dashboard link OR "all done"
  *  - Web app "done" → same, but triggered via HTTP endpoint
+ *
+ * POST-DASHBOARD BEHAVIOUR (after plan change):
+ *  - When queue is empty after END → operator gets "✅ All done! Queue empty." message
+ *  - When queue has remaining customers → operator gets a dashboard URL to choose next
+ *  - FIFO auto-notify is REMOVED — operator actively selects from dashboard
  */
 
 import { PrismaClient } from "@echatbot/database"
 import { OperatorRelayService } from "../../../src/application/services/operator-relay.service"
+
+// ============================================================================
+// MOCK SECURE TOKEN SERVICE
+// (operator-relay.service.ts instantiates it at module level)
+// ============================================================================
+
+jest.mock("../../../src/application/services/secure-token.service", () => ({
+  SecureTokenService: jest.fn().mockImplementation(() => ({
+    createToken: jest.fn().mockResolvedValue("mock-dashboard-token-abc"),
+  })),
+}))
 
 // ============================================================================
 // MOCK PRISMA
@@ -239,16 +255,17 @@ describe("OperatorRelayService", () => {
 
   describe("processEndCommand", () => {
     it("should re-enable chatbot and clear queue fields for active customer", async () => {
-      // SCENARIO: Operator sends END while serving customer A
+      // SCENARIO: Operator sends END while serving customer A (queue becomes empty)
       // RULE: customer A gets activeChatbot=true, all queue fields cleared
       const activeCustomer = makeCustomer()
-      mockPrisma.customers.findFirst
-        .mockResolvedValueOnce(activeCustomer) // getActiveCustomer
-        .mockResolvedValueOnce(null) // getActiveCustomer after reorder (empty queue)
+      mockPrisma.customers.findFirst.mockResolvedValueOnce(activeCustomer) // getActiveCustomer
 
-      mockPrisma.customers.findMany.mockResolvedValue([]) // getQueuedCustomers for reorder
+      // Queue is empty after release
+      mockPrisma.customers.findMany.mockResolvedValue([])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.whatsAppQueue.create.mockResolvedValue({})
+      // sendMessageToOperator → workspace.findUnique (no operator number configured = silent skip)
+      mockPrisma.workspace.findUnique.mockResolvedValue({ operatorWhatsappNumber: null })
 
       await service.processEndCommand(WORKSPACE_ID)
 
@@ -271,17 +288,16 @@ describe("OperatorRelayService", () => {
       // SCENARIO: Operator sends END
       // RULE: Customer receives a farewell message so they know chatbot is re-enabled
       const activeCustomer = makeCustomer()
-      mockPrisma.customers.findFirst
-        .mockResolvedValueOnce(activeCustomer)
-        .mockResolvedValueOnce(null)
+      mockPrisma.customers.findFirst.mockResolvedValueOnce(activeCustomer)
 
       mockPrisma.customers.findMany.mockResolvedValue([])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.whatsAppQueue.create.mockResolvedValue({})
+      mockPrisma.workspace.findUnique.mockResolvedValue({ operatorWhatsappNumber: null })
 
       await service.processEndCommand(WORKSPACE_ID)
 
-      // ASSERT: message enqueued to customer's phone
+      // ASSERT: farewell message enqueued to customer's phone
       expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -293,9 +309,36 @@ describe("OperatorRelayService", () => {
       )
     })
 
-    it("should notify operator of next customer after END", async () => {
-      // SCENARIO: Customer A served, Customer B waiting
-      // RULE: After END, operator gets notification about Customer B
+    it("should send 'all done' message to operator when queue is empty after END", async () => {
+      // SCENARIO: Operator sends END and no more customers are waiting
+      // RULE: Operator gets "All done! Queue empty." message (new dashboard behaviour)
+      // IMPORTANT: replaces old FIFO auto-notify — operator must use dashboard to pick next
+      const activeCustomer = makeCustomer()
+      const workspace = { operatorWhatsappNumber: "+39111222333" }
+
+      mockPrisma.customers.findFirst.mockResolvedValueOnce(activeCustomer)
+      // Queue is empty after release
+      mockPrisma.customers.findMany.mockResolvedValue([])
+      mockPrisma.customers.update.mockResolvedValue({})
+      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
+      mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
+
+      await service.processEndCommand(WORKSPACE_ID)
+
+      // ASSERT: "all done" message sent to operator
+      const calls = mockPrisma.whatsAppQueue.create.mock.calls
+      const operatorMsg = calls.find(
+        (c) => c[0].data.phoneNumber === workspace.operatorWhatsappNumber
+      )
+      expect(operatorMsg).toBeDefined()
+      expect(operatorMsg?.[0].data.messageContent).toContain("All done")
+      expect(operatorMsg?.[0].data.messageContent).toContain("Queue empty")
+    })
+
+    it("should send dashboard link to operator when queue still has customers after END", async () => {
+      // SCENARIO: Customer A served, Customer B still waiting
+      // RULE: After END, operator gets a dashboard URL to CHOOSE the next customer
+      //       (old FIFO auto-notify replaced by dashboard-based selection)
       const customerA = makeCustomer({ name: "Mario", id: "cust-A" })
       const customerB = makeCustomer({
         name: "Luigi",
@@ -306,11 +349,9 @@ describe("OperatorRelayService", () => {
 
       const workspace = { operatorWhatsappNumber: "+39111222333" }
 
-      mockPrisma.customers.findFirst
-        .mockResolvedValueOnce(customerA)   // getActiveCustomer first call
-        .mockResolvedValueOnce(customerB)   // getActiveCustomer after reorder (next customer)
+      mockPrisma.customers.findFirst.mockResolvedValueOnce(customerA) // getActiveCustomer
 
-      // reorderQueue: findMany for remaining customers
+      // getQueuedCustomers (remaining.length check) + reorderQueue both call findMany
       mockPrisma.customers.findMany.mockResolvedValue([customerB])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
@@ -318,13 +359,16 @@ describe("OperatorRelayService", () => {
 
       await service.processEndCommand(WORKSPACE_ID)
 
-      // ASSERT: at least one WhatsApp message sent to operator's number
+      // ASSERT: dashboard link message sent to operator's number
       const waCreateCalls = mockPrisma.whatsAppQueue.create.mock.calls
       const operatorNotification = waCreateCalls.find(
         (call) => call[0].data.phoneNumber === workspace.operatorWhatsappNumber
       )
       expect(operatorNotification).toBeDefined()
-      expect(operatorNotification?.[0].data.messageContent).toContain("Luigi")
+      // ASSERT: message contains the dashboard URL (SecureTokenService generates the token — tested separately)
+      expect(operatorNotification?.[0].data.messageContent).toContain("operator-dashboard")
+      // ASSERT: message indicates how many customers are waiting
+      expect(operatorNotification?.[0].data.messageContent).toContain("1 customer")
     })
 
     it("should do nothing when queue is empty on END", async () => {
@@ -465,9 +509,10 @@ describe("OperatorRelayService", () => {
   // ──────────────────────────────────────────────────────────────────────────
 
   describe("releaseCustomerAndProcessNext", () => {
-    it("should release customer, send farewell, and notify operator of next", async () => {
+    it("should release customer, send farewell, and send dashboard link when queue has remaining", async () => {
       // SCENARIO: Web app operator clicks "Done" for customer A; customer B is waiting
-      // RULE: A gets chatbot re-enabled; operator gets notification about B
+      // RULE: A gets chatbot re-enabled; operator gets dashboard link to choose next
+      //       (new behaviour: operator picks from dashboard instead of auto-FIFO)
       const customerA = makeCustomer({ id: "cust-A", name: "Mario" })
       const customerB = makeCustomer({
         id: "cust-B",
@@ -478,11 +523,10 @@ describe("OperatorRelayService", () => {
       const workspace = { operatorWhatsappNumber: "+39999888777" }
 
       // findFirst for loading customerA details
-      mockPrisma.customers.findFirst
-        .mockResolvedValueOnce(customerA)  // initial load
-        .mockResolvedValueOnce(customerB)  // getActiveCustomer after reorder
+      mockPrisma.customers.findFirst.mockResolvedValueOnce(customerA)
 
-      mockPrisma.customers.findMany.mockResolvedValue([customerB]) // reorderQueue
+      // reorderQueue + getQueuedCustomers both call findMany
+      mockPrisma.customers.findMany.mockResolvedValue([customerB])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
       mockPrisma.whatsAppQueue.create.mockResolvedValue({})
@@ -498,17 +542,43 @@ describe("OperatorRelayService", () => {
       )
 
       // ASSERT: farewell message queued for customer A (whatsapp channel)
-      const farawellCall = mockPrisma.whatsAppQueue.create.mock.calls.find(
+      const farewell = mockPrisma.whatsAppQueue.create.mock.calls.find(
         (c) => c[0].data.phoneNumber === customerA.phone
       )
-      expect(farawellCall).toBeDefined()
+      expect(farewell).toBeDefined()
 
-      // ASSERT: operator notified about customer B
-      const operatorNotif = mockPrisma.whatsAppQueue.create.mock.calls.find(
+      // ASSERT: operator gets dashboard link (not old FIFO customer name notification)
+      const operatorMsg = mockPrisma.whatsAppQueue.create.mock.calls.find(
+        (c) => c[0].data.phoneNumber === workspace.operatorWhatsappNumber
+      )
+      expect(operatorMsg).toBeDefined()
+      // ASSERT: message references operator-dashboard (dashboard-based selection, not FIFO auto-notify)
+      expect(operatorMsg?.[0].data.messageContent).toContain("operator-dashboard")
+    })
+
+    it("should send 'all done' to operator when queue is empty after release", async () => {
+      // SCENARIO: Only one customer in queue; after done the queue is empty
+      // RULE: Operator gets "All done! Queue empty." message (dashboard not needed)
+      const customerA = makeCustomer()
+      const workspace = { operatorWhatsappNumber: "+39999888777" }
+
+      mockPrisma.customers.findFirst.mockResolvedValueOnce(customerA)
+
+      // Queue is empty after release
+      mockPrisma.customers.findMany.mockResolvedValue([])
+      mockPrisma.customers.update.mockResolvedValue({})
+      mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
+      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
+
+      await service.releaseCustomerAndProcessNext(WORKSPACE_ID, customerA.id)
+
+      // ASSERT: "all done" message sent to operator
+      const calls = mockPrisma.whatsAppQueue.create.mock.calls
+      const operatorNotif = calls.find(
         (c) => c[0].data.phoneNumber === workspace.operatorWhatsappNumber
       )
       expect(operatorNotif).toBeDefined()
-      expect(operatorNotif?.[0].data.messageContent).toContain("Luigi")
+      expect(operatorNotif?.[0].data.messageContent).toContain("All done")
     })
 
     it("should handle gracefully when customer is not found", async () => {
@@ -521,32 +591,6 @@ describe("OperatorRelayService", () => {
       ).resolves.not.toThrow()
 
       expect(mockPrisma.customers.update).not.toHaveBeenCalled()
-    })
-
-    it("should not notify operator when queue is empty after release", async () => {
-      // SCENARIO: Only one customer in queue; after done the queue is empty
-      // RULE: No "next customer" notification sent to operator
-      const customerA = makeCustomer()
-      const workspace = { operatorWhatsappNumber: "+39999888777" }
-
-      mockPrisma.customers.findFirst
-        .mockResolvedValueOnce(customerA) // initial load
-        .mockResolvedValueOnce(null)       // getActiveCustomer after reorder (empty)
-
-      mockPrisma.customers.findMany.mockResolvedValue([]) // reorderQueue
-      mockPrisma.customers.update.mockResolvedValue({})
-      mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
-
-      await service.releaseCustomerAndProcessNext(WORKSPACE_ID, customerA.id)
-
-      // ASSERT: only farewell to customer, no operator "next" notification
-      const calls = mockPrisma.whatsAppQueue.create.mock.calls
-      const operatorNotif = calls.find(
-        (c) => c[0].data.phoneNumber === workspace.operatorWhatsappNumber
-      )
-      // Farewell goes to customer phone, not operator phone — so no operator notification here
-      expect(operatorNotif).toBeUndefined()
     })
   })
 
@@ -563,11 +607,9 @@ describe("OperatorRelayService", () => {
       const customerC = makeCustomer({ id: "cust-C", operatorQueuePosition: 3 })
       const workspace = { operatorWhatsappNumber: "+39111222333" }
 
-      mockPrisma.customers.findFirst
-        .mockResolvedValueOnce(customerA) // getActiveCustomer (for A)
-        .mockResolvedValueOnce(customerB) // getActiveCustomer after reorder (B is now pos=1)
+      mockPrisma.customers.findFirst.mockResolvedValueOnce(customerA) // getActiveCustomer
 
-      // reorderQueue fetches remaining after A is cleared
+      // Both getQueuedCustomers and reorderQueue call findMany
       mockPrisma.customers.findMany.mockResolvedValue([customerB, customerC])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)

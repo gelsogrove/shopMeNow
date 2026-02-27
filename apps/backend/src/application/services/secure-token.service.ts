@@ -64,7 +64,8 @@ export class SecureTokenService {
       | "profile"
       | "any"
       | "universal"
-      | "support_chat",
+      | "support_chat"
+      | "operator_dashboard",
     workspaceId: string,
     payload?: any,
     expiresIn?: string,
@@ -74,8 +75,10 @@ export class SecureTokenService {
     customerId?: string
   ): Promise<string> {
     try {
-      // Special case: registration tokens don't need customerId (customer doesn't exist yet)
-      if (!customerId && type !== "registration") {
+      // Special case: registration and operator_dashboard tokens don't need customerId
+      // - registration: customer doesn't exist yet
+      // - operator_dashboard: workspace-level token (no specific customer)
+      if (!customerId && type !== "registration" && type !== "operator_dashboard") {
         throw new Error("KISS TOKEN: customerId è obbligatorio")
       }
 
@@ -92,6 +95,18 @@ export class SecureTokenService {
             phoneNumber,
             workspaceId,
             type: "registration",
+            expiresAt: {
+              gt: new Date(), // NON scaduto
+            },
+          },
+        })
+      } else if (type === "operator_dashboard") {
+        // operator_dashboard tokens are workspace-level (no customerId)
+        existingToken = await this.prisma.secureToken.findFirst({
+          where: {
+            workspaceId,
+            type: "operator_dashboard",
+            customerId: null,
             expiresAt: {
               gt: new Date(), // NON scaduto
             },
@@ -145,6 +160,15 @@ export class SecureTokenService {
             phoneNumber,
             workspaceId,
             type: "registration",
+          },
+        })
+      } else if (type === "operator_dashboard") {
+        // operator_dashboard tokens are workspace-level, clean by workspaceId + type
+        await this.prisma.secureToken.deleteMany({
+          where: {
+            workspaceId,
+            type: "operator_dashboard",
+            customerId: null,
           },
         })
       } else if (customerId) {

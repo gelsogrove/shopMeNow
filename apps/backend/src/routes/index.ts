@@ -140,6 +140,7 @@ import { createTrashRoutes } from "../interfaces/http/routes/trash.routes"
 import { supportRouter } from "../interfaces/http/routes/support.routes"
 import { adminSupportRouter } from "../interfaces/http/routes/admin-support.routes"
 import { supportChatRoutes } from "../interfaces/http/routes/support-chat.routes"
+import { operatorDashboardRoutes } from "../interfaces/http/routes/operator-dashboard.routes"
 import { paypalRoutes } from "../interfaces/http/routes/paypal.routes"
 import { pushCampaignRoutes } from "../interfaces/http/routes/push-campaign.routes"
 
@@ -418,6 +419,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/pricing", // PUBLIC pricing configuration endpoint (no auth required)
   "/subscription/plans", // PUBLIC subscription plans endpoint (Feature 185)
   "/support-chat", // 🆘 PUBLIC operator handoff routes (token-authenticated)
+  "/operator-dashboard", // 📊 PUBLIC operator dashboard routes (token-authenticated)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {
@@ -845,6 +847,10 @@ logger.info("Registered admin support ticket routes for backoffice")
 // Mount operator handoff support-chat routes (PUBLIC, token-authenticated)
 router.use("/support-chat", supportChatRoutes)
 logger.info("Registered operator support-chat routes (token-auth, no login)")
+
+// Mount operator dashboard routes (PUBLIC, token-authenticated)
+router.use("/operator-dashboard", operatorDashboardRoutes)
+logger.info("Registered operator dashboard routes (token-auth, no login)")
 
 // Health check
 router.get("/health", (req, res) => {
