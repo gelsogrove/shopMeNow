@@ -398,7 +398,10 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
   }
 
   /**
-   * Parse LLM JSON response and log parsing failures
+   * Parse LLM JSON response and log parsing failures.
+   * Supports two formats:
+   * - New format: {"translated": true, "message": "...", "originalLanguage": "...", "targetLanguage": "..."}
+   * - Legacy DB prompt format: {"translatedText": "...", "safe": true, "blockedReason": null}
    */
   private parseTranslationResponse(
     llmResponse: string
@@ -410,7 +413,15 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
   } | null {
     if (!llmResponse) return null
     try {
-      return JSON.parse(llmResponse)
+      const parsed = JSON.parse(llmResponse)
+      // Normalize legacy "translatedText" key to "message" so downstream code always finds "message"
+      if (!parsed.message && parsed.translatedText) {
+        parsed.message = parsed.translatedText
+        if (parsed.translated === undefined) {
+          parsed.translated = true
+        }
+      }
+      return parsed
     } catch (error) {
       logger.error("❌ Failed to parse TranslationAgent JSON response", {
         llmResponse,
