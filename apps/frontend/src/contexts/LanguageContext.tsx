@@ -97,6 +97,16 @@ const translations = {
     "humanLoop.subtitle":
       "Passa a un operatore quando serve mantenendo tutto il contesto. L'agente riceve una notifica WhatsApp per intervenire immediatamente. Il team resta in controllo, con l'AI che fa il lavoro pesante.",
 
+    // Widget to WhatsApp Section
+    "widgetToWhatsapp.badge": "Novità",
+    "widgetToWhatsapp.title": "Dal Widget al tuo WhatsApp",
+    "widgetToWhatsapp.subtitle":
+      "Il cliente inizia nel widget, l'operatore risponde dal suo WhatsApp. Quando serve supporto umano, l'operatore riceve una notifica sul suo WhatsApp personale con tutto il contesto della conversazione: niente app nuove, niente backoffice aperto. Rispondi dove sei, quando vuoi.",
+    "widgetToWhatsapp.chip1": "Notifica in tempo reale",
+    "widgetToWhatsapp.chip2": "Contesto chat condiviso",
+    "widgetToWhatsapp.chip3": "Solo il tuo WhatsApp",
+    "widgetToWhatsapp.chip4": "Zero app extra",
+
     // Pricing
     "pricing.title": "Scegli il Tuo Piano",
     "pricing.subtitle": "Inizia gratis e scala mentre cresci",
@@ -632,6 +642,16 @@ const translations = {
     "humanLoop.title": "Human-in-the-loop support",
     "humanLoop.subtitle":
       "Escalate to a human when needed while keeping full context. The agent receives a WhatsApp notification to intervene immediately. Your team stays in control, with the AI doing the heavy lifting.",
+
+    // Widget to WhatsApp Section
+    "widgetToWhatsapp.badge": "New Feature",
+    "widgetToWhatsapp.title": "From Widget to Your WhatsApp",
+    "widgetToWhatsapp.subtitle":
+      "The customer starts in the widget, the operator replies from their WhatsApp. When human support is needed, the operator gets a notification on their personal WhatsApp with the full chat context: no new apps, no open backoffice. Reply from wherever you are, whenever you want.",
+    "widgetToWhatsapp.chip1": "Real-time notification",
+    "widgetToWhatsapp.chip2": "Full chat context shared",
+    "widgetToWhatsapp.chip3": "Just your WhatsApp",
+    "widgetToWhatsapp.chip4": "Zero extra apps",
 
     // Pricing
     "pricing.title": "Choose Your Plan",
@@ -1204,6 +1224,16 @@ const translations = {
     "humanLoop.subtitle":
       "Escala a un humano cuando sea necesario manteniendo todo el contexto. El agente recibe una notificación de WhatsApp para intervenir de inmediato. Tu equipo mantiene el control y la IA hace el trabajo pesado.",
 
+    // Widget to WhatsApp Section
+    "widgetToWhatsapp.badge": "Nueva función",
+    "widgetToWhatsapp.title": "Del Widget a tu WhatsApp",
+    "widgetToWhatsapp.subtitle":
+      "El cliente empieza en el widget, el operador responde desde su WhatsApp personal. Cuando se necesita soporte humano, el operador recibe una notificación con todo el contexto de la conversación: sin nuevas apps, sin backoffice abierto. Responde desde donde estés, cuando quieras.",
+    "widgetToWhatsapp.chip1": "Notificación en tiempo real",
+    "widgetToWhatsapp.chip2": "Contexto completo compartido",
+    "widgetToWhatsapp.chip3": "Solo tu WhatsApp",
+    "widgetToWhatsapp.chip4": "Cero apps extra",
+
     // Pricing
     "pricing.title": "Elige Tu Plan",
     "pricing.subtitle": "Comienza gratis y escala mientras creces",
@@ -1639,6 +1669,16 @@ const translations = {
     "humanLoop.title": "Suporte human-in-the-loop",
     "humanLoop.subtitle":
       "Escale para um humano quando necessário mantendo todo o contexto. O agente recebe uma notificação do WhatsApp para intervir imediatamente. Sua equipe fica no controle e a IA faz o trabalho pesado.",
+
+    // Widget to WhatsApp Section
+    "widgetToWhatsapp.badge": "Nova função",
+    "widgetToWhatsapp.title": "Do Widget ao seu WhatsApp",
+    "widgetToWhatsapp.subtitle":
+      "O cliente começa no widget, o operador responde pelo seu WhatsApp pessoal. Quando o suporte humano é necessário, o operador recebe uma notificação com todo o contexto da conversa: sem novos apps, sem backoffice aberto. Responda de onde estiver, quando quiser.",
+    "widgetToWhatsapp.chip1": "Notificação em tempo real",
+    "widgetToWhatsapp.chip2": "Contexto completo compartilhado",
+    "widgetToWhatsapp.chip3": "Apenas o seu WhatsApp",
+    "widgetToWhatsapp.chip4": "Zero apps extras",
 
     // Pricing
     "pricing.title": "Escolha Seu Plano",

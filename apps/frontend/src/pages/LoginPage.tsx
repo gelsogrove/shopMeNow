@@ -2127,6 +2127,134 @@ export function LoginPage() {
         </div>
       </div>
 
+      {/* Widget to WhatsApp Section */}
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
+            {/* Green/teal decorative frame - WhatsApp theme */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-teal-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-10 items-center">
+
+                {/* Left: Content */}
+                <div className="space-y-6 text-center lg:text-left">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <span>📱</span>
+                      {t("widgetToWhatsapp.badge")}
+                    </div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                      {t("widgetToWhatsapp.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                      {t("widgetToWhatsapp.subtitle")}
+                    </p>
+                  </div>
+
+                  {/* Feature chips */}
+                  <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+                    {(["chip1", "chip2", "chip3", "chip4"] as const).map((chip) => (
+                      <span
+                        key={chip}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-200"
+                      >
+                        <svg className="w-3.5 h-3.5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {t(`widgetToWhatsapp.${chip}`)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right: Widget → WhatsApp illustration */}
+                <div className="flex items-center justify-center lg:justify-end">
+                  <div className="relative w-[260px] h-[200px] flex items-center justify-center select-none">
+
+                    {/* Widget mock – left */}
+                    <div className="absolute left-0 top-4 bg-white rounded-2xl shadow-xl border border-slate-200 w-[100px] p-3 z-10">
+                      <div className="text-[7px] text-slate-400 font-bold mb-2 tracking-widest uppercase">Widget</div>
+                      <div className="space-y-1.5">
+                        <div className="h-2 w-full bg-green-400 rounded-full opacity-80"></div>
+                        <div className="h-2 w-3/4 bg-slate-200 rounded-full ml-auto"></div>
+                        <div className="h-2 w-2/3 bg-green-400 rounded-full opacity-60"></div>
+                        <div className="h-2 w-4/5 bg-slate-200 rounded-full ml-auto"></div>
+                      </div>
+                      <div className="flex gap-1 mt-2.5 justify-end">
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce [animation-delay:0ms]"></div>
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce [animation-delay:150ms]"></div>
+                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce [animation-delay:300ms]"></div>
+                      </div>
+                    </div>
+
+                    {/* Arrow + label – center */}
+                    <div className="absolute left-[88px] top-1/2 -translate-y-[55%] flex flex-col items-center gap-1 z-20">
+                      <div className="text-[9px] text-green-700 font-semibold bg-white px-2 py-0.5 rounded-full border border-green-200 shadow-sm whitespace-nowrap">
+                        operator
+                      </div>
+                      <svg width="50" height="20" viewBox="0 0 50 20" fill="none" className="text-green-500">
+                        <path d="M2 10 H40 M32 3 L40 10 L32 17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+
+                    {/* Smartphone with WhatsApp – right */}
+                    <div className="absolute right-0 top-0 w-[90px] h-[160px] bg-slate-800 rounded-[22px] shadow-2xl overflow-hidden ring-2 ring-slate-700 group-hover:ring-green-400 transition-all duration-300">
+                      {/* Status bar */}
+                      <div className="h-4 bg-slate-900 flex items-center justify-center">
+                        <div className="w-14 h-1.5 bg-slate-700 rounded-full"></div>
+                      </div>
+                      {/* WhatsApp header */}
+                      <div className="bg-[#075e54] px-2 py-1.5 flex items-center gap-1.5">
+                        <div className="w-5 h-5 bg-[#25d366] rounded-full flex items-center justify-center text-white text-[7px] font-bold shrink-0">A</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="h-1.5 w-full bg-white opacity-90 rounded-full"></div>
+                          <div className="h-1 w-2/3 bg-white opacity-50 rounded-full mt-0.5"></div>
+                        </div>
+                      </div>
+                      {/* Chat messages */}
+                      <div className="bg-[#ece5dd] p-1.5 space-y-1.5 h-[90px] overflow-hidden">
+                        <div className="bg-white rounded-lg rounded-tl-none px-1.5 py-1 w-4/5 shadow-sm">
+                          <div className="h-1 w-full bg-slate-200 rounded-full"></div>
+                          <div className="h-1 w-2/3 bg-slate-200 rounded-full mt-0.5"></div>
+                        </div>
+                        <div className="bg-[#dcf8c6] rounded-lg rounded-tr-none px-1.5 py-1 w-3/4 ml-auto shadow-sm">
+                          <div className="h-1 w-full bg-green-200 rounded-full"></div>
+                        </div>
+                        <div className="bg-white rounded-lg rounded-tl-none px-1.5 py-1 w-4/5 shadow-sm">
+                          <div className="h-1 w-full bg-slate-200 rounded-full"></div>
+                          <div className="h-1 w-1/2 bg-slate-200 rounded-full mt-0.5"></div>
+                        </div>
+                      </div>
+                      {/* Input bar */}
+                      <div className="bg-white px-1.5 py-1 flex gap-1 items-center border-t border-slate-100">
+                        <div className="flex-1 h-4 bg-slate-100 rounded-full"></div>
+                        <div className="w-4 h-4 bg-[#25d366] rounded-full flex items-center justify-center shrink-0">
+                          <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                      {/* Notification badge */}
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#25d366] rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-lg animate-pulse ring-2 ring-white z-30">
+                        1
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
       {/* Integration Section */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
