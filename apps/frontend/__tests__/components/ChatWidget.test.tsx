@@ -189,7 +189,7 @@ describe('ChatWidget', () => {
     localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any)
-      // First call: widget status
+      // First call: widget status (reconcile / returning-user path)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -206,15 +206,21 @@ describe('ChatWidget', () => {
           },
         }),
       })
-      // Second call: send message
+      // Second call: restoreOperatorState → /widget/operator-messages (always called at init)
+      // RULE: must be mocked because it runs before the user interaction fetch
       .mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        response: 'This is the bot response',
-        sessionId: 'session-123',
-      }),
-    })
+        ok: true,
+        json: async () => ({ activeChatbot: true, messages: [] }),
+      })
+      // Third call: send message
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          response: 'This is the bot response',
+          sessionId: 'session-123',
+        }),
+      })
 
     renderWithLanguage(<ChatWidget workspaceId="test-workspace" />)
 
@@ -350,7 +356,7 @@ describe('ChatWidget', () => {
     localStorageMock.getItem.mockReturnValue('visitor_1700000000000_test123')
 
     ;(global.fetch as any)
-      // status
+      // First call: widget status (reconcile / returning-user path)
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -367,7 +373,13 @@ describe('ChatWidget', () => {
           },
         }),
       })
-      // convertVisitor
+      // Second call: restoreOperatorState → /widget/operator-messages (always called at init)
+      // RULE: must be mocked because it runs before the convertVisitor call
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ activeChatbot: true, messages: [] }),
+      })
+      // Third call: convertVisitor
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
