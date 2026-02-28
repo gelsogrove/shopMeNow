@@ -463,9 +463,8 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
 💬 *Riassunto* (ultima ora):
 ${compactSummary || 'Nessuna conversazione recente'}
 
-${supportChatUrl ? `🔗 *Link chat diretta* (48h):\n${supportChatUrl}\n` : ''}
 💬 I messaggi del cliente arriveranno qui.
-Rispondi per rispondergli.
+Rispondi direttamente su WhatsApp.
 
 ✅ *Scrivi END quando hai finito per riattivare il chatbot.*
               `.trim()
