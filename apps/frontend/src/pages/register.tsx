@@ -474,9 +474,9 @@ const RegisterPage = () => {
               value={formData.firstName}
               onChange={handleInputChange}
               required
-              className={`mt-1 block w-full px-3 py-2 border ${
+              className={`mt-1 block w-full px-4 py-3 text-base border ${
                 formErrors.firstName ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              } rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
             />
             {formErrors.firstName && (
               <p className="mt-1 text-sm text-red-600">
@@ -500,9 +500,9 @@ const RegisterPage = () => {
               value={formData.lastName}
               onChange={handleInputChange}
               required
-              className={`mt-1 block w-full px-3 py-2 border ${
+              className={`mt-1 block w-full px-4 py-3 text-base border ${
                 formErrors.lastName ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              } rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
             />
             {formErrors.lastName && (
               <p className="mt-1 text-sm text-red-600">{formErrors.lastName}</p>
@@ -524,9 +524,9 @@ const RegisterPage = () => {
               value={formData.company}
               onChange={handleInputChange}
               required
-              className={`mt-1 block w-full px-3 py-2 border ${
+              className={`mt-1 block w-full px-4 py-3 text-base border ${
                 formErrors.company ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              } rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
             />
             {formErrors.company && (
               <p className="mt-1 text-sm text-red-600">{formErrors.company}</p>
@@ -548,9 +548,9 @@ const RegisterPage = () => {
               value={formData.email}
               onChange={handleInputChange}
               required
-              className={`mt-1 block w-full px-3 py-2 border ${
+              className={`mt-1 block w-full px-4 py-3 text-base border ${
                 formErrors.email ? "border-red-500" : "border-gray-300"
-              } rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+              } rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
             />
             {formErrors.email && (
               <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
@@ -570,7 +570,7 @@ const RegisterPage = () => {
               name="language"
               value={formData.language}
               onChange={handleInputChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="mt-1 block w-full px-4 py-3 text-base border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             >
               {languages.map((lang) => (
                 <option key={lang.code} value={lang.code}>
@@ -584,54 +584,54 @@ const RegisterPage = () => {
           <input type="hidden" name="currency" value="USD" />
 
           {/* Push notifications */}
-          <div className="flex items-start">
-            <div className="flex items-center h-5">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center pt-0.5">
               <input
                 id="pushNotificationsConsent"
                 name="pushNotificationsConsent"
                 type="checkbox"
                 checked={formData.pushNotificationsConsent}
                 onChange={handleCheckboxChange}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
               />
             </div>
-            <div className="ml-3 text-sm">
+            <div className="text-sm">
               <label
                 htmlFor="pushNotificationsConsent"
-                className="font-medium text-gray-700"
+                className="font-medium text-gray-700 cursor-pointer"
               >
                 {texts.pushNotifications}
               </label>
-              <p className="text-gray-500">
+              <p className="text-gray-500 mt-0.5">
                 You will be able to unsubscribe whenever you want
               </p>
             </div>
           </div>
 
           {/* GDPR consent */}
-          <div className="flex items-start">
-            <div className="flex items-center h-5">
+          <div className="flex items-start gap-3">
+            <div className="flex items-center pt-0.5">
               <input
                 id="gdprConsent"
                 name="gdprConsent"
                 type="checkbox"
                 checked={formData.gdprConsent}
                 onChange={handleCheckboxChange}
-                className={`h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${
+                className={`h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer ${
                   formErrors.gdprConsent ? "border-red-500" : ""
                 }`}
               />
             </div>
-            <div className="ml-3 text-sm">
+            <div className="text-sm">
               <label
                 htmlFor="gdprConsent"
-                className={`font-medium ${
+                className={`font-medium cursor-pointer ${
                   formErrors.gdprConsent ? "text-red-700" : "text-gray-700"
                 }`}
               >
                 {texts.gdprConsent}
               </label>
-              <p className="text-gray-500">
+              <p className="text-gray-500 mt-0.5">
                 By checking this box, you agree to our{" "}
                 <GDPRDialog>
                   <span className="text-blue-600 hover:underline cursor-pointer">

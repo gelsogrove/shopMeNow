@@ -39,15 +39,15 @@ export const PublicMobileShell: React.FC<PublicMobileShellProps> = ({
 
   return (
     <div
-      className="min-h-screen w-full relative overflow-hidden"
+      className="min-h-screen w-full relative"
       style={{
         background: toneBackgrounds[tone],
       }}
       data-public-mobile-shell
     >
-      {/* Accent glows */}
+      {/* Accent glows — pointer-events-none so they never block interaction */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-40"
+        className="pointer-events-none fixed inset-0 opacity-40 overflow-hidden"
         aria-hidden
       >
         <div
@@ -68,7 +68,7 @@ export const PublicMobileShell: React.FC<PublicMobileShellProps> = ({
         />
       </div>
 
-      {/* Content container */}
+      {/* Content container — scrolls naturally with the page */}
       <div className="relative z-10 flex justify-center">
         <div
           className={`w-full ${className}`}
@@ -77,7 +77,7 @@ export const PublicMobileShell: React.FC<PublicMobileShellProps> = ({
             paddingLeft: "clamp(16px, 4vw, 28px)",
             paddingRight: "clamp(16px, 4vw, 28px)",
             paddingTop: "calc(20px + env(safe-area-inset-top, 0px))",
-            paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+            paddingBottom: "calc(32px + env(safe-area-inset-bottom, 0px))",
           }}
         >
           {children}
