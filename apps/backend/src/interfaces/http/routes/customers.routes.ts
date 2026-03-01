@@ -1,10 +1,10 @@
 import { Router } from "express"
 
 import logger from "../../../utils/logger"
-import { CustomersController } from "../controllers/customers.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { checkPlanLimits } from "../middlewares/billing.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import { CustomersController } from "../controllers/customers.controller"
 
 // Router per il mounting principale
 export const customersRouter = (controller: CustomersController): Router => {
