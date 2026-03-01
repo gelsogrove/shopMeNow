@@ -367,7 +367,9 @@ export class CustomersController {
 
   async deleteCustomer(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id, workspaceId } = req.params
+      const { id } = req.params
+      const workspaceId =
+        req.params.workspaceId || (req as any).workspaceId || undefined
 
       logger.info("Starting customer deletion process:", { id, workspaceId })
 
