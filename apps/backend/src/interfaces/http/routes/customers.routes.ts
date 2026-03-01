@@ -1,8 +1,10 @@
 import { Router } from "express"
+
 import logger from "../../../utils/logger"
 import { CustomersController } from "../controllers/customers.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { checkPlanLimits } from "../middlewares/billing.middleware"
+import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 // Router per il mounting principale
 export const customersRouter = (controller: CustomersController): Router => {
@@ -34,6 +36,14 @@ export const customersRouter = (controller: CustomersController): Router => {
   )
   router.delete(
     "/:workspaceId/customers/:id",
+    controller.deleteCustomer.bind(controller)
+  )
+
+  // 🛟 Backward compatibility: allow deletion when workspaceId is provided via header/JWT
+  // This handles older frontend calls hitting /customers/:id without the workspace path
+  router.delete(
+    "/customers/:id",
+    workspaceValidationMiddleware,
     controller.deleteCustomer.bind(controller)
   )
   router.post(
