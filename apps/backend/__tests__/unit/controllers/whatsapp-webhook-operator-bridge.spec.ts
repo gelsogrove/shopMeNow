@@ -37,6 +37,7 @@ const mockPrisma = {
     update: jest.fn(),
     findFirst: jest.fn(),
     findMany: jest.fn(),
+    findUnique: jest.fn(), // needed by relayCustomerMessageToOperator (sales agent lookup)
   },
   workspace: {
     findUnique: jest.fn(),
@@ -137,8 +138,10 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
       // SCENARIO: Customer sends "I want a refund" after operator took over (activeChatbot=false)
       // RULE: Message forwarded to operatorWhatsappNumber via WhatsAppQueue
       //       (not sent to LLM — LLM is blocked when activeChatbot=false)
+      // RULE: No sales agent assigned → uses workspace.operatorWhatsappNumber
       const workspace = { operatorWhatsappNumber: OPERATOR_PHONE }
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
+      mockPrisma.customers.findUnique.mockResolvedValue({ salesId: null, sales: null })
       mockPrisma.whatsAppQueue.create.mockResolvedValue({})
 
       const customer = { id: "cust-001", name: "Mario Rossi", phone: CUSTOMER_PHONE }
@@ -165,9 +168,10 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
     })
 
     it("should skip relay when operatorWhatsappNumber is not configured", async () => {
-      // SCENARIO: Workspace has no operator phone — feature not set up
+      // SCENARIO: Workspace has no operator phone AND no sales agent — feature not set up
       // RULE: Silent skip, no error thrown, no WhatsApp entry created
       mockPrisma.workspace.findUnique.mockResolvedValue({ operatorWhatsappNumber: null })
+      mockPrisma.customers.findUnique.mockResolvedValue({ salesId: null, sales: null })
 
       const customer = { id: "cust-001", name: "Mario", phone: CUSTOMER_PHONE }
 
@@ -181,8 +185,10 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
     it("should relay multiple sequential messages from same customer to operator", async () => {
       // SCENARIO: Customer sends 3 messages while in operator mode
       // RULE: Each message independently relayed — no batching
+      // RULE: No sales agent → uses workspace.operatorWhatsappNumber each time
       const workspace = { operatorWhatsappNumber: OPERATOR_PHONE }
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
+      mockPrisma.customers.findUnique.mockResolvedValue({ salesId: null, sales: null })
       mockPrisma.whatsAppQueue.create.mockResolvedValue({})
 
       const customer = { id: "cust-001", name: "Mario", phone: CUSTOMER_PHONE }

@@ -530,10 +530,13 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             continue
           }
 
-          // 🔒 SECURITY CHECK: Skip for system/operator notifications (no conversationMessageId)
-          // These messages are generated internally (e.g., contactOperator WA notifications)
-          // and contain customer data that would trigger false positives in security patterns.
-          const isSystemNotification = !message.conversationMessageId && !message.pushCampaignId
+          // 🔒 SECURITY CHECK: Skip for system/operator notifications.
+          // Two cases bypass security:
+          //  1. No conversationMessageId (old system notifications before relay tracking)
+          //  2. skipSecurityCheck=true (operator replies relayed back to customers — safe by design)
+          const isSystemNotification =
+            (!message.conversationMessageId && !message.pushCampaignId) ||
+            message.skipSecurityCheck === true
           const securityCheck = isSystemNotification
             ? { isSafe: true as const, debugModel: 'bypass/system-notification', debugPrompt: 'Skipped: system-generated operator notification' }
             : await securityAgent.validateMessage({

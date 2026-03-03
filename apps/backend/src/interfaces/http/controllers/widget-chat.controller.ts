@@ -695,6 +695,23 @@ export class WidgetChatController {
         })
       }
 
+      // 🛠️ DEBUG MODE (WIP) — block registration + LLM when workspace is under maintenance
+      // NOTE: canProcessMessages below uses skipChannelCheck=true (avoids double channelStatus check),
+      // which also skips debugMode. We must check it explicitly here.
+      if (workspace.debugMode === true) {
+        const lang = this.normalizeLanguage(language) || workspace.defaultLanguage || "ENG"
+        const wipResponse = await this.translateWipMessage(
+          workspace.wipMessage as Record<string, string> | string | null,
+          lang,
+          resolvedWorkspaceId
+        )
+        return res.status(200).json({
+          success: true,
+          status: "wip",
+          response: wipResponse,
+        })
+      }
+
       // 🔒 Origin allow-list: only allow requests coming from configured domains
       if (!isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
         return res.status(403).json({
@@ -1730,6 +1747,18 @@ export class WidgetChatController {
 
       if (!visitorId || !workspaceId) {
         return res.status(400).json({ error: "visitorId and workspaceId required" })
+      }
+
+      // 🔐 CORS check — same as all other widget endpoints
+      const workspaceForCors = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { websiteUrl: true, allowedExternalLinks: true },
+      })
+      if (
+        workspaceForCors &&
+        !isOriginAllowed(req, workspaceForCors.websiteUrl, workspaceForCors.allowedExternalLinks as string[] | null)
+      ) {
+        return res.status(403).json({ error: "Origin not allowed" })
       }
 
       // Find customer by customId (widget visitorId) — primary lookup path for widget visitors.

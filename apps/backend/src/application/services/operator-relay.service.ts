@@ -460,8 +460,40 @@ export class OperatorRelayService {
   ): Promise<void> {
     const channel = customer.originChannel ?? "widget"
 
+    // Always need the active session to persist the operator message in chat history
+    const session = await this.prisma.chatSession.findFirst({
+      where: { customerId: customer.id, status: "active" },
+      orderBy: { createdAt: "desc" },
+    })
+
+    if (!session) {
+      logger.warn(
+        "[OperatorRelay] ⚠️ No active session for customer — cannot relay",
+        { customerId: customer.id }
+      )
+      return
+    }
+
+    // Always save to ConversationMessage so the admin ChatPage shows the operator reply
+    // with the correct OPERATOR badge (blue, right-aligned) instead of appearing as chatbot
+    const savedConvMsg = await this.prisma.conversationMessage.create({
+      data: {
+        conversationId: session.id,
+        customerId: customer.id,
+        workspaceId,
+        role: "assistant",   // OUTBOUND → appears on right side in admin view
+        content: message,
+        agentType: "OPERATOR", // marks it as human operator message (blue badge in frontend)
+        tokensUsed: 0,
+        deliveryStatus: channel === "whatsapp" ? "pending" : "delivered",
+      },
+      select: { id: true },
+    })
+
     if (channel === "whatsapp" && customer.phone) {
       // ── WhatsApp customer ──────────────────────────────────────────────
+      // Link the queue entry to the conversationMessage so the scheduler
+      // can update deliveryStatus when the message is actually sent
       await this.prisma.whatsAppQueue.create({
         data: {
           workspaceId,
@@ -471,41 +503,22 @@ export class OperatorRelayService {
           status: "pending",
           channel: "whatsapp",
           skipSecurityCheck: true, // operator replies bypass security
+          conversationMessageId: savedConvMsg.id, // tracks delivery status in chat history
         },
       })
 
       logger.info("[OperatorRelay] 📨 Operator reply enqueued for WhatsApp customer", {
         customerId: customer.id,
         phone: customer.phone,
+        conversationMessageId: savedConvMsg.id,
       })
     } else {
       // ── Widget customer ────────────────────────────────────────────────
-      const session = await this.prisma.chatSession.findFirst({
-        where: { customerId: customer.id, status: "active" },
-        orderBy: { createdAt: "desc" },
-      })
-
-      if (!session) {
-        logger.warn(
-          "[OperatorRelay] ⚠️ No active session for widget customer — cannot relay",
-          { customerId: customer.id }
-        )
-        return
-      }
-
-      await this.prisma.conversationMessage.create({
-        data: {
-          conversationId: session.id,
-          customerId: customer.id,
-          workspaceId,
-          role: "assistant",
-          content: message,
-        },
-      })
-
+      // ConversationMessage already saved above — widget polls it directly
       logger.info("[OperatorRelay] 📨 Operator reply saved to ConversationMessage for widget customer", {
         customerId: customer.id,
         sessionId: session.id,
+        conversationMessageId: savedConvMsg.id,
       })
     }
   }
