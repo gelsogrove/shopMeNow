@@ -387,15 +387,30 @@ export class OperatorRelayService {
     customer: { id: string; name: string; phone: string | null },
     messageText: string
   ): Promise<void> {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { operatorWhatsappNumber: true },
-    })
+    // Fetch workspace operator number AND the customer's assigned sales agent phone.
+    // PRIORITY (mirrors contactOperator.ts):
+    //  1. Sales agent's phone (if customer has salesId)
+    //  2. Workspace generic operator number
+    const [workspace, fullCustomer] = await Promise.all([
+      this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { operatorWhatsappNumber: true },
+      }),
+      this.prisma.customers.findUnique({
+        where: { id: customer.id },
+        select: { salesId: true, sales: { select: { phone: true } } },
+      }),
+    ])
 
-    if (!workspace?.operatorWhatsappNumber) {
+    const targetPhone =
+      (fullCustomer?.salesId && fullCustomer.sales?.phone) ||
+      workspace?.operatorWhatsappNumber ||
+      null
+
+    if (!targetPhone) {
       logger.warn(
-        "[OperatorRelay] ⚠️ Cannot relay customer message — operatorWhatsappNumber not configured",
-        { workspaceId }
+        "[OperatorRelay] ⚠️ Cannot relay customer message — no operator phone configured",
+        { workspaceId, customerId: customer.id }
       )
       return
     }
@@ -407,7 +422,7 @@ export class OperatorRelayService {
       data: {
         workspaceId,
         customerId: customer.id,        // used for billing reference
-        phoneNumber: workspace.operatorWhatsappNumber,
+        phoneNumber: targetPhone,
         messageContent: relayMessage,
         status: "pending",
         channel: "whatsapp",
@@ -418,7 +433,8 @@ export class OperatorRelayService {
     logger.info("[OperatorRelay] 📤 Customer message relayed to operator", {
       workspaceId,
       customerId: customer.id,
-      operatorPhone: workspace.operatorWhatsappNumber,
+      targetPhone,
+      via: fullCustomer?.salesId ? "sales_agent" : "workspace_operator",
     })
   }
 

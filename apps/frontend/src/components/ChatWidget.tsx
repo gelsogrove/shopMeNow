@@ -33,6 +33,13 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+export const shouldShowWhatsappNumber = (config?: {
+  channelStatus?: boolean
+  whatsappPhoneNumber?: string | null
+} | null): boolean => {
+  return !!config?.whatsappPhoneNumber && config?.channelStatus === true
+}
+
 /**
  * TypingIndicator - 3 bouncing dots animation (like Payload playground)
  */
@@ -1087,16 +1094,16 @@ export function ChatWidget({
                   {resolvedTitle}
                   {workspaceConfig?.name ? ` · ${workspaceConfig.name}` : ""}
                 </h2>
-                {workspaceConfig?.whatsappPhoneNumber && (
-                  <div className="flex items-center gap-1 text-xs text-white/80">
+                {shouldShowWhatsappNumber(workspaceConfig) && (
+                  <div className="flex items-center gap-1 text-sm font-semibold text-white">
                     <span>WhatsApp:</span>
                     <a
                       className="underline-offset-2 hover:underline"
-                      href={`https://wa.me/${workspaceConfig.whatsappPhoneNumber.replace(/\\D/g, "")}`}
+                      href={`https://wa.me/${workspaceConfig.whatsappPhoneNumber?.replace(/\D/g, "")}`}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {workspaceConfig.whatsappPhoneNumber}
+                      {workspaceConfig?.whatsappPhoneNumber}
                     </a>
                   </div>
                 )}

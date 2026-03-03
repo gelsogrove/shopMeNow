@@ -143,15 +143,15 @@ async function buildWidgetSuggestionsWithAI(
             role: "system",
             content:
               `You select clickable follow-up suggestions for a chat widget from a fixed FAQ list.\n` +
-              `Language for output: ${langName[lang] || "same as the chatbot reply"}.\n` +
+              `Output language: ${langName[lang] || "English"}. ALL suggestions MUST be written in this language — regardless of the language of the FAQ list.\n` +
               `\n` +
               `STRICT RULES:\n` +
-              `- You MUST only pick questions from the FAQ LIST below — NEVER invent new ones\n` +
-              `- Pick EXACTLY 3 FAQ questions that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
-              `- Write each suggestion in FIRST PERSON (e.g. "Voglio sapere i prezzi" not "Prezzi")\n` +
-              `- Max 40 characters per suggestion — shorten if the FAQ question is longer\n` +
+              `- Select EXACTLY 3 FAQ topics that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
+              `- TRANSLATE and REWRITE each selected topic in ${langName[lang] || "English"} — do NOT copy the original FAQ text verbatim\n` +
+              `- Write each suggestion in FIRST PERSON (e.g. "I want to know the prices" not "Prices")\n` +
+              `- Max 40 characters per suggestion — shorten if needed\n` +
               `- No links, no emoji, no punctuation at the end\n` +
-              `- Return ONLY a raw JSON array of EXACTLY 3 strings. Example: ["Come posso pagare?","Dove è il mio ordine?","Posso modificare?"]`,
+              `- Return ONLY a raw JSON array of EXACTLY 3 strings. Example: ["How can I pay?","Where is my order?","Can I modify it?"]`,
           },
           {
             role: "user",
@@ -258,10 +258,10 @@ const SUGGESTIONS_I18N: Record<string, Record<string, string[]>> = {
 
 /** Normalise language code: "ENG" | "ITA" | "ESP" | "POR" | "en" | "it" | … → "en" | "it" | "es" | "pt" */
 function normLang(raw?: string): string {
-  if (!raw) return "it"
+  if (!raw) return "en"
   const l = raw.toLowerCase().slice(0, 3)
   const map: Record<string, string> = { eng: "en", ita: "it", esp: "es", por: "pt", por2: "pt", en: "en", it: "it", es: "es", pt: "pt" }
-  return map[l] || map[l.slice(0, 2)] || "it"
+  return map[l] || map[l.slice(0, 2)] || "en"
 }
 
 // Quick, deterministic auto-suggestions for widget replies.
@@ -1614,7 +1614,7 @@ export class WidgetChatController {
       // RULE: Never generate suggestions when operator handoff was just triggered
       const suggestions =
         !operatorHandoffTriggered && workspace.widgetAutoSuggestionsEnabled === true
-          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "it", workspace.widgetQuickReplies as any, workspaceId)
+          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "en", workspace.widgetQuickReplies as any, workspaceId)
           : []
 
       // 📝 Save assistant message to conversation history

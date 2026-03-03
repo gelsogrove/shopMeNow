@@ -493,36 +493,76 @@ export class WhatsAppWebhookController {
         }
       }
 
-      // � OPERATOR RELAY TUNNEL: Check if the sender is the workspace operator
-      // If the inbound phone matches Workspace.operatorWhatsappNumber, route ALL messages
-      // to OperatorRelayService instead of the normal customer/LLM pipeline.
+      // 🔀 OPERATOR RELAY TUNNEL: Check if the sender is the workspace operator.
+      // Two detection paths:
+      //  1. Workspace generic operator number (Workspace.operatorWhatsappNumber)
+      //  2. Sales agent's personal phone (Sales.phone) when that agent has an active
+      //     customer in the operator queue — this handles the case where the notification
+      //     was sent to the assigned sales agent instead of the generic operator number.
       const operatorPhone = whatsappSettings.workspace.operatorWhatsappNumber
+      let isOperator = false
+
       if (operatorPhone) {
         const operatorVariants = buildPhoneVariants(operatorPhone)
-        const isOperator = phoneVariants.some((v) => operatorVariants.includes(v))
+        isOperator = phoneVariants.some((v) => operatorVariants.includes(v))
+      }
 
-        if (isOperator) {
-          logger.info("[WEBHOOK] 🔀 Operator message detected — routing to OperatorRelayService", {
-            workspaceId,
-            senderPhone: phoneNumber,
-            operatorPhone,
+      // Path 2: Check if the sender is a Sales agent with an active customer in queue
+      if (!isOperator) {
+        try {
+          const salesAgent = await prisma.sales.findFirst({
+            where: {
+              workspaceId,
+              phone: { in: phoneVariants },
+              customers: {
+                some: {
+                  workspaceId,
+                  activeChatbot: false,
+                  operatorQueuePosition: { not: null },
+                  deletedAt: null,
+                },
+              },
+            },
+            select: { id: true, firstName: true, lastName: true, phone: true },
           })
 
-          try {
-            const { OperatorRelayService } = require("../../../application/services/operator-relay.service")
-            const operatorRelayService = new OperatorRelayService(prisma)
-            await operatorRelayService.handleOperatorMessage(workspaceId, messageText)
-          } catch (relayError) {
-            logger.error("[WEBHOOK] ❌ OperatorRelayService.handleOperatorMessage failed", {
-              error: relayError,
+          if (salesAgent) {
+            isOperator = true
+            logger.info("[WEBHOOK] 🔀 Sales agent message detected — routing to OperatorRelayService", {
               workspaceId,
+              senderPhone: phoneNumber,
+              agentId: salesAgent.id,
+              agentName: `${salesAgent.firstName} ${salesAgent.lastName}`.trim(),
             })
           }
-
-          // Always return 200 to WhatsApp (regardless of relay outcome)
-          res.status(200).json({ status: "ok", source: "operator_relay" })
-          return
+        } catch (salesCheckError) {
+          logger.warn("[WEBHOOK] ⚠️ Failed to check sales agent phone — skipping relay", {
+            error: salesCheckError instanceof Error ? salesCheckError.message : String(salesCheckError),
+          })
         }
+      }
+
+      if (isOperator) {
+        logger.info("[WEBHOOK] 🔀 Operator message detected — routing to OperatorRelayService", {
+          workspaceId,
+          senderPhone: phoneNumber,
+          operatorPhone: operatorPhone ?? "(sales agent)",
+        })
+
+        try {
+          const { OperatorRelayService } = require("../../../application/services/operator-relay.service")
+          const operatorRelayService = new OperatorRelayService(prisma)
+          await operatorRelayService.handleOperatorMessage(workspaceId, messageText)
+        } catch (relayError) {
+          logger.error("[WEBHOOK] ❌ OperatorRelayService.handleOperatorMessage failed", {
+            error: relayError,
+            workspaceId,
+          })
+        }
+
+        // Always return 200 to WhatsApp (regardless of relay outcome)
+        res.status(200).json({ status: "ok", source: "operator_relay" })
+        return
       }
 
       // �🔍 DEBUG: Log phone lookup
