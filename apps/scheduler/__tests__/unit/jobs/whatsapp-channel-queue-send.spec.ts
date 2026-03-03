@@ -33,7 +33,7 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     clearRecipientThrottleCache()
 
     workspaceModel = { findMany: jest.fn(), findUnique: jest.fn() }
-    queueModel = { findMany: jest.fn(), update: jest.fn() }
+    queueModel = { findMany: jest.fn(), update: jest.fn(), findFirst: jest.fn() }
     conversationModel = { findUnique: jest.fn(), update: jest.fn() }
     pushCampaignRecipientModel = { findMany: jest.fn(), updateMany: jest.fn() }
     ;(prisma as any).workspace = workspaceModel
@@ -42,6 +42,7 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     ;(prisma as any).pushCampaignRecipient = pushCampaignRecipientModel
 
     pushCampaignRecipientModel.findMany.mockResolvedValue([])
+    queueModel.findFirst.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -260,11 +261,12 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
         messageContent: 'ciao',
         status: 'pending',
         channel: 'whatsapp',
-        conversationMessageId: undefined,
+        conversationMessageId: 'conv-123',
       },
     ])
 
     queueModel.update.mockResolvedValue({})
+    jest.spyOn(BillingService.prototype, 'hasOwnerCredit').mockResolvedValue(false)
 
     await whatsappChannelQueueJob()
 
