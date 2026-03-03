@@ -33,10 +33,16 @@ jest.mock("../../../src/application/services/visitor-id.service", () => ({
 
 jest.mock("../../../src/services/llm-router.service", () => ({
   LLMRouterService: jest.fn().mockImplementation(() => ({
-    routeMessage: jest.fn().mockResolvedValue({
-      response: "LLM RESPONSE",
-      agentUsed: "ROUTER",
-      tokensUsed: 1,
+    routeMessage: jest.fn().mockImplementation(async (_args) => {
+      // Simulate ChatEngine side-effect: save assistant message
+      await prisma.conversationMessage.create({
+        data: { role: "assistant", content: "LLM RESPONSE" },
+      })
+      return {
+        response: "LLM RESPONSE",
+        agentUsed: "ROUTER",
+        tokensUsed: 1,
+      }
     }),
   })),
 }))

@@ -8,6 +8,10 @@ import {
 } from '../config/database'
 import logger from '../utils/logger'
 import { translationService } from '../services/translation.service'
+import { BillingService } from '../services/billing.service'
+
+// Initialize billing service for credit deduction
+const billingService = new BillingService()
 
 /**
  * Push Campaigns job (WhatsApp only).
@@ -153,23 +157,6 @@ export async function pushCampaignsJob(): Promise<void> {
       for (const recipient of recipients) {
         if (creditExhausted) break
 
-        // 💰 Refresh credit balance from DB every 10 messages
-        // Prevents overspend if another campaign/widget depleted balance concurrently
-        if (processed > 0 && processed % 10 === 0) {
-          const freshOwner = await prisma.user.findUnique({
-            where: { id: workspace.ownerId },
-            select: { creditBalance: true },
-          })
-          if (freshOwner) {
-            availableBalance = Number(freshOwner.creditBalance)
-            if (availableBalance < CREDIT_MIN_THRESHOLD) {
-              logger.warn(`[PUSH-CAMPAIGN] Credit dropped below threshold during batch (balance: ${availableBalance})`)
-              creditExhausted = true
-              break
-            }
-          }
-        }
-
         try {
           // Load customer for variables, language, consent
           const customer = await prisma.customers.findFirst({
@@ -188,6 +175,7 @@ export async function pushCampaignsJob(): Promise<void> {
               language: true,
               isBlacklisted: true,
               isActive: true,
+              push_notifications_consent: true,
             },
           })
 
@@ -210,6 +198,21 @@ export async function pushCampaignsJob(): Promise<void> {
                 status: 'SKIPPED',
                 errorCode: customer.isBlacklisted ? 'BLACKLISTED' : 'INACTIVE',
                 errorMessage: `Customer is ${customer.isBlacklisted ? 'blacklisted' : 'inactive'}`,
+              },
+            })
+            continue
+          }
+
+          if (customer.push_notifications_consent !== true) {
+            noEligibleRecipientsWarning =
+              noEligibleRecipientsWarning ||
+              'No eligible recipients: push_notifications_consent is false for all targeted customers.'
+            await prisma.pushCampaignRecipient.update({
+              where: { id: recipient.id },
+              data: {
+                status: 'SKIPPED',
+                errorCode: 'NO_PUSH_CONSENT',
+                errorMessage: 'Customer has not given push_notifications_consent',
               },
             })
             continue
@@ -311,13 +314,50 @@ export async function pushCampaignsJob(): Promise<void> {
             })
           })
 
-          availableBalance -= costPerMessage
+          // 💰 BILLING FIX: Deduct push credit from owner (Feature 198)
+          const billingResult = await billingService.deductOwnerPushCredit(
+            workspace.ownerId,
+            campaign.workspaceId,
+            campaign.id
+          )
+
+          if (!billingResult.success) {
+            logger.error(`[PUSH-CAMPAIGN] Failed to deduct credit for recipient ${recipient.id}: ${billingResult.error}`)
+            // Mark campaign as paused if billing fails (prevent infinite free messages)
+            creditExhausted = true
+            await prisma.pushCampaign.update({
+              where: { id: campaign.id },
+              data: {
+                status: 'PAUSED',
+                lastError: `Billing error: ${billingResult.error}`,
+              },
+            })
+            break
+          }
+
+          // Update in-memory balance from actual DB value (billing service updates DB atomically)
+          availableBalance = billingResult.newBalance
           processed++
+          
+          // Check if credit exhausted after deduction
+          if (availableBalance < CREDIT_MIN_THRESHOLD) {
+            logger.warn(`[PUSH-CAMPAIGN] Credit exhausted during batch (balance: ${availableBalance})`)
+            creditExhausted = true
+            break
+          }
         } catch (error) {
           logger.error(
             `[PUSH-CAMPAIGN] Error sending to recipient ${recipient.id}:`,
             error
           )
+          await prisma.pushCampaignRecipient.update({
+            where: { id: recipient.id },
+            data: {
+              status: 'FAILED',
+              errorCode: 'SEND_ERROR',
+              errorMessage: (error as Error).message,
+            },
+          })
           await prisma.pushCampaignRecipient.update({
             where: { id: recipient.id },
             data: {
@@ -357,6 +397,19 @@ export async function pushCampaignsJob(): Promise<void> {
       }
 
       // Finish this run
+      // If nothing was sent in this run and there was a consent/eligibility warning, FAIL ONCE campaigns
+      if (processed === 0 && noEligibleRecipientsWarning && campaign.frequency === CampaignFrequency.ONCE) {
+        await prisma.pushCampaign.update({
+          where: { id: campaign.id },
+          data: {
+            status: 'FAILED',
+            isActive: false,
+            lastError: noEligibleRecipientsWarning,
+          },
+        })
+        continue
+      }
+
       const { nextRunAt, finalStatus, shouldDeactivate } =
         computeCompletionUpdate(campaign, new Date())
 
@@ -400,6 +453,7 @@ async function populateRecipientsForRun(campaign: any) {
           activeChatbot: true,
           isBlacklisted: false,
           deletedAt: null,
+          push_notifications_consent: true, // ✅ Only customers who consented to push
         },
         select: { id: true },
       })
@@ -413,6 +467,7 @@ async function populateRecipientsForRun(campaign: any) {
           activeChatbot: true,
           isBlacklisted: false,
           deletedAt: null,
+          push_notifications_consent: true, // ✅ Only customers who consented to push
         },
         select: { id: true },
       })

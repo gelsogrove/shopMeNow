@@ -6169,14 +6169,15 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     debugInfo?: any
   ): Promise<{ assistantMessageId?: string }> {
     try {
-      // ❌ DON'T save user message here - already saved by LLMRouterService
-      // Saving here would create duplicate user messages in conversation history
-      // await this.conversationManager.saveUserMessage({
-      //   workspaceId,
-      //   customerId,
-      //   conversationId,
-      //   content: userMessage,
-      // })
+      // 🔧 CRITICAL FIX: Save user message FIRST
+      // LLMRouterService does NOT save user messages - ChatEngine must save them
+      // This method is called by ALL chat flows (widget, WhatsApp, informational, etc.)
+      await this.conversationManager.saveUserMessage({
+        workspaceId,
+        customerId,
+        conversationId,
+        content: userMessage,
+      })
       
       // 🆕 Create minimal debugInfo if not provided (for FAST-PATH responses)
       const finalDebugInfo = debugInfo || {
@@ -6207,7 +6208,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         debugInfo: finalDebugInfo,  // 🆕 Always have debugInfo for Message Flow Dialog
       })
       
-      logger.debug("💾 [ChatEngine] Messages saved to history", { 
+      logger.debug("💾 [ChatEngine] Messages saved to history (user + assistant)", { 
         hasDebugInfo: true,
         debugStepsCount: finalDebugInfo?.steps?.length || 0,
         wasFastPath: !debugInfo,

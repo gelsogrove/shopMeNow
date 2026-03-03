@@ -13,6 +13,38 @@ function generateWebhookId(): string {
   return `wh_${randomBytes(12).toString('hex')}`
 }
 
+function buildWorkspaceSlug(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+
+  return normalized || "channel"
+}
+
+async function generateUniqueWorkspaceSlug(value: string): Promise<string> {
+  const baseSlug = buildWorkspaceSlug(value)
+  let candidate = baseSlug
+  let suffix = 1
+
+  while (true) {
+    const existingWorkspace = await prisma.workspace.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    })
+
+    if (!existingWorkspace) {
+      return candidate
+    }
+
+    suffix += 1
+    candidate = `${baseSlug}-${suffix}`
+  }
+}
+
 interface CreateWorkspaceData {
   name: string
   slug?: string
@@ -346,6 +378,12 @@ export const workspaceService = {
     // Extract FAQs to handle separately (Prisma relation)
     const { faqs, whatsappAppSecret, whatsappAppName, ...workspaceData } = data
 
+    const normalizedChannelName = (workspaceData.name || "").trim()
+    if (!normalizedChannelName) {
+      throw new Error("Channel name is required")
+    }
+    workspaceData.name = normalizedChannelName
+
     // Enforce channel-specific flags
     const channelType = workspaceData.channelType || "WHATSAPP"
     if (channelType === "WIDGET") {
@@ -357,6 +395,10 @@ export const workspaceService = {
     } else {
       workspaceData.enableWhatsapp = true
       workspaceData.enableWidget = false
+    }
+
+    if (workspaceData.whatsappPhoneNumber) {
+      workspaceData.whatsappPhoneNumber = workspaceData.whatsappPhoneNumber.trim()
     }
 
     if (!workspaceData.operatorContactMethod) {
@@ -388,6 +430,8 @@ export const workspaceService = {
       throw new Error("WhatsApp phone number is required for WHATSAPP channels")
     }
 
+    const uniqueSlug = await generateUniqueWorkspaceSlug(workspaceData.slug || workspaceData.name)
+
     // 🛡️ Default allowed external links (always include platform domain)
     if (!workspaceData.allowedExternalLinks || workspaceData.allowedExternalLinks.length === 0) {
       workspaceData.allowedExternalLinks = ["www.echatbot.ai"]
@@ -398,7 +442,7 @@ export const workspaceService = {
     const created = await prisma.workspace.create({
       data: {
         ...workspaceData,
-        slug: data.name.toLowerCase().replace(/\s+/g, "-"),
+        slug: uniqueSlug,
       },
       select: {
         id: true,

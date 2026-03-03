@@ -232,4 +232,89 @@ export class BillingService {
       return null
     }
   }
+
+  /**
+   * Deduct credit for a push campaign message
+   * Feature 198: Deducts from Owner's creditBalance (shared across all workspaces)
+   *
+   * @param userId - Owner's user ID
+   * @param workspaceId - Optional: which channel sent the push
+   * @param campaignId - Optional: reference to the campaign
+   * @returns Result with success status and new balance
+   */
+  async deductOwnerPushCredit(
+    userId: string,
+    workspaceId?: string,
+    campaignId?: string
+  ): Promise<{ success: boolean; newBalance: number; error?: string }> {
+    try {
+      // Get owner's plan configuration for push cost
+      const owner = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          creditBalance: true,
+          planType: true,
+        },
+      })
+
+      if (!owner) {
+        return { success: false, newBalance: 0, error: 'User not found' }
+      }
+
+      // Get plan configuration for push cost
+      const planConfig = await prisma.planConfiguration.findUnique({
+        where: { planType: owner.planType },
+        select: { pushCost: true },
+      })
+
+      if (!planConfig) {
+        return { success: false, newBalance: 0, error: 'Plan configuration not found' }
+      }
+
+      const pushCost = Number(planConfig.pushCost)
+
+      // Atomic transaction: deduct credit + create transaction record
+      const result = await prisma.$transaction(async (tx) => {
+        // 1. Deduct credit from owner
+        const updatedOwner = await tx.user.update({
+          where: { id: userId },
+          data: {
+            creditBalance: { decrement: pushCost },
+          },
+          select: { creditBalance: true },
+        })
+
+        const newBalance = Number(updatedOwner.creditBalance)
+
+        // 2. Create billing transaction
+        await tx.billingTransaction.create({
+          data: {
+            userId,
+            workspaceId,
+            type: 'PUSH_NOTIFICATION',
+            amount: -pushCost,
+            balanceAfter: newBalance,
+            description: 'Push campaign message',
+            referenceId: campaignId,
+            referenceType: 'campaign',
+          },
+        })
+
+        return { success: true, newBalance }
+      })
+
+      logger.info(
+        `[Billing] 💳 Push credit deducted: -€${pushCost.toFixed(2)} (owner: ${userId}, balance: €${result.newBalance.toFixed(2)})`
+      )
+
+      return result
+    } catch (error) {
+      logger.error('[Billing] ❌ Error deducting push credit:', error)
+      return {
+        success: false,
+        newBalance: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      }
+    }
+  }
 }

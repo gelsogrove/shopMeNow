@@ -697,38 +697,109 @@ export class ChatController {
         // Continue - message is saved even if usage tracking fails
       }
 
-      // 📤 Add to WhatsApp Queue (instead of sending directly)
-      // This ensures messages go through Security Agent and respect Debug Mode
-      try {
-        const queueEntry = await this.whatsappQueueService.enqueue({
-          workspaceId,
-          customerId: chatSession.customerId,
-          phoneNumber: chatSession.customer.phone || "",
-          messageContent: finalMessage, // Use validated/translated message
-          conversationMessageId: conversationMessage.id,
-        })
-        logger.info(`[CHAT-SEND] ✅ Message added to WhatsApp queue`)
+      // 📤 STEP 5: CHANNEL-SPECIFIC DELIVERY (WhatsApp vs Widget)
+      // 🔧 CRITICAL FIX: Route message based on channel, NOT blindly to WhatsApp
+      if (chatSession.channel === "whatsapp") {
+        // WhatsApp customer: send via WhatsApp provider queue
+        try {
+          const queueEntry = await this.whatsappQueueService.enqueue({
+            workspaceId,
+            customerId: chatSession.customerId,
+            phoneNumber: chatSession.customer.phone || "",
+            messageContent: finalMessage, // Use validated/translated message
+            conversationMessageId: conversationMessage.id,
+          })
+          logger.info(`[CHAT-SEND] ✅ Message added to WhatsApp queue (channel: whatsapp)`)
+          
+          // 🆕 ADD WhatsApp queue debug step
+          debugSteps.push({
+            type: "function_call",
+            agent: "📤 Add to WhatsApp Queue",
+            model: "N/A",
+            temperature: 0,
+            timestamp: new Date().toISOString(),
+            functionName: "enqueueWhatsAppMessage",
+            input: {
+              channel: "whatsapp",
+              phoneNumber: chatSession.customer.phone || "",
+              message: finalMessage,
+              customerId: chatSession.customerId,
+              customerName: chatSession.customer.name || "Unknown",
+            },
+            output: {
+              success: true,
+              messageId: queueEntry.id,
+              conversationMessageId: conversationMessage.id,
+              queueStatus: "pending",
+              executionTimeMs: 10,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+          })
+        } catch (queueError) {
+          logger.warn(
+            `[CHAT-SEND] ⚠️ Failed to add message to WhatsApp queue (message still saved):`,
+            queueError.message
+          )
+          // Continue - message is saved even if queue fails
+          
+          // 🆕 ADD WhatsApp queue error debug step
+          debugSteps.push({
+            type: "function_call",
+            agent: "📤 Add to WhatsApp Queue",
+            model: "N/A",
+            temperature: 0,
+            timestamp: new Date().toISOString(),
+            functionName: "enqueueWhatsAppMessage",
+            input: {
+              channel: "whatsapp",
+              phoneNumber: chatSession.customer.phone || "",
+              message: finalMessage,
+              customerId: chatSession.customerId,
+              customerName: chatSession.customer.name || "Unknown",
+            },
+            output: {
+              success: false,
+              conversationMessageId: conversationMessage.id,
+              queueStatus: "failed",
+              error: queueError instanceof Error ? queueError.message : "Unknown error",
+              executionTimeMs: 20,
+            },
+            tokenUsage: {
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            },
+          })
+        }
+      } else if (chatSession.channel === "widget") {
+        // Widget customer: message already saved to conversationMessage table
+        // Widget polls for new messages via GET /widget/operator-messages endpoint
+        logger.info(`[CHAT-SEND] ✅ Widget message saved - delivery via polling (channel: widget)`)
         
-        // 🆕 ADD WhatsApp queue debug step
+        // 🆕 ADD Widget polling delivery debug step
         debugSteps.push({
           type: "function_call",
-          agent: "📤 Add to WhatsApp Queue",
+          agent: "💬 Widget Delivery (Polling)",
           model: "N/A",
           temperature: 0,
           timestamp: new Date().toISOString(),
-          functionName: "enqueueWhatsAppMessage",
+          functionName: "widgetPollingDelivery",
           input: {
-            phoneNumber: chatSession.customer.phone || "",
-            message: finalMessage,
+            channel: "widget",
             customerId: chatSession.customerId,
-            customerName: chatSession.customer.name || "Unknown",
+            conversationMessageId: conversationMessage.id,
+            pollingEndpoint: "/widget/operator-messages",
           },
           output: {
             success: true,
-            messageId: queueEntry.id,
-            conversationMessageId: conversationMessage.id,
-            queueStatus: "pending",
-            executionTimeMs: 10,
+            deliveryMethod: "polling",
+            pollingEndpoint: "/widget/operator-messages",
+            note: "Widget polls this endpoint every 2-3 seconds for new operator messages",
+            executionTimeMs: 5,
           },
           tokenUsage: {
             promptTokens: 0,
@@ -736,33 +807,26 @@ export class ChatController {
             totalTokens: 0,
           },
         })
-      } catch (queueError) {
-        logger.warn(
-          `[CHAT-SEND] ⚠️ Failed to add message to queue (message still saved):`,
-          queueError.message
-        )
-        // Continue - message is saved even if queue fails
+      } else {
+        // Unknown channel - log warning but don't fail
+        logger.warn(`[CHAT-SEND] ⚠️ Unknown channel: ${chatSession.channel} - message saved but delivery uncertain`)
         
-        // 🆕 ADD WhatsApp queue error debug step
         debugSteps.push({
           type: "function_call",
-          agent: "📤 Add to WhatsApp Queue",
+          agent: "⚠️ Unknown Channel",
           model: "N/A",
           temperature: 0,
           timestamp: new Date().toISOString(),
-          functionName: "sendWhatsAppMessage",
+          functionName: "unknownChannelDelivery",
           input: {
-            phoneNumber: chatSession.customer.phone || "",
-            message: finalMessage,
+            channel: chatSession.channel,
             customerId: chatSession.customerId,
-            customerName: chatSession.customer.name || "Unknown",
           },
           output: {
             success: false,
-            conversationMessageId: conversationMessage.id,
-            queueStatus: "failed",
-            error: queueError instanceof Error ? queueError.message : "Unknown error",
-            executionTimeMs: 20,
+            warning: `Unknown channel: ${chatSession.channel}`,
+            note: "Message saved to conversationMessage but delivery uncertain",
+            executionTimeMs: 5,
           },
           tokenUsage: {
             promptTokens: 0,
@@ -772,18 +836,7 @@ export class ChatController {
         })
       }
 
-      logger.info(`[CHAT-SEND] ✅ Operator message processing completed`)
-
-      // 🆕 SAVE COMPLETE DEBUG INFO to agentInteractions table (for timeline)
-      const finalDebugInfo = {
-        steps: debugSteps, // All steps: operator, safety, whatsapp
-        totalTokens: 0,
-        totalCost: 0,
-        executionTimeMs: 0,
-        timestamp: new Date().toISOString(),
-      }
-
-      // 🚨 CRITICAL: UPDATE conversationMessage with COMPLETE debug info
+      // 🚨 CRITICAL: UPDATE conversationMessage with COMPLETE debug info BEFORE finalizing
       // This ensures frontend gets ALL debug steps, not just the initial one
       await this.prisma.conversationMessage.update({
         where: { id: conversationMessage.id },
@@ -792,7 +845,7 @@ export class ChatController {
             isOperatorMessage: true,
             sentBy: "HUMAN_OPERATOR",
             timestamp: new Date().toISOString(),
-            steps: debugSteps, // 🚨 COMPLETE debug steps with Safety & WhatsApp
+            steps: debugSteps, // 🚨 COMPLETE debug steps with Safety & delivery
             totalTokens: 0,
             totalCost: 0,
             executionTimeMs: 0,
@@ -800,7 +853,7 @@ export class ChatController {
         },
       })
 
-      logger.info("🚨 CRITICAL: Updated conversationMessage with COMPLETE debug steps including Safety & WhatsApp")
+      logger.info(`[CHAT-SEND] ✅ Operator message processing completed (channel: ${chatSession.channel})`)
 
       try {
         // Access loggerService through the router service instance

@@ -923,7 +923,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     if (e) e.preventDefault()
 
     // Use wizard data
-    const channelAlias = wizardData.alias
+    const channelAlias = wizardData.alias.trim()
     const phoneNumber = wizardData.channelType === 'WHATSAPP' ? wizardData.whatsappNumber : ''
 
     if (!channelAlias.trim()) {
@@ -990,7 +990,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
       if (error?.response?.data?.code === "CHANNEL_LIMIT_EXCEEDED") {
         const limitMsg =
           error.response.data.message ||
-          `Hai raggiunto il limite di canali (${currentChannelUsage}/${currentChannelLimit}). Aggiorna il piano per aggiungere più canali.`
+          `Channel limit reached (${currentChannelUsage}/${currentChannelLimit}). Upgrade your plan to add more channels.`
         setErrorMessage(limitMsg)
         toast.error(limitMsg)
         // Apri dialog Change Plan
@@ -1005,7 +1005,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         closeWizardDialog()
         setPaypalConnectModalOpen(true)
       } else {
-        setErrorMessage("Failed to create channel")
+        const genericMessage =
+          error?.response?.data?.message || error?.message || "Failed to create channel"
+        setErrorMessage(genericMessage)
+        toast.error(genericMessage)
       }
       logger.error("❌ Error creating workspace:", error)
     } finally {

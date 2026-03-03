@@ -75,8 +75,11 @@ import logger from '../utils/logger'
  * PayPal then charges the customer automatically and sends webhook PAYMENT.SUCCESS
  * 
  * This scheduler now only creates PENDING invoices - actual payment is handled manually
+ * 
+ * 🔧 FIX: Now accepts transaction parameter for atomic operations
  */
 async function createPendingInvoice(
+  tx: Prisma.TransactionClient,
   userId: string,
   amount: number,
   subscriptionFee: number,
@@ -93,7 +96,7 @@ async function createPendingInvoice(
     const periodEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59)
     
     // Create invoice with PENDING status - awaiting manual payment processing
-    const invoice = await prisma.monthlyInvoice.upsert({
+    const invoice = await tx.monthlyInvoice.upsert({
       where: {
         userId_periodYear_periodMonth: {
           userId,
@@ -231,36 +234,8 @@ export async function monthlyBillingJob(): Promise<void> {
       },
     })
 
-    try {
-      // ═══════════════════════════════════════════════════════════════════
-      // STEP 1: Apply pending plan change (downgrades) on User
-      // ═══════════════════════════════════════════════════════════════════
-      if (
-        owner.pendingPlanType &&
-        owner.pendingPlanEffectiveDate &&
-        new Date(owner.pendingPlanEffectiveDate) <= today
-      ) {
-        logger.info(
-          `[BILLING] 📋 Applying pending plan change for ${ownerName}: ${owner.planType} → ${owner.pendingPlanType}`
-        )
-
-        await prisma.user.update({
-          where: { id: owner.id },
-          data: {
-            planType: owner.pendingPlanType,
-            pendingPlanType: null,
-            pendingPlanEffectiveDate: null,
-            planStartedAt: new Date(),
-          },
-        })
-
-        // Update local reference for billing calculation
-        owner.planType = owner.pendingPlanType
-        stats.pendingPlanApplied++
-      }
-
-      // ═══════════════════════════════════════════════════════════════════
-      // STEP 2: SKIP PAUSED USERS - No billing, no chatbot
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP 2: SKIP PAUSED USERS - No billing, no chatbot (check BEFORE transaction)
       // ═══════════════════════════════════════════════════════════════════
       // PAUSE FLOW:
       // - User clicks "Pause" → subscriptionStatus = 'PAUSED', pausedAt = NOW
@@ -304,79 +279,107 @@ export async function monthlyBillingJob(): Promise<void> {
         continue
       }
 
-      // ═══════════════════════════════════════════════════════════════════
-      // STEP 5: Calculate total charge (subscription + credit debt)
-      // Credit is now on User, shared across all workspaces
-      // ═══════════════════════════════════════════════════════════════════
-      const planConfig = planConfigMap.get(owner.planType as PlanType)
+      // 🔧 CRITICAL FIX: Wrap entire owner processing in transaction
+      // Prevents race conditions: plan update + invoice + nextBillingDate are atomic
+      // If crash mid-processing, entire owner is rolled back (no partial state)
+      try {
+        await prisma.$transaction(async (tx) => {
+          // ═══════════════════════════════════════════════════════════════════
+          // STEP 1: Apply pending plan change (downgrades) on User
+          // ═══════════════════════════════════════════════════════════════════
+          if (
+            owner.pendingPlanType &&
+            owner.pendingPlanEffectiveDate &&
+            new Date(owner.pendingPlanEffectiveDate) <= today
+          ) {
+            logger.info(
+              `[BILLING] 📋 Applying pending plan change for ${ownerName}: ${owner.planType} → ${owner.pendingPlanType}`
+            )
 
-      if (!planConfig) {
-        logger.error(`[BILLING] ❌ No plan config for ${owner.planType}`)
-        stats.errors++
-        continue
-      }
+            await tx.user.update({
+              where: { id: owner.id },
+              data: {
+                planType: owner.pendingPlanType,
+                pendingPlanType: null,
+                pendingPlanEffectiveDate: null,
+                planStartedAt: new Date(),
+              },
+            })
 
-      const subscriptionFee = Number((planConfig as any).monthlyFee)
-      const currentBalance = Number(owner.creditBalance)
+            // Update local reference for billing calculation
+            owner.planType = owner.pendingPlanType
+            stats.pendingPlanApplied++
+          }
 
-      // If credit is negative, add the debt to the charge
-      const creditDebt = currentBalance < 0 ? Math.abs(currentBalance) : 0
-      const totalCharge = subscriptionFee + creditDebt
-      
-      // Get billing month (previous month since we bill for completed month)
-      const now = new Date()
-      const billingMonth = now.getMonth() // 0-indexed (January = 0)
-      const billingYear = billingMonth === 0 ? now.getFullYear() - 1 : now.getFullYear()
-      const actualBillingMonth = billingMonth === 0 ? 12 : billingMonth // 1-indexed for display
+          // ═══════════════════════════════════════════════════════════════════
+          // STEP 4: Calculate total charge (subscription + credit debt)
+          // Credit is now on User, shared across all workspaces
+          // ═══════════════════════════════════════════════════════════════════
+          const planConfig = planConfigMap.get(owner.planType as PlanType)
 
-      logger.info(
-        `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription €${subscriptionFee} + Debt €${creditDebt.toFixed(2)} = Total €${totalCharge.toFixed(2)}`
-      )
+          if (!planConfig) {
+            throw new Error(`No plan config for ${owner.planType}`)
+          }
 
-      // ═══════════════════════════════════════════════════════════════════
-      // STEP 6: Create PENDING invoice (payment processed manually by admin)
-      // ═══════════════════════════════════════════════════════════════════
-      const invoiceResult = await createPendingInvoice(
-        owner.id,
-        totalCharge,
-        subscriptionFee,
-        creditDebt,
-        owner.planType as string,
-        (planConfig as any).displayName,
-        actualBillingMonth,
-        billingYear
-      )
+          const subscriptionFee = Number((planConfig as any).monthlyFee)
+          const currentBalance = Number(owner.creditBalance)
 
-      if (invoiceResult.success) {
-        // ═══════════════════════════════════════════════════════════════
-        // INVOICE CREATED - Now waiting for admin to process payment
-        // ═══════════════════════════════════════════════════════════════
-        await prisma.user.update({
-          where: { id: owner.id },
-          data: {
-            nextBillingDate: new Date(today.getFullYear(), today.getMonth() + 1, 1),
-          },
+          // If credit is negative, add the debt to the charge
+          const creditDebt = currentBalance < 0 ? Math.abs(currentBalance) : 0
+          const totalCharge = subscriptionFee + creditDebt
+          
+          // Get billing month (previous month since we bill for completed month)
+          const now = new Date()
+          const billingMonth = now.getMonth() // 0-indexed (January = 0)
+          const billingYear = billingMonth === 0 ? now.getFullYear() - 1 : now.getFullYear()
+          const actualBillingMonth = billingMonth === 0 ? 12 : billingMonth // 1-indexed for display
+
+          logger.info(
+            `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription €${subscriptionFee} + Debt €${creditDebt.toFixed(2)} = Total €${totalCharge.toFixed(2)}`
+          )
+
+          // ═══════════════════════════════════════════════════════════════════
+          // STEP 5: Create PENDING invoice (payment processed manually by admin)
+          // ═══════════════════════════════════════════════════════════════════
+          const invoiceResult = await createPendingInvoice(
+            tx, // ✅ Pass transaction - atomic with plan update
+            owner.id,
+            totalCharge,
+            subscriptionFee,
+            creditDebt,
+            owner.planType as string,
+            (planConfig as any).displayName,
+            actualBillingMonth,
+            billingYear
+          )
+
+          if (!invoiceResult.success) {
+            throw new Error(`Invoice creation failed: ${invoiceResult.error}`)
+          }
+
+          // ═══════════════════════════════════════════════════════════════════
+          // STEP 6: Update nextBillingDate (atomic with invoice)
+          // ═══════════════════════════════════════════════════════════════════
+          await tx.user.update({
+            where: { id: owner.id },
+            data: {
+              nextBillingDate: new Date(today.getFullYear(), today.getMonth() + 1, 1),
+            },
+          })
+
+          logger.info(
+            `[BILLING] ✅ Invoice PENDING created for ${ownerName}: €${totalCharge.toFixed(2)} (Invoice: ${invoiceResult.invoiceId})`
+          )
         })
 
-        logger.info(
-          `[BILLING] ✅ Invoice PENDING created for ${ownerName}: €${totalCharge.toFixed(2)} (Invoice: ${invoiceResult.invoiceId})`
-        )
-        stats.paymentSuccess++ // Rename to invoiceSuccess in future
-      } else {
-        // ═══════════════════════════════════════════════════════════════
-        // INVOICE CREATION FAILED - Log error
-        // ═══════════════════════════════════════════════════════════════
-        logger.error(
-          `[BILLING] ❌ Failed to create invoice for ${ownerName}: ${invoiceResult.error}`
-        )
-        stats.paymentFailed++ // Rename to invoiceFailed in future
+        // Transaction committed successfully
+        stats.paymentSuccess++
+        stats.processed++
+      } catch (error) {
+        // Transaction rolled back - no partial state
+        logger.error(`[BILLING] ❌ Error processing owner ${ownerName}:`, error)
+        stats.errors++
       }
-
-      stats.processed++
-    } catch (error) {
-      logger.error(`[BILLING] ❌ Error processing owner ${ownerName}:`, error)
-      stats.errors++
-    }
   }
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(2)

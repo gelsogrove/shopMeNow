@@ -1527,20 +1527,9 @@ export class WidgetChatController {
         message: message.substring(0, 50) + "...",
       })
 
-      // 📝 Save user message to conversation history
-      await prisma.conversationMessage.create({
-        data: {
-          workspaceId,
-          customerId: customer.id,
-          conversationId: chatSession.id,
-          role: "user",
-          content: message,
-          agentType: AgentType.ROUTER,
-          tokensUsed: 0,
-        },
-      })
-
-      // 📊 REGISTRATION PROMPT: Count messages and calculate prompt level
+      // � REGISTRATION PROMPT: Count messages BEFORE saving (to get correct count for first message)
+      // 🔧 CRITICAL FIX: Count BEFORE saving message, not after
+      // This allows welcome message detection to work correctly (count=0 for first message)
       const widgetMessageCount = await prisma.conversationMessage.count({
         where: {
           customerId: customer.id,
@@ -1634,18 +1623,15 @@ export class WidgetChatController {
           ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "en", workspace.widgetQuickReplies as any, workspaceId)
           : []
 
-      // 📝 Save assistant message to conversation history
-      await prisma.conversationMessage.create({
-        data: {
-          workspaceId,
-          customerId: customer.id,
-          conversationId: chatSession.id,
-          role: "assistant",
-          content: llmResult.response || "Response unavailable",
-          agentType: llmResult.agentUsed || AgentType.ROUTER,
-          tokensUsed: llmResult.tokensUsed || 0,
-        },
-      })
+      // � CRITICAL FIX: DO NOT save assistant message here
+      // ChatEngine.saveMessages() already saves BOTH user + assistant messages
+      // Saving here would create duplicate assistant messages in conversation history
+      
+      // ✅ Messages already saved by ChatEngine (via LLMRouterService → ChatEngine.routeMessage → ChatEngine.saveMessages)
+      // - User message: saved by ChatEngine.saveMessages()
+      // - Assistant message: saved by ChatEngine.saveMessages()
+      
+      logger.debug("💾 [Widget] Messages already saved by ChatEngine - skipping duplicate save")
 
       // 💰 BILLING: Deduct widget message credit ($0.005) unless playground
       if (isPlayground === true) {

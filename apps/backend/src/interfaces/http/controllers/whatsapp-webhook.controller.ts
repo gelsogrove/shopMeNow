@@ -2444,7 +2444,7 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // ✅ Messages already saved by LLMRouterService (INBOUND + OUTBOUND)
+      // ✅ Messages already saved by ChatEngine.saveMessages() (INBOUND + OUTBOUND)
       // ✅ debugInfo already saved with timeline
       // 💰 BILLING: Credit is deducted by WhatsApp Queue Cronjob when message is actually sent
       //    (not here - we only check credit availability before processing)
