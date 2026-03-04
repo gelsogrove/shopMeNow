@@ -1185,6 +1185,13 @@ class BackofficeApi {
     }
   }
 
+  // Onboarding Questionnaire — Admin endpoints
+  questionnaire = {
+    getAll: async () => this.fetch<any[]>('/admin/questionnaire'),
+    markViewed: async (id: string) =>
+      this.fetch<any>(`/admin/questionnaire/${id}/viewed`, { method: 'PATCH' }),
+  }
+
   logout() {
     this.clearToken()
   }

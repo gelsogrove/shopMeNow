@@ -143,6 +143,10 @@ import { supportChatRoutes } from "../interfaces/http/routes/support-chat.routes
 import { operatorDashboardRoutes } from "../interfaces/http/routes/operator-dashboard.routes"
 import { paypalRoutes } from "../interfaces/http/routes/paypal.routes"
 import { pushCampaignRoutes } from "../interfaces/http/routes/push-campaign.routes"
+import {
+  questionnairePublicRouter,
+  questionnaireAdminRouter,
+} from "../interfaces/http/routes/onboarding-questionnaire.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -420,6 +424,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/subscription/plans", // PUBLIC subscription plans endpoint (Feature 185)
   "/support-chat", // 🆘 PUBLIC operator handoff routes (token-authenticated)
   "/operator-dashboard", // 📊 PUBLIC operator dashboard routes (token-authenticated)
+  "/questionnaire", // 📋 PUBLIC onboarding questionnaire (no auth)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {
@@ -613,6 +618,14 @@ logger.info(
 // IMPORTANT: Must be mounted BEFORE customersRouter to prevent auth middleware interception
 router.use(contactRoutes())
 logger.info("✅ Registered contact route: /api/contact (public)")
+
+// 🔓 PUBLIC QUESTIONNAIRE ROUTE (NO AUTH REQUIRED)
+router.use(questionnairePublicRouter)
+logger.info("✅ Registered public questionnaire route: POST /api/questionnaire")
+
+// 🔒 ADMIN QUESTIONNAIRE ROUTES (auth required)
+router.use("/admin", questionnaireAdminRouter)
+logger.info("✅ Registered admin questionnaire routes: /api/admin/questionnaire")
 
 // Removed messages, push-messaging, and push-testing routes (not used by frontend)
 router.use("/users", createUserRouter())

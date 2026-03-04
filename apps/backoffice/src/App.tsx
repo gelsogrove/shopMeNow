@@ -16,6 +16,7 @@ import { LawsDocumentsPage } from '@/pages/LawsDocumentsPage'
 import ChannelsPage from '@/pages/ChannelsPage'
 import CallingFunctionsPage from '@/pages/CallingFunctionsPage'
 import SupportTicketsAdminPage from '@/pages/SupportTicketsAdminPage'
+import QuestionnaireAdminPage from '@/pages/QuestionnairePage'
 
 // 🌐 Base path for production deployment
 // Standalone SPA - no basename needed (served from root)
@@ -67,6 +68,7 @@ function AppRoutes() {
         <Route path="clients" element={<ClientsPage />} />
         <Route path="laws-documents" element={<LawsDocumentsPage />} />
         <Route path="support-tickets" element={<SupportTicketsAdminPage />} />
+        <Route path="questionnaire" element={<QuestionnaireAdminPage />} />
         <Route
           path="gdpr"
           element={

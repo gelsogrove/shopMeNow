@@ -1027,6 +1027,13 @@ export function LoginPage() {
               >
                 {t("nav.contact")}
               </a>
+              <span className="text-slate-900 text-xs font-semibold">|</span>
+              <Link
+                to="/questionario"
+                className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full transition-colors"
+              >
+                📋 Questionnaire
+              </Link>
             </div>
           </div>
 

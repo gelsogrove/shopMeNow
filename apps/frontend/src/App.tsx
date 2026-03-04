@@ -1,3 +1,4 @@
+import QuestionnairePage from "@/pages/QuestionnairePage"
 import GdprPage from "@/pages/GdprPage"
 import { SettingsPage } from "@/pages/SettingsPage"
 import WidgetPage from "@/pages/WidgetPage"
@@ -217,6 +218,9 @@ function AppWithProviders() {
                 
                 {/* PayPal callback result page - NO AUTH REQUIRED */}
                 <Route path="/paypal-result" element={<PayPalResultPage />} />
+
+                {/* Onboarding Questionnaire - Public, no auth */}
+                <Route path="/questionario" element={<QuestionnairePage />} />
 
                 {/* NOTE: Short URLs (/s/:code) are handled by Vite proxy directly to backend */}
                 {/* No React route needed - see vite.config.ts proxy for "^/s/" */}

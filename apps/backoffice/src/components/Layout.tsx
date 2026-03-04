@@ -16,6 +16,7 @@ import {
   Inbox,
   Zap,
   MessageSquare,
+  ClipboardList,
 } from 'lucide-react'
 
 const menuItems = [
@@ -28,6 +29,7 @@ const menuItems = [
   { path: '/pricing', label: 'Pricing', icon: CreditCard },
   { path: '/laws-documents', label: 'Laws Documents', icon: Scale },
   { path: '/support-tickets', label: 'Support Tickets', icon: MessageSquare },
+  { path: '/questionnaire', label: 'Questionnaire', icon: ClipboardList },
   { path: '/schedulers', label: 'Schedulers', icon: Clock },
   { path: '/trash', label: 'Trash', icon: Trash2 },
 ]

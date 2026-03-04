@@ -1921,3 +1921,32 @@ enum SupportSenderType {
   CUSTOMER
   ADMIN
 }
+
+// ============================================================
+// ONBOARDING QUESTIONNAIRE
+// ============================================================
+model OnboardingQuestionnaire {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+
+  // Contact info
+  fullName    String
+  email       String
+  phone       String?
+  company     String?
+
+  // Step answers
+  stepChannel      String  // "widget" | "whatsapp" | "multichannel"
+  stepTimeSaving   String  // free text
+  stepEcommerce    String  // "yes" | "no"
+  stepDocuments    String  // "yes" | "no"
+  stepIntegration  String  // "yes" | "no"
+  stepHandoff      String  // "whatsapp" | "backoffice"
+  stepMarketing    String  // "yes" | "no"
+
+  // Admin management
+  status      String   @default("NEW")  // "NEW" | "VIEWED"
+  adminNotes  String?
+
+  @@map("onboarding_questionnaires")
+}
