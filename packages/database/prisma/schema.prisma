@@ -68,7 +68,7 @@ model Workspace {
   toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
   
   // 🆕 WhatsApp Provider Configuration (Multi-provider support)
-  whatsappProvider      String  @default("meta") // "meta" | "ultramsg" | "waapi" - selects which WhatsApp provider to use
+  whatsappProvider      String  @default("waapi") // "meta" | "ultramsg" | "waapi" - selects which WhatsApp provider to use
   // Meta Business API fields (existing fields kept for compatibility)
   metaPhoneNumberId     String? // Meta Phone Number ID
   metaAccessToken       String? // Meta Access Token

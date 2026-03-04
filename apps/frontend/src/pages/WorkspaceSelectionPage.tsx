@@ -75,12 +75,9 @@ interface WizardFormData {
 }
 
 const WIZARD_STEPS = [
-  { id: 1, title: "Channel Type", description: "WhatsApp or Web Widget?", icon: Smartphone },
-  { id: 2, title: "E-commerce", description: "Sell products/services?", icon: Store },
-  { id: 4, title: "Human Support", description: "Talk to an operator?", icon: Headphones },
-  { id: 5, title: "Tone of Voice", description: "How should the bot communicate?", icon: MessageSquare },
-  { id: 6, title: "Bot Identity", description: "How should the bot introduce itself?", icon: Bot },
-  { id: 7, title: "FAQs", description: "Common questions & answers", icon: HelpCircle },
+  { id: 1, title: "Channel Basics", description: "Type, name & settings", icon: Smartphone },
+  { id: 2, title: "Bot Personality", description: "Tone & identity", icon: Bot },
+  { id: 3, title: "Review & Create", description: "Confirm your setup", icon: CheckCircle2 },
 ] as const
 
 const PLAN_LABELS: Record<PlanType, string> = {
@@ -201,24 +198,7 @@ const initialWizardData: WizardFormData = {
   humanSupportInstructions: "",
   toneOfVoice: 'friendly',
   botIdentityResponse: "",
-  faqs: [
-    { question: "How long does it take to receive the order?", answer: "" },
-    { question: "What is your refund policy?", answer: "" },
-    { question: "What are your business hours?", answer: "" },
-    { question: "What payment methods do you accept?", answer: "" },
-  ],
-}
-
-// FAQ templates based on channel type
-const getDefaultFAQs = (_channelType: 'WHATSAPP' | 'WIDGET', _sellsProducts: boolean): Array<{ question: string; answer: string }> => {
-  // No default FAQs - user adds their own
-  return []
-}
-
-// No pre-filled suggestions - user writes their own questions
-const getAdditionalFAQSuggestions = (_channelType: 'WHATSAPP' | 'WIDGET', _sellsProducts: boolean): string[] => {
-  // Return empty array - user types their own questions
-  return []
+  faqs: [],
 }
 
 // Badge stats type
@@ -298,27 +278,18 @@ export function WorkspaceSelectionPage() {
 
   const validateCurrentStep = (): boolean => {
     switch (wizardStep) {
-      case 1: // Channel Type + Details
+      case 1: // Channel Basics: alias + phone (if WhatsApp)
         if (!wizardData.alias.trim()) return false
-        // WhatsApp requires phone number
         if (wizardData.channelType === 'WHATSAPP') {
           return !!(
-            wizardData.whatsappNumber.trim() && 
+            wizardData.whatsappNumber.trim() &&
             validateWhatsAppNumber(wizardData.whatsappNumber)
           )
         }
         return true
-      case 2: // E-commerce - always valid (boolean)
-        return true
-      case 3: // Sales Agents - always valid (boolean)
-        return true
-      case 4: // Human Support - always valid (boolean)
-        return true
-      case 5: // Tone of Voice - always valid (has default)
-        return true
-      case 6: // Bot Identity - require some text
+      case 2: // Bot Personality: require botIdentityResponse
         return wizardData.botIdentityResponse.trim().length > 0
-      case 7: // FAQs - optional
+      case 3: // Review & Create - always valid
         return true
       default:
         return true
@@ -326,30 +297,15 @@ export function WorkspaceSelectionPage() {
   }
 
   const getVisibleSteps = () => {
-    // Step 2 (E-commerce) only visible if channelType === 'WHATSAPP' (Widget can't sell)
-    return WIZARD_STEPS.filter(step => {
-      if (step.id === 2) return wizardData.channelType === 'WHATSAPP'
-      return true
-    })
+    // All 3 steps always visible
+    return WIZARD_STEPS as unknown as typeof WIZARD_STEPS[number][]
   }
 
   const getNextStep = () => {
-    if (wizardStep === 1 && wizardData.channelType === 'WIDGET') {
-      return 4 // Skip step 2 (E-commerce) AND step 3 (Sales Agents) for Widget
-    }
-    if (wizardStep === 2) {
-      return 4 // Skip step 3 (Sales Agents) - Andrea: not needed anymore
-    }
     return wizardStep + 1
   }
 
   const getPrevStep = () => {
-    if (wizardStep === 4 && wizardData.channelType === 'WIDGET') {
-      return 1 // Skip back over step 2 AND step 3 for Widget
-    }
-    if (wizardStep === 4) {
-      return 2 // Skip back over step 3 (Sales Agents)
-    }
     return wizardStep - 1
   }
 
@@ -368,7 +324,7 @@ export function WorkspaceSelectionPage() {
   const handleNextStep = () => {
     if (validateCurrentStep()) {
       const next = getNextStep()
-      if (next <= 7) {
+      if (next <= 3) {
         setWizardStep(next)
       }
     }
@@ -383,11 +339,7 @@ export function WorkspaceSelectionPage() {
 
   const resetWizard = useCallback(() => {
     setWizardStep(1)
-    const defaultFAQs = getDefaultFAQs('WHATSAPP', true)
-    setWizardData({
-      ...initialWizardData,
-      faqs: defaultFAQs
-    })
+    setWizardData({ ...initialWizardData })
     setErrorMessage("")
     setValidationErrors({})
   }, [])
@@ -647,7 +599,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     // Se limite canali raggiunto: mostra toast e apri dialog Change Plan
     if (channelLimitReached) {
       const planLabel = PLAN_LABELS[currentPlanType]
-      const message = `Il tuo piano ${planLabel} permette ${currentChannelLimit} canal${currentChannelLimit > 1 ? "i" : "e"}. Ne hai già ${currentChannelUsage}. Aggiorna il piano per aggiungere più canali.`
+      const message = `Your ${planLabel} plan allows ${currentChannelLimit} channel${currentChannelLimit > 1 ? "s" : ""}. You already have ${currentChannelUsage}. Upgrade your plan to add more.`
       toast.error(message)
       setOpenChangePlanDialog(true)
       return
@@ -951,6 +903,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         planType: 'FREE_TRIAL', // 🆕 Explicit plan type for new workspaces (14-day trial)
         channelType: wizardData.channelType, // 🆕 WHATSAPP or WIDGET
         whatsappPhoneNumber: phoneNumber || undefined,
+        whatsappProvider: wizardData.channelType === 'WHATSAPP' ? 'waapi' : undefined, // 🆕 WAAPI as default for new WhatsApp channels
         language: "en",
         adminEmail: userEmail, // 🆕 AUTO from token (Andrea's requirement)
         allowedExternalLinks: allowedLinks,
@@ -1889,40 +1842,36 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
               {/* Step Content */}
               <div className="flex-1 p-6 overflow-y-auto">
-                {/* STEP 1: Channel Type */}
+                {/* STEP 1: Channel Basics (merged old Steps 1 + 2) */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Channel Type</h3>
-                      <p className="text-sm text-gray-500 mt-1">Choose your channel type</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Channel Basics</h3>
+                      <p className="text-sm text-gray-500 mt-1">Choose your channel type and configure basics</p>
                     </div>
 
                     {/* Channel Type Selection */}
-                    <div className="space-y-4">
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          wizardData.channelType === 'WHATSAPP' 
-                            ? 'border-green-500 bg-green-50' 
+                    <div className="space-y-3">
+                      <div
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.channelType === 'WHATSAPP'
+                            ? 'border-green-500 bg-green-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => {
                           updateWizardData('channelType', 'WHATSAPP')
-                          // WhatsApp can sell products - update FAQs to e-commerce
                           if (wizardData.channelType !== 'WHATSAPP') {
                             updateWizardData('sellsProductsAndServices', true)
-                            updateWizardData('faqs', getDefaultFAQs('WHATSAPP', true))
                           }
                         }}
                       >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WHATSAPP' ? 'bg-[#25D366] text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <MessageCircle className="w-6 h-6" />
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2.5 rounded-lg ${wizardData.channelType === 'WHATSAPP' ? 'bg-[#25D366] text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <MessageCircle className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">WhatsApp Channel</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Connect your WhatsApp Business number to handle customer conversations
-                            </p>
+                            <h4 className="font-semibold text-gray-900 text-sm">WhatsApp Channel</h4>
+                            <p className="text-xs text-gray-500">Connect your WhatsApp Business number</p>
                           </div>
                           {wizardData.channelType === 'WHATSAPP' && (
                             <Check className="w-5 h-5 text-green-500" />
@@ -1930,29 +1879,24 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         </div>
                       </div>
 
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          wizardData.channelType === 'WIDGET' 
-                            ? 'border-blue-500 bg-blue-50' 
+                      <div
+                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          wizardData.channelType === 'WIDGET'
+                            ? 'border-blue-500 bg-blue-50'
                             : 'border-gray-200 hover:border-gray-300'
                         }`}
                         onClick={() => {
                           updateWizardData('channelType', 'WIDGET')
-                          // Widget can only do support (no e-commerce)
                           updateWizardData('sellsProductsAndServices', false)
-                          // Update FAQs for support-only
-                          updateWizardData('faqs', getDefaultFAQs('WIDGET', false))
                         }}
                       >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.channelType === 'WIDGET' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Globe className="w-6 h-6" />
+                        <div className="flex items-center gap-4">
+                          <div className={`p-2.5 rounded-lg ${wizardData.channelType === 'WIDGET' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            <Globe className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">Web Widget</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Embed a chat widget on your website (Support & info only - no e-commerce)
-                            </p>
+                            <h4 className="font-semibold text-gray-900 text-sm">Web Widget</h4>
+                            <p className="text-xs text-gray-500">Embed chat on your website (support only)</p>
                           </div>
                           {wizardData.channelType === 'WIDGET' && (
                             <Check className="w-5 h-5 text-blue-600" />
@@ -1961,24 +1905,19 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </div>
                     </div>
 
-                    {/* 🚨 Widget Info Alert - Andrea's "No Surprises" requirement */}
+                    {/* Widget Info Alert */}
                     {wizardData.channelType === 'WIDGET' && (
-                      <div className="border border-blue-200 bg-blue-50 rounded-lg p-4">
-                        <div className="flex gap-3">
-                          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm text-blue-800 font-medium">Support Channel Only</p>
-                            <p className="text-sm text-blue-700 mt-1">
-                              Widget channels are for customer support and information only. 
-                              E-commerce features (product catalog, cart, orders) require WhatsApp 
-                              for persistent customer identification.
-                            </p>
-                          </div>
+                      <div className="border border-blue-200 bg-blue-50 rounded-lg p-3">
+                        <div className="flex gap-2">
+                          <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-blue-700">
+                            Widget channels are for support and information only. E-commerce features require WhatsApp.
+                          </p>
                         </div>
                       </div>
                     )}
 
-                    {/* Channel Name (always required) */}
+                    {/* Channel Name */}
                     <div>
                       <Label htmlFor="wizard-alias" className="text-sm font-medium">
                         Channel Name <span className="text-red-500">*</span>
@@ -1994,7 +1933,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <p className="text-xs text-gray-500 mt-1">This name will identify your channel</p>
                     </div>
 
-                    {/* WhatsApp Number (ONLY for WhatsApp, hidden for Widget) */}
+                    {/* WhatsApp Number (ONLY for WhatsApp) */}
                     {wizardData.channelType === 'WHATSAPP' && (
                       <div>
                         <Label htmlFor="wizard-whatsapp" className="text-sm font-medium">
@@ -2020,184 +1959,87 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         )}
                       </div>
                     )}
+
+                    {/* E-commerce toggle (ONLY for WhatsApp) */}
+                    {wizardData.channelType === 'WHATSAPP' && (
+                      <div>
+                        <Label className="text-sm font-medium">Do you sell products?</Label>
+                        <div className="grid grid-cols-2 gap-3 mt-2">
+                          <div
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center ${
+                              wizardData.sellsProductsAndServices
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateWizardData('sellsProductsAndServices', true)}
+                          >
+                            <Store className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+                            <p className="text-sm font-medium text-gray-900">Yes</p>
+                            <p className="text-xs text-gray-500">Catalog, cart & orders</p>
+                          </div>
+                          <div
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center ${
+                              !wizardData.sellsProductsAndServices
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateWizardData('sellsProductsAndServices', false)}
+                          >
+                            <MessageSquare className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+                            <p className="text-sm font-medium text-gray-900">No</p>
+                            <p className="text-xs text-gray-500">Support only</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* STEP 2: E-commerce */}
+                {/* STEP 2: Bot Personality (merged old Steps 5 + 6) */}
                 {wizardStep === 2 && (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">E-commerce Integration</h3>
-                      <p className="text-sm text-gray-500 mt-1">What do you want to sell through WhatsApp?</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Bot Personality</h3>
+                      <p className="text-sm text-gray-500 mt-1">Define how your bot communicates and introduces itself</p>
                     </div>
-                    
-                    <div className="space-y-4">
-                      {/* Sells Products & Services option */}
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          wizardData.sellsProductsAndServices 
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => updateWizardData('sellsProductsAndServices', true)}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.sellsProductsAndServices ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Store className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">Yes, I sell products & services</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Enable product/service catalog, shopping cart, and order management
-                            </p>
-                          </div>
-                          {wizardData.sellsProductsAndServices && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
 
-                      {/* Support only option */}
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          !wizardData.sellsProductsAndServices
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => updateWizardData('sellsProductsAndServices', false)}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${!wizardData.sellsProductsAndServices ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <MessageSquare className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">No, just customer support</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Use WhatsApp for customer inquiries and support only
-                            </p>
-                          </div>
-                          {!wizardData.sellsProductsAndServices && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 4: Human Support */}
-                {wizardStep === 4 && (
-                  <div className="space-y-6">
+                    {/* Tone of Voice grid */}
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Human Support</h3>
-                      <p className="text-sm text-gray-500 mt-1">Allow customers to request a human operator?</p>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          wizardData.hasHumanSupport 
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => updateWizardData('hasHumanSupport', true)}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${wizardData.hasHumanSupport ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Headphones className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">Yes, enable human handoff</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              Customers can request to speak with a human operator via email notification
-                            </p>
-                          </div>
-                          {wizardData.hasHumanSupport && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-
-                      <div 
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          !wizardData.hasHumanSupport 
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => {
-                          updateWizardData('hasHumanSupport', false)
-                          updateWizardData('humanSupportInstructions', '') // Clear instructions if disabled
-                        }}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-lg ${!wizardData.hasHumanSupport ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                            <Bot className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">No, AI only</h4>
-                            <p className="text-sm text-gray-500 mt-1">
-                              The AI will handle all conversations without human intervention
-                            </p>
-                          </div>
-                          {!wizardData.hasHumanSupport && (
-                            <Check className="w-5 h-5 text-green-500" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Info note about email notification */}
-                      {wizardData.hasHumanSupport && (
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <p className="text-sm text-blue-700">
-                            💡 <strong>Notification:</strong> We'll send you an email when a customer requests human support.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 5: Tone of Voice */}
-                {wizardStep === 5 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Tone of Voice</h3>
-                      <p className="text-sm text-gray-500 mt-1">How should the chatbot communicate with customers?</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      {[
-                        { value: 'friendly', label: 'Friendly', emoji: '😊', desc: 'Warm, approachable, uses emojis' },
-                        { value: 'professional', label: 'Professional', emoji: '💼', desc: 'Polite, business-like, clear' },
-                        { value: 'formal', label: 'Formal', emoji: '🎩', desc: 'Respectful, traditional, courteous' },
-                        { value: 'casual', label: 'Casual', emoji: '✌️', desc: 'Relaxed, conversational, fun' },
-                      ].map((tone) => (
-                        <div
-                          key={tone.value}
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                            wizardData.toneOfVoice === tone.value
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => updateWizardData('toneOfVoice', tone.value as WizardFormData['toneOfVoice'])}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">{tone.emoji}</span>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900">{tone.label}</h4>
-                              <p className="text-xs text-gray-500">{tone.desc}</p>
+                      <Label className="text-sm font-medium">Tone of Voice</Label>
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                        {[
+                          { value: 'friendly', label: 'Friendly', emoji: '😊', desc: 'Warm & approachable' },
+                          { value: 'professional', label: 'Professional', emoji: '💼', desc: 'Business-like & clear' },
+                          { value: 'formal', label: 'Formal', emoji: '🎩', desc: 'Traditional & courteous' },
+                          { value: 'casual', label: 'Casual', emoji: '✌️', desc: 'Relaxed & fun' },
+                        ].map((tone) => (
+                          <div
+                            key={tone.value}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              wizardData.toneOfVoice === tone.value
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateWizardData('toneOfVoice', tone.value as WizardFormData['toneOfVoice'])}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">{tone.emoji}</span>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 text-sm">{tone.label}</h4>
+                                <p className="text-xs text-gray-500">{tone.desc}</p>
+                              </div>
+                              {wizardData.toneOfVoice === tone.value && (
+                                <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              )}
                             </div>
-                            {wizardData.toneOfVoice === tone.value && (
-                              <Check className="w-5 h-5 text-green-500" />
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Preview */}
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs font-medium text-gray-600 mb-2">Example response:</p>
+                    {/* Tone preview */}
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-xs font-medium text-gray-600 mb-1">Example response:</p>
                       <p className="text-sm text-gray-800 italic">
                         {wizardData.toneOfVoice === 'friendly' && '"Hey there! 👋 Great to hear from you! How can I help you today?"'}
                         {wizardData.toneOfVoice === 'professional' && '"Good day. Thank you for contacting us. How may I assist you?"'}
@@ -2205,35 +2047,24 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         {wizardData.toneOfVoice === 'casual' && '"Hey! What\'s up? Need any help finding something cool?"'}
                       </p>
                     </div>
-                  </div>
-                )}
 
-                {/* STEP 6: Bot Identity */}
-                {wizardStep === 6 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Bot Identity</h3>
-                      <p className="text-sm text-gray-500 mt-1">When a customer asks "Who are you?", how should the bot respond?</p>
-                    </div>
-                    
+                    {/* Bot Identity */}
                     <div>
                       <Label htmlFor="wizard-identity" className="text-sm font-medium">
-                        Bot's self-introduction <span className="text-red-500">*</span>
+                        Bot Identity <span className="text-red-500">*</span>
                       </Label>
+                      <p className="text-xs text-gray-500 mt-0.5 mb-1.5">When a customer asks "Who are you?", how should the bot respond?</p>
                       <Textarea
                         id="wizard-identity"
-                        placeholder={`E.g., "I'm Sofia, the virtual assistant for ${wizardData.alias || 'your business'}. I can help you browse our products, answer questions, and place orders."`}
+                        placeholder={`E.g., "I'm Sofia, the virtual assistant for ${wizardData.alias || 'your business'}. I can help you browse products, answer questions, and place orders."`}
                         value={wizardData.botIdentityResponse}
                         onChange={(e) => updateWizardData('botIdentityResponse', e.target.value)}
-                        className="mt-1.5 min-h-[150px]"
-                        rows={6}
+                        className="min-h-[100px]"
+                        rows={4}
                       />
-                      <p className="text-xs text-gray-500 mt-2">
-                        💡 Tip: Include the bot's name, what it can help with, and your business name
-                      </p>
                     </div>
 
-                    {/* Quick suggestions */}
+                    {/* Quick templates */}
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-gray-600">Quick templates:</p>
                       <div className="flex flex-wrap gap-2">
@@ -2263,55 +2094,124 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
 
-                {/* STEP 7: FAQs */}
-                {wizardStep === 7 && (
+                {/* STEP 3: Review & Create */}
+                {wizardStep === 3 && (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Frequently Asked Questions</h3>
-                      <p className="text-sm text-gray-500 mt-1">Add common questions and answers for your customers</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Review & Create</h3>
+                      <p className="text-sm text-gray-500 mt-1">Confirm your channel setup</p>
                     </div>
 
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-700">
-                        💡 <strong>Tip:</strong> You can edit these FAQs anytime after creating your channel in the Settings page.
-                      </p>
+                    {/* Summary card */}
+                    <div className="bg-gray-50 rounded-xl p-5 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 uppercase">Channel Type</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {wizardData.channelType === 'WHATSAPP' ? (
+                              <MessageCircle className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <Globe className="w-4 h-4 text-blue-600" />
+                            )}
+                            <p className="text-sm font-medium text-gray-900">
+                              {wizardData.channelType === 'WHATSAPP' ? 'WhatsApp' : 'Web Widget'}
+                            </p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 uppercase">Channel Name</p>
+                          <p className="text-sm font-medium text-gray-900 mt-1">{wizardData.alias}</p>
+                        </div>
+                        {wizardData.channelType === 'WHATSAPP' && (
+                          <>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase">Phone Number</p>
+                              <p className="text-sm font-medium text-gray-900 mt-1">{wizardData.whatsappNumber}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-gray-500 uppercase">E-commerce</p>
+                              <p className="text-sm font-medium text-gray-900 mt-1">
+                                {wizardData.sellsProductsAndServices ? 'Yes' : 'No'}
+                              </p>
+                            </div>
+                          </>
+                        )}
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 uppercase">Tone of Voice</p>
+                          <p className="text-sm font-medium text-gray-900 mt-1 capitalize">{wizardData.toneOfVoice}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase">Bot Identity</p>
+                        <p className="text-sm text-gray-700 mt-1 line-clamp-2">{wizardData.botIdentityResponse}</p>
+                      </div>
                     </div>
 
-                    <div className="space-y-4">
-                      {wizardData.faqs.map((faq, index) => (
-                        <div key={index} className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <Label className="text-sm font-medium text-gray-700">
-                                Question {index + 1}
-                              </Label>
-                              <Input
-                                value={faq.question}
-                                onChange={(e) => {
-                                  const newFaqs = [...wizardData.faqs]
-                                  newFaqs[index] = { ...newFaqs[index], question: e.target.value }
+                    {/* Human Support toggle */}
+                    <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <Headphones className="w-5 h-5 text-gray-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Human Support</p>
+                          <p className="text-xs text-gray-500">Allow customers to request a human operator</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateWizardData('hasHumanSupport', !wizardData.hasHumanSupport)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          wizardData.hasHumanSupport ? 'bg-green-500' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          wizardData.hasHumanSupport ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+
+                    {/* Collapsible FAQs section */}
+                    <details className="bg-white rounded-xl border border-gray-200">
+                      <summary className="flex items-center justify-between p-4 cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <HelpCircle className="w-5 h-5 text-gray-600" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">FAQs</p>
+                            <p className="text-xs text-gray-500">
+                              {wizardData.faqs.length > 0
+                                ? `${wizardData.faqs.length} question${wizardData.faqs.length > 1 ? 's' : ''} added`
+                                : 'Add common questions (optional)'}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-400 transition-transform [details[open]_&]:rotate-90" />
+                      </summary>
+                      <div className="px-4 pb-4 space-y-3">
+                        {wizardData.faqs.map((faq, index) => (
+                          <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <Input
+                                  value={faq.question}
+                                  onChange={(e) => {
+                                    const newFaqs = [...wizardData.faqs]
+                                    newFaqs[index] = { ...newFaqs[index], question: e.target.value }
+                                    updateWizardData('faqs', newFaqs)
+                                  }}
+                                  placeholder="Question..."
+                                  className="text-sm"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newFaqs = wizardData.faqs.filter((_, i) => i !== index)
                                   updateWizardData('faqs', newFaqs)
                                 }}
-                                placeholder="Enter a common question..."
-                                className="mt-1"
-                              />
+                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newFaqs = wizardData.faqs.filter((_, i) => i !== index)
-                                updateWizardData('faqs', newFaqs)
-                              }}
-                              className="mt-6 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Remove FAQ"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div>
-                            <Label className="text-sm font-medium text-gray-700">
-                              Answer
-                            </Label>
                             <Textarea
                               value={faq.answer}
                               onChange={(e) => {
@@ -2319,43 +2219,36 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                                 newFaqs[index] = { ...newFaqs[index], answer: e.target.value }
                                 updateWizardData('faqs', newFaqs)
                               }}
-                              placeholder="Provide the answer..."
-                              className="mt-1 min-h-[60px]"
+                              placeholder="Answer..."
+                              className="text-sm min-h-[50px]"
                               rows={2}
                             />
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            updateWizardData('faqs', [
+                              ...wizardData.faqs,
+                              { question: '', answer: '' }
+                            ])
+                          }}
+                          className="w-full gap-2 border-dashed"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add FAQ
+                        </Button>
+                      </div>
+                    </details>
+
+                    {/* Info note */}
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-700">
+                        You can customize everything later in <strong>Settings</strong> — FAQs, human support, messages, and more.
+                      </p>
                     </div>
-
-                    {/* Add FAQ button with smart suggestions */}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        // Get smart suggestions based on channel type
-                        const suggestions = getAdditionalFAQSuggestions(
-                          wizardData.channelType, 
-                          wizardData.sellsProductsAndServices
-                        )
-                        // Pick next unused suggestion or empty
-                        const usedQuestions = wizardData.faqs.map(f => f.question)
-                        const nextSuggestion = suggestions.find(s => !usedQuestions.includes(s))
-                        
-                        updateWizardData('faqs', [
-                          ...wizardData.faqs, 
-                          { question: nextSuggestion || '', answer: '' }
-                        ])
-                      }}
-                      className="w-full gap-2 border-dashed"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add FAQ
-                    </Button>
-
-                    <p className="text-xs text-gray-500 text-center">
-                      Add the most common questions your customers ask. You can add more FAQs later.
-                    </p>
                   </div>
                 )}
 
@@ -2375,27 +2268,27 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       Back
                     </Button>
                   )}
-                  
-                  {wizardStep < 7 ? (
+
+                  {wizardStep < 3 ? (
                     <Button
                       onClick={handleNextStep}
                       disabled={!validateCurrentStep()}
                       className="bg-green-600 hover:bg-green-700 gap-2"
                     >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={handleCreateWorkspace}
-                        disabled={isLoading || !validateCurrentStep()}
-                        className="bg-green-600 hover:bg-green-700 gap-2"
-                      >
-                        {isLoading ? "Creating..." : "Create Channel"}
-                        {!isLoading && <Check className="w-4 h-4" />}
-                      </Button>
-                    )}
-                  </div>
+                      Next
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleCreateWorkspace}
+                      disabled={isLoading || !validateCurrentStep()}
+                      className="bg-green-600 hover:bg-green-700 gap-2"
+                    >
+                      {isLoading ? "Creating..." : "Create Channel"}
+                      {!isLoading && <Check className="w-4 h-4" />}
+                    </Button>
+                  )}
+                </div>
 
               </div>
             </div>

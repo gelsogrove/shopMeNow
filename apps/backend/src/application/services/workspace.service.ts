@@ -424,14 +424,17 @@ For privacy inquiries, please contact our support team.`
     if (data.hasHumanSupport === undefined) data.hasHumanSupport = true
     if (data.hasSalesAgents === undefined) data.hasSalesAgents = false
     if (data.sellsProductsAndServices === undefined) data.sellsProductsAndServices = true
-    if (data.toneOfVoice === undefined) data.toneOfVoice = "FRIENDLY"
+    if (data.toneOfVoice === undefined) data.toneOfVoice = "friendly"
     if (data.operatorContactMethod === undefined) data.operatorContactMethod = "EMAIL"
     // 🌍 Default languages: force English as baseline for new workspaces
     if (!data.defaultLanguage) data.defaultLanguage = "en"
     if (!data.language) data.language = "en"
 
+    // 🆕 WAAPI as default provider for new WhatsApp channels
+    if (!data.whatsappProvider) data.whatsappProvider = "waapi"
+
     // 🚨 CRITICAL: Widget + E-commerce Validation (Andrea's Rule)
-    // Widget visitors use temporary visitorId (24h localStorage expiry) 
+    // Widget visitors use temporary visitorId (24h localStorage expiry)
     // → cannot guarantee cart/order persistence → e-commerce impossible
     // See: .specify/widget-ecommerce-restriction/spec.md
 
@@ -461,19 +464,19 @@ For privacy inquiries, please contact our support team.`
       data.enableWidget = false
     }
 
-    // Default human support instructions - use placeholder as default
+    // Default human support instructions (English - Translation Agent handles customer language)
     if (!data.humanSupportInstructions) {
       if (data.hasHumanSupport) {
         if (data.hasSalesAgents) {
           data.humanSupportInstructions =
-            `Ciao {{nameUser}}, mi sto mettendo in contatto con l'agente {{agentName}}.\nTi richiamera' al piu' presto (tel: {{agentPhone}} - email: {{agentEmail}}).\nMetto in pausa il chatbot finche' non ricevi risposta.`
+            `Hello {{nameUser}}, I'm connecting you with agent {{agentName}}.\nThey will contact you as soon as possible (phone: {{agentPhone}} - email: {{agentEmail}}).\nThe chatbot is paused until you receive a response.`
         } else {
           data.humanSupportInstructions =
-            `Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore.\nTi rispondera' al piu' presto.\nMetto in pausa il chatbot finche' non ricevi assistenza.`
+            `Hello {{nameUser}}, I'm connecting you with our operator.\nThey will respond as soon as possible.\nThe chatbot is paused until you receive assistance.`
         }
       } else {
         data.humanSupportInstructions =
-          "Mi dispiace per il disagio. Puoi inviarci una mail a {{adminEmail}} e ti risponderemo il prima possibile."
+          "I'm sorry for the inconvenience. You can send us an email at {{adminEmail}} and we'll get back to you as soon as possible."
       }
     }
 

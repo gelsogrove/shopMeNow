@@ -350,6 +350,29 @@ export class WorkspaceController {
 
       const workspaceData = req.body
 
+      // Validate wizard fields
+      const validTones = ['formal', 'friendly', 'professional', 'casual']
+      if (workspaceData.toneOfVoice && !validTones.includes(workspaceData.toneOfVoice)) {
+        return res.status(400).json({
+          error: 'Invalid tone of voice',
+          message: `toneOfVoice must be one of: ${validTones.join(', ')}`
+        })
+      }
+
+      if (workspaceData.botIdentityResponse && workspaceData.botIdentityResponse.length > 2000) {
+        return res.status(400).json({
+          error: 'Bot identity too long',
+          message: 'botIdentityResponse must be 2000 characters or less'
+        })
+      }
+
+      if (workspaceData.operatorEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(workspaceData.operatorEmail)) {
+        return res.status(400).json({
+          error: 'Invalid email',
+          message: 'operatorEmail must be a valid email address'
+        })
+      }
+
       // Create workspace with user relation
       const workspace = await this.workspaceService.create({
         ...workspaceData,
@@ -538,7 +561,7 @@ export class WorkspaceController {
         return res.status((error as any).statusCode || 403).json({
           error: "Plan limit reached",
           code: "CHANNEL_LIMIT_EXCEEDED",
-          message: "Il piano Free consente un solo canale attivo. Aggiorna il piano per aggiungerne altri.",
+          message: "Your current plan allows only one active channel. Upgrade your plan to add more.",
         })
       }
       return next(error)
