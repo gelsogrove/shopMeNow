@@ -424,7 +424,7 @@ describe('Push Campaigns Job', () => {
       mockPrisma.customers.findFirst.mockResolvedValue(mockCustomer)
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'owner-1',
-        creditBalance: new Prisma.Decimal(0.5), // Insufficient credit
+        creditBalance: new Prisma.Decimal(-11.0), // Below -10 threshold
       })
       mockPrisma.pushCampaign.update.mockResolvedValue(mockCampaign)
 
@@ -434,11 +434,11 @@ describe('Push Campaigns Job', () => {
         where: { id: 'campaign-1' },
         data: {
           status: 'PAUSED',
-          lastError: 'Insufficient credit',
+          lastError: expect.stringContaining('Credit exhausted'),
         },
       })
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('paused due to insufficient credit')
+        expect.stringContaining('Credit exhausted for campaign')
       )
     })
   })
@@ -783,6 +783,7 @@ describe('Push Campaigns Job', () => {
         language: 'it',
         isBlacklisted: false,
         isActive: true,
+        push_notifications_consent: true, // Added consent to bypass previous check
       }
 
       mockPrisma.pushCampaign.findMany.mockResolvedValue([mockCampaign])
@@ -1153,6 +1154,7 @@ describe('Push Campaigns Job', () => {
         language: 'it',
         isBlacklisted: false,
         isActive: true,
+        push_notifications_consent: true,
       }
 
       mockPrisma.pushCampaign.findMany.mockResolvedValue([mockCampaign])
@@ -1252,6 +1254,7 @@ describe('Push Campaigns Job', () => {
         language: 'it',
         isBlacklisted: false,
         isActive: true,
+        push_notifications_consent: true,
       }
 
       mockPrisma.pushCampaign.findMany.mockResolvedValue([mockCampaign])
@@ -1569,6 +1572,7 @@ describe('Push Campaigns Job', () => {
         language: 'it',
         isBlacklisted: false,
         isActive: true,
+        push_notifications_consent: true, // Bypass consent check
       })
       mockPrisma.pushCampaignRecipient.update.mockResolvedValue(null)
       mockPrisma.pushCampaign.update.mockResolvedValue(mockCampaign)
