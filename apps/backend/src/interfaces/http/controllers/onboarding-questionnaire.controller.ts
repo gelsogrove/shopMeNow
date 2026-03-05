@@ -13,45 +13,53 @@ export class OnboardingQuestionnaireController {
   async submit(req: Request, res: Response): Promise<void> {
     try {
       const {
+        // Contact info (optional — only if wantsContact=true)
         fullName,
         email,
         phone,
         company,
-        stepChannel,
-        stepTimeSaving,
+        // v2 step answers
+        stepHumanSupport,
+        stepPushMarketing,
+        stepWidget,
+        stepSalesAgents,
         stepEcommerce,
-        stepDocuments,
-        stepIntegration,
-        stepHandoff,
-        stepMarketing,
+        stepEcommercePlatform,
+        stepPrivacy,
+        stepHelpful,
+        stepOther,
+        wantsContact,
       } = req.body
 
-      // Basic validation
-      if (!fullName || !email || !stepChannel || !stepTimeSaving || !stepEcommerce || !stepDocuments || !stepIntegration || !stepHandoff || !stepMarketing) {
-        res.status(400).json({ success: false, error: "Missing required fields" })
+      // At least one step answer required
+      if (!stepHumanSupport && !stepEcommerce && !stepWidget) {
+        res.status(400).json({ success: false, error: "Missing required step answers" })
         return
       }
 
       const record = await prisma.onboardingQuestionnaire.create({
         data: {
-          fullName,
-          email,
+          fullName: fullName || null,
+          email: email || null,
           phone: phone || null,
           company: company || null,
-          stepChannel,
-          stepTimeSaving,
-          stepEcommerce,
-          stepDocuments,
-          stepIntegration,
-          stepHandoff,
-          stepMarketing,
+          stepHumanSupport: stepHumanSupport || null,
+          stepPushMarketing: stepPushMarketing || null,
+          stepWidget: stepWidget || null,
+          stepSalesAgents: stepSalesAgents || null,
+          stepEcommerce: stepEcommerce || null,
+          stepEcommercePlatform: stepEcommercePlatform || null,
+          stepPrivacy: stepPrivacy || null,
+          stepHelpful: stepHelpful || null,
+          stepOther: stepOther || null,
+          wantsContact: wantsContact === true || wantsContact === "true",
           status: "NEW",
         },
       })
 
-      logger.info(`[QUESTIONNAIRE] New submission from ${email} (id: ${record.id})`)
+      logger.info(`[QUESTIONNAIRE] New submission (id: ${record.id}, wantsContact: ${record.wantsContact})`)
 
-      // Send admin notification email (fire & forget — don't fail the response on email error)
+      // Send admin notification (fire & forget)
       this.sendAdminNotification(record).catch((err) =>
         logger.error("[QUESTIONNAIRE] Failed to send admin notification email:", err)
       )
@@ -65,7 +73,6 @@ export class OnboardingQuestionnaireController {
 
   /**
    * GET /admin/questionnaire (ADMIN — authMiddleware required)
-   * Returns all questionnaire submissions ordered by createdAt desc.
    */
   async getAll(_req: Request, res: Response): Promise<void> {
     try {
@@ -81,7 +88,6 @@ export class OnboardingQuestionnaireController {
 
   /**
    * PATCH /admin/questionnaire/:id/viewed (ADMIN — authMiddleware required)
-   * Marks a submission as VIEWED.
    */
   async markViewed(req: Request, res: Response): Promise<void> {
     try {
@@ -97,28 +103,18 @@ export class OnboardingQuestionnaireController {
     }
   }
 
-  private async sendAdminNotification(record: {
-    id: string
-    fullName: string
-    email: string
-    phone: string | null
-    company: string | null
-    stepChannel: string
-    stepTimeSaving: string
-    stepEcommerce: string
-    stepDocuments: string
-    stepIntegration: string
-    stepHandoff: string
-    stepMarketing: string
-    createdAt: Date
-  }): Promise<void> {
-    const adminEmail =
-      process.env.ADMIN_EMAIL ||
-      process.env.SMTP_FROM ||
-      "admin@echatbot.ai"
+  private async sendAdminNotification(record: any): Promise<void> {
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_FROM || "admin@echatbot.ai"
+    const backofficeUrl = process.env.BACKOFFICE_URL || "http://localhost:3002"
 
-    const backofficeUrl =
-      process.env.BACKOFFICE_URL || "http://localhost:3002"
+    const contactSection = record.wantsContact
+      ? `<table>
+      <tr><td>Full Name</td><td>${record.fullName || "—"}</td></tr>
+      <tr><td>Email</td><td>${record.email || "—"}</td></tr>
+      <tr><td>Phone</td><td>${record.phone || "—"}</td></tr>
+      <tr><td>Company</td><td>${record.company || "—"}</td></tr>
+    </table>`
+      : `<p style="color:#16a34a;font-weight:bold">⚠️ User did NOT consent to be contacted.</p>`
 
     const html = `
 <!DOCTYPE html>
@@ -141,21 +137,19 @@ export class OnboardingQuestionnaireController {
     <h1>🎯 New Questionnaire Submission</h1>
     <p class="subtitle">Received on ${new Date(record.createdAt).toLocaleString("it-IT")}</p>
 
-    <table>
-      <tr><td>Full Name</td><td>${record.fullName}</td></tr>
-      <tr><td>Email</td><td>${record.email}</td></tr>
-      <tr><td>Phone</td><td>${record.phone || "—"}</td></tr>
-      <tr><td>Company</td><td>${record.company || "—"}</td></tr>
-    </table>
+    ${contactSection}
 
     <table>
-      <tr><td>Channel preference</td><td>${record.stepChannel}</td></tr>
-      <tr><td>Time saving goal</td><td>${record.stepTimeSaving}</td></tr>
-      <tr><td>Automated sales</td><td>${record.stepEcommerce}</td></tr>
-      <tr><td>Document management</td><td>${record.stepDocuments}</td></tr>
-      <tr><td>Live integrations</td><td>${record.stepIntegration}</td></tr>
-      <tr><td>Handoff preference</td><td>${record.stepHandoff}</td></tr>
-      <tr><td>AI marketing</td><td>${record.stepMarketing}</td></tr>
+      <tr><td>Human Support</td><td>${record.stepHumanSupport || "—"}</td></tr>
+      <tr><td>Push Marketing</td><td>${record.stepPushMarketing || "—"}</td></tr>
+      <tr><td>Widget</td><td>${record.stepWidget || "—"}</td></tr>
+      <tr><td>Sales Agents</td><td>${record.stepSalesAgents || "—"}</td></tr>
+      <tr><td>E-Commerce</td><td>${record.stepEcommerce || "—"}</td></tr>
+      <tr><td>Platform</td><td>${record.stepEcommercePlatform || "—"}</td></tr>
+      <tr><td>Privacy</td><td>${record.stepPrivacy || "—"}</td></tr>
+      <tr><td>Will it help?</td><td>${record.stepHelpful || "—"}</td></tr>
+      <tr><td>Other notes</td><td>${record.stepOther || "—"}</td></tr>
+      <tr><td>Wants contact?</td><td>${record.wantsContact ? "✅ YES" : "❌ NO"}</td></tr>
     </table>
 
     <a href="${backofficeUrl}/questionnaire" class="cta">View in Backoffice</a>
@@ -165,7 +159,7 @@ export class OnboardingQuestionnaireController {
 
     await this.emailService.sendContactEmail({
       to: adminEmail,
-      subject: `[eChatbot] New questionnaire from ${record.fullName}`,
+      subject: `[eChatbot] New questionnaire from ${record.fullName || "anonymous"}`,
       message: html,
     })
   }

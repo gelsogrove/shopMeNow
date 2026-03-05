@@ -126,7 +126,10 @@ import { Prisma } from '../../../src/config/database'
 
 describe('Push Campaigns Job', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    // Use resetAllMocks (not clearAllMocks) to also flush unconsumed mockResolvedValueOnce
+    // queues, preventing state leakage between tests when a test exits early (e.g. via
+    // creditExhausted → continue) before consuming all queued count mock values.
+    jest.resetAllMocks()
     // Reset transaction mock to pass-through by default
     mockPrisma.$transaction.mockImplementation((callback) => callback(mockPrisma))
     mockPrisma.user.findUnique.mockResolvedValue({

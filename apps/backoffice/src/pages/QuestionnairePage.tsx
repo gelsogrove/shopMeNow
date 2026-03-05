@@ -4,29 +4,52 @@ import { api } from '@/services/api'
 interface QuestionnaireRecord {
   id: string
   createdAt: string
-  fullName: string
-  email: string
+  // Contact (optional)
+  fullName: string | null
+  email: string | null
   phone: string | null
   company: string | null
-  stepChannel: string
-  stepTimeSaving: string
-  stepEcommerce: string
-  stepDocuments: string
-  stepIntegration: string
-  stepHandoff: string
-  stepMarketing: string
+  wantsContact: boolean
+  // v2 fields
+  stepHumanSupport: string | null
+  stepPushMarketing: string | null
+  stepWidget: string | null
+  stepSalesAgents: string | null
+  stepEcommerce: string | null
+  stepEcommercePlatform: string | null
+  stepPrivacy: string | null
+  stepHelpful: string | null
+  stepOther: string | null
+  // v1 legacy fields
+  stepChannel: string | null
+  stepTimeSaving: string | null
+  stepDocuments: string | null
+  stepIntegration: string | null
+  stepHandoff: string | null
+  stepMarketing: string | null
   status: string
   adminNotes: string | null
 }
 
-const STEP_LABELS: Record<string, string> = {
-  stepChannel: 'Channel preference',
-  stepTimeSaving: 'Time saving goal',
-  stepEcommerce: 'Automated sales',
-  stepDocuments: 'Document management',
-  stepIntegration: 'Live integrations',
-  stepHandoff: 'Human handoff',
-  stepMarketing: 'AI marketing',
+const V2_STEP_LABELS: Record<string, string> = {
+  stepHumanSupport: 'Human support',
+  stepPushMarketing: 'Push marketing',
+  stepWidget: 'Widget',
+  stepSalesAgents: 'Sales agents',
+  stepEcommerce: 'E-commerce',
+  stepEcommercePlatform: 'Platform',
+  stepPrivacy: 'Privacy',
+  stepHelpful: 'Will it help?',
+  stepOther: 'Other notes',
+}
+
+const V1_STEP_LABELS: Record<string, string> = {
+  stepChannel: 'Channel preference (v1)',
+  stepTimeSaving: 'Time saving goal (v1)',
+  stepDocuments: 'Document management (v1)',
+  stepIntegration: 'Live integrations (v1)',
+  stepHandoff: 'Human handoff (v1)',
+  stepMarketing: 'AI marketing (v1)',
 }
 
 type Filter = 'ALL' | 'NEW' | 'VIEWED'
@@ -137,10 +160,23 @@ export default function QuestionnairePage() {
                   {record.status}
                 </span>
 
+                {/* Contact consent indicator */}
+                <span
+                  className={`text-xs font-bold px-2 py-1 rounded-full self-start sm:self-auto ${
+                    record.wantsContact
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {record.wantsContact ? '📞 Contact' : '🙏 No contact'}
+                </span>
+
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 truncate">{record.fullName}</div>
-                  <div className="text-sm text-gray-500 truncate">{record.email}</div>
+                  <div className="font-semibold text-gray-900 truncate">
+                    {record.fullName || <span className="text-gray-400 italic">Anonymous</span>}
+                  </div>
+                  <div className="text-sm text-gray-500 truncate">{record.email || '—'}</div>
                 </div>
 
                 <div className="hidden md:block text-sm text-gray-500 shrink-0">
@@ -170,18 +206,66 @@ export default function QuestionnairePage() {
               {/* Expanded detail */}
               {expanded === record.id && (
                 <div className="border-t border-gray-100 bg-gray-50 px-6 py-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 mb-5">
-                    {Object.entries(STEP_LABELS).map(([key, label]) => (
-                      <div key={key}>
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                          {label}
-                        </span>
-                        <p className="text-sm text-gray-800 mt-0.5">
-                          {record[key as keyof QuestionnaireRecord] as string}
-                        </p>
+                  {/* Contact info (only if wantsContact) */}
+                  {record.wantsContact && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-5">
+                      <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">
+                        📞 Contact Information
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div><span className="text-gray-500">Name:</span> <span className="font-medium">{record.fullName || '—'}</span></div>
+                        <div><span className="text-gray-500">Email:</span> <span className="font-medium">{record.email || '—'}</span></div>
+                        <div><span className="text-gray-500">Phone:</span> <span className="font-medium">{record.phone || '—'}</span></div>
+                        <div><span className="text-gray-500">Company:</span> <span className="font-medium">{record.company || '—'}</span></div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* v2 Step answers */}
+                  {Object.entries(V2_STEP_LABELS).some(([key]) => record[key as keyof QuestionnaireRecord]) && (
+                    <>
+                      <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                        Questionnaire Answers
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 mb-5">
+                        {Object.entries(V2_STEP_LABELS).map(([key, label]) => {
+                          const val = record[key as keyof QuestionnaireRecord] as string | null
+                          if (!val) return null
+                          return (
+                            <div key={key}>
+                              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                {label}
+                              </span>
+                              <p className="text-sm text-gray-800 mt-0.5">{val}</p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* v1 legacy answers (if any) */}
+                  {Object.entries(V1_STEP_LABELS).some(([key]) => record[key as keyof QuestionnaireRecord]) && (
+                    <details className="mb-4">
+                      <summary className="text-xs font-semibold text-gray-400 uppercase tracking-wider cursor-pointer">
+                        Legacy answers (v1)
+                      </summary>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 mt-3">
+                        {Object.entries(V1_STEP_LABELS).map(([key, label]) => {
+                          const val = record[key as keyof QuestionnaireRecord] as string | null
+                          if (!val) return null
+                          return (
+                            <div key={key}>
+                              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                {label}
+                              </span>
+                              <p className="text-sm text-gray-800 mt-0.5">{val}</p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </details>
+                  )}
 
                   {/* Actions */}
                   {record.status === 'NEW' && (

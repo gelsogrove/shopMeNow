@@ -1929,20 +1929,31 @@ model OnboardingQuestionnaire {
   id          String   @id @default(uuid())
   createdAt   DateTime @default(now())
 
-  // Contact info
-  fullName    String
-  email       String
+  // Contact info (optional — only if user consents to be contacted)
+  fullName    String?
+  email       String?
   phone       String?
   company     String?
 
-  // Step answers
-  stepChannel      String  // "widget" | "whatsapp" | "multichannel"
-  stepTimeSaving   String  // free text
-  stepEcommerce    String  // "yes" | "no"
-  stepDocuments    String  // "yes" | "no"
-  stepIntegration  String  // "yes" | "no"
-  stepHandoff      String  // "whatsapp" | "backoffice"
-  stepMarketing    String  // "yes" | "no"
+  // v2 Step answers (new questionnaire)
+  stepHumanSupport      String?  // "yes_handoff" | "partial" | "full_auto"
+  stepPushMarketing     String?  // "yes" | "no"
+  stepWidget            String?  // "yes_widget" | "whatsapp_only" | "both"
+  stepSalesAgents       String?  // "yes" | "general" | "no"
+  stepEcommerce         String?  // "yes" | "no" | "planning"
+  stepEcommercePlatform String?  // "wordpress" | "prestashop" | "magento" | "other"
+  stepPrivacy           String?  // "ok" | "concerns" | "need_info"
+  stepHelpful           String?  // "yes" | "maybe" | "exploring"
+  stepOther             String?  // free text
+  wantsContact          Boolean  @default(false)
+
+  // v1 legacy fields (kept nullable for backward compat)
+  stepChannel      String?
+  stepTimeSaving   String?
+  stepDocuments    String?
+  stepIntegration  String?
+  stepHandoff      String?
+  stepMarketing    String?
 
   // Admin management
   status      String   @default("NEW")  // "NEW" | "VIEWED"
