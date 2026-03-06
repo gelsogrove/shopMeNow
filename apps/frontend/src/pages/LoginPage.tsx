@@ -1926,22 +1926,22 @@ export function LoginPage() {
         const qMap: Record<string, { title: string; desc: string; cta: string }> = {
           it: {
             title: "Aiutaci a costruire il chatbot perfetto per te",
-            desc: "Il segreto di un buon chatbot è la qualità delle risposte. Rispondi a qualche domanda sulle tue esigenze — supporto umano, marketing push, widget, vendite, e-commerce e privacy — e ti mostreremo come eChatbot può fare la differenza. Circa 5 minuti, zero impegno.",
+            desc: "Il segreto di un buon chatbot è la qualità delle risposte. Rispondi a qualche domanda sulle tue esigenze — supporto umano, marketing push, widget, vendite, e-commerce e privacy — e ti mostreremo come eChatbot può fare la differenza. Circa 2 minuti, zero impegno.",
             cta: "Inizia il questionario →",
           },
           es: {
             title: "Ayúdanos a construir el chatbot perfecto para ti",
-            desc: "El secreto de un buen chatbot son las respuestas de calidad. Responde algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia. Unos 5 minutos, sin compromiso.",
+            desc: "El secreto de un buen chatbot son las respuestas de calidad. Responde algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia. Unos 2 minutos, sin compromiso.",
             cta: "Comenzar el cuestionario →",
           },
           pt: {
             title: "Ajude-nos a construir o chatbot perfeito para você",
-            desc: "O segredo de um bom chatbot são as respostas de qualidade. Responda algumas perguntas sobre suas necessidades — suporte humano, marketing push, widget, vendas, e-commerce e privacidade — e mostraremos como o eChatbot pode fazer a diferença. Cerca de 5 minutos, sem compromisso.",
+            desc: "O segredo de um bom chatbot são as respostas de qualidade. Responda algumas perguntas sobre suas necessidades — suporte humano, marketing push, widget, vendas, e-commerce e privacidade — e mostraremos como o eChatbot pode fazer a diferença. Cerca de 2 minutos, sem compromisso.",
             cta: "Iniciar o questionário →",
           },
           en: {
             title: "Help us build the perfect chatbot for you",
-            desc: "The secret to a great chatbot is quality responses. Answer a few questions about your needs — human support, push marketing, widget, sales, e-commerce, and privacy — and we'll show you how eChatbot can make a real difference. About 5 minutes, no commitment.",
+            desc: "The secret to a great chatbot is quality responses. Answer a few questions about your needs — human support, push marketing, widget, sales, e-commerce, and privacy — and we'll show you how eChatbot can make a real difference. About 2 minutes, no commitment.",
             cta: "Start the questionnaire →",
           },
         }
@@ -1989,7 +1989,7 @@ export function LoginPage() {
                       <div className="mt-6 h-3 bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full w-4/6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full" />
                       </div>
-                      <p className="text-sm text-slate-400 text-center mt-2">~ 5 min</p>
+                      <p className="text-sm text-slate-400 text-center mt-2">2 min</p>
                     </div>
                   </div>
                 </div>
