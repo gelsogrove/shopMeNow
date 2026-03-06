@@ -25,6 +25,7 @@ export class OnboardingQuestionnaireController {
         stepSalesAgents,
         stepEcommerce,
         stepEcommercePlatform,
+        stepIntegrations,
         stepPrivacy,
         stepHelpful,
         stepInterest,
@@ -50,6 +51,7 @@ export class OnboardingQuestionnaireController {
           stepSalesAgents: stepSalesAgents || null,
           stepEcommerce: stepEcommerce || null,
           stepEcommercePlatform: stepEcommercePlatform || null,
+          stepIntegrations: stepIntegrations || null,
           stepPrivacy: stepPrivacy || null,
           stepHelpful: stepHelpful || null,
           stepInterest: stepInterest || null,
@@ -182,6 +184,7 @@ export class OnboardingQuestionnaireController {
           stepSalesAgents: true,
           stepEcommerce: true,
           stepEcommercePlatform: true,
+          stepIntegrations: true,
           stepPrivacy: true,
           stepHelpful: true,
           stepInterest: true,
@@ -212,6 +215,7 @@ export class OnboardingQuestionnaireController {
         salesAgents: countAnswers('stepSalesAgents'),
         ecommerce: countAnswers('stepEcommerce'),
         ecommercePlatform: countAnswers('stepEcommercePlatform'),
+        integrations: countAnswers('stepIntegrations'),
         privacy: countAnswers('stepPrivacy'),
         helpful: countAnswers('stepHelpful'),
         interest: countAnswers('stepInterest'),
@@ -271,6 +275,7 @@ export class OnboardingQuestionnaireController {
       <tr><td>Sales Agents</td><td>${record.stepSalesAgents || "—"}</td></tr>
       <tr><td>E-Commerce</td><td>${record.stepEcommerce || "—"}</td></tr>
       <tr><td>Platform</td><td>${record.stepEcommercePlatform || "—"}</td></tr>
+      <tr><td>Integrations (CRM/ERP)</td><td>${record.stepIntegrations || "—"}</td></tr>
       <tr><td>Privacy</td><td>${record.stepPrivacy || "—"}</td></tr>
       <tr><td>Will it help?</td><td>${record.stepHelpful || "—"}</td></tr>
       <tr><td>Interest (0-5 stars)</td><td>${record.stepInterest ? "⭐".repeat(parseInt(record.stepInterest)) + ` (${record.stepInterest}/5)` : "—"}</td></tr>

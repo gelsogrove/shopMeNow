@@ -67,7 +67,14 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
     ecommercePlatform_opt4: "Altra piattaforma",
 
-    // Step 7: Privacy
+    // Step 7: External integrations
+    integrations_title: "Integrazioni Esterne",
+    integrations_q: "Il tuo business utilizza sistemi esterni che potrebbero beneficiare dell'integrazione con eChatbot? Ad esempio: CRM (Salesforce, HubSpot), ERP, software di magazzino, sistemi di pagamento, piattaforme di marketing automation, o altri strumenti aziendali. L'integrazione permette di sincronizzare automaticamente dati, ordini e interazioni.",
+    integrations_opt1: "Sì, ho sistemi da integrare",
+    integrations_opt2: "Non uso sistemi esterni",
+    integrations_opt3: "Non so, vorrei saperne di più",
+
+    // Step 8: Privacy
     privacy_title: "Privacy e Sicurezza",
     privacy_q: "Comprendiamo che la privacy dei tuoi clienti è fondamentale. eChatbot è progettato con la privacy al centro: non inviamo mai dati sensibili dei clienti ai modelli AI. Le informazioni personali (contatti, ordini, pagamenti) rimangono sempre nel tuo database. Per le operazioni sensibili usiamo link con token temporizzati, accessibili solo dall'utente interessato. Il nostro approccio è conforme al GDPR. Questo livello di privacy ti soddisfa?",
     privacy_opt1: "Sì, questo approccio mi convince",
@@ -171,7 +178,14 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
     ecommercePlatform_opt4: "Other platform",
 
-    privacy_title: "Privacy & Security",
+    // Step 7: External integrations
+    integrations_title: "External Integrations",
+    integrations_q: "Does your business use external systems that could benefit from integration with eChatbot? For example: CRM (Salesforce, HubSpot), ERP, warehouse software, payment systems, marketing automation platforms, or other business tools. Integration allows automatic synchronization of data, orders, and interactions.",
+    integrations_opt1: "Yes, I have systems to integrate",
+    integrations_opt2: "I don't use external systems",
+    integrations_opt3: "I don't know, I'd like to learn more",
+
+    // Step 8: Privacy
     privacy_q: "We understand that your customers' privacy is paramount. eChatbot is designed with privacy at its core: we never send sensitive customer data to AI models. Personal information (contacts, orders, payments) always stays in your database. For sensitive operations we use time-limited token links, accessible only by the specific user. Our approach is fully GDPR-compliant. Does this privacy model work for you?",
     privacy_opt1: "Yes, this approach works for me",
     privacy_opt2: "I have some privacy concerns",
@@ -268,7 +282,14 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
     ecommercePlatform_opt4: "Otra plataforma",
 
-    privacy_title: "Privacidad y Seguridad",
+    // Step 7: External integrations
+    integrations_title: "Integraciones Externas",
+    integrations_q: "¿Tu negocio utiliza sistemas externos que podrían beneficiarse de la integración con eChatbot? Por ejemplo: CRM (Salesforce, HubSpot), ERP, software de almacén, sistemas de pago, plataformas de automatización de marketing, u otras herramientas empresariales. La integración permite sincronizar automáticamente datos, pedidos e interacciones.",
+    integrations_opt1: "Sí, tengo sistemas para integrar",
+    integrations_opt2: "No uso sistemas externos",
+    integrations_opt3: "No lo sé, me gustaría saber más",
+
+    // Step 8: Privacy
     privacy_q: "Entendemos que la privacidad de tus clientes es fundamental. eChatbot está diseñado con la privacidad en el centro: nunca enviamos datos sensibles de los clientes a los modelos de IA. La información personal (contactos, pedidos, pagos) siempre permanece en tu base de datos. Para operaciones sensibles usamos enlaces con tokens de tiempo limitado, accesibles solo por el usuario en cuestión. Nuestro enfoque cumple plenamente con el RGPD. ¿Este modelo de privacidad te funciona?",
     privacy_opt1: "Sí, este enfoque me convence",
     privacy_opt2: "Tengo algunas dudas sobre privacidad",
@@ -365,7 +386,14 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
     ecommercePlatform_opt4: "Outra plataforma",
 
-    privacy_title: "Privacidade e Segurança",
+    // Step 7: External integrations
+    integrations_title: "Integrações Externas",
+    integrations_q: "O seu negócio utiliza sistemas externos que poderiam se beneficiar da integração com o eChatbot? Por exemplo: CRM (Salesforce, HubSpot), ERP, software de estoque, sistemas de pagamento, plataformas de automação de marketing, ou outras ferramentas empresariais. A integração permite sincronizar automaticamente dados, pedidos e interações.",
+    integrations_opt1: "Sim, tenho sistemas para integrar",
+    integrations_opt2: "Não uso sistemas externos",
+    integrations_opt3: "Não sei, gostaria de saber mais",
+
+    // Step 8: Privacy
     privacy_q: "Entendemos que a privacidade dos seus clientes é fundamental. O eChatbot foi desenvolvido com a privacidade no centro: nunca enviamos dados sensíveis dos clientes para modelos de IA. As informações pessoais (contatos, pedidos, pagamentos) sempre ficam no seu banco de dados. Para operações sensíveis usamos links com tokens temporários, acessíveis apenas pelo usuário em questão. Nossa abordagem está em total conformidade com a LGPD/RGPD. Este modelo de privacidade atende às suas expectativas?",
     privacy_opt1: "Sim, essa abordagem me convence",
     privacy_opt2: "Tenho algumas dúvidas sobre privacidade",
@@ -518,6 +546,19 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "prestashop", label: T.ecommercePlatform_opt2, emoji: "🟣" },
         { value: "magento", label: T.ecommercePlatform_opt3, emoji: "🟠" },
         { value: "other", label: T.ecommercePlatform_opt4, emoji: "🔧" },
+      ],
+    },
+    {
+      id: "stepIntegrations",
+      icon: "🔗",
+      titleKey: "integrations_title",
+      questionKey: "integrations_q",
+      type: "radio",
+      image: "https://www.echatbot.ai/CRM.png",
+      options: [
+        { value: "yes", label: T.integrations_opt1, emoji: "🔗" },
+        { value: "no", label: T.integrations_opt2, emoji: "📦" },
+        { value: "learn_more", label: T.integrations_opt3, emoji: "🎓" },
       ],
     },
     {
