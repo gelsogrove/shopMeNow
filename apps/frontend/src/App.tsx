@@ -13,6 +13,7 @@ import { CrmIntegrationPage } from "@/pages/CrmIntegrationPage"
 import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
 import { PricingPage } from "@/pages/PricingPage"
+import { NeapolisPage } from "@/pages/NeapolisPage"
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { Toaster } from "sonner"
 import { MinimalLayout } from "./components/layout/MinimalLayout"
@@ -222,6 +223,7 @@ function AppWithProviders() {
                 <Route path="/team-collaboration" element={<TeamCollaborationPage />} />
                 <Route path="/privacy-by-design" element={<PrivacyByDesignPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/neapolis" element={<NeapolisPage />} />
                 {/* Direct route for /forgot-password to avoid 404 */}
                 <Route
                   path="/forgot-password"
