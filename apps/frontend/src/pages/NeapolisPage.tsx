@@ -21,6 +21,7 @@ const T: Record<Lang, {
   client0: string
   offer: string
   offerItems: string[]
+  offerExclusion: string
   goal: string
   cta_title: string
   cta_desc: string
@@ -41,9 +42,10 @@ const T: Record<Lang, {
       "Integrazioni con fonti e servizi terzi",
       "Supporto continuo gratuito per 12 mesi",
     ],
+    offerExclusion: "Non copriamo i costi di utilizzo dei modelli LLM (es. OpenAI)",
     goal: "L'obiettivo è collaborare con un partner che ci permetta di dimostrare concretamente il valore della piattaforma e di farci conoscere all'interno della community.",
     cta_title: "Ti incuriosisce?",
-    cta_desc: "Rispondi a qualche breve domanda per capire come eChatbot può trasformare il tuo business. Circa 5 minuti — zero impegno.",
+    cta_desc: "Rispondi a qualche breve domanda per capire come eChatbot può trasformare il tuo business. Circa 2 minuti — zero impegno.",
     cta_btn: "Avvia il survey →",
     footer_back: "← Torna alla homepage",
   },
@@ -61,9 +63,10 @@ const T: Record<Lang, {
       "Integrations with third-party sources and services",
       "Free continuous support for 12 months",
     ],
+    offerExclusion: "LLM usage costs not covered (e.g. OpenAI)",
     goal: "Our goal is to collaborate with a partner who allows us to concretely demonstrate the value of the platform and to make ourselves known within the community.",
     cta_title: "Does it sound interesting?",
-    cta_desc: "Answer a few quick questions to help us understand how eChatbot can transform your business. About 5 minutes — no commitment.",
+    cta_desc: "Answer a few quick questions to help us understand how eChatbot can transform your business. About 2 minutes — no commitment.",
     cta_btn: "Start the survey →",
     footer_back: "← Back to homepage",
   },
@@ -81,9 +84,10 @@ const T: Record<Lang, {
       "Integraciones con fuentes y servicios de terceros",
       "Soporte continuo gratuito durante 12 meses",
     ],
+    offerExclusion: "No cubrimos los costes de uso de los modelos LLM (ej. OpenAI)",
     goal: "El objetivo es colaborar con un socio que nos permita demostrar concretamente el valor de la plataforma y darnos a conocer dentro de la comunidad.",
     cta_title: "¿Te parece interesante?",
-    cta_desc: "Responde algunas preguntas rápidas para entender cómo eChatbot puede transformar tu negocio. Unos 5 minutos — sin compromiso.",
+    cta_desc: "Responde algunas preguntas rápidas para entender cómo eChatbot puede transformar tu negocio. Unos 2 minutos — sin compromiso.",
     cta_btn: "Iniciar el survey →",
     footer_back: "← Volver a la página principal",
   },
@@ -101,9 +105,10 @@ const T: Record<Lang, {
       "Integrações com fontes e serviços de terceiros",
       "Suporte contínuo gratuito por 12 meses",
     ],
+    offerExclusion: "Custos de uso dos modelos LLM não cobertos (ex. OpenAI)",
     goal: "O objetivo é colaborar com um parceiro que nos permita demonstrar concretamente o valor da plataforma e tornarmo-nos conhecidos dentro da comunidade.",
     cta_title: "Parece interessante?",
-    cta_desc: "Responda a algumas perguntas rápidas para entender como o eChatbot pode transformar o seu negócio. Cerca de 5 minutos — sem compromisso.",
+    cta_desc: "Responda a algumas perguntas rápidas para entender como o eChatbot pode transformar o seu negócio. Cerca de 2 minutos — sem compromisso.",
     cta_btn: "Iniciar o survey →",
     footer_back: "← Voltar à página inicial",
   },
@@ -139,19 +144,19 @@ export function NeapolisPage() {
         }}
       >
         {/* ── Header ── */}
-        <header className="bg-white/80 backdrop-blur-sm border-b border-slate-100 sticky top-0 z-50">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            {/* Logos */}
-            <div className="flex items-center gap-5">
+        <header className="bg-white/90 backdrop-blur-sm border-b border-slate-100 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-8 py-3 flex items-center justify-between">
+            {/* Logos with arrow */}
+            <div className="flex items-center gap-4">
               <img
                 src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg"
-                alt="Neapolis"
-                className="h-8 w-auto"
+                alt="Neàpolis"
+                className="h-10 w-auto"
               />
-              <span className="text-slate-300 text-xl font-light">×</span>
-              <Link to="/" className="flex items-center gap-2">
-                <img src="/logo.png" alt="eChatbot" className="w-8 h-8" />
-                <span className="text-lg font-bold text-green-600">eChatbot.AI</span>
+              <ArrowRight className="w-5 h-5 text-slate-400" />
+              <Link to="/" className="flex items-center gap-1">
+                <img src="/logo.png" alt="eChatbot" className="w-14 h-14 -my-2" />
+                <span className="text-xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
               </Link>
             </div>
 
@@ -175,7 +180,7 @@ export function NeapolisPage() {
         </header>
 
         {/* ── Hero badge ── */}
-        <div className="max-w-3xl mx-auto px-6 pt-14 pb-4 text-center">
+        <div className="max-w-5xl mx-auto px-8 pt-10 pb-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -189,33 +194,35 @@ export function NeapolisPage() {
         </div>
 
         {/* ── Main card ── */}
-        <div className="max-w-3xl mx-auto px-6 pb-16">
+        <div className="max-w-5xl mx-auto px-8 pb-12">
           <motion.div
             initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: "easeOut" }}
             className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
           >
-            {/* Green top banner with both logos */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-10 py-10 text-white">
-              <div className="flex items-center justify-center gap-6 mb-6">
-                <div className="bg-white/20 backdrop-blur rounded-2xl px-5 py-3">
-                  <img
-                    src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg"
-                    alt="Neapolis"
-                    className="h-9 w-auto brightness-0 invert"
-                  />
-                </div>
-                <span className="text-3xl font-light opacity-80">×</span>
-                <div className="bg-white/20 backdrop-blur rounded-2xl px-5 py-3 flex items-center gap-2">
-                  <img src="/logo.png" alt="eChatbot" className="w-9 h-9" />
-                  <span className="text-xl font-bold">eChatbot.AI</span>
-                </div>
+            {/* Green top banner — tagline only, no logos */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-12 py-8 text-white text-center">
+              <p className="text-2xl font-bold tracking-tight">neàpolis × eChatbot.AI</p>
+              <p className="text-green-100 text-sm mt-1 font-medium uppercase tracking-widest">Partnership · Cliente 0</p>
+            </div>
+
+            {/* Colored logos row */}
+            <div className="flex items-center justify-center gap-8 px-12 py-8 border-b border-slate-100 bg-slate-50/50">
+              <img
+                src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg"
+                alt="Neàpolis"
+                className="h-12 w-auto"
+              />
+              <ArrowRight className="w-6 h-6 text-slate-300" />
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="eChatbot" className="w-14 h-14" />
+                <span className="text-2xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
               </div>
             </div>
 
             {/* Body */}
-            <div className="px-10 py-10 space-y-8">
+            <div className="px-12 py-10 space-y-8">
 
               {/* Greeting + intro */}
               <div>
@@ -260,6 +267,11 @@ export function NeapolisPage() {
                     )
                   })}
                 </div>
+                {/* Exclusion note */}
+                <p className="mt-4 text-sm text-slate-400 flex items-start gap-2">
+                  <span className="mt-0.5 text-slate-300">✗</span>
+                  {t.offerExclusion}
+                </p>
               </div>
 
               {/* Goal */}
