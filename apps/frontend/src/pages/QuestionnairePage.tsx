@@ -717,10 +717,10 @@ export default function QuestionnairePage() {
     >
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="eChatbot" className="w-10 h-10" />
-            <span className="text-xl font-bold text-green-600">{T.header_brand}</span>
+        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-1">
+            <img src="/logo.png" alt="eChatbot" className="w-[90px] h-[90px] mt-[-6px]" />
+            <span className="text-2xl font-bold text-green-600 relative left-[-20px]">{T.header_brand}</span>
           </Link>
           <Link
             to="/"
@@ -754,18 +754,8 @@ export default function QuestionnairePage() {
                   {T.intro_desc}
                 </p>
 
-                {/* Live chatbot CTA — points to the floating widget */}
-                <div className="mb-8 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl flex items-center gap-4">
-                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center shrink-0 shadow-lg">
-                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>
-                  </div>
-                  <p className="text-base text-slate-700 font-medium">
-                    {T.try_chatbot} — <span className="text-green-600 font-semibold">{T.try_chatbot_button}</span>
-                  </p>
-                </div>
-
                 {/* Topic preview chips */}
-                <div className="grid grid-cols-2 gap-3 mb-10">
+                <div className="grid grid-cols-1 gap-3 mb-10">
                   {[
                     { emoji: "🤝", label: lang === "it" ? "Supporto umano" : lang === "es" ? "Soporte humano" : lang === "pt" ? "Suporte humano" : "Human support" },
                     { emoji: "📣", label: lang === "it" ? "Marketing push" : "Push marketing" },
@@ -838,14 +828,18 @@ export default function QuestionnairePage() {
                     exit="exit"
                     transition={{ duration: 0.25 }}
                   >
-                    {/* Image (if available) */}
-                    {step.image && (
+                    {/* Image (if available) or placeholder */}
+                    {step.image ? (
                       <div className="mb-6 flex justify-center">
                         <img
                           src={step.image}
                           alt={T[step.titleKey]}
                           className="w-full max-w-md h-48 object-cover rounded-2xl shadow-lg"
                         />
+                      </div>
+                    ) : (
+                      <div className="mb-6 w-full h-48 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-dashed border-emerald-200 flex items-center justify-center">
+                        <span className="text-4xl opacity-30">🖼️</span>
                       </div>
                     )}
 
@@ -894,7 +888,18 @@ export default function QuestionnairePage() {
                         {[0, 1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
-                            onClick={() => handleAnswer(step.id, star.toString())}
+                            onClick={() => {
+                              handleAnswer(step.id, star.toString())
+                              // Auto-advance after selecting a star
+                              setTimeout(() => {
+                                if (currentStep < totalSteps - 1) {
+                                  setDirection(1)
+                                  setCurrentStep((s) => s + 1)
+                                } else {
+                                  setView("contact_consent")
+                                }
+                              }, 350)
+                            }}
                             className="group relative transition-transform hover:scale-110"
                           >
                             <svg
@@ -1144,7 +1149,7 @@ export default function QuestionnairePage() {
       
       {/* Widget Loader + Floating Chat Widget */}
       <WidgetLoader />
-      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" />
+      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" logoUrl="/logo.png" />
     </div>
   )
 }

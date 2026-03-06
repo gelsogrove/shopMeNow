@@ -305,7 +305,7 @@ export function NeapolisPage() {
       </div>
 
       <WidgetLoader />
-      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" />
+      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" logoUrl="/logo.png" />
     </>
   )
 }
