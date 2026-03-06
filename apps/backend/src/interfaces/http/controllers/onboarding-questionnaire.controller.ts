@@ -103,6 +103,127 @@ export class OnboardingQuestionnaireController {
     }
   }
 
+  /**
+   * GET /admin/questionnaire/stats (ADMIN — authMiddleware required)
+   * Returns aggregated statistics of questionnaire responses
+   * @swagger
+   * /api/v1/admin/questionnaire/stats:
+   *   get:
+   *     summary: Get questionnaire response statistics
+   *     tags: [Questionnaire]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Statistics retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                 data:
+   *                   type: object
+   *                   properties:
+   *                     total:
+   *                       type: number
+   *                       description: Total number of submissions
+   *                     totalWithContact:
+   *                       type: number
+   *                       description: Submissions with contact consent
+   *                     totalWithoutContact:
+   *                       type: number
+   *                       description: Submissions without contact consent
+   *                     humanSupport:
+   *                       type: object
+   *                       description: Human support answer counts
+   *                     pushMarketing:
+   *                       type: object
+   *                       description: Push marketing answer counts
+   *                     widget:
+   *                       type: object
+   *                       description: Widget answer counts
+   *                     salesAgents:
+   *                       type: object
+   *                       description: Sales agents answer counts
+   *                     ecommerce:
+   *                       type: object
+   *                       description: E-commerce answer counts
+   *                     ecommercePlatform:
+   *                       type: object
+   *                       description: E-commerce platform counts
+   *                     privacy:
+   *                       type: object
+   *                       description: Privacy answer counts
+   *                     helpful:
+   *                       type: object
+   *                       description: Helpful answer counts
+   *                     last30Days:
+   *                       type: number
+   *                       description: Submissions in last 30 days
+   *       401:
+   *         description: Unauthorized
+   *       500:
+   *         description: Internal server error
+   */
+  async getStats(_req: Request, res: Response): Promise<void> {
+    try {
+      const total = await prisma.onboardingQuestionnaire.count()
+      
+      // Get all submissions to calculate stats
+      const submissions = await prisma.onboardingQuestionnaire.findMany({
+        select: {
+          stepHumanSupport: true,
+          stepPushMarketing: true,
+          stepWidget: true,
+          stepSalesAgents: true,
+          stepEcommerce: true,
+          stepEcommercePlatform: true,
+          stepPrivacy: true,
+          stepHelpful: true,
+          wantsContact: true,
+          createdAt: true,
+        },
+      })
+
+      // Helper function to count occurrences
+      const countAnswers = (field: string) => {
+        const counts: Record<string, number> = {}
+        submissions.forEach((s: any) => {
+          const value = s[field]
+          if (value) {
+            counts[value] = (counts[value] || 0) + 1
+          }
+        })
+        return counts
+      }
+
+      const stats = {
+        total,
+        totalWithContact: submissions.filter(s => s.wantsContact).length,
+        totalWithoutContact: submissions.filter(s => !s.wantsContact).length,
+        humanSupport: countAnswers('stepHumanSupport'),
+        pushMarketing: countAnswers('stepPushMarketing'),
+        widget: countAnswers('stepWidget'),
+        salesAgents: countAnswers('stepSalesAgents'),
+        ecommerce: countAnswers('stepEcommerce'),
+        ecommercePlatform: countAnswers('stepEcommercePlatform'),
+        privacy: countAnswers('stepPrivacy'),
+        helpful: countAnswers('stepHelpful'),
+        // Last 30 days trend
+        last30Days: submissions.filter(
+          s => new Date(s.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        ).length,
+      }
+
+      res.json({ success: true, data: stats })
+    } catch (error) {
+      logger.error('[QUESTIONNAIRE] Error fetching stats:', error)
+      res.status(500).json({ success: false, error: 'Internal server error' })
+    }
+  }
+
   private async sendAdminNotification(record: any): Promise<void> {
     const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_FROM || "admin@echatbot.ai"
     const backofficeUrl = process.env.BACKOFFICE_URL || "http://localhost:3002"

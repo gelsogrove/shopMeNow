@@ -19,6 +19,11 @@ questionnaireAdminRouter.get(
   authMiddleware,
   (req, res) => controller.getAll(req, res)
 )
+questionnaireAdminRouter.get(
+  "/questionnaire/stats",
+  authMiddleware,
+  (req, res) => controller.getStats(req, res)
+)
 questionnaireAdminRouter.patch(
   "/questionnaire/:id/viewed",
   authMiddleware,
