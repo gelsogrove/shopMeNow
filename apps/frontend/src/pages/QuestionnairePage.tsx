@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { WidgetLoader } from "@/components/WidgetLoader"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
 
@@ -115,6 +116,10 @@ const QT: Record<Lang, Record<string, string>> = {
     // Header back link
     header_back: "← Torna alla homepage",
     header_brand: "eChatbot",
+
+    // Try chatbot CTA
+    try_chatbot: "Hai dubbi o domande? Prova il nostro chatbot su WhatsApp!",
+    try_chatbot_button: "Chatta con noi",
   },
 
   en: {
@@ -203,6 +208,10 @@ const QT: Record<Lang, Record<string, string>> = {
 
     header_back: "← Back to homepage",
     header_brand: "eChatbot",
+
+    // Try chatbot CTA
+    try_chatbot: "Have doubts or questions? Try our chatbot on WhatsApp!",
+    try_chatbot_button: "Chat with us",
   },
 
   es: {
@@ -291,6 +300,10 @@ const QT: Record<Lang, Record<string, string>> = {
 
     header_back: "← Volver a la página principal",
     header_brand: "eChatbot",
+
+    // Try chatbot CTA
+    try_chatbot: "¿Tienes dudas o preguntas? ¡Prueba nuestro chatbot en WhatsApp!",
+    try_chatbot_button: "Chatea con nosotros",
   },
 
   pt: {
@@ -379,6 +392,10 @@ const QT: Record<Lang, Record<string, string>> = {
 
     header_back: "← Voltar para a página inicial",
     header_brand: "eChatbot",
+
+    // Try chatbot CTA
+    try_chatbot: "Tem dúvidas ou perguntas? Experimente nosso chatbot no WhatsApp!",
+    try_chatbot_button: "Converse conosco",
   },
 }
 
@@ -659,6 +676,24 @@ export default function QuestionnairePage() {
                 <p className="text-slate-600 mb-6 leading-relaxed text-base">
                   {T.intro_desc}
                 </p>
+
+                {/* WhatsApp chatbot CTA */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                  <p className="text-sm text-slate-700 mb-3 text-center">
+                    {T.try_chatbot}
+                  </p>
+                  <a
+                    href="https://wa.me/34602119358"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
+                  >
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
+                    </svg>
+                    <span>{T.try_chatbot_button}</span>
+                  </a>
+                </div>
 
                 {/* Topic preview chips */}
                 <div className="grid grid-cols-2 gap-2 mb-8">
@@ -954,7 +989,26 @@ export default function QuestionnairePage() {
                 <span className="text-4xl">✅</span>
               </motion.div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">{T.success_title}</h2>
-              <p className="text-slate-500 mb-8 leading-relaxed">{T.success_desc}</p>
+              <p className="text-slate-500 mb-6 leading-relaxed">{T.success_desc}</p>
+              
+              {/* WhatsApp chatbot CTA */}
+              <div className="mb-8 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                <p className="text-sm text-slate-700 mb-3 text-center">
+                  {T.try_chatbot}
+                </p>
+                <a
+                  href="https://wa.me/34602119358"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
+                >
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
+                  </svg>
+                  <span>{T.try_chatbot_button}</span>
+                </a>
+              </div>
+
               <Link to="/">
                 <Button className="bg-green-600 hover:bg-green-700 text-white px-8">
                   {T.success_cta}
@@ -980,7 +1034,26 @@ export default function QuestionnairePage() {
                 <span className="text-4xl">🙏</span>
               </motion.div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">{T.noContact_title}</h2>
-              <p className="text-slate-500 mb-8 leading-relaxed">{T.noContact_desc}</p>
+              <p className="text-slate-500 mb-6 leading-relaxed">{T.noContact_desc}</p>
+              
+              {/* WhatsApp chatbot CTA */}
+              <div className="mb-8 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                <p className="text-sm text-slate-700 mb-3 text-center">
+                  {T.try_chatbot}
+                </p>
+                <a
+                  href="https://wa.me/34602119358"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
+                >
+                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
+                  </svg>
+                  <span>{T.try_chatbot_button}</span>
+                </a>
+              </div>
+
               <Link to="/">
                 <Button className="bg-green-600 hover:bg-green-700 text-white px-8">
                   {T.noContact_cta}
@@ -990,6 +1063,9 @@ export default function QuestionnairePage() {
           )}
         </div>
       </div>
+      
+      {/* Widget Loader */}
+      <WidgetLoader />
     </div>
   )
 }
