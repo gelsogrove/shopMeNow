@@ -6,6 +6,13 @@ import WidgetSettingsPage from "@/pages/WidgetSettingsPage"
 import WidgetEmbedPage from "@/pages/WidgetEmbedPage"
 import WidgetTestPage from "@/pages/WidgetTestPage"
 import { LegalDocumentPage } from "@/pages/LegalDocumentPage"
+import { FeaturesPage } from "@/pages/FeaturesPage"
+import { WidgetToWhatsAppPage } from "@/pages/WidgetToWhatsAppPage"
+import { HumanSupportPage } from "@/pages/HumanSupportPage"
+import { CrmIntegrationPage } from "@/pages/CrmIntegrationPage"
+import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
+import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
+import { PricingPage } from "@/pages/PricingPage"
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { Toaster } from "sonner"
 import { MinimalLayout } from "./components/layout/MinimalLayout"
@@ -206,6 +213,15 @@ function AppWithProviders() {
                 <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
                 <Route path="/refund-policy" element={<Navigate to="/refund" replace />} />
                 <Route path="/gdpr-policy" element={<Navigate to="/gdpr" replace />} />
+
+                {/* Public SEO Marketing Pages */}
+                <Route path="/features" element={<FeaturesPage />} />
+                <Route path="/widget-to-whatsapp" element={<WidgetToWhatsAppPage />} />
+                <Route path="/human-support" element={<HumanSupportPage />} />
+                <Route path="/crm-integration" element={<CrmIntegrationPage />} />
+                <Route path="/team-collaboration" element={<TeamCollaborationPage />} />
+                <Route path="/privacy-by-design" element={<PrivacyByDesignPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
                 {/* Direct route for /forgot-password to avoid 404 */}
                 <Route
                   path="/forgot-password"
@@ -219,7 +235,8 @@ function AppWithProviders() {
                 {/* PayPal callback result page - NO AUTH REQUIRED */}
                 <Route path="/paypal-result" element={<PayPalResultPage />} />
 
-                {/* Onboarding Questionnaire - Public, no auth */}
+                {/* Survey (formerly Questionario) - Public, no auth */}
+                <Route path="/survey" element={<QuestionnairePage />} />
                 <Route path="/questionario" element={<QuestionnairePage />} />
 
                 {/* NOTE: Short URLs (/s/:code) are handled by Vite proxy directly to backend */}

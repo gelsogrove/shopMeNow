@@ -3,6 +3,9 @@ import { Link } from "react-router-dom"
 import DOMPurify from "dompurify"
 import { ArrowLeft } from "lucide-react"
 import { publicApi } from "@/services/publicApi"
+import { SEO } from "@/components/SEO"
+import { SiteHeader } from "@/components/layout/SiteHeader"
+import { SiteFooter } from "@/components/layout/SiteFooter"
 
 interface LegalDocument {
   type: string
@@ -69,7 +72,7 @@ export function LegalDocumentPage({ docType }: LegalDocumentPageProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="text-purple-600 text-lg">{t.loading}</div>
       </div>
     )
@@ -77,8 +80,9 @@ export function LegalDocumentPage({ docType }: LegalDocumentPageProps) {
 
   if (!document) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="max-w-4xl w-full bg-white rounded-lg shadow-xl p-8 md:p-12">
+      <div className="min-h-screen bg-white">
+        <SiteHeader />
+        <div className="max-w-4xl mx-auto px-6 py-32 text-center">
           <h1 className="text-2xl font-bold text-gray-900">{t.notFound}</h1>
           <p className="text-gray-600 mt-4">{t.notAvailable}</p>
           <Link
@@ -89,13 +93,29 @@ export function LegalDocumentPage({ docType }: LegalDocumentPageProps) {
             <span>{t.backToHome}</span>
           </Link>
         </div>
+        <SiteFooter />
       </div>
     )
   }
 
+  const urlMap: Record<string, string> = {
+    PRIVACY_POLICY: "/privacy",
+    TERMS_OF_SERVICE: "/terms",
+    REFUND_POLICY: "/refund",
+    GDPR: "/gdpr",
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full bg-white rounded-lg shadow-xl p-8 md:p-12">
+    <div className="min-h-screen bg-white">
+      <SEO
+        title={`${document.title} | eChatbot`}
+        description={`${document.title} - eChatbot WhatsApp e-commerce chatbot platform.`}
+        url={urlMap[docType] ?? "/"}
+        lang={language}
+      />
+      <SiteHeader />
+      <main className="pt-24 pb-20">
+      <div className="max-w-4xl mx-auto px-6 lg:px-8 bg-white rounded-lg shadow-xl p-8 md:p-12 mt-4">
         {/* Back Button */}
         <Link
           to="/"
@@ -120,6 +140,8 @@ export function LegalDocumentPage({ docType }: LegalDocumentPageProps) {
           </p>
         </div>
       </div>
+      </main>
+      <SiteFooter />
     </div>
   )
 }

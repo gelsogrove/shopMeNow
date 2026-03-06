@@ -1,13 +1,23 @@
 import { useLanguage } from "@/contexts/LanguageContext"
 import { ArrowLeft } from "lucide-react"
 import { Link } from "react-router-dom"
+import { SEO } from "@/components/SEO"
+import { SiteHeader } from "@/components/layout/SiteHeader"
+import { SiteFooter } from "@/components/layout/SiteFooter"
 
 export function RefundPolicy() {
   const { t } = useLanguage()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full bg-white rounded-lg shadow-xl p-8 md:p-12">
+    <div className="min-h-screen bg-white">
+      <SEO
+        title="Refund Policy | eChatbot"
+        description="eChatbot refund and cancellation policy. 14-day money back guarantee, cancellation terms and procedures."
+        url="/refund"
+      />
+      <SiteHeader />
+      <main className="pt-24 pb-20">
+      <div className="max-w-4xl mx-auto px-6 lg:px-8 bg-white rounded-lg shadow-xl p-8 md:p-12 mt-4">
         {/* Back Button */}
         <Link
           to="/"
@@ -132,6 +142,8 @@ export function RefundPolicy() {
           </p>
         </div>
       </div>
+      </main>
+      <SiteFooter />
     </div>
   )
 }

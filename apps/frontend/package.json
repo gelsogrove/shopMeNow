@@ -86,6 +86,7 @@
   },
   "optionalDependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "react-helmet-async": "^3.0.0",
     "react-quill-new": "^3.7.0"
   }
 }

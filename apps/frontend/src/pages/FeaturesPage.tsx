@@ -83,7 +83,96 @@ const translations = {
       imagePlaceholder: "Placeholder immagine integr",
     },
   },
-  // ... (altre lingue verranno aggiunte dopo, per ora solo IT per brevità)
+  en: {
+    seoTitle: "Features - AI WhatsApp Chatbot Platform | eChatbot",
+    seoDescription: "Discover all eChatbot features: AI automation, human support, push marketing, CRM integration, e-commerce, privacy and security. The complete platform for WhatsApp chatbots.",
+    seoKeywords: "whatsapp chatbot, ai chatbot, customer service automation, push marketing, crm integration, ecommerce chatbot, human in the loop, privacy gdpr",
+    breadcrumb: "Features",
+    hero: {
+      badge: "Complete Platform",
+      title: "Everything you need to<br/>automate your business",
+      subtitle: "eChatbot combines artificial intelligence, automation and human intervention to create exceptional customer experiences on WhatsApp and web widgets.",
+      cta: "Try Free for 15 Days",
+    },
+    coreFeatures: {
+      title: "Core Features",
+      subtitle: "The capabilities that make eChatbot the ideal choice for your business",
+      features: [
+        { icon: "Bot", title: "Advanced AI Automation", description: "Intelligent chatbot based on GPT-4 that understands natural language, answers complex questions and learns from conversations to continuously improve.", points: ["Context understanding", "Personalized responses", "Continuous learning"] },
+        { icon: "Users", title: "Human-in-the-Loop Support", description: "Easily switch from AI to a human operator when needed. The chatbot knows when to ask for help and transfers the conversation seamlessly.", points: ["Intelligent handoff", "Operator dashboard", "Conversation continuity"] },
+        { icon: "MessageSquare", title: "Proactive Push Marketing", description: "Send targeted marketing campaigns on WhatsApp. Segment your audience, personalize messages and measure results in real time.", points: ["Advanced segmentation", "A/B testing", "Detailed analytics"] },
+        { icon: "ShoppingCart", title: "Integrated E-Commerce", description: "Sell products directly on WhatsApp. Product catalog, cart, payments and order tracking all in chat.", points: ["AI product catalog", "Secure payments", "Order management"] },
+        { icon: "Globe", title: "Widget → WhatsApp", description: "A single chatbot for website and WhatsApp. Customers start on the widget and continue on WhatsApp without repeating information.", points: ["Unified session", "Data continuity", "Zero friction"] },
+        { icon: "Lock", title: "GDPR Privacy & Security", description: "Full GDPR compliance, end-to-end encryption, customizable data retention policies and complete control over your customers' data.", points: ["GDPR compliant", "E2E encryption", "Data ownership"] },
+      ],
+    },
+    integration: {
+      title: "Powerful Integrations",
+      subtitle: "Connect eChatbot with your work tools",
+      description: "Easily integrate the chatbot with CRMs (Salesforce, HubSpot), e-commerce platforms (WooCommerce, PrestaShop, Magento), ERP systems, warehouse software, marketing automation tools and much more.",
+      imagePlaceholder: "Integration image placeholder",
+    },
+  },
+  es: {
+    seoTitle: "Funcionalidades - Plataforma AI Chatbot WhatsApp | eChatbot",
+    seoDescription: "Descubre todas las funcionalidades de eChatbot: automatización IA, soporte humano, marketing push, integración CRM, e-commerce, privacidad y seguridad.",
+    seoKeywords: "chatbot whatsapp, ai chatbot, automatización customer service, marketing push, integración crm, chatbot ecommerce, human in the loop, privacidad gdpr",
+    breadcrumb: "Funcionalidades",
+    hero: {
+      badge: "Plataforma Completa",
+      title: "Todo lo que necesitas para<br/>automatizar tu negocio",
+      subtitle: "eChatbot combina inteligencia artificial, automatización e intervención humana para crear experiencias de cliente excepcionales en WhatsApp y widgets web.",
+      cta: "Prueba Gratis 15 Días",
+    },
+    coreFeatures: {
+      title: "Funcionalidades Principales",
+      subtitle: "Las capacidades que hacen de eChatbot la elección ideal para tu negocio",
+      features: [
+        { icon: "Bot", title: "Automatización IA Avanzada", description: "Chatbot inteligente basado en GPT-4 que comprende el lenguaje natural, responde preguntas complejas y aprende de las conversaciones.", points: ["Comprensión del contexto", "Respuestas personalizadas", "Aprendizaje continuo"] },
+        { icon: "Users", title: "Soporte Human-in-the-Loop", description: "Cambia fácilmente de IA a un operador humano cuando sea necesario. El chatbot sabe cuándo pedir ayuda y transfiere la conversación sin interrupciones.", points: ["Handoff inteligente", "Dashboard operadores", "Continuidad conversación"] },
+        { icon: "MessageSquare", title: "Marketing Push Proactivo", description: "Envía campañas de marketing dirigidas en WhatsApp. Segmenta la audiencia, personaliza los mensajes y mide resultados en tiempo real.", points: ["Segmentación avanzada", "A/B testing", "Analytics detallados"] },
+        { icon: "ShoppingCart", title: "E-Commerce Integrado", description: "Vende productos directamente en WhatsApp. Catálogo de productos, carrito, pagos y seguimiento de pedidos todo en el chat.", points: ["Catálogo IA", "Pagos seguros", "Gestión de pedidos"] },
+        { icon: "Globe", title: "Widget → WhatsApp", description: "Un único chatbot para sitio web y WhatsApp. Los clientes empiezan en el widget y continúan en WhatsApp sin repetir información.", points: ["Sesión unificada", "Continuidad de datos", "Sin fricción"] },
+        { icon: "Lock", title: "Privacidad & Seguridad GDPR", description: "Cumplimiento total GDPR, cifrado de extremo a extremo, políticas de retención de datos personalizables y control completo sobre los datos de tus clientes.", points: ["Conforme GDPR", "Cifrado E2E", "Data ownership"] },
+      ],
+    },
+    integration: {
+      title: "Integraciones Potentes",
+      subtitle: "Conecta eChatbot con tus herramientas de trabajo",
+      description: "Integra fácilmente el chatbot con CRMs (Salesforce, HubSpot), plataformas de e-commerce (WooCommerce, PrestaShop, Magento), sistemas ERP, software de almacén, herramientas de marketing automation y mucho más.",
+      imagePlaceholder: "Imagen de integración",
+    },
+  },
+  pt: {
+    seoTitle: "Funcionalidades - Plataforma IA Chatbot WhatsApp | eChatbot",
+    seoDescription: "Descubra todas as funcionalidades do eChatbot: automação IA, suporte humano, marketing push, integração CRM, e-commerce, privacidade e segurança.",
+    seoKeywords: "chatbot whatsapp, ai chatbot, automatização customer service, marketing push, integração crm, chatbot ecommerce, human in the loop, privacidade gdpr",
+    breadcrumb: "Funcionalidades",
+    hero: {
+      badge: "Plataforma Completa",
+      title: "Tudo o que precisa para<br/>automatizar o seu negócio",
+      subtitle: "O eChatbot combina inteligência artificial, automação e intervenção humana para criar experiências de cliente excecionais no WhatsApp e widgets web.",
+      cta: "Experimente Grátis 15 Dias",
+    },
+    coreFeatures: {
+      title: "Funcionalidades Principais",
+      subtitle: "As capacidades que tornam o eChatbot a escolha ideal para o seu negócio",
+      features: [
+        { icon: "Bot", title: "Automação IA Avançada", description: "Chatbot inteligente baseado em GPT-4 que compreende linguagem natural, responde a perguntas complexas e aprende com as conversas.", points: ["Compreensão do contexto", "Respostas personalizadas", "Aprendizagem contínua"] },
+        { icon: "Users", title: "Suporte Human-in-the-Loop", description: "Mude facilmente da IA para um operador humano quando necessário. O chatbot sabe quando pedir ajuda e transfere a conversa sem interrupções.", points: ["Handoff inteligente", "Dashboard operadores", "Continuidade da conversa"] },
+        { icon: "MessageSquare", title: "Marketing Push Proativo", description: "Envie campanhas de marketing direcionadas no WhatsApp. Segmente o público, personalize mensagens e meça resultados em tempo real.", points: ["Segmentação avançada", "A/B testing", "Analytics detalhados"] },
+        { icon: "ShoppingCart", title: "E-Commerce Integrado", description: "Venda produtos diretamente no WhatsApp. Catálogo de produtos, carrinho, pagamentos e rastreamento de pedidos tudo no chat.", points: ["Catálogo IA", "Pagamentos seguros", "Gestão de pedidos"] },
+        { icon: "Globe", title: "Widget → WhatsApp", description: "Um único chatbot para site e WhatsApp. Os clientes começam no widget e continuam no WhatsApp sem repetir informações.", points: ["Sessão unificada", "Continuidade de dados", "Zero fricção"] },
+        { icon: "Lock", title: "Privacidade & Segurança GDPR", description: "Conformidade total GDPR, criptografia ponta a ponta, políticas de retenção de dados personalizáveis e controlo total sobre os dados dos seus clientes.", points: ["Conforme GDPR", "Criptografia E2E", "Data ownership"] },
+      ],
+    },
+    integration: {
+      title: "Integrações Poderosas",
+      subtitle: "Ligue o eChatbot às suas ferramentas de trabalho",
+      description: "Integre facilmente o chatbot com CRMs (Salesforce, HubSpot), plataformas de e-commerce (WooCommerce, PrestaShop, Magento), sistemas ERP, software de armazém, ferramentas de marketing automation e muito mais.",
+      imagePlaceholder: "Imagem de integração",
+    },
+  },
 }
 
 export function FeaturesPage() {
@@ -92,6 +181,8 @@ export function FeaturesPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0)
+    const browserLang = navigator.language.slice(0, 2)
+    if (["it", "en", "es", "pt"].includes(browserLang)) setLanguage(browserLang as Language)
   }, [])
 
   const iconMap = {

@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { WidgetLoader } from "@/components/WidgetLoader"
+import { ChatWidget } from "@/components/ChatWidget"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
 
 // ─────────────────────────────────────────
-// Questionnaire translations (self-contained, not in global LanguageContext)
+// Survey translations (self-contained, not in global LanguageContext)
 // ─────────────────────────────────────────
 type Lang = "it" | "en" | "es" | "pt"
 
@@ -19,7 +20,7 @@ const QT: Record<Lang, Record<string, string>> = {
     // Intro
     intro_title: "Aiutaci a capire le tue esigenze",
     intro_desc: "Rispondi a qualche domanda per aiutarci a capire come eChatbot può trasformare il tuo business. Il segreto di un buon chatbot è la qualità delle risposte: più capiamo il tuo contesto, meglio possiamo configurarlo per te. Parleremo di supporto clienti, marketing push, widget, vendite e molto altro. Circa 5 minuti — zero impegno.",
-    intro_cta: "Inizia il questionario →",
+    intro_cta: "Avvia il survey →",
     back: "← Indietro",
     next: "Avanti →",
     almost: "Quasi fatto →",
@@ -99,7 +100,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 10: Contact consent
     contact_title: "Parliamo insieme",
-    contact_q: "Grazie per aver completato il questionario! Le tue risposte ci aiuteranno a costruire un chatbot su misura per te. Saresti disponibile per una breve chiamata con il nostro team? Ti mostreremmo una demo personalizzata e risponderemmo a tutte le tue domande — senza impegno.",
+    contact_q: "Grazie per aver completato il survey! Le tue risposte ci aiuteranno a costruire un chatbot su misura per te. Saresti disponibile per una breve chiamata con il nostro team? Ti mostreremmo una demo personalizzata e risponderemmo a tutte le tue domande — senza impegno.",
     contact_opt1: "Sì, contattatemi!",
     contact_opt2: "No, ma grazie per le informazioni",
 
@@ -136,7 +137,7 @@ const QT: Record<Lang, Record<string, string>> = {
   en: {
     intro_title: "Help us understand your needs",
     intro_desc: "Answer a few questions to help us understand how eChatbot can transform your business. The secret to a great chatbot is quality responses: the more we understand your context, the better we can configure it for you. We'll cover customer support, push marketing, widget, sales, and more. About 5 minutes — no commitment.",
-    intro_cta: "Start the questionnaire →",
+    intro_cta: "Start the survey →",
     back: "← Back",
     next: "Next →",
     almost: "Almost done →",
@@ -207,7 +208,7 @@ const QT: Record<Lang, Record<string, string>> = {
     other_placeholder: "Write your ideas or questions here… (optional)",
 
     contact_title: "Let's Talk",
-    contact_q: "Thank you for completing the questionnaire! Your answers will help us build a chatbot tailored to your needs. Would you be available for a brief call with our team? We'd show you a personalised demo and answer all your questions — no commitment required.",
+    contact_q: "Thank you for completing the survey! Your answers will help us build a chatbot tailored to your needs. Would you be available for a brief call with our team? We'd show you a personalised demo and answer all your questions — no commitment required.",
     contact_opt1: "Yes, please contact me!",
     contact_opt2: "No, but thank you for the information",
 
@@ -240,7 +241,7 @@ const QT: Record<Lang, Record<string, string>> = {
   es: {
     intro_title: "Ayúdanos a entender tus necesidades",
     intro_desc: "Responde algunas preguntas para ayudarnos a entender cómo eChatbot puede transformar tu negocio. El secreto de un buen chatbot son las respuestas de calidad: cuanto más entendemos tu contexto, mejor podemos configurarlo. Hablaremos de soporte al cliente, marketing push, widget, ventas y mucho más. Unos 5 minutos — sin compromiso.",
-    intro_cta: "Comenzar el cuestionario →",
+    intro_cta: "Iniciar el survey →",
     back: "← Atrás",
     next: "Siguiente →",
     almost: "¡Ya casi! →",
@@ -311,7 +312,7 @@ const QT: Record<Lang, Record<string, string>> = {
     other_placeholder: "Escribe tus ideas o preguntas aquí… (opcional)",
 
     contact_title: "Hablemos",
-    contact_q: "¡Gracias por completar el cuestionario! Tus respuestas nos ayudarán a crear un chatbot a medida para tus necesidades. ¿Estarías disponible para una breve llamada con nuestro equipo? Te mostraríamos una demo personalizada y responderíamos todas tus preguntas — sin ningún compromiso.",
+    contact_q: "¡Gracias por completar el survey! Tus respuestas nos ayudarán a crear un chatbot a medida para tus necesidades. ¿Estarías disponible para una breve llamada con nuestro equipo? Te mostraríamos una demo personalizada y responderíamos todas tus preguntas — sin ningún compromiso.",
     contact_opt1: "¡Sí, contactadme!",
     contact_opt2: "No, pero gracias por la información",
 
@@ -344,7 +345,7 @@ const QT: Record<Lang, Record<string, string>> = {
   pt: {
     intro_title: "Ajude-nos a entender suas necessidades",
     intro_desc: "Responda algumas perguntas para nos ajudar a entender como o eChatbot pode transformar o seu negócio. O segredo de um bom chatbot são as respostas de qualidade: quanto mais entendemos o seu contexto, melhor podemos configurá-lo. Falaremos sobre atendimento ao cliente, marketing push, widget, vendas e muito mais. Cerca de 5 minutos — sem compromisso.",
-    intro_cta: "Iniciar o questionário →",
+    intro_cta: "Iniciar o survey →",
     back: "← Voltar",
     next: "Próximo →",
     almost: "Quase lá →",
@@ -415,7 +416,7 @@ const QT: Record<Lang, Record<string, string>> = {
     other_placeholder: "Escreva suas ideias ou perguntas aqui… (opcional)",
 
     contact_title: "Vamos Conversar",
-    contact_q: "Obrigado por completar o questionário! As suas respostas nos ajudarão a criar um chatbot sob medida para as suas necessidades. Você estaria disponível para uma breve ligação com a nossa equipe? Mostraríamos uma demo personalizada e responderíamos a todas as suas dúvidas — sem nenhum compromisso.",
+    contact_q: "Obrigado por completar o survey! As suas respostas nos ajudarão a criar um chatbot sob medida para as suas necessidades. Você estaria disponível para uma breve ligação com a nossa equipe? Mostraríamos uma demo personalizada e responderíamos a todas as suas dúvidas — sem nenhum compromisso.",
     contact_opt1: "Sim, por favor me contactem!",
     contact_opt2: "Não, mas obrigado pelas informações",
 
@@ -732,7 +733,7 @@ export default function QuestionnairePage() {
 
       {/* Content */}
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] px-4 py-12">
-        <div className="w-full max-w-xl">
+        <div className="w-full max-w-2xl">
 
           {/* ── INTRO ── */}
           {view === "intro" && (
@@ -743,37 +744,28 @@ export default function QuestionnairePage() {
               className="bg-white rounded-2xl shadow-xl overflow-hidden"
             >
               {/* Top banner */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-6 text-white text-center">
-                <div className="text-5xl mb-3">🤖</div>
-                <h1 className="text-2xl font-bold mb-1">{T.intro_title}</h1>
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-8 text-white text-center">
+                <h1 className="text-3xl font-bold">{T.intro_title}</h1>
               </div>
 
               {/* Body */}
-              <div className="p-8">
-                <p className="text-slate-600 mb-6 leading-relaxed text-base">
+              <div className="p-10">
+                <p className="text-slate-600 mb-8 leading-relaxed text-lg">
                   {T.intro_desc}
                 </p>
 
-                {/* WhatsApp chatbot CTA */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                  <p className="text-sm text-slate-700 mb-3 text-center">
-                    {T.try_chatbot}
+                {/* Live chatbot CTA — points to the floating widget */}
+                <div className="mb-8 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl flex items-center gap-4">
+                  <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center shrink-0 shadow-lg">
+                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>
+                  </div>
+                  <p className="text-base text-slate-700 font-medium">
+                    {T.try_chatbot} — <span className="text-green-600 font-semibold">{T.try_chatbot_button}</span>
                   </p>
-                  <a
-                    href="https://wa.me/34602119358"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
-                  >
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
-                    </svg>
-                    <span>{T.try_chatbot_button}</span>
-                  </a>
                 </div>
 
                 {/* Topic preview chips */}
-                <div className="grid grid-cols-2 gap-2 mb-8">
+                <div className="grid grid-cols-2 gap-3 mb-10">
                   {[
                     { emoji: "🤝", label: lang === "it" ? "Supporto umano" : lang === "es" ? "Soporte humano" : lang === "pt" ? "Suporte humano" : "Human support" },
                     { emoji: "📣", label: lang === "it" ? "Marketing push" : "Push marketing" },
@@ -784,7 +776,7 @@ export default function QuestionnairePage() {
                   ].map(({ emoji, label }) => (
                     <div
                       key={label}
-                      className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-3 py-2 text-sm text-green-800 font-medium"
+                      className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-base text-green-800 font-medium"
                     >
                       <span>{emoji}</span>
                       <span>{label}</span>
@@ -794,7 +786,7 @@ export default function QuestionnairePage() {
 
                 <Button
                   size="lg"
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg rounded-xl shadow-lg"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-7 text-xl rounded-xl shadow-lg"
                   onClick={() => {
                     setView("steps")
                     setCurrentStep(0)
@@ -1111,25 +1103,7 @@ export default function QuestionnairePage() {
                 <span className="text-4xl">✅</span>
               </motion.div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">{T.success_title}</h2>
-              <p className="text-slate-500 mb-6 leading-relaxed">{T.success_desc}</p>
-              
-              {/* WhatsApp chatbot CTA */}
-              <div className="mb-8 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                <p className="text-sm text-slate-700 mb-3 text-center">
-                  {T.try_chatbot}
-                </p>
-                <a
-                  href="https://wa.me/34602119358"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
-                >
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
-                  </svg>
-                  <span>{T.try_chatbot_button}</span>
-                </a>
-              </div>
+              <p className="text-slate-500 mb-8 leading-relaxed">{T.success_desc}</p>
 
               <Link to="/">
                 <Button className="bg-green-600 hover:bg-green-700 text-white px-8">
@@ -1156,25 +1130,7 @@ export default function QuestionnairePage() {
                 <span className="text-4xl">🙏</span>
               </motion.div>
               <h2 className="text-2xl font-bold text-slate-900 mb-2">{T.noContact_title}</h2>
-              <p className="text-slate-500 mb-6 leading-relaxed">{T.noContact_desc}</p>
-              
-              {/* WhatsApp chatbot CTA */}
-              <div className="mb-8 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                <p className="text-sm text-slate-700 mb-3 text-center">
-                  {T.try_chatbot}
-                </p>
-                <a
-                  href="https://wa.me/34602119358"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg"
-                >
-                  <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
-                  </svg>
-                  <span>{T.try_chatbot_button}</span>
-                </a>
-              </div>
+              <p className="text-slate-500 mb-8 leading-relaxed">{T.noContact_desc}</p>
 
               <Link to="/">
                 <Button className="bg-green-600 hover:bg-green-700 text-white px-8">
@@ -1186,8 +1142,9 @@ export default function QuestionnairePage() {
         </div>
       </div>
       
-      {/* Widget Loader */}
+      {/* Widget Loader + Floating Chat Widget */}
       <WidgetLoader />
+      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" />
     </div>
   )
 }

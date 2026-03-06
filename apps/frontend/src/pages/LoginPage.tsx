@@ -1920,29 +1920,29 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Questionnaire CTA Section - MOVED BEFORE HOW IT WORKS */}
+      {/* Survey CTA Section - MOVED BEFORE HOW IT WORKS */}
       {(() => {
         const qLang = language as string
         const qMap: Record<string, { title: string; desc: string; cta: string }> = {
           it: {
             title: "Aiutaci a costruire il chatbot perfetto per te",
             desc: "Il segreto di un buon chatbot è la qualità delle risposte. Rispondi a qualche domanda sulle tue esigenze — supporto umano, marketing push, widget, vendite, e-commerce e privacy — e ti mostreremo come eChatbot può fare la differenza. Circa 2 minuti, zero impegno.",
-            cta: "Inizia il questionario →",
+            cta: "Avvia il survey →",
           },
           es: {
             title: "Ayúdanos a construir el chatbot perfecto para ti",
             desc: "El secreto de un buen chatbot son las respuestas de calidad. Responde algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia. Unos 2 minutos, sin compromiso.",
-            cta: "Comenzar el cuestionario →",
+            cta: "Iniciar el survey →",
           },
           pt: {
             title: "Ajude-nos a construir o chatbot perfeito para você",
             desc: "O segredo de um bom chatbot são as respostas de qualidade. Responda algumas perguntas sobre suas necessidades — suporte humano, marketing push, widget, vendas, e-commerce e privacidade — e mostraremos como o eChatbot pode fazer a diferença. Cerca de 2 minutos, sem compromisso.",
-            cta: "Iniciar o questionário →",
+            cta: "Iniciar o survey →",
           },
           en: {
             title: "Help us build the perfect chatbot for you",
             desc: "The secret to a great chatbot is quality responses. Answer a few questions about your needs — human support, push marketing, widget, sales, e-commerce, and privacy — and we'll show you how eChatbot can make a real difference. About 2 minutes, no commitment.",
-            cta: "Start the questionnaire →",
+            cta: "Start the survey →",
           },
         }
         const q = qMap[qLang] || qMap["en"]
@@ -1997,7 +1997,7 @@ export function LoginPage() {
                 {/* Right: Text + CTA */}
                 <div className="lg:w-1/2 text-center lg:text-left">
                   <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
-                    {qLang === "it" ? "Questionario" : qLang === "es" ? "Cuestionario" : qLang === "pt" ? "Questionário" : "Questionnaire"}
+                    Survey
                   </span>
                   <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
                     {q.title}
@@ -2006,7 +2006,7 @@ export function LoginPage() {
                     {q.desc}
                   </p>
                   <Link
-                    to="/questionario"
+                    to="/survey"
                     className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
                   >
                     <span className="text-2xl">📋</span>
