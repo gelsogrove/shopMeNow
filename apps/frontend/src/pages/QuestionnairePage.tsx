@@ -81,7 +81,11 @@ const QT: Record<Lang, Record<string, string>> = {
     helpful_opt2: "Probabilmente sì, voglio approfondire",
     helpful_opt3: "Sto ancora valutando le opzioni",
 
-    // Step 9: Other (textarea)
+    // Step 9: Interest rating
+    interest_title: "Quanto sei interessato?",
+    interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato).",
+
+    // Step 10: Other (textarea)
     other_title: "Hai altro da aggiungere?",
     other_q: "C'è qualcosa di specifico che vorresti fare con un chatbot AI e che non abbiamo coperto? Un caso d'uso particolare, un'integrazione specifica, una funzionalità che hai in mente? Qualsiasi dettaglio ci aiuta a capire meglio come possiamo servirti.",
     other_placeholder: "Scrivi qui le tue idee o domande… (opzionale)",
@@ -179,6 +183,11 @@ const QT: Record<Lang, Record<string, string>> = {
     helpful_opt2: "Probably yes, I need to explore more",
     helpful_opt3: "I'm still evaluating my options",
 
+    // Step 9: Interest rating
+    interest_title: "How interested are you?",
+    interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested).",
+
+    // Step 10: Other (textarea)
     other_title: "Anything Else?",
     other_q: "Is there something specific you'd like to do with an AI chatbot that we haven't covered? A particular use case, a specific integration, a feature you have in mind? Any details help us better understand how we can serve you.",
     other_placeholder: "Write your ideas or questions here… (optional)",
@@ -271,6 +280,11 @@ const QT: Record<Lang, Record<string, string>> = {
     helpful_opt2: "Probablemente sí, necesito profundizar",
     helpful_opt3: "Todavía estoy evaluando opciones",
 
+    // Step 9: Interest rating
+    interest_title: "¿Cuánto te interesa?",
+    interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado).",
+
+    // Step 10: Other (textarea)
     other_title: "¿Algo más?",
     other_q: "¿Hay algo específico que quisieras hacer con un chatbot de IA y que no hayamos cubierto? ¿Un caso de uso particular, una integración específica, una función que tengas en mente? Cualquier detalle nos ayuda a entender mejor cómo podemos servirte.",
     other_placeholder: "Escribe tus ideas o preguntas aquí… (opcional)",
@@ -363,6 +377,11 @@ const QT: Record<Lang, Record<string, string>> = {
     helpful_opt2: "Provavelmente sim, preciso aprofundar",
     helpful_opt3: "Ainda estou avaliando as opções",
 
+    // Step 9: Interest rating
+    interest_title: "Quanto você está interessado?",
+    interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado).",
+
+    // Step 10: Other (textarea)
     other_title: "Algo mais?",
     other_q: "Há algo específico que você gostaria de fazer com um chatbot de IA e que não cobrimos? Um caso de uso particular, uma integração específica, uma funcionalidade que você tem em mente? Qualquer detalhe nos ajuda a entender melhor como podemos servir você.",
     other_placeholder: "Escreva suas ideias ou perguntas aqui… (opcional)",
@@ -413,8 +432,9 @@ interface StepDef {
   icon: string
   titleKey: string
   questionKey: string
-  type: "radio" | "textarea"
+  type: "radio" | "textarea" | "stars"
   options?: StepOption[]
+  image?: string // Optional image URL for the step
   /** If provided, this step is only shown when the condition is met */
   showWhen?: (answers: Record<string, string>) => boolean
 }
@@ -427,6 +447,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "humanSupport_title",
       questionKey: "humanSupport_q",
       type: "radio",
+      image: "https://www.echatbot.ai/CRM.png",
       options: [
         { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
         { value: "partial", label: T.humanSupport_opt2, emoji: "⚖️" },
@@ -439,6 +460,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "pushMarketing_title",
       questionKey: "pushMarketing_q",
       type: "radio",
+      image: "https://www.echatbot.ai/push.png",
       options: [
         { value: "yes", label: T.pushMarketing_opt1, emoji: "📣" },
         { value: "no", label: T.pushMarketing_opt2, emoji: "⏸️" },
@@ -450,6 +472,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "widget_title",
       questionKey: "widget_q",
       type: "radio",
+      image: "https://www.echatbot.ai/demo.png",
       options: [
         { value: "yes_widget", label: T.widget_opt1, emoji: "🌐" },
         { value: "whatsapp_only", label: T.widget_opt2, emoji: "💬" },
@@ -462,6 +485,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "salesAgents_title",
       questionKey: "salesAgents_q",
       type: "radio",
+      image: "https://www.echatbot.ai/CRM.png",
       options: [
         { value: "yes", label: T.salesAgents_opt1, emoji: "🛍️" },
         { value: "general", label: T.salesAgents_opt2, emoji: "🤖" },
@@ -474,6 +498,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "ecommerce_title",
       questionKey: "ecommerce_q",
       type: "radio",
+      image: "https://www.echatbot.ai/demo.png",
       options: [
         { value: "yes", label: T.ecommerce_opt1, emoji: "🛒" },
         { value: "no", label: T.ecommerce_opt2, emoji: "🏪" },
@@ -486,6 +511,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "ecommercePlatform_title",
       questionKey: "ecommercePlatform_q",
       type: "radio",
+      image: "https://www.echatbot.ai/demo.png",
       showWhen: (answers) => answers.stepEcommerce === "yes",
       options: [
         { value: "wordpress", label: T.ecommercePlatform_opt1, emoji: "🔵" },
@@ -500,6 +526,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "privacy_title",
       questionKey: "privacy_q",
       type: "radio",
+      image: "https://www.echatbot.ai/privacy.png",
       options: [
         { value: "ok", label: T.privacy_opt1, emoji: "🔒" },
         { value: "concerns", label: T.privacy_opt2, emoji: "🤔" },
@@ -517,6 +544,13 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "maybe", label: T.helpful_opt2, emoji: "🤔" },
         { value: "exploring", label: T.helpful_opt3, emoji: "🔍" },
       ],
+    },
+    {
+      id: "stepInterest",
+      icon: "⭐",
+      titleKey: "interest_title",
+      questionKey: "interest_q",
+      type: "stars",
     },
     {
       id: "stepOther",
@@ -628,6 +662,8 @@ export default function QuestionnairePage() {
 
   const canProceed = step && (step.type === "textarea"
     ? true // textarea is optional
+    : step.type === "stars"
+    ? !!answers[step.id] // stars must be selected
     : !!answers[step.id])
 
   return (
@@ -769,6 +805,17 @@ export default function QuestionnairePage() {
                     exit="exit"
                     transition={{ duration: 0.25 }}
                   >
+                    {/* Image (if available) */}
+                    {step.image && (
+                      <div className="mb-6 flex justify-center">
+                        <img
+                          src={step.image}
+                          alt={T[step.titleKey]}
+                          className="w-full max-w-md h-48 object-cover rounded-2xl shadow-lg"
+                        />
+                      </div>
+                    )}
+
                     {/* Icon + Title */}
                     <div className="text-5xl mb-3">{step.icon}</div>
                     <h2 className="text-xl font-bold text-slate-900 mb-2">{T[step.titleKey]}</h2>
@@ -808,6 +855,39 @@ export default function QuestionnairePage() {
                       </div>
                     )}
 
+                    {/* Stars rating */}
+                    {step.type === "stars" && (
+                      <div className="flex justify-center gap-2 my-6">
+                        {[0, 1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            onClick={() => handleAnswer(step.id, star.toString())}
+                            className="group relative transition-transform hover:scale-110"
+                          >
+                            <svg
+                              className={`w-12 h-12 ${
+                                answers[step.id] !== undefined && parseInt(answers[step.id]) >= star
+                                  ? "text-yellow-400 fill-yellow-400"
+                                  : "text-slate-300 fill-none hover:text-yellow-200"
+                              } transition-colors`}
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+                              />
+                            </svg>
+                            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-500 font-medium">
+                              {star}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Textarea */}
                     {step.type === "textarea" && (
                       <textarea
@@ -830,10 +910,11 @@ export default function QuestionnairePage() {
                   >
                     {T.back}
                   </Button>
-                  {step.type === "textarea" && (
+                  {(step.type === "textarea" || step.type === "stars") && (
                     <Button
                       onClick={handleNext}
                       className="flex-2 bg-green-600 hover:bg-green-700 text-white px-8"
+                      disabled={step.type === "stars" && answers[step.id] === undefined}
                     >
                       {currentStep < totalSteps - 1 ? T.next : T.almost}
                     </Button>

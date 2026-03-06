@@ -27,6 +27,7 @@ export class OnboardingQuestionnaireController {
         stepEcommercePlatform,
         stepPrivacy,
         stepHelpful,
+        stepInterest,
         stepOther,
         wantsContact,
       } = req.body
@@ -51,6 +52,7 @@ export class OnboardingQuestionnaireController {
           stepEcommercePlatform: stepEcommercePlatform || null,
           stepPrivacy: stepPrivacy || null,
           stepHelpful: stepHelpful || null,
+          stepInterest: stepInterest || null,
           stepOther: stepOther || null,
           wantsContact: wantsContact === true || wantsContact === "true",
           status: "NEW",
@@ -182,6 +184,7 @@ export class OnboardingQuestionnaireController {
           stepEcommercePlatform: true,
           stepPrivacy: true,
           stepHelpful: true,
+          stepInterest: true,
           wantsContact: true,
           createdAt: true,
         },
@@ -211,6 +214,7 @@ export class OnboardingQuestionnaireController {
         ecommercePlatform: countAnswers('stepEcommercePlatform'),
         privacy: countAnswers('stepPrivacy'),
         helpful: countAnswers('stepHelpful'),
+        interest: countAnswers('stepInterest'),
         // Last 30 days trend
         last30Days: submissions.filter(
           s => new Date(s.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -269,6 +273,7 @@ export class OnboardingQuestionnaireController {
       <tr><td>Platform</td><td>${record.stepEcommercePlatform || "—"}</td></tr>
       <tr><td>Privacy</td><td>${record.stepPrivacy || "—"}</td></tr>
       <tr><td>Will it help?</td><td>${record.stepHelpful || "—"}</td></tr>
+      <tr><td>Interest (0-5 stars)</td><td>${record.stepInterest ? "⭐".repeat(parseInt(record.stepInterest)) + ` (${record.stepInterest}/5)` : "—"}</td></tr>
       <tr><td>Other notes</td><td>${record.stepOther || "—"}</td></tr>
       <tr><td>Wants contact?</td><td>${record.wantsContact ? "✅ YES" : "❌ NO"}</td></tr>
     </table>
