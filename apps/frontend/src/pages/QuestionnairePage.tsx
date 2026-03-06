@@ -39,7 +39,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 3: Widget
     widget_title: "Chat Widget",
-    widget_q: "Il Widget di eChatbot permette di integrare una chat intelligente direttamente nel tuo sito web. I visitatori possono iniziare una conversazione senza lasciare il sito e il chatbot risponde in tempo reale. La chat può poi spostarsi su WhatsApp per continuare anche offline. Hai un sito e vorresti aggiungere un widget di chat?",
+    widget_q: "Il Widget di eChatbot permette di integrare una chat intelligente direttamente nel tuo sito web, utilizzando lo stesso chatbot che hai configurato per WhatsApp. I visitanti possono iniziare una conversazione senza lasciare il sito e il chatbot risponde in tempo reale. La chat può poi spostarsi su WhatsApp per continuare anche offline. Hai un sito e vorresti aggiungere un widget di chat?",
     widget_opt1: "Sì, voglio il widget sul mio sito",
     widget_opt2: "Solo WhatsApp, senza widget",
     widget_opt3: "Entrambi — widget + WhatsApp",
@@ -138,7 +138,7 @@ const QT: Record<Lang, Record<string, string>> = {
     pushMarketing_opt2: "Not right now",
 
     widget_title: "Chat Widget",
-    widget_q: "eChatbot's Widget lets you integrate a smart chat directly into your website. Visitors can start a conversation without leaving your site, and the chatbot responds in real time. The chat can then move to WhatsApp to continue even offline. Do you have a website and would you like to add a chat widget?",
+    widget_q: "eChatbot's Widget lets you integrate a smart chat directly into your website, using the same chatbot you've configured for WhatsApp. Visitors can start a conversation without leaving your site, and the chatbot responds in real time. The chat can then move to WhatsApp to continue even offline. Do you have a website and would you like to add a chat widget?",
     widget_opt1: "Yes, I want a widget on my website",
     widget_opt2: "WhatsApp only, no widget needed",
     widget_opt3: "Both — website widget + WhatsApp",
@@ -226,7 +226,7 @@ const QT: Record<Lang, Record<string, string>> = {
     pushMarketing_opt2: "Por ahora no",
 
     widget_title: "Widget de Chat",
-    widget_q: "El Widget de eChatbot permite integrar un chat inteligente directamente en tu sitio web. Los visitantes pueden iniciar una conversación sin salir del sitio y el chatbot responde en tiempo real. El chat puede luego trasladarse a WhatsApp para continuar incluso offline. ¿Tienes un sitio web y te gustaría añadir un widget de chat?",
+    widget_q: "El Widget de eChatbot permite integrar un chat inteligente directamente en tu sitio web, utilizando el mismo chatbot que has configurado para WhatsApp. Los visitantes pueden iniciar una conversación sin salir del sitio y el chatbot responde en tiempo real. El chat puede luego trasladarse a WhatsApp para continuar incluso offline. ¿Tienes un sitio web y te gustaría añadir un widget de chat?",
     widget_opt1: "Sí, quiero el widget en mi web",
     widget_opt2: "Solo WhatsApp, sin widget",
     widget_opt3: "Ambos — widget + WhatsApp",
@@ -314,7 +314,7 @@ const QT: Record<Lang, Record<string, string>> = {
     pushMarketing_opt2: "Por enquanto não",
 
     widget_title: "Widget de Chat",
-    widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real. O chat pode depois migrar para o WhatsApp para continuar mesmo offline. Você tem um site e gostaria de adicionar um widget de chat?",
+    widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site, utilizando o mesmo chatbot que você configurou para o WhatsApp. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real. O chat pode depois migrar para o WhatsApp para continuar mesmo offline. Você tem um site e gostaria de adicionar um widget de chat?",
     widget_opt1: "Sim, quero o widget no meu site",
     widget_opt2: "Somente WhatsApp, sem widget",
     widget_opt3: "Ambos — widget + WhatsApp",
