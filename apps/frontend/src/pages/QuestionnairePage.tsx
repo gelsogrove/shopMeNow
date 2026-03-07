@@ -30,12 +30,11 @@ const QT: Record<Lang, Record<string, string>> = {
     humanSupport_title: "Supporto Umano",
     humanSupport_q: "Uno dei punti di forza di eChatbot è il passaggio intelligente da AI a operatore umano — senza perdere il contesto della conversazione. Quando un cliente ha un problema complesso, l'agente AI trasferisce immediatamente la chat a un operatore che riceve una notifica WhatsApp con tutta la cronologia. Vorresti questa capacità integrata nel tuo chatbot?",
     humanSupport_opt1: "Sì, voglio il passaggio a operatore umano",
-    humanSupport_opt2: "In parte, con supervisione selettiva",
-    humanSupport_opt3: "L'automazione completa va bene",
+    humanSupport_opt2: "L'automazione completa va bene",
 
     // Step 2: Push Marketing
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "Le notifiche push su WhatsApp hanno un tasso di apertura superiore al 90%. Ma la vera differenza è la personalizzazione intelligente: l'IA invia solo ciò che ogni cliente vuole davvero ricevere. Se un cliente cerca un monolocale a Barcellona, riceverà solo nuovi annunci nella sua zona o aggiornamenti di prezzo su immobili simili — mai messaggi irrilevanti. Zero spam, massima rilevanza. Vorresti usare questo canale per coinvolgere i tuoi clienti in modo mirato e aumentare le conversioni?",
+    pushMarketing_q: "Le notifiche push su WhatsApp hanno un tasso di apertura superiore al 90%. Ma la vera differenza è la personalizzazione intelligente: l'IA invia solo ciò che ogni cliente vuole davvero ricevere. Se un cliente cerca un monolocale a Barcellona, riceverà solo nuovi annunci nella sua zona o aggiornamenti di prezzo su immobili simili — mai messaggi irrilevanti. Zero spam, massima rilevanza.",
     pushMarketing_opt1: "Sì, sono interessato",
     pushMarketing_opt2: "Magari in un secondo momento",
     pushMarketing_opt3: "Non mi interessa",
@@ -51,8 +50,7 @@ const QT: Record<Lang, Record<string, string>> = {
     salesAgents_title: "Team di Vendita",
     salesAgents_q: "eChatbot ti permette di creare un vero team di vendita digitale: puoi registrare i tuoi collaboratori come agenti di vendita, ognuno con il proprio profilo e area di competenza. Quando un cliente è pronto all'acquisto o ha bisogno di assistenza personalizzata, l'IA passa la chat direttamente all'agente giusto del tuo staff — che riceve una notifica istantanea e interviene in tempo reale, con tutta la cronologia della conversazione. Questa funzionalità è pensata per le aziende con un team commerciale. Hai collaboratori dedicati alle vendite?",
     salesAgents_opt1: "Sì, ho un team di vendita",
-    salesAgents_opt2: "Lavoro da solo, ma potrei espandermi",
-    salesAgents_opt3: "No, gestisco tutto in autonomia",
+    salesAgents_opt2: "No, gestisco tutto in autonomia",
 
     // Step 5: Ecommerce
     ecommerce_title: "E-Commerce",
@@ -74,7 +72,6 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_q: "Il tuo business usa sistemi esterni come CRM (Salesforce, HubSpot), ERP, software gestionale o altri strumenti aziendali? eChatbot può integrarsi con questi sistemi tramite sviluppo personalizzato: importiamo e mappiamo i tuoi dati in modo che il chatbot abbia sempre le informazioni aggiornate. Ogni integrazione richiede una migrazione dedicata che gestiamo noi.",
     integrations_opt1: "Sì, ho sistemi da integrare",
     integrations_opt2: "Non uso sistemi esterni",
-    integrations_opt3: "Non so, vorrei saperne di più",
 
     // Step 8: Privacy
     privacy_title: "Privacy e Sicurezza",
@@ -84,11 +81,11 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt3: "Vorrei saperne di più",
 
     // Step 9: On-Premise
-    onPremise_title: "Controllo Totale dei Dati",
-    onPremise_q: "eChatbot è disponibile anche in modalità on-premise: l'intera piattaforma — backend, database e motore AI — viene installata direttamente sui tuoi server o nella tua infrastruttura cloud privata. Zero dati vengono trasmessi a terze parti. Questa soluzione è ideale per aziende con requisiti di conformità avanzati (settore bancario, sanitario, legale o governativo), politiche IT rigide, o semplicemente per chi vuole piena indipendenza e controllo senza dipendere da servizi esterni. Saresti interessato a gestire eChatbot sulla tua infrastruttura?",
-    onPremise_opt1: "Sì, voglio il pieno controllo dei dati",
-    onPremise_opt2: "Mi interessa, voglio saperne di più",
-    onPremise_opt3: "Il servizio cloud è sufficiente per me",
+    onPremise_title: "Service On-Premise",
+    onPremise_q: "eChatbot è disponibile anche in modalità on-premise: l'intera piattaforma, backend, database e motore AI, viene installata direttamente sui tuoi server o nella tua infrastruttura cloud privata. Questa soluzione è ideale per aziende con requisiti di conformità avanzati (settore bancario, sanitario, legale o governativo), politiche IT rigide, o semplicemente per chi vuole piena indipendenza e controllo senza dipendere da servizi esterni.",
+    onPremise_opt1: "Sì, mi interessa",
+    onPremise_opt2: "Il servizio cloud su eChatbot.AI è abbastanza",
+    onPremise_opt3: "Magari più avanti",
 
     // Step 10: Interest rating
     interest_title: "Quanto sei interessato?",
@@ -147,11 +144,10 @@ const QT: Record<Lang, Record<string, string>> = {
     humanSupport_title: "Human Support",
     humanSupport_q: "One of eChatbot's strengths is the intelligent handoff from AI to a human agent — without losing conversation context. When a customer has a complex issue, the AI agent instantly transfers the chat to an operator who receives a WhatsApp notification with the full conversation history. Would you like this capability integrated into your chatbot?",
     humanSupport_opt1: "Yes, I want human handoff capability",
-    humanSupport_opt2: "Partial automation with selective oversight",
-    humanSupport_opt3: "Full automation works for me",
+    humanSupport_opt2: "Full automation works for me",
 
     pushMarketing_title: "Push Marketing",
-    pushMarketing_q: "WhatsApp push notifications have an open rate above 90%. But the real difference is intelligent personalization: the AI sends only what each customer genuinely wants to receive. If a customer is looking for a studio flat in Barcelona, they'll only get new listings in their area or price drops on similar properties — never irrelevant messages. Zero spam, maximum relevance. Would you like to use this channel to engage your customers with precision and boost conversions?",
+    pushMarketing_q: "WhatsApp push notifications have an open rate above 90%. But the real difference is intelligent personalization: the AI sends only what each customer genuinely wants to receive. If a customer is looking for a studio flat in Barcelona, they'll only get new listings in their area or price drops on similar properties — never irrelevant messages. Zero spam, maximum relevance.",
     pushMarketing_opt1: "Yes, I'm interested",
     pushMarketing_opt2: "Maybe later",
     pushMarketing_opt3: "Not interested",
@@ -165,8 +161,7 @@ const QT: Record<Lang, Record<string, string>> = {
     salesAgents_title: "Sales Team",
     salesAgents_q: "eChatbot lets you build a real digital sales team: you can register your team members as sales agents, each with their own profile and area of expertise. When a customer is ready to buy or needs personalised assistance, the AI hands off the chat directly to the right agent on your staff — who gets an instant notification and steps in with the full conversation history. This feature is designed for businesses with a commercial team. Do you have staff dedicated to sales?",
     salesAgents_opt1: "Yes, I have a sales team",
-    salesAgents_opt2: "I work alone but could expand",
-    salesAgents_opt3: "No, I handle everything myself",
+    salesAgents_opt2: "No, I handle everything myself",
 
     ecommerce_title: "E-Commerce",
     ecommerce_q: "eChatbot has a built-in e-commerce engine that lets customers browse the catalog, add products to cart, and complete orders directly in chat — on WhatsApp or the widget. If you already have an online store or are planning to launch one, we can integrate it or build a new one. Does your business sell products or services online?",
@@ -186,7 +181,6 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_q: "Does your business use external systems such as a CRM (Salesforce, HubSpot), ERP, management software, or other business tools? eChatbot can integrate with these systems through custom development: we import and map your data so the chatbot always has up-to-date information. Each integration requires a dedicated migration that we handle for you.",
     integrations_opt1: "Yes, I have systems to integrate",
     integrations_opt2: "I don't use external systems",
-    integrations_opt3: "I don't know, I'd like to learn more",
 
     // Step 8: Privacy
     privacy_q: "We understand that your customers' privacy is paramount. eChatbot is designed with privacy at its core: we never send sensitive customer data to AI models. Personal information (contacts, orders, payments) always stays in your database. For sensitive operations we use time-limited token links, accessible only by the specific user.",
@@ -195,11 +189,11 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt3: "I'd like to know more",
 
     // Step 9: On-Premise
-    onPremise_title: "Full Data Control",
-    onPremise_q: "eChatbot is also available as an on-premise solution: the entire platform — backend, database, and AI engine — is installed directly on your own servers or private cloud infrastructure. Zero data ever leaves your network. This is ideal for organisations with strict compliance requirements (banking, healthcare, legal, or government sectors), rigid IT policies, or anyone who wants complete independence from external services. Would you be interested in running eChatbot on your own infrastructure?",
-    onPremise_opt1: "Yes, I want full control over my data",
-    onPremise_opt2: "Interested — I'd like to know more",
-    onPremise_opt3: "Cloud service is sufficient for me",
+    onPremise_title: "Service On-Premise",
+    onPremise_q: "eChatbot is also available as an on-premise solution: the entire platform, backend, database, and AI engine, is installed directly on your own servers or private cloud infrastructure. This is ideal for organisations with strict compliance requirements (banking, healthcare, legal, or government sectors), rigid IT policies, or anyone who wants complete independence from external services.",
+    onPremise_opt1: "Yes, I'm interested",
+    onPremise_opt2: "The cloud service on eChatbot.AI is enough",
+    onPremise_opt3: "Maybe later",
 
     // Step 10: Interest rating
     interest_title: "How interested are you?",
@@ -253,11 +247,10 @@ const QT: Record<Lang, Record<string, string>> = {
     humanSupport_title: "Soporte Humano",
     humanSupport_q: "Una de las fortalezas de eChatbot es la transferencia inteligente de la IA a un agente humano — sin perder el contexto de la conversación. Cuando un cliente tiene un problema complejo, el agente de IA transfiere inmediatamente el chat a un operador que recibe una notificación de WhatsApp con todo el historial. ¿Te gustaría tener esta capacidad integrada en tu chatbot?",
     humanSupport_opt1: "Sí, quiero transferencias a operador humano",
-    humanSupport_opt2: "Automatización parcial con supervisión selectiva",
-    humanSupport_opt3: "La automatización completa me funciona",
+    humanSupport_opt2: "La automatización completa me funciona",
 
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "Las notificaciones push de WhatsApp tienen una tasa de apertura superior al 90%. Pero la verdadera diferencia es la personalización inteligente: la IA se encarga de enviar solo lo que cada cliente realmente quiere recibir. Si un cliente busca un estudio en Barcelona, solo recibirá nuevos anuncios en su zona o cambios de precio en propiedades similares — nunca mensajes irrelevantes. Cero spam, máxima relevancia. ¿Te gustaría usar este canal para impactar a tus clientes de forma precisa y aumentar las conversiones?",
+    pushMarketing_q: "Las notificaciones push de WhatsApp tienen una tasa de apertura superior al 90%. Pero la verdadera diferencia es la personalización inteligente: la IA se encarga de enviar solo lo que cada cliente realmente quiere recibir. Si un cliente busca un estudio en Barcelona, solo recibirá nuevos anuncios en su zona o cambios de precio en propiedades similares — nunca mensajes irrelevantes. Cero spam, máxima relevancia.",
     pushMarketing_opt1: "Sí, estoy interesado",
     pushMarketing_opt2: "Quizás más adelante",
     pushMarketing_opt3: "No me interesa",
@@ -271,8 +264,7 @@ const QT: Record<Lang, Record<string, string>> = {
     salesAgents_title: "Equipo de Ventas",
     salesAgents_q: "eChatbot te permite crear un verdadero equipo de ventas digital: puedes registrar a tus colaboradores como agentes de ventas, cada uno con su perfil y área de especialización. Cuando un cliente está listo para comprar o necesita asistencia personalizada, la IA transfiere el chat directamente al agente adecuado de tu equipo — que recibe una notificación instantánea e interviene con el historial completo de la conversación. Esta funcionalidad está diseñada para empresas con un equipo comercial. ¿Tienes colaboradores dedicados a las ventas?",
     salesAgents_opt1: "Sí, tengo un equipo de ventas",
-    salesAgents_opt2: "Trabajo solo, pero podría crecer",
-    salesAgents_opt3: "No, lo gestiono todo yo solo",
+    salesAgents_opt2: "No, lo gestiono todo yo solo",
 
     ecommerce_title: "E-Commerce",
     ecommerce_q: "eChatbot tiene un motor de e-commerce integrado que permite a los clientes explorar el catálogo, añadir productos al carrito y completar pedidos directamente en el chat — en WhatsApp o en el widget. Si ya tienes una tienda online o estás planeando crear una, podemos integrarla o construir una nueva. ¿Tu negocio vende productos o servicios online?",
@@ -292,7 +284,6 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_q: "¿Tu negocio utiliza sistemas externos como un CRM (Salesforce, HubSpot), ERP, software de gestión u otras herramientas empresariales? eChatbot puede integrarse con estos sistemas mediante desarrollo personalizado: importamos y mapeamos tus datos para que el chatbot siempre tenga la información actualizada. Cada integración requiere una migración dedicada que gestionamos nosotros.",
     integrations_opt1: "Sí, tengo sistemas para integrar",
     integrations_opt2: "No uso sistemas externos",
-    integrations_opt3: "No lo sé, me gustaría saber más",
 
     // Step 8: Privacy
     privacy_q: "Entendemos que la privacidad de tus clientes es fundamental. eChatbot está diseñado con la privacidad en el centro: nunca enviamos datos sensibles de los clientes a los modelos de IA. La información personal (contactos, pedidos, pagos) siempre permanece en tu base de datos. Para operaciones sensibles usamos enlaces con tokens de tiempo limitado, accesibles solo por el usuario en cuestión.",
@@ -301,11 +292,11 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt3: "Me gustaría saber más",
 
     // Step 9: On-Premise
-    onPremise_title: "Control Total de Datos",
-    onPremise_q: "eChatbot también está disponible como solución on-premise: toda la plataforma — backend, base de datos y motor de IA — se instala directamente en tus propios servidores o infraestructura cloud privada. Cero datos salen de tu red. Es ideal para organizaciones con requisitos de cumplimiento estrictos (sector bancario, sanitario, legal o gubernamental), políticas TI rígidas, o para quienes quieren independencia total de servicios externos. ¿Te interesaría gestionar eChatbot en tu propia infraestructura?",
-    onPremise_opt1: "Sí, quiero control total sobre mis datos",
-    onPremise_opt2: "Me interesa, quiero saber más",
-    onPremise_opt3: "El servicio cloud es suficiente para mí",
+    onPremise_title: "Service On-Premise",
+    onPremise_q: "eChatbot también está disponible como solución on-premise: toda la plataforma, backend, base de datos y motor de IA, se instala directamente en tus propios servidores o infraestructura cloud privada. Es ideal para organizaciones con requisitos de cumplimiento estrictos (sector bancario, sanitario, legal o gubernamental), políticas TI rígidas, o para quienes quieren independencia total de servicios externos.",
+    onPremise_opt1: "Sí, me interesa",
+    onPremise_opt2: "El servicio cloud en eChatbot.AI es suficiente",
+    onPremise_opt3: "Quizás más adelante",
 
     // Step 10: Interest rating
     interest_title: "¿Cuánto te interesa?",
@@ -359,11 +350,10 @@ const QT: Record<Lang, Record<string, string>> = {
     humanSupport_title: "Suporte Humano",
     humanSupport_q: "Um dos pontos fortes do eChatbot é a transferência inteligente da IA para um agente humano — sem perder o contexto da conversa. Quando um cliente tem um problema complexo, o agente de IA transfere imediatamente o chat para um operador que recebe uma notificação no WhatsApp com todo o histórico. Gostaria de ter essa capacidade integrada no seu chatbot?",
     humanSupport_opt1: "Sim, quero transferência para operador humano",
-    humanSupport_opt2: "Automação parcial com supervisão seletiva",
-    humanSupport_opt3: "Automação completa está ótimo para mim",
+    humanSupport_opt2: "Automação completa está ótimo para mim",
 
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "As notificações push do WhatsApp têm uma taxa de abertura superior a 90%. Mas a verdadeira diferença é a personalização inteligente: a IA encarrega-se de enviar apenas o que cada cliente quer mesmo receber. Se um cliente procura um estúdio em Barcelona, receberá apenas novos anúncios na sua zona ou atualizações de preço em imóveis semelhantes — nunca mensagens irrelevantes. Zero spam, máxima relevância. Gostaria de usar este canal para envolver os seus clientes de forma precisa e aumentar as conversões?",
+    pushMarketing_q: "As notificações push do WhatsApp têm uma taxa de abertura superior a 90%. Mas a verdadeira diferença é a personalização inteligente: a IA encarrega-se de enviar apenas o que cada cliente quer mesmo receber. Se um cliente procura um estúdio em Barcelona, receberá apenas novos anúncios na sua zona ou atualizações de preço em imóveis semelhantes — nunca mensagens irrelevantes. Zero spam, máxima relevância.",
     pushMarketing_opt1: "Sim, estou interessado",
     pushMarketing_opt2: "Talvez mais tarde",
     pushMarketing_opt3: "Não me interessa",
@@ -377,8 +367,7 @@ const QT: Record<Lang, Record<string, string>> = {
     salesAgents_title: "Equipe de Vendas",
     salesAgents_q: "O eChatbot permite criar uma verdadeira equipe de vendas digital: pode registar os seus colaboradores como agentes de vendas, cada um com o seu próprio perfil e área de especialização. Quando um cliente está pronto para comprar ou precisa de assistência personalizada, a IA transfere o chat diretamente para o agente certo da sua equipe — que recebe uma notificação instantânea e intervém com todo o histórico da conversa. Esta funcionalidade é pensada para empresas com uma equipe comercial. Tem colaboradores dedicados a vendas?",
     salesAgents_opt1: "Sim, tenho uma equipe de vendas",
-    salesAgents_opt2: "Trabalho sozinho, mas posso expandir",
-    salesAgents_opt3: "Não, faço tudo por conta própria",
+    salesAgents_opt2: "Não, faço tudo por conta própria",
 
     ecommerce_title: "E-Commerce",
     ecommerce_q: "O eChatbot tem um motor de e-commerce integrado que permite aos clientes navegar no catálogo, adicionar produtos ao carrinho e concluir pedidos diretamente no chat — no WhatsApp ou no widget. Se você já tem uma loja online ou está planejando criar uma, podemos integrá-la ou criar uma nova. O seu negócio vende produtos ou serviços online?",
@@ -398,7 +387,6 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_q: "O seu negócio utiliza sistemas externos como um CRM (Salesforce, HubSpot), ERP, software de gestão ou outras ferramentas empresariais? O eChatbot pode integrar-se com esses sistemas através de desenvolvimento personalizado: importamos e mapeamos os seus dados para que o chatbot tenha sempre informações atualizadas. Cada integração requer uma migração dedicada que tratamos nós.",
     integrations_opt1: "Sim, tenho sistemas para integrar",
     integrations_opt2: "Não uso sistemas externos",
-    integrations_opt3: "Não sei, gostaria de saber mais",
 
     // Step 8: Privacy
     privacy_q: "Entendemos que a privacidade dos seus clientes é fundamental. O eChatbot foi desenvolvido com a privacidade no centro: nunca enviamos dados sensíveis dos clientes para modelos de IA. As informações pessoais (contatos, pedidos, pagamentos) sempre ficam no seu banco de dados. Para operações sensíveis usamos links com tokens temporários, acessíveis apenas pelo usuário em questão.",
@@ -407,11 +395,11 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt3: "Gostaria de saber mais",
 
     // Step 9: On-Premise
-    onPremise_title: "Controlo Total dos Dados",
-    onPremise_q: "O eChatbot também está disponível como solução on-premise: toda a plataforma — backend, base de dados e motor de IA — é instalada diretamente nos seus próprios servidores ou infraestrutura cloud privada. Zero dados saem da sua rede. Ideal para organizações com requisitos de conformidade rigorosos (setor bancário, saúde, jurídico ou governamental), políticas de TI rígidas, ou para quem quer independência total de serviços externos. Teria interesse em gerir o eChatbot na sua própria infraestrutura?",
-    onPremise_opt1: "Sim, quero controlo total sobre os meus dados",
-    onPremise_opt2: "Tenho interesse, quero saber mais",
-    onPremise_opt3: "O serviço cloud é suficiente para mim",
+    onPremise_title: "Service On-Premise",
+    onPremise_q: "O eChatbot também está disponível como solução on-premise: toda a plataforma, backend, base de dados e motor de IA, é instalada diretamente nos seus próprios servidores ou infraestrutura cloud privada. Ideal para organizações com requisitos de conformidade rigorosos (setor bancário, saúde, jurídico ou governamental), políticas de TI rígidas, ou para quem quer independência total de serviços externos.",
+    onPremise_opt1: "Sim, tenho interesse",
+    onPremise_opt2: "O serviço cloud no eChatbot.AI é suficiente",
+    onPremise_opt3: "Talvez mais tarde",
 
     // Step 10: Interest rating
     interest_title: "Quanto você está interessado?",
@@ -486,8 +474,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       image: "/survey-support.png",
       options: [
         { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
-        { value: "partial", label: T.humanSupport_opt2, emoji: "⚖️" },
-        { value: "full_auto", label: T.humanSupport_opt3, emoji: "🤖" },
+        { value: "full_auto", label: T.humanSupport_opt2, emoji: "🤖" },
       ],
     },
     {
@@ -499,8 +486,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       image: "/survey-agent.png",
       options: [
         { value: "yes", label: T.salesAgents_opt1, emoji: "👥" },
-        { value: "solo", label: T.salesAgents_opt2, emoji: "🙋" },
-        { value: "no", label: T.salesAgents_opt3, emoji: "🤖" },
+        { value: "no", label: T.salesAgents_opt2, emoji: "🤖" },
       ],
     },
     {
@@ -566,7 +552,6 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       options: [
         { value: "yes", label: T.integrations_opt1, emoji: "🔗" },
         { value: "no", label: T.integrations_opt2, emoji: "📦" },
-        { value: "learn_more", label: T.integrations_opt3, emoji: "🎓" },
       ],
     },
     {
@@ -575,7 +560,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "privacy_title",
       questionKey: "privacy_q",
       type: "radio",
-      image: "/privacy.png",
+      image: "/survery-secuiry.png",
       options: [
         { value: "ok", label: T.privacy_opt1, emoji: "🔒" },
         { value: "concerns", label: T.privacy_opt2, emoji: "🤔" },
@@ -588,7 +573,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "onPremise_title",
       questionKey: "onPremise_q",
       type: "radio",
-      image: "/survery-secuiry.png",
+      image: "/survery-crm.png",
       options: [
         { value: "yes", label: T.onPremise_opt1, emoji: "🏢" },
         { value: "interested", label: T.onPremise_opt2, emoji: "🔍" },
@@ -737,8 +722,8 @@ export default function QuestionnairePage() {
       </header>
 
       {/* Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-56px)] px-4 py-12">
-        <div className="w-full max-w-[712px]">
+      <div className="flex items-center justify-center min-h-[calc(100vh-56px)] px-3 sm:px-4 py-6 sm:py-12">
+        <div className="w-full max-w-[727px]">
 
           {/* ── INTRO ── */}
           {view === "intro" && (
@@ -749,14 +734,14 @@ export default function QuestionnairePage() {
               className="bg-white rounded-2xl shadow-xl overflow-hidden"
             >
               {/* Top banner */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-8 text-white text-center">
-                <h1 className="text-3xl font-bold">{T.intro_title}</h1>
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 sm:px-8 py-6 sm:py-8 text-white text-center">
+                <h1 className="text-2xl sm:text-3xl font-bold">{T.intro_title}</h1>
               </div>
 
               {/* Body */}
-              <div className="p-10">
+              <div className="p-5 sm:p-10">
                 {/* Full-width intro image */}
-                <div className="-mx-10 -mt-10 mb-8">
+                <div className="-mx-5 sm:-mx-10 mb-8">
                   <img
                     src="/survey.png"
                     alt="eChatbot survey"
@@ -803,7 +788,7 @@ export default function QuestionnairePage() {
                 />
               </div>
 
-              <div className="p-8">
+              <div className="p-4 sm:p-8">
                 {/* Step counter */}
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -833,15 +818,15 @@ export default function QuestionnairePage() {
                   >
                     {/* Image (if available) or placeholder — full bleed */}
                     {step.image ? (
-                      <div className="-mx-8 -mt-0 mb-6">
+                      <div className="-mx-4 sm:-mx-8 mb-6">
                         <img
                           src={step.image}
                           alt={T[step.titleKey]}
-                          className="w-full h-52 object-cover"
+                          className="w-full h-44 sm:h-52 object-cover"
                         />
                       </div>
                     ) : (
-                      <div className="-mx-8 mb-6 w-[calc(100%+4rem)] h-52 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-dashed border-emerald-200 flex items-center justify-center">
+                      <div className="-mx-4 sm:-mx-8 mb-6 w-[calc(100%+2rem)] sm:w-[calc(100%+4rem)] h-44 sm:h-52 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-dashed border-emerald-200 flex items-center justify-center">
                         <span className="text-4xl opacity-30">🖼️</span>
                       </div>
                     )}
@@ -889,7 +874,7 @@ export default function QuestionnairePage() {
 
                     {/* Stars rating */}
                     {step.type === "stars" && (
-                      <div className="flex justify-center gap-2 my-6">
+                      <div className="flex justify-center gap-1 sm:gap-2 my-6">
                         {[0, 1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
@@ -908,7 +893,7 @@ export default function QuestionnairePage() {
                             className="group relative transition-transform hover:scale-110"
                           >
                             <svg
-                              className={`w-12 h-12 ${
+                              className={`w-9 h-9 sm:w-12 sm:h-12 ${
                                 answers[step.id] !== undefined && parseInt(answers[step.id]) >= star
                                   ? "text-yellow-400 fill-yellow-400"
                                   : "text-slate-300 fill-none hover:text-yellow-200"
@@ -970,7 +955,7 @@ export default function QuestionnairePage() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="bg-white rounded-2xl shadow-xl p-8"
+              className="bg-white rounded-2xl shadow-xl p-5 sm:p-8"
             >
               <div className="text-5xl mb-3">👤</div>
               <h2 className="text-2xl font-bold text-slate-900 mb-1">{T.form_title}</h2>
@@ -1028,12 +1013,12 @@ export default function QuestionnairePage() {
 
                 {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
 
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => { setView("steps"); setCurrentStep(totalSteps - 1) }}
-                    className="flex-1 border-slate-200 text-slate-600"
+                    className="sm:flex-1 border-slate-200 text-slate-600"
                   >
                     {T.back}
                   </Button>
@@ -1042,14 +1027,14 @@ export default function QuestionnairePage() {
                     variant="outline"
                     disabled={isSubmitting}
                     onClick={() => submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })}
-                    className="flex-1 border-slate-200 text-slate-500 hover:bg-slate-50"
+                    className="sm:flex-1 border-slate-200 text-slate-500 hover:bg-slate-50"
                   >
                     {T.contact_opt2}
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting || !contact.fullName.trim() || !contact.email.trim()}
-                    className="flex-2 bg-green-600 hover:bg-green-700 text-white px-8 disabled:opacity-40"
+                    className="sm:flex-2 bg-green-600 hover:bg-green-700 text-white px-8 disabled:opacity-40"
                   >
                     {isSubmitting ? T.form_submitting : T.form_submit}
                   </Button>
