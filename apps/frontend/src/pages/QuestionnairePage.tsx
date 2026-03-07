@@ -451,7 +451,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "humanSupport_title",
       questionKey: "humanSupport_q",
       type: "radio",
-      image: "https://www.echatbot.ai/CRM.png",
+      image: "/survey-1.png",
       options: [
         { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
         { value: "partial", label: T.humanSupport_opt2, emoji: "⚖️" },
@@ -489,7 +489,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "salesAgents_title",
       questionKey: "salesAgents_q",
       type: "radio",
-      image: "https://www.echatbot.ai/CRM.png",
+      image: "/survey-agent.png",
       options: [
         { value: "yes", label: T.salesAgents_opt1, emoji: "🛍️" },
         { value: "general", label: T.salesAgents_opt2, emoji: "🤖" },
@@ -502,7 +502,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "ecommerce_title",
       questionKey: "ecommerce_q",
       type: "radio",
-      image: "https://www.echatbot.ai/demo.png",
+      image: "/survey-ecommerce.png",
       options: [
         { value: "yes", label: T.ecommerce_opt1, emoji: "🛒" },
         { value: "no", label: T.ecommerce_opt2, emoji: "🏪" },
@@ -556,6 +556,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "interest_title",
       questionKey: "interest_q",
       type: "stars",
+      image: "/survey-interest.png",
     },
     {
       id: "stepOther",
@@ -563,6 +564,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "other_title",
       questionKey: "other_q",
       type: "textarea",
+      image: "/survery-altro.png",
     },
   ]
 }
@@ -706,7 +708,7 @@ export default function QuestionnairePage() {
                 {/* Full-width intro image */}
                 <div className="-mx-10 -mt-10 mb-8">
                   <img
-                    src="/images/survey-intro.png"
+                    src="/survey.png"
                     alt="eChatbot survey"
                     className="w-full h-48 object-cover"
                     onError={(e) => {
