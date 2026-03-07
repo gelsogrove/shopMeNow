@@ -82,20 +82,13 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "Ho alcune domande sulla privacy",
     privacy_opt3: "Vorrei saperne di più",
 
-    // Step 8: Helpful
-    helpful_title: "Valore per te",
-    helpful_q: "Abbiamo esplorato insieme le principali funzionalità: supporto umano, marketing push, widget, agenti di vendita, e-commerce e privacy. Considerando il tuo tipo di business e le tue esigenze, pensi che eChatbot possa essere un valore aggiunto reale per la tua attività?",
-    helpful_opt1: "Sì, assolutamente!",
-    helpful_opt2: "Probabilmente sì, voglio approfondire",
-    helpful_opt3: "Sto ancora valutando le opzioni",
-
     // Step 9: Interest rating
     interest_title: "Quanto sei interessato?",
     interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato).",
 
     // Step 10: Other (textarea)
     other_title: "Hai altro da aggiungere?",
-    other_q: "C'è qualcosa di specifico che vorresti fare con un chatbot AI e che non abbiamo coperto? Un caso d'uso particolare, un'integrazione specifica, una funzionalità che hai in mente? Qualsiasi dettaglio ci aiuta a capire meglio come possiamo servirti.",
+    other_q: "C'è qualcosa di specifico che vorresti fare con un chatbot AI e che non abbiamo coperto? Un caso d'uso particolare, un'integrazione specifica, una funzionalità che hai in mente? Qualsiasi dettaglio ci aiuta a capire meglio come possiamo aiutarti.",
     other_placeholder: "Scrivi qui le tue idee o domande… (opzionale)",
 
     // Step 10: Contact consent
@@ -192,19 +185,13 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "I have some privacy concerns",
     privacy_opt3: "I'd like to know more",
 
-    helpful_title: "Value for You",
-    helpful_q: "We've explored eChatbot's main features together: human support, push marketing, widget, sales agents, e-commerce, and privacy. Considering your type of business and your needs, do you think eChatbot could be a real value-add for your operations?",
-    helpful_opt1: "Yes, absolutely!",
-    helpful_opt2: "Probably yes, I need to explore more",
-    helpful_opt3: "I'm still evaluating my options",
-
     // Step 9: Interest rating
     interest_title: "How interested are you?",
     interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested).",
 
     // Step 10: Other (textarea)
     other_title: "Anything Else?",
-    other_q: "Is there something specific you'd like to do with an AI chatbot that we haven't covered? A particular use case, a specific integration, a feature you have in mind? Any details help us better understand how we can serve you.",
+    other_q: "Is there something specific you'd like to do with an AI chatbot that we haven't covered? A particular use case, a specific integration, a feature you have in mind? Any details help us better understand how we can help you.",
     other_placeholder: "Write your ideas or questions here… (optional)",
 
     contact_title: "Let's Talk",
@@ -296,19 +283,13 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "Tengo algunas dudas sobre privacidad",
     privacy_opt3: "Me gustaría saber más",
 
-    helpful_title: "Valor para Ti",
-    helpful_q: "Hemos explorado juntos las principales funcionalidades de eChatbot: soporte humano, marketing push, widget, agentes de ventas, e-commerce y privacidad. Teniendo en cuenta tu tipo de negocio, ¿crees que eChatbot podría ser un valor añadido real para tu empresa?",
-    helpful_opt1: "¡Sí, absolutamente!",
-    helpful_opt2: "Probablemente sí, necesito profundizar",
-    helpful_opt3: "Todavía estoy evaluando opciones",
-
     // Step 9: Interest rating
     interest_title: "¿Cuánto te interesa?",
     interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado).",
 
     // Step 10: Other (textarea)
     other_title: "¿Algo más?",
-    other_q: "¿Hay algo específico que quisieras hacer con un chatbot de IA y que no hayamos cubierto? ¿Un caso de uso particular, una integración específica, una función que tengas en mente? Cualquier detalle nos ayuda a entender mejor cómo podemos servirte.",
+    other_q: "¿Hay algo específico que quisieras hacer con un chatbot de IA y que no hayamos cubierto? ¿Un caso de uso particular, una integración específica, una función que tengas en mente? Cualquier detalle nos ayuda a entender mejor cómo podemos ayudarte.",
     other_placeholder: "Escribe tus ideas o preguntas aquí… (opcional)",
 
     contact_title: "Hablemos",
@@ -400,19 +381,13 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "Tenho algumas dúvidas sobre privacidade",
     privacy_opt3: "Gostaria de saber mais",
 
-    helpful_title: "Valor para Você",
-    helpful_q: "Exploramos juntos as principais funcionalidades do eChatbot: suporte humano, marketing push, widget, agentes de vendas, e-commerce e privacidade. Considerando o seu tipo de negócio, você acha que o eChatbot poderia ser um valor agregado real para a sua empresa?",
-    helpful_opt1: "Sim, absolutamente!",
-    helpful_opt2: "Provavelmente sim, preciso aprofundar",
-    helpful_opt3: "Ainda estou avaliando as opções",
-
     // Step 9: Interest rating
     interest_title: "Quanto você está interessado?",
     interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado).",
 
     // Step 10: Other (textarea)
     other_title: "Algo mais?",
-    other_q: "Há algo específico que você gostaria de fazer com um chatbot de IA e que não cobrimos? Um caso de uso particular, uma integração específica, uma funcionalidade que você tem em mente? Qualquer detalhe nos ajuda a entender melhor como podemos servir você.",
+    other_q: "Há algo específico que você gostaria de fazer com um chatbot de IA e que não cobrimos? Um caso de uso particular, uma integração específica, uma funcionalidade que você tem em mente? Qualquer detalhe nos ajuda a entender melhor como podemos ajudá-lo.",
     other_placeholder: "Escreva suas ideias ou perguntas aqui… (opcional)",
 
     contact_title: "Vamos Conversar",
@@ -573,18 +548,6 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "ok", label: T.privacy_opt1, emoji: "🔒" },
         { value: "concerns", label: T.privacy_opt2, emoji: "🤔" },
         { value: "need_info", label: T.privacy_opt3, emoji: "📚" },
-      ],
-    },
-    {
-      id: "stepHelpful",
-      icon: "🎯",
-      titleKey: "helpful_title",
-      questionKey: "helpful_q",
-      type: "radio",
-      options: [
-        { value: "yes", label: T.helpful_opt1, emoji: "🎯" },
-        { value: "maybe", label: T.helpful_opt2, emoji: "🤔" },
-        { value: "exploring", label: T.helpful_opt3, emoji: "🔍" },
       ],
     },
     {
@@ -750,12 +713,8 @@ export default function QuestionnairePage() {
 
               {/* Body */}
               <div className="p-10">
-                <p className="text-slate-600 mb-8 leading-relaxed text-lg">
-                  {T.intro_desc}
-                </p>
-
                 {/* Full-width intro image */}
-                <div className="-mx-10 mb-8">
+                <div className="-mx-10 -mt-10 mb-8">
                   <img
                     src="/images/survey-intro.png"
                     alt="eChatbot survey"
@@ -772,24 +731,9 @@ export default function QuestionnairePage() {
                   </div>
                 </div>
 
-                {/* Topic preview chips */}
-                <div className="grid grid-cols-1 gap-3 mb-10">
-                  {[
-                    lang === "it" ? "Supporto umano" : lang === "es" ? "Soporte humano" : lang === "pt" ? "Suporte humano" : "Human support",
-                    lang === "it" ? "Marketing push" : "Push marketing",
-                    "Widget",
-                    lang === "it" ? "Agenti di vendita" : lang === "es" ? "Agentes ventas" : lang === "pt" ? "Agentes vendas" : "Sales agents",
-                    "E-commerce",
-                    lang === "it" ? "Privacy" : "Privacy",
-                  ].map((label) => (
-                    <div
-                      key={label}
-                      className="flex items-center bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-base text-green-800 font-medium"
-                    >
-                      <span>{label}</span>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-slate-600 mb-8 leading-relaxed" style={{ fontSize: "1.15rem" }}>
+                  {T.intro_desc}
+                </p>
 
                 <Button
                   size="lg"
@@ -863,7 +807,7 @@ export default function QuestionnairePage() {
                     {/* Icon + Title */}
                     <div className="text-5xl mb-3">{step.icon}</div>
                     <h2 className="text-xl font-bold text-slate-900 mb-2">{T[step.titleKey]}</h2>
-                    <p className="text-slate-500 mb-6 text-sm leading-relaxed">{T[step.questionKey]}</p>
+                    <p className="text-slate-500 mb-6 leading-relaxed" style={{ fontSize: "1.15rem" }}>{T[step.questionKey]}</p>
 
                     {/* Radio options */}
                     {step.type === "radio" && step.options && (
@@ -965,15 +909,12 @@ export default function QuestionnairePage() {
                   >
                     {T.back}
                   </Button>
-                  {(step.type === "textarea" || step.type === "stars") && (
-                    <Button
-                      onClick={handleNext}
-                      className="flex-2 bg-green-600 hover:bg-green-700 text-white px-8"
-                      disabled={step.type === "stars" && answers[step.id] === undefined}
-                    >
-                      {currentStep < totalSteps - 1 ? T.next : T.almost}
-                    </Button>
-                  )}
+                  <Button
+                    onClick={handleNext}
+                    className="flex-2 bg-green-600 hover:bg-green-700 text-white px-8"
+                  >
+                    {currentStep < totalSteps - 1 ? T.next : T.almost}
+                  </Button>
                 </div>
               </div>
             </div>

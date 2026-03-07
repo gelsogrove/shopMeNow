@@ -32,9 +32,8 @@ export function WidgetLoader() {
   const { language } = useLanguage() // Get language from header dropdown
 
   // Check if widget should be visible
-  const isHomePage = location.pathname === "/"
-  // Always allow widget on homepage; target workspace suitability is enforced by the backend
-  const shouldShowWidget = isHomePage
+  const isPublicPage = location.pathname === "/" || location.pathname === "/survey" || location.pathname === "/neapolis" || location.pathname === "/questionario"
+  const shouldShowWidget = isPublicPage
 
   // Load widget script dynamically from platform config
   useEffect(() => {

@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import { SEO } from "@/components/SEO"
 import { WidgetLoader } from "@/components/WidgetLoader"
 import { ChatWidget } from "@/components/ChatWidget"
-import { ArrowRight, Gift, Wrench, Headphones } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 
 // ─────────────────────────────────────────
 // Translations
@@ -114,8 +114,6 @@ const T: Record<Lang, {
   },
 }
 
-const offerIcons = [Gift, Wrench, Headphones]
-
 export function NeapolisPage() {
   const [lang, setLang] = useState<Lang>("it")
 
@@ -175,9 +173,9 @@ export function NeapolisPage() {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
           >
-            {/* Green banner */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-10 py-4 text-white text-center">
-              <p className="text-green-100 text-xs font-semibold uppercase tracking-widest">Partnership · Cliente 0</p>
+            {/* Title banner */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-10 py-8 text-white text-center">
+              <h1 className="text-3xl font-bold">Survey</h1>
             </div>
 
             {/* Logos row */}
@@ -210,26 +208,15 @@ export function NeapolisPage() {
               {/* Offer */}
               <div>
                 <p className="text-base font-bold text-slate-900 mb-3">{t.offer}</p>
-                <div className="grid grid-cols-3 gap-3">
-                  {t.offerItems.map((item, i) => {
-                    const Icon = offerIcons[i]
-                    return (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + i * 0.08, duration: 0.35 }}
-                        className="flex flex-col items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3"
-                      >
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-green-700" />
-                        </div>
-                        <p className="text-xs font-medium text-slate-800 leading-snug">{item}</p>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-                <p className="mt-3 text-xs text-slate-400 flex items-start gap-1.5">
+                <ul className="space-y-2 mb-3">
+                  {t.offerItems.map((item, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                      <span className="mt-1 text-green-500 shrink-0">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-slate-400 flex items-start gap-1.5">
                   <span className="text-slate-300 mt-0.5">✗</span>
                   {t.offerExclusion}
                 </p>
