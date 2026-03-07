@@ -19,7 +19,7 @@ const QT: Record<Lang, Record<string, string>> = {
   it: {
     // Intro
     intro_title: "Aiutaci a capire le tue esigenze",
-    intro_desc: "Rispondi a qualche domanda per aiutarci a capire come eChatbot può trasformare il tuo business. Il segreto di un buon chatbot è la qualità delle risposte: più capiamo il tuo contesto, meglio possiamo configurarlo per te. Parleremo di supporto clienti, marketing push, widget, vendite e molto altro. Circa 5 minuti — zero impegno.",
+    intro_desc: "Rispondi a qualche domanda per aiutarci a capire come eChatbot può trasformare il tuo business. Il segreto di un buon chatbot è la qualità delle risposte: più capiamo il tuo contesto, meglio possiamo configurarlo per te. Parleremo di supporto clienti, marketing push, widget, vendite e molto altro.\nCirca 2 minuti — zero impegno.",
     intro_cta: "Avvia il survey →",
     back: "← Indietro",
     next: "Avanti →",
@@ -129,7 +129,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
   en: {
     intro_title: "Help us understand your needs",
-    intro_desc: "Answer a few questions to help us understand how eChatbot can transform your business. The secret to a great chatbot is quality responses: the more we understand your context, the better we can configure it for you. We'll cover customer support, push marketing, widget, sales, and more. About 5 minutes — no commitment.",
+    intro_desc: "Answer a few questions to help us understand how eChatbot can transform your business. The secret to a great chatbot is quality responses: the more we understand your context, the better we can configure it for you. We'll cover customer support, push marketing, widget, sales, and more.\nAbout 2 minutes — no commitment.",
     intro_cta: "Start the survey →",
     back: "← Back",
     next: "Next →",
@@ -227,7 +227,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
   es: {
     intro_title: "Ayúdanos a entender tus necesidades",
-    intro_desc: "Responde algunas preguntas para ayudarnos a entender cómo eChatbot puede transformar tu negocio. El secreto de un buen chatbot son las respuestas de calidad: cuanto más entendemos tu contexto, mejor podemos configurarlo. Hablaremos de soporte al cliente, marketing push, widget, ventas y mucho más. Unos 5 minutos — sin compromiso.",
+    intro_desc: "Responde algunas preguntas para ayudarnos a entender cómo eChatbot puede transformar tu negocio. El secreto de un buen chatbot son las respuestas de calidad: cuanto más entendemos tu contexto, mejor podemos configurarlo. Hablaremos de soporte al cliente, marketing push, widget, ventas y mucho más.\nUnos 2 minutos — sin compromiso.",
     intro_cta: "Iniciar el survey →",
     back: "← Atrás",
     next: "Siguiente →",
@@ -325,7 +325,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
   pt: {
     intro_title: "Ajude-nos a entender suas necessidades",
-    intro_desc: "Responda algumas perguntas para nos ajudar a entender como o eChatbot pode transformar o seu negócio. O segredo de um bom chatbot são as respostas de qualidade: quanto mais entendemos o seu contexto, melhor podemos configurá-lo. Falaremos sobre atendimento ao cliente, marketing push, widget, vendas e muito mais. Cerca de 5 minutos — sem compromisso.",
+    intro_desc: "Responda algumas perguntas para nos ajudar a entender como o eChatbot pode transformar o seu negócio. O segredo de um bom chatbot são as respostas de qualidade: quanto mais entendemos o seu contexto, melhor podemos configurá-lo. Falaremos sobre atendimento ao cliente, marketing push, widget, vendas e muito mais.\nCerca de 2 minutos — sem compromisso.",
     intro_cta: "Iniciar o survey →",
     back: "← Voltar",
     next: "Próximo →",
@@ -584,7 +584,7 @@ export default function QuestionnairePage() {
   const lang = (["it", "en", "es", "pt"].includes(language) ? language : "en") as Lang
   const T = QT[lang]
 
-  type View = "intro" | "steps" | "contact_consent" | "contact_form" | "success" | "no_contact"
+  type View = "intro" | "steps" | "contact_form" | "success" | "no_contact"
   const [view, setView] = useState<View>("intro")
   const [currentStep, setCurrentStep] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -612,7 +612,7 @@ export default function QuestionnairePage() {
       setDirection(1)
       setCurrentStep((s) => s + 1)
     } else {
-      setView("contact_consent")
+      submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
     }
   }
 
@@ -627,16 +627,6 @@ export default function QuestionnairePage() {
 
   function handleAnswer(stepId: string, value: string) {
     setAnswers((prev) => ({ ...prev, [stepId]: value }))
-  }
-
-  // ─── Contact consent ──────────────────────
-  async function handleContactConsent(wants: boolean) {
-    if (wants) {
-      setView("contact_form")
-    } else {
-      // Submit without contact info
-      await submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
-    }
   }
 
   // ─── Submit ───────────────────────────────
@@ -658,7 +648,7 @@ export default function QuestionnairePage() {
         ...answers,
         wantsContact,
       })
-      setView(wantsContact ? "success" : "no_contact")
+      setView("success")
     } catch {
       setSubmitError(T.form_error)
       setIsSubmitting(false)
@@ -731,7 +721,7 @@ export default function QuestionnairePage() {
                   </div>
                 </div>
 
-                <p className="text-slate-600 mb-8 leading-relaxed" style={{ fontSize: "1.15rem" }}>
+                <p className="text-slate-600 mb-8 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>
                   {T.intro_desc}
                 </p>
 
@@ -823,7 +813,7 @@ export default function QuestionnairePage() {
                                   setDirection(1)
                                   setCurrentStep((s) => s + 1)
                                 } else {
-                                  setView("contact_consent")
+                                  submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
                                 }
                               }, 300)
                             }}
@@ -857,7 +847,7 @@ export default function QuestionnairePage() {
                                   setDirection(1)
                                   setCurrentStep((s) => s + 1)
                                 } else {
-                                  setView("contact_consent")
+                                  submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
                                 }
                               }, 350)
                             }}
@@ -918,50 +908,6 @@ export default function QuestionnairePage() {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* ── CONTACT CONSENT ── */}
-          {view === "contact_consent" && (
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="bg-white rounded-2xl shadow-xl overflow-hidden"
-            >
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-6 text-white text-center">
-                <div className="text-5xl mb-2">📞</div>
-                <h2 className="text-2xl font-bold">{T.contact_title}</h2>
-              </div>
-              <div className="p-8">
-                <p className="text-slate-600 mb-8 leading-relaxed text-base">
-                  {T.contact_q}
-                </p>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => handleContactConsent(true)}
-                    className="w-full flex items-center gap-3 px-5 py-4 rounded-xl border-2 border-green-500 bg-green-50 text-green-800 font-semibold text-left hover:bg-green-100 transition-colors"
-                  >
-                    <span className="text-2xl">📞</span>
-                    <span>{T.contact_opt1}</span>
-                    <span className="ml-auto text-green-600">→</span>
-                  </button>
-                  <button
-                    disabled={isSubmitting}
-                    onClick={() => handleContactConsent(false)}
-                    className="w-full flex items-center gap-3 px-5 py-4 rounded-xl border-2 border-slate-200 text-slate-600 font-medium text-left hover:border-slate-300 hover:bg-slate-50 transition-colors disabled:opacity-50"
-                  >
-                    <span className="text-2xl">👋</span>
-                    <span>{T.contact_opt2}</span>
-                  </button>
-                </div>
-                <button
-                  onClick={() => { setView("steps"); setCurrentStep(totalSteps - 1) }}
-                  className="mt-4 w-full text-center text-sm text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  {T.back}
-                </button>
-              </div>
-            </motion.div>
           )}
 
           {/* ── CONTACT FORM ── */}
@@ -1032,7 +978,7 @@ export default function QuestionnairePage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setView("contact_consent")}
+                    onClick={() => { setView("steps"); setCurrentStep(totalSteps - 1) }}
                     className="flex-1 border-slate-200 text-slate-600"
                   >
                     {T.back}

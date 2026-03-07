@@ -197,8 +197,8 @@ export function NeapolisPage() {
                 <p className="text-base text-slate-700 leading-relaxed">{t.intro}</p>
               </div>
 
-              {/* Client 0 highlight */}
-              <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl px-6 py-4">
+              {/* Client 0 */}
+              <div>
                 <p className="text-sm font-bold text-green-700 uppercase tracking-widest mb-1">
                   {t.client0Label}
                 </p>
@@ -211,35 +211,26 @@ export function NeapolisPage() {
                 <ul className="space-y-2 mb-3">
                   {t.offerItems.map((item, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                      <span className="mt-1 text-green-500 shrink-0">•</span>
+                      <span className="shrink-0">✅</span>
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs text-slate-400 flex items-start gap-1.5">
-                  <span className="text-slate-300 mt-0.5">✗</span>
+                <p className="text-sm text-slate-600 font-medium flex items-start gap-2">
+                  <span className="shrink-0">❌</span>
                   {t.offerExclusion}
                 </p>
               </div>
 
               {/* Survey CTA */}
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.45 }}
-                className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl px-8 py-6 text-white text-center shadow-xl"
-              >
-                <h2 className="text-lg font-bold mb-1">{t.cta_title}</h2>
-                <p className="text-green-100 text-sm leading-relaxed mb-4 max-w-md mx-auto">
-                  {t.cta_desc}
-                </p>
+              <div className="text-center pt-2 pb-1">
                 <Link
                   to="/survey"
-                  className="inline-flex items-center gap-2 bg-white text-green-700 hover:bg-green-50 font-bold px-7 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-base"
+                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-base"
                 >
                   {t.cta_btn}
                 </Link>
-              </motion.div>
+              </div>
 
             </div>
           </motion.div>
