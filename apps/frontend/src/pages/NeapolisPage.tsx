@@ -135,9 +135,9 @@ export function NeapolisPage() {
         {/* ── Header ── */}
         <header className="bg-white shadow-sm sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-1">
-              <img src="/logo.png" alt="eChatbot" className="w-[90px] h-[90px] mt-[-6px]" />
-              <span className="text-2xl font-bold text-green-600 relative left-[-20px]">eChatbot.AI</span>
+            <Link to="/" className="flex items-center gap-2">
+              <img src="/logo.png" alt="eChatbot" className="w-12 h-12" />
+              <span className="text-xl font-bold text-green-600">eChatbot.AI</span>
             </Link>
             <div className="flex items-center gap-1">
               {(["it", "en", "es", "pt"] as Lang[]).map((l) => (
@@ -156,7 +156,7 @@ export function NeapolisPage() {
         </header>
 
         {/* ── Main card ── */}
-        <div className="flex items-center justify-center min-h-[calc(100vh-90px)] px-6 py-8">
+        <div className="flex items-center justify-center min-h-[calc(100vh-56px)] px-6 py-8">
         <div className="w-full max-w-4xl">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
