@@ -47,12 +47,12 @@ const QT: Record<Lang, Record<string, string>> = {
     widget_opt2: "Solo WhatsApp, senza widget",
     widget_opt3: "Entrambi — widget + WhatsApp",
 
-    // Step 4: Sales Agents
-    salesAgents_title: "Agenti di Vendita AI",
-    salesAgents_q: "eChatbot offre agenti AI specializzati nel supporto alla vendita: guidano i clienti nella scelta dei prodotti, rispondono alle domande sul catalogo, gestiscono il carrello e aiutano a chiudere ordini direttamente in chat. Questi agenti sono addestrati con i tuoi dati e parlano in oltre 30 lingue. Saresti interessato ad avere agenti AI dedicati alle vendite?",
-    salesAgents_opt1: "Sì, voglio agenti di vendita AI",
-    salesAgents_opt2: "Un assistente AI generico va bene",
-    salesAgents_opt3: "Non ho bisogno di vendita assistita",
+    // Step 2 (moved): Sales Team
+    salesAgents_title: "Team di Vendita",
+    salesAgents_q: "eChatbot ti permette di creare un vero team di vendita digitale: puoi registrare i tuoi collaboratori come agenti di vendita, ognuno con il proprio profilo e area di competenza. Quando un cliente è pronto all'acquisto o ha bisogno di assistenza personalizzata, l'IA passa la chat direttamente all'agente giusto del tuo staff — che riceve una notifica istantanea e interviene in tempo reale, con tutta la cronologia della conversazione. Questa funzionalità è pensata per le aziende con un team commerciale. Hai collaboratori dedicati alle vendite?",
+    salesAgents_opt1: "Sì, ho un team di vendita",
+    salesAgents_opt2: "Lavoro da solo, ma potrei espandermi",
+    salesAgents_opt3: "No, gestisco tutto in autonomia",
 
     // Step 5: Ecommerce
     ecommerce_title: "E-Commerce",
@@ -155,11 +155,11 @@ const QT: Record<Lang, Record<string, string>> = {
     widget_opt2: "WhatsApp only, no widget needed",
     widget_opt3: "Both — website widget + WhatsApp",
 
-    salesAgents_title: "AI Sales Agents",
-    salesAgents_q: "eChatbot offers AI agents specialised in sales support: they guide customers through product selection, answer catalog questions, manage the cart, and help close orders directly in chat. These agents are trained on your data and converse in over 30 languages. Would you be interested in having AI agents dedicated to driving sales?",
-    salesAgents_opt1: "Yes, I want AI sales agents",
-    salesAgents_opt2: "A general AI assistant is enough",
-    salesAgents_opt3: "I don't need assisted sales",
+    salesAgents_title: "Sales Team",
+    salesAgents_q: "eChatbot lets you build a real digital sales team: you can register your team members as sales agents, each with their own profile and area of expertise. When a customer is ready to buy or needs personalised assistance, the AI hands off the chat directly to the right agent on your staff — who gets an instant notification and steps in with the full conversation history. This feature is designed for businesses with a commercial team. Do you have staff dedicated to sales?",
+    salesAgents_opt1: "Yes, I have a sales team",
+    salesAgents_opt2: "I work alone but could expand",
+    salesAgents_opt3: "No, I handle everything myself",
 
     ecommerce_title: "E-Commerce",
     ecommerce_q: "eChatbot has a built-in e-commerce engine that lets customers browse the catalog, add products to cart, and complete orders directly in chat — on WhatsApp or the widget. If you already have an online store or are planning to launch one, we can integrate it or build a new one. Does your business sell products or services online?",
@@ -254,11 +254,11 @@ const QT: Record<Lang, Record<string, string>> = {
     widget_opt2: "Solo WhatsApp, sin widget",
     widget_opt3: "Ambos — widget + WhatsApp",
 
-    salesAgents_title: "Agentes de Ventas IA",
-    salesAgents_q: "eChatbot ofrece agentes de IA especializados en soporte de ventas: guían a los clientes en la selección de productos, responden preguntas del catálogo, gestionan el carrito y ayudan a cerrar pedidos directamente en el chat. Estos agentes están entrenados con tus datos y conversan en más de 30 idiomas. ¿Te interesaría tener agentes de IA dedicados a impulsar las ventas?",
-    salesAgents_opt1: "Sí, quiero agentes de ventas IA",
-    salesAgents_opt2: "Un asistente IA general es suficiente",
-    salesAgents_opt3: "No necesito ventas asistidas",
+    salesAgents_title: "Equipo de Ventas",
+    salesAgents_q: "eChatbot te permite crear un verdadero equipo de ventas digital: puedes registrar a tus colaboradores como agentes de ventas, cada uno con su perfil y área de especialización. Cuando un cliente está listo para comprar o necesita asistencia personalizada, la IA transfiere el chat directamente al agente adecuado de tu equipo — que recibe una notificación instantánea e interviene con el historial completo de la conversación. Esta funcionalidad está diseñada para empresas con un equipo comercial. ¿Tienes colaboradores dedicados a las ventas?",
+    salesAgents_opt1: "Sí, tengo un equipo de ventas",
+    salesAgents_opt2: "Trabajo solo, pero podría crecer",
+    salesAgents_opt3: "No, lo gestiono todo yo solo",
 
     ecommerce_title: "E-Commerce",
     ecommerce_q: "eChatbot tiene un motor de e-commerce integrado que permite a los clientes explorar el catálogo, añadir productos al carrito y completar pedidos directamente en el chat — en WhatsApp o en el widget. Si ya tienes una tienda online o estás planeando crear una, podemos integrarla o construir una nueva. ¿Tu negocio vende productos o servicios online?",
@@ -353,11 +353,11 @@ const QT: Record<Lang, Record<string, string>> = {
     widget_opt2: "Somente WhatsApp, sem widget",
     widget_opt3: "Ambos — widget + WhatsApp",
 
-    salesAgents_title: "Agentes de Vendas IA",
-    salesAgents_q: "O eChatbot oferece agentes de IA especializados em suporte a vendas: guiam os clientes na escolha de produtos, respondem perguntas do catálogo, gerenciam o carrinho e ajudam a fechar pedidos diretamente no chat. Esses agentes são treinados com os seus dados e conversam em mais de 30 idiomas. Você teria interesse em ter agentes de IA dedicados a impulsionar as vendas?",
-    salesAgents_opt1: "Sim, quero agentes de vendas IA",
-    salesAgents_opt2: "Um assistente de IA geral é suficiente",
-    salesAgents_opt3: "Não preciso de vendas assistidas",
+    salesAgents_title: "Equipe de Vendas",
+    salesAgents_q: "O eChatbot permite criar uma verdadeira equipe de vendas digital: pode registar os seus colaboradores como agentes de vendas, cada um com o seu próprio perfil e área de especialização. Quando um cliente está pronto para comprar ou precisa de assistência personalizada, a IA transfere o chat diretamente para o agente certo da sua equipe — que recebe uma notificação instantânea e intervém com todo o histórico da conversa. Esta funcionalidade é pensada para empresas com uma equipe comercial. Tem colaboradores dedicados a vendas?",
+    salesAgents_opt1: "Sim, tenho uma equipe de vendas",
+    salesAgents_opt2: "Trabalho sozinho, mas posso expandir",
+    salesAgents_opt3: "Não, faço tudo por conta própria",
 
     ecommerce_title: "E-Commerce",
     ecommerce_q: "O eChatbot tem um motor de e-commerce integrado que permite aos clientes navegar no catálogo, adicionar produtos ao carrinho e concluir pedidos diretamente no chat — no WhatsApp ou no widget. Se você já tem uma loja online ou está planejando criar uma, podemos integrá-la ou criar uma nova. O seu negócio vende produtos ou serviços online?",
@@ -463,6 +463,19 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       ],
     },
     {
+      id: "stepSalesAgents",
+      icon: "👥",
+      titleKey: "salesAgents_title",
+      questionKey: "salesAgents_q",
+      type: "radio",
+      image: "/survey-agent.png",
+      options: [
+        { value: "yes", label: T.salesAgents_opt1, emoji: "👥" },
+        { value: "solo", label: T.salesAgents_opt2, emoji: "🙋" },
+        { value: "no", label: T.salesAgents_opt3, emoji: "🤖" },
+      ],
+    },
+    {
       id: "stepPushMarketing",
       icon: "📣",
       titleKey: "pushMarketing_title",
@@ -486,19 +499,6 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "yes_widget", label: T.widget_opt1, emoji: "🌐" },
         { value: "whatsapp_only", label: T.widget_opt2, emoji: "💬" },
         { value: "both", label: T.widget_opt3, emoji: "🔀" },
-      ],
-    },
-    {
-      id: "stepSalesAgents",
-      icon: "🛍️",
-      titleKey: "salesAgents_title",
-      questionKey: "salesAgents_q",
-      type: "radio",
-      image: "/survey-agent.png",
-      options: [
-        { value: "yes", label: T.salesAgents_opt1, emoji: "🛍️" },
-        { value: "general", label: T.salesAgents_opt2, emoji: "🤖" },
-        { value: "no", label: T.salesAgents_opt3, emoji: "⏸️" },
       ],
     },
     {
@@ -656,8 +656,13 @@ export default function QuestionnairePage() {
       })
       setView(wantsContact ? "success" : "no_contact")
     } catch {
-      setSubmitError(T.form_error)
-      setIsSubmitting(false)
+      if (!wantsContact) {
+        // User said "no thanks" — don't show an error, just navigate away
+        setView("no_contact")
+      } else {
+        setSubmitError(T.form_error)
+        setIsSubmitting(false)
+      }
     }
   }
 
