@@ -7,6 +7,7 @@ import { getPublicPageTexts } from "@/utils/publicPageTranslations"
 import { useTokenValidation } from "../hooks/useTokenValidation"
 import { tokenApi } from "../services/tokenApi"
 import { PublicMobileShell } from "@/components/public/PublicMobileShell"
+import { SEO } from "@/components/SEO"
 
 const RegisterPage = () => {
   const [searchParams] = useSearchParams()
@@ -306,158 +307,176 @@ const RegisterPage = () => {
     }
   }
 
+  const seo = (
+    <SEO
+      title="Registration"
+      description="Complete your eChatbot registration smoothly on mobile or desktop with a responsive layout."
+    />
+  )
+
   // Loading state
   if (loading || validatingToken || initialLoading) {
     return (
-      <PublicMobileShell accentColor={workspacePrimaryColor || "#0ea5e9"}>
-        <div className="w-full max-w-xl mx-auto">
-          <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 sm:p-8">
-            <div className="animate-pulse space-y-6">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-10 bg-gray-200 rounded"></div>
-              <div className="h-10 bg-gray-200 rounded w-1/2 mx-auto"></div>
+      <>
+        {seo}
+        <PublicMobileShell accentColor={workspacePrimaryColor || "#0ea5e9"}>
+          <div className="w-full max-w-xl mx-auto">
+            <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 sm:p-8">
+              <div className="animate-pulse space-y-6">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+                <div className="h-10 bg-gray-200 rounded w-1/2 mx-auto"></div>
+              </div>
+              <p className="text-center mt-4 text-gray-500">
+                {texts.validatingLink}
+              </p>
             </div>
-            <p className="text-center mt-4 text-gray-500">
-              {texts.validatingLink}
-            </p>
           </div>
-        </div>
-      </PublicMobileShell>
+        </PublicMobileShell>
+      </>
     )
   }
 
   // Token error state
   if (!tokenValid || tokenError) {
     return (
-      <PublicMobileShell accentColor="#ef4444">
-        <div className="w-full max-w-xl mx-auto">
-          <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 sm:p-8">
-            <div className="text-center mb-6">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-red-500 mx-auto"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <h2 className="text-xl font-bold mt-4">
-                {texts.registrationErrorTitle}
-              </h2>
-            </div>
-            <p className="text-gray-700 text-center">{tokenError}</p>
-            <div className="mt-6">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-              >
-                {texts.tryAgain}
-              </button>
+      <>
+        {seo}
+        <PublicMobileShell accentColor="#ef4444">
+          <div className="w-full max-w-xl mx-auto">
+            <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 sm:p-8">
+              <div className="text-center mb-6">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-12 w-12 text-red-500 mx-auto"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 0 0118 0z"
+                  />
+                </svg>
+                <h2 className="text-xl font-bold mt-4">
+                  {texts.registrationErrorTitle}
+                </h2>
+              </div>
+              <p className="text-gray-700 text-center">{tokenError}</p>
+              <div className="mt-6">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                >
+                  {texts.tryAgain}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </PublicMobileShell>
+        </PublicMobileShell>
+      </>
     )
   }
 
   // Success state
   if (submitStatus.success) {
     return (
-      <PublicMobileShell accentColor="#10b981" tone="emerald">
-        <div className="w-full max-w-xl mx-auto">
-          <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 sm:p-8">
-            <div className="text-center mb-6">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 text-green-500 mx-auto"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <h2 className="text-xl font-bold mt-4">
-                {texts.registrationSuccessTitle}
-              </h2>
-            </div>
-            <p className="text-gray-700 text-center">
-              {texts.registrationSuccessMessage}
-            </p>
-            <div className="mt-6">
-              <button
-                onClick={() =>
-                  (window.location.href = `whatsapp://send?phone=${phone.replace(
-                    /[^0-9]/g,
-                    ""
-                  )}`)
-                }
-                className="w-full px-4 py-3 text-base bg-green-500 text-white rounded-xl hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
-              >
-                {texts.returnToWhatsApp}
-              </button>
+      <>
+        {seo}
+        <PublicMobileShell accentColor="#10b981" tone="emerald">
+          <div className="w-full max-w-xl mx-auto">
+            <div className="bg-white/95 backdrop-blur rounded-2xl shadow-xl p-6 sm:p-8">
+              <div className="text-center mb-6">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-12 w-12 text-green-500 mx-auto"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                <h2 className="text-xl font-bold mt-4">
+                  {texts.registrationSuccessTitle}
+                </h2>
+              </div>
+              <p className="text-gray-700 text-center">
+                {texts.registrationSuccessMessage}
+              </p>
+              <div className="mt-6">
+                <button
+                  onClick={() =>
+                    (window.location.href = `whatsapp://send?phone=${phone.replace(
+                      /[^0-9]/g,
+                      ""
+                    )}`)
+                  }
+                  className="w-full px-4 py-3 text-base bg-green-500 text-white rounded-xl hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+                >
+                  {texts.returnToWhatsApp}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </PublicMobileShell>
+        </PublicMobileShell>
+      </>
     )
   }
 
   // Registration form
   return (
-    <PublicMobileShell accentColor={workspacePrimaryColor || "#0ea5e9"}>
-      <div className="w-full max-w-2xl mx-auto">
-        <div className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl overflow-hidden">
-          <div
-            className="px-6 py-8 text-white"
-            style={{
-              background: workspacePrimaryColor
-                ? `linear-gradient(135deg, ${workspacePrimaryColor} 0%, ${workspacePrimaryColor}CC 70%)`
-                : "linear-gradient(to right, #3b82f6, #6366f1)",
-            }}
-          >
-            {workspaceLogoUrl && (
-              <div className="flex justify-center mb-4">
-                <img
-                  src={
-                    workspaceLogoUrl.startsWith("http")
-                      ? workspaceLogoUrl
-                      : `${IMG_BASE_URL}${workspaceLogoUrl}`
-                  }
-                  alt="Workspace logo"
-                  className="h-16 w-16 rounded-full border-2 border-white/70 shadow-md object-contain bg-white"
-                />
+    <>
+      {seo}
+      <PublicMobileShell accentColor={workspacePrimaryColor || "#0ea5e9"}>
+        <div className="w-full max-w-2xl mx-auto">
+          <div className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl overflow-hidden">
+            <div
+              className="px-6 py-8 text-white"
+              style={{
+                background: workspacePrimaryColor
+                  ? `linear-gradient(135deg, ${workspacePrimaryColor} 0%, ${workspacePrimaryColor}CC 70%)`
+                  : "linear-gradient(to right, #3b82f6, #6366f1)",
+              }}
+            >
+              {workspaceLogoUrl && (
+                <div className="flex justify-center mb-4">
+                  <img
+                    src={
+                      workspaceLogoUrl.startsWith("http")
+                        ? workspaceLogoUrl
+                        : `${IMG_BASE_URL}${workspaceLogoUrl}`
+                    }
+                    alt="Workspace logo"
+                    className="h-16 w-16 rounded-full border-2 border-white/70 shadow-md object-contain bg-white"
+                  />
+                </div>
+              )}
+              <h1 className="text-lg sm:text-xl font-bold text-center leading-snug">
+                {texts.registerTitle.replace(
+                  "{workspaceName}",
+                  workspaceName || "Our Service"
+                )}
+              </h1>
+              <p className="mt-2 text-center text-white/80 text-sm sm:text-base">
+                {texts.registerSubtitle}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="px-5 sm:px-8 py-8 space-y-6">
+            {submitStatus.error && (
+              <div className="bg-red-50 text-red-700 p-4 rounded-md">
+                {submitStatus.error}
               </div>
             )}
-            <h1 className="text-lg sm:text-xl font-bold text-center leading-snug">
-              {texts.registerTitle.replace(
-                "{workspaceName}",
-                workspaceName || "Our Service"
-              )}
-            </h1>
-            <p className="mt-2 text-center text-white/80 text-sm sm:text-base">
-              {texts.registerSubtitle}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="px-5 sm:px-8 py-8 space-y-6">
-          {submitStatus.error && (
-            <div className="bg-red-50 text-red-700 p-4 rounded-md">
-              {submitStatus.error}
-            </div>
-          )}
 
           {/* First name */}
           <div>
@@ -695,6 +714,7 @@ const RegisterPage = () => {
         </div>
       </div>
     </PublicMobileShell>
+    </>
   )
 }
 

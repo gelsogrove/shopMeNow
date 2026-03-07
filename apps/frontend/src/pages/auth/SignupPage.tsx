@@ -21,6 +21,7 @@ import {
 import { GDPRDialog } from "@/components/ui/gdpr-dialog"
 import { Input } from "@/components/ui/input"
 import { api } from "@/services/api"
+import { SEO } from "@/components/SEO"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
@@ -98,7 +99,12 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="signup-background">
+    <>
+      <SEO
+        title="Sign up"
+        description="Create your eChatbot account with a fully responsive experience on any device."
+      />
+      <div className="signup-background">
       <AuthLogo />
       <div className="container mx-auto px-4 flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md font-system bg-white/95 backdrop-blur-sm shadow-xl">
@@ -263,5 +269,6 @@ export default function SignupPage() {
         </Card>
       </div>
     </div>
+    </>
   )
 }

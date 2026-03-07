@@ -4,6 +4,7 @@ import { HomeFAQ } from "@/components/landing/HomeFAQ"
 import { WIPModal } from "@/components/shared/WIPModal"
 import { WidgetLoader } from "@/components/WidgetLoader"
 import { ChatWidget } from "@/components/ChatWidget"
+import { SEO } from "@/components/SEO"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -991,17 +992,22 @@ export function LoginPage() {
   ]
 
   return (
-    <div
-      className="w-full min-h-screen"
-      style={{
-        backgroundImage:
-          "linear-gradient(to bottom right, rgba(248,250,252,0.95), rgba(226,232,240,0.95)), url('/background.png')",
-        backgroundRepeat: "no-repeat, no-repeat",
-        backgroundSize: "100% 100%, cover",
-        backgroundPosition: "top left, center top",
-        backgroundBlendMode: "normal, lighten",
-      }}
-    >
+    <>
+      <SEO
+        title="Login"
+        description="Access eChatbot to sign in, register, or explore the platform with a mobile-friendly experience."
+      />
+      <div
+        className="w-full min-h-screen"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom right, rgba(248,250,252,0.95), rgba(226,232,240,0.95)), url('/background.png')",
+          backgroundRepeat: "no-repeat, no-repeat",
+          backgroundSize: "100% 100%, cover",
+          backgroundPosition: "top left, center top",
+          backgroundBlendMode: "normal, lighten",
+        }}
+      >
       {/* Header - Professional Design */}
       <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
@@ -2844,6 +2850,7 @@ export function LoginPage() {
       {/* Chat Widget - Support widget for eChatbot HQ */}
       <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" />
 
-    </div>
+      </div>
+    </>
   )
 }

@@ -77,7 +77,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 8: Privacy
     privacy_title: "Privacy e Sicurezza",
-    privacy_q: "Comprendiamo che la privacy dei tuoi clienti è fondamentale. eChatbot è progettato con la privacy al centro: non inviamo mai dati sensibili dei clienti ai modelli AI. Le informazioni personali (contatti, ordini, pagamenti) rimangono sempre nel tuo database. Per le operazioni sensibili usiamo link con token temporizzati, accessibili solo dall'utente interessato. Il nostro approccio è conforme al GDPR. Questo livello di privacy ti soddisfa?",
+    privacy_q: "Comprendiamo che la privacy dei tuoi clienti è fondamentale. eChatbot è progettato con la privacy al centro: non inviamo mai dati sensibili dei clienti ai modelli AI. Le informazioni personali (contatti, ordini, pagamenti) rimangono sempre nel tuo database. Per le operazioni sensibili usiamo link con token temporizzati, accessibili solo dall'utente interessato.",
     privacy_opt1: "Sì, questo approccio mi convince",
     privacy_opt2: "Ho alcune domande sulla privacy",
     privacy_opt3: "Vorrei saperne di più",
@@ -180,7 +180,7 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_opt3: "I don't know, I'd like to learn more",
 
     // Step 8: Privacy
-    privacy_q: "We understand that your customers' privacy is paramount. eChatbot is designed with privacy at its core: we never send sensitive customer data to AI models. Personal information (contacts, orders, payments) always stays in your database. For sensitive operations we use time-limited token links, accessible only by the specific user. Our approach is fully GDPR-compliant. Does this privacy model work for you?",
+    privacy_q: "We understand that your customers' privacy is paramount. eChatbot is designed with privacy at its core: we never send sensitive customer data to AI models. Personal information (contacts, orders, payments) always stays in your database. For sensitive operations we use time-limited token links, accessible only by the specific user.",
     privacy_opt1: "Yes, this approach works for me",
     privacy_opt2: "I have some privacy concerns",
     privacy_opt3: "I'd like to know more",
@@ -278,7 +278,7 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_opt3: "No lo sé, me gustaría saber más",
 
     // Step 8: Privacy
-    privacy_q: "Entendemos que la privacidad de tus clientes es fundamental. eChatbot está diseñado con la privacidad en el centro: nunca enviamos datos sensibles de los clientes a los modelos de IA. La información personal (contactos, pedidos, pagos) siempre permanece en tu base de datos. Para operaciones sensibles usamos enlaces con tokens de tiempo limitado, accesibles solo por el usuario en cuestión. Nuestro enfoque cumple plenamente con el RGPD. ¿Este modelo de privacidad te funciona?",
+    privacy_q: "Entendemos que la privacidad de tus clientes es fundamental. eChatbot está diseñado con la privacidad en el centro: nunca enviamos datos sensibles de los clientes a los modelos de IA. La información personal (contactos, pedidos, pagos) siempre permanece en tu base de datos. Para operaciones sensibles usamos enlaces con tokens de tiempo limitado, accesibles solo por el usuario en cuestión.",
     privacy_opt1: "Sí, este enfoque me convence",
     privacy_opt2: "Tengo algunas dudas sobre privacidad",
     privacy_opt3: "Me gustaría saber más",
@@ -376,7 +376,7 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_opt3: "Não sei, gostaria de saber mais",
 
     // Step 8: Privacy
-    privacy_q: "Entendemos que a privacidade dos seus clientes é fundamental. O eChatbot foi desenvolvido com a privacidade no centro: nunca enviamos dados sensíveis dos clientes para modelos de IA. As informações pessoais (contatos, pedidos, pagamentos) sempre ficam no seu banco de dados. Para operações sensíveis usamos links com tokens temporários, acessíveis apenas pelo usuário em questão. Nossa abordagem está em total conformidade com a LGPD/RGPD. Este modelo de privacidade atende às suas expectativas?",
+    privacy_q: "Entendemos que a privacidade dos seus clientes é fundamental. O eChatbot foi desenvolvido com a privacidade no centro: nunca enviamos dados sensíveis dos clientes para modelos de IA. As informações pessoais (contatos, pedidos, pagamentos) sempre ficam no seu banco de dados. Para operações sensíveis usamos links com tokens temporários, acessíveis apenas pelo usuário em questão.",
     privacy_opt1: "Sim, essa abordagem me convence",
     privacy_opt2: "Tenho algumas dúvidas sobre privacidade",
     privacy_opt3: "Gostaria de saber mais",
@@ -686,7 +686,7 @@ export default function QuestionnairePage() {
 
       {/* Content */}
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)] px-4 py-12">
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-[712px]">
 
           {/* ── INTRO ── */}
           {view === "intro" && (

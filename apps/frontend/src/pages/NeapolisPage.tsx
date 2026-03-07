@@ -17,8 +17,6 @@ const T: Record<Lang, {
   badge: string
   greeting: string
   intro: string
-  client0Label: string
-  client0: string
   offer: string
   offerItems: string[]
   offerExclusion: string
@@ -33,9 +31,7 @@ const T: Record<Lang, {
     seoDesc: "eChatbot.AI cerca il Cliente 0 all'interno del network Neapolis. Chatbot AI su misura, completamente gratuito per un anno.",
     badge: "Offerta esclusiva per la community Neapolis",
     greeting: "Ciao,",
-    intro: "eChatbot.AI è una nuova startup e ci vantiamo di poter creare chatbot customizzati di alta qualità.",
-    client0Label: "Cliente 0",
-    client0: "In questo momento stiamo cercando il Cliente 0 all'interno del network di Neapolis — qualcuno che voglia sperimentare con noi il potenziale di un assistente AI costruito su misura per la propria attività.",
+    intro: "eChatbot.AI è una nuova startup e ci vantiamo di poter creare chatbot customizzati di alta qualità. In questo momento stiamo cercando il Cliente 0 all'interno del network di Neapolis — qualcuno che voglia sperimentare con noi il potenziale di un assistente AI costruito su misura per la propria attività.",
     offer: "Offriamo il servizio completamente gratuito per un anno.",
     offerItems: [
       "Tutta l'implementazione tecnica inclusa",
@@ -54,9 +50,7 @@ const T: Record<Lang, {
     seoDesc: "eChatbot.AI is looking for Client 0 within the Neapolis network. Custom AI chatbot, completely free for one year.",
     badge: "Exclusive offer for the Neapolis community",
     greeting: "Hello,",
-    intro: "eChatbot.AI is a new startup and we pride ourselves on building high-quality customised chatbots.",
-    client0Label: "Client 0",
-    client0: "We are currently looking for our Client 0 within the Neapolis network — someone willing to explore with us the potential of an AI assistant built specifically for their business.",
+    intro: "eChatbot.AI is a new startup and we pride ourselves on building high-quality customised chatbots. We are currently looking for our Client 0 within the Neapolis network — someone willing to explore with us the potential of an AI assistant built specifically for their business.",
     offer: "We offer the service completely free for one year.",
     offerItems: [
       "Full technical implementation included",
@@ -75,9 +69,7 @@ const T: Record<Lang, {
     seoDesc: "eChatbot.AI busca al Cliente 0 dentro de la red Neapolis. Chatbot AI personalizado, completamente gratuito durante un año.",
     badge: "Oferta exclusiva para la comunidad Neapolis",
     greeting: "Hola,",
-    intro: "eChatbot.AI es una nueva startup y nos enorgullece crear chatbots personalizados de alta calidad.",
-    client0Label: "Cliente 0",
-    client0: "Actualmente estamos buscando al Cliente 0 dentro de la red de Neapolis — alguien que quiera explorar con nosotros el potencial de un asistente AI construido a medida para su negocio.",
+    intro: "eChatbot.AI es una nueva startup y nos enorgullece crear chatbots personalizados de alta calidad. Actualmente estamos buscando al Cliente 0 dentro de la red de Neapolis — alguien que quiera explorar con nosotros el potencial de un asistente AI construido a medida para su negocio.",
     offer: "Ofrecemos el servicio completamente gratuito durante un año.",
     offerItems: [
       "Toda la implementación técnica incluida",
@@ -96,9 +88,7 @@ const T: Record<Lang, {
     seoDesc: "eChatbot.AI procura o Cliente 0 dentro da rede Neapolis. Chatbot AI personalizado, completamente gratuito por um ano.",
     badge: "Oferta exclusiva para a comunidade Neapolis",
     greeting: "Olá,",
-    intro: "eChatbot.AI é uma nova startup e temos orgulho em criar chatbots personalizados de alta qualidade.",
-    client0Label: "Cliente 0",
-    client0: "Estamos à procura do nosso Cliente 0 dentro da rede Neapolis — alguém disposto a explorar connosco o potencial de um assistente AI construído especificamente para o seu negócio.",
+    intro: "eChatbot.AI é uma nova startup e temos orgulho em criar chatbots personalizados de alta qualidade. Estamos à procura do nosso Cliente 0 dentro da rede Neapolis — alguém disposto a explorar connosco o potencial de um assistente AI construído especificamente para o seu negócio.",
     offer: "Oferecemos o serviço completamente gratuito por um ano.",
     offerItems: [
       "Toda a implementação técnica incluída",
@@ -143,11 +133,11 @@ export function NeapolisPage() {
         } as React.CSSProperties}
       >
         {/* ── Header ── */}
-        <header className="bg-white/90 backdrop-blur-sm border-b border-slate-100 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-8 py-2 flex items-center justify-between">
+        <header className="bg-white shadow-sm sticky top-0 z-50">
+          <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-1">
-              <img src="/logo.png" alt="eChatbot" className="w-12 h-12 -my-1" />
-              <span className="text-lg font-bold text-green-600 -ml-2">eChatbot.AI</span>
+              <img src="/logo.png" alt="eChatbot" className="w-[90px] h-[90px] mt-[-6px]" />
+              <span className="text-2xl font-bold text-green-600 relative left-[-20px]">eChatbot.AI</span>
             </Link>
             <div className="flex items-center gap-1">
               {(["it", "en", "es", "pt"] as Lang[]).map((l) => (
@@ -166,7 +156,8 @@ export function NeapolisPage() {
         </header>
 
         {/* ── Main card ── */}
-        <div className="max-w-4xl mx-auto px-6 py-6">
+        <div className="flex items-center justify-center min-h-[calc(100vh-90px)] px-6 py-8">
+        <div className="w-full max-w-4xl">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -195,14 +186,6 @@ export function NeapolisPage() {
               <div>
                 <p className="text-xl font-bold text-slate-900 mb-2">{t.greeting}</p>
                 <p className="text-base text-slate-700 leading-relaxed">{t.intro}</p>
-              </div>
-
-              {/* Client 0 */}
-              <div>
-                <p className="text-sm font-bold text-green-700 uppercase tracking-widest mb-1">
-                  {t.client0Label}
-                </p>
-                <p className="text-sm text-slate-700 leading-relaxed">{t.client0}</p>
               </div>
 
               {/* Offer */}
@@ -235,38 +218,11 @@ export function NeapolisPage() {
             </div>
           </motion.div>
         </div>
+        </div>
       </div>
 
       <WidgetLoader />
       <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" logoUrl="/logo.png" useChannelLogo={true} />
     </>
   )
-        {/* ── Header ── */}
-        <header className="bg-white/90 backdrop-blur-sm border-b border-slate-100 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-8 py-3 flex items-center justify-between">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-1">
-              <img src="/logo.png" alt="eChatbot" className="w-14 h-14 -my-2" />
-              <span className="text-xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
-            </Link>
-
-            {/* Language switcher */}
-            <div className="flex items-center gap-1">
-              {(["it", "en", "es", "pt"] as Lang[]).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all ${
-                    lang === l
-                      ? "bg-green-600 text-white shadow-sm"
-                      : "text-slate-500 hover:bg-slate-100"
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
-            </div>
-          </div>
-        </header>
-
 }

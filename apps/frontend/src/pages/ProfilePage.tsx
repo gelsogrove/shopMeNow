@@ -23,6 +23,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
+import { SEO } from "@/components/SEO"
 import {
   UserProfile,
   changePassword,
@@ -316,7 +317,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      <SEO
+        title="Profile"
+        description="Manage your eChatbot account, security, and preferences with a responsive layout on any device."
+      />
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-green-600">Profile</h1>
@@ -754,5 +760,6 @@ export default function ProfilePage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   )
 }
