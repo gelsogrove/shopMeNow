@@ -515,7 +515,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "ecommercePlatform_title",
       questionKey: "ecommercePlatform_q",
       type: "radio",
-      image: "/survery-crm.png",
+      image: "/surver-secuiry.png",
       showWhen: (answers) => answers.stepEcommerce === "yes",
       options: [
         { value: "wordpress", label: T.ecommercePlatform_opt1, emoji: "🔵" },
@@ -530,7 +530,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "integrations_title",
       questionKey: "integrations_q",
       type: "radio",
-      image: "/surver-secuiry.png",
+      image: "/survery-crm.png",
       options: [
         { value: "yes", label: T.integrations_opt1, emoji: "🔗" },
         { value: "no", label: T.integrations_opt2, emoji: "📦" },
