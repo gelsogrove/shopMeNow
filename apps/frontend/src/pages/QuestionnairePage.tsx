@@ -795,8 +795,10 @@ export default function QuestionnairePage() {
                     )}
 
                     {/* Icon + Title */}
-                    <div className="text-5xl mb-3">{step.icon}</div>
-                    <h2 className="text-xl font-bold text-slate-900 mb-2">{T[step.titleKey]}</h2>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-4xl">{step.icon}</span>
+                      <h2 className="text-xl font-bold text-slate-900">{T[step.titleKey]}</h2>
+                    </div>
                     <p className="text-slate-500 mb-6 leading-relaxed" style={{ fontSize: "1.15rem" }}>{T[step.questionKey]}</p>
 
                     {/* Radio options */}

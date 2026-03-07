@@ -34,7 +34,7 @@ const T: Record<Lang, {
     intro: "eChatbot.AI è una nuova startup e ci vantiamo di poter creare chatbot customizzati di alta qualità. In questo momento stiamo cercando il Cliente 0 all'interno del network di Neapolis — qualcuno che voglia sperimentare con noi il potenziale di un assistente AI costruito su misura per la propria attività.",
     offer: "Offriamo il servizio completamente gratuito per un anno.",
     offerItems: [
-      "Tutta l'implementazione tecnica inclusa",
+      "Sviluppo delle integrazioni con i tuoi sistemi esistenti (CRM, ERP, e-commerce, ecc.) a nostro carico",
       "Integrazioni con fonti e servizi terzi",
       "Supporto continuo gratuito per 12 mesi",
     ],
@@ -53,7 +53,7 @@ const T: Record<Lang, {
     intro: "eChatbot.AI is a new startup and we pride ourselves on building high-quality customised chatbots. We are currently looking for our Client 0 within the Neapolis network — someone willing to explore with us the potential of an AI assistant built specifically for their business.",
     offer: "We offer the service completely free for one year.",
     offerItems: [
-      "Full technical implementation included",
+      "We handle all development to integrate with your existing systems (CRM, ERP, e-commerce, etc.)",
       "Integrations with third-party sources and services",
       "Free continuous support for 12 months",
     ],
@@ -72,7 +72,7 @@ const T: Record<Lang, {
     intro: "eChatbot.AI es una nueva startup y nos enorgullece crear chatbots personalizados de alta calidad. Actualmente estamos buscando al Cliente 0 dentro de la red de Neapolis — alguien que quiera explorar con nosotros el potencial de un asistente AI construido a medida para su negocio.",
     offer: "Ofrecemos el servicio completamente gratuito durante un año.",
     offerItems: [
-      "Toda la implementación técnica incluida",
+      "Nos encargamos de todo el desarrollo para integrar con tus sistemas existentes (CRM, ERP, e-commerce, etc.)",
       "Integraciones con fuentes y servicios de terceros",
       "Soporte continuo gratuito durante 12 meses",
     ],
@@ -91,7 +91,7 @@ const T: Record<Lang, {
     intro: "eChatbot.AI é uma nova startup e temos orgulho em criar chatbots personalizados de alta qualidade. Estamos à procura do nosso Cliente 0 dentro da rede Neapolis — alguém disposto a explorar connosco o potencial de um assistente AI construído especificamente para o seu negócio.",
     offer: "Oferecemos o serviço completamente gratuito por um ano.",
     offerItems: [
-      "Toda a implementação técnica incluída",
+      "Tratamos de todo o desenvolvimento para integrar com os seus sistemas existentes (CRM, ERP, e-commerce, etc.)",
       "Integrações com fontes e serviços de terceiros",
       "Suporte contínuo gratuito por 12 meses",
     ],
@@ -173,10 +173,7 @@ export function NeapolisPage() {
             <div className="flex items-center justify-center gap-6 px-10 py-5 border-b border-slate-100 bg-slate-50/50">
               <img src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg" alt="Neàpolis" className="h-9 w-auto" />
               <ArrowRight className="w-5 h-5 text-slate-300" />
-              <div className="flex items-center gap-1">
-                <img src="/logo.png" alt="eChatbot" className="w-12 h-12" />
-                <span className="text-xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
-              </div>
+              <span className="text-xl font-bold text-green-600">eChatbot.AI</span>
             </div>
 
             {/* Body */}
