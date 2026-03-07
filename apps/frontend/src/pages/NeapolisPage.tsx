@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import { SEO } from "@/components/SEO"
 import { WidgetLoader } from "@/components/WidgetLoader"
 import { ChatWidget } from "@/components/ChatWidget"
-import { ArrowRight, Gift, Wrench, Headphones, Users } from "lucide-react"
+import { ArrowRight, Gift, Wrench, Headphones } from "lucide-react"
 
 // ─────────────────────────────────────────
 // Translations
@@ -137,28 +137,140 @@ export function NeapolisPage() {
       />
 
       <div
-        className="min-h-screen"
+        className="h-screen overflow-y-auto [&::-webkit-scrollbar]:hidden"
         style={{
-          background:
-            "linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #ecfdf5 100%)",
-        }}
+          background: "linear-gradient(135deg, #f0fdf4 0%, #f8fafc 50%, #ecfdf5 100%)",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+        } as React.CSSProperties}
       >
         {/* ── Header ── */}
         <header className="bg-white/90 backdrop-blur-sm border-b border-slate-100 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-8 py-3 flex items-center justify-between">
-            {/* Logos with arrow */}
-            <div className="flex items-center gap-4">
-              <img
-                src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg"
-                alt="Neàpolis"
-                className="h-10 w-auto"
-              />
-              <ArrowRight className="w-5 h-5 text-slate-400" />
-              <Link to="/" className="flex items-center gap-1">
-                <img src="/logo.png" alt="eChatbot" className="w-14 h-14 -my-2" />
-                <span className="text-xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
-              </Link>
+          <div className="max-w-7xl mx-auto px-8 py-2 flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-1">
+              <img src="/logo.png" alt="eChatbot" className="w-12 h-12 -my-1" />
+              <span className="text-lg font-bold text-green-600 -ml-2">eChatbot.AI</span>
+            </Link>
+            <div className="flex items-center gap-1">
+              {(["it", "en", "es", "pt"] as Lang[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all ${
+                    lang === l ? "bg-green-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
+          </div>
+        </header>
+
+        {/* ── Main card ── */}
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
+          >
+            {/* Green banner */}
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-10 py-4 text-white text-center">
+              <p className="text-green-100 text-xs font-semibold uppercase tracking-widest">Partnership · Cliente 0</p>
+            </div>
+
+            {/* Logos row */}
+            <div className="flex items-center justify-center gap-6 px-10 py-5 border-b border-slate-100 bg-slate-50/50">
+              <img src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg" alt="Neàpolis" className="h-9 w-auto" />
+              <ArrowRight className="w-5 h-5 text-slate-300" />
+              <div className="flex items-center gap-1">
+                <img src="/logo.png" alt="eChatbot" className="w-12 h-12" />
+                <span className="text-xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-10 py-6 space-y-5">
+
+              {/* Greeting + intro */}
+              <div>
+                <p className="text-xl font-bold text-slate-900 mb-2">{t.greeting}</p>
+                <p className="text-base text-slate-700 leading-relaxed">{t.intro}</p>
+              </div>
+
+              {/* Client 0 highlight */}
+              <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl px-6 py-4">
+                <p className="text-sm font-bold text-green-700 uppercase tracking-widest mb-1">
+                  {t.client0Label}
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed">{t.client0}</p>
+              </div>
+
+              {/* Offer */}
+              <div>
+                <p className="text-base font-bold text-slate-900 mb-3">{t.offer}</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {t.offerItems.map((item, i) => {
+                    const Icon = offerIcons[i]
+                    return (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + i * 0.08, duration: 0.35 }}
+                        className="flex flex-col items-start gap-2 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3"
+                      >
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-green-700" />
+                        </div>
+                        <p className="text-xs font-medium text-slate-800 leading-snug">{item}</p>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+                <p className="mt-3 text-xs text-slate-400 flex items-start gap-1.5">
+                  <span className="text-slate-300 mt-0.5">✗</span>
+                  {t.offerExclusion}
+                </p>
+              </div>
+
+              {/* Survey CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.45 }}
+                className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl px-8 py-6 text-white text-center shadow-xl"
+              >
+                <h2 className="text-lg font-bold mb-1">{t.cta_title}</h2>
+                <p className="text-green-100 text-sm leading-relaxed mb-4 max-w-md mx-auto">
+                  {t.cta_desc}
+                </p>
+                <Link
+                  to="/survey"
+                  className="inline-flex items-center gap-2 bg-white text-green-700 hover:bg-green-50 font-bold px-7 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-base"
+                >
+                  {t.cta_btn}
+                </Link>
+              </motion.div>
+
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      <WidgetLoader />
+      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" logoUrl="/logo.png" useChannelLogo={true} />
+    </>
+  )
+        {/* ── Header ── */}
+        <header className="bg-white/90 backdrop-blur-sm border-b border-slate-100 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-8 py-3 flex items-center justify-between">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-1">
+              <img src="/logo.png" alt="eChatbot" className="w-14 h-14 -my-2" />
+              <span className="text-xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
+            </Link>
 
             {/* Language switcher */}
             <div className="flex items-center gap-1">
@@ -179,145 +291,4 @@ export function NeapolisPage() {
           </div>
         </header>
 
-        {/* ── Hero badge ── */}
-        <div className="max-w-5xl mx-auto px-8 pt-10 pb-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <span className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-sm font-semibold px-5 py-2 rounded-full border border-green-200">
-              <Users className="w-4 h-4" />
-              {t.badge}
-            </span>
-          </motion.div>
-        </div>
-
-        {/* ── Main card ── */}
-        <div className="max-w-5xl mx-auto px-8 pb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-            className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
-          >
-            {/* Green top banner — tagline only, no logos */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-12 py-8 text-white text-center">
-              <p className="text-2xl font-bold tracking-tight">neàpolis × eChatbot.AI</p>
-              <p className="text-green-100 text-sm mt-1 font-medium uppercase tracking-widest">Partnership · Cliente 0</p>
-            </div>
-
-            {/* Colored logos row */}
-            <div className="flex items-center justify-center gap-8 px-12 py-8 border-b border-slate-100 bg-slate-50/50">
-              <img
-                src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg"
-                alt="Neàpolis"
-                className="h-12 w-auto"
-              />
-              <ArrowRight className="w-6 h-6 text-slate-300" />
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="eChatbot" className="w-14 h-14" />
-                <span className="text-2xl font-bold text-green-600 -ml-2">eChatbot.AI</span>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="px-12 py-10 space-y-8">
-
-              {/* Greeting + intro */}
-              <div>
-                <p className="text-2xl font-bold text-slate-900 mb-3">{t.greeting}</p>
-                <p className="text-lg text-slate-700 leading-relaxed">{t.intro}</p>
-              </div>
-
-              {/* Client 0 highlight */}
-              <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-7">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
-                    <span className="text-white font-black text-lg">0</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-green-700 uppercase tracking-widest mb-2">
-                      {t.client0Label}
-                    </p>
-                    <p className="text-base text-slate-700 leading-relaxed">{t.client0}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Offer heading */}
-              <div>
-                <p className="text-xl font-bold text-slate-900 mb-5">{t.offer}</p>
-                <div className="grid gap-4">
-                  {t.offerItems.map((item, i) => {
-                    const Icon = offerIcons[i]
-                    return (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -16 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.15 + i * 0.1, duration: 0.4 }}
-                        className="flex items-center gap-4 bg-slate-50 border border-slate-100 rounded-xl px-5 py-4"
-                      >
-                        <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4 text-green-700" />
-                        </div>
-                        <p className="text-base font-medium text-slate-800">{item}</p>
-                      </motion.div>
-                    )
-                  })}
-                </div>
-                {/* Exclusion note */}
-                <p className="mt-4 text-sm text-slate-400 flex items-start gap-2">
-                  <span className="mt-0.5 text-slate-300">✗</span>
-                  {t.offerExclusion}
-                </p>
-              </div>
-
-              {/* Goal */}
-              <p className="text-base text-slate-600 leading-relaxed border-l-4 border-green-400 pl-5 italic">
-                {t.goal}
-              </p>
-
-              {/* Divider */}
-              <div className="border-t border-slate-100" />
-
-              {/* Survey CTA */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.5 }}
-                className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-8 text-white text-center shadow-xl"
-              >
-                <h2 className="text-2xl font-bold mb-3">{t.cta_title}</h2>
-                <p className="text-green-100 text-base leading-relaxed mb-7 max-w-lg mx-auto">
-                  {t.cta_desc}
-                </p>
-                <Link
-                  to="/survey"
-                  className="inline-flex items-center gap-3 bg-white text-green-700 hover:bg-green-50 font-bold px-9 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-                >
-                  <span>{t.cta_btn}</span>
-                  <ArrowRight className="w-5 h-5" />
-                </Link>
-              </motion.div>
-
-              {/* Footer back link */}
-              <div className="text-center pt-2">
-                <Link
-                  to="/"
-                  className="text-sm text-slate-400 hover:text-green-600 transition-colors"
-                >
-                  {t.footer_back}
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      <WidgetLoader />
-      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" logoUrl="/logo.png" />
-    </>
-  )
 }

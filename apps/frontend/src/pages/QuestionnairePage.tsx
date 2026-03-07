@@ -754,21 +754,38 @@ export default function QuestionnairePage() {
                   {T.intro_desc}
                 </p>
 
+                {/* Full-width intro image */}
+                <div className="-mx-10 mb-8">
+                  <img
+                    src="/images/survey-intro.png"
+                    alt="eChatbot survey"
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      const el = e.currentTarget
+                      el.style.display = "none"
+                      const next = el.nextElementSibling as HTMLElement | null
+                      if (next) next.style.display = "flex"
+                    }}
+                  />
+                  <div className="hidden w-full h-48 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-emerald-200 items-center justify-center">
+                    <span className="text-4xl opacity-30">🖼️</span>
+                  </div>
+                </div>
+
                 {/* Topic preview chips */}
                 <div className="grid grid-cols-1 gap-3 mb-10">
                   {[
-                    { emoji: "🤝", label: lang === "it" ? "Supporto umano" : lang === "es" ? "Soporte humano" : lang === "pt" ? "Suporte humano" : "Human support" },
-                    { emoji: "📣", label: lang === "it" ? "Marketing push" : "Push marketing" },
-                    { emoji: "🌐", label: "Widget" },
-                    { emoji: "🛍️", label: lang === "it" ? "Agenti di vendita" : lang === "es" ? "Agentes ventas" : lang === "pt" ? "Agentes vendas" : "Sales agents" },
-                    { emoji: "🛒", label: "E-commerce" },
-                    { emoji: "🔒", label: lang === "it" ? "Privacy" : "Privacy" },
-                  ].map(({ emoji, label }) => (
+                    lang === "it" ? "Supporto umano" : lang === "es" ? "Soporte humano" : lang === "pt" ? "Suporte humano" : "Human support",
+                    lang === "it" ? "Marketing push" : "Push marketing",
+                    "Widget",
+                    lang === "it" ? "Agenti di vendita" : lang === "es" ? "Agentes ventas" : lang === "pt" ? "Agentes vendas" : "Sales agents",
+                    "E-commerce",
+                    lang === "it" ? "Privacy" : "Privacy",
+                  ].map((label) => (
                     <div
                       key={label}
-                      className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-base text-green-800 font-medium"
+                      className="flex items-center bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-base text-green-800 font-medium"
                     >
-                      <span>{emoji}</span>
                       <span>{label}</span>
                     </div>
                   ))}
@@ -828,17 +845,17 @@ export default function QuestionnairePage() {
                     exit="exit"
                     transition={{ duration: 0.25 }}
                   >
-                    {/* Image (if available) or placeholder */}
+                    {/* Image (if available) or placeholder — full bleed */}
                     {step.image ? (
-                      <div className="mb-6 flex justify-center">
+                      <div className="-mx-8 -mt-0 mb-6">
                         <img
                           src={step.image}
                           alt={T[step.titleKey]}
-                          className="w-full max-w-md h-48 object-cover rounded-2xl shadow-lg"
+                          className="w-full h-52 object-cover"
                         />
                       </div>
                     ) : (
-                      <div className="mb-6 w-full h-48 rounded-2xl bg-gradient-to-br from-green-50 to-emerald-100 border-2 border-dashed border-emerald-200 flex items-center justify-center">
+                      <div className="-mx-8 mb-6 w-[calc(100%+4rem)] h-52 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-dashed border-emerald-200 flex items-center justify-center">
                         <span className="text-4xl opacity-30">🖼️</span>
                       </div>
                     )}

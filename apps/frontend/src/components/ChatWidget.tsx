@@ -885,7 +885,7 @@ export function ChatWidget({
   const shouldUseLogo = Boolean(
     resolvedUseChannelLogo &&
       resolvedLogoUrl &&
-      !resolvedLogoUrl.endsWith("/logo.png")
+      (useChannelLogo === true || !resolvedLogoUrl.endsWith("/logo.png"))
   )
   const displayLogoUrl = shouldUseLogo ? resolvedLogoUrl : null
 
