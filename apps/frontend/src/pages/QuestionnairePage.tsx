@@ -35,13 +35,13 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 2: Push Marketing
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "Le campagne push su WhatsApp hanno tassi di apertura superiori al 90% — molto più alti di email o SMS. Con eChatbot puoi inviare messaggi promozionali mirati, avvisi di nuovi prodotti, offerte speciali e follow-up automatici ai tuoi clienti direttamente su WhatsApp. Saresti interessato a usare questo canale per riattivare clienti e aumentare le vendite?",
+    pushMarketing_q: "Le notifiche push su WhatsApp hanno un tasso di apertura superiore al 90%. Ma la vera differenza è la personalizzazione intelligente: l'IA invia solo ciò che ogni cliente vuole davvero ricevere. Se un cliente cerca un monolocale a Barcellona, riceverà solo nuovi annunci nella sua zona o aggiornamenti di prezzo su immobili simili — mai messaggi irrilevanti. Zero spam, massima rilevanza. Vorresti usare questo canale per coinvolgere i tuoi clienti in modo mirato e aumentare le conversioni?",
     pushMarketing_opt1: "Sì, voglio campagne push",
     pushMarketing_opt2: "Non per ora",
 
     // Step 3: Widget
     widget_title: "Chat Widget",
-    widget_q: "Il Widget di eChatbot permette di integrare una chat intelligente direttamente nel tuo sito web, utilizzando lo stesso chatbot che hai configurato per WhatsApp. I visitanti possono iniziare una conversazione senza lasciare il sito e il chatbot risponde in tempo reale. La chat può poi spostarsi su WhatsApp per continuare anche offline. Hai un sito e vorresti aggiungere un widget di chat?",
+    widget_q: "Il Widget di eChatbot permette di integrare una chat intelligente direttamente nel tuo sito web, utilizzando lo stesso chatbot che hai configurato per WhatsApp. I visitanti possono iniziare una conversazione senza lasciare il sito e il chatbot risponde in tempo reale.",
     widget_opt1: "Sì, voglio il widget sul mio sito",
     widget_opt2: "Solo WhatsApp, senza widget",
     widget_opt3: "Entrambi — widget + WhatsApp",
@@ -143,12 +143,12 @@ const QT: Record<Lang, Record<string, string>> = {
     humanSupport_opt3: "Full automation works for me",
 
     pushMarketing_title: "Push Marketing",
-    pushMarketing_q: "WhatsApp push campaigns have open rates above 90% — far higher than email or SMS. With eChatbot you can send targeted promotional messages, new product alerts, special offers, and automated follow-ups to your customers directly on WhatsApp, at the right moment. Would you be interested in using this channel to re-engage customers and boost sales?",
+    pushMarketing_q: "WhatsApp push notifications have an open rate above 90%. But the real difference is intelligent personalization: the AI sends only what each customer genuinely wants to receive. If a customer is looking for a studio flat in Barcelona, they'll only get new listings in their area or price drops on similar properties — never irrelevant messages. Zero spam, maximum relevance. Would you like to use this channel to engage your customers with precision and boost conversions?",
     pushMarketing_opt1: "Yes, I want push campaigns",
     pushMarketing_opt2: "Not right now",
 
     widget_title: "Chat Widget",
-    widget_q: "eChatbot's Widget lets you integrate a smart chat directly into your website, using the same chatbot you've configured for WhatsApp. Visitors can start a conversation without leaving your site, and the chatbot responds in real time. The chat can then move to WhatsApp to continue even offline. Do you have a website and would you like to add a chat widget?",
+    widget_q: "eChatbot's Widget lets you integrate a smart chat directly into your website, using the same chatbot you've configured for WhatsApp. Visitors can start a conversation without leaving your site, and the chatbot responds in real time.",
     widget_opt1: "Yes, I want a widget on my website",
     widget_opt2: "WhatsApp only, no widget needed",
     widget_opt3: "Both — website widget + WhatsApp",
@@ -241,12 +241,12 @@ const QT: Record<Lang, Record<string, string>> = {
     humanSupport_opt3: "La automatización completa me funciona",
 
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "Las campañas push de WhatsApp tienen tasas de apertura superiores al 90% — mucho más que el correo o los SMS. Con eChatbot puedes enviar mensajes promocionales dirigidos, alertas de nuevos productos, ofertas especiales y seguimientos automatizados a tus clientes directamente en WhatsApp. ¿Te interesaría usar este canal para reactivar clientes y aumentar las ventas?",
+    pushMarketing_q: "Las notificaciones push de WhatsApp tienen una tasa de apertura superior al 90%. Pero la verdadera diferencia es la personalización inteligente: la IA se encarga de enviar solo lo que cada cliente realmente quiere recibir. Si un cliente busca un estudio en Barcelona, solo recibirá nuevos anuncios en su zona o cambios de precio en propiedades similares — nunca mensajes irrelevantes. Cero spam, máxima relevancia. ¿Te gustaría usar este canal para impactar a tus clientes de forma precisa y aumentar las conversiones?",
     pushMarketing_opt1: "Sí, quiero campañas push",
     pushMarketing_opt2: "Por ahora no",
 
     widget_title: "Widget de Chat",
-    widget_q: "El Widget de eChatbot permite integrar un chat inteligente directamente en tu sitio web, utilizando el mismo chatbot que has configurado para WhatsApp. Los visitantes pueden iniciar una conversación sin salir del sitio y el chatbot responde en tiempo real. El chat puede luego trasladarse a WhatsApp para continuar incluso offline. ¿Tienes un sitio web y te gustaría añadir un widget de chat?",
+    widget_q: "El Widget de eChatbot permite integrar un chat inteligente directamente en tu sitio web, utilizando el mismo chatbot que has configurado para WhatsApp. Los visitantes pueden iniciar una conversación sin salir del sitio y el chatbot responde en tiempo real.",
     widget_opt1: "Sí, quiero el widget en mi web",
     widget_opt2: "Solo WhatsApp, sin widget",
     widget_opt3: "Ambos — widget + WhatsApp",
@@ -339,12 +339,12 @@ const QT: Record<Lang, Record<string, string>> = {
     humanSupport_opt3: "Automação completa está ótimo para mim",
 
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "As campanhas push do WhatsApp têm taxas de abertura superiores a 90% — muito mais do que e-mail ou SMS. Com o eChatbot você pode enviar mensagens promocionais direcionadas, alertas de novos produtos, ofertas especiais e follow-ups automatizados para os seus clientes diretamente no WhatsApp. Você teria interesse em usar este canal para reengajar clientes e aumentar as vendas?",
+    pushMarketing_q: "As notificações push do WhatsApp têm uma taxa de abertura superior a 90%. Mas a verdadeira diferença é a personalização inteligente: a IA encarrega-se de enviar apenas o que cada cliente quer mesmo receber. Se um cliente procura um estúdio em Barcelona, receberá apenas novos anúncios na sua zona ou atualizações de preço em imóveis semelhantes — nunca mensagens irrelevantes. Zero spam, máxima relevância. Gostaria de usar este canal para envolver os seus clientes de forma precisa e aumentar as conversões?",
     pushMarketing_opt1: "Sim, quero campanhas push",
     pushMarketing_opt2: "Por enquanto não",
 
     widget_title: "Widget de Chat",
-    widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site, utilizando o mesmo chatbot que você configurou para o WhatsApp. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real. O chat pode depois migrar para o WhatsApp para continuar mesmo offline. Você tem um site e gostaria de adicionar um widget de chat?",
+    widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site, utilizando o mesmo chatbot que você configurou para o WhatsApp. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real.",
     widget_opt1: "Sim, quero o widget no meu site",
     widget_opt2: "Somente WhatsApp, sem widget",
     widget_opt3: "Ambos — widget + WhatsApp",
@@ -515,7 +515,6 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "ecommercePlatform_title",
       questionKey: "ecommercePlatform_q",
       type: "radio",
-      image: "/surver-secuiry.png",
       showWhen: (answers) => answers.stepEcommerce === "yes",
       options: [
         { value: "wordpress", label: T.ecommercePlatform_opt1, emoji: "🔵" },
@@ -530,7 +529,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "integrations_title",
       questionKey: "integrations_q",
       type: "radio",
-      image: "/survery-crm.png",
+      image: "/survery-secuiry.png",
       options: [
         { value: "yes", label: T.integrations_opt1, emoji: "🔗" },
         { value: "no", label: T.integrations_opt2, emoji: "📦" },
@@ -614,7 +613,7 @@ export default function QuestionnairePage() {
       setDirection(1)
       setCurrentStep((s) => s + 1)
     } else {
-      submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
+      setView("contact_form")
     }
   }
 
@@ -650,7 +649,7 @@ export default function QuestionnairePage() {
         ...answers,
         wantsContact,
       })
-      setView("success")
+      setView(wantsContact ? "success" : "no_contact")
     } catch {
       setSubmitError(T.form_error)
       setIsSubmitting(false)
@@ -673,8 +672,8 @@ export default function QuestionnairePage() {
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="eChatbot" className="w-12 h-12" />
+          <Link to="/" className="flex items-center gap-1">
+            <img src="/logo.png" alt="eChatbot" className="w-16 h-16" />
             <span className="text-xl font-bold text-green-600">{T.header_brand}</span>
           </Link>
           <Link
@@ -986,6 +985,15 @@ export default function QuestionnairePage() {
                     className="flex-1 border-slate-200 text-slate-600"
                   >
                     {T.back}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSubmitting}
+                    onClick={() => submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })}
+                    className="flex-1 border-slate-200 text-slate-500 hover:bg-slate-50"
+                  >
+                    {T.contact_opt2}
                   </Button>
                   <Button
                     type="submit"
