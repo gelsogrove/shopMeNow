@@ -451,7 +451,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "humanSupport_title",
       questionKey: "humanSupport_q",
       type: "radio",
-      image: "/survey-1.png",
+      image: "/survey-support.png",
       options: [
         { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
         { value: "partial", label: T.humanSupport_opt2, emoji: "⚖️" },
@@ -464,7 +464,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "pushMarketing_title",
       questionKey: "pushMarketing_q",
       type: "radio",
-      image: "https://www.echatbot.ai/push.png",
+      image: "/survey-push.png",
       options: [
         { value: "yes", label: T.pushMarketing_opt1, emoji: "📣" },
         { value: "no", label: T.pushMarketing_opt2, emoji: "⏸️" },
@@ -476,7 +476,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "widget_title",
       questionKey: "widget_q",
       type: "radio",
-      image: "https://www.echatbot.ai/demo.png",
+      image: "/surver-widget.png",
       options: [
         { value: "yes_widget", label: T.widget_opt1, emoji: "🌐" },
         { value: "whatsapp_only", label: T.widget_opt2, emoji: "💬" },
@@ -515,7 +515,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "ecommercePlatform_title",
       questionKey: "ecommercePlatform_q",
       type: "radio",
-      image: "https://www.echatbot.ai/demo.png",
+      image: "/survery-crm.png",
       showWhen: (answers) => answers.stepEcommerce === "yes",
       options: [
         { value: "wordpress", label: T.ecommercePlatform_opt1, emoji: "🔵" },
@@ -530,7 +530,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "integrations_title",
       questionKey: "integrations_q",
       type: "radio",
-      image: "https://www.echatbot.ai/CRM.png",
+      image: "/surver-secuiry.png",
       options: [
         { value: "yes", label: T.integrations_opt1, emoji: "🔗" },
         { value: "no", label: T.integrations_opt2, emoji: "📦" },
