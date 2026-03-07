@@ -62,7 +62,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 6: Ecommerce Platform (conditional)
     ecommercePlatform_title: "Piattaforma E-Commerce",
-    ecommercePlatform_q: "Ottimo! Lavoriamo con le principali piattaforme e-commerce. La sincronizzazione con eChatbot è automatica: qualsiasi modifica fatta sulla tua piattaforma si riflette immediatamente nel chatbot — catalogo, prezzi, disponibilità. Quale piattaforma stai usando?",
+    ecommercePlatform_q: "Ottimo! eChatbot si integra con le principali piattaforme e-commerce: possiamo importare il catalogo prodotti, i prezzi e la disponibilità per renderli accessibili al chatbot. Quale piattaforma stai usando?",
     ecommercePlatform_opt1: "WordPress / WooCommerce",
     ecommercePlatform_opt2: "PrestaShop",
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
@@ -70,7 +70,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "Integrazioni Esterne",
-    integrations_q: "Il tuo business utilizza sistemi esterni che potrebbero beneficiare dell'integrazione con eChatbot? Ad esempio: CRM (Salesforce, HubSpot), ERP, software di magazzino, sistemi di pagamento, piattaforme di marketing automation, o altri strumenti aziendali. L'integrazione permette di sincronizzare automaticamente dati, ordini e interazioni.",
+    integrations_q: "Il tuo business usa sistemi esterni come CRM (Salesforce, HubSpot), ERP, software gestionale o altri strumenti aziendali? eChatbot può integrarsi con questi sistemi tramite sviluppo personalizzato: importiamo e mappiamo i tuoi dati in modo che il chatbot abbia sempre le informazioni aggiornate. Ogni integrazione richiede una migrazione dedicata che gestiamo noi.",
     integrations_opt1: "Sì, ho sistemi da integrare",
     integrations_opt2: "Non uso sistemi esterni",
     integrations_opt3: "Non so, vorrei saperne di più",
@@ -166,7 +166,7 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommerce_opt3: "I'm planning to start",
 
     ecommercePlatform_title: "E-Commerce Platform",
-    ecommercePlatform_q: "Great! We work with all major e-commerce platforms. Synchronisation with eChatbot is automatic — any change made on your platform (catalog, prices, availability) is instantly reflected in the chatbot. Which platform are you using?",
+    ecommercePlatform_q: "Great! eChatbot integrates with all major e-commerce platforms: we can import your product catalog, prices, and availability to make them accessible to the chatbot. Which platform are you using?",
     ecommercePlatform_opt1: "WordPress / WooCommerce",
     ecommercePlatform_opt2: "PrestaShop",
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
@@ -174,7 +174,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "External Integrations",
-    integrations_q: "Does your business use external systems that could benefit from integration with eChatbot? For example: CRM (Salesforce, HubSpot), ERP, warehouse software, payment systems, marketing automation platforms, or other business tools. Integration allows automatic synchronization of data, orders, and interactions.",
+    integrations_q: "Does your business use external systems such as a CRM (Salesforce, HubSpot), ERP, management software, or other business tools? eChatbot can integrate with these systems through custom development: we import and map your data so the chatbot always has up-to-date information. Each integration requires a dedicated migration that we handle for you.",
     integrations_opt1: "Yes, I have systems to integrate",
     integrations_opt2: "I don't use external systems",
     integrations_opt3: "I don't know, I'd like to learn more",
@@ -264,7 +264,7 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommerce_opt3: "Estoy planeando empezar",
 
     ecommercePlatform_title: "Plataforma E-Commerce",
-    ecommercePlatform_q: "¡Genial! Trabajamos con todas las principales plataformas. La sincronización con eChatbot es automática — cualquier cambio en tu plataforma (catálogo, precios, disponibilidad) se refleja instantáneamente en el chatbot. ¿Qué plataforma estás usando?",
+    ecommercePlatform_q: "¡Genial! eChatbot se integra con todas las principales plataformas de e-commerce: podemos importar tu catálogo de productos, precios y disponibilidad para que el chatbot los tenga accesibles. ¿Qué plataforma estás usando?",
     ecommercePlatform_opt1: "WordPress / WooCommerce",
     ecommercePlatform_opt2: "PrestaShop",
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
@@ -272,7 +272,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "Integraciones Externas",
-    integrations_q: "¿Tu negocio utiliza sistemas externos que podrían beneficiarse de la integración con eChatbot? Por ejemplo: CRM (Salesforce, HubSpot), ERP, software de almacén, sistemas de pago, plataformas de automatización de marketing, u otras herramientas empresariales. La integración permite sincronizar automáticamente datos, pedidos e interacciones.",
+    integrations_q: "¿Tu negocio utiliza sistemas externos como un CRM (Salesforce, HubSpot), ERP, software de gestión u otras herramientas empresariales? eChatbot puede integrarse con estos sistemas mediante desarrollo personalizado: importamos y mapeamos tus datos para que el chatbot siempre tenga la información actualizada. Cada integración requiere una migración dedicada que gestionamos nosotros.",
     integrations_opt1: "Sí, tengo sistemas para integrar",
     integrations_opt2: "No uso sistemas externos",
     integrations_opt3: "No lo sé, me gustaría saber más",
@@ -362,7 +362,7 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommerce_opt3: "Estou planejando começar",
 
     ecommercePlatform_title: "Plataforma E-Commerce",
-    ecommercePlatform_q: "Ótimo! Trabalhamos com todas as principais plataformas. A sincronização com o eChatbot é automática — qualquer alteração na sua plataforma (catálogo, preços, disponibilidade) é refletida instantaneamente no chatbot. Qual plataforma você está usando?",
+    ecommercePlatform_q: "Ótimo! O eChatbot integra-se com as principais plataformas de e-commerce: podemos importar o seu catálogo de produtos, preços e disponibilidade para que o chatbot os tenha acessíveis. Qual plataforma está a usar?",
     ecommercePlatform_opt1: "WordPress / WooCommerce",
     ecommercePlatform_opt2: "PrestaShop",
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
@@ -370,7 +370,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "Integrações Externas",
-    integrations_q: "O seu negócio utiliza sistemas externos que poderiam se beneficiar da integração com o eChatbot? Por exemplo: CRM (Salesforce, HubSpot), ERP, software de estoque, sistemas de pagamento, plataformas de automação de marketing, ou outras ferramentas empresariais. A integração permite sincronizar automaticamente dados, pedidos e interações.",
+    integrations_q: "O seu negócio utiliza sistemas externos como um CRM (Salesforce, HubSpot), ERP, software de gestão ou outras ferramentas empresariais? O eChatbot pode integrar-se com esses sistemas através de desenvolvimento personalizado: importamos e mapeamos os seus dados para que o chatbot tenha sempre informações atualizadas. Cada integração requer uma migração dedicada que tratamos nós.",
     integrations_opt1: "Sim, tenho sistemas para integrar",
     integrations_opt2: "Não uso sistemas externos",
     integrations_opt3: "Não sei, gostaria de saber mais",
@@ -542,7 +542,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "privacy_title",
       questionKey: "privacy_q",
       type: "radio",
-      image: "https://www.echatbot.ai/privacy.png",
+      image: "/survey-privacy.png",
       options: [
         { value: "ok", label: T.privacy_opt1, emoji: "🔒" },
         { value: "concerns", label: T.privacy_opt2, emoji: "🤔" },
