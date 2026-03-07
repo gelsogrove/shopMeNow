@@ -83,7 +83,14 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "Ho alcune domande sulla privacy",
     privacy_opt3: "Vorrei saperne di più",
 
-    // Step 9: Interest rating
+    // Step 9: On-Premise
+    onPremise_title: "Controllo Totale dei Dati",
+    onPremise_q: "eChatbot è disponibile anche in modalità on-premise: l'intera piattaforma — backend, database e motore AI — viene installata direttamente sui tuoi server o nella tua infrastruttura cloud privata. Zero dati vengono trasmessi a terze parti. Questa soluzione è ideale per aziende con requisiti di conformità avanzati (settore bancario, sanitario, legale o governativo), politiche IT rigide, o semplicemente per chi vuole piena indipendenza e controllo senza dipendere da servizi esterni. Saresti interessato a gestire eChatbot sulla tua infrastruttura?",
+    onPremise_opt1: "Sì, voglio il pieno controllo dei dati",
+    onPremise_opt2: "Mi interessa, voglio saperne di più",
+    onPremise_opt3: "Il servizio cloud è sufficiente per me",
+
+    // Step 10: Interest rating
     interest_title: "Quanto sei interessato?",
     interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato).",
 
@@ -187,7 +194,14 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "I have some privacy concerns",
     privacy_opt3: "I'd like to know more",
 
-    // Step 9: Interest rating
+    // Step 9: On-Premise
+    onPremise_title: "Full Data Control",
+    onPremise_q: "eChatbot is also available as an on-premise solution: the entire platform — backend, database, and AI engine — is installed directly on your own servers or private cloud infrastructure. Zero data ever leaves your network. This is ideal for organisations with strict compliance requirements (banking, healthcare, legal, or government sectors), rigid IT policies, or anyone who wants complete independence from external services. Would you be interested in running eChatbot on your own infrastructure?",
+    onPremise_opt1: "Yes, I want full control over my data",
+    onPremise_opt2: "Interested — I'd like to know more",
+    onPremise_opt3: "Cloud service is sufficient for me",
+
+    // Step 10: Interest rating
     interest_title: "How interested are you?",
     interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested).",
 
@@ -286,7 +300,14 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "Tengo algunas dudas sobre privacidad",
     privacy_opt3: "Me gustaría saber más",
 
-    // Step 9: Interest rating
+    // Step 9: On-Premise
+    onPremise_title: "Control Total de Datos",
+    onPremise_q: "eChatbot también está disponible como solución on-premise: toda la plataforma — backend, base de datos y motor de IA — se instala directamente en tus propios servidores o infraestructura cloud privada. Cero datos salen de tu red. Es ideal para organizaciones con requisitos de cumplimiento estrictos (sector bancario, sanitario, legal o gubernamental), políticas TI rígidas, o para quienes quieren independencia total de servicios externos. ¿Te interesaría gestionar eChatbot en tu propia infraestructura?",
+    onPremise_opt1: "Sí, quiero control total sobre mis datos",
+    onPremise_opt2: "Me interesa, quiero saber más",
+    onPremise_opt3: "El servicio cloud es suficiente para mí",
+
+    // Step 10: Interest rating
     interest_title: "¿Cuánto te interesa?",
     interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado).",
 
@@ -385,7 +406,14 @@ const QT: Record<Lang, Record<string, string>> = {
     privacy_opt2: "Tenho algumas dúvidas sobre privacidade",
     privacy_opt3: "Gostaria de saber mais",
 
-    // Step 9: Interest rating
+    // Step 9: On-Premise
+    onPremise_title: "Controlo Total dos Dados",
+    onPremise_q: "O eChatbot também está disponível como solução on-premise: toda a plataforma — backend, base de dados e motor de IA — é instalada diretamente nos seus próprios servidores ou infraestrutura cloud privada. Zero dados saem da sua rede. Ideal para organizações com requisitos de conformidade rigorosos (setor bancário, saúde, jurídico ou governamental), políticas de TI rígidas, ou para quem quer independência total de serviços externos. Teria interesse em gerir o eChatbot na sua própria infraestrutura?",
+    onPremise_opt1: "Sim, quero controlo total sobre os meus dados",
+    onPremise_opt2: "Tenho interesse, quero saber mais",
+    onPremise_opt3: "O serviço cloud é suficiente para mim",
+
+    // Step 10: Interest rating
     interest_title: "Quanto você está interessado?",
     interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado).",
 
@@ -534,7 +562,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "integrations_title",
       questionKey: "integrations_q",
       type: "radio",
-      image: "/survery-secuiry.png",
+      image: "/survery-crm.png",
       options: [
         { value: "yes", label: T.integrations_opt1, emoji: "🔗" },
         { value: "no", label: T.integrations_opt2, emoji: "📦" },
@@ -547,11 +575,24 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "privacy_title",
       questionKey: "privacy_q",
       type: "radio",
-      image: "/survey-privacy.png",
+      image: "/privacy.png",
       options: [
         { value: "ok", label: T.privacy_opt1, emoji: "🔒" },
         { value: "concerns", label: T.privacy_opt2, emoji: "🤔" },
         { value: "need_info", label: T.privacy_opt3, emoji: "📚" },
+      ],
+    },
+    {
+      id: "stepOnPremise",
+      icon: "🏢",
+      titleKey: "onPremise_title",
+      questionKey: "onPremise_q",
+      type: "radio",
+      image: "/survery-secuiry.png",
+      options: [
+        { value: "yes", label: T.onPremise_opt1, emoji: "🏢" },
+        { value: "interested", label: T.onPremise_opt2, emoji: "🔍" },
+        { value: "cloud", label: T.onPremise_opt3, emoji: "☁️" },
       ],
     },
     {
@@ -560,7 +601,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "interest_title",
       questionKey: "interest_q",
       type: "stars",
-      image: "/survey-interest.png",
+      image: "/survery-start.png",
     },
     {
       id: "stepOther",

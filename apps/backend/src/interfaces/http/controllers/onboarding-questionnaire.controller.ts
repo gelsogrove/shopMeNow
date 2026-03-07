@@ -27,6 +27,7 @@ export class OnboardingQuestionnaireController {
         stepEcommercePlatform,
         stepIntegrations,
         stepPrivacy,
+        stepOnPremise,
         stepHelpful,
         stepInterest,
         stepOther,
@@ -53,6 +54,7 @@ export class OnboardingQuestionnaireController {
           stepEcommercePlatform: stepEcommercePlatform || null,
           stepIntegrations: stepIntegrations || null,
           stepPrivacy: stepPrivacy || null,
+          stepOnPremise: stepOnPremise || null,
           stepHelpful: stepHelpful || null,
           stepInterest: stepInterest || null,
           stepOther: stepOther || null,
@@ -277,6 +279,7 @@ export class OnboardingQuestionnaireController {
       <tr><td>Platform</td><td>${record.stepEcommercePlatform || "—"}</td></tr>
       <tr><td>Integrations (CRM/ERP)</td><td>${record.stepIntegrations || "—"}</td></tr>
       <tr><td>Privacy</td><td>${record.stepPrivacy || "—"}</td></tr>
+      <tr><td>On-Premise</td><td>${record.stepOnPremise || "—"}</td></tr>
       <tr><td>Will it help?</td><td>${record.stepHelpful || "—"}</td></tr>
       <tr><td>Interest (0-5 stars)</td><td>${record.stepInterest ? "⭐".repeat(parseInt(record.stepInterest)) + ` (${record.stepInterest}/5)` : "—"}</td></tr>
       <tr><td>Other notes</td><td>${record.stepOther || "—"}</td></tr>

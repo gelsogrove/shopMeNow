@@ -1944,6 +1944,7 @@ model OnboardingQuestionnaire {
   stepEcommercePlatform String?  // "wordpress" | "prestashop" | "magento" | "other"
   stepIntegrations      String?  // "yes" | "no" | "learn_more"
   stepPrivacy           String?  // "ok" | "concerns" | "need_info"
+  stepOnPremise         String?  // "yes" | "interested" | "cloud"
   stepHelpful           String?  // "yes" | "maybe" | "exploring"
   stepInterest          String?  // "0" | "1" | "2" | "3" | "4" | "5" (stars rating)
   stepOther             String?  // free text
