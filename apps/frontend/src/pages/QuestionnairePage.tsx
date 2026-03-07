@@ -36,8 +36,9 @@ const QT: Record<Lang, Record<string, string>> = {
     // Step 2: Push Marketing
     pushMarketing_title: "Marketing Push",
     pushMarketing_q: "Le notifiche push su WhatsApp hanno un tasso di apertura superiore al 90%. Ma la vera differenza è la personalizzazione intelligente: l'IA invia solo ciò che ogni cliente vuole davvero ricevere. Se un cliente cerca un monolocale a Barcellona, riceverà solo nuovi annunci nella sua zona o aggiornamenti di prezzo su immobili simili — mai messaggi irrilevanti. Zero spam, massima rilevanza. Vorresti usare questo canale per coinvolgere i tuoi clienti in modo mirato e aumentare le conversioni?",
-    pushMarketing_opt1: "Sì, voglio campagne push",
-    pushMarketing_opt2: "Non per ora",
+    pushMarketing_opt1: "Sì, sono interessato",
+    pushMarketing_opt2: "Magari in un secondo momento",
+    pushMarketing_opt3: "Non mi interessa",
 
     // Step 3: Widget
     widget_title: "Chat Widget",
@@ -144,8 +145,9 @@ const QT: Record<Lang, Record<string, string>> = {
 
     pushMarketing_title: "Push Marketing",
     pushMarketing_q: "WhatsApp push notifications have an open rate above 90%. But the real difference is intelligent personalization: the AI sends only what each customer genuinely wants to receive. If a customer is looking for a studio flat in Barcelona, they'll only get new listings in their area or price drops on similar properties — never irrelevant messages. Zero spam, maximum relevance. Would you like to use this channel to engage your customers with precision and boost conversions?",
-    pushMarketing_opt1: "Yes, I want push campaigns",
-    pushMarketing_opt2: "Not right now",
+    pushMarketing_opt1: "Yes, I'm interested",
+    pushMarketing_opt2: "Maybe later",
+    pushMarketing_opt3: "Not interested",
 
     widget_title: "Chat Widget",
     widget_q: "eChatbot's Widget lets you integrate a smart chat directly into your website, using the same chatbot you've configured for WhatsApp. Visitors can start a conversation without leaving your site, and the chatbot responds in real time.",
@@ -242,8 +244,9 @@ const QT: Record<Lang, Record<string, string>> = {
 
     pushMarketing_title: "Marketing Push",
     pushMarketing_q: "Las notificaciones push de WhatsApp tienen una tasa de apertura superior al 90%. Pero la verdadera diferencia es la personalización inteligente: la IA se encarga de enviar solo lo que cada cliente realmente quiere recibir. Si un cliente busca un estudio en Barcelona, solo recibirá nuevos anuncios en su zona o cambios de precio en propiedades similares — nunca mensajes irrelevantes. Cero spam, máxima relevancia. ¿Te gustaría usar este canal para impactar a tus clientes de forma precisa y aumentar las conversiones?",
-    pushMarketing_opt1: "Sí, quiero campañas push",
-    pushMarketing_opt2: "Por ahora no",
+    pushMarketing_opt1: "Sí, estoy interesado",
+    pushMarketing_opt2: "Quizás más adelante",
+    pushMarketing_opt3: "No me interesa",
 
     widget_title: "Widget de Chat",
     widget_q: "El Widget de eChatbot permite integrar un chat inteligente directamente en tu sitio web, utilizando el mismo chatbot que has configurado para WhatsApp. Los visitantes pueden iniciar una conversación sin salir del sitio y el chatbot responde en tiempo real.",
@@ -340,8 +343,9 @@ const QT: Record<Lang, Record<string, string>> = {
 
     pushMarketing_title: "Marketing Push",
     pushMarketing_q: "As notificações push do WhatsApp têm uma taxa de abertura superior a 90%. Mas a verdadeira diferença é a personalização inteligente: a IA encarrega-se de enviar apenas o que cada cliente quer mesmo receber. Se um cliente procura um estúdio em Barcelona, receberá apenas novos anúncios na sua zona ou atualizações de preço em imóveis semelhantes — nunca mensagens irrelevantes. Zero spam, máxima relevância. Gostaria de usar este canal para envolver os seus clientes de forma precisa e aumentar as conversões?",
-    pushMarketing_opt1: "Sim, quero campanhas push",
-    pushMarketing_opt2: "Por enquanto não",
+    pushMarketing_opt1: "Sim, estou interessado",
+    pushMarketing_opt2: "Talvez mais tarde",
+    pushMarketing_opt3: "Não me interessa",
 
     widget_title: "Widget de Chat",
     widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site, utilizando o mesmo chatbot que você configurou para o WhatsApp. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real.",
@@ -467,7 +471,8 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       image: "/survey-push.png",
       options: [
         { value: "yes", label: T.pushMarketing_opt1, emoji: "📣" },
-        { value: "no", label: T.pushMarketing_opt2, emoji: "⏸️" },
+        { value: "maybe", label: T.pushMarketing_opt2, emoji: "🕐" },
+        { value: "no", label: T.pushMarketing_opt3, emoji: "❌" },
       ],
     },
     {
