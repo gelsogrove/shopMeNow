@@ -368,10 +368,25 @@ export class CustomersController {
   async deleteCustomer(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
-      const workspaceId =
+      const rawWorkspaceId =
         req.params.workspaceId || (req as any).workspaceId || undefined
 
-      logger.info("Starting customer deletion process:", { id, workspaceId })
+      // Resolve slug → UUID: the URL may contain a slug (e.g. "echatbot-hq-support")
+      // but customers.workspaceId stores the actual CUID. Look up by id OR slug.
+      let workspaceId = rawWorkspaceId
+      if (rawWorkspaceId) {
+        const ws = await prisma.workspace.findFirst({
+          where: {
+            OR: [{ id: rawWorkspaceId }, { slug: rawWorkspaceId }],
+          },
+          select: { id: true },
+        })
+        if (ws) {
+          workspaceId = ws.id
+        }
+      }
+
+      logger.info("Starting customer deletion process:", { id, workspaceId, rawWorkspaceId })
 
       try {
         const success = await this.customerService.delete(id, workspaceId)

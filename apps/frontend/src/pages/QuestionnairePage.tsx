@@ -707,22 +707,23 @@ export default function QuestionnairePage() {
     >
       {/* Header */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-1">
-            <img src="/logo.png" alt="eChatbot" className="w-16 h-16" />
-            <span className="text-xl font-bold text-green-600">{T.header_brand}</span>
+        <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
+          <Link to="/" className="flex items-center gap-1 shrink-0">
+            <img src="/logo.png" alt="eChatbot" className="w-10 h-10 sm:w-14 sm:h-14" />
+            <span className="text-lg sm:text-xl font-bold text-green-600">{T.header_brand}</span>
           </Link>
           <Link
             to="/"
-            className="text-sm font-medium text-slate-600 hover:text-green-600 transition-colors"
+            className="text-xs sm:text-sm font-medium text-slate-600 hover:text-green-600 transition-colors text-right"
           >
-            {T.header_back}
+            <span className="hidden sm:inline">{T.header_back}</span>
+            <span className="sm:hidden">← Home</span>
           </Link>
         </div>
       </header>
 
       {/* Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-56px)] px-3 sm:px-4 py-6 sm:py-12">
+      <div className="flex items-start sm:items-center justify-center min-h-[calc(100vh-52px)] sm:min-h-[calc(100vh-64px)] px-3 sm:px-4 py-6 sm:py-12">
         <div className="w-full max-w-[727px]">
 
           {/* ── INTRO ── */}
