@@ -60,6 +60,7 @@ export default function QuestionnairePage() {
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<Filter>('ALL')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     loadRecords()
@@ -83,6 +84,17 @@ export default function QuestionnairePage() {
       setRecords((prev) =>
         prev.map((r) => (r.id === id ? { ...r, status: 'VIEWED' } : r))
       )
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm('Delete this questionnaire response? This cannot be undone.')) return
+    setDeletingId(id)
+    const res = await api.questionnaire.delete(id)
+    setDeletingId(null)
+    if (res.success) {
+      setRecords((prev) => prev.filter((r) => r.id !== id))
+      if (expanded === id) setExpanded(null)
     }
   }
 
@@ -268,14 +280,23 @@ export default function QuestionnairePage() {
                   )}
 
                   {/* Actions */}
-                  {record.status === 'NEW' && (
+                  <div className="flex gap-3 flex-wrap mt-2">
+                    {record.status === 'NEW' && (
+                      <button
+                        onClick={() => handleMarkViewed(record.id)}
+                        className="bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                      >
+                        ✓ Mark as Viewed
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleMarkViewed(record.id)}
-                      className="bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(record.id) }}
+                      disabled={deletingId === record.id}
+                      className="bg-red-50 text-red-600 border border-red-200 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
                     >
-                      ✓ Mark as Viewed
+                      {deletingId === record.id ? 'Deleting…' : '🗑 Delete'}
                     </button>
-                  )}
+                  </div>
                 </div>
               )}
             </div>

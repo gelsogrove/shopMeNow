@@ -1190,6 +1190,8 @@ class BackofficeApi {
     getAll: async () => this.fetch<any[]>('/admin/questionnaire'),
     markViewed: async (id: string) =>
       this.fetch<any>(`/admin/questionnaire/${id}/viewed`, { method: 'PATCH' }),
+    delete: async (id: string) =>
+      this.fetch<any>(`/admin/questionnaire/${id}`, { method: 'DELETE' }),
   }
 
   logout() {

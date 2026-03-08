@@ -110,6 +110,21 @@ export class OnboardingQuestionnaireController {
   }
 
   /**
+   * DELETE /admin/questionnaire/:id (ADMIN — authMiddleware required)
+   */
+  async deleteOne(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params
+      await prisma.onboardingQuestionnaire.delete({ where: { id } })
+      logger.info(`[QUESTIONNAIRE] Deleted submission ${id}`)
+      res.json({ success: true })
+    } catch (error) {
+      logger.error(`[QUESTIONNAIRE] Error deleting submission ${req.params.id}:`, error)
+      res.status(500).json({ success: false, error: "Internal server error" })
+    }
+  }
+
+  /**
    * GET /admin/questionnaire/stats (ADMIN — authMiddleware required)
    * Returns aggregated statistics of questionnaire responses
    * @swagger

@@ -29,5 +29,10 @@ questionnaireAdminRouter.patch(
   authMiddleware,
   (req, res) => controller.markViewed(req, res)
 )
+questionnaireAdminRouter.delete(
+  "/questionnaire/:id",
+  authMiddleware,
+  (req, res) => controller.deleteOne(req, res)
+)
 
 export { questionnairePublicRouter, questionnaireAdminRouter }
