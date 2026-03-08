@@ -385,7 +385,7 @@ export class CustomerRepository implements ICustomerRepository {
   }
 
   /**
-   * Check if customer has related records (orders, chat sessions)
+   * Check if customer has related records (orders, chat sessions, agent logs)
    */
   async hasRelatedRecords(id: string): Promise<boolean> {
     try {
@@ -399,7 +399,17 @@ export class CustomerRepository implements ICustomerRepository {
         where: { customerId: id },
       })
 
-      return ordersCount > 0 || chatSessionsCount > 0
+      // Check for agent conversation logs
+      const agentLogsCount = await prisma.agentConversationLog.count({
+        where: { customerId: id },
+      })
+
+      // Check for conversation messages
+      const convMsgsCount = await prisma.conversationMessage.count({
+        where: { customerId: id },
+      })
+
+      return ordersCount > 0 || chatSessionsCount > 0 || agentLogsCount > 0 || convMsgsCount > 0
     } catch (error) {
       logger.error(
         `Error checking if customer ${id} has related records:`,
@@ -475,6 +485,39 @@ export class CustomerRepository implements ICustomerRepository {
 
       // Delete orders
       await prisma.orders.deleteMany({
+        where: { customerId: id },
+      })
+
+      // Delete agent conversation logs
+      const deletedAgentLogs = await prisma.agentConversationLog.deleteMany({
+        where: { customerId: id },
+      })
+      if (deletedAgentLogs.count > 0) {
+        logger.info(`Deleted ${deletedAgentLogs.count} agentConversationLog records for customer ${id}`)
+      }
+
+      // Delete push campaign recipients
+      await prisma.pushCampaignRecipient.deleteMany({
+        where: { customerId: id },
+      })
+
+      // Delete product searches
+      await prisma.productSearch.deleteMany({
+        where: { customerId: id },
+      })
+
+      // Delete usage records
+      await prisma.usage.deleteMany({
+        where: { clientId: id },
+      })
+
+      // Delete billing records
+      await prisma.billing.deleteMany({
+        where: { customerId: id },
+      })
+
+      // Delete cart (one-to-one, Carts table)
+      await prisma.carts.deleteMany({
         where: { customerId: id },
       })
 

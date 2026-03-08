@@ -130,17 +130,17 @@ export function NeapolisPage() {
       >
         {/* ── Header ── */}
         <header className="bg-white shadow-sm sticky top-0 z-50">
-          <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <img src="/logo.png" alt="eChatbot" className="w-12 h-12" />
-              <span className="text-xl font-bold text-green-600">eChatbot.AI</span>
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-1 flex items-center justify-between gap-2">
+            <Link to="/" className="flex items-center gap-1 shrink-0">
+              <img src="/logo.png" alt="eChatbot" className="w-9 h-9 sm:w-12 sm:h-12" />
+              <span className="text-base sm:text-xl font-bold text-green-600">eChatbot.AI</span>
             </Link>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1">
               {(["it", "en", "es", "pt"] as Lang[]).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all ${
+                  className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wide transition-all ${
                     lang === l ? "bg-green-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-100"
                   }`}
                 >
@@ -152,28 +152,28 @@ export function NeapolisPage() {
         </header>
 
         {/* ── Main card ── */}
-        <div className="flex items-center justify-center min-h-[calc(100vh-56px)] px-6 py-8">
+        <div className="flex items-start sm:items-center justify-center min-h-[calc(100vh-56px)] px-3 sm:px-6 py-6 sm:py-8">
         <div className="w-full max-w-4xl">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
+            className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden"
           >
             {/* Title banner */}
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-10 py-8 text-white text-center">
-              <h1 className="text-3xl font-bold">Survey</h1>
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-5 sm:px-10 py-6 sm:py-8 text-white text-center">
+              <h1 className="text-2xl sm:text-3xl font-bold">Survey</h1>
             </div>
 
             {/* Logos row */}
-            <div className="flex items-center justify-center gap-6 px-10 py-5 border-b border-slate-100 bg-slate-50/50">
-              <img src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg" alt="Neàpolis" className="h-9 w-auto" />
-              <ArrowRight className="w-5 h-5 text-slate-300" />
-              <span className="text-xl font-bold text-green-600">eChatbot.AI</span>
+            <div className="flex items-center justify-center gap-4 sm:gap-6 px-5 sm:px-10 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50">
+              <img src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg" alt="Neàpolis" className="h-7 sm:h-9 w-auto" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
+              <span className="text-lg sm:text-xl font-bold text-green-600">eChatbot.AI</span>
             </div>
 
             {/* Body */}
-            <div className="px-10 py-6 space-y-5">
+            <div className="px-5 sm:px-10 py-5 sm:py-6 space-y-5">
 
               {/* Greeting + intro */}
               <div>

@@ -180,14 +180,9 @@ export class CustomerService {
         throw new Error("Customer not found")
       }
 
-      // Check if customer has related records
-      const hasRelatedRecords =
-        await this.customerRepository.hasRelatedRecords(id)
-
-      if (hasRelatedRecords) {
-        // Delete related records first
-        await this.customerRepository.deleteRelatedRecords(id)
-      }
+      // Always delete related records first (even if hasRelatedRecords = false,
+      // there might be FK constraints from tables not checked, e.g. agentConversationLog)
+      await this.customerRepository.deleteRelatedRecords(id)
 
       // Delete the customer
       return await this.customerRepository.hardDelete(id, workspaceId)
