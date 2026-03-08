@@ -29,39 +29,60 @@ import { CustomerRepository } from "../../src/repositories/customer.repository"
 // MOCKS
 // ─────────────────────────────────────────────────────────────
 
-// Mock Prisma with ALL tables that have FK → customers
-const mockPrisma = {
-  workspace: {
-    findFirst: jest.fn(),
-  },
-  customers: {
-    findFirst: jest.fn(),
-    delete: jest.fn(),
-  },
-  // FK tables (must ALL be in deleteRelatedRecords)
-  whatsAppQueue: { deleteMany: jest.fn() },
-  conversationMessage: { deleteMany: jest.fn() },
-  message: { deleteMany: jest.fn() },
-  chatSession: { deleteMany: jest.fn() },
-  orderItems: { deleteMany: jest.fn() },
-  creditNote: { deleteMany: jest.fn() },
-  paymentDetails: { deleteMany: jest.fn() },
-  orders: { deleteMany: jest.fn() },
-  agentConversationLog: { deleteMany: jest.fn() },
-  pushCampaignRecipient: { deleteMany: jest.fn() },
-  productSearch: { deleteMany: jest.fn() },
-  usage: { deleteMany: jest.fn() },
-  billing: { deleteMany: jest.fn() },
-  carts: { deleteMany: jest.fn() },
-}
+// NOTE: jest.mock is hoisted above variable declarations (Babel transform).
+// The mock object MUST be defined inline inside the factory to avoid
+// "Cannot access before initialization" TDZ errors with const/let.
+// We retrieve the mocked prisma via require() AFTER the mock declaration.
 
 jest.mock("../../src/lib/prisma", () => ({
-  prisma: mockPrisma,
+  prisma: {
+    workspace: { findFirst: jest.fn() },
+    customers: { findFirst: jest.fn(), delete: jest.fn() },
+    // FK tables (must ALL be in deleteRelatedRecords)
+    whatsAppQueue: { deleteMany: jest.fn() },
+    conversationMessage: { deleteMany: jest.fn() },
+    message: { deleteMany: jest.fn() },
+    chatSession: { deleteMany: jest.fn() },
+    orderItems: { deleteMany: jest.fn() },
+    creditNote: { deleteMany: jest.fn() },
+    paymentDetails: { deleteMany: jest.fn() },
+    orders: { deleteMany: jest.fn() },
+    agentConversationLog: { deleteMany: jest.fn() },
+    pushCampaignRecipient: { deleteMany: jest.fn() },
+    productSearch: { deleteMany: jest.fn() },
+    usage: { deleteMany: jest.fn() },
+    billing: { deleteMany: jest.fn() },
+    carts: { deleteMany: jest.fn() },
+  },
 }))
 
 jest.mock("../../src/utils/logger", () => ({
-  default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
 }))
+
+// Access the mocked prisma AFTER jest.mock (require returns the mocked version)
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const mockPrisma = require("../../src/lib/prisma").prisma as {
+  workspace: { findFirst: jest.Mock }
+  customers: { findFirst: jest.Mock; delete: jest.Mock }
+  whatsAppQueue: { deleteMany: jest.Mock }
+  conversationMessage: { deleteMany: jest.Mock }
+  message: { deleteMany: jest.Mock }
+  chatSession: { deleteMany: jest.Mock }
+  orderItems: { deleteMany: jest.Mock }
+  creditNote: { deleteMany: jest.Mock }
+  paymentDetails: { deleteMany: jest.Mock }
+  orders: { deleteMany: jest.Mock }
+  agentConversationLog: { deleteMany: jest.Mock }
+  pushCampaignRecipient: { deleteMany: jest.Mock }
+  productSearch: { deleteMany: jest.Mock }
+  usage: { deleteMany: jest.Mock }
+  billing: { deleteMany: jest.Mock }
+  carts: { deleteMany: jest.Mock }
+}
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS

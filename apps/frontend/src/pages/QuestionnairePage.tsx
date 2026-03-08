@@ -82,14 +82,14 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
-    onPremise_q: "eChatbot è disponibile anche in modalità on-premise: l'intera piattaforma, backend, database e motore AI, viene installata direttamente sui tuoi server o nella tua infrastruttura cloud privata. Questa soluzione è ideale per aziende con requisiti di conformità avanzati (settore bancario, sanitario, legale o governativo), politiche IT rigide, o semplicemente per chi vuole piena indipendenza e controllo senza dipendere da servizi esterni.",
+    onPremise_q: "eChatbot è disponibile anche in modalità on-premise: l'intera piattaforma, backend, database e motore AI, viene installata direttamente sui server del cliente o nella sua infrastruttura cloud privata. Questa soluzione è ideale per aziende con requisiti di conformità avanzati (settore bancario, sanitario, legale o governativo), politiche IT rigide, o semplicemente per chi vuole piena indipendenza e controllo senza dipendere da servizi esterni.",
     onPremise_opt1: "Sì, mi interessa",
     onPremise_opt2: "Il servizio cloud su eChatbot.AI è abbastanza",
     onPremise_opt3: "Magari più avanti",
 
     // Step 10: Interest rating
     interest_title: "Quanto sei interessato?",
-    interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato).",
+    interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato). Se sei interessato, ci permetteremo di contattarti nei prossimi giorni per capire come possiamo aiutarti.",
 
     // Step 10: Other (textarea)
     other_title: "Hai altro da aggiungere?",
@@ -190,14 +190,14 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
-    onPremise_q: "eChatbot is also available as an on-premise solution: the entire platform, backend, database, and AI engine, is installed directly on your own servers or private cloud infrastructure. This is ideal for organisations with strict compliance requirements (banking, healthcare, legal, or government sectors), rigid IT policies, or anyone who wants complete independence from external services.",
+    onPremise_q: "eChatbot is also available as an on-premise solution: the entire platform, backend, database, and AI engine, is installed directly on the client's servers or private cloud infrastructure. This is ideal for organisations with strict compliance requirements (banking, healthcare, legal, or government sectors), rigid IT policies, or anyone who wants complete independence from external services.",
     onPremise_opt1: "Yes, I'm interested",
     onPremise_opt2: "The cloud service on eChatbot.AI is enough",
     onPremise_opt3: "Maybe later",
 
     // Step 10: Interest rating
     interest_title: "How interested are you?",
-    interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested).",
+    interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested). If you are interested, we will reach out to you in the coming days to understand how we can help.",
 
     // Step 10: Other (textarea)
     other_title: "Anything Else?",
@@ -293,14 +293,14 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
-    onPremise_q: "eChatbot también está disponible como solución on-premise: toda la plataforma, backend, base de datos y motor de IA, se instala directamente en tus propios servidores o infraestructura cloud privada. Es ideal para organizaciones con requisitos de cumplimiento estrictos (sector bancario, sanitario, legal o gubernamental), políticas TI rígidas, o para quienes quieren independencia total de servicios externos.",
+    onPremise_q: "eChatbot también está disponible como solución on-premise: toda la plataforma, backend, base de datos y motor de IA, se instala directamente en los servidores del cliente o infraestructura cloud privada. Es ideal para organizaciones con requisitos de cumplimiento estrictos (sector bancario, sanitario, legal o gubernamental), políticas TI rígidas, o para quienes quieren independencia total de servicios externos.",
     onPremise_opt1: "Sí, me interesa",
     onPremise_opt2: "El servicio cloud en eChatbot.AI es suficiente",
     onPremise_opt3: "Quizás más adelante",
 
     // Step 10: Interest rating
     interest_title: "¿Cuánto te interesa?",
-    interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado).",
+    interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado). Si estás interesado, nos pondremos en contacto contigo en los próximos días para ver cómo podemos ayudarte.",
 
     // Step 10: Other (textarea)
     other_title: "¿Algo más?",
@@ -396,14 +396,14 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
-    onPremise_q: "O eChatbot também está disponível como solução on-premise: toda a plataforma, backend, base de dados e motor de IA, é instalada diretamente nos seus próprios servidores ou infraestrutura cloud privada. Ideal para organizações com requisitos de conformidade rigorosos (setor bancário, saúde, jurídico ou governamental), políticas de TI rígidas, ou para quem quer independência total de serviços externos.",
+    onPremise_q: "O eChatbot também está disponível como solução on-premise: toda a plataforma, backend, base de dados e motor de IA, é instalada diretamente nos servidores do cliente ou na sua infraestrutura cloud privada. Ideal para organizações com requisitos de conformidade rigorosos (setor bancário, saúde, jurídico ou governamental), políticas de TI rígidas, ou para quem quer independência total de serviços externos.",
     onPremise_opt1: "Sim, tenho interesse",
     onPremise_opt2: "O serviço cloud no eChatbot.AI é suficiente",
     onPremise_opt3: "Talvez mais tarde",
 
     // Step 10: Interest rating
     interest_title: "Quanto você está interessado?",
-    interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado).",
+    interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado). Se você estiver interessado, entraremos em contato nos próximos dias para ver como podemos ajudá-lo.",
 
     // Step 10: Other (textarea)
     other_title: "Algo mais?",
@@ -581,20 +581,20 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       ],
     },
     {
-      id: "stepInterest",
-      icon: "⭐",
-      titleKey: "interest_title",
-      questionKey: "interest_q",
-      type: "stars",
-      image: "/survery-start.png",
-    },
-    {
       id: "stepOther",
       icon: "💭",
       titleKey: "other_title",
       questionKey: "other_q",
       type: "textarea",
       image: "/survery-altro.png",
+    },
+    {
+      id: "stepInterest",
+      icon: "⭐",
+      titleKey: "interest_title",
+      questionKey: "interest_q",
+      type: "stars",
+      image: "/survery-start.png",
     },
   ]
 }
