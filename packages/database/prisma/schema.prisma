@@ -1938,6 +1938,7 @@ model OnboardingQuestionnaire {
   // v2 Step answers (new questionnaire)
   stepHumanSupport      String?  // "yes_handoff" | "partial" | "full_auto"
   stepPushMarketing     String?  // "yes" | "no"
+  stepReminders         String?  // "yes" | "no"
   stepWidget            String?  // "yes_widget" | "whatsapp_only" | "both"
   stepSalesAgents       String?  // "yes" | "general" | "no"
   stepEcommerce         String?  // "yes" | "no" | "planning"

@@ -21,6 +21,7 @@ export class OnboardingQuestionnaireController {
         // v2 step answers
         stepHumanSupport,
         stepPushMarketing,
+        stepReminders,
         stepWidget,
         stepSalesAgents,
         stepEcommerce,
@@ -48,6 +49,7 @@ export class OnboardingQuestionnaireController {
           company: company || null,
           stepHumanSupport: stepHumanSupport || null,
           stepPushMarketing: stepPushMarketing || null,
+          stepReminders: stepReminders || null,
           stepWidget: stepWidget || null,
           stepSalesAgents: stepSalesAgents || null,
           stepEcommerce: stepEcommerce || null,
@@ -197,6 +199,7 @@ export class OnboardingQuestionnaireController {
         select: {
           stepHumanSupport: true,
           stepPushMarketing: true,
+          stepReminders: true,
           stepWidget: true,
           stepSalesAgents: true,
           stepEcommerce: true,
@@ -228,6 +231,7 @@ export class OnboardingQuestionnaireController {
         totalWithoutContact: submissions.filter(s => !s.wantsContact).length,
         humanSupport: countAnswers('stepHumanSupport'),
         pushMarketing: countAnswers('stepPushMarketing'),
+        reminders: countAnswers('stepReminders'),
         widget: countAnswers('stepWidget'),
         salesAgents: countAnswers('stepSalesAgents'),
         ecommerce: countAnswers('stepEcommerce'),
@@ -288,6 +292,7 @@ export class OnboardingQuestionnaireController {
     <table>
       <tr><td>Human Support</td><td>${record.stepHumanSupport || "—"}</td></tr>
       <tr><td>Push Marketing</td><td>${record.stepPushMarketing || "—"}</td></tr>
+      <tr><td>Reminders &amp; Appointments</td><td>${record.stepReminders || "—"}</td></tr>
       <tr><td>Widget</td><td>${record.stepWidget || "—"}</td></tr>
       <tr><td>Sales Agents</td><td>${record.stepSalesAgents || "—"}</td></tr>
       <tr><td>E-Commerce</td><td>${record.stepEcommerce || "—"}</td></tr>

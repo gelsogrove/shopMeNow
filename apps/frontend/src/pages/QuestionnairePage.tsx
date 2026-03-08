@@ -19,7 +19,7 @@ const QT: Record<Lang, Record<string, string>> = {
   it: {
     // Intro
     intro_title: "Aiutaci a capire le tue esigenze",
-    intro_desc: "Rispondi a qualche domanda per aiutarci a capire come eChatbot può trasformare il tuo business. Il segreto di un buon chatbot è la qualità delle risposte: più capiamo il tuo contesto, meglio possiamo configurarlo per te. Parleremo di supporto clienti, marketing push, widget, vendite e molto altro.\nCirca 2 minuti — zero impegno.",
+    intro_desc: "Rispondi a qualche domanda per aiutarci a capire come eChatbot può trasformare il tuo business. Il segreto di un buon chatbot è la qualità delle risposte: più capiamo il tuo contesto, meglio possiamo configurarlo per te. Parleremo di supporto clienti, marketing push, widget, vendite e molto altro.\nCirca 2 minuti, zero impegno.",
     intro_cta: "Avvia il survey →",
     back: "← Indietro",
     next: "Avanti →",
@@ -28,33 +28,39 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 1: Human Support
     humanSupport_title: "Supporto Umano",
-    humanSupport_q: "Uno dei punti di forza di eChatbot è il passaggio intelligente da AI a operatore umano — senza perdere il contesto della conversazione. Quando un cliente ha un problema complesso, l'agente AI trasferisce immediatamente la chat a un operatore che riceve una notifica WhatsApp con tutta la cronologia. Vorresti questa capacità integrata nel tuo chatbot?",
+    humanSupport_q: "Uno dei punti di forza di eChatbot è il passaggio intelligente da AI a operatore umano, senza perdere il contesto della conversazione. Quando un cliente ha un problema complesso, l'agente AI trasferisce immediatamente la chat a un operatore che riceve una notifica WhatsApp con tutta la cronologia. Vorresti questa capacità integrata nel tuo chatbot?",
     humanSupport_opt1: "Sì, voglio il passaggio a operatore umano",
     humanSupport_opt2: "L'automazione completa va bene",
 
     // Step 2: Push Marketing
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "Le notifiche push su WhatsApp hanno un tasso di apertura superiore al 90%. Ma la vera differenza è la personalizzazione intelligente: l'IA invia solo ciò che ogni cliente vuole davvero ricevere. Se un cliente cerca un monolocale a Barcellona, riceverà solo nuovi annunci nella sua zona o aggiornamenti di prezzo su immobili simili — mai messaggi irrilevanti. Zero spam, massima rilevanza.",
+    pushMarketing_q: "Le notifiche push su WhatsApp hanno un tasso di apertura superiore al 90%. Ma la vera differenza è la personalizzazione intelligente: l'IA invia solo ciò che ogni cliente vuole davvero ricevere. Se per esempio un cliente cerca un monolocale a Barcellona, riceverà solo nuovi annunci nella sua zona o aggiornamenti di prezzo su immobili simili, mai messaggi irrilevanti. Zero spam, massima rilevanza.",
     pushMarketing_opt1: "Sì, sono interessato",
     pushMarketing_opt2: "Magari in un secondo momento",
     pushMarketing_opt3: "Non mi interessa",
+
+    // Step: Reminders & Scheduling
+    reminders_title: "Promemoria e Appuntamenti",
+    reminders_q: "Devi impostare dei promemoria ai tuoi clienti? Come scadenze di pagamento, riunioni o appuntamenti? Grazie alla feature di scheduling di eChatbot puoi automatizzare invii mirati su WhatsApp nel momento giusto, per ogni cliente.",
+    reminders_opt1: "Sì, mi interessa",
+    reminders_opt2: "No, non mi interessa",
 
     // Step 3: Widget
     widget_title: "Chat Widget",
     widget_q: "Il Widget di eChatbot permette di integrare una chat intelligente direttamente nel tuo sito web, utilizzando lo stesso chatbot che hai configurato per WhatsApp. I visitanti possono iniziare una conversazione senza lasciare il sito e il chatbot risponde in tempo reale.",
     widget_opt1: "Sì, voglio il widget sul mio sito",
     widget_opt2: "Solo WhatsApp, senza widget",
-    widget_opt3: "Entrambi — widget + WhatsApp",
+    widget_opt3: "Entrambi: widget + WhatsApp",
 
     // Step 2 (moved): Sales Team
     salesAgents_title: "Team di Vendita",
-    salesAgents_q: "eChatbot ti permette di creare un vero team di vendita digitale: puoi registrare i tuoi collaboratori come agenti di vendita, ognuno con il proprio profilo e area di competenza. Quando un cliente è pronto all'acquisto o ha bisogno di assistenza personalizzata, l'IA passa la chat direttamente all'agente giusto del tuo staff — che riceve una notifica istantanea e interviene in tempo reale, con tutta la cronologia della conversazione. Questa funzionalità è pensata per le aziende con un team commerciale. Hai collaboratori dedicati alle vendite?",
+    salesAgents_q: "eChatbot ti permette di creare un vero team di vendita digitale: puoi registrare i tuoi collaboratori come agenti di vendita, ognuno con il proprio profilo e area di competenza. Quando un cliente è pronto all'acquisto o ha bisogno di assistenza personalizzata, l'IA passa la chat direttamente all'agente giusto del tuo staff, che riceve una notifica istantanea e interviene in tempo reale, con tutta la cronologia della conversazione. Questa funzionalità è pensata per le aziende con un team commerciale. Hai collaboratori dedicati alle vendite?",
     salesAgents_opt1: "Sì, ho un team di vendita",
     salesAgents_opt2: "No, gestisco tutto in autonomia",
 
     // Step 5: Ecommerce
     ecommerce_title: "E-Commerce",
-    ecommerce_q: "eChatbot ha un motore e-commerce integrato che permette ai clienti di sfogliare il catalogo, aggiungere prodotti al carrello e completare gli ordini direttamente in chat — su WhatsApp o widget. Se hai già un negozio online o stai pianificando di avviarne uno, possiamo integrarlo o costruirne uno nuovo. La tua attività vende prodotti o servizi online?",
+    ecommerce_q: "eChatbot ha un motore e-commerce integrato che permette ai clienti di sfogliare il catalogo, aggiungere prodotti al carrello e completare gli ordini direttamente in chat, su WhatsApp o widget. Se hai già un negozio online o stai pianificando di avviarne uno, possiamo integrarlo o costruirne uno nuovo. La tua attività vende prodotti o servizi online?",
     ecommerce_opt1: "Sì, ho già un e-commerce",
     ecommerce_opt2: "No, non vendo online",
     ecommerce_opt3: "Sto pianificando di iniziare",
@@ -69,7 +75,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "Integrazioni Esterne",
-    integrations_q: "Il tuo business usa sistemi esterni come CRM (Salesforce, HubSpot), ERP, software gestionale o altri strumenti aziendali? eChatbot può integrarsi con questi sistemi tramite sviluppo personalizzato: importiamo e mappiamo i tuoi dati in modo che il chatbot abbia sempre le informazioni aggiornate. Ogni integrazione richiede una migrazione dedicata che gestiamo noi.",
+    integrations_q: "Il tuo business usa sistemi esterni come CRM (Salesforce, HubSpot), ERP, software gestionale o altri strumenti aziendali? eChatbot può integrarsi con questi sistemi tramite sviluppo personalizzato: importiamo e mappiamo i tuoi dati in modo che il chatbot abbia sempre le informazioni aggiornate.",
     integrations_opt1: "Sì, ho sistemi da integrare",
     integrations_opt2: "Non uso sistemi esterni",
 
@@ -98,7 +104,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 10: Contact consent
     contact_title: "Parliamo insieme",
-    contact_q: "Grazie per aver completato il survey! Le tue risposte ci aiuteranno a costruire un chatbot su misura per te. Saresti disponibile per una breve chiamata con il nostro team? Ti mostreremmo una demo personalizzata e risponderemmo a tutte le tue domande — senza impegno.",
+    contact_q: "Grazie per aver completato il survey! Le tue risposte ci aiuteranno a costruire un chatbot su misura per te. Saresti disponibile per una breve chiamata con il nostro team? Ti mostreremmo una demo personalizzata e risponderemmo a tutte le tue domande, senza impegno.",
     contact_opt1: "Sì, contattatemi!",
     contact_opt2: "No, ma grazie per le informazioni",
 
@@ -120,7 +126,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // No-contact thank you
     noContact_title: "Grazie mille!",
-    noContact_desc: "Apprezziamo il tempo che hai dedicato a rispondere. Le tue risposte ci aiuteranno a migliorare eChatbot. Se cambi idea, siamo sempre disponibili — trovi il link di contatto nella homepage.",
+    noContact_desc: "Apprezziamo il tempo che hai dedicato a rispondere. Le tue risposte ci aiuteranno a migliorare eChatbot. Se cambi idea, siamo sempre disponibili, trovi il link di contatto nella homepage.",
     noContact_cta: "Torna alla homepage",
 
     // Header back link
@@ -134,7 +140,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
   en: {
     intro_title: "Help us understand your needs",
-    intro_desc: "Answer a few questions to help us understand how eChatbot can transform your business. The secret to a great chatbot is quality responses: the more we understand your context, the better we can configure it for you. We'll cover customer support, push marketing, widget, sales, and more.\nAbout 2 minutes — no commitment.",
+    intro_desc: "Answer a few questions to help us understand how eChatbot can transform your business. The secret to a great chatbot is quality responses: the more we understand your context, the better we can configure it for you. We'll cover customer support, push marketing, widget, sales, and more.\nAbout 2 minutes, no commitment.",
     intro_cta: "Start the survey →",
     back: "← Back",
     next: "Next →",
@@ -142,29 +148,34 @@ const QT: Record<Lang, Record<string, string>> = {
     step_of: "Step {current} of {total}",
 
     humanSupport_title: "Human Support",
-    humanSupport_q: "One of eChatbot's strengths is the intelligent handoff from AI to a human agent — without losing conversation context. When a customer has a complex issue, the AI agent instantly transfers the chat to an operator who receives a WhatsApp notification with the full conversation history. Would you like this capability integrated into your chatbot?",
+    humanSupport_q: "One of eChatbot's strengths is the intelligent handoff from AI to a human agent, without losing conversation context. When a customer has a complex issue, the AI agent instantly transfers the chat to an operator who receives a WhatsApp notification with the full conversation history. Would you like this capability integrated into your chatbot?",
     humanSupport_opt1: "Yes, I want human handoff capability",
     humanSupport_opt2: "Full automation works for me",
 
     pushMarketing_title: "Push Marketing",
-    pushMarketing_q: "WhatsApp push notifications have an open rate above 90%. But the real difference is intelligent personalization: the AI sends only what each customer genuinely wants to receive. If a customer is looking for a studio flat in Barcelona, they'll only get new listings in their area or price drops on similar properties — never irrelevant messages. Zero spam, maximum relevance.",
+    pushMarketing_q: "WhatsApp push notifications have an open rate above 90%. But the real difference is intelligent personalization: the AI sends only what each customer genuinely wants to receive. If for example a customer is looking for a studio flat in Barcelona, they'll only get new listings in their area or price drops on similar properties, never irrelevant messages. Zero spam, maximum relevance.",
     pushMarketing_opt1: "Yes, I'm interested",
     pushMarketing_opt2: "Maybe later",
     pushMarketing_opt3: "Not interested",
+
+    reminders_title: "Reminders & Appointments",
+    reminders_q: "Do you need to set reminders for your customers? Such as payment deadlines, meetings or appointments? With eChatbot's scheduling feature you can automate targeted WhatsApp messages at exactly the right moment, for each individual customer.",
+    reminders_opt1: "Yes, I'm interested",
+    reminders_opt2: "No, not interested",
 
     widget_title: "Chat Widget",
     widget_q: "eChatbot's Widget lets you integrate a smart chat directly into your website, using the same chatbot you've configured for WhatsApp. Visitors can start a conversation without leaving your site, and the chatbot responds in real time.",
     widget_opt1: "Yes, I want a widget on my website",
     widget_opt2: "WhatsApp only, no widget needed",
-    widget_opt3: "Both — website widget + WhatsApp",
+    widget_opt3: "Both: website widget + WhatsApp",
 
     salesAgents_title: "Sales Team",
-    salesAgents_q: "eChatbot lets you build a real digital sales team: you can register your team members as sales agents, each with their own profile and area of expertise. When a customer is ready to buy or needs personalised assistance, the AI hands off the chat directly to the right agent on your staff — who gets an instant notification and steps in with the full conversation history. This feature is designed for businesses with a commercial team. Do you have staff dedicated to sales?",
+    salesAgents_q: "eChatbot lets you build a real digital sales team: you can register your team members as sales agents, each with their own profile and area of expertise. When a customer is ready to buy or needs personalised assistance, the AI hands off the chat directly to the right agent on your staff, who gets an instant notification and steps in with the full conversation history. This feature is designed for businesses with a commercial team. Do you have staff dedicated to sales?",
     salesAgents_opt1: "Yes, I have a sales team",
     salesAgents_opt2: "No, I handle everything myself",
 
     ecommerce_title: "E-Commerce",
-    ecommerce_q: "eChatbot has a built-in e-commerce engine that lets customers browse the catalog, add products to cart, and complete orders directly in chat — on WhatsApp or the widget. If you already have an online store or are planning to launch one, we can integrate it or build a new one. Does your business sell products or services online?",
+    ecommerce_q: "eChatbot has a built-in e-commerce engine that lets customers browse the catalog, add products to cart, and complete orders directly in chat, on WhatsApp or the widget. If you already have an online store or are planning to launch one, we can integrate it or build a new one. Does your business sell products or services online?",
     ecommerce_opt1: "Yes, I already have an e-commerce",
     ecommerce_opt2: "No, I don't sell online",
     ecommerce_opt3: "I'm planning to start",
@@ -178,7 +189,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "External Integrations",
-    integrations_q: "Does your business use external systems such as a CRM (Salesforce, HubSpot), ERP, management software, or other business tools? eChatbot can integrate with these systems through custom development: we import and map your data so the chatbot always has up-to-date information. Each integration requires a dedicated migration that we handle for you.",
+    integrations_q: "Does your business use external systems such as a CRM (Salesforce, HubSpot), ERP, management software, or other business tools? eChatbot can integrate with these systems through custom development: we import and map your data so the chatbot always has up-to-date information.",
     integrations_opt1: "Yes, I have systems to integrate",
     integrations_opt2: "I don't use external systems",
 
@@ -205,7 +216,7 @@ const QT: Record<Lang, Record<string, string>> = {
     other_placeholder: "Write your ideas or questions here… (optional)",
 
     contact_title: "Let's Talk",
-    contact_q: "Thank you for completing the survey! Your answers will help us build a chatbot tailored to your needs. Would you be available for a brief call with our team? We'd show you a personalised demo and answer all your questions — no commitment required.",
+    contact_q: "Thank you for completing the survey! Your answers will help us build a chatbot tailored to your needs. Would you be available for a brief call with our team? We'd show you a personalised demo and answer all your questions, no commitment required.",
     contact_opt1: "Yes, please contact me!",
     contact_opt2: "No, but thank you for the information",
 
@@ -224,7 +235,7 @@ const QT: Record<Lang, Record<string, string>> = {
     success_cta: "Back to homepage",
 
     noContact_title: "Thank you so much!",
-    noContact_desc: "We appreciate the time you took to respond. Your answers will help us improve eChatbot. If you change your mind, we're always here — find the contact link on the homepage.",
+    noContact_desc: "We appreciate the time you took to respond. Your answers will help us improve eChatbot. If you change your mind, we're always here, find the contact link on the homepage.",
     noContact_cta: "Back to homepage",
 
     header_back: "← Back to homepage",
@@ -237,7 +248,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
   es: {
     intro_title: "Ayúdanos a entender tus necesidades",
-    intro_desc: "Responde algunas preguntas para ayudarnos a entender cómo eChatbot puede transformar tu negocio. El secreto de un buen chatbot son las respuestas de calidad: cuanto más entendemos tu contexto, mejor podemos configurarlo. Hablaremos de soporte al cliente, marketing push, widget, ventas y mucho más.\nUnos 2 minutos — sin compromiso.",
+    intro_desc: "Responde algunas preguntas para ayudarnos a entender cómo eChatbot puede transformar tu negocio. El secreto de un buen chatbot son las respuestas de calidad: cuanto más entendemos tu contexto, mejor podemos configurarlo. Hablaremos de soporte al cliente, marketing push, widget, ventas y mucho más.\nUnos 2 minutos, sin compromiso.",
     intro_cta: "Iniciar el survey →",
     back: "← Atrás",
     next: "Siguiente →",
@@ -245,29 +256,34 @@ const QT: Record<Lang, Record<string, string>> = {
     step_of: "Paso {current} de {total}",
 
     humanSupport_title: "Soporte Humano",
-    humanSupport_q: "Una de las fortalezas de eChatbot es la transferencia inteligente de la IA a un agente humano — sin perder el contexto de la conversación. Cuando un cliente tiene un problema complejo, el agente de IA transfiere inmediatamente el chat a un operador que recibe una notificación de WhatsApp con todo el historial. ¿Te gustaría tener esta capacidad integrada en tu chatbot?",
+    humanSupport_q: "Una de las fortalezas de eChatbot es la transferencia inteligente de la IA a un agente humano, sin perder el contexto de la conversación. Cuando un cliente tiene un problema complejo, el agente de IA transfiere inmediatamente el chat a un operador que recibe una notificación de WhatsApp con todo el historial. ¿Te gustaría tener esta capacidad integrada en tu chatbot?",
     humanSupport_opt1: "Sí, quiero transferencias a operador humano",
     humanSupport_opt2: "La automatización completa me funciona",
 
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "Las notificaciones push de WhatsApp tienen una tasa de apertura superior al 90%. Pero la verdadera diferencia es la personalización inteligente: la IA se encarga de enviar solo lo que cada cliente realmente quiere recibir. Si un cliente busca un estudio en Barcelona, solo recibirá nuevos anuncios en su zona o cambios de precio en propiedades similares — nunca mensajes irrelevantes. Cero spam, máxima relevancia.",
+    pushMarketing_q: "Las notificaciones push de WhatsApp tienen una tasa de apertura superior al 90%. Pero la verdadera diferencia es la personalización inteligente: la IA se encarga de enviar solo lo que cada cliente realmente quiere recibir. Si por ejemplo un cliente busca un estudio en Barcelona, solo recibirá nuevos anuncios en su zona o cambios de precio en propiedades similares, nunca mensajes irrelevantes. Cero spam, máxima relevancia.",
     pushMarketing_opt1: "Sí, estoy interesado",
     pushMarketing_opt2: "Quizás más adelante",
     pushMarketing_opt3: "No me interesa",
+
+    reminders_title: "Recordatorios y Citas",
+    reminders_q: "¿Necesitas configurar recordatorios para tus clientes? ¿Como vencimientos de pagos, reuniones o citas? Con la función de scheduling de eChatbot puedes automatizar envíos dirigidos por WhatsApp en el momento adecuado, para cada cliente.",
+    reminders_opt1: "Sí, me interesa",
+    reminders_opt2: "No, no me interesa",
 
     widget_title: "Widget de Chat",
     widget_q: "El Widget de eChatbot permite integrar un chat inteligente directamente en tu sitio web, utilizando el mismo chatbot que has configurado para WhatsApp. Los visitantes pueden iniciar una conversación sin salir del sitio y el chatbot responde en tiempo real.",
     widget_opt1: "Sí, quiero el widget en mi web",
     widget_opt2: "Solo WhatsApp, sin widget",
-    widget_opt3: "Ambos — widget + WhatsApp",
+    widget_opt3: "Ambos: widget + WhatsApp",
 
     salesAgents_title: "Equipo de Ventas",
-    salesAgents_q: "eChatbot te permite crear un verdadero equipo de ventas digital: puedes registrar a tus colaboradores como agentes de ventas, cada uno con su perfil y área de especialización. Cuando un cliente está listo para comprar o necesita asistencia personalizada, la IA transfiere el chat directamente al agente adecuado de tu equipo — que recibe una notificación instantánea e interviene con el historial completo de la conversación. Esta funcionalidad está diseñada para empresas con un equipo comercial. ¿Tienes colaboradores dedicados a las ventas?",
+    salesAgents_q: "eChatbot te permite crear un verdadero equipo de ventas digital: puedes registrar a tus colaboradores como agentes de ventas, cada uno con su perfil y área de especialización. Cuando un cliente está listo para comprar o necesita asistencia personalizada, la IA transfiere el chat directamente al agente adecuado de tu equipo, que recibe una notificación instantánea e interviene con el historial completo de la conversación. Esta funcionalidad está diseñada para empresas con un equipo comercial. ¿Tienes colaboradores dedicados a las ventas?",
     salesAgents_opt1: "Sí, tengo un equipo de ventas",
     salesAgents_opt2: "No, lo gestiono todo yo solo",
 
     ecommerce_title: "E-Commerce",
-    ecommerce_q: "eChatbot tiene un motor de e-commerce integrado que permite a los clientes explorar el catálogo, añadir productos al carrito y completar pedidos directamente en el chat — en WhatsApp o en el widget. Si ya tienes una tienda online o estás planeando crear una, podemos integrarla o construir una nueva. ¿Tu negocio vende productos o servicios online?",
+    ecommerce_q: "eChatbot tiene un motor de e-commerce integrado que permite a los clientes explorar el catálogo, añadir productos al carrito y completar pedidos directamente en el chat, en WhatsApp o en el widget. Si ya tienes una tienda online o estás planeando crear una, podemos integrarla o construir una nueva. ¿Tu negocio vende productos o servicios online?",
     ecommerce_opt1: "Sí, ya tengo un e-commerce",
     ecommerce_opt2: "No, no vendo online",
     ecommerce_opt3: "Estoy planeando empezar",
@@ -281,7 +297,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "Integraciones Externas",
-    integrations_q: "¿Tu negocio utiliza sistemas externos como un CRM (Salesforce, HubSpot), ERP, software de gestión u otras herramientas empresariales? eChatbot puede integrarse con estos sistemas mediante desarrollo personalizado: importamos y mapeamos tus datos para que el chatbot siempre tenga la información actualizada. Cada integración requiere una migración dedicada que gestionamos nosotros.",
+    integrations_q: "¿Tu negocio utiliza sistemas externos como un CRM (Salesforce, HubSpot), ERP, software de gestión u otras herramientas empresariales? eChatbot puede integrarse con estos sistemas mediante desarrollo personalizado: importamos y mapeamos tus datos para que el chatbot siempre tenga la información actualizada.",
     integrations_opt1: "Sí, tengo sistemas para integrar",
     integrations_opt2: "No uso sistemas externos",
 
@@ -308,7 +324,7 @@ const QT: Record<Lang, Record<string, string>> = {
     other_placeholder: "Escribe tus ideas o preguntas aquí… (opcional)",
 
     contact_title: "Hablemos",
-    contact_q: "¡Gracias por completar el survey! Tus respuestas nos ayudarán a crear un chatbot a medida para tus necesidades. ¿Estarías disponible para una breve llamada con nuestro equipo? Te mostraríamos una demo personalizada y responderíamos todas tus preguntas — sin ningún compromiso.",
+    contact_q: "¡Gracias por completar el survey! Tus respuestas nos ayudarán a crear un chatbot a medida para tus necesidades. ¿Estarías disponible para una breve llamada con nuestro equipo? Te mostraríamos una demo personalizada y responderíamos todas tus preguntas, sin ningún compromiso.",
     contact_opt1: "¡Sí, contactadme!",
     contact_opt2: "No, pero gracias por la información",
 
@@ -340,7 +356,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
   pt: {
     intro_title: "Ajude-nos a entender suas necessidades",
-    intro_desc: "Responda algumas perguntas para nos ajudar a entender como o eChatbot pode transformar o seu negócio. O segredo de um bom chatbot são as respostas de qualidade: quanto mais entendemos o seu contexto, melhor podemos configurá-lo. Falaremos sobre atendimento ao cliente, marketing push, widget, vendas e muito mais.\nCerca de 2 minutos — sem compromisso.",
+    intro_desc: "Responda algumas perguntas para nos ajudar a entender como o eChatbot pode transformar o seu negócio. O segredo de um bom chatbot são as respostas de qualidade: quanto mais entendemos o seu contexto, melhor podemos configurá-lo. Falaremos sobre atendimento ao cliente, marketing push, widget, vendas e muito mais.\nCerca de 2 minutos, sem compromisso.",
     intro_cta: "Iniciar o survey →",
     back: "← Voltar",
     next: "Próximo →",
@@ -348,29 +364,34 @@ const QT: Record<Lang, Record<string, string>> = {
     step_of: "Passo {current} de {total}",
 
     humanSupport_title: "Suporte Humano",
-    humanSupport_q: "Um dos pontos fortes do eChatbot é a transferência inteligente da IA para um agente humano — sem perder o contexto da conversa. Quando um cliente tem um problema complexo, o agente de IA transfere imediatamente o chat para um operador que recebe uma notificação no WhatsApp com todo o histórico. Gostaria de ter essa capacidade integrada no seu chatbot?",
+    humanSupport_q: "Um dos pontos fortes do eChatbot é a transferência inteligente da IA para um agente humano, sem perder o contexto da conversa. Quando um cliente tem um problema complexo, o agente de IA transfere imediatamente o chat para um operador que recebe uma notificação no WhatsApp com todo o histórico. Gostaria de ter essa capacidade integrada no seu chatbot?",
     humanSupport_opt1: "Sim, quero transferência para operador humano",
     humanSupport_opt2: "Automação completa está ótimo para mim",
 
     pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "As notificações push do WhatsApp têm uma taxa de abertura superior a 90%. Mas a verdadeira diferença é a personalização inteligente: a IA encarrega-se de enviar apenas o que cada cliente quer mesmo receber. Se um cliente procura um estúdio em Barcelona, receberá apenas novos anúncios na sua zona ou atualizações de preço em imóveis semelhantes — nunca mensagens irrelevantes. Zero spam, máxima relevância.",
+    pushMarketing_q: "As notificações push do WhatsApp têm uma taxa de abertura superior a 90%. Mas a verdadeira diferença é a personalização inteligente: a IA encarrega-se de enviar apenas o que cada cliente quer mesmo receber. Se por exemplo um cliente procura um estúdio em Barcelona, receberá apenas novos anúncios na sua zona ou atualizações de preço em imóveis semelhantes, nunca mensagens irrelevantes. Zero spam, máxima relevância.",
     pushMarketing_opt1: "Sim, estou interessado",
     pushMarketing_opt2: "Talvez mais tarde",
     pushMarketing_opt3: "Não me interessa",
+
+    reminders_title: "Lembretes e Agendamentos",
+    reminders_q: "Precisa de configurar lembretes para os seus clientes? Como prazos de pagamento, reuniões ou compromissos? Com a funcionalidade de agendamento do eChatbot pode automatizar envios direcionados no WhatsApp no momento certo, para cada cliente.",
+    reminders_opt1: "Sim, tenho interesse",
+    reminders_opt2: "Não, não tenho interesse",
 
     widget_title: "Widget de Chat",
     widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site, utilizando o mesmo chatbot que você configurou para o WhatsApp. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real.",
     widget_opt1: "Sim, quero o widget no meu site",
     widget_opt2: "Somente WhatsApp, sem widget",
-    widget_opt3: "Ambos — widget + WhatsApp",
+    widget_opt3: "Ambos: widget + WhatsApp",
 
     salesAgents_title: "Equipe de Vendas",
-    salesAgents_q: "O eChatbot permite criar uma verdadeira equipe de vendas digital: pode registar os seus colaboradores como agentes de vendas, cada um com o seu próprio perfil e área de especialização. Quando um cliente está pronto para comprar ou precisa de assistência personalizada, a IA transfere o chat diretamente para o agente certo da sua equipe — que recebe uma notificação instantânea e intervém com todo o histórico da conversa. Esta funcionalidade é pensada para empresas com uma equipe comercial. Tem colaboradores dedicados a vendas?",
+    salesAgents_q: "O eChatbot permite criar uma verdadeira equipe de vendas digital: pode registar os seus colaboradores como agentes de vendas, cada um com o seu próprio perfil e área de especialização. Quando um cliente está pronto para comprar ou precisa de assistência personalizada, a IA transfere o chat diretamente para o agente certo da sua equipe, que recebe uma notificação instantânea e intervém com todo o histórico da conversa. Esta funcionalidade é pensada para empresas com uma equipe comercial. Tem colaboradores dedicados a vendas?",
     salesAgents_opt1: "Sim, tenho uma equipe de vendas",
     salesAgents_opt2: "Não, faço tudo por conta própria",
 
     ecommerce_title: "E-Commerce",
-    ecommerce_q: "O eChatbot tem um motor de e-commerce integrado que permite aos clientes navegar no catálogo, adicionar produtos ao carrinho e concluir pedidos diretamente no chat — no WhatsApp ou no widget. Se você já tem uma loja online ou está planejando criar uma, podemos integrá-la ou criar uma nova. O seu negócio vende produtos ou serviços online?",
+    ecommerce_q: "O eChatbot tem um motor de e-commerce integrado que permite aos clientes navegar no catálogo, adicionar produtos ao carrinho e concluir pedidos diretamente no chat, no WhatsApp ou no widget. Se você já tem uma loja online ou está planejando criar uma, podemos integrá-la ou criar uma nova. O seu negócio vende produtos ou serviços online?",
     ecommerce_opt1: "Sim, já tenho um e-commerce",
     ecommerce_opt2: "Não, não vendo online",
     ecommerce_opt3: "Estou planejando começar",
@@ -384,7 +405,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 7: External integrations
     integrations_title: "Integrações Externas",
-    integrations_q: "O seu negócio utiliza sistemas externos como um CRM (Salesforce, HubSpot), ERP, software de gestão ou outras ferramentas empresariais? O eChatbot pode integrar-se com esses sistemas através de desenvolvimento personalizado: importamos e mapeamos os seus dados para que o chatbot tenha sempre informações atualizadas. Cada integração requer uma migração dedicada que tratamos nós.",
+    integrations_q: "O seu negócio utiliza sistemas externos como um CRM (Salesforce, HubSpot), ERP, software de gestão ou outras ferramentas empresariais? O eChatbot pode integrar-se com esses sistemas através de desenvolvimento personalizado: importamos e mapeamos os seus dados para que o chatbot tenha sempre informações atualizadas.",,
     integrations_opt1: "Sim, tenho sistemas para integrar",
     integrations_opt2: "Não uso sistemas externos",
 
@@ -411,7 +432,7 @@ const QT: Record<Lang, Record<string, string>> = {
     other_placeholder: "Escreva suas ideias ou perguntas aqui… (opcional)",
 
     contact_title: "Vamos Conversar",
-    contact_q: "Obrigado por completar o survey! As suas respostas nos ajudarão a criar um chatbot sob medida para as suas necessidades. Você estaria disponível para uma breve ligação com a nossa equipe? Mostraríamos uma demo personalizada e responderíamos a todas as suas dúvidas — sem nenhum compromisso.",
+    contact_q: "Obrigado por completar o survey! As suas respostas nos ajudarão a criar um chatbot sob medida para as suas necessidades. Você estaria disponível para uma breve ligação com a nossa equipe? Mostraríamos uma demo personalizada e responderíamos a todas as suas dúvidas, sem nenhum compromisso.",
     contact_opt1: "Sim, por favor me contactem!",
     contact_opt2: "Não, mas obrigado pelas informações",
 
@@ -500,6 +521,18 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "yes", label: T.pushMarketing_opt1, emoji: "📣" },
         { value: "maybe", label: T.pushMarketing_opt2, emoji: "🕐" },
         { value: "no", label: T.pushMarketing_opt3, emoji: "❌" },
+      ],
+    },
+    {
+      id: "stepReminders",
+      icon: "⏰",
+      titleKey: "reminders_title",
+      questionKey: "reminders_q",
+      type: "radio",
+      image: "/survey-push.png",
+      options: [
+        { value: "yes", label: T.reminders_opt1, emoji: "⏰" },
+        { value: "no", label: T.reminders_opt2, emoji: "❌" },
       ],
     },
     {
@@ -715,7 +748,6 @@ export default function QuestionnairePage() {
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-1 shrink-0">
-            <img src="/logo.png" alt="eChatbot" className="w-10 h-10 sm:w-14 sm:h-14" />
             <span className="text-lg sm:text-xl font-bold text-green-600">{T.header_brand}</span>
           </Link>
           <Link
@@ -1039,7 +1071,7 @@ export default function QuestionnairePage() {
                     variant="outline"
                     disabled={isSubmitting}
                     onClick={() => submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })}
-                    className="sm:flex-1 border-slate-200 text-slate-500 hover:bg-slate-50"
+                    className="sm:flex-1 border-green-300 text-green-700 hover:bg-green-50"
                   >
                     {T.contact_opt2}
                   </Button>

@@ -16,8 +16,10 @@ const T: Record<Lang, {
   seoDesc: string
   badge: string
   greeting: string
-  intro: string
+  introPart1: string
+  introPart2: string
   offer: string
+  offerFreeWord: string
   offerItems: string[]
   offerExclusion: string
   goal: string
@@ -30,9 +32,11 @@ const T: Record<Lang, {
     seoTitle: "Collaborazione Neapolis × eChatbot.AI",
     seoDesc: "eChatbot.AI cerca il Cliente 0 all'interno del network Neapolis. Chatbot AI su misura, completamente gratuito per un anno.",
     badge: "Offerta esclusiva per la community Neapolis",
-    greeting: "Ciao,",
-    intro: "Sviluppiamo chatbot su misura, integrati con i sistemi aziendali del cliente (CRM, ERP, e-commerce, ecc.). Trasformiamo la conversazione in uno strumento strategico: risposte precise in tempo reale basate sui dati aziendali, e notifiche push per azioni di marketing conversazionale mirato. Per crescere abbiamo bisogno del nostro Cliente 0, una startup del network Neàpolis con cui co-costruire il prodotto. Per questo offriamo il servizio completo gratuitamente per il primo anno, con supporto tecnico continuo incluso.",
+    greeting: "Ciao, benvenuto su eChatbot.AI",
+    introPart1: "Sviluppiamo chatbot su misura, integrati con i sistemi aziendali del cliente (CRM, ERP, e-commerce, ecc.). Trasformiamo la conversazione in uno strumento strategico: risposte precise in tempo reale basate sui dati aziendali, e notifiche push per azioni di marketing conversazionale mirato.",
+    introPart2: "Per crescere abbiamo bisogno del nostro Cliente 0, una startup del network Neàpolis con cui co-costruire il prodotto. Per questo offriamo il servizio completo gratuitamente per il primo anno.",
     offer: "Offriamo il servizio completamente gratuito per un anno.",
+    offerFreeWord: "gratuito",
     offerItems: [
       "Sviluppo delle integrazioni con i tuoi sistemi esistenti (CRM, ERP, e-commerce, ecc.) a nostro carico",
       "Supporto continuo gratuito per 12 mesi",
@@ -48,9 +52,11 @@ const T: Record<Lang, {
     seoTitle: "Neapolis × eChatbot.AI Partnership",
     seoDesc: "eChatbot.AI is looking for Client 0 within the Neapolis network. Custom AI chatbot, completely free for one year.",
     badge: "Exclusive offer for the Neapolis community",
-    greeting: "Hello,",
-    intro: "We develop custom chatbots integrated with the client's business systems (CRM, ERP, e-commerce, etc.). We turn conversation into a strategic tool: precise real-time responses based on corporate data, and push notifications for targeted conversational marketing. To grow, we need our Client 0, a startup within the Neàpolis network to co-build the product with. That's why we offer the full service free for the first year, with continuous technical support included.",
+    greeting: "Hello, welcome to eChatbot.AI",
+    introPart1: "We develop custom chatbots integrated with the client's business systems (CRM, ERP, e-commerce, etc.). We turn conversation into a strategic tool: precise real-time responses based on corporate data, and push notifications for targeted conversational marketing.",
+    introPart2: "To grow, we need our Client 0, a startup within the Neàpolis network to co-build the product with. That's why we offer the full service free for the first year.",
     offer: "We offer the service completely free for one year.",
+    offerFreeWord: "free",
     offerItems: [
       "We handle all development to integrate with your existing systems (CRM, ERP, e-commerce, etc.)",
       "Free continuous support for 12 months",
@@ -66,9 +72,11 @@ const T: Record<Lang, {
     seoTitle: "Colaboración Neapolis × eChatbot.AI",
     seoDesc: "eChatbot.AI busca al Cliente 0 dentro de la red Neapolis. Chatbot AI personalizado, completamente gratuito durante un año.",
     badge: "Oferta exclusiva para la comunidad Neapolis",
-    greeting: "Hola,",
-    intro: "Desarrollamos chatbots a medida integrados con los sistemas del cliente (CRM, ERP, e-commerce, etc.). Transformamos la conversación en una herramienta estratégica: respuestas precisas en tiempo real basadas en datos corporativos, y notificaciones push para acciones de marketing conversacional dirigido. Para crecer necesitamos nuestro Cliente 0, una startup dentro de la red Neàpolis con quien co-construir el producto. Por eso ofrecemos el servicio completo sin coste durante el primer año, con soporte técnico continuo incluido.",
+    greeting: "Hola, bienvenido a eChatbot.AI",
+    introPart1: "Desarrollamos chatbots a medida integrados con los sistemas del cliente (CRM, ERP, e-commerce, etc.). Transformamos la conversación en una herramienta estratégica: respuestas precisas en tiempo real basadas en datos corporativos, y notificaciones push para acciones de marketing conversacional dirigido.",
+    introPart2: "Para crecer necesitamos nuestro Cliente 0, una startup dentro de la red Neàpolis con quien co-construir el producto. Por eso ofrecemos el servicio completo sin coste durante el primer año.",
     offer: "Ofrecemos el servicio completamente gratuito durante un año.",
+    offerFreeWord: "gratuito",
     offerItems: [
       "Nos encargamos de todo el desarrollo para integrar con tus sistemas existentes (CRM, ERP, e-commerce, etc.)",
       "Soporte continuo gratuito durante 12 meses",
@@ -84,9 +92,11 @@ const T: Record<Lang, {
     seoTitle: "Parceria Neapolis × eChatbot.AI",
     seoDesc: "eChatbot.AI procura o Cliente 0 dentro da rede Neapolis. Chatbot AI personalizado, completamente gratuito por um ano.",
     badge: "Oferta exclusiva para a comunidade Neapolis",
-    greeting: "Olá,",
-    intro: "Desenvolvemos chatbots personalizados integrados com os sistemas do cliente (CRM, ERP, e-commerce, etc.). Transformamos a conversa numa ferramenta estratégica: respostas precisas em tempo real baseadas em dados corporativos, e notificações push para ações de marketing conversacional dirigido. Para crescer precisamos do nosso Cliente 0, uma startup da rede Neàpolis com quem co-construir o produto. Por isso oferecemos o serviço completo gratuitamente durante o primeiro ano, com suporte técnico contínuo incluído.",
+    greeting: "Olá, bem-vindo ao eChatbot.AI",
+    introPart1: "Desenvolvemos chatbots personalizados integrados com os sistemas do cliente (CRM, ERP, e-commerce, etc.). Transformamos a conversa numa ferramenta estratégica: respostas precisas em tempo real baseadas em dados corporativos, e notificações push para ações de marketing conversacional dirigido.",
+    introPart2: "Para crescer precisamos do nosso Cliente 0, uma startup da rede Neàpolis com quem co-construir o produto. Por isso oferecemos o serviço completo gratuitamente durante o primeiro ano.",
     offer: "Oferecemos o serviço completamente gratuito por um ano.",
+    offerFreeWord: "gratuito",
     offerItems: [
       "Tratamos de todo o desenvolvimento para integrar com os seus sistemas existentes (CRM, ERP, e-commerce, etc.)",
       "Suporte contínuo gratuito por 12 meses",
@@ -167,23 +177,26 @@ export function NeapolisPage() {
 
             {/* Logos row */}
             <div className="flex items-center justify-center gap-4 sm:gap-6 px-5 sm:px-10 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50">
-              <img src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg" alt="Neàpolis" className="h-7 sm:h-9 w-auto" />
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
-              <span className="text-lg sm:text-xl font-bold text-green-600">eChatbot.AI</span>
+              <img src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg" alt="Neàpolis" className="h-12 sm:h-16 w-auto" />
+              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-slate-300" />
+              <span className="text-2xl sm:text-3xl font-bold text-green-600">eChatbot.AI</span>
             </div>
 
             {/* Body */}
             <div className="px-5 sm:px-10 py-5 sm:py-6 space-y-5">
 
               {/* Greeting + intro */}
-              <div>
-                <p className="text-xl font-bold text-slate-900 mb-2">{t.greeting}</p>
-                <p className="text-base text-slate-700 leading-relaxed">{t.intro}</p>
+              <div className="space-y-3">
+                <p className="text-2xl font-bold text-slate-900">{t.greeting}</p>
+                <p className="text-lg text-slate-700 leading-relaxed">{t.introPart1}</p>
+                <p className="text-lg text-slate-700 leading-relaxed">{t.introPart2}</p>
               </div>
 
               {/* Offer */}
               <div>
-                <p className="text-base font-bold text-slate-900 mb-3">{t.offer}</p>
+                <p className="text-lg font-bold text-slate-900 mb-3">
+                  {t.offer.split(t.offerFreeWord)[0]}<span className="text-red-600 font-extrabold uppercase">{t.offerFreeWord.toUpperCase()}</span>{t.offer.split(t.offerFreeWord)[1]}
+                </p>
                 <ul className="space-y-2 mb-3">
                   {t.offerItems.map((item, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-slate-700">

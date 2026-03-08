@@ -17,6 +17,7 @@ interface QuestionnaireRecord {
   stepSalesAgents: string | null
   stepEcommerce: string | null
   stepEcommercePlatform: string | null
+  stepReminders: string | null
   stepPrivacy: string | null
   stepHelpful: string | null
   stepOther: string | null
@@ -34,6 +35,7 @@ interface QuestionnaireRecord {
 const V2_STEP_LABELS: Record<string, string> = {
   stepHumanSupport: 'Human support',
   stepPushMarketing: 'Push marketing',
+  stepReminders: 'Reminders & Appointments',
   stepWidget: 'Widget',
   stepSalesAgents: 'Sales agents',
   stepEcommerce: 'E-commerce',
