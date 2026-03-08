@@ -19,6 +19,8 @@ export class OnboardingQuestionnaireController {
         phone,
         company,
         // v2 step answers
+        stepIndustry,
+        stepGoal,
         stepHumanSupport,
         stepPushMarketing,
         stepReminders,
@@ -47,6 +49,8 @@ export class OnboardingQuestionnaireController {
           email: email || null,
           phone: phone || null,
           company: company || null,
+          stepIndustry: stepIndustry || null,
+          stepGoal: stepGoal || null,
           stepHumanSupport: stepHumanSupport || null,
           stepPushMarketing: stepPushMarketing || null,
           stepReminders: stepReminders || null,
@@ -197,6 +201,8 @@ export class OnboardingQuestionnaireController {
       // Get all submissions to calculate stats
       const submissions = await prisma.onboardingQuestionnaire.findMany({
         select: {
+          stepIndustry: true,
+          stepGoal: true,
           stepHumanSupport: true,
           stepPushMarketing: true,
           stepReminders: true,
@@ -229,6 +235,8 @@ export class OnboardingQuestionnaireController {
         total,
         totalWithContact: submissions.filter(s => s.wantsContact).length,
         totalWithoutContact: submissions.filter(s => !s.wantsContact).length,
+        industry: countAnswers('stepIndustry'),
+        goal: countAnswers('stepGoal'),
         humanSupport: countAnswers('stepHumanSupport'),
         pushMarketing: countAnswers('stepPushMarketing'),
         reminders: countAnswers('stepReminders'),
@@ -290,6 +298,8 @@ export class OnboardingQuestionnaireController {
     ${contactSection}
 
     <table>
+      <tr><td>Industry</td><td>${record.stepIndustry || "—"}</td></tr>
+      <tr><td>Main Goal</td><td>${record.stepGoal || "—"}</td></tr>
       <tr><td>Human Support</td><td>${record.stepHumanSupport || "—"}</td></tr>
       <tr><td>Push Marketing</td><td>${record.stepPushMarketing || "—"}</td></tr>
       <tr><td>Reminders &amp; Appointments</td><td>${record.stepReminders || "—"}</td></tr>

@@ -1936,6 +1936,8 @@ model OnboardingQuestionnaire {
   company     String?
 
   // v2 Step answers (new questionnaire)
+  stepIndustry          String?  // "real_estate" | "retail" | "food_hospitality" | "professions" | "b2b" | "education" | "other"
+  stepGoal              String?  // "support" | "leads" | "sales" | "bookings" | "communications"
   stepHumanSupport      String?  // "yes_handoff" | "partial" | "full_auto"
   stepPushMarketing     String?  // "yes" | "no"
   stepReminders         String?  // "yes" | "no"

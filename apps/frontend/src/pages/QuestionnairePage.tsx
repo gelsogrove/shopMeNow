@@ -26,6 +26,26 @@ const QT: Record<Lang, Record<string, string>> = {
     almost: "Quasi fatto →",
     step_of: "Passo {current} di {total}",
 
+    // Step 0: Industry
+    industry_title: "Il tuo settore",
+    industry_q: "In quale settore opera la tua attività? Ci aiuta a capire subito il contesto e personalizzare al meglio la demo per te.",
+    industry_opt1: "Immobiliare",
+    industry_opt2: "Retail / E-commerce",
+    industry_opt3: "Ristorazione / Hospitality",
+    industry_opt4: "Professioni (legale, medico, consulenza)",
+    industry_opt5: "Produzione / B2B",
+    industry_opt6: "Formazione / Education",
+    industry_opt7: "Altro settore",
+
+    // Step 0: Main Goal
+    goal_title: "Obiettivo principale",
+    goal_q: "Qual è il tuo obiettivo principale con un chatbot AI? Questo ci permette di mostrarti subito le funzionalità più rilevanti per te.",
+    goal_opt1: "Ridurre le richieste di supporto clienti",
+    goal_opt2: "Generare e qualificare lead",
+    goal_opt3: "Aumentare le vendite online",
+    goal_opt4: "Gestire prenotazioni e appuntamenti",
+    goal_opt5: "Inviare comunicazioni e promemoria ai clienti",
+
     // Step 1: Human Support
     humanSupport_title: "Supporto Umano",
     humanSupport_q: "Uno dei punti di forza di eChatbot è il passaggio intelligente da AI a operatore umano, senza perdere il contesto della conversazione. Quando un cliente ha un problema complesso, l'agente AI trasferisce immediatamente la chat a un operatore che riceve una notifica WhatsApp con tutta la cronologia. Vorresti questa capacità integrata nel tuo chatbot?",
@@ -74,7 +94,7 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt4: "Altra piattaforma",
 
     // Step 7: External integrations
-    integrations_title: "Integrazioni Esterne",
+    integrations_title: "Integrazioni Esterne (RAG)",
     integrations_q: "Il tuo business usa sistemi esterni come CRM (Salesforce, HubSpot), ERP, software gestionale o altri strumenti aziendali? eChatbot può integrarsi con questi sistemi tramite sviluppo personalizzato: importiamo e mappiamo i tuoi dati in modo che il chatbot abbia sempre le informazioni aggiornate.",
     integrations_opt1: "Sì, ho sistemi da integrare",
     integrations_opt2: "Non uso sistemi esterni",
@@ -147,6 +167,24 @@ const QT: Record<Lang, Record<string, string>> = {
     almost: "Almost done →",
     step_of: "Step {current} of {total}",
 
+    industry_title: "Your industry",
+    industry_q: "Which industry does your business operate in? This helps us understand your context straight away and tailor the demo for you.",
+    industry_opt1: "Real estate",
+    industry_opt2: "Retail / E-commerce",
+    industry_opt3: "Food & Hospitality",
+    industry_opt4: "Professions (legal, medical, consulting)",
+    industry_opt5: "Manufacturing / B2B",
+    industry_opt6: "Education / Training",
+    industry_opt7: "Other industry",
+
+    goal_title: "Main objective",
+    goal_q: "What is your main goal with an AI chatbot? This lets us show you the most relevant features straight away.",
+    goal_opt1: "Reduce customer support requests",
+    goal_opt2: "Generate and qualify leads",
+    goal_opt3: "Increase online sales",
+    goal_opt4: "Manage bookings and appointments",
+    goal_opt5: "Send communications and reminders to customers",
+
     humanSupport_title: "Human Support",
     humanSupport_q: "One of eChatbot's strengths is the intelligent handoff from AI to a human agent, without losing conversation context. When a customer has a complex issue, the AI agent instantly transfers the chat to an operator who receives a WhatsApp notification with the full conversation history. Would you like this capability integrated into your chatbot?",
     humanSupport_opt1: "Yes, I want human handoff capability",
@@ -188,7 +226,7 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt4: "Other platform",
 
     // Step 7: External integrations
-    integrations_title: "External Integrations",
+    integrations_title: "External Integrations (RAG)",
     integrations_q: "Does your business use external systems such as a CRM (Salesforce, HubSpot), ERP, management software, or other business tools? eChatbot can integrate with these systems through custom development: we import and map your data so the chatbot always has up-to-date information.",
     integrations_opt1: "Yes, I have systems to integrate",
     integrations_opt2: "I don't use external systems",
@@ -255,6 +293,24 @@ const QT: Record<Lang, Record<string, string>> = {
     almost: "¡Ya casi! →",
     step_of: "Paso {current} de {total}",
 
+    industry_title: "Tu sector",
+    industry_q: "¿en qué sector opera tu negocio? Nos ayuda a entender el contexto de inmediato y a personalizar la demo para ti.",
+    industry_opt1: "Inmobiliario",
+    industry_opt2: "Retail / E-commerce",
+    industry_opt3: "Restauración / Hospitality",
+    industry_opt4: "Profesiones (legal, médico, consultoría)",
+    industry_opt5: "Producción / B2B",
+    industry_opt6: "Formación / Educación",
+    industry_opt7: "Otro sector",
+
+    goal_title: "Objetivo principal",
+    goal_q: "¿Cuál es tu objetivo principal con un chatbot de IA? Esto nos permite mostrarte de inmediato las funciones más relevantes para ti.",
+    goal_opt1: "Reducir las solicitudes de soporte al cliente",
+    goal_opt2: "Generar y calificar leads",
+    goal_opt3: "Aumentar las ventas online",
+    goal_opt4: "Gestionar reservas y citas",
+    goal_opt5: "Enviar comunicaciones y recordatorios a clientes",
+
     humanSupport_title: "Soporte Humano",
     humanSupport_q: "Una de las fortalezas de eChatbot es la transferencia inteligente de la IA a un agente humano, sin perder el contexto de la conversación. Cuando un cliente tiene un problema complejo, el agente de IA transfiere inmediatamente el chat a un operador que recibe una notificación de WhatsApp con todo el historial. ¿Te gustaría tener esta capacidad integrada en tu chatbot?",
     humanSupport_opt1: "Sí, quiero transferencias a operador humano",
@@ -296,7 +352,7 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt4: "Otra plataforma",
 
     // Step 7: External integrations
-    integrations_title: "Integraciones Externas",
+    integrations_title: "Integraciones Externas (RAG)",
     integrations_q: "¿Tu negocio utiliza sistemas externos como un CRM (Salesforce, HubSpot), ERP, software de gestión u otras herramientas empresariales? eChatbot puede integrarse con estos sistemas mediante desarrollo personalizado: importamos y mapeamos tus datos para que el chatbot siempre tenga la información actualizada.",
     integrations_opt1: "Sí, tengo sistemas para integrar",
     integrations_opt2: "No uso sistemas externos",
@@ -363,6 +419,24 @@ const QT: Record<Lang, Record<string, string>> = {
     almost: "Quase lá →",
     step_of: "Passo {current} de {total}",
 
+    industry_title: "O seu setor",
+    industry_q: "Em que setor atua o seu negócio? Ajuda-nos a perceber o contexto imediatamente e a personalizar a demo para si.",
+    industry_opt1: "Imobiliário",
+    industry_opt2: "Retalho / E-commerce",
+    industry_opt3: "Restauração / Hospitalidade",
+    industry_opt4: "Profissões (jurídico, médico, consultoria)",
+    industry_opt5: "Produção / B2B",
+    industry_opt6: "Formação / Educação",
+    industry_opt7: "Outro setor",
+
+    goal_title: "Objetivo principal",
+    goal_q: "Qual é o seu principal objetivo com um chatbot de IA? Isso permite-nos mostrar-lhe imediatamente as funcionalidades mais relevantes.",
+    goal_opt1: "Reduzir pedidos de suporte ao cliente",
+    goal_opt2: "Gerar e qualificar leads",
+    goal_opt3: "Aumentar as vendas online",
+    goal_opt4: "Gerir reservas e agendamentos",
+    goal_opt5: "Enviar comunicações e lembretes aos clientes",
+
     humanSupport_title: "Suporte Humano",
     humanSupport_q: "Um dos pontos fortes do eChatbot é a transferência inteligente da IA para um agente humano, sem perder o contexto da conversa. Quando um cliente tem um problema complexo, o agente de IA transfere imediatamente o chat para um operador que recebe uma notificação no WhatsApp com todo o histórico. Gostaria de ter essa capacidade integrada no seu chatbot?",
     humanSupport_opt1: "Sim, quero transferência para operador humano",
@@ -404,8 +478,8 @@ const QT: Record<Lang, Record<string, string>> = {
     ecommercePlatform_opt4: "Outra plataforma",
 
     // Step 7: External integrations
-    integrations_title: "Integrações Externas",
-    integrations_q: "O seu negócio utiliza sistemas externos como um CRM (Salesforce, HubSpot), ERP, software de gestão ou outras ferramentas empresariais? O eChatbot pode integrar-se com esses sistemas através de desenvolvimento personalizado: importamos e mapeamos os seus dados para que o chatbot tenha sempre informações atualizadas.",,
+    integrations_title: "Integrações Externas (RAG)",
+    integrations_q: "O seu negócio utiliza sistemas externos como um CRM (Salesforce, HubSpot), ERP, software de gestão ou outras ferramentas empresariais? O eChatbot pode integrar-se com esses sistemas através de desenvolvimento personalizado: importamos e mapeamos os seus dados para que o chatbot tenha sempre informações atualizadas.",
     integrations_opt1: "Sim, tenho sistemas para integrar",
     integrations_opt2: "Não uso sistemas externos",
 
@@ -486,55 +560,41 @@ interface StepDef {
 
 function buildSteps(T: Record<string, string>): StepDef[] {
   return [
+    // ── 1. Settore ──────────────────────────────────────────────────────
     {
-      id: "stepHumanSupport",
-      icon: "🤝",
-      titleKey: "humanSupport_title",
-      questionKey: "humanSupport_q",
+      id: "stepIndustry",
+      icon: "🏢",
+      titleKey: "industry_title",
+      questionKey: "industry_q",
       type: "radio",
-      image: "/survey-support.png",
+      image: "/survey.png",
       options: [
-        { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
-        { value: "full_auto", label: T.humanSupport_opt2, emoji: "🤖" },
+        { value: "real_estate", label: T.industry_opt1, emoji: "🏠" },
+        { value: "retail", label: T.industry_opt2, emoji: "🛍️" },
+        { value: "food_hospitality", label: T.industry_opt3, emoji: "🍽️" },
+        { value: "professions", label: T.industry_opt4, emoji: "⚖️" },
+        { value: "b2b", label: T.industry_opt5, emoji: "🏭" },
+        { value: "education", label: T.industry_opt6, emoji: "🎓" },
+        { value: "other", label: T.industry_opt7, emoji: "🔧" },
       ],
     },
+    // ── 2. Obiettivo principale ─────────────────────────────────────────
     {
-      id: "stepSalesAgents",
-      icon: "👥",
-      titleKey: "salesAgents_title",
-      questionKey: "salesAgents_q",
+      id: "stepGoal",
+      icon: "🎯",
+      titleKey: "goal_title",
+      questionKey: "goal_q",
       type: "radio",
       image: "/survey-agent.png",
       options: [
-        { value: "yes", label: T.salesAgents_opt1, emoji: "👥" },
-        { value: "no", label: T.salesAgents_opt2, emoji: "🤖" },
+        { value: "support", label: T.goal_opt1, emoji: "💬" },
+        { value: "leads", label: T.goal_opt2, emoji: "🎯" },
+        { value: "sales", label: T.goal_opt3, emoji: "🛍️" },
+        { value: "bookings", label: T.goal_opt4, emoji: "📅" },
+        { value: "communications", label: T.goal_opt5, emoji: "📢" },
       ],
     },
-    {
-      id: "stepPushMarketing",
-      icon: "📣",
-      titleKey: "pushMarketing_title",
-      questionKey: "pushMarketing_q",
-      type: "radio",
-      image: "/survey-push.png",
-      options: [
-        { value: "yes", label: T.pushMarketing_opt1, emoji: "📣" },
-        { value: "maybe", label: T.pushMarketing_opt2, emoji: "🕐" },
-        { value: "no", label: T.pushMarketing_opt3, emoji: "❌" },
-      ],
-    },
-    {
-      id: "stepReminders",
-      icon: "⏰",
-      titleKey: "reminders_title",
-      questionKey: "reminders_q",
-      type: "radio",
-      image: "/survey-push.png",
-      options: [
-        { value: "yes", label: T.reminders_opt1, emoji: "⏰" },
-        { value: "no", label: T.reminders_opt2, emoji: "❌" },
-      ],
-    },
+    // ── 3. Widget ───────────────────────────────────────────────────────
     {
       id: "stepWidget",
       icon: "🌐",
@@ -548,6 +608,33 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "both", label: T.widget_opt3, emoji: "🔀" },
       ],
     },
+    // ── 4. Supporto Umano ───────────────────────────────────────────────
+    {
+      id: "stepHumanSupport",
+      icon: "🤝",
+      titleKey: "humanSupport_title",
+      questionKey: "humanSupport_q",
+      type: "radio",
+      image: "/survey-support.png",
+      options: [
+        { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
+        { value: "full_auto", label: T.humanSupport_opt2, emoji: "🤖" },
+      ],
+    },
+    // ── 5. Team di Vendita ──────────────────────────────────────────────
+    {
+      id: "stepSalesAgents",
+      icon: "👥",
+      titleKey: "salesAgents_title",
+      questionKey: "salesAgents_q",
+      type: "radio",
+      image: "/survey-agent.png",
+      options: [
+        { value: "yes", label: T.salesAgents_opt1, emoji: "👥" },
+        { value: "no", label: T.salesAgents_opt2, emoji: "🤖" },
+      ],
+    },
+    // ── 6. E-Commerce ───────────────────────────────────────────────────
     {
       id: "stepEcommerce",
       icon: "🛒",
@@ -561,12 +648,14 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "planning", label: T.ecommerce_opt3, emoji: "🚀" },
       ],
     },
+    // ── 6b. Piattaforma (condizionale) ──────────────────────────────────
     {
       id: "stepEcommercePlatform",
       icon: "🔧",
       titleKey: "ecommercePlatform_title",
       questionKey: "ecommercePlatform_q",
       type: "radio",
+      image: "/survey-ecommerce.png",
       showWhen: (answers) => answers.stepEcommerce === "yes",
       options: [
         { value: "wordpress", label: T.ecommercePlatform_opt1, emoji: "🔵" },
@@ -575,6 +664,34 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "other", label: T.ecommercePlatform_opt4, emoji: "🔧" },
       ],
     },
+    // ── 7. Marketing Push ───────────────────────────────────────────────
+    {
+      id: "stepPushMarketing",
+      icon: "📣",
+      titleKey: "pushMarketing_title",
+      questionKey: "pushMarketing_q",
+      type: "radio",
+      image: "/survey-push.png",
+      options: [
+        { value: "yes", label: T.pushMarketing_opt1, emoji: "📣" },
+        { value: "maybe", label: T.pushMarketing_opt2, emoji: "🕐" },
+        { value: "no", label: T.pushMarketing_opt3, emoji: "❌" },
+      ],
+    },
+    // ── 8. Promemoria ───────────────────────────────────────────────────
+    {
+      id: "stepReminders",
+      icon: "⏰",
+      titleKey: "reminders_title",
+      questionKey: "reminders_q",
+      type: "radio",
+      image: "/survey-push.png",
+      options: [
+        { value: "yes", label: T.reminders_opt1, emoji: "⏰" },
+        { value: "no", label: T.reminders_opt2, emoji: "❌" },
+      ],
+    },
+    // ── 9. Integrazioni (RAG) ───────────────────────────────────────────
     {
       id: "stepIntegrations",
       icon: "🔗",
@@ -587,6 +704,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "no", label: T.integrations_opt2, emoji: "📦" },
       ],
     },
+    // ── 10. Privacy ─────────────────────────────────────────────────────
     {
       id: "stepPrivacy",
       icon: "🔒",
@@ -600,6 +718,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "need_info", label: T.privacy_opt3, emoji: "📚" },
       ],
     },
+    // ── 11. On-Premise ──────────────────────────────────────────────────
     {
       id: "stepOnPremise",
       icon: "🏢",
@@ -613,6 +732,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
         { value: "cloud", label: T.onPremise_opt3, emoji: "☁️" },
       ],
     },
+    // ── 12. Altro ───────────────────────────────────────────────────────
     {
       id: "stepOther",
       icon: "💭",
@@ -621,6 +741,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       type: "textarea",
       image: "/survery-altro.png",
     },
+    // ── 13. Interesse ───────────────────────────────────────────────────
     {
       id: "stepInterest",
       icon: "⭐",
