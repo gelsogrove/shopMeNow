@@ -128,7 +128,7 @@ export function AgentEditSlidePanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[500px]">
+      <SheetContent side="right" className="w-full sm:max-w-[500px]">
         <SheetHeader>
           <SheetTitle>Edit Agent: {formData.name}</SheetTitle>
           <SheetDescription>

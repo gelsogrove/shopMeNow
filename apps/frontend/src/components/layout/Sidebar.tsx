@@ -10,15 +10,22 @@ import {
   LifeBuoy,
   LucideIcon,
   Megaphone,
+  MessageSquare,
   Package2,
   Percent,
   ShoppingCart,
   UserCircle,
   Users,
   Wrench,
+  X,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
+
+interface SidebarProps {
+  isOpen?: boolean
+  onClose?: () => void
+}
 
 interface SidebarLink {
   href?: string // Made optional to allow non-navigable parent links
@@ -31,7 +38,7 @@ interface SidebarLink {
   key?: string
 }
 
-export function Sidebar() {
+export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
   // Get workspace from context to check hasSalesAgents
   const { workspace } = useWorkspace()
   console.log("🔍 Sidebar workspace:", workspace)
@@ -137,7 +144,14 @@ export function Sidebar() {
   const mainLinks = baseLinks
 
   return (
-    <aside className="fixed top-16 bottom-0 left-0 w-72 bg-gray-100 border-r">
+    <aside
+      className={cn(
+        "fixed top-16 bottom-0 left-0 w-72 bg-gray-100 border-r z-40 transition-transform duration-300 ease-in-out",
+        // Mobile: slide in/out; Desktop: always visible
+        isOpen ? "translate-x-0" : "-translate-x-full",
+        "md:translate-x-0"
+      )}
+    >
       <div className="flex flex-col h-full">
         
         {/* Channel Logo & Name Header */}
@@ -162,6 +176,14 @@ export function Sidebar() {
                 {workspace?.sellsProductsAndServices ? 'E-commerce' : 'Info'}
               </p>
             </div>
+            {/* Mobile close button */}
+            <button
+              onClick={onClose}
+              className="md:hidden p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -207,6 +229,7 @@ export function Sidebar() {
                           key={child.href}
                           to={child.href}
                           end={child.href === "/products"}
+                          onClick={onClose}
                           className={({ isActive }) =>
                             cn(
                               "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
@@ -228,6 +251,7 @@ export function Sidebar() {
                   key={link.href}
                   to={link.href}
                   end={link.href === "/"}
+                  onClick={onClose}
                   className={({ isActive }) =>
                     cn(
                       "flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium transition-colors",

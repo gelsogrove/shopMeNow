@@ -837,7 +837,7 @@ export function AgentFlowDiagram({
 
       {/* Edit Sheet */}
       <Sheet open={!!selectedAgent} onOpenChange={() => setSelectedAgent(null)}>
-        <SheetContent className="w-[1200px] sm:max-w-[1200px] overflow-y-auto">
+        <SheetContent className="w-full sm:max-w-[1200px] overflow-y-auto">
           {selectedAgent && selectedMeta && (
             <>
               <SheetHeader>

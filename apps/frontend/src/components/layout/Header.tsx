@@ -30,6 +30,7 @@ import {
   Crown,
   LogOut,
   Mail,
+  Menu,
   Rocket,
   Send,
   Settings,
@@ -38,7 +39,7 @@ import {
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
-export function Header() {
+export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void } = {}) {
   const navigate = useNavigate()
   const location = useLocation()
   const isChatPage = location.pathname.startsWith("/chat")
@@ -203,10 +204,18 @@ export function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Left: Logo */}
-          <div className="flex items-center gap-4">
+          {/* Left: Hamburger (mobile) + Logo */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Hamburger menu - mobile only */}
+            <button
+              onClick={onMobileMenuToggle}
+              className="md:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
             <span className="text-xl font-bold text-green-600">eChatbot</span>
           </div>
 
@@ -278,12 +287,12 @@ export function Header() {
           </nav>
 
           {/* Right side: Trial Banner + Support Inbox + Settings + Plan Badge + Profile menu */}
-          <div className="flex items-center gap-4">
-            {/* 🎯 Trial Days Countdown Banner - Only for FREE_TRIAL users */}
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* 🎯 Trial Days Countdown Banner - Only for FREE_TRIAL users - hidden on small mobile */}
             {(actualPlanType === 'FREE_TRIAL' || (!actualPlanType && workspace?.planType === 'FREE_TRIAL')) && trialDaysRemaining !== null && (
               <button
                 onClick={() => navigate("/workspace-selection?upgrade=true")}
-                className="group relative flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white font-medium text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
+                className="hidden sm:flex group relative items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white font-medium text-xs sm:text-sm shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 overflow-hidden"
               >
                 {/* Animated background shimmer */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -330,7 +339,7 @@ export function Header() {
               </Tooltip>
             </TooltipProvider>
 
-            {/* Settings Icon */}
+            {/* Settings Icon - hidden on mobile (accessible via dropdown) */}
             <TooltipProvider delayDuration={100}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -338,7 +347,7 @@ export function Header() {
                     variant="ghost"
                     size="sm"
                     onClick={() => navigate("/settings")}
-                    className="p-2 text-gray-600 hover:text-gray-900"
+                    className="hidden md:flex p-2 text-gray-600 hover:text-gray-900"
                   >
                     <Settings className="h-5 w-5" />
                   </Button>
@@ -349,14 +358,14 @@ export function Header() {
               </Tooltip>
             </TooltipProvider>
 
-            {/* Plan Badge - uses actualPlanType from billing API or fallback to workspace.planType */}
+            {/* Plan Badge - hidden on mobile */}
             {workspace && (
               <TooltipProvider delayDuration={100}>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => isSuperAdmin && navigate("/workspace-selection")}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${isSuperAdmin ? 'hover:scale-105 cursor-pointer' : 'cursor-default'} ${
+                      className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium transition-all ${isSuperAdmin ? 'hover:scale-105 cursor-pointer' : 'cursor-default'} ${
                         (actualPlanType || workspace.planType) === 'FREE_TRIAL'
                           ? 'bg-amber-100 text-amber-700 border border-amber-300'
                           : (actualPlanType || workspace.planType) === 'BASIC'
@@ -391,7 +400,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="relative h-16 w-16 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
+              className="relative h-10 w-10 sm:h-14 sm:w-14 rounded-full focus:ring-2 focus:ring-green-500 focus:outline-none hover:scale-105 transition-transform p-0"
               data-testid="user-avatar-button"
               >
                 {profilePicture ? (

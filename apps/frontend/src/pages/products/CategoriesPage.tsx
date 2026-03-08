@@ -271,7 +271,7 @@ export default function CategoriesPage() {
 
       {/* Add Category Sheet */}
       <Sheet open={showAddSheet} onOpenChange={setShowAddSheet}>
-        <SheetContent side="right" className="w-[25%]">
+        <SheetContent side="right" className="w-full sm:w-[25%] sm:min-w-[320px]">
           <SheetHeader>
             <SheetTitle>Add</SheetTitle>
             <SheetDescription>
@@ -284,7 +284,7 @@ export default function CategoriesPage() {
 
       {/* Edit Category Sheet */}
       <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
-        <SheetContent side="right" className="w-[25%]">
+        <SheetContent side="right" className="w-full sm:w-[25%] sm:min-w-[320px]">
           <SheetHeader>
             <SheetTitle>Edit Category</SheetTitle>
             <SheetDescription>

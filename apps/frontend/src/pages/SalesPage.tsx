@@ -281,7 +281,7 @@ export default function SalesPage() {
 
       {/* Add Salesperson Sheet */}
       <Sheet open={showAddSheet} onOpenChange={setShowAddSheet}>
-        <SheetContent side="right" className="w-[25%]">
+        <SheetContent side="right" className="w-full sm:w-[25%] sm:min-w-[320px]">
           <SheetHeader>
             <SheetTitle>Add</SheetTitle>
             <SheetDescription>
@@ -294,7 +294,7 @@ export default function SalesPage() {
 
       {/* Edit Salesperson Sheet */}
       <Sheet open={showEditSheet} onOpenChange={setShowEditSheet}>
-        <SheetContent side="right" className="w-[25%]">
+        <SheetContent side="right" className="w-full sm:w-[25%] sm:min-w-[320px]">
           <SheetHeader>
             <SheetTitle>Edit Salesperson</SheetTitle>
             <SheetDescription>

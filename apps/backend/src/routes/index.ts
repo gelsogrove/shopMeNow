@@ -135,6 +135,7 @@ import { shortUrlRoutes } from "../interfaces/http/routes/short-url.routes"
 import whatsappRoutes from "../interfaces/http/routes/whatsapp.routes"
 import { createTokenRouter } from "./token"
 import userAdminRoutes from "../interfaces/http/routes/user-admin.routes"
+import adminInvoiceRoutes from "../interfaces/http/routes/admin/admin-invoice.routes"
 import twoFactorResetRoutes from "../interfaces/http/routes/two-factor-reset.routes"
 import { createTrashRoutes } from "../interfaces/http/routes/trash.routes"
 import { supportRouter } from "../interfaces/http/routes/support.routes"
@@ -563,6 +564,10 @@ logger.info("✅ Registered platform config routes (/api/platform-config)")
 // ========================================
 router.use("/users", userAdminRoutes)
 logger.info("✅ Registered user admin routes (/api/users/admin/*)")
+
+// 🧾 ADMIN INVOICE ROUTES (Platform Admin only)
+router.use("/users", adminInvoiceRoutes)
+logger.info("✅ Registered admin invoice routes (/api/users/admin/invoices/*)")
 
 // ========================================
 // 🗑️ TRASH MANAGEMENT ROUTES (Platform Admin only)

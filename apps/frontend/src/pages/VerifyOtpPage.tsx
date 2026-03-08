@@ -62,7 +62,7 @@ export function VerifyOtpPage() {
 
   return (
     <div className="container flex h-screen items-center justify-center">
-      <Card className="w-[400px]">
+      <Card className="w-full max-w-[400px]">
         <CardHeader className="text-center">
           <CardTitle>Two-Factor Authentication</CardTitle>
           <CardDescription>

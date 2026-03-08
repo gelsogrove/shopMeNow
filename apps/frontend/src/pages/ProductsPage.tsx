@@ -1609,7 +1609,7 @@ export function ProductsPage() {
 
       {/* Certifications Management Panel */}
       <Sheet open={showCertificationsPanel} onOpenChange={setShowCertificationsPanel}>
-        <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
+        <SheetContent side="right" className="w-full sm:max-w-[800px]">
           <SheetHeader>
             <SheetTitle>Manage Certifications</SheetTitle>
             <SheetDescription>
@@ -1689,7 +1689,7 @@ export function ProductsPage() {
 
       {/* Certification Edit Sheet */}
       <Sheet open={showCertEdit} onOpenChange={setShowCertEdit}>
-        <SheetContent side="right" className="w-[600px]">
+        <SheetContent side="right" className="w-full sm:max-w-[600px]">
           <SheetHeader>
             <SheetTitle>Edit Certification</SheetTitle>
             <SheetDescription>
@@ -1750,7 +1750,7 @@ export function ProductsPage() {
 
       {/* Types Management Panel */}
       <Sheet open={showTypesPanel} onOpenChange={setShowTypesPanel}>
-        <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
+        <SheetContent side="right" className="w-full sm:max-w-[800px]">
           <SheetHeader>
             <SheetTitle>Manage Types</SheetTitle>
             <SheetDescription>
@@ -1830,7 +1830,7 @@ export function ProductsPage() {
 
       {/* Type Edit Sheet */}
       <Sheet open={showTtEdit} onOpenChange={setShowTtEdit}>
-        <SheetContent side="right" className="w-[600px]">
+        <SheetContent side="right" className="w-full sm:max-w-[600px]">
           <SheetHeader>
             <SheetTitle>Edit Type</SheetTitle>
             <SheetDescription>
@@ -1891,7 +1891,7 @@ export function ProductsPage() {
 
       {/* Categories Management Panel */}
       <Sheet open={showCategoriesPanel} onOpenChange={setShowCategoriesPanel}>
-        <SheetContent side="right" className="w-[800px] sm:max-w-[800px]">
+        <SheetContent side="right" className="w-full sm:max-w-[800px]">
           <SheetHeader>
             <SheetTitle>Manage Categories</SheetTitle>
             <SheetDescription>
@@ -1962,7 +1962,7 @@ export function ProductsPage() {
 
       {/* Category Edit Sheet */}
       <Sheet open={showCatEdit} onOpenChange={setShowCatEdit}>
-        <SheetContent side="right" className="w-[600px]">
+        <SheetContent side="right" className="w-full sm:max-w-[600px]">
           <SheetHeader>
             <SheetTitle>Edit Category</SheetTitle>
             <SheetDescription>

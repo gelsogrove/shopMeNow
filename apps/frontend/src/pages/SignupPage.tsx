@@ -58,7 +58,7 @@ export function SignupPage() {
       <div className="absolute top-4 right-4">
         <LanguageSelector />
       </div>
-      <Card className="w-[400px]">
+      <Card className="w-full max-w-[400px]">
         <CardHeader className="text-center">
           <CardTitle>Create Account</CardTitle>
           <CardDescription>Sign up for a new account</CardDescription>

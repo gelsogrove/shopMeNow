@@ -1755,9 +1755,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           id="wizard-dialog"
           className="backdrop:bg-black/50 p-0 rounded-2xl shadow-2xl border-0 w-[1200px] max-w-[95vw] bg-white"
         >
-          <div className="flex h-[750px] max-h-[90vh]">
-            {/* LEFT SIDEBAR - Step Indicators */}
-            <div className="w-[340px] bg-gray-50 border-r border-gray-200 p-6 flex flex-col rounded-l-2xl">
+          <div className="flex h-auto sm:h-[750px] max-h-[90vh]">
+            {/* LEFT SIDEBAR - Step Indicators - hidden on mobile */}
+            <div className="hidden sm:flex w-[240px] lg:w-[340px] bg-gray-50 border-r border-gray-200 p-6 flex-col rounded-l-2xl">
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900">New Channel</h2>
                 <p className="text-gray-500 text-sm mt-1">Setup wizard</p>

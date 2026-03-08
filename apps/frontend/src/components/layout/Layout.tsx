@@ -6,7 +6,7 @@ import { storage } from "@/lib/storage"
 import { Chat } from "@/types/chat"
 import ImpersonationBanner from "@/components/ImpersonationBanner"
 // Importiamo l'icona WhatsAppIcon che creiamo internamente
-import { memo, useEffect, useState } from "react"
+import { memo, useCallback, useEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { Header } from "./Header"
 import { Sidebar } from "./Sidebar"
@@ -40,6 +40,10 @@ export function Layout() {
 
   const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
   const [savedChat, setSavedChat] = useState<Chat | null>(null)
+  // Mobile sidebar state
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const toggleMobileSidebar = useCallback(() => setIsMobileSidebarOpen(prev => !prev), [])
+  const closeMobileSidebar = useCallback(() => setIsMobileSidebarOpen(false), [])
 
   // Recupera la chat salvata dallo storage quando il componente viene montato
   useEffect(() => {
@@ -105,18 +109,26 @@ export function Layout() {
       <ImpersonationBanner />
       <div className="relative flex min-h-screen flex-col bg-gray-50">
         {/* Header at 100% width - ABOVE sidebar */}
-        <MemoizedHeader />
+        <MemoizedHeader onMobileMenuToggle={toggleMobileSidebar} />
         
         <div className="flex flex-1">
-          <MemoizedSidebar />
-          <div className="flex w-full flex-col pl-72 bg-gray-50">
-            <main className="flex-1 px-8 py-9">
+          {/* Mobile overlay backdrop */}
+          {isMobileSidebarOpen && (
+            <div
+              className="fixed inset-0 z-30 bg-black/40 md:hidden"
+              onClick={closeMobileSidebar}
+              aria-hidden="true"
+            />
+          )}
+          <MemoizedSidebar isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} />
+          <div className="flex w-full flex-col md:pl-72 bg-gray-50">
+            <main className="flex-1 px-4 sm:px-6 py-6 sm:py-9">
               <Outlet />
             </main>
           </div>
         </div>
         {/* Footer */}
-        <footer className="pl-72 py-9 text-center text-sm text-gray-400 border-t border-gray-100 bg-gray-50">
+        <footer className="md:pl-72 py-6 sm:py-9 text-center text-sm text-gray-400 border-t border-gray-100 bg-gray-50">
           <p>© {new Date().getFullYear()} eChatbot. All rights reserved.</p>
         </footer>
         <WhatsAppChatModal

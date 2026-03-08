@@ -82,7 +82,7 @@ export function ResetPasswordPage() {
   if (!token) {
     return (
       <div className="container flex h-screen items-center justify-center">
-        <Card className="w-[400px]">
+        <Card className="w-full max-w-[400px]">
           <CardHeader className="text-center">
             <CardTitle>{t("resetPassword.invalidLink")}</CardTitle>
             <CardDescription>
@@ -106,7 +106,7 @@ export function ResetPasswordPage() {
       <div className="absolute top-4 right-4">
         <LanguageSelector />
       </div>
-      <Card className="w-[400px]">
+      <Card className="w-full max-w-[400px]">
         <CardHeader className="text-center">
           <CardTitle>{t("resetPassword.title")}</CardTitle>
           <CardDescription>
