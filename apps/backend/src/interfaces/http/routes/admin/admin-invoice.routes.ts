@@ -15,6 +15,9 @@ import adminInvoicePaypalRoutes from "./admin-invoice-paypal.routes"
 
 const router = Router()
 
+// Analytics: history, summary, unpaid/failed lists (must come BEFORE dynamic :invoiceId routes)
+router.use(adminInvoiceAnalyticsRoutes)
+
 // Core: current invoices, PDF, status update, invoice detail
 router.use(adminInvoiceCoreRoutes)
 
@@ -23,9 +26,6 @@ router.use(adminInvoiceCreditNotesRoutes)
 
 // Invoice adjustments CRUD
 router.use(adminInvoiceAdjustmentsRoutes)
-
-// Analytics: history, summary, unpaid/failed lists
-router.use(adminInvoiceAnalyticsRoutes)
 
 // Revenue stats for analytics dashboard
 router.use(adminInvoiceRevenueRoutes)
