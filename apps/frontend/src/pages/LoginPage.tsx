@@ -1011,7 +1011,7 @@ export function LoginPage() {
       {/* Header - Professional Design */}
       <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
-          <div className="hidden md:flex justify-end pt-3">
+          <div className="hidden lg:flex justify-end pt-3">
             <div className="flex items-center gap-4">
               <a
                 href="#demo"
@@ -1055,7 +1055,7 @@ export function LoginPage() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="hidden md:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+                    className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
                   >
                     <span className="text-xl">
                       {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
@@ -1253,7 +1253,7 @@ export function LoginPage() {
                 <div className="flex items-center gap-2 md:gap-3">
                   <Button
                     variant="ghost"
-                    className="text-xs md:text-sm font-medium text-slate-700 hover:text-green-600 hover:bg-green-50 transition-colors px-2 md:px-3"
+                    className="hidden sm:flex text-xs md:text-sm font-medium text-slate-700 hover:text-green-600 hover:bg-green-50 transition-colors px-2 md:px-3"
                     onClick={() => {
                       if (isAdminBypass || !workingInProgress) {
                         setActiveTab('signin')
@@ -1299,7 +1299,7 @@ export function LoginPage() {
       </header>
 
       <main className="flex-1">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16 relative z-20">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20">
         
         <div className="text-center mb-12 space-y-4 relative">
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
