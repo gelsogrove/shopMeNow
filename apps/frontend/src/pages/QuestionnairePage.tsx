@@ -30,13 +30,17 @@ const QT: Record<Lang, Record<string, string>> = {
     industry_title: "Il tuo settore",
     industry_q: "In quale settore opera la tua attività? Ci aiuta a capire subito il contesto e personalizzare al meglio la demo per te.",
     industry_opt1: "Immobiliare",
-    industry_opt2: "Retail / E-commerce",
-    industry_opt3: "Ristorazione / Hospitality",
-    industry_opt4: "Professioni (legale, medico, consulenza)",
-    industry_opt5: "Produzione",
-    industry_opt6: "Formazione",
-    industry_opt7: "Altro settore",
-    industry_opt8: "Fornitori",
+    industry_opt2: "Alimentare & Ristorazione",
+    industry_opt3: "Medico & Sanitario",
+    industry_opt4: "Bellezza & Benessere",
+    industry_opt5: "Formazione",
+    industry_opt6: "Turismo",
+    industry_opt7: "Moda",
+    industry_opt8: "Fitness",
+    industry_opt9: "Trasporti",
+    industry_opt10: "Legale",
+    industry_opt11: "Altro",
+    industry_other_placeholder: "Specifica il tuo settore…",
 
     // Step 0: Main Goal
     goal_title: "Obiettivo principale",
@@ -116,7 +120,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 10: Interest rating
     interest_title: "Quanto sei interessato?",
-    interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato). Se sei interessato, ci permetteremo di contattarti nei prossimi giorni per capire come possiamo aiutarti.",
+    interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato). Se sei interessato, ci permetteremo di contattarti nei prossimi giorni per capire come possiamo aiutarci a vicenda.",
 
     // Step 10: Other (textarea)
     other_title: "Hai altro da aggiungere?",
@@ -170,14 +174,18 @@ const QT: Record<Lang, Record<string, string>> = {
 
     industry_title: "Your industry",
     industry_q: "Which industry does your business operate in? This helps us understand your context straight away and tailor the demo for you.",
-    industry_opt1: "Real estate",
-    industry_opt2: "Retail / E-commerce",
-    industry_opt3: "Food & Hospitality",
-    industry_opt4: "Professions (legal, medical, consulting)",
-    industry_opt5: "Manufacturing",
-    industry_opt6: "Education",
-    industry_opt7: "Other industry",
-    industry_opt8: "Suppliers",
+    industry_opt1: "Real Estate",
+    industry_opt2: "Food & Hospitality",
+    industry_opt3: "Medical & Healthcare",
+    industry_opt4: "Beauty & Wellness",
+    industry_opt5: "Education & Training",
+    industry_opt6: "Tourism",
+    industry_opt7: "Fashion",
+    industry_opt8: "Fitness",
+    industry_opt9: "Transport",
+    industry_opt10: "Legal",
+    industry_opt11: "Other",
+    industry_other_placeholder: "Specify your industry…",
 
     goal_title: "Main objective",
     goal_q: "What is your main goal with an AI chatbot? This lets us show you the most relevant features straight away.",
@@ -298,13 +306,17 @@ const QT: Record<Lang, Record<string, string>> = {
     industry_title: "Tu sector",
     industry_q: "¿en qué sector opera tu negocio? Nos ayuda a entender el contexto de inmediato y a personalizar la demo para ti.",
     industry_opt1: "Inmobiliario",
-    industry_opt2: "Retail / E-commerce",
-    industry_opt3: "Restauración / Hospitality",
-    industry_opt4: "Profesiones (legal, médico, consultoría)",
-    industry_opt5: "Producción",
-    industry_opt6: "Formación",
-    industry_opt7: "Otro sector",
-    industry_opt8: "Proveedores",
+    industry_opt2: "Alimentación & Hostelería",
+    industry_opt3: "Médico & Salud",
+    industry_opt4: "Belleza & Bienestar",
+    industry_opt5: "Formación",
+    industry_opt6: "Turismo",
+    industry_opt7: "Moda",
+    industry_opt8: "Fitness",
+    industry_opt9: "Transporte",
+    industry_opt10: "Legal",
+    industry_opt11: "Otro",
+    industry_other_placeholder: "Especifica tu sector…",
 
     goal_title: "Objetivo principal",
     goal_q: "¿Cuál es tu objetivo principal con un chatbot de IA? Esto nos permite mostrarte de inmediato las funciones más relevantes para ti.",
@@ -425,13 +437,17 @@ const QT: Record<Lang, Record<string, string>> = {
     industry_title: "O seu setor",
     industry_q: "Em que setor atua o seu negócio? Ajuda-nos a perceber o contexto imediatamente e a personalizar a demo para si.",
     industry_opt1: "Imobiliário",
-    industry_opt2: "Retalho / E-commerce",
-    industry_opt3: "Restauração / Hospitalidade",
-    industry_opt4: "Profissões (jurídico, médico, consultoria)",
-    industry_opt5: "Produção",
-    industry_opt6: "Formação",
-    industry_opt7: "Outro setor",
-    industry_opt8: "Fornecedores",
+    industry_opt2: "Alimentação & Restauração",
+    industry_opt3: "Médico & Saúde",
+    industry_opt4: "Beleza & Bem-estar",
+    industry_opt5: "Formação",
+    industry_opt6: "Turismo",
+    industry_opt7: "Moda",
+    industry_opt8: "Fitness",
+    industry_opt9: "Transporte",
+    industry_opt10: "Jurídico",
+    industry_opt11: "Outro",
+    industry_other_placeholder: "Especifique o seu setor…",
 
     goal_title: "Objetivo principal",
     goal_q: "Qual é o seu principal objetivo com um chatbot de IA? Isso permite-nos mostrar-lhe imediatamente as funcionalidades mais relevantes.",
@@ -555,7 +571,7 @@ interface StepDef {
   icon: string
   titleKey: string
   questionKey: string
-  type: "radio" | "textarea" | "stars"
+  type: "radio" | "textarea" | "stars" | "select"
   options?: StepOption[]
   image?: string // Optional image URL for the step
   /** If provided, this step is only shown when the condition is met */
@@ -570,17 +586,20 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🏢",
       titleKey: "industry_title",
       questionKey: "industry_q",
-      type: "radio",
+      type: "select",
       image: "/survey.png",
       options: [
         { value: "real_estate", label: T.industry_opt1, emoji: "🏠" },
-        { value: "retail", label: T.industry_opt2, emoji: "🛍️" },
-        { value: "food_hospitality", label: T.industry_opt3, emoji: "🍽️" },
-        { value: "professions", label: T.industry_opt4, emoji: "⚖️" },
-        { value: "b2b", label: T.industry_opt5, emoji: "🏭" },
-        { value: "education", label: T.industry_opt6, emoji: "🎓" },
-        { value: "suppliers", label: T.industry_opt8, emoji: "🚚" },
-        { value: "other", label: T.industry_opt7, emoji: "🔧" },
+        { value: "food", label: T.industry_opt2, emoji: "🍽️" },
+        { value: "medical", label: T.industry_opt3, emoji: "🏥" },
+        { value: "beauty_wellness", label: T.industry_opt4, emoji: "💅" },
+        { value: "education", label: T.industry_opt5, emoji: "🎓" },
+        { value: "tourism", label: T.industry_opt6, emoji: "🌍" },
+        { value: "fashion", label: T.industry_opt7, emoji: "👗" },
+        { value: "fitness", label: T.industry_opt8, emoji: "💪" },
+        { value: "transport", label: T.industry_opt9, emoji: "🚗" },
+        { value: "legal", label: T.industry_opt10, emoji: "⚖️" },
+        { value: "other", label: T.industry_opt11, emoji: "🔧" },
       ],
     },
     // ── 2. Obiettivo principale ─────────────────────────────────────────
@@ -780,6 +799,7 @@ export default function QuestionnairePage() {
   const [currentStep, setCurrentStep] = useState(0)
   const [direction, setDirection] = useState(1)
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [industryOtherText, setIndustryOtherText] = useState("")
   const [contact, setContact] = useState({ fullName: "", email: "", phone: "", company: "" })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
@@ -840,9 +860,13 @@ export default function QuestionnairePage() {
     setIsSubmitting(true)
     setSubmitError("")
     try {
+      const finalAnswers = { ...answers }
+      if (finalAnswers.stepIndustry === "other" && industryOtherText.trim()) {
+        finalAnswers.stepIndustry = industryOtherText.trim()
+      }
       await axios.post(`${API_BASE}/questionnaire`, {
         ...contactData,
-        ...answers,
+        ...finalAnswers,
         wantsContact,
         lang,
       })
@@ -1035,6 +1059,45 @@ export default function QuestionnairePage() {
                             )}
                           </button>
                         ))}
+                      </div>
+                    )}
+
+                    {/* Select dropdown (industry) */}
+                    {step.type === "select" && step.options && (
+                      <div className="space-y-3">
+                        <select
+                          value={answers[step.id] || ""}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            if (val === "other") {
+                              handleAnswer(step.id, "other")
+                              setIndustryOtherText("")
+                            } else {
+                              handleAnswer(step.id, val)
+                              setIndustryOtherText("")
+                            }
+                          }}
+                          className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-700 focus:border-green-500 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
+                        >
+                          <option value="" disabled>
+                            — Select… —
+                          </option>
+                          {step.options.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.emoji} {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        {answers[step.id] === "other" && (
+                          <input
+                            type="text"
+                            placeholder={T.industry_other_placeholder || "Specify your industry…"}
+                            value={industryOtherText}
+                            onChange={(e) => setIndustryOtherText(e.target.value)}
+                            className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-700 focus:border-green-500 focus:outline-none transition-colors"
+                            autoFocus
+                          />
+                        )}
                       </div>
                     )}
 
