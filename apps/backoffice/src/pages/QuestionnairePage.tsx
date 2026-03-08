@@ -11,6 +11,7 @@ interface QuestionnaireRecord {
   company: string | null
   wantsContact: boolean
   // v2 fields
+  lang: string | null
   stepIndustry: string | null
   stepGoal: string | null
   stepHumanSupport: string | null
@@ -35,6 +36,7 @@ interface QuestionnaireRecord {
 }
 
 const V2_STEP_LABELS: Record<string, string> = {
+  lang: 'Language',
   stepIndustry: 'Industry',
   stepGoal: 'Main goal',
   stepHumanSupport: 'Human support',

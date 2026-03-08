@@ -1951,6 +1951,7 @@ model OnboardingQuestionnaire {
   stepHelpful           String?  // "yes" | "maybe" | "exploring"
   stepInterest          String?  // "0" | "1" | "2" | "3" | "4" | "5" (stars rating)
   stepOther             String?  // free text
+  lang                  String?  // "it" | "en" | "es" | "pt"
   wantsContact          Boolean  @default(false)
 
   // v1 legacy fields (kept nullable for backward compat)

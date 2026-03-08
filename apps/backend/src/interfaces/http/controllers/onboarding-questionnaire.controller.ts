@@ -35,10 +35,11 @@ export class OnboardingQuestionnaireController {
         stepInterest,
         stepOther,
         wantsContact,
+        lang,
       } = req.body
 
       // At least one step answer required
-      if (!stepHumanSupport && !stepEcommerce && !stepWidget) {
+      if (!stepIndustry && !stepHumanSupport && !stepEcommerce && !stepWidget && !stepGoal) {
         res.status(400).json({ success: false, error: "Missing required step answers" })
         return
       }
@@ -64,6 +65,7 @@ export class OnboardingQuestionnaireController {
           stepHelpful: stepHelpful || null,
           stepInterest: stepInterest || null,
           stepOther: stepOther || null,
+          lang: lang || null,
           wantsContact: wantsContact === true || wantsContact === "true",
           status: "NEW",
         },
@@ -214,6 +216,7 @@ export class OnboardingQuestionnaireController {
           stepPrivacy: true,
           stepHelpful: true,
           stepInterest: true,
+          lang: true,
           wantsContact: true,
           createdAt: true,
         },
@@ -248,6 +251,43 @@ export class OnboardingQuestionnaireController {
         privacy: countAnswers('stepPrivacy'),
         helpful: countAnswers('stepHelpful'),
         interest: countAnswers('stepInterest'),
+        // Language breakdown
+        byLanguage: countAnswers('lang'),
+        // Conversion rate
+        conversionRate: total > 0 ? Math.round((submissions.filter(s => s.wantsContact).length / total) * 100) : 0,
+        // Average interest score
+        avgInterest: (() => {
+          const scores = submissions
+            .map((s: any) => parseInt(s.stepInterest || '0'))
+            .filter((n: number) => !isNaN(n) && n > 0)
+          return scores.length > 0
+            ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10) / 10
+            : 0
+        })(),
+        // Weekly trend (last 8 weeks)
+        weeklyTrend: (() => {
+          const weeks: Record<string, number> = {}
+          const now = Date.now()
+          for (let i = 7; i >= 0; i--) {
+            const weekStart = new Date(now - i * 7 * 24 * 60 * 60 * 1000)
+            const label = `W${weekStart.toISOString().slice(5, 10)}`
+            weeks[label] = 0
+          }
+          submissions.forEach((s: any) => {
+            const d = new Date(s.createdAt)
+            const weekAgo = Math.floor((Date.now() - d.getTime()) / (7 * 24 * 60 * 60 * 1000))
+            if (weekAgo <= 7) {
+              const label = `W${d.toISOString().slice(5, 10)}`
+              if (weeks[label] !== undefined) weeks[label]++
+              else weeks[label] = 1
+            }
+          })
+          return weeks
+        })(),
+        // Last 7 days trend
+        last7Days: submissions.filter(
+          s => new Date(s.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        ).length,
         // Last 30 days trend
         last30Days: submissions.filter(
           s => new Date(s.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -300,6 +340,7 @@ export class OnboardingQuestionnaireController {
     <table>
       <tr><td>Industry</td><td>${record.stepIndustry || "—"}</td></tr>
       <tr><td>Main Goal</td><td>${record.stepGoal || "—"}</td></tr>
+      <tr><td>Language</td><td>${record.lang || "—"}</td></tr>
       <tr><td>Human Support</td><td>${record.stepHumanSupport || "—"}</td></tr>
       <tr><td>Push Marketing</td><td>${record.stepPushMarketing || "—"}</td></tr>
       <tr><td>Reminders &amp; Appointments</td><td>${record.stepReminders || "—"}</td></tr>

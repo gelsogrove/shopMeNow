@@ -839,6 +839,7 @@ export default function QuestionnairePage() {
         ...contactData,
         ...answers,
         wantsContact,
+        lang,
       })
       setView(wantsContact ? "success" : "no_contact")
     } catch {
