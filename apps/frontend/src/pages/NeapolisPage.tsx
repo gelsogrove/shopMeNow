@@ -74,7 +74,7 @@ const T: Record<Lang, {
     badge: "Oferta exclusiva para la comunidad Neapolis",
     greeting: "Hola, bienvenido a eChatbot.AI",
     introPart1: "Desarrollamos chatbots a medida integrados con los sistemas del cliente (CRM, ERP, e-commerce, etc.). Transformamos la conversación en una herramienta estratégica: respuestas precisas en tiempo real basadas en datos corporativos, y notificaciones push para acciones de marketing conversacional dirigido.",
-    introPart2: "Para crecer necesitamos nuestro Cliente 0, una startup dentro de la red Neàpolis con quien co-construir el producto. Por eso ofrecemos el servicio completo sin coste durante el primer año.",
+    introPart2: "Para crecer necesitamos nuestro Cliente 0, una startup dentro de la red Neàpolis con quien co-construir el producto.",
     offer: "Ofrecemos el servicio completamente gratuito durante un año.",
     offerFreeWord: "gratuito",
     offerItems: [
