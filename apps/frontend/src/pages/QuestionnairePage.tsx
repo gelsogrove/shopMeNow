@@ -644,7 +644,13 @@ export default function QuestionnairePage() {
       setDirection(1)
       setCurrentStep((s) => s + 1)
     } else {
-      setView("contact_form")
+      // Last step is stepInterest (stars): show contact form only if rating >= 2
+      const interestValue = answers["stepInterest"]
+      if (interestValue && parseInt(interestValue) >= 2) {
+        setView("contact_form")
+      } else {
+        submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
+      }
     }
   }
 
@@ -887,7 +893,12 @@ export default function QuestionnairePage() {
                                   setDirection(1)
                                   setCurrentStep((s) => s + 1)
                                 } else {
-                                  submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
+                                  // Last step (stepInterest): show contact form if rating >= 2, else submit directly
+                                  if (star >= 2) {
+                                    setView("contact_form")
+                                  } else {
+                                    submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
+                                  }
                                 }
                               }, 350)
                             }}
