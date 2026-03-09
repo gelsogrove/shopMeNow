@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { SEO } from "@/components/SEO"
@@ -111,13 +111,9 @@ const T: Record<Lang, {
 }
 
 export function NeapolisPage() {
-  const [lang, setLang] = useState<Lang>("it")
-
-  useEffect(() => {
-    const l = navigator.language.slice(0, 2)
-    if (l === "en" || l === "es" || l === "pt") setLang(l)
-    else setLang("it") // Italian as default for Neapolis
-  }, [])
+  const { language, setLanguage } = useLanguage()
+  const lang: Lang = (["it", "en", "es", "pt"].includes(language) ? language : "it") as Lang
+  const setLang = (l: Lang) => setLanguage(l)
 
   const t = T[lang]
 

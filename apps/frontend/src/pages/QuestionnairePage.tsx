@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { LanguageSelector } from "@/components/shared/LanguageSelector"
 import { WidgetLoader } from "@/components/WidgetLoader"
 import { ChatWidget } from "@/components/ChatWidget"
 
@@ -44,7 +45,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 0: Main Goal
     goal_title: "Obiettivo principale",
-    goal_q: "Qual è il tuo obiettivo principale con un chatbot AI? Questo ci permette di mostrarti subito le funzionalità più rilevanti per te.",
+    goal_q: "Qual è il tuo obiettivo principale con un chatbot? Questo ci permette di mostrarti subito le funzionalità più rilevanti per te.",
     goal_opt1: "Ridurre le richieste di supporto clienti",
     goal_opt2: "Generare e qualificare lead",
     goal_opt3: "Aumentare le vendite online",
@@ -107,9 +108,8 @@ const QT: Record<Lang, Record<string, string>> = {
     // Step 8: Privacy
     privacy_title: "Privacy e Sicurezza",
     privacy_q: "Comprendiamo che la privacy dei tuoi clienti è fondamentale. eChatbot è progettato con la privacy al centro: non inviamo mai dati sensibili dei clienti ai modelli AI. Le informazioni personali (contatti, ordini, pagamenti) rimangono sempre nel tuo database. Per le operazioni sensibili usiamo link con token temporizzati, accessibili solo dall'utente interessato.",
-    privacy_opt1: "Sì, questo approccio mi convince",
-    privacy_opt2: "Ho alcune domande sulla privacy",
-    privacy_opt3: "Vorrei saperne di più",
+    privacy_opt1: "Sì, mi convince",
+    privacy_opt2: "Ho ancora dei dubbi",
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
@@ -120,7 +120,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 10: Interest rating
     interest_title: "Quanto sei interessato?",
-    interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato). Se sei interessato, ci permetteremo di contattarti nei prossimi giorni per capire come possiamo aiutarci a vicenda.",
+    interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato).\n\nSe selezioni 0, non ti chiediamo nessun dato personale. Se sei interessato, ti mostreremo una breve form di contatto — ci permetteremo di contattarti nei prossimi giorni per capire come possiamo aiutarci a vicenda.",
 
     // Step 10: Other (textarea)
     other_title: "Hai altro da aggiungere?",
@@ -188,7 +188,7 @@ const QT: Record<Lang, Record<string, string>> = {
     industry_other_placeholder: "Specify your industry…",
 
     goal_title: "Main objective",
-    goal_q: "What is your main goal with an AI chatbot? This lets us show you the most relevant features straight away.",
+    goal_q: "What is your main goal with a chatbot? This lets us show you the most relevant features straight away.",
     goal_opt1: "Reduce customer support requests",
     goal_opt2: "Generate and qualify leads",
     goal_opt3: "Increase online sales",
@@ -243,9 +243,8 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 8: Privacy
     privacy_q: "We understand that your customers' privacy is paramount. eChatbot is designed with privacy at its core: we never send sensitive customer data to AI models. Personal information (contacts, orders, payments) always stays in your database. For sensitive operations we use time-limited token links, accessible only by the specific user.",
-    privacy_opt1: "Yes, this approach works for me",
-    privacy_opt2: "I have some privacy concerns",
-    privacy_opt3: "I'd like to know more",
+    privacy_opt1: "Yes, I'm convinced",
+    privacy_opt2: "I still have some doubts",
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
@@ -256,7 +255,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 10: Interest rating
     interest_title: "How interested are you?",
-    interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested). If you are interested, we will reach out to you in the coming days to understand how we can help.",
+    interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested).\n\nIf you select 0, we won't ask for any personal data. If you are interested, we'll show you a short contact form — we'll reach out in the coming days to see how we can help each other.",
 
     // Step 10: Other (textarea)
     other_title: "Anything Else?",
@@ -319,7 +318,7 @@ const QT: Record<Lang, Record<string, string>> = {
     industry_other_placeholder: "Especifica tu sector…",
 
     goal_title: "Objetivo principal",
-    goal_q: "¿Cuál es tu objetivo principal con un chatbot de IA? Esto nos permite mostrarte de inmediato las funciones más relevantes para ti.",
+    goal_q: "¿Cuál es tu objetivo principal con un chatbot? Esto nos permite mostrarte de inmediato las funciones más relevantes para ti.",
     goal_opt1: "Reducir las solicitudes de soporte al cliente",
     goal_opt2: "Generar y calificar leads",
     goal_opt3: "Aumentar las ventas online",
@@ -374,9 +373,8 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 8: Privacy
     privacy_q: "Entendemos que la privacidad de tus clientes es fundamental. eChatbot está diseñado con la privacidad en el centro: nunca enviamos datos sensibles de los clientes a los modelos de IA. La información personal (contactos, pedidos, pagos) siempre permanece en tu base de datos. Para operaciones sensibles usamos enlaces con tokens de tiempo limitado, accesibles solo por el usuario en cuestión.",
-    privacy_opt1: "Sí, este enfoque me convence",
-    privacy_opt2: "Tengo algunas dudas sobre privacidad",
-    privacy_opt3: "Me gustaría saber más",
+    privacy_opt1: "Sí, me convence",
+    privacy_opt2: "Todavía tengo dudas",
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
@@ -387,7 +385,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 10: Interest rating
     interest_title: "¿Cuánto te interesa?",
-    interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado). Si estás interesado, nos pondremos en contacto contigo en los próximos días para ver cómo podemos ayudarte.",
+    interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado).\n\nSi seleccionas 0, no te pediremos ningún dato personal. Si estás interesado, te mostraremos un breve formulario de contacto — nos pondremos en contacto contigo en los próximos días para ver cómo podemos ayudarnos mutuamente.",
 
     // Step 10: Other (textarea)
     other_title: "¿Algo más?",
@@ -450,7 +448,7 @@ const QT: Record<Lang, Record<string, string>> = {
     industry_other_placeholder: "Especifique o seu setor…",
 
     goal_title: "Objetivo principal",
-    goal_q: "Qual é o seu principal objetivo com um chatbot de IA? Isso permite-nos mostrar-lhe imediatamente as funcionalidades mais relevantes.",
+    goal_q: "Qual é o seu principal objetivo com um chatbot? Isso permite-nos mostrar-lhe imediatamente as funcionalidades mais relevantes.",
     goal_opt1: "Reduzir pedidos de suporte ao cliente",
     goal_opt2: "Gerar e qualificar leads",
     goal_opt3: "Aumentar as vendas online",
@@ -505,9 +503,8 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 8: Privacy
     privacy_q: "Entendemos que a privacidade dos seus clientes é fundamental. O eChatbot foi desenvolvido com a privacidade no centro: nunca enviamos dados sensíveis dos clientes para modelos de IA. As informações pessoais (contatos, pedidos, pagamentos) sempre ficam no seu banco de dados. Para operações sensíveis usamos links com tokens temporários, acessíveis apenas pelo usuário em questão.",
-    privacy_opt1: "Sim, essa abordagem me convence",
-    privacy_opt2: "Tenho algumas dúvidas sobre privacidade",
-    privacy_opt3: "Gostaria de saber mais",
+    privacy_opt1: "Sim, me convence",
+    privacy_opt2: "Ainda tenho dúvidas",
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
@@ -518,7 +515,7 @@ const QT: Record<Lang, Record<string, string>> = {
 
     // Step 10: Interest rating
     interest_title: "Quanto você está interessado?",
-    interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado). Se você estiver interessado, entraremos em contato nos próximos dias para ver como podemos ajudá-lo.",
+    interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado).\n\nSe selecionar 0, não pediremos nenhum dado pessoal. Se estiver interessado, mostraremos um breve formulário de contato — entraremos em contato nos próximos dias para ver como podemos ajudar uns aos outros.",
 
     // Step 10: Other (textarea)
     other_title: "Algo mais?",
@@ -571,11 +568,11 @@ interface StepDef {
   icon: string
   titleKey: string
   questionKey: string
-  type: "radio" | "textarea" | "stars" | "select"
+  type: "multi" | "textarea" | "stars" | "select"
   options?: StepOption[]
   image?: string // Optional image URL for the step
   /** If provided, this step is only shown when the condition is met */
-  showWhen?: (answers: Record<string, string>) => boolean
+  showWhen?: (answers: Record<string, string | string[]>) => boolean
 }
 
 function buildSteps(T: Record<string, string>): StepDef[] {
@@ -608,7 +605,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🎯",
       titleKey: "goal_title",
       questionKey: "goal_q",
-      type: "radio",
+      type: "multi",
       image: "/survey-agent.png",
       options: [
         { value: "support", label: T.goal_opt1, emoji: "💬" },
@@ -624,7 +621,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🌐",
       titleKey: "widget_title",
       questionKey: "widget_q",
-      type: "radio",
+      type: "multi",
       image: "/surver-widget.png",
       options: [
         { value: "yes_widget", label: T.widget_opt1, emoji: "🌐" },
@@ -638,7 +635,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🤝",
       titleKey: "humanSupport_title",
       questionKey: "humanSupport_q",
-      type: "radio",
+      type: "multi",
       image: "/survey-support.png",
       options: [
         { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
@@ -651,11 +648,15 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "👥",
       titleKey: "salesAgents_title",
       questionKey: "salesAgents_q",
-      type: "radio",
+      type: "multi",
       image: "/survey-agent.png",
+      showWhen: (answers) => {
+        const v = answers.stepHumanSupport
+        return v === "yes_handoff" || (Array.isArray(v) && v.includes("yes_handoff"))
+      },
       options: [
-        { value: "yes", label: T.salesAgents_opt1, emoji: "👥" },
-        { value: "no", label: T.salesAgents_opt2, emoji: "🤖" },
+        { value: "yes", label: T.salesAgents_opt1, emoji: "✅" },
+        { value: "no", label: T.salesAgents_opt2, emoji: "❌" },
       ],
     },
     // ── 6. E-Commerce ───────────────────────────────────────────────────
@@ -664,7 +665,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🛒",
       titleKey: "ecommerce_title",
       questionKey: "ecommerce_q",
-      type: "radio",
+      type: "multi",
       image: "/survey-ecommerce.png",
       options: [
         { value: "yes", label: T.ecommerce_opt1, emoji: "🛒" },
@@ -678,9 +679,12 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🔧",
       titleKey: "ecommercePlatform_title",
       questionKey: "ecommercePlatform_q",
-      type: "radio",
+      type: "multi",
       image: "/survey-ecommerce.png",
-      showWhen: (answers) => answers.stepEcommerce === "yes",
+      showWhen: (answers) => {
+        const v = answers.stepEcommerce
+        return v === "yes" || (Array.isArray(v) && v.includes("yes"))
+      },
       options: [
         { value: "wordpress", label: T.ecommercePlatform_opt1, emoji: "🔵" },
         { value: "prestashop", label: T.ecommercePlatform_opt2, emoji: "🟣" },
@@ -694,10 +698,10 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "📣",
       titleKey: "pushMarketing_title",
       questionKey: "pushMarketing_q",
-      type: "radio",
+      type: "multi",
       image: "/survey-push.png",
       options: [
-        { value: "yes", label: T.pushMarketing_opt1, emoji: "📣" },
+        { value: "yes", label: T.pushMarketing_opt1, emoji: "✅" },
         { value: "maybe", label: T.pushMarketing_opt2, emoji: "🕐" },
         { value: "no", label: T.pushMarketing_opt3, emoji: "❌" },
       ],
@@ -708,10 +712,10 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "⏰",
       titleKey: "reminders_title",
       questionKey: "reminders_q",
-      type: "radio",
+      type: "multi",
       image: "/survey-push.png",
       options: [
-        { value: "yes", label: T.reminders_opt1, emoji: "⏰" },
+        { value: "yes", label: T.reminders_opt1, emoji: "✅" },
         { value: "no", label: T.reminders_opt2, emoji: "❌" },
       ],
     },
@@ -721,11 +725,11 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🔗",
       titleKey: "integrations_title",
       questionKey: "integrations_q",
-      type: "radio",
+      type: "multi",
       image: "/survery-crm.png",
       options: [
-        { value: "yes", label: T.integrations_opt1, emoji: "🔗" },
-        { value: "no", label: T.integrations_opt2, emoji: "📦" },
+        { value: "yes", label: T.integrations_opt1, emoji: "✅" },
+        { value: "no", label: T.integrations_opt2, emoji: "❌" },
       ],
     },
     // ── 10. Privacy ─────────────────────────────────────────────────────
@@ -734,12 +738,11 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🔒",
       titleKey: "privacy_title",
       questionKey: "privacy_q",
-      type: "radio",
+      type: "multi",
       image: "/survery-secuiry.png",
       options: [
-        { value: "ok", label: T.privacy_opt1, emoji: "🔒" },
+        { value: "ok", label: T.privacy_opt1, emoji: "✅" },
         { value: "concerns", label: T.privacy_opt2, emoji: "🤔" },
-        { value: "need_info", label: T.privacy_opt3, emoji: "📚" },
       ],
     },
     // ── 11. On-Premise ──────────────────────────────────────────────────
@@ -748,7 +751,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🏢",
       titleKey: "onPremise_title",
       questionKey: "onPremise_q",
-      type: "radio",
+      type: "multi",
       image: "/survery-crm.png",
       options: [
         { value: "yes", label: T.onPremise_opt1, emoji: "🏢" },
@@ -798,7 +801,7 @@ export default function QuestionnairePage() {
   const [view, setView] = useState<View>("intro")
   const [currentStep, setCurrentStep] = useState(0)
   const [direction, setDirection] = useState(1)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const [industryOtherText, setIndustryOtherText] = useState("")
   const [contact, setContact] = useState({ fullName: "", email: "", phone: "", company: "" })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -846,6 +849,16 @@ export default function QuestionnairePage() {
     setAnswers((prev) => ({ ...prev, [stepId]: value }))
   }
 
+  function handleMultiAnswer(stepId: string, value: string) {
+    setAnswers((prev) => {
+      const current = prev[stepId]
+      const arr = Array.isArray(current) ? current : current ? [current as string] : []
+      const idx = arr.indexOf(value)
+      const next = idx >= 0 ? arr.filter((v) => v !== value) : [...arr, value]
+      return { ...prev, [stepId]: next }
+    })
+  }
+
   // ─── Submit ───────────────────────────────
   async function handleContactSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -864,9 +877,15 @@ export default function QuestionnairePage() {
       if (finalAnswers.stepIndustry === "other" && industryOtherText.trim()) {
         finalAnswers.stepIndustry = industryOtherText.trim()
       }
+      // Serialize arrays to comma-separated strings for the API
+      const serialized: Record<string, string> = {}
+      Object.keys(finalAnswers).forEach((key) => {
+        const val = finalAnswers[key]
+        serialized[key] = Array.isArray(val) ? val.join(",") : (val as string)
+      })
       await axios.post(`${API_BASE}/questionnaire`, {
         ...contactData,
-        ...finalAnswers,
+        ...serialized,
         wantsContact,
         lang,
       })
@@ -886,6 +905,8 @@ export default function QuestionnairePage() {
     ? true // textarea is optional
     : step.type === "stars"
     ? !!answers[step.id] // stars must be selected
+    : step.type === "multi"
+    ? Array.isArray(answers[step.id]) ? (answers[step.id] as string[]).length > 0 : !!answers[step.id]
     : !!answers[step.id])
 
   return (
@@ -901,6 +922,7 @@ export default function QuestionnairePage() {
           <Link to="/" className="flex items-center gap-1 shrink-0">
             <span className="text-lg sm:text-xl font-bold text-green-600">{T.header_brand}</span>
           </Link>
+          <LanguageSelector />
           <Link
             to="/"
             className="text-xs sm:text-sm font-medium text-slate-600 hover:text-green-600 transition-colors text-right"
@@ -1026,39 +1048,42 @@ export default function QuestionnairePage() {
                       <span className="text-4xl">{step.icon}</span>
                       <h2 className="text-xl font-bold text-slate-900">{T[step.titleKey]}</h2>
                     </div>
-                    <p className="text-slate-500 mb-6 leading-relaxed" style={{ fontSize: "1.15rem" }}>{T[step.questionKey]}</p>
+                    <p className="text-slate-500 mb-6 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>{T[step.questionKey]}</p>
 
-                    {/* Radio options */}
-                    {step.type === "radio" && step.options && (
+                    {/* Multi-select options */}
+                    {step.type === "multi" && step.options && (
                       <div className="space-y-3">
-                        {step.options.map((opt) => (
-                          <button
-                            key={opt.value}
-                            onClick={() => {
-                              handleAnswer(step.id, opt.value)
-                              // Auto-advance radio selections after a short delay
-                              setTimeout(() => {
-                                if (currentStep < totalSteps - 1) {
-                                  setDirection(1)
-                                  setCurrentStep((s) => s + 1)
-                                } else {
-                                  submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
-                                }
-                              }, 300)
-                            }}
-                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
-                              answers[step.id] === opt.value
-                                ? "border-green-500 bg-green-50 text-green-800"
-                                : "border-slate-200 hover:border-green-300 text-slate-700"
-                            }`}
-                          >
-                            <span className="text-xl">{opt.emoji}</span>
-                            <span className="font-medium text-sm">{opt.label}</span>
-                            {answers[step.id] === opt.value && (
-                              <span className="ml-auto text-green-600">✓</span>
-                            )}
-                          </button>
-                        ))}
+                        {step.options.map((opt) => {
+                          const currentVal = answers[step.id]
+                          const selected = Array.isArray(currentVal)
+                            ? currentVal.includes(opt.value)
+                            : currentVal === opt.value
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => handleMultiAnswer(step.id, opt.value)}
+                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
+                                selected
+                                  ? "border-green-500 bg-green-50 text-green-800"
+                                  : "border-slate-200 hover:border-green-300 text-slate-700"
+                              }`}
+                            >
+                              <span
+                                className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                                  selected ? "bg-green-500 border-green-500" : "border-slate-300"
+                                }`}
+                              >
+                                {selected && (
+                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </span>
+                              <span className="text-xl">{opt.emoji}</span>
+                              <span className="font-medium text-sm">{opt.label}</span>
+                            </button>
+                          )
+                        })}
                       </div>
                     )}
 

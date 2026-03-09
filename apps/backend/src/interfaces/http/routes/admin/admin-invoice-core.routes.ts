@@ -96,7 +96,7 @@ router.get(
  *           type: string
  */
 router.get(
-  "/admin/invoices/:invoiceId/pdf",
+  "/admin/invoices/:invoiceId([a-z0-9]{10,})/pdf",
   authMiddleware,
   platformAdminMiddleware,
   async (req: Request, res: Response) => {
@@ -153,7 +153,7 @@ router.get(
  *           type: string
  */
 router.get(
-  "/admin/invoices/:invoiceId/credit-notes/:noteId/pdf",
+  "/admin/invoices/:invoiceId([a-z0-9]{10,})/credit-notes/:noteId/pdf",
   authMiddleware,
   platformAdminMiddleware,
   async (req: Request, res: Response) => {
@@ -204,7 +204,7 @@ router.get(
  *           type: string
  */
 router.patch(
-  "/admin/invoices/:invoiceId",
+  "/admin/invoices/:invoiceId([a-z0-9]{10,})",
   authMiddleware,
   platformAdminMiddleware,
   async (req: Request, res: Response) => {
@@ -303,7 +303,7 @@ router.patch(
  *         description: Invoice details
  */
 router.get(
-  "/admin/invoices/:invoiceId",
+  "/admin/invoices/:invoiceId([a-z0-9]{10,})",
   authMiddleware,
   platformAdminMiddleware,
   async (req: Request, res: Response) => {
