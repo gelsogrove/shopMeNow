@@ -2,8 +2,6 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { SEO } from "@/components/SEO"
-import { WidgetLoader } from "@/components/WidgetLoader"
-import { ChatWidget } from "@/components/ChatWidget"
 import { ArrowRight } from "lucide-react"
 
 // ─────────────────────────────────────────
@@ -223,8 +221,6 @@ export function NeapolisPage() {
         </div>
       </div>
 
-      <WidgetLoader />
-      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" logoUrl="/logo.png" useChannelLogo={true} />
     </>
   )
 }

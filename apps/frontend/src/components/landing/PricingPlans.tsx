@@ -4,6 +4,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 import { usePlatformConfig } from "@/hooks/usePlatformConfig"
 import { PlanType } from "@/services/subscriptionBillingApi"
 import { Check, MessageSquare, X } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
 
 interface PricingPlan {
   name: string
@@ -28,10 +29,13 @@ interface PricingPlansProps {
 export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disableTrial = false }: PricingPlansProps) {
   const { t } = useLanguage()
   const { prices, isLoading, error, getPriceWithOriginal, freeTrialCredit } = usePlatformConfig()
+  const navigate = useNavigate()
 
   const handleStartFreeTrial = () => {
     if (onStartFreeTrial) {
       onStartFreeTrial()
+    } else {
+      navigate("/auth/signup")
     }
   }
 
@@ -228,7 +232,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
                   asChild={plan.name === "Enterprise"}
                 >
                   {plan.name === "Enterprise" ? (
-                    <a href="#contact">Contact Sales</a>
+                    <Link to="/contact">Contact Sales</Link>
                   ) : (
                     <>
                       {plan.name === "Free" && "Start Free Trial"}
@@ -264,7 +268,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
                       asChild={plan.planType === "ENTERPRISE"}
                     >
                       {plan.planType === "ENTERPRISE" ? (
-                        <a href="#contact">Contact Sales</a>
+                        <Link to="/contact">Contact Sales</Link>
                       ) : (
                         `Upgrade to ${plan.name}`
                       )}

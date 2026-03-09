@@ -6,8 +6,6 @@ import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
-import { WidgetLoader } from "@/components/WidgetLoader"
-import { ChatWidget } from "@/components/ChatWidget"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
 
@@ -568,7 +566,7 @@ interface StepDef {
   icon: string
   titleKey: string
   questionKey: string
-  type: "multi" | "textarea" | "stars" | "select"
+  type: "radio" | "multi" | "textarea" | "stars" | "select"
   options?: StepOption[]
   image?: string // Optional image URL for the step
   /** If provided, this step is only shown when the condition is met */
@@ -621,7 +619,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🌐",
       titleKey: "widget_title",
       questionKey: "widget_q",
-      type: "multi",
+      type: "radio",
       image: "/surver-widget.png",
       options: [
         { value: "yes_widget", label: T.widget_opt1, emoji: "🌐" },
@@ -635,7 +633,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🤝",
       titleKey: "humanSupport_title",
       questionKey: "humanSupport_q",
-      type: "multi",
+      type: "radio",
       image: "/survey-support.png",
       options: [
         { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
@@ -648,7 +646,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "👥",
       titleKey: "salesAgents_title",
       questionKey: "salesAgents_q",
-      type: "multi",
+      type: "radio",
       image: "/survey-agent.png",
       showWhen: (answers) => {
         const v = answers.stepHumanSupport
@@ -665,7 +663,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🛒",
       titleKey: "ecommerce_title",
       questionKey: "ecommerce_q",
-      type: "multi",
+      type: "radio",
       image: "/survey-ecommerce.png",
       options: [
         { value: "yes", label: T.ecommerce_opt1, emoji: "🛒" },
@@ -679,7 +677,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🔧",
       titleKey: "ecommercePlatform_title",
       questionKey: "ecommercePlatform_q",
-      type: "multi",
+      type: "radio",
       image: "/survey-ecommerce.png",
       showWhen: (answers) => {
         const v = answers.stepEcommerce
@@ -698,7 +696,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "📣",
       titleKey: "pushMarketing_title",
       questionKey: "pushMarketing_q",
-      type: "multi",
+      type: "radio",
       image: "/survey-push.png",
       options: [
         { value: "yes", label: T.pushMarketing_opt1, emoji: "✅" },
@@ -712,7 +710,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "⏰",
       titleKey: "reminders_title",
       questionKey: "reminders_q",
-      type: "multi",
+      type: "radio",
       image: "/survey-push.png",
       options: [
         { value: "yes", label: T.reminders_opt1, emoji: "✅" },
@@ -725,7 +723,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🔗",
       titleKey: "integrations_title",
       questionKey: "integrations_q",
-      type: "multi",
+      type: "radio",
       image: "/survery-crm.png",
       options: [
         { value: "yes", label: T.integrations_opt1, emoji: "✅" },
@@ -738,7 +736,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🔒",
       titleKey: "privacy_title",
       questionKey: "privacy_q",
-      type: "multi",
+      type: "radio",
       image: "/survery-secuiry.png",
       options: [
         { value: "ok", label: T.privacy_opt1, emoji: "✅" },
@@ -751,7 +749,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       icon: "🏢",
       titleKey: "onPremise_title",
       questionKey: "onPremise_q",
-      type: "multi",
+      type: "radio",
       image: "/survery-crm.png",
       options: [
         { value: "yes", label: T.onPremise_opt1, emoji: "🏢" },
@@ -907,7 +905,7 @@ export default function QuestionnairePage() {
     ? !!answers[step.id] // stars must be selected
     : step.type === "multi"
     ? Array.isArray(answers[step.id]) ? (answers[step.id] as string[]).length > 0 : !!answers[step.id]
-    : !!answers[step.id])
+    : !!answers[step.id]) // radio + select
 
   return (
     <div
@@ -1050,7 +1048,40 @@ export default function QuestionnairePage() {
                     </div>
                     <p className="text-slate-500 mb-6 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>{T[step.questionKey]}</p>
 
-                    {/* Multi-select options */}
+                    {/* Radio options (single choice, auto-advance) */}
+                    {step.type === "radio" && step.options && (
+                      <div className="space-y-3">
+                        {step.options.map((opt) => {
+                          const selected = answers[step.id] === opt.value
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => {
+                                handleAnswer(step.id, opt.value)
+                                setTimeout(() => handleNext(), 250)
+                              }}
+                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
+                                selected
+                                  ? "border-green-500 bg-green-50 text-green-800"
+                                  : "border-slate-200 hover:border-green-300 text-slate-700"
+                              }`}
+                            >
+                              <span
+                                className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                  selected ? "bg-green-500 border-green-500" : "border-slate-300"
+                                }`}
+                              >
+                                {selected && <span className="w-2 h-2 rounded-full bg-white" />}
+                              </span>
+                              <span className="text-xl">{opt.emoji}</span>
+                              <span className="font-medium text-sm">{opt.label}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* Multi-select options (checkboxes — only stepGoal) */}
                     {step.type === "multi" && step.options && (
                       <div className="space-y-3">
                         {step.options.map((opt) => {
@@ -1357,10 +1388,6 @@ export default function QuestionnairePage() {
           )}
         </div>
       </div>
-      
-      {/* Widget Loader + Floating Chat Widget */}
-      <WidgetLoader />
-      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" logoUrl="/logo.png" />
     </div>
   )
 }

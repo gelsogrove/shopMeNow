@@ -6,6 +6,7 @@ import { publicApi } from "@/services/publicApi"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface LegalDocument {
   type: string
@@ -22,22 +23,8 @@ export function LegalDocumentPage({ docType }: LegalDocumentPageProps) {
   const [document, setDocument] = useState<LegalDocument | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Detect user language: localStorage > browser > default to English
-  const getUserLanguage = (): string => {
-    const savedLang = localStorage.getItem("userLanguage")
-    if (savedLang && ["it", "en", "es", "pt"].includes(savedLang)) {
-      return savedLang
-    }
-    
-    const browserLang = navigator.language.slice(0, 2).toLowerCase()
-    if (["it", "en", "es", "pt"].includes(browserLang)) {
-      return browserLang
-    }
-    
-    return "en" // Default to English
-  }
-
-  const [language] = useState<string>(getUserLanguage())
+  // Use global language context (stores under key "language" in localStorage)
+  const { language } = useLanguage()
 
   const translations = {
     it: { backToHome: "Torna alla home", notFound: "Documento non trovato", notAvailable: "Il documento richiesto non è disponibile.", loading: "Caricamento..." },

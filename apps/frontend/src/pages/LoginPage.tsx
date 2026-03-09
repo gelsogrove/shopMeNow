@@ -1,3 +1,4 @@
+import { SiteFooter } from "@/components/layout/SiteFooter"
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
@@ -1013,13 +1014,6 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
           <div className="hidden lg:flex justify-end pt-3">
             <div className="flex items-center gap-4">
-              <a
-                href="#demo"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
-              >
-                {t("nav.demo")}
-              </a>
-              <span className="text-slate-900 text-xs font-semibold">|</span>
               <a
                 href="#pricing"
                 className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
@@ -2760,59 +2754,7 @@ export function LoginPage() {
       </div>
       </main>
 
-      {/* Footer Semplificato */}
-      <footer className="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          {/* Main Footer Content - 2 colonne */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-10">
-            {/* Brand Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="text-xl font-bold text-white">eChatbot</span>
-              </div>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-md">
-                Professional WhatsApp AI Chatbot Platform for E-commerce Success.
-              </p>
-            </div>
-
-            {/* Links */}
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Quick Links</h3>
-                <ul className="space-y-3">
-                  <li><a href="#features" className="text-sm hover:text-green-400 transition-colors">Features</a></li>
-                  <li><a href="#pricing" className="text-sm hover:text-green-400 transition-colors">Pricing</a></li>
-                  <li>
-                    <a 
-                      href="#contact" 
-                      onClick={scrollToContactForm}
-                      className="text-sm hover:text-green-400 transition-colors cursor-pointer"
-                    >
-                      Contact
-                    </a>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-4">Legal</h3>
-                <ul className="space-y-3">
-                  <li><button onClick={() => navigate("/privacy")} className="text-sm hover:text-green-400 transition-colors bg-none border-none cursor-pointer p-0">Privacy Policy</button></li>
-                  <li><button onClick={() => navigate("/terms")} className="text-sm hover:text-green-400 transition-colors bg-none border-none cursor-pointer p-0">Terms of Service</button></li>
-                  <li><button onClick={() => navigate("/refund")} className="text-sm hover:text-green-400 transition-colors bg-none border-none cursor-pointer p-0">Refund Policy</button></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div className="pt-6 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-slate-500">
-              © 2025 eChatbot. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter language={language} />
 
       {/* ⏸️ WhatsApp Floating Button - DISABLED (will reactivate later) */}
       {/* 

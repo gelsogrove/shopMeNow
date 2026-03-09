@@ -197,20 +197,28 @@ export function HumanSupportPage() {
   return (
     <div className="min-h-screen bg-white">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/human-support" lang={language} />
-      <SiteHeader language={language} />
+      <SiteHeader language={language} onLanguageChange={setLanguage} />
 
       <main>
         {/* Hero */}
         <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-amber-50 via-white to-orange-50">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <Breadcrumbs items={[{ label: t.breadcrumb }]} />
+            <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
-              <div>
+              {/* Hero image placeholder */}
+              <div className="order-2 lg:order-1 aspect-square bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border-2 border-dashed border-amber-200 flex items-center justify-center shadow-xl">
+                <div className="text-center p-8">
+                  <Users className="h-24 w-24 text-amber-300 mx-auto mb-4" />
+                  <p className="text-sm text-slate-500 font-medium">Human Support Dashboard</p>
+                  <p className="text-xs text-slate-400 mt-1">1000x1000px PNG</p>
+                </div>
+              </div>
+              <div className="order-1 lg:order-2">
                 <span className="inline-block bg-amber-100 text-amber-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                   {t.badge}
                 </span>
@@ -225,14 +233,6 @@ export function HumanSupportPage() {
                   <Zap className="h-5 w-5" />
                   {t.cta}
                 </Link>
-              </div>
-              {/* Hero image placeholder */}
-              <div className="aspect-square bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border-2 border-dashed border-amber-200 flex items-center justify-center shadow-xl">
-                <div className="text-center p-8">
-                  <Users className="h-24 w-24 text-amber-300 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500 font-medium">Human Support Dashboard</p>
-                  <p className="text-xs text-slate-400 mt-1">1000x1000px PNG</p>
-                </div>
               </div>
             </motion.div>
           </div>

@@ -169,13 +169,13 @@ export function WidgetToWhatsAppPage() {
   return (
     <div className="min-h-screen bg-white">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/widget-to-whatsapp" lang={language} />
-      <SiteHeader language={language} />
+      <SiteHeader language={language} onLanguageChange={setLanguage} />
 
       <main>
         {/* Hero */}
         <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-teal-50 via-white to-green-50 overflow-hidden">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <Breadcrumbs items={[{ label: t.breadcrumb }]} />
+            <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
 
             <motion.div
               initial={{ opacity: 0, y: 30 }}
