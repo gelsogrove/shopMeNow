@@ -25,13 +25,13 @@ export const callingFunctionsApi = {
         return response.data
     },
 
-    update: async (workspaceId: string, functionId: string, data: Partial<CallingFunction>): Promise<CallingFunction> => {
-        const response = await api.put(`/workspaces/${workspaceId}/functions/${functionId}`, data)
+    update: async (workspaceId: string, functionName: string, data: Partial<CallingFunction>): Promise<CallingFunction> => {
+        const response = await api.patch(`/workspaces/${workspaceId}/functions/${functionName}`, data)
         return response.data
     },
 
-    delete: async (workspaceId: string, functionId: string): Promise<void> => {
-        await api.delete(`/workspaces/${workspaceId}/functions/${functionId}`)
+    delete: async (workspaceId: string, functionName: string): Promise<void> => {
+        await api.delete(`/workspaces/${workspaceId}/functions/${functionName}`)
     },
 
     testWebhook: async (workspaceId: string, data: { url: string; timeout?: number; secret?: string }): Promise<any> => {

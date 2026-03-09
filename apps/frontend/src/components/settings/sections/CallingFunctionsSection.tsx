@@ -143,7 +143,7 @@ export function CallingFunctionsSection({
             const payload = { ...editingFunction, parameters: parsedParams }
 
             if (editingFunction.id) {
-                await callingFunctionsApi.update(workspaceId, editingFunction.id, payload)
+                await callingFunctionsApi.update(workspaceId, editingFunction.functionName!, payload)
                 toast.success("Tool updated successfully")
             } else {
                 await callingFunctionsApi.create(workspaceId, payload)
@@ -159,11 +159,11 @@ export function CallingFunctionsSection({
         }
     }
 
-    const handleDeleteFunction = async (id: string) => {
+    const handleDeleteFunction = async (functionName: string) => {
         if (!window.confirm("Are you sure you want to delete this tool?")) return
 
         try {
-            await callingFunctionsApi.delete(workspaceId, id)
+            await callingFunctionsApi.delete(workspaceId, functionName)
             toast.success("Tool deleted")
             loadFunctions()
         } catch (error) {
@@ -173,7 +173,7 @@ export function CallingFunctionsSection({
 
     const toggleFunctionStatus = async (fn: CallingFunction) => {
         try {
-            await callingFunctionsApi.update(workspaceId, fn.id, { isActive: !fn.isActive })
+            await callingFunctionsApi.update(workspaceId, fn.functionName, { isActive: !fn.isActive })
             setFunctions(prev => prev.map(f => f.id === fn.id ? { ...f, isActive: !f.isActive } : f))
         } catch (error) {
             toast.error("Failed to toggle status")
@@ -312,7 +312,7 @@ export function CallingFunctionsSection({
                                                 <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
                                                     <Edit2 className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.functionName)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
                                             </>
