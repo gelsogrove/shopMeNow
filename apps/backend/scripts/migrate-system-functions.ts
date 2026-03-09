@@ -9,9 +9,7 @@
  *   npx ts-node scripts/migrate-system-functions.ts
  */
 
-import { PrismaClient } from "@echatbot/database"
-
-const prisma = new PrismaClient()
+import { prisma, disconnectDatabase } from "@echatbot/database"
 
 function buildSystemFunctions(workspaceId: string, isEcommerce: boolean) {
   const functions: any[] = []
