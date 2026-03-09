@@ -636,8 +636,8 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       type: "radio",
       image: "/survey-support.png",
       options: [
-        { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "🤝" },
-        { value: "full_auto", label: T.humanSupport_opt2, emoji: "🤖" },
+        { value: "yes_handoff", label: T.humanSupport_opt1, emoji: "✅" },
+        { value: "full_auto", label: T.humanSupport_opt2, emoji: "❌" },
       ],
     },
     // ── 5. Team di Vendita ──────────────────────────────────────────────
@@ -666,8 +666,8 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       type: "radio",
       image: "/survey-ecommerce.png",
       options: [
-        { value: "yes", label: T.ecommerce_opt1, emoji: "🛒" },
-        { value: "no", label: T.ecommerce_opt2, emoji: "🏪" },
+        { value: "yes", label: T.ecommerce_opt1, emoji: "✅" },
+        { value: "no", label: T.ecommerce_opt2, emoji: "❌" },
         { value: "planning", label: T.ecommerce_opt3, emoji: "🚀" },
       ],
     },
@@ -740,7 +740,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       image: "/survery-secuiry.png",
       options: [
         { value: "ok", label: T.privacy_opt1, emoji: "✅" },
-        { value: "concerns", label: T.privacy_opt2, emoji: "🤔" },
+        { value: "concerns", label: T.privacy_opt2, emoji: "❌" },
       ],
     },
     // ── 11. On-Premise ──────────────────────────────────────────────────
@@ -752,7 +752,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       type: "radio",
       image: "/survery-crm.png",
       options: [
-        { value: "yes", label: T.onPremise_opt1, emoji: "🏢" },
+        { value: "yes", label: T.onPremise_opt1, emoji: "✅" },
         { value: "interested", label: T.onPremise_opt2, emoji: "🔍" },
         { value: "cloud", label: T.onPremise_opt3, emoji: "☁️" },
       ],

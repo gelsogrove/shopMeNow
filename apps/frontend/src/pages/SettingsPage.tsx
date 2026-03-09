@@ -43,11 +43,10 @@ import { WhatsAppChannelSection } from "@/components/settings/sections/WhatsAppC
 import { WebsiteWidgetSection } from "@/components/settings/sections/WebsiteWidgetSection"
 import { SecuritySection } from "@/components/settings/sections/SecuritySection"
 import { WidgetSupportSection } from "@/components/settings/sections/WidgetSupportSection"
-import { SubscriptionSection } from "@/components/settings/sections/SubscriptionSection"
 import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
 
 // Types
-type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "subscription" | "functions"
+type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions"
 
 // Section definitions for dropdown
 const SECTIONS: SettingsSection[] = [
@@ -58,7 +57,6 @@ const SECTIONS: SettingsSection[] = [
   { key: "widget-support", label: "Human Support", description: "Escalation to human operators" },
   { key: "security", label: "Security", description: "Access control and domains" },
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
-  { key: "subscription", label: "Subscription", description: "Plan and payment settings" },
 ]
 
 // Default help content for each section
@@ -70,7 +68,6 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "widget-support": "humanSupportEnabled",
   "security": "allowedDomains",
   "functions": "webhookUrl",
-  "subscription": "subscription",
 }
 
 // Default messages
@@ -733,12 +730,6 @@ export function SettingsPage() {
             errors={errors}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
-          />
-        )
-      case "subscription":
-        return (
-          <SubscriptionSection
             onFieldFocus={handleFieldFocus}
           />
         )
