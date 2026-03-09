@@ -82,204 +82,162 @@ const translations = {
 export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
+  const [isLangOpen, setIsLangOpen] = useState(false)
   const resourcesRef = useRef<HTMLDivElement>(null)
+  const langRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const t = translations[language]
 
   const isActive = (path: string) => location.pathname === path
+  const currentLang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[1]
 
-  // Close Resources dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (resourcesRef.current && !resourcesRef.current.contains(e.target as Node)) {
         setIsResourcesOpen(false)
+      }
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setIsLangOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <img src="/logo.png" alt="eChatbot Logo" className="w-[44px] h-[44px] object-contain" />
-            <span className="text-xl font-bold text-green-600">eChatbot</span>
+    <header className="bg-white shadow-sm sticky top-0 z-50 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 lg:px-12">
+
+        {/* Main Header Row — same height/style as homepage */}
+        <div className="flex items-center justify-between py-1 md:py-1.5 max-h-[70px]">
+
+          {/* Left: Logo + Brand (identical to homepage) */}
+          <Link to="/" className="flex items-center justify-start gap-1 hover:opacity-80 transition-opacity">
+            <img
+              src="/logo.png"
+              alt="eChatbot Logo"
+              className="hidden md:block w-[110px] h-[110px] mt-[-10px]"
+            />
+            <span className="py-2 md:py-[15px] px-2 md:px-0 relative md:left-[-25px] md:top-[-7px] text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">
+              eChatbot
+            </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
+          {/* Center: Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
             <Link
               to="/"
-              className={`font-medium transition-colors hover:text-green-600 ${
-                isActive("/") ? "text-green-600" : "text-slate-700"
-              }`}
+              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/") ? "text-green-600" : "text-slate-700"}`}
             >
               {t.home}
             </Link>
-
             <Link
               to="/features"
-              className={`font-medium transition-colors hover:text-green-600 ${
-                isActive("/features") ? "text-green-600" : "text-slate-700"
-              }`}
+              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/features") ? "text-green-600" : "text-slate-700"}`}
             >
               {t.features}
             </Link>
-
             <Link
               to="/pricing"
-              className={`font-medium transition-colors hover:text-green-600 ${
-                isActive("/pricing") ? "text-green-600" : "text-slate-700"
-              }`}
+              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/pricing") ? "text-green-600" : "text-slate-700"}`}
             >
               {t.pricing}
             </Link>
 
-            {/* Resources Dropdown - click based */}
+            {/* Resources Dropdown */}
             <div className="relative" ref={resourcesRef}>
               <button
                 onClick={() => setIsResourcesOpen(!isResourcesOpen)}
-                className="flex items-center gap-1 font-medium text-slate-700 hover:text-green-600 transition-colors"
+                className="flex items-center gap-1 font-medium text-sm xl:text-base text-slate-700 hover:text-green-600 transition-colors"
               >
                 {t.resources}
                 <ChevronDown className={`h-4 w-4 transition-transform ${isResourcesOpen ? "rotate-180" : ""}`} />
               </button>
-
               {isResourcesOpen && (
                 <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
-                  <Link
-                    to="/widget-to-whatsapp"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                    onClick={() => setIsResourcesOpen(false)}
-                  >
-                    {t.widgetToWhatsApp}
-                  </Link>
-                  <Link
-                    to="/human-support"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                    onClick={() => setIsResourcesOpen(false)}
-                  >
-                    {t.humanSupport}
-                  </Link>
-                  <Link
-                    to="/crm-integration"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                    onClick={() => setIsResourcesOpen(false)}
-                  >
-                    {t.crmIntegration}
-                  </Link>
-                  <Link
-                    to="/team-collaboration"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                    onClick={() => setIsResourcesOpen(false)}
-                  >
-                    {t.teamCollaboration}
-                  </Link>
-                  <Link
-                    to="/privacy-by-design"
-                    className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors"
-                    onClick={() => setIsResourcesOpen(false)}
-                  >
-                    {t.privacyDesign}
-                  </Link>
+                  <Link to="/widget-to-whatsapp" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.widgetToWhatsApp}</Link>
+                  <Link to="/human-support" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.humanSupport}</Link>
+                  <Link to="/crm-integration" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.crmIntegration}</Link>
+                  <Link to="/team-collaboration" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.teamCollaboration}</Link>
+                  <Link to="/privacy-by-design" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.privacyDesign}</Link>
                 </div>
               )}
             </div>
 
             <Link
               to="/contact"
-              className={`font-medium transition-colors hover:text-green-600 ${
-                isActive("/contact") ? "text-green-600" : "text-slate-700"
-              }`}
+              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/contact") ? "text-green-600" : "text-slate-700"}`}
             >
               {t.contact}
             </Link>
           </nav>
 
-          {/* Right: Language + CTA */}
-          <div className="hidden lg:flex items-center gap-3">
-            {/* Language Switcher - inline flags (same style as survey) */}
-            <div className="flex items-center gap-1">
-              {LANGUAGES.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => onLanguageChange?.(lang.code)}
-                  title={lang.name}
-                  className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
-                    language === lang.code
-                      ? "bg-green-500 shadow-md scale-110 ring-2 ring-green-300"
-                      : "bg-gray-100 hover:bg-gray-200"
-                  }`}
-                >
-                  <span className="text-base">{lang.flag}</span>
-                </button>
-              ))}
+          {/* Right: Language dropdown (same style as homepage) + CTA */}
+          <div className="flex items-center justify-end gap-2 md:gap-4">
+
+            {/* Language Dropdown — flag + code + chevron, identical to homepage */}
+            <div className="relative" ref={langRef}>
+              <button
+                onClick={() => setIsLangOpen(!isLangOpen)}
+                className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors"
+              >
+                <span className="text-xl">{currentLang.flag}</span>
+                <span className="text-sm font-medium text-slate-700">{currentLang.code.toUpperCase()}</span>
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              </button>
+
+              {isLangOpen && (
+                <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50">
+                  <p className="text-xs text-slate-500 uppercase tracking-wider px-3 py-2 font-semibold">{t.language}</p>
+                  <div className="border-t border-slate-100 mb-1" />
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => { onLanguageChange?.(lang.code); setIsLangOpen(false) }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-green-50 hover:text-green-600 transition-colors ${language === lang.code ? "text-green-600 font-semibold" : "text-slate-700"}`}
+                    >
+                      <span className="text-xl">{lang.flag}</span>
+                      <span>{lang.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <Link
-              to="/"
-              className="text-slate-700 hover:text-green-600 font-medium transition-colors"
-            >
-              {t.signIn}
-            </Link>
-            <Link
-              to="/auth/signup"
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              {t.getStarted}
-            </Link>
-          </div>
+            {/* Sign In + Get Started */}
+            <div className="hidden lg:flex items-center gap-3">
+              <Link to="/" className="text-slate-700 hover:text-green-600 font-medium text-sm transition-colors">
+                {t.signIn}
+              </Link>
+              <Link
+                to="/auth/signup"
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
+              >
+                {t.getStarted}
+              </Link>
+            </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 text-slate-700 hover:text-green-600 transition-colors"
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="lg:hidden p-2 text-slate-700 hover:text-green-600 transition-colors"
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="lg:hidden py-4 border-t border-slate-200">
             <nav className="flex flex-col gap-4">
-              <Link
-                to="/"
-                className="font-medium text-slate-700 hover:text-green-600 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {t.home}
-              </Link>
-              <Link
-                to="/features"
-                className="font-medium text-slate-700 hover:text-green-600 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {t.features}
-              </Link>
-              <Link
-                to="/pricing"
-                className="font-medium text-slate-700 hover:text-green-600 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {t.pricing}
-              </Link>
-              <Link
-                to="/contact"
-                className="font-medium text-slate-700 hover:text-green-600 transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {t.contact}
-              </Link>
+              <Link to="/" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.home}</Link>
+              <Link to="/features" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.features}</Link>
+              <Link to="/pricing" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.pricing}</Link>
+              <Link to="/contact" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.contact}</Link>
 
               <div className="border-t border-slate-200 pt-4 mt-2">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-                  {t.resources}
-                </p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.resources}</p>
                 <div className="flex flex-col gap-3 ml-4">
                   <Link to="/widget-to-whatsapp" className="text-sm text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.widgetToWhatsApp}</Link>
                   <Link to="/human-support" className="text-sm text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.humanSupport}</Link>
@@ -292,22 +250,19 @@ export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProp
               {/* Mobile Language Switcher */}
               <div className="border-t border-slate-200 pt-4 mt-2">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.language}</p>
-                <div className="flex gap-2 flex-wrap ml-4">
+                <div className="flex flex-col gap-1 ml-4">
                   {LANGUAGES.map((lang) => (
                     <button
                       key={lang.code}
-                      onClick={() => {
-                        onLanguageChange?.(lang.code)
-                        setIsMenuOpen(false)
-                      }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                      onClick={() => { onLanguageChange?.(lang.code); setIsMenuOpen(false) }}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                         language === lang.code
-                          ? "border-green-500 bg-green-50 text-green-700"
-                          : "border-slate-200 text-slate-600 hover:border-green-400"
+                          ? "bg-green-50 text-green-700 font-semibold"
+                          : "text-slate-700 hover:bg-slate-50"
                       }`}
                     >
-                      <span>{lang.flag}</span>
-                      <span>{lang.code.toUpperCase()}</span>
+                      <span className="text-xl">{lang.flag}</span>
+                      <span>{lang.name}</span>
                     </button>
                   ))}
                 </div>

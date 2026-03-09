@@ -2193,8 +2193,20 @@ export function LoginPage() {
             <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
 
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
-                <div className="space-y-6 text-center lg:text-left">
+              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
+                <div className="flex flex-col items-center lg:items-start gap-4 order-1">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-amber-100 transition-all duration-300">
+                      <img
+                        src="/human.png"
+                        alt="Human-in-the-loop support"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6 text-center lg:text-left order-2">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
                       <span>🤝</span>
@@ -2206,18 +2218,6 @@ export function LoginPage() {
                     <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("humanLoop.subtitle")}
                     </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-center lg:items-end gap-4">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-amber-100 transition-all duration-300">
-                      <img
-                        src="/human.png"
-                        alt="Human-in-the-loop support"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
                   </div>
                 </div>
               </div>

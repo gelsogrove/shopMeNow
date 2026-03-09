@@ -1,43 +1,60 @@
+import { useState, useRef, useEffect } from "react"
+import { ChevronDown } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 
-const flags = {
-  it: "🇮🇹",
-  en: "🇬🇧",
-  es: "🇪🇸",
-  pt: "🇵🇹",
-}
+type Language = "it" | "en" | "es" | "pt"
 
-const languageNames = {
-  it: "Italiano",
-  en: "English",
-  es: "Español",
-  pt: "Português",
-}
+const LANGUAGES = [
+  { code: "it" as Language, name: "Italiano", flag: "🇮🇹" },
+  { code: "en" as Language, name: "English", flag: "🇬🇧" },
+  { code: "es" as Language, name: "Español", flag: "🇪🇸" },
+  { code: "pt" as Language, name: "Português", flag: "🇵🇹" },
+]
 
 export function LanguageSelector() {
   const { language, setLanguage } = useLanguage()
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
-  const handleLanguageChange = (lang: "it" | "en" | "es" | "pt") => {
-    // setLanguage now handles localStorage save AND page reload
-    setLanguage(lang)
-  }
+  const current = LANGUAGES.find((l) => l.code === language) || LANGUAGES[1]
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   return (
-    <div className="flex items-center gap-1">
-      {Object.entries(flags).map(([lang, flag]) => (
-        <button
-          key={lang}
-          onClick={() => handleLanguageChange(lang as "it" | "en" | "es" | "pt")}
-          className={`flex items-center justify-center w-8 h-8 rounded-md transition-all ${
-            language === lang
-              ? "bg-green-500 shadow-md scale-110 ring-2 ring-green-300"
-              : "bg-gray-100 hover:bg-gray-200"
-          }`}
-          title={languageNames[lang as keyof typeof languageNames]}
-        >
-          <span className="text-base">{flag}</span>
-        </button>
-      ))}
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors"
+      >
+        <span className="text-xl">{current.flag}</span>
+        <span className="text-sm font-medium text-slate-700">{current.code.toUpperCase()}</span>
+        <ChevronDown className="h-4 w-4 text-slate-500" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50">
+          {LANGUAGES.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => { setLanguage(lang.code); setIsOpen(false) }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-green-50 hover:text-green-600 transition-colors ${
+                language === lang.code ? "text-green-600 font-semibold" : "text-slate-700"
+              }`}
+            >
+              <span className="text-xl">{lang.flag}</span>
+              <span>{lang.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
