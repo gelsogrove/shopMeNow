@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Users, Zap, CheckCircle, UserCheck, BarChart2, MessageSquare } from "lucide-react"
+import { Zap, CheckCircle, UserCheck, MessageSquare } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -201,12 +201,13 @@ export function TeamCollaborationPage() {
                   {t.cta}
                 </Link>
               </div>
-              <div className="aspect-square bg-gradient-to-br from-purple-50 to-violet-50 rounded-3xl border-2 border-dashed border-purple-200 flex items-center justify-center shadow-xl">
-                <div className="text-center p-8">
-                  <Users className="h-24 w-24 text-purple-300 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500 font-medium">Team Dashboard Screenshot</p>
-                  <p className="text-xs text-slate-400 mt-1">1000x1000px PNG</p>
-                </div>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-violet-100 rounded-3xl rotate-1 scale-105 opacity-60" />
+                <img
+                  src="/survey-support.png"
+                  alt="Team support dashboard"
+                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain"
+                />
               </div>
             </motion.div>
           </div>
@@ -306,12 +307,13 @@ export function TeamCollaborationPage() {
                   ))}
                 </ul>
               </div>
-              <div className="aspect-video bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl border-2 border-dashed border-purple-200 flex items-center justify-center shadow-xl">
-                <div className="text-center p-8">
-                  <BarChart2 className="h-16 w-16 text-purple-300 mx-auto mb-3" />
-                  <p className="text-sm text-slate-500 font-medium">Manager Dashboard Screenshot</p>
-                  <p className="text-xs text-slate-400 mt-1">1200x675px PNG</p>
-                </div>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-violet-100 rounded-2xl rotate-1 scale-105 opacity-60" />
+                <img
+                  src="/survey-agent.png"
+                  alt="Manager dashboard real-time view"
+                  className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/60 object-contain"
+                />
               </div>
             </div>
           </div>
