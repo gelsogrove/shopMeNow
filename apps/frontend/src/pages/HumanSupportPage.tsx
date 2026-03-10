@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { ArrowRight, Zap, CheckCircle, Clock, Star } from "lucide-react"
@@ -189,19 +190,17 @@ const T = {
 }
 
 export function HumanSupportPage() {
-  const [language, setLanguage] = useState<Language>("it")
+  const { language } = useLanguage()
   const t = T[language]
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    const browserLang = navigator.language.slice(0, 2)
-    if (["it", "en", "es", "pt"].includes(browserLang)) setLanguage(browserLang as Language)
   }, [])
 
   return (
     <div className="min-h-screen bg-white">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/human-support" lang={language} />
-      <SiteHeader language={language} onLanguageChange={setLanguage} />
+      <SiteHeader />
 
       <main>
         {/* Hero */}

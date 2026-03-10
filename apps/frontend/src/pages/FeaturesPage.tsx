@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { 
@@ -187,13 +188,11 @@ const translations = {
 }
 
 export function FeaturesPage() {
-  const [language, setLanguage] = useState<Language>("it")
+  const { language } = useLanguage()
   const t = translations[language]
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    const browserLang = navigator.language.slice(0, 2)
-    if (["it", "en", "es", "pt"].includes(browserLang)) setLanguage(browserLang as Language)
   }, [])
 
   const iconMap = {
@@ -215,7 +214,7 @@ export function FeaturesPage() {
         lang={language}
       />
 
-      <SiteHeader language={language} onLanguageChange={setLanguage} />
+      <SiteHeader />
 
       <main>
         {/* Hero Section */}

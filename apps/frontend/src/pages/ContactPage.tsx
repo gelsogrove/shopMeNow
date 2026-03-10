@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { motion } from "framer-motion"
 import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
@@ -148,7 +149,7 @@ const T = {
 const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ""
 
 export function ContactPage() {
-  const [language, setLanguage] = useState<Language>("it")
+  const { language } = useLanguage()
   const t = T[language]
 
   const [name, setName] = useState("")
@@ -165,8 +166,6 @@ export function ContactPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    const browserLang = navigator.language.slice(0, 2)
-    if (["it", "en", "es", "pt"].includes(browserLang)) setLanguage(browserLang as Language)
 
     // reCAPTCHA callback
     ;(window as any).onRecaptchaSuccess = (token: string) => {
@@ -213,7 +212,7 @@ export function ContactPage() {
   return (
     <div className="min-h-screen bg-white">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/contact" lang={language} />
-      <SiteHeader language={language} onLanguageChange={setLanguage} />
+      <SiteHeader />
 
       <main>
         {/* Hero */}

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Zap, CheckCircle, ArrowRight } from "lucide-react"
@@ -39,14 +40,14 @@ const T = {
       { icon: "📊", title: "Analytics unificati", desc: "Un'unica dashboard con dati da chatbot, CRM ed e-commerce. Vedi il ROI reale di ogni conversazione." },
     ],
     apiTitle: "API Aperta per Integrazioni Custom",
-    apiDesc: "La nostra REST API documentata ti permette di connettere qualsiasi sistema interno, anche proprietario. Supporto a webhook, event streaming e batch sync per massima flessibilità.",
+    apiDesc: "La nostra REST API documentata ti permette di connettere qualsiasi sistema interno, anche proprietario. Supporto webhook WhatsApp e documentazione Swagger/OpenAPI completa per un'integrazione semplice e veloce.",
     apiFeatures: [
-      "REST API con autenticazione OAuth 2.0",
-      "Webhook per eventi in tempo reale",
-      "SDK disponibili per Node.js, Python, PHP",
-      "Documentazione Swagger completa",
-      "Ambiente sandbox per test",
-      "SLA 99.9% uptime garantito",
+      "REST API con autenticazione JWT Bearer token",
+      "Integrazione webhook WhatsApp in tempo reale",
+      "API multi-tenant con isolamento workspace",
+      "Documentazione Swagger/OpenAPI completa",
+      "Compatibile con qualsiasi sistema REST esterno",
+      "Accesso sicuro via API key per workspace",
     ],
   },
   en: {
@@ -78,14 +79,14 @@ const T = {
       { icon: "📊", title: "Unified analytics", desc: "A single dashboard with data from chatbot, CRM and e-commerce. See the real ROI of each conversation." },
     ],
     apiTitle: "Open API for Custom Integrations",
-    apiDesc: "Our documented REST API lets you connect any internal system, even proprietary ones. Support for webhooks, event streaming and batch sync for maximum flexibility.",
+    apiDesc: "Our documented REST API lets you connect any internal or proprietary system. Full WhatsApp webhook support and complete Swagger/OpenAPI documentation for simple, fast integration.",
     apiFeatures: [
-      "REST API with OAuth 2.0 authentication",
-      "Webhooks for real-time events",
-      "SDKs available for Node.js, Python, PHP",
-      "Complete Swagger documentation",
-      "Sandbox environment for testing",
-      "99.9% uptime SLA guaranteed",
+      "REST API with JWT Bearer token authentication",
+      "Real-time WhatsApp webhook integration",
+      "Multi-tenant API with workspace isolation",
+      "Complete Swagger/OpenAPI documentation",
+      "Compatible with any REST-compliant external system",
+      "Secure API key access per workspace",
     ],
   },
   es: {
@@ -117,14 +118,14 @@ const T = {
       { icon: "📊", title: "Analíticas unificadas", desc: "Un único panel con datos de chatbot, CRM y e-commerce. Ve el ROI real de cada conversación." },
     ],
     apiTitle: "API Abierta para Integraciones Custom",
-    apiDesc: "Nuestra REST API documentada te permite conectar cualquier sistema interno, incluso propietario. Soporte para webhooks, event streaming y batch sync para máxima flexibilidad.",
+    apiDesc: "Nuestra REST API documentada te permite conectar cualquier sistema interno, incluso propietario. Soporte completo de webhooks WhatsApp y documentación Swagger/OpenAPI para una integración sencilla y rápida.",
     apiFeatures: [
-      "REST API con autenticación OAuth 2.0",
-      "Webhooks para eventos en tiempo real",
-      "SDKs disponibles para Node.js, Python, PHP",
-      "Documentación Swagger completa",
-      "Entorno sandbox para pruebas",
-      "SLA 99.9% uptime garantizado",
+      "REST API con autenticación JWT Bearer token",
+      "Integración webhook WhatsApp en tiempo real",
+      "API multi-tenant con aislamiento de workspace",
+      "Documentación Swagger/OpenAPI completa",
+      "Compatible con cualquier sistema REST externo",
+      "Acceso seguro via API key por workspace",
     ],
   },
   pt: {
@@ -156,32 +157,30 @@ const T = {
       { icon: "📊", title: "Analytics unificados", desc: "Um único dashboard com dados de chatbot, CRM e e-commerce. Veja o ROI real de cada conversa." },
     ],
     apiTitle: "API Aberta para Integrações Personalizadas",
-    apiDesc: "Nossa REST API documentada permite conectar qualquer sistema interno, até proprietários. Suporte a webhooks, event streaming e batch sync para máxima flexibilidade.",
+    apiDesc: "Nossa REST API documentada permite conectar qualquer sistema interno ou proprietário. Suporte completo a webhooks WhatsApp e documentação Swagger/OpenAPI para integração simples e rápida.",
     apiFeatures: [
-      "REST API com autenticação OAuth 2.0",
-      "Webhooks para eventos em tempo real",
-      "SDKs disponíveis para Node.js, Python, PHP",
-      "Documentação Swagger completa",
-      "Ambiente sandbox para testes",
-      "SLA 99.9% uptime garantido",
+      "REST API com autenticação JWT Bearer token",
+      "Integração webhook WhatsApp em tempo real",
+      "API multi-tenant com isolamento de workspace",
+      "Documentação Swagger/OpenAPI completa",
+      "Compatível com qualquer sistema REST externo",
+      "Acesso seguro via API key por workspace",
     ],
   },
 }
 
 export function CrmIntegrationPage() {
-  const [language, setLanguage] = useState<Language>("it")
+  const { language } = useLanguage()
   const t = T[language]
 
   useEffect(() => {
     window.scrollTo(0, 0)
-    const browserLang = navigator.language.slice(0, 2)
-    if (["it", "en", "es", "pt"].includes(browserLang)) setLanguage(browserLang as Language)
   }, [])
 
   return (
     <div className="min-h-screen bg-white">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/crm-integration" lang={language} />
-      <SiteHeader language={language} onLanguageChange={setLanguage} />
+      <SiteHeader />
 
       <main>
         {/* Hero */}

@@ -2516,7 +2516,9 @@ export function LoginPage() {
                       {t("common.viewMore")}
                     </Link>
                   </div>
-                </div>}
+                </div>
+
+                {/* Right: Image */}
                 <div className="flex flex-col items-center lg:items-end">
                   <div className="relative">
                     <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300">

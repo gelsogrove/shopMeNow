@@ -1,20 +1,15 @@
 import { Link, useLocation } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
 import { Menu, X, ChevronDown } from "lucide-react"
+import { useLanguage, SUPPORTED_LANGUAGES } from "@/contexts/LanguageContext"
 
 type Language = "it" | "en" | "es" | "pt"
 
+// Props kept for backward compatibility — language is driven by global context
 interface SiteHeaderProps {
   language?: Language
   onLanguageChange?: (lang: Language) => void
 }
-
-const LANGUAGES = [
-  { code: "it" as Language, name: "Italiano", flag: "🇮🇹" },
-  { code: "en" as Language, name: "English", flag: "🇬🇧" },
-  { code: "es" as Language, name: "Español", flag: "🇪🇸" },
-  { code: "pt" as Language, name: "Português", flag: "🇵🇹" },
-]
 
 const translations = {
   it: {
@@ -79,7 +74,9 @@ const translations = {
   },
 }
 
-export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function SiteHeader({ language: _language, onLanguageChange: _onLanguageChange }: SiteHeaderProps) {
+  const { language, setLanguage } = useLanguage()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
   const [isLangOpen, setIsLangOpen] = useState(false)
@@ -89,7 +86,7 @@ export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProp
   const t = translations[language]
 
   const isActive = (path: string) => location.pathname === path
-  const currentLang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[1]
+  const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[1]
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -105,7 +102,7 @@ export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProp
   }, [])
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50">
+    <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 lg:px-12">
 
         {/* Main Header Row — same height/style as homepage */}
@@ -190,10 +187,10 @@ export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProp
                 <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50">
                   <p className="text-xs text-slate-500 uppercase tracking-wider px-3 py-2 font-semibold">{t.language}</p>
                   <div className="border-t border-slate-100 mb-1" />
-                  {LANGUAGES.map((lang) => (
+                  {SUPPORTED_LANGUAGES.map((lang) => (
                     <button
                       key={lang.code}
-                      onClick={() => { onLanguageChange?.(lang.code); setIsLangOpen(false) }}
+                      onClick={() => { setLanguage(lang.code); setIsLangOpen(false) }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-green-50 hover:text-green-600 transition-colors ${language === lang.code ? "text-green-600 font-semibold" : "text-slate-700"}`}
                     >
                       <span className="text-xl">{lang.flag}</span>
@@ -251,10 +248,10 @@ export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProp
               <div className="border-t border-slate-200 pt-4 mt-2">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.language}</p>
                 <div className="flex flex-col gap-1 ml-4">
-                  {LANGUAGES.map((lang) => (
+                  {SUPPORTED_LANGUAGES.map((lang) => (
                     <button
                       key={lang.code}
-                      onClick={() => { onLanguageChange?.(lang.code); setIsMenuOpen(false) }}
+                      onClick={() => { setLanguage(lang.code); setIsMenuOpen(false) }}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                         language === lang.code
                           ? "bg-green-50 text-green-700 font-semibold"
