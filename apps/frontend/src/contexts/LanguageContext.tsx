@@ -170,6 +170,7 @@ const translations = {
     "privacy.sectionTitle": "Privacy by design",
     "privacy.subtitle": "Nessun dato sensibile viene inviato a terze parti o modelli AI. L'accesso è protetto con token con ambito limitato, crittografato in transito e limitato ai dati minimi richiesti per ogni interazione. I dati dei tuoi clienti restano sotto il tuo controllo.",
     "privacy.button": "Vai al GDPR",
+    "common.viewMore": "Scopri di più →",
     
     "pricing.features.channels": "Canali WhatsApp",
     "pricing.features.channel": "Canale WhatsApp",
@@ -786,6 +787,7 @@ const translations = {
     "privacy.sectionTitle": "Privacy by design",
     "privacy.subtitle": "No sensitive data is sent to third parties or AI models. Access is secured with scoped tokens, encrypted in transit, and limited to the minimum data required for each interaction. Your customer data stays under your control.",
     "privacy.button": "Go to GDPR",
+    "common.viewMore": "Learn more →",
     
     "pricing.features.channels": "WhatsApp Channels",
     "pricing.features.channel": "WhatsApp Channel",
@@ -1286,6 +1288,7 @@ const translations = {
     "privacy.sectionTitle": "Privacidad por diseño",
     "privacy.subtitle": "Ningún dato sensible se envía a terceros o modelos de IA. El acceso está protegido con tokens de alcance limitado, cifrado en tránsito y limitado a los datos mínimos requeridos para cada interacción. Los datos de tus clientes permanecen bajo tu control.",
     "privacy.button": "Ir al GDPR",
+    "common.viewMore": "Ver más →",
     
     "pricing.features.channels": "Canales WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
@@ -1748,6 +1751,7 @@ const translations = {
     "privacy.sectionTitle": "Privacidade por design",
     "privacy.subtitle": "Nenhum dado sensível é enviado para terceiros ou modelos de IA. O acesso é protegido com tokens de escopo limitado, criptografado em trânsito e limitado aos dados mínimos necessários para cada interação. Os dados dos seus clientes permanecem sob seu controle.",
     "privacy.button": "Ir para GDPR",
+    "common.viewMore": "Ver mais →",
     
     "pricing.features.channels": "Canais WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",

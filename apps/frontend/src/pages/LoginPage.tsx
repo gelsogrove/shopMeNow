@@ -1931,6 +1931,14 @@ export function LoginPage() {
                       {t("pushAi.subtitle")}
                     </p>
                   </div>
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <Link
+                      to="/push-notifications"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline transition-colors"
+                    >
+                      {t("common.viewMore")}
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1981,9 +1989,21 @@ export function LoginPage() {
                     {/* Decorative background */}
                     <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-300 rounded-3xl rotate-3 opacity-30" />
                     <div className="relative bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
-                      <div className="text-center mb-6">
-                        <span className="text-6xl">🤖</span>
-                        <p className="text-lg font-semibold text-green-700 mt-2">eChatbot Quiz</p>
+                      <div className="text-center mb-6 space-y-3">
+                        <img
+                          src="/survey.png"
+                          alt="Survey illustration"
+                          className="mx-auto h-20 w-20 drop-shadow-md"
+                        />
+                        <p className="text-lg font-semibold text-green-700">
+                          {qLang === "it"
+                            ? "Questionario eChatbot"
+                            : qLang === "es"
+                            ? "Cuestionario eChatbot"
+                            : qLang === "pt"
+                            ? "Questionário eChatbot"
+                            : "eChatbot Questionnaire"}
+                        </p>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         {[
@@ -2132,24 +2152,8 @@ export function LoginPage() {
                 </div>
               )}
               
-              <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
-                {/* Left: Image with badge */}
-                <div className="flex flex-col items-center lg:items-start gap-4">
-                  <div className="relative">
-                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl">
-                      <img
-                        src="/demo.png"
-                        alt="Demo Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
-                      Live
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Right: Content */}
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-10 items-start">
+                {/* Left: Content */}
                 <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
@@ -2190,6 +2194,22 @@ export function LoginPage() {
                         <span>{t("demo.button")}</span>
                       </span>
                     </Button>
+                  </div>
+                </div>
+                
+                {/* Right: Image with badge */}
+                <div className="flex flex-col items-center lg:items-end gap-4">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl">
+                      <img
+                        src="/demo.png"
+                        alt="Demo Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
+                      Live
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2236,6 +2256,14 @@ export function LoginPage() {
                     <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("humanLoop.subtitle")}
                     </p>
+                  </div>
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <Link
+                      to="/human-support"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-900 hover:underline transition-colors"
+                    >
+                      {t("common.viewMore")}
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -2288,6 +2316,14 @@ export function LoginPage() {
                         {t(`widgetToWhatsapp.${chip}`)}
                       </span>
                     ))}
+                  </div>
+                  <div className="pt-2 flex justify-center lg:justify-start">
+                    <Link
+                      to="/widget-to-whatsapp"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-900 hover:underline transition-colors"
+                    >
+                      {t("common.viewMore")}
+                    </Link>
                   </div>
                 </div>
 
@@ -2417,7 +2453,7 @@ export function LoginPage() {
                     </p>
                   </div>
                   
-                  <div className="pt-4 flex justify-center lg:justify-start">
+                  <div className="pt-4 flex flex-wrap items-center gap-4 justify-center lg:justify-start">
                     <Button
                       type="button"
                       className="w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
@@ -2429,6 +2465,12 @@ export function LoginPage() {
                         <span>{t("integration.crm.button")}</span>
                       </span>
                     </Button>
+                    <Link
+                      to="/crm-integration"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline transition-colors"
+                    >
+                      {t("common.viewMore")}
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -2466,9 +2508,15 @@ export function LoginPage() {
                       {t("teamCollaboration.subtitle")}
                     </p>
                   </div>
-                </div>
-
-                {/* Right: Image with effects */}
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <Link
+                      to="/team-collaboration"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-purple-700 hover:text-purple-900 hover:underline transition-colors"
+                    >
+                      {t("common.viewMore")}
+                    </Link>
+                  </div>
+                </div>}
                 <div className="flex flex-col items-center lg:items-end">
                   <div className="relative">
                     <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300">
@@ -2530,14 +2578,12 @@ export function LoginPage() {
                   </div>
                   
                   <div className="pt-4 flex justify-center lg:justify-start">
-                    <Button
-                      type="button"
-                      className="w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                    <Link
+                      to="/privacy-by-design"
+                      className="inline-flex items-center gap-2 w-full sm:w-auto sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 justify-center"
                     >
-                      <span className="flex items-center gap-3">
-                        <span>{t("privacy.button")}</span>
-                      </span>
-                    </Button>
+                      <span>{t("common.viewMore")}</span>
+                    </Link>
                   </div>
                 </div>
               </div>
