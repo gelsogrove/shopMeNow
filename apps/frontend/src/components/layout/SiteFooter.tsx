@@ -98,8 +98,6 @@ const translations = {
 export function SiteFooter({ language = "en" }: SiteFooterProps) {
   const t = translations[language]
   const currentYear = new Date().getFullYear()
-  const madeIn = t.in.replace(/!/g, "")
-
   return (
     <footer className="bg-slate-900 text-slate-300">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
@@ -155,9 +153,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
         <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-slate-400">
             © {currentYear} eChatbot. {t.allRightsReserved}
-          </p>
-          <p className="text-sm text-slate-400 flex items-center gap-1">
-            {t.madeWith} <span className="text-red-500">❤️</span> {madeIn}
           </p>
         </div>
       </div>
