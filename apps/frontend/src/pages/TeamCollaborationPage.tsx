@@ -12,6 +12,8 @@ type Language = "it" | "en" | "es" | "pt"
 const T = {
   it: {
     seoTitle: "Team Collaboration - Gestione Multi-Agente per il Customer Service",
+    ctaTitle: "Pronto a potenziare il tuo team?",
+    ctaSub: "Inizia gratis, senza carta di credito.",
     seoDesc: "Coordina il tuo team di assistenza con eChatbot. Assegnazione conversazioni, ruoli e permessi, dashboard analytics, escalation ai supervisor, notifiche in tempo reale.",
     seoKeys: "team collaboration chatbot, multi agente whatsapp, gestione team customer service, assegnazione conversazioni, dashboard customer service",
     breadcrumb: "Team Collaboration",
@@ -46,6 +48,8 @@ const T = {
   },
   en: {
     seoTitle: "Team Collaboration - Multi-Agent Management for Customer Service",
+    ctaTitle: "Ready to empower your team?",
+    ctaSub: "Start free, no credit card required.",
     seoDesc: "Coordinate your customer support team with eChatbot. Conversation assignment, roles and permissions, analytics dashboard, escalation to supervisors, real-time notifications.",
     seoKeys: "team collaboration chatbot, multi agent whatsapp, customer service team management, conversation assignment, customer service dashboard",
     breadcrumb: "Team Collaboration",
@@ -80,6 +84,8 @@ const T = {
   },
   es: {
     seoTitle: "Team Collaboration - Gestión Multi-Agente para Atención al Cliente",
+    ctaTitle: "¿Listo para potenciar tu equipo?",
+    ctaSub: "Empieza gratis, sin tarjeta de crédito.",
     seoDesc: "Coordina tu equipo de soporte con eChatbot. Asignación de conversaciones, roles y permisos, panel analytics, escalación a supervisores, notificaciones en tiempo real.",
     seoKeys: "colaboración equipo chatbot, multi agente whatsapp, gestión equipo atención cliente, asignación conversaciones, panel customer service",
     breadcrumb: "Team Collaboration",
@@ -114,6 +120,8 @@ const T = {
   },
   pt: {
     seoTitle: "Team Collaboration - Gestão Multi-Agente para Atendimento ao Cliente",
+    ctaTitle: "Pronto para potencializar sua equipe?",
+    ctaSub: "Comece grátis, sem cartão de crédito.",
     seoDesc: "Coordene sua equipe de suporte com o eChatbot. Atribuição de conversas, funções e permissões, painel de analytics, escalação para supervisores, notificações em tempo real.",
     seoKeys: "colaboração equipe chatbot, multi agente whatsapp, gestão equipe atendimento cliente, atribuição conversas, painel customer service",
     breadcrumb: "Team Collaboration",
@@ -312,8 +320,8 @@ export function TeamCollaborationPage() {
         {/* CTA */}
         <section className="py-20 bg-gradient-to-br from-purple-600 to-violet-700">
           <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">Pronto a potenziare il tuo team?</h2>
-            <p className="text-xl text-purple-100 mb-8">Inizia gratis, senza carta di credito.</p>
+            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
+            <p className="text-xl text-purple-100 mb-8">{t.ctaSub}</p>
             <Link to="/" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-purple-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}

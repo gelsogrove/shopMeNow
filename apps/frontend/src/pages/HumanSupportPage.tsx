@@ -12,6 +12,7 @@ type Language = "it" | "en" | "es" | "pt"
 const T = {
   it: {
     seoTitle: "Supporto Umano Human-in-the-Loop - AI + Operatori in Sinergia",
+    ctaTitle: "Pronto ad aggiungere il tocco umano?",
     seoDesc: "eChatbot combina AI e operatori umani per offrire un supporto clienti eccezionale. Il chatbot gestisce il 90% delle richieste, gli operatori intervengono quando davvero necessario.",
     seoKeys: "human in the loop, supporto umano chatbot, chatbot operatore umano, handoff whatsapp, customer support ai, live chat whatsapp",
     breadcrumb: "Supporto Umano",
@@ -55,6 +56,7 @@ const T = {
   },
   en: {
     seoTitle: "Human Support Human-in-the-Loop - AI + Human Agents in Synergy",
+    ctaTitle: "Ready to add the human touch?",
     seoDesc: "eChatbot combines AI and human operators to offer exceptional customer support. The chatbot handles 90% of requests, operators step in when truly needed.",
     seoKeys: "human in the loop, human chatbot support, chatbot human agent, whatsapp handoff, customer support ai, live chat whatsapp",
     breadcrumb: "Human Support",
@@ -98,6 +100,7 @@ const T = {
   },
   es: {
     seoTitle: "Soporte Humano Human-in-the-Loop - IA + Agentes Humanos en Sinergia",
+    ctaTitle: "¿Listo para agregar el toque humano?",
     seoDesc: "eChatbot combina IA y operadores humanos para ofrecer un soporte al cliente excepcional. El chatbot gestiona el 90% de las solicitudes, los operadores intervienen cuando es realmente necesario.",
     seoKeys: "human in the loop, soporte humano chatbot, chatbot agente humano, handoff whatsapp, soporte cliente ai, live chat whatsapp",
     breadcrumb: "Soporte Humano",
@@ -141,6 +144,7 @@ const T = {
   },
   pt: {
     seoTitle: "Suporte Humano Human-in-the-Loop - IA + Agentes Humanos em Sinergia",
+    ctaTitle: "Pronto para adicionar o toque humano?",
     seoDesc: "O eChatbot combina IA e operadores humanos para oferecer suporte ao cliente excepcional. O chatbot lida com 90% das solicitações, os operadores intervêm quando realmente necessário.",
     seoKeys: "human in the loop, suporte humano chatbot, chatbot agente humano, handoff whatsapp, suporte cliente ai, live chat whatsapp",
     breadcrumb: "Suporte Humano",
@@ -354,8 +358,8 @@ export function HumanSupportPage() {
         {/* CTA */}
         <section className="py-20 bg-gradient-to-br from-amber-500 to-orange-600">
           <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">Pronto ad aggiungere il tocco umano?</h2>
-            <p className="text-xl text-amber-100 mb-8">AI + Operatori umani. La combinazione vincente per il tuo customer service.</p>
+            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
+            <p className="text-xl text-amber-100 mb-8">{t.ctaSub}</p>
             <Link to="/" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-amber-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}

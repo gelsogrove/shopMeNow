@@ -105,7 +105,7 @@ export function SiteHeader({ language = "en", onLanguageChange }: SiteHeaderProp
   }, [])
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50 overflow-hidden">
+    <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 lg:px-12">
 
         {/* Main Header Row — same height/style as homepage */}

@@ -12,6 +12,7 @@ type Language = "it" | "en" | "es" | "pt"
 const T = {
   it: {
     seoTitle: "Widget Chat → WhatsApp - Chatbot Unificato per Sito e WhatsApp",
+    ctaTitle: "Pronto ad unificare i tuoi canali?",
     seoDesc: "Scopri come eChatbot unifica il widget sul sito web con WhatsApp in un'unica sessione continua. I clienti iniziano sul sito e continuano su WhatsApp senza perdere il contesto.",
     seoKeys: "widget whatsapp, chatbot sito web, chat widget, whatsapp business chatbot, omnichannel chatbot, unified chat session",
     breadcrumb: "Widget → WhatsApp",
@@ -48,6 +49,7 @@ const T = {
   },
   en: {
     seoTitle: "Widget Chat → WhatsApp - Unified Chatbot for Website and WhatsApp",
+    ctaTitle: "Ready to unify your channels?",
     seoDesc: "Discover how eChatbot unifies your website chat widget with WhatsApp in a single continuous session. Customers start on your site and continue on WhatsApp without losing context.",
     seoKeys: "widget whatsapp, website chatbot, chat widget, whatsapp business chatbot, omnichannel chatbot, unified chat session",
     breadcrumb: "Widget → WhatsApp",
@@ -84,6 +86,7 @@ const T = {
   },
   es: {
     seoTitle: "Widget Chat → WhatsApp - Chatbot Unificado para Sitio Web y WhatsApp",
+    ctaTitle: "¿Listo para unificar tus canales?",
     seoDesc: "Descubre cómo eChatbot unifica el widget de chat del sitio web con WhatsApp en una sesión continua. Los clientes empiezan en el sitio y continúan en WhatsApp sin perder el contexto.",
     seoKeys: "widget whatsapp, chatbot sitio web, chat widget, whatsapp business chatbot, chatbot omnicanal, sesión chat unificada",
     breadcrumb: "Widget → WhatsApp",
@@ -120,6 +123,7 @@ const T = {
   },
   pt: {
     seoTitle: "Widget Chat → WhatsApp - Chatbot Unificado para Site e WhatsApp",
+    ctaTitle: "Pronto para unificar os seus canais?",
     seoDesc: "Descubra como o eChatbot unifica o widget de chat do site com o WhatsApp em uma sessão contínua. Os clientes começam no site e continuam no WhatsApp sem perder o contexto.",
     seoKeys: "widget whatsapp, chatbot site, chat widget, whatsapp business chatbot, chatbot omnicanal, sessão chat unificada",
     breadcrumb: "Widget → WhatsApp",
@@ -366,8 +370,8 @@ export function WidgetToWhatsAppPage() {
         {/* CTA */}
         <section className="py-20 bg-gradient-to-br from-green-600 to-teal-700">
           <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">Pronto ad unificare i tuoi canali?</h2>
-            <p className="text-xl text-green-100 mb-8">Inizia gratuitamente e scopri la potenza dell'omnicanalità.</p>
+            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
+            <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
             <Link to="/" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}

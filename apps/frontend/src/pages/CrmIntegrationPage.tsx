@@ -12,6 +12,8 @@ type Language = "it" | "en" | "es" | "pt"
 const T = {
   it: {
     seoTitle: "Integrazione CRM ERP - Connetti eChatbot con i tuoi Sistemi",
+    ctaTitle: "Pronto a connettere i tuoi sistemi?",
+    ctaSub: "Richiedi una demo personalizzata con il nostro team tecnico.",
     seoDesc: "Integra eChatbot con Salesforce, HubSpot, Microsoft Dynamics, sistemi ERP, warehouse management e piattaforme di marketing automation. Sincronizzazione dati in tempo reale.",
     seoKeys: "integrazione crm chatbot, salesforce whatsapp, hubspot chatbot, erp chatbot, woocommerce chatbot, prestashop chatbot, magento chatbot, zapier integration",
     breadcrumb: "Integrazione CRM",
@@ -49,6 +51,8 @@ const T = {
   },
   en: {
     seoTitle: "CRM ERP Integration - Connect eChatbot with Your Systems",
+    ctaTitle: "Ready to connect your systems?",
+    ctaSub: "Request a personalized demo with our technical team.",
     seoDesc: "Integrate eChatbot with Salesforce, HubSpot, Microsoft Dynamics, ERP systems, warehouse management and marketing automation platforms. Real-time data synchronization.",
     seoKeys: "crm chatbot integration, salesforce whatsapp, hubspot chatbot, erp chatbot, woocommerce chatbot, prestashop chatbot, magento chatbot, zapier integration",
     breadcrumb: "CRM Integration",
@@ -86,6 +90,8 @@ const T = {
   },
   es: {
     seoTitle: "Integración CRM ERP - Conecta eChatbot con tus Sistemas",
+    ctaTitle: "¿Listo para conectar tus sistemas?",
+    ctaSub: "Solicita una demo personalizada con nuestro equipo técnico.",
     seoDesc: "Integra eChatbot con Salesforce, HubSpot, Microsoft Dynamics, sistemas ERP, gestión de almacenes y plataformas de marketing automation. Sincronización de datos en tiempo real.",
     seoKeys: "integración crm chatbot, salesforce whatsapp, hubspot chatbot, erp chatbot, woocommerce chatbot, prestashop chatbot, magento chatbot, zapier integration",
     breadcrumb: "Integración CRM",
@@ -123,6 +129,8 @@ const T = {
   },
   pt: {
     seoTitle: "Integração CRM ERP - Conecte o eChatbot com seus Sistemas",
+    ctaTitle: "Pronto para conectar os seus sistemas?",
+    ctaSub: "Solicite uma demo personalizada com a nossa equipe técnica.",
     seoDesc: "Integre o eChatbot com Salesforce, HubSpot, Microsoft Dynamics, sistemas ERP, gerenciamento de armazém e plataformas de marketing automation. Sincronização de dados em tempo real.",
     seoKeys: "integração crm chatbot, salesforce whatsapp, hubspot chatbot, erp chatbot, woocommerce chatbot, prestashop chatbot, magento chatbot, zapier integration",
     breadcrumb: "Integração CRM",
@@ -312,8 +320,8 @@ export function CrmIntegrationPage() {
         {/* CTA */}
         <section className="py-20 bg-gradient-to-br from-blue-600 to-cyan-700">
           <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">Pronto a connettere i tuoi sistemi?</h2>
-            <p className="text-xl text-blue-100 mb-8">Richiedi una demo personalizzata con il nostro team tecnico.</p>
+            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
+            <p className="text-xl text-blue-100 mb-8">{t.ctaSub}</p>
             <Link to="/" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-blue-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}

@@ -12,6 +12,8 @@ type Language = "it" | "en" | "es" | "pt"
 const T = {
   it: {
     seoTitle: "Privacy by Design - GDPR Compliance e Sicurezza dei Dati | eChatbot",
+    ctaTitle: "La privacy dei tuoi clienti è al sicuro",
+    ctaSub: "Richiedi una demo e scopri come eChatbot gestisce i dati.",
     seoDesc: "eChatbot è progettato con Privacy by Design. Conformità GDPR, DSGVO, LGPD. Crittografia end-to-end, data retention configurabile, diritto all'oblio, esportazione dati su richiesta.",
     seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, protezione dati conversazioni whatsapp, dsgvo chatbot, lgpd chatbot, sicurezza dati e-commerce",
     breadcrumb: "Privacy by Design",
@@ -55,6 +57,8 @@ const T = {
   },
   en: {
     seoTitle: "Privacy by Design - GDPR Compliance and Data Security | eChatbot",
+    ctaTitle: "Your customers' privacy is protected",
+    ctaSub: "Request a demo and discover how eChatbot handles data.",
     seoDesc: "eChatbot is built with Privacy by Design. GDPR, DSGVO, LGPD compliance. End-to-end encryption, configurable data retention, right to erasure, data export on request.",
     seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, whatsapp conversation data protection, dsgvo chatbot, lgpd chatbot, e-commerce data security",
     breadcrumb: "Privacy by Design",
@@ -98,6 +102,8 @@ const T = {
   },
   es: {
     seoTitle: "Privacy by Design - Cumplimiento GDPR y Seguridad de Datos | eChatbot",
+    ctaTitle: "La privacidad de tus clientes está protegida",
+    ctaSub: "Solicita una demo y descubre cómo eChatbot gestiona los datos.",
     seoDesc: "eChatbot está construido con Privacy by Design. Cumplimiento GDPR, DSGVO, LGPD. Cifrado de extremo a extremo, retención de datos configurable, derecho al olvido, exportación de datos a pedido.",
     seoKeys: "privacy by design gdpr chatbot whatsapp, cumplimiento gdpr chatbot, protección datos conversaciones whatsapp, dsgvo chatbot, lgpd chatbot, seguridad datos e-commerce",
     breadcrumb: "Privacy by Design",
@@ -141,6 +147,8 @@ const T = {
   },
   pt: {
     seoTitle: "Privacy by Design - Conformidade GDPR e Segurança de Dados | eChatbot",
+    ctaTitle: "A privacidade dos seus clientes está protegida",
+    ctaSub: "Solicite uma demo e descubra como o eChatbot gere os dados.",
     seoDesc: "O eChatbot é construído com Privacy by Design. Conformidade GDPR, DSGVO, LGPD. Criptografia ponta a ponta, retenção de dados configurável, direito ao esquecimento, exportação de dados sob demanda.",
     seoKeys: "privacy by design gdpr chatbot whatsapp, conformidade gdpr chatbot, proteção dados conversas whatsapp, dsgvo chatbot, lgpd chatbot, segurança dados e-commerce",
     breadcrumb: "Privacy by Design",
@@ -344,8 +352,8 @@ export function PrivacyByDesignPage() {
         {/* CTA */}
         <section className="py-20 bg-gradient-to-br from-indigo-600 to-slate-800">
           <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">La privacy dei tuoi clienti è al sicuro</h2>
-            <p className="text-xl text-indigo-200 mb-8">Richiedi una demo e scopri come eChatbot gestisce i dati.</p>
+            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
+            <p className="text-xl text-indigo-200 mb-8">{t.ctaSub}</p>
             <Link to="/" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-indigo-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}

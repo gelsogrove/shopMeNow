@@ -49,6 +49,8 @@ import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
+import landingImg from "@/assets/landing.png"
+import whatsappIcon from "@/assets/whatsapp.svg"
 import { toast } from "../lib/toast"
 import { auth, api } from "../services/api"
 import { workspaceApi } from "../services/workspaceApi"
@@ -1296,6 +1298,11 @@ export function LoginPage() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20">
         
         <div className="text-center mb-12 space-y-4 relative">
+          {/* WhatsApp brand badge */}
+          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5 mb-1">
+            <img src={whatsappIcon} alt="WhatsApp" className="w-5 h-5" />
+            <span className="text-green-700 text-sm font-semibold">WhatsApp AI Platform</span>
+          </div>
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
             {t("hero.title")}
           </h1>
@@ -1303,6 +1310,19 @@ export function LoginPage() {
             {t("hero.subtitle")}
           </p>
         </div>
+
+        {/* Mobile hero image — shown only on mobile/tablet, desktop has the carousel */}
+        <div className="block lg:hidden mb-8 px-2">
+          <div className="relative mx-auto max-w-md">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-3xl rotate-1 scale-105 opacity-80" />
+            <img
+              src={landingImg}
+              alt="eChatbot platform preview"
+              className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/50"
+            />
+          </div>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
           <div className="hidden lg:flex justify-center lg:justify-start items-center w-full lg:flex-1">
             <div className="relative w-full max-w-3xl lg:mr-2">
@@ -2528,8 +2548,8 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Contact Form */}
-      <div id="contact" className="py-16 bg-white border-t border-slate-200">
+      {/* Contact Form removed - see /contact page */}
+      {false && <div id="contact" className="py-16 bg-white border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-8 items-stretch">
             {/* Form Section - 60% */}
@@ -2708,7 +2728,7 @@ export function LoginPage() {
           </div>
         </div>
         </div>
-      </div>
+      </div>}
 
       {/* CTA Section - Barra Verde con Call to Action */}
       <div className="py-12 bg-gradient-to-br from-green-600 to-emerald-700 relative overflow-hidden">
@@ -2738,17 +2758,12 @@ export function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </button>
-            <button
-              onClick={() => {
-                const contactSection = document.getElementById('contact')
-                if (contactSection) {
-                  contactSection.scrollIntoView({ behavior: 'smooth' })
-                }
-              }}
+            <Link
+              to="/contact"
               className="px-10 py-5 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 shadow-lg transition-all duration-300"
             >
               {t("cta.button.contact")}
-            </button>
+            </Link>
           </div>
         </div>
       </div>

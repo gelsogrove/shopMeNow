@@ -170,10 +170,16 @@ export function NeapolisPage() {
             </div>
 
             {/* Logos row */}
-            <div className="flex items-center justify-center gap-4 sm:gap-6 px-5 sm:px-10 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50">
-              <img src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg" alt="Neàpolis" className="h-12 sm:h-16 w-auto" />
-              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-slate-300" />
-              <span className="text-2xl sm:text-3xl font-bold text-green-600">eChatbot.AI</span>
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 px-4 sm:px-10 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50">
+              <div className="flex items-center justify-center min-w-0">
+                <img
+                  src="https://www.neapolis.cat/wp-content/uploads/2022/09/logo.svg"
+                  alt="Neàpolis"
+                  className="h-10 sm:h-16 w-auto max-w-[110px] sm:max-w-[180px] object-contain"
+                />
+              </div>
+              <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-slate-300 shrink-0" />
+              <span className="text-xl sm:text-3xl font-bold text-green-600 whitespace-nowrap">eChatbot.AI</span>
             </div>
 
             {/* Body */}
