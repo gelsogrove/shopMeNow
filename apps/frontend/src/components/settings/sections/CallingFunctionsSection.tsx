@@ -15,14 +15,9 @@ import {
     Settings2,
     Play,
     Loader2,
-    Save,
     Zap,
     Code,
     Edit2,
-    Clock,
-    Globe,
-    AlertTriangle,
-    CheckCircle2,
     ExternalLink
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -34,24 +29,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface CallingFunctionsSectionProps {
     workspaceId: string
-    webhookUrl: string
-    webhookTimeout: number
     canEdit: boolean
-    onFieldChange: (field: string, value: any) => void
+    onFieldChange?: (field: string, value: any) => void
     onFieldFocus?: (fieldKey: string) => void
 }
 
 export function CallingFunctionsSection({
     workspaceId,
-    webhookUrl,
-    webhookTimeout,
     canEdit,
-    onFieldChange,
-    onFieldFocus,
 }: CallingFunctionsSectionProps) {
     const [functions, setFunctions] = useState<CallingFunction[]>([])
     const [loading, setLoading] = useState(true)
-    const [testingWebhook, setTestingWebhook] = useState(false)
+    const [testingToolWebhook, setTestingToolWebhook] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingFunction, setEditingFunction] = useState<Partial<CallingFunction> | null>(null)
     const [isSaving, setIsSaving] = useState(false)
@@ -75,24 +64,21 @@ export function CallingFunctionsSection({
         }
     }
 
-    const handleTestWebhook = async () => {
-        if (!webhookUrl) {
+    const handleTestToolWebhook = async () => {
+        const url = editingFunction?.webhookUrl
+        if (!url) {
             toast.error("Please enter a Webhook URL first")
             return
         }
-
         try {
-            setTestingWebhook(true)
-            await callingFunctionsApi.testWebhook(workspaceId, {
-                url: webhookUrl,
-                timeout: webhookTimeout,
-            })
+            setTestingToolWebhook(true)
+            await callingFunctionsApi.testWebhook(workspaceId, { url })
             toast.success("Webhook test successful!")
         } catch (error: any) {
             const msg = error.response?.data?.error || error.message || "Webhook test failed"
             toast.error(msg)
         } finally {
-            setTestingWebhook(false)
+            setTestingToolWebhook(false)
         }
     }
 
@@ -190,62 +176,6 @@ export function CallingFunctionsSection({
                 </h2>
                 <p className="text-sm text-gray-500 mt-1">Connect your AI to external services via Webhooks</p>
             </div>
-
-            {/* Webhook Configuration Card */}
-            <Card>
-                <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
-                    <CardTitle className="text-base font-semibold flex items-center gap-2">
-                        <Globe className="h-5 w-5 text-blue-600" />
-                        Global Webhook Settings
-                    </CardTitle>
-                    <CardDescription>Configure the endpoint that will receive AI tool calls</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-4">
-                        <div className="sm:col-span-3 space-y-2">
-                            <Label htmlFor="webhookUrl">Webhook URL</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    id="webhookUrl"
-                                    value={webhookUrl}
-                                    onChange={(e) => onFieldChange("webhookUrl", e.target.value)}
-                                    placeholder="https://api.yourdomain.com/webhook"
-                                    disabled={!canEdit}
-                                    onFocus={() => onFieldFocus?.("webhookUrl")}
-                                    data-focus-key="webhookUrl"
-                                />
-                                <Button
-                                    variant="outline"
-                                    onClick={handleTestWebhook}
-                                    disabled={!canEdit || testingWebhook || !webhookUrl}
-                                    className="shrink-0"
-                                >
-                                    {testingWebhook ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-                                    Test
-                                </Button>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="webhookTimeout">Timeout (ms)</Label>
-                            <Input
-                                id="webhookTimeout"
-                                type="number"
-                                value={webhookTimeout}
-                                onChange={(e) => onFieldChange("webhookTimeout", parseInt(e.target.value))}
-                                placeholder="10000"
-                                disabled={!canEdit}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200">
-                        <AlertTriangle className="h-4 w-4 shrink-0" />
-                        <span>
-                            All tools configured as <strong>WEBHOOK</strong> will use this URL. Payloads are sent as JSON POST requests.
-                        </span>
-                    </div>
-                </CardContent>
-            </Card>
 
             {/* Functions List Card */}
             <Card>
@@ -401,16 +331,41 @@ export function CallingFunctionsSection({
                         </div>
 
                         {editingFunction?.executionType === "WEBHOOK" && (
-                            <div className="space-y-2">
-                                <Label htmlFor="responseInstructions">Response Instructions (Optional AI guidance)</Label>
-                                <Textarea
-                                    id="responseInstructions"
-                                    value={editingFunction?.responseInstructions || ""}
-                                    onChange={(e) => setEditingFunction(prev => ({ ...prev, responseInstructions: e.target.value }))}
-                                    placeholder="Guide the AI on how to present the data received from the webhook"
-                                    rows={2}
-                                />
-                            </div>
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="toolWebhookUrl">Webhook URL</Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="toolWebhookUrl"
+                                            value={editingFunction?.webhookUrl || ""}
+                                            onChange={(e) => setEditingFunction(prev => ({ ...prev, webhookUrl: e.target.value }))}
+                                            placeholder="https://api.yourdomain.com/webhook"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleTestToolWebhook}
+                                            disabled={testingToolWebhook || !editingFunction?.webhookUrl}
+                                            className="shrink-0"
+                                        >
+                                            {testingToolWebhook ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                                            Test
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-slate-500">Payload sent as JSON POST request when AI calls this tool.</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="responseInstructions">Response Instructions (Optional AI guidance)</Label>
+                                    <Textarea
+                                        id="responseInstructions"
+                                        value={editingFunction?.responseInstructions || ""}
+                                        onChange={(e) => setEditingFunction(prev => ({ ...prev, responseInstructions: e.target.value }))}
+                                        placeholder="Guide the AI on how to present the data received from the webhook"
+                                        rows={2}
+                                    />
+                                </div>
+                            </>
                         )}
                     </div>
 

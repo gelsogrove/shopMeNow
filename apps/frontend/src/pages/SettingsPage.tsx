@@ -737,11 +737,7 @@ export function SettingsPage() {
         return (
           <CallingFunctionsSection
             workspaceId={currentWorkspace?.id || ""}
-            webhookUrl={formData.webhookUrl}
-            webhookTimeout={formData.webhookTimeout}
             canEdit={canEdit}
-            onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
           />
         )
       default:
