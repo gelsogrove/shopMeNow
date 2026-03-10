@@ -260,6 +260,25 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
     <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 lg:px-12">
 
+        {/* Mini top-bar — identical to homepage */}
+        <div className="hidden lg:flex justify-end pt-3">
+          <div className="flex items-center gap-4">
+            <Link
+              to="/pricing"
+              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
+            >
+              {t.pricing}
+            </Link>
+            <span className="text-slate-900 text-xs font-semibold">|</span>
+            <Link
+              to="/contact"
+              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
+            >
+              {t.contact}
+            </Link>
+          </div>
+        </div>
+
         {/* Main Header Row — same height/style as homepage */}
         <div className="flex items-center justify-between py-1 md:py-1.5 max-h-[70px]">
 
