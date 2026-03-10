@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Shield, Lock, Zap, CheckCircle, Eye, Trash2, FileDown } from "lucide-react"
+import { Zap, CheckCircle, Eye, Trash2, FileDown } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -231,12 +231,9 @@ export function PrivacyByDesignPage() {
                   {t.cta}
                 </Link>
               </div>
-              <div className="aspect-square bg-gradient-to-br from-slate-50 to-indigo-50 rounded-3xl border-2 border-dashed border-indigo-200 flex items-center justify-center shadow-xl">
-                <div className="text-center p-8">
-                  <Shield className="h-24 w-24 text-indigo-300 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500 font-medium">Privacy Architecture Diagram</p>
-                  <p className="text-xs text-slate-400 mt-1">1000x1000px PNG</p>
-                </div>
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-br from-indigo-100 to-slate-100 rounded-3xl blur-xl opacity-40" />
+                <img src="/survery-secuiry.png" alt="Privacy Architecture" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain" />
               </div>
             </motion.div>
           </div>
@@ -302,12 +299,9 @@ export function PrivacyByDesignPage() {
         <section className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="aspect-video bg-gradient-to-br from-slate-50 to-indigo-50 rounded-2xl border-2 border-dashed border-indigo-200 flex items-center justify-center shadow-xl order-2 lg:order-1">
-                <div className="text-center p-8">
-                  <Lock className="h-16 w-16 text-indigo-300 mx-auto mb-3" />
-                  <p className="text-sm text-slate-500 font-medium">Security Architecture Diagram</p>
-                  <p className="text-xs text-slate-400 mt-1">1200x675px PNG</p>
-                </div>
+              <div className="relative order-2 lg:order-1">
+                <div className="absolute -inset-4 bg-gradient-to-br from-indigo-100 to-slate-100 rounded-2xl blur-xl opacity-40" />
+                <img src="/survery-secuiry.png" alt="Security Architecture" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
               </div>
               <div className="order-1 lg:order-2">
                 <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">{t.techTitle}</h2>

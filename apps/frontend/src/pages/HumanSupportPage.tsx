@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Users, ArrowRight, Zap, CheckCircle, Clock, MessageCircle, Star } from "lucide-react"
+import { ArrowRight, Zap, CheckCircle, Clock, Star } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -214,13 +214,10 @@ export function HumanSupportPage() {
               transition={{ duration: 0.6 }}
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
-              {/* Hero image placeholder */}
-              <div className="order-2 lg:order-1 aspect-square bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl border-2 border-dashed border-amber-200 flex items-center justify-center shadow-xl">
-                <div className="text-center p-8">
-                  <Users className="h-24 w-24 text-amber-300 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500 font-medium">Human Support Dashboard</p>
-                  <p className="text-xs text-slate-400 mt-1">1000x1000px PNG</p>
-                </div>
+              {/* Hero image */}
+              <div className="relative order-2 lg:order-1">
+                <div className="absolute -inset-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl blur-xl opacity-40" />
+                <img src="/human.png" alt="Human Support Dashboard" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain" />
               </div>
               <div className="order-1 lg:order-2">
                 <span className="inline-block bg-amber-100 text-amber-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
@@ -304,13 +301,10 @@ export function HumanSupportPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl sm:rotate-1 scale-[1.01] group-hover:rotate-2 transition-transform duration-500" />
               <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:-translate-y-1 transition-all duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-                  {/* Image placeholder */}
-                  <div className="aspect-video bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-dashed border-amber-200 flex items-center justify-center order-2 lg:order-1">
-                    <div className="text-center p-8">
-                      <MessageCircle className="h-16 w-16 text-amber-300 mx-auto mb-3" />
-                      <p className="text-sm text-slate-500 font-medium">Operator Dashboard Screenshot</p>
-                      <p className="text-xs text-slate-400 mt-1">1200x675px PNG</p>
-                    </div>
+                  {/* Operator dashboard image */}
+                  <div className="relative order-2 lg:order-1">
+                    <div className="absolute -inset-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl blur-xl opacity-40" />
+                    <img src="/survey-support.png" alt="Operator Dashboard" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
                   </div>
                   <div className="space-y-6 order-1 lg:order-2">
                     <h2 className="text-3xl lg:text-4xl font-bold text-slate-900">{t.operatorTitle}</h2>

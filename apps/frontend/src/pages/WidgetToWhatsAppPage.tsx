@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Globe, MessageCircle, ArrowRight, Zap, RefreshCw, Users, CheckCircle } from "lucide-react"
+import { ArrowRight, Zap, CheckCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -213,25 +213,17 @@ export function WidgetToWhatsAppPage() {
               {/* Right: Dual-channel illustration */}
               <div className="relative">
                 <div className="grid grid-cols-2 gap-4">
-                  {/* Widget placeholder */}
-                  <div className="aspect-square bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl border-2 border-dashed border-teal-200 flex items-center justify-center shadow-lg">
-                    <div className="text-center p-4">
-                      <Globe className="h-12 w-12 text-teal-400 mx-auto mb-2" />
-                      <p className="text-xs text-slate-500 font-medium">{t.imagePlaceholder1}</p>
-                      <p className="text-xs text-slate-400">600x600px</p>
-                    </div>
+                  {/* Widget chat */}
+                  <div className="relative">
+                    <img src="/surver-widget.png" alt="Widget Chat" className="w-full h-auto rounded-2xl shadow-lg object-contain" />
                   </div>
                   {/* Arrow */}
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-green-600 rounded-full p-3 shadow-xl">
                     <ArrowRight className="h-6 w-6 text-white" />
                   </div>
-                  {/* WhatsApp placeholder */}
-                  <div className="aspect-square bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border-2 border-dashed border-green-200 flex items-center justify-center shadow-lg">
-                    <div className="text-center p-4">
-                      <MessageCircle className="h-12 w-12 text-green-400 mx-auto mb-2" />
-                      <p className="text-xs text-slate-500 font-medium">{t.imagePlaceholder2}</p>
-                      <p className="text-xs text-slate-400">600x600px</p>
-                    </div>
+                  {/* WhatsApp conversation */}
+                  <div className="relative">
+                    <img src="/home.png" alt="WhatsApp Conversation" className="w-full h-auto rounded-2xl shadow-lg object-contain" />
                   </div>
                 </div>
               </div>
@@ -328,13 +320,10 @@ export function WidgetToWhatsAppPage() {
                       ))}
                     </ul>
                   </div>
-                  {/* Image placeholder */}
-                  <div className="aspect-video bg-gradient-to-br from-teal-50 to-green-50 rounded-2xl border-2 border-dashed border-teal-200 flex items-center justify-center">
-                    <div className="text-center p-8">
-                      <RefreshCw className="h-16 w-16 text-teal-300 mx-auto mb-3" />
-                      <p className="text-sm text-slate-500 font-medium">Technical Architecture Diagram</p>
-                      <p className="text-xs text-slate-400 mt-1">1200x675px PNG/SVG</p>
-                    </div>
+                  {/* Technical architecture */}
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-gradient-to-br from-teal-100 to-green-100 rounded-2xl blur-xl opacity-40" />
+                    <img src="/demo.png" alt="Technical Architecture" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
                   </div>
                 </div>
               </div>

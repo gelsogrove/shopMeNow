@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Database, Zap, CheckCircle, ArrowRight, Link2, BarChart3 } from "lucide-react"
+import { Zap, CheckCircle, ArrowRight } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -207,13 +207,10 @@ export function CrmIntegrationPage() {
                   {t.cta}
                 </Link>
               </div>
-              {/* Hero image placeholder */}
-              <div className="aspect-square bg-gradient-to-br from-blue-50 to-cyan-50 rounded-3xl border-2 border-dashed border-blue-200 flex items-center justify-center shadow-xl">
-                <div className="text-center p-8">
-                  <Database className="h-24 w-24 text-blue-300 mx-auto mb-4" />
-                  <p className="text-sm text-slate-500 font-medium">CRM Integration Diagram</p>
-                  <p className="text-xs text-slate-400 mt-1">1000x1000px PNG</p>
-                </div>
+              {/* Hero image */}
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl blur-xl opacity-40" />
+                <img src="/CRM.png" alt="CRM Integration" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain" />
               </div>
             </motion.div>
           </div>
@@ -304,12 +301,9 @@ export function CrmIntegrationPage() {
                       ))}
                     </ul>
                   </div>
-                  <div className="aspect-video bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-dashed border-blue-200 flex items-center justify-center">
-                    <div className="text-center p-8">
-                      <Link2 className="h-16 w-16 text-blue-300 mx-auto mb-3" />
-                      <p className="text-sm text-slate-500 font-medium">API Documentation Screenshot</p>
-                      <p className="text-xs text-slate-400 mt-1">1200x675px PNG</p>
-                    </div>
+                  <div className="relative">
+                    <div className="absolute -inset-4 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl blur-xl opacity-40" />
+                    <img src="/survery-crm.png" alt="API Documentation" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
                   </div>
                 </div>
               </div>

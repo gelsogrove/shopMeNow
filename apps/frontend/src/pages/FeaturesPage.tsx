@@ -6,7 +6,6 @@ import {
   MessageSquare, 
   Users, 
   ShoppingCart, 
-  BarChart3, 
   Lock, 
   Zap,
   Globe,
@@ -348,16 +347,9 @@ export function FeaturesPage() {
 
                   {/* Right: Image placeholder */}
                   <div className="relative">
-                    <div className="aspect-square bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-dashed border-blue-200 flex items-center justify-center">
-                      <div className="text-center p-8">
-                        <BarChart3 className="h-24 w-24 text-blue-300 mx-auto mb-4" />
-                        <p className="text-sm text-slate-500 font-medium">
-                          Integration Dashboard Image
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          1000x1000px PNG/SVG
-                        </p>
-                      </div>
+                    <div className="relative">
+                      <div className="absolute -inset-4 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl blur-xl opacity-40" />
+                      <img src="/survey-ecommerce.png" alt="Integration Dashboard" className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/60 object-contain" />
                     </div>
                   </div>
                 </div>
