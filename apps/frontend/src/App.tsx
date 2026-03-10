@@ -66,6 +66,7 @@ import { LanguagesPage } from "./pages/settings/LanguagesPage"
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
 import { Suspense, lazy } from "react"
+import { ChatWidget } from "@/components/ChatWidget"
 import { useWorkspaceRole } from "./hooks/useWorkspaceRole"
 import { useWorkspace } from "./hooks/use-workspace"
 import { BillingProvider } from "./contexts/BillingContext"
@@ -119,6 +120,19 @@ function ProtectedAnalyticsRoute() {
   }
   
   return <AnalyticsPage />
+}
+
+// Renders the platform support widget on all pages except /survey and /neapolis
+function GlobalChatWidget() {
+  const location = useLocation()
+  const EXCLUDED_PATHS = ["/survey", "/neapolis"]
+  if (EXCLUDED_PATHS.includes(location.pathname)) return null
+  return (
+    <ChatWidget
+      workspaceId="echatbot-hq-support"
+      position="bottom-right"
+    />
+  )
 }
 
 export function App() {
@@ -239,9 +253,8 @@ function AppWithProviders() {
                 {/* PayPal callback result page - NO AUTH REQUIRED */}
                 <Route path="/paypal-result" element={<PayPalResultPage />} />
 
-                {/* Survey (formerly Questionario) - Public, no auth */}
+                {/* Survey - Public, no auth */}
                 <Route path="/survey" element={<QuestionnairePage />} />
-                <Route path="/questionario" element={<QuestionnairePage />} />
 
                 {/* NOTE: Short URLs (/s/:code) are handled by Vite proxy directly to backend */}
                 {/* No React route needed - see vite.config.ts proxy for "^/s/" */}
@@ -481,8 +494,9 @@ function AppWithProviders() {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
               
-              {/* Chat Widget - Appears on all pages */}
+              {/* Chat Widget - Appears on all pages except /survey and /neapolis */}
               <WidgetLoader />
+              <GlobalChatWidget />
             </ChatListProvider>
           </ChatProvider>
         </CustomerEditProvider>

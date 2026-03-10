@@ -31,9 +31,9 @@ export function WidgetLoader() {
   const { workspace } = useWorkspace()
   const { language } = useLanguage() // Get language from header dropdown
 
-  // Check if widget should be visible
-  const isPublicPage = location.pathname === "/" || location.pathname === "/survey" || location.pathname === "/neapolis" || location.pathname === "/questionario"
-  const shouldShowWidget = isPublicPage
+  // Check if widget should be visible — show everywhere except /survey and /neapolis
+  const EXCLUDED_PATHS = ["/survey", "/neapolis"]
+  const shouldShowWidget = !EXCLUDED_PATHS.includes(location.pathname)
 
   // Load widget script dynamically from platform config
   useEffect(() => {

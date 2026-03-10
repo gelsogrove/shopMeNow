@@ -3,8 +3,6 @@ import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
 import { WIPModal } from "@/components/shared/WIPModal"
-import { WidgetLoader } from "@/components/WidgetLoader"
-import { ChatWidget } from "@/components/ChatWidget"
 import { SEO } from "@/components/SEO"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -2800,12 +2798,6 @@ export function LoginPage() {
         feature={wipFeature}
         onClose={() => setShowWIPModal(false)}
       />
-
-      {/* Widget Configuration Loader - injects window.eChatbotConfig with language from header */}
-      <WidgetLoader />
-
-      {/* Chat Widget - Support widget for eChatbot HQ */}
-      <ChatWidget workspaceId="echatbot-hq-support" position="bottom-right" />
 
       </div>
     </>

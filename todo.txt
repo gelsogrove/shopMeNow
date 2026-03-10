@@ -5,7 +5,6 @@
 - lingue  sbagliate nelle pagie
 - Send us a message
 - foto del robottino
-- 
 - box vanno a landing pagie
 - scrivere al stakholder (Micheal, )
 - WAPI UltraMesg= facebiook?
