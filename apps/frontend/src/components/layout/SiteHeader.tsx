@@ -1,7 +1,21 @@
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useState, useRef, useEffect } from "react"
-import { Menu, X, ChevronDown } from "lucide-react"
+import { Menu, X, ChevronDown, Mail, Crown, LogOut, User, CreditCard, MessageSquare } from "lucide-react"
 import { useLanguage, SUPPORTED_LANGUAGES } from "@/contexts/LanguageContext"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@/components/ui/button"
+import { storage } from "@/lib/storage"
+import { workspaceApi } from "@/services/workspaceApi"
+import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
+import { logger } from "@/lib/logger"
 
 type Language = "it" | "en" | "es" | "pt"
 
@@ -26,6 +40,11 @@ const translations = {
     getStarted: "Inizia Gratis",
     signIn: "Accedi",
     language: "Lingua",
+    yourChannels: "I tuoi canali",
+    profile: "Profilo",
+    billing: "Fatturazione",
+    support: "Supporto",
+    logout: "Esci",
   },
   en: {
     home: "Home",
@@ -41,6 +60,11 @@ const translations = {
     getStarted: "Get Started",
     signIn: "Sign In",
     language: "Language",
+    yourChannels: "Your Channels",
+    profile: "Profile",
+    billing: "Billing",
+    support: "Support",
+    logout: "Log Out",
   },
   es: {
     home: "Inicio",
@@ -56,6 +80,11 @@ const translations = {
     getStarted: "Comenzar Gratis",
     signIn: "Iniciar Sesión",
     language: "Idioma",
+    yourChannels: "Tus canales",
+    profile: "Perfil",
+    billing: "Facturación",
+    support: "Soporte",
+    logout: "Cerrar sesión",
   },
   pt: {
     home: "Início",
@@ -71,12 +100,29 @@ const translations = {
     getStarted: "Começar Grátis",
     signIn: "Entrar",
     language: "Idioma",
+    yourChannels: "Seus canais",
+    profile: "Perfil",
+    billing: "Faturamento",
+    support: "Suporte",
+    logout: "Sair",
   },
+}
+
+const PLAN_PRIORITY: Record<PlanType, number> = {
+  FREE_TRIAL: 0,
+  BASIC: 1,
+  PREMIUM: 2,
+  ENTERPRISE: 3,
+}
+const getPlanPriorityValue = (planType?: string | null) => {
+  if (!planType) return -1
+  return PLAN_PRIORITY[planType as PlanType] ?? -1
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function SiteHeader({ language: _language, onLanguageChange: _onLanguageChange }: SiteHeaderProps) {
   const { language, setLanguage } = useLanguage()
+  const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
   const [isLangOpen, setIsLangOpen] = useState(false)
@@ -84,6 +130,115 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
   const langRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const t = translations[language]
+
+  // Auth state — mirrors LoginPage header
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [loggedInUser, setLoggedInUser] = useState<{
+    firstName?: string
+    lastName?: string
+    email?: string
+    profilePicture?: string
+    authProvider?: string
+    isPlatformAdmin?: boolean
+  } | null>(null)
+  const [avatarImageError, setAvatarImageError] = useState(false)
+  const [userPlan, setUserPlan] = useState<{
+    planType?: string | null
+    trialEndsAt?: string | null
+    creditBalance?: number | null
+  } | null>(null)
+  const supportUnreadCount = 0
+
+  // Load auth state from storage on mount (same logic as LoginPage)
+  useEffect(() => {
+    const existingToken = storage.getToken()
+    if (!existingToken) return
+
+    const cachedUser = storage.getUser<{
+      firstName?: string; lastName?: string; email?: string
+      profilePicture?: string; authProvider?: string; isPlatformAdmin?: boolean
+    }>()
+    if (!cachedUser) return
+
+    try {
+      setLoggedInUser(cachedUser)
+      setIsLoggedIn(true)
+      setAvatarImageError(false)
+
+      workspaceApi.getAll().then((workspaces: Array<{ id: string; planType?: string | null; trialEndsAt?: string | null }>) => {
+        if (!workspaces || workspaces.length === 0) return
+
+        const storedWorkspaceRaw = storage.getWorkspace<{ id?: string }>()
+        const storedWorkspaceId = storedWorkspaceRaw?.id ?? null
+
+        const selectedWorkspace = workspaces.reduce(
+          (best: typeof workspaces[0], current: typeof workspaces[0]) => {
+            if (!best) return current
+            const bestPriority = getPlanPriorityValue(best.planType)
+            const currentPriority = getPlanPriorityValue(current.planType)
+            if (currentPriority > bestPriority) return current
+            if (currentPriority === bestPriority && storedWorkspaceId && current.id === storedWorkspaceId) return current
+            return best
+          },
+          workspaces[0]
+        )
+
+        if (!selectedWorkspace) return
+
+        setUserPlan({
+          planType: selectedWorkspace.planType,
+          trialEndsAt: selectedWorkspace.trialEndsAt,
+          creditBalance: null,
+        })
+
+        getBillingOverview(selectedWorkspace.id)
+          .then((overview) => {
+            setUserPlan({
+              planType: overview.billing.planType,
+              trialEndsAt: overview.billing.trialEndsAt,
+              creditBalance: overview.billing.creditBalance,
+            })
+          })
+          .catch((err: Error) => logger.error("SiteHeader: Failed to fetch billing overview:", err))
+      }).catch((err: { response?: { status?: number } } & Error) => {
+        if (err?.response?.status === 401) {
+          storage.clearAuth()
+          setIsLoggedIn(false)
+          setLoggedInUser(null)
+          setUserPlan(null)
+          return
+        }
+        logger.error("SiteHeader: Failed to fetch workspaces:", err)
+      })
+    } catch (e) {
+      logger.error("SiteHeader: Failed to initialise auth:", e)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Plan display values (same as LoginPage)
+  const planLabel =
+    !userPlan?.planType || userPlan.planType === "FREE_TRIAL"
+      ? "Free Trial"
+      : userPlan.planType === "BASIC"
+      ? "Basic"
+      : userPlan.planType === "PREMIUM"
+      ? "Premium"
+      : userPlan?.planType
+      ? userPlan.planType.charAt(0) + userPlan.planType.slice(1).toLowerCase()
+      : "Free Trial"
+
+  const trialDaysRemaining = userPlan?.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(userPlan.trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null
+
+  const handleLogout = () => {
+    storage.clearAppState()
+    setIsLoggedIn(false)
+    setLoggedInUser(null)
+    setUserPlan(null)
+    navigate("/")
+  }
 
   const isActive = (path: string) => location.pathname === path
   const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[1]
@@ -201,18 +356,139 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
               )}
             </div>
 
-            {/* Sign In + Get Started */}
-            <div className="hidden lg:flex items-center gap-3">
-              <Link to="/" className="text-slate-700 hover:text-green-600 font-medium text-sm transition-colors">
-                {t.signIn}
-              </Link>
-              <Link
-                to="/auth/signup"
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
-              >
-                {t.getStarted}
-              </Link>
-            </div>
+            {/* Auth Section — logged in or logged out */}
+            {isLoggedIn ? (
+              <div className="hidden lg:flex items-center gap-3">
+                {/* Support Inbox */}
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate("/support/tickets")}
+                        className="relative h-9 w-9 p-0 text-slate-600 hover:text-green-600 hover:bg-green-50"
+                      >
+                        <Mail className="h-5 w-5" />
+                        {supportUnreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                            {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                          </span>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{supportUnreadCount > 0 ? `${supportUnreadCount} unread` : t.support}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                {/* Plan Badge */}
+                <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border ${
+                  !userPlan?.planType || userPlan.planType === "FREE_TRIAL"
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : userPlan.planType === "BASIC"
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : userPlan.planType === "PREMIUM"
+                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                    : "bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-800 border-amber-200"
+                }`}>
+                  <Crown className="h-3.5 w-3.5" />
+                  <span>
+                    {!userPlan?.planType || userPlan.planType === "FREE_TRIAL"
+                      ? `Free Trial ${trialDaysRemaining ?? 0}d`
+                      : planLabel}
+                  </span>
+                </div>
+
+                {/* User Avatar Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="relative h-10 w-10 rounded-full focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none hover:scale-105 transition-transform p-0"
+                    >
+                      {loggedInUser?.profilePicture && !avatarImageError ? (
+                        <img
+                          src={loggedInUser.profilePicture}
+                          alt="User"
+                          referrerPolicy="no-referrer"
+                          className="h-full w-full rounded-full object-cover ring-2 ring-gray-100"
+                          onError={() => setAvatarImageError(true)}
+                        />
+                      ) : (
+                        <div className="h-full w-full rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-semibold ring-2 ring-green-100">
+                          {loggedInUser?.firstName && loggedInUser?.lastName
+                            ? `${loggedInUser.firstName[0]}${loggedInUser.lastName[0]}`.toUpperCase()
+                            : loggedInUser?.firstName?.[0]?.toUpperCase() || loggedInUser?.email?.[0]?.toUpperCase() || "U"}
+                        </div>
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal p-3">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none truncate">
+                          {loggedInUser?.firstName && loggedInUser?.lastName
+                            ? `${loggedInUser.firstName} ${loggedInUser.lastName}`
+                            : "User"}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground truncate">
+                          {loggedInUser?.email}
+                        </p>
+                        {loggedInUser?.isPlatformAdmin && (
+                          <p className="text-xs leading-none text-purple-600 font-semibold pt-1">🔐 Platform Admin</p>
+                        )}
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/workspace-selection")}>
+                      <MessageSquare className="mr-2 h-4 w-4 text-green-500" fill="currentColor" />
+                      <span>{t.yourChannels}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/profile")}>
+                      <User className="mr-2 h-4 w-4 text-blue-500" />
+                      <span>{t.profile}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/billing")}>
+                      <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
+                      <span>{t.billing}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/support/tickets")}>
+                      <div className="relative mr-2">
+                        <Mail className="h-4 w-4 text-blue-500" />
+                        {supportUnreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                            {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
+                          </span>
+                        )}
+                      </div>
+                      <span>{supportUnreadCount > 0 ? `${t.support} (${supportUnreadCount})` : t.support}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="p-2 cursor-pointer text-red-600 focus:text-red-600"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>{t.logout}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <div className="hidden lg:flex items-center gap-3">
+                <Link to="/" className="text-slate-700 hover:text-green-600 font-medium text-sm transition-colors">
+                  {t.signIn}
+                </Link>
+                <Link
+                  to="/auth/signup"
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
+                >
+                  {t.getStarted}
+                </Link>
+              </div>
+            )}
 
             {/* Mobile Menu Button */}
             <button
@@ -265,14 +541,59 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                 </div>
               </div>
 
+              {/* Mobile Auth Section */}
               <div className="border-t border-slate-200 pt-4 mt-2">
-                <Link
-                  to="/auth/signup"
-                  className="block text-center bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-all"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {t.getStarted}
-                </Link>
+                {isLoggedIn ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-3 px-1">
+                      <div className="h-10 w-10 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                        {loggedInUser?.firstName && loggedInUser?.lastName
+                          ? `${loggedInUser.firstName[0]}${loggedInUser.lastName[0]}`.toUpperCase()
+                          : loggedInUser?.email?.[0]?.toUpperCase() || "U"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">
+                          {loggedInUser?.firstName && loggedInUser?.lastName
+                            ? `${loggedInUser.firstName} ${loggedInUser.lastName}`
+                            : "User"}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">{loggedInUser?.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-700 hover:text-green-600 transition-colors"
+                      onClick={() => { navigate("/workspace-selection"); setIsMenuOpen(false) }}
+                    >
+                      <MessageSquare className="h-4 w-4 text-green-500" fill="currentColor" />{t.yourChannels}
+                    </button>
+                    <button
+                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-700 hover:text-green-600 transition-colors"
+                      onClick={() => { navigate("/profile"); setIsMenuOpen(false) }}
+                    >
+                      <User className="h-4 w-4 text-blue-500" />{t.profile}
+                    </button>
+                    <button
+                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-700 hover:text-green-600 transition-colors"
+                      onClick={() => { navigate("/billing"); setIsMenuOpen(false) }}
+                    >
+                      <CreditCard className="h-4 w-4 text-emerald-500" />{t.billing}
+                    </button>
+                    <button
+                      className="flex items-center gap-2 px-1 py-2 text-sm text-red-600 hover:text-red-700 transition-colors"
+                      onClick={() => { handleLogout(); setIsMenuOpen(false) }}
+                    >
+                      <LogOut className="h-4 w-4" />{t.logout}
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to="/auth/signup"
+                    className="block text-center bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-all"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t.getStarted}
+                  </Link>
+                )}
               </div>
             </nav>
           </div>

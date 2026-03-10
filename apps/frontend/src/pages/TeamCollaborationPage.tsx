@@ -25,7 +25,7 @@ const T = {
     rolesTitle: "Ruoli e permessi granulari",
     rolesSub: "Ogni membro del team ha accesso esattamente a ciò di cui ha bisogno",
     roles: [
-      { name: "Admin", icon: "👑", color: "purple", perms: ["Configura workspace e canali", "Gestisce utenti e ruoli", "Accede a tutti gli analytics", "Configura regole AI", "Esporta dati e report"] },
+      { name: "Admin", icon: "👑", color: "purple", perms: ["Configura workspace e canali", "Gestisce utenti e ruoli", "Accede a tutti gli analytics", "Configura regole AI", "Gestisce abbonamento e fatturazione"] },
       { name: "Manager", icon: "🎯", color: "blue", perms: ["Monitora tutte le conversazioni", "Assegna e riassegna chat", "Accede agli analytics di team", "Gestisce escalation", "Supervisiona qualità"] },
       { name: "Operator", icon: "💬", color: "green", perms: ["Gestisce le conversazioni assegnate", "Risponde ai clienti", "Crea ordini e preventivi", "Aggiorna dati cliente", "Chiede escalation"] },
     ],
@@ -37,8 +37,8 @@ const T = {
       { num: "04", title: "Handoff con contesto", desc: "L'operatore vede tutta la conversazione precedente. Il cliente non deve ripetere nulla." },
     ],
     dashTitle: "Dashboard Manager in tempo reale",
-    dashDesc: "Il Manager o il Supervisor vede in un'unica schermata: conversazioni attive, operatori disponibili, tempi di risposta, SLA e notifiche urgenti.",
-    dashFeatures: ["Mappa in tempo reale di tutte le chat aperte", "Indicatori di carico per ogni operatore", "Alert automatici per SLA a rischio", "Storico completo delle conversazioni", "Metriche di soddisfazione per operatore", "Esportazione report CSV/PDF"],
+    dashDesc: "Il Manager o il Supervisor vede in un'unica schermata: conversazioni attive, operatori disponibili, clienti in coda e notifiche urgenti.",
+    dashFeatures: ["Coda clienti in attesa con riassunti AI", "Assegnazione cliente a operatore con un click", "Storico completo di ogni conversazione", "Contesto cliente pronto per l'operatore", "Notifiche browser per nuove richieste", "Escalation AI → operatore senza interruzioni"],
     metricsTitle: "Risultati misurabili",
     metrics: [
       { value: "45%", label: "riduzione tempo first response" },
@@ -61,7 +61,7 @@ const T = {
     rolesTitle: "Granular roles and permissions",
     rolesSub: "Each team member gets access to exactly what they need",
     roles: [
-      { name: "Admin", icon: "👑", color: "purple", perms: ["Configure workspace and channels", "Manage users and roles", "Access all analytics", "Configure AI rules", "Export data and reports"] },
+      { name: "Admin", icon: "👑", color: "purple", perms: ["Configure workspace and channels", "Manage users and roles", "Access all analytics", "Configure AI rules", "Manage subscription and billing"] },
       { name: "Manager", icon: "🎯", color: "blue", perms: ["Monitor all conversations", "Assign and reassign chats", "Access team analytics", "Manage escalations", "Supervise quality"] },
       { name: "Operator", icon: "💬", color: "green", perms: ["Manage assigned conversations", "Reply to customers", "Create orders and quotes", "Update customer data", "Request escalation"] },
     ],
@@ -73,8 +73,8 @@ const T = {
       { num: "04", title: "Handoff with context", desc: "The operator sees the entire previous conversation. The customer doesn't have to repeat anything." },
     ],
     dashTitle: "Real-time Manager Dashboard",
-    dashDesc: "The Manager or Supervisor sees in a single screen: active conversations, available operators, response times, SLAs and urgent notifications.",
-    dashFeatures: ["Real-time map of all open chats", "Load indicators per operator", "Automatic alerts for at-risk SLAs", "Complete conversation history", "Satisfaction metrics per operator", "CSV/PDF report export"],
+    dashDesc: "The Manager or Supervisor sees in a single screen: active conversations, available operators, waiting queue and urgent notifications.",
+    dashFeatures: ["Customer waiting queue with AI summaries", "Assign customer to operator with one click", "Complete history of every conversation", "Customer context ready for the operator", "Browser notifications for new requests", "AI → operator escalation without interruption"],
     metricsTitle: "Measurable results",
     metrics: [
       { value: "45%", label: "reduction in first response time" },
@@ -97,7 +97,7 @@ const T = {
     rolesTitle: "Roles y permisos granulares",
     rolesSub: "Cada miembro del equipo tiene acceso exactamente a lo que necesita",
     roles: [
-      { name: "Admin", icon: "👑", color: "purple", perms: ["Configura workspace y canales", "Gestiona usuarios y roles", "Accede a todos los analytics", "Configura reglas de IA", "Exporta datos y reportes"] },
+      { name: "Admin", icon: "👑", color: "purple", perms: ["Configura workspace y canales", "Gestiona usuarios y roles", "Accede a todos los analytics", "Configura reglas de IA", "Gestiona suscripción y facturación"] },
       { name: "Manager", icon: "🎯", color: "blue", perms: ["Monitorea todas las conversaciones", "Asigna y reasigna chats", "Accede a analytics de equipo", "Gestiona escalaciones", "Supervisa calidad"] },
       { name: "Operator", icon: "💬", color: "green", perms: ["Gestiona conversaciones asignadas", "Responde a clientes", "Crea pedidos y presupuestos", "Actualiza datos del cliente", "Solicita escalación"] },
     ],
@@ -109,8 +109,8 @@ const T = {
       { num: "04", title: "Handoff con contexto", desc: "El operador ve toda la conversación anterior. El cliente no tiene que repetir nada." },
     ],
     dashTitle: "Panel Manager en tiempo real",
-    dashDesc: "El Manager o Supervisor ve en una única pantalla: conversaciones activas, operadores disponibles, tiempos de respuesta, SLA y notificaciones urgentes.",
-    dashFeatures: ["Mapa en tiempo real de todos los chats abiertos", "Indicadores de carga por operador", "Alertas automáticas para SLA en riesgo", "Historial completo de conversaciones", "Métricas de satisfacción por operador", "Exportación de reportes CSV/PDF"],
+    dashDesc: "El Manager o Supervisor ve en una única pantalla: conversaciones activas, operadores disponibles, cola de espera y notificaciones urgentes.",
+    dashFeatures: ["Cola de clientes en espera con resúmenes de IA", "Asignación de cliente a operador con un clic", "Historial completo de cada conversación", "Contexto del cliente listo para el operador", "Notificaciones del navegador para nuevas solicitudes", "Escalación IA → operador sin interrupciones"],
     metricsTitle: "Resultados medibles",
     metrics: [
       { value: "45%", label: "reducción en el tiempo de primera respuesta" },
@@ -133,7 +133,7 @@ const T = {
     rolesTitle: "Funções e permissões granulares",
     rolesSub: "Cada membro da equipe tem acesso exatamente ao que precisa",
     roles: [
-      { name: "Admin", icon: "👑", color: "purple", perms: ["Configura workspace e canais", "Gerencia usuários e funções", "Acessa todos os analytics", "Configura regras de IA", "Exporta dados e relatórios"] },
+      { name: "Admin", icon: "👑", color: "purple", perms: ["Configura workspace e canais", "Gerencia usuários e funções", "Acessa todos os analytics", "Configura regras de IA", "Gerencia assinatura e faturamento"] },
       { name: "Manager", icon: "🎯", color: "blue", perms: ["Monitora todas as conversas", "Atribui e reatribui chats", "Acessa analytics da equipe", "Gerencia escalações", "Supervisiona qualidade"] },
       { name: "Operator", icon: "💬", color: "green", perms: ["Gerencia conversas atribuídas", "Responde aos clientes", "Cria pedidos e orçamentos", "Atualiza dados do cliente", "Solicita escalação"] },
     ],
@@ -145,8 +145,8 @@ const T = {
       { num: "04", title: "Handoff com contexto", desc: "O operador vê toda a conversa anterior. O cliente não precisa repetir nada." },
     ],
     dashTitle: "Dashboard Manager em tempo real",
-    dashDesc: "O Manager ou Supervisor vê em uma única tela: conversas ativas, operadores disponíveis, tempos de resposta, SLAs e notificações urgentes.",
-    dashFeatures: ["Mapa em tempo real de todos os chats abertos", "Indicadores de carga por operador", "Alertas automáticos para SLAs em risco", "Histórico completo de conversas", "Métricas de satisfação por operador", "Exportação de relatórios CSV/PDF"],
+    dashDesc: "O Manager ou Supervisor vê em uma única tela: conversas ativas, operadores disponíveis, fila de espera e notificações urgentes.",
+    dashFeatures: ["Fila de clientes aguardando com resumos de IA", "Atribuição de cliente a operador com um clique", "Histórico completo de cada conversa", "Contexto do cliente pronto para o operador", "Notificações de navegador para novas solicitações", "Escalação IA → operador sem interrupções"],
     metricsTitle: "Resultados mensuráveis",
     metrics: [
       { value: "45%", label: "redução no tempo de primeira resposta" },
