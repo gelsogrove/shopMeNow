@@ -29,6 +29,8 @@ const mockRepository = {
   getWorkspaceBilling: jest.fn(),
   updateOwnerSubscriptionStatus: jest.fn(),
   getOwnerSubscriptionStatus: jest.fn(),
+  shouldSendOwnerLowBalanceNotification: jest.fn(),
+  updateOwnerLowBalanceNotification: jest.fn(),
 }
 
 // Mock Prisma
@@ -883,6 +885,277 @@ describe("SubscriptionBillingService - Feature 198 Owner-Based Billing", () => {
       }
 
       expect(invoiceBreakdown.totalAmount).toBe(39.0)
+    })
+  })
+
+  // ============================================================================
+  // LOW BALANCE NOTIFICATION TESTS
+  // ============================================================================
+
+  describe("Low Balance Notification (checkAndNotifyOwnerLowBalance)", () => {
+    // SCENARIO: After each message deduction, if balance drops at or below threshold, a notification should fire
+    // RULE: shouldSendOwnerLowBalanceNotification prevents duplicate alerts within cooldown period
+
+    it("should call shouldSendOwnerLowBalanceNotification when balance drops to threshold", async () => {
+      // SCENARIO: Balance is exactly at threshold (€5) after widget message deduction
+      // RULE: Notification check is triggered when newBalance <= lowBalanceThreshold
+      mockRepository.getOwnerBilling.mockResolvedValue(mockOwnerBilling)
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        ...mockPlanLimits,
+        lowBalanceThreshold: 5.0,
+      })
+      ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(0.05)
+      mockRepository.deductCredit.mockResolvedValue({
+        success: true,
+        newBalance: 5.0, // Exactly at threshold
+      })
+      mockRepository.shouldSendOwnerLowBalanceNotification = jest.fn().mockResolvedValue(false)
+      mockRepository.updateOwnerLowBalanceNotification = jest.fn()
+
+      await service.deductOwnerWidgetMessageCredit(
+        mockUserId,
+        mockWorkspaceId,
+        "msg-low-balance"
+      )
+
+      // RULE: shouldSendOwnerLowBalanceNotification is called to check rate limiting
+      expect(mockRepository.shouldSendOwnerLowBalanceNotification).toHaveBeenCalledWith(mockUserId)
+    })
+
+    it("should NOT trigger notification when balance is above threshold", async () => {
+      // SCENARIO: Balance is €20 after deduction, threshold is €5 — no notification needed
+      // RULE: Notification only fires when balance <= threshold
+      mockRepository.getOwnerBilling.mockResolvedValue(mockOwnerBilling)
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        ...mockPlanLimits,
+        lowBalanceThreshold: 5.0,
+      })
+      ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(0.05)
+      mockRepository.deductCredit.mockResolvedValue({
+        success: true,
+        newBalance: 20.0, // Above threshold
+      })
+      mockRepository.shouldSendOwnerLowBalanceNotification = jest.fn().mockResolvedValue(false)
+
+      await service.deductOwnerWidgetMessageCredit(
+        mockUserId,
+        mockWorkspaceId,
+        "msg-high-balance"
+      )
+
+      // RULE: Notification check is NOT triggered when balance is above threshold
+      expect(mockRepository.shouldSendOwnerLowBalanceNotification).not.toHaveBeenCalled()
+    })
+
+    it("should update notification timestamp when shouldSend returns true (cooldown expired)", async () => {
+      // SCENARIO: Balance drops below threshold AND cooldown has expired → send notification
+      // RULE: updateOwnerLowBalanceNotification records the last notification time to prevent spam
+      mockRepository.getOwnerBilling.mockResolvedValue(mockOwnerBilling)
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        ...mockPlanLimits,
+        lowBalanceThreshold: 5.0,
+      })
+      ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(0.05)
+      mockRepository.deductCredit.mockResolvedValue({
+        success: true,
+        newBalance: 3.0, // Below threshold
+      })
+      mockRepository.shouldSendOwnerLowBalanceNotification = jest.fn().mockResolvedValue(true)
+      mockRepository.updateOwnerLowBalanceNotification = jest.fn().mockResolvedValue(undefined)
+
+      await service.deductOwnerWidgetMessageCredit(
+        mockUserId,
+        mockWorkspaceId,
+        "msg-below-threshold"
+      )
+
+      // RULE: updateOwnerLowBalanceNotification is called to record the notification was sent
+      expect(mockRepository.updateOwnerLowBalanceNotification).toHaveBeenCalledWith(mockUserId)
+    })
+
+    it("should NOT update timestamp when shouldSend returns false (rate limited — duplicate prevention)", async () => {
+      // SCENARIO: Balance below threshold but notification was recently sent (rate limited)
+      // RULE: If shouldSend=false (within cooldown), do NOT call updateOwnerLowBalanceNotification
+      mockRepository.getOwnerBilling.mockResolvedValue(mockOwnerBilling)
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        ...mockPlanLimits,
+        lowBalanceThreshold: 5.0,
+      })
+      ;(platformConfigService.getPrice as jest.Mock).mockResolvedValue(0.05)
+      mockRepository.deductCredit.mockResolvedValue({
+        success: true,
+        newBalance: 2.0, // Below threshold
+      })
+      mockRepository.shouldSendOwnerLowBalanceNotification = jest.fn().mockResolvedValue(false) // Rate limited
+      mockRepository.updateOwnerLowBalanceNotification = jest.fn()
+
+      await service.deductOwnerWidgetMessageCredit(
+        mockUserId,
+        mockWorkspaceId,
+        "msg-rate-limited"
+      )
+
+      // RULE: Since shouldSend=false, no update should happen (prevents notification spam)
+      expect(mockRepository.updateOwnerLowBalanceNotification).not.toHaveBeenCalled()
+    })
+  })
+
+  // ============================================================================
+  // PLAN DOWNGRADE — PRODUCTS LIMIT CHECK (Bug Fix)
+  // ============================================================================
+
+  describe("Plan Downgrade - Products Limit Check (Bug Fix #products)", () => {
+    // SCENARIO: PREMIUM user with 150 products tries to downgrade to BASIC (max 100 products)
+    // RULE: Downgrade MUST be blocked when current products count exceeds target plan limit
+    // BUG FIX: Products check was missing from changeOwnerPlan — only customers+channels were checked
+
+    const mockPremiumBilling = {
+      ...mockOwnerBilling,
+      planType: "PREMIUM",
+      creditBalance: 100.0,
+    }
+
+    it("should reject downgrade when products exceed target plan limit", async () => {
+      // SCENARIO: 150 products on PREMIUM, trying to go to BASIC (max 100)
+      // RULE: Cannot downgrade if productsCount > targetPlan.maxProducts
+      mockRepository.getOwnerBilling.mockResolvedValue(mockPremiumBilling)
+      mockRepository.getOwnerUsage.mockResolvedValue({
+        productsCount: 150, // BASIC only allows 100
+        customersCount: 200, // Within BASIC limit (500)
+        channelsCount: 2,    // Within BASIC limit (3)
+      })
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 19.0,
+        maxChannels: 3,
+        maxCustomers: 500,
+        maxProducts: 100,
+      })
+
+      await expect(service.changeOwnerPlan(mockUserId, "BASIC")).rejects.toThrow(
+        /Too many products/
+      )
+    })
+
+    it("should allow downgrade when products are within target plan limit", async () => {
+      // SCENARIO: 80 products on PREMIUM, trying to go to BASIC (max 100) — OK
+      // RULE: Downgrade is allowed when ALL limits (customers, channels, products) are satisfied
+      mockRepository.getOwnerBilling.mockResolvedValue(mockPremiumBilling)
+      mockRepository.getOwnerUsage.mockResolvedValue({
+        productsCount: 80, // BASIC max is 100 — OK
+        customersCount: 200,
+        channelsCount: 2,
+      })
+      mockRepository.upgradeOwnerPlan.mockResolvedValue({
+        nextBillingDate: new Date(2026, 0, 1),
+      })
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        monthlyFee: 19.0,
+        displayName: "Basic",
+      })
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 19.0,
+        maxChannels: 3,
+        maxCustomers: 500,
+        maxProducts: 100,
+      })
+      mockPrisma.billingTransaction.deleteMany.mockResolvedValue({ count: 0 })
+      mockPrisma.billingTransaction.create.mockResolvedValue({})
+
+      const result = await service.changeOwnerPlan(mockUserId, "BASIC")
+
+      expect(result.success).toBe(true)
+      expect(result.isDowngrade).toBe(true)
+    })
+
+    it("should report all violations together (customers + channels + products in one error)", async () => {
+      // SCENARIO: All three resource limits exceeded simultaneously
+      // RULE: Error message must report ALL violations — not stop at first one
+      mockRepository.getOwnerBilling.mockResolvedValue(mockPremiumBilling)
+      mockRepository.getOwnerUsage.mockResolvedValue({
+        productsCount: 150, // exceeds BASIC max (100)
+        customersCount: 600, // exceeds BASIC max (500)
+        channelsCount: 5,   // exceeds BASIC max (3)
+      })
+      mockPrisma.planConfiguration.findUnique.mockResolvedValue({
+        displayName: "Basic",
+        monthlyFee: 19.0,
+        maxChannels: 3,
+        maxCustomers: 500,
+        maxProducts: 100,
+      })
+
+      const error = await service.changeOwnerPlan(mockUserId, "BASIC").catch(e => e)
+
+      expect(error.message).toMatch(/Cannot downgrade to BASIC/)
+      expect(error.message).toMatch(/Too many customers/)
+      expect(error.message).toMatch(/Too many channels/)
+      expect(error.message).toMatch(/Too many products/)
+    })
+  })
+
+  // ============================================================================
+  // CREDIT RECHARGE — AMOUNT VALIDATION TESTS
+  // ============================================================================
+
+  describe("rechargeOwnerCredit — Amount Boundary Validation", () => {
+    // RULE: Recharge amount must be between $10 (min) and $1000 (max)
+    // SECURITY: These limits prevent accidental or malicious extreme amounts
+
+    it("should reject recharge below minimum ($9.99)", async () => {
+      // RULE: Minimum recharge is $10 — anything less is rejected immediately
+      await expect(service.rechargeOwnerCredit(mockUserId, 9.99)).rejects.toThrow(
+        "Minimum recharge amount is $10"
+      )
+    })
+
+    it("should reject recharge above maximum ($1000.01)", async () => {
+      // RULE: Maximum recharge is $1000 — prevents accidental extreme charges
+      await expect(service.rechargeOwnerCredit(mockUserId, 1000.01)).rejects.toThrow(
+        "Maximum recharge amount is $1000"
+      )
+    })
+
+    it("should reject $0 recharge (zero is also below minimum)", async () => {
+      // RULE: $0 is below the $10 minimum — must be rejected
+      await expect(service.rechargeOwnerCredit(mockUserId, 0)).rejects.toThrow(
+        "Minimum recharge amount is $10"
+      )
+    })
+
+    it("should accept exactly $10 (minimum boundary — inclusive)", async () => {
+      // RULE: $10.00 is the exact minimum — it MUST be accepted (boundary inclusive)
+      mockRepository.getOwnerBilling.mockResolvedValue({
+        ...mockOwnerBilling,
+        planType: "BASIC",
+      })
+      mockRepository.addCredit = jest.fn().mockResolvedValue({ success: true, newBalance: 60 })
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        monthlyFee: 19.0,
+        displayName: "Basic",
+      })
+
+      const result = await service.rechargeOwnerCredit(mockUserId, 10.00)
+
+      expect(result.success).toBe(true)
+    })
+
+    it("should accept exactly $1000 (maximum boundary — inclusive)", async () => {
+      // RULE: $1000.00 is the exact maximum — it MUST be accepted (boundary inclusive)
+      mockRepository.getOwnerBilling.mockResolvedValue({
+        ...mockOwnerBilling,
+        planType: "BASIC",
+      })
+      mockRepository.addCredit = jest.fn().mockResolvedValue({ success: true, newBalance: 1050 })
+      mockRepository.getPlanConfiguration.mockResolvedValue({
+        monthlyFee: 19.0,
+        displayName: "Basic",
+      })
+
+      const result = await service.rechargeOwnerCredit(mockUserId, 1000.00)
+
+      expect(result.success).toBe(true)
     })
   })
 })

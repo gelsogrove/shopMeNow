@@ -818,11 +818,14 @@ export class SubscriptionBillingService {
 
       const violations: string[] = []
 
-    if (usage.customersCount > targetPlanConfig.maxCustomers) {
-      violations.push(`Too many customers: ${usage.customersCount}/${targetPlanConfig.maxCustomers}`)
-    }
+      if (usage.customersCount > targetPlanConfig.maxCustomers) {
+        violations.push(`Too many customers: ${usage.customersCount}/${targetPlanConfig.maxCustomers}`)
+      }
       if (usage.channelsCount > targetPlanConfig.maxChannels) {
         violations.push(`Too many channels: ${usage.channelsCount}/${targetPlanConfig.maxChannels}`)
+      }
+      if (usage.productsCount > targetPlanConfig.maxProducts) {
+        violations.push(`Too many products: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
       }
 
       if (violations.length > 0) {
@@ -927,6 +930,9 @@ export class SubscriptionBillingService {
     }
     if (usage.channelsCount > targetPlanConfig.maxChannels) {
       violations.push(`Canali: ${usage.channelsCount}/${targetPlanConfig.maxChannels}`)
+    }
+    if (usage.productsCount > targetPlanConfig.maxProducts) {
+      violations.push(`Prodotti: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
     }
 
     if (violations.length > 0) {
