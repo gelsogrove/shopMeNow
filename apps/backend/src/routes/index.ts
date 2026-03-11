@@ -426,6 +426,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/support-chat", // 🆘 PUBLIC operator handoff routes (token-authenticated)
   "/operator-dashboard", // 📊 PUBLIC operator dashboard routes (token-authenticated)
   "/questionnaire", // 📋 PUBLIC onboarding questionnaire (no auth)
+  "/legal-documents", // 📜 PUBLIC legal pages (terms, privacy, refund, GDPR)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {

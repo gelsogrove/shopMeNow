@@ -1,9 +1,4 @@
 - paypall
+- WAPI
 - consegnare il quetionario foto robottibo
-- privacy non va 
-- lingue  sbagliate nelle pagie
-- Send us a message
-- foto del robottino
-- box vanno a landing pagie
-- scrivere al stakholder (Micheal, )
-- WAPI UltraMesg= facebiook?
+ 

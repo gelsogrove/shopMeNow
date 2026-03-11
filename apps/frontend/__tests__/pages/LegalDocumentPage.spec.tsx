@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { LegalDocumentPage } from '@/pages/LegalDocumentPage'
 import { publicApi } from '@/services/publicApi'
+import { LanguageProvider } from '@/contexts/LanguageContext'
 
 vi.mock('@/services/publicApi', () => ({
   publicApi: {
@@ -28,11 +29,14 @@ describe('LegalDocumentPage', () => {
   })
 
   it('loads legal document using public API without auth redirects', async () => {
-    localStorage.setItem('userLanguage', 'it')
+    // RULE: LanguageProvider reads from localStorage key "language" (not "userLanguage")
+    localStorage.setItem('language', 'it')
 
     render(
       <BrowserRouter>
-        <LegalDocumentPage docType="PRIVACY_POLICY" />
+        <LanguageProvider>
+          <LegalDocumentPage docType="PRIVACY_POLICY" />
+        </LanguageProvider>
       </BrowserRouter>
     )
 

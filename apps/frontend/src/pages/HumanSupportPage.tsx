@@ -216,7 +216,11 @@ export function HumanSupportPage() {
               {/* Hero image */}
               <div className="relative order-2 lg:order-1">
                 <div className="absolute -inset-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl blur-xl opacity-40" />
-                <img src="/human.png" alt="Human Support Dashboard" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain" />
+                <img
+                  src="/contactus.png"
+                  alt="Human + AI collaboration"
+                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-cover"
+                />
               </div>
               <div className="order-1 lg:order-2">
                 <span className="inline-block bg-amber-100 text-amber-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">

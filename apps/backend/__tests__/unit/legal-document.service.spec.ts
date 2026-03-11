@@ -6,6 +6,7 @@ jest.mock("@echatbot/database", () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+      upsert: jest.fn(),
     },
   }
 
@@ -147,15 +148,18 @@ describe("LegalDocumentService", () => {
         isActive: true,
       } as any
 
-      prisma.legalDocument.update.mockResolvedValue(updatedDocument)
+      // Service now uses upsert instead of update (supports create-if-not-exists)
+      prisma.legalDocument.upsert.mockResolvedValue(updatedDocument)
 
       const result = await service.updateLegalDocument("PRIVACY_POLICY", updateData)
 
       expect(result.titleIt).toBe("Nuovo Titolo")
-      expect(prisma.legalDocument.update).toHaveBeenCalledWith({
-        where: { type: "PRIVACY_POLICY" },
-        data: updateData,
-      })
+      expect(prisma.legalDocument.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { type: "PRIVACY_POLICY" },
+          update: updateData,
+        })
+      )
     })
 
     it("should throw error for invalid document type", async () => {

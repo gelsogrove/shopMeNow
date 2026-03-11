@@ -288,54 +288,8 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             </span>
           </Link>
 
-          {/* Center: Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-8">
-            <Link
-              to="/"
-              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/") ? "text-green-600" : "text-slate-700"}`}
-            >
-              {t.home}
-            </Link>
-            <Link
-              to="/features"
-              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/features") ? "text-green-600" : "text-slate-700"}`}
-            >
-              {t.features}
-            </Link>
-            <Link
-              to="/pricing"
-              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/pricing") ? "text-green-600" : "text-slate-700"}`}
-            >
-              {t.pricing}
-            </Link>
-
-            {/* Resources Dropdown */}
-            <div className="relative" ref={resourcesRef}>
-              <button
-                onClick={() => setIsResourcesOpen(!isResourcesOpen)}
-                className="flex items-center gap-1 font-medium text-sm xl:text-base text-slate-700 hover:text-green-600 transition-colors"
-              >
-                {t.resources}
-                <ChevronDown className={`h-4 w-4 transition-transform ${isResourcesOpen ? "rotate-180" : ""}`} />
-              </button>
-              {isResourcesOpen && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50">
-                  <Link to="/widget-to-whatsapp" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.widgetToWhatsApp}</Link>
-                  <Link to="/human-support" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.humanSupport}</Link>
-                  <Link to="/crm-integration" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.crmIntegration}</Link>
-                  <Link to="/team-collaboration" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.teamCollaboration}</Link>
-                  <Link to="/privacy-by-design" className="block px-4 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors" onClick={() => setIsResourcesOpen(false)}>{t.privacyDesign}</Link>
-                </div>
-              )}
-            </div>
-
-            <Link
-              to="/contact"
-              className={`font-medium text-sm xl:text-base transition-colors hover:text-green-600 ${isActive("/contact") ? "text-green-600" : "text-slate-700"}`}
-            >
-              {t.contact}
-            </Link>
-          </nav>
+          {/* Center spacer (nav hidden to mirror homepage header minimal layout) */}
+          <div className="hidden lg:block flex-1" />
 
           {/* Right: Language + Auth (identical layout to homepage) */}
           <div className="flex items-center justify-end gap-2 md:gap-6">
