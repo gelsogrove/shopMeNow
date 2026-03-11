@@ -897,6 +897,19 @@ class BackofficeApi {
     },
 
     /**
+     * Mark invoice as paid manually (admin override, no PayPal)
+     */
+    markInvoicePaidManually: async (
+      invoiceId: string,
+      reason: string
+    ): Promise<ApiResponse<{ invoiceId: string; invoiceNumber: string; status: string; paidAt: string }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}/mark-paid-manually`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      })
+    },
+
+    /**
      * Cancel invoice and optionally block workspace
      */
     cancelInvoice: async (

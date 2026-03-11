@@ -246,7 +246,7 @@ export function CollectionsPage() {
   const [rechargesModal, setRechargesModal] = useState<{ userId: string; ownerEmail: string } | null>(null)
   const [rechargesTransactions, setRechargesTransactions] = useState<any[]>([])
   const [rechargesLoading, setRechargesLoading] = useState(false)
-  const [cancelModal, setCancelModal] = useState<{ 
+  const [cancelModal, setCancelModal] = useState<{
     invoiceId: string
     ownerEmail: string
     periodMonth: number
@@ -256,6 +256,15 @@ export function CollectionsPage() {
   const [cancelReason, setCancelReason] = useState('')
   const [cancelBlockWorkspace, setCancelBlockWorkspace] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [markPaidModal, setMarkPaidModal] = useState<{
+    invoiceId: string
+    ownerEmail: string
+    periodMonth: number
+    periodYear: number
+    amount: number
+  } | null>(null)
+  const [markPaidReason, setMarkPaidReason] = useState('')
+  const [markPaidLoading, setMarkPaidLoading] = useState(false)
   const previousDefaults = getPreviousMonthFromDate(new Date())
   const [historyMonth, setHistoryMonth] = useState<number | null>(previousDefaults.month)
   const [historyYear, setHistoryYear] = useState<number | null>(previousDefaults.year)
@@ -355,7 +364,7 @@ export function CollectionsPage() {
     setIsTransactionsLoading(true)
     setError(null)
 
-    const response = await api.users.getPayPalTransactions()
+    const response = await api.users.getPayPalTransactions('SUCCESS')
 
     if (!response.success || !response.data) {
       if (!shouldIgnoreError(response.error)) {
@@ -711,8 +720,17 @@ export function CollectionsPage() {
 
     const nextStatus = response.data.success ? 'PAID' : 'FAILED'
     setPreviousRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
+    // Also update currentRows so the button reflects the new status immediately
+    const paymentSucceeded = response.data!.success
+    setCurrentRows((prev) =>
+      prev.map((row) =>
+        row.invoice.id === invoiceId
+          ? { ...row, invoice: { ...row.invoice, status: nextStatus, paidAt: paymentSucceeded ? new Date().toISOString() : null } }
+          : row
+      )
+    )
     setFailedRows((prev) => {
-      if (response.data.success) {
+      if (paymentSucceeded) {
         return prev.filter((row) => row.invoice.id !== invoiceId)
       }
       const updatedRow = targetRow
@@ -753,6 +771,49 @@ export function CollectionsPage() {
       }
     })
     setUpdating(null)
+  }
+
+  const handleMarkPaidManually = async () => {
+    if (!markPaidModal) return
+
+    if (!markPaidReason.trim() || markPaidReason.trim().length < 5) {
+      setError('Please enter a reason (minimum 5 characters)')
+      return
+    }
+
+    setMarkPaidLoading(true)
+    const response = await api.users.markInvoicePaidManually(markPaidModal.invoiceId, markPaidReason.trim())
+
+    if (!response.success || !response.data) {
+      setError(response.error || 'Failed to mark invoice as paid')
+      setMarkPaidLoading(false)
+      return
+    }
+
+    const { invoiceId, paidAt } = response.data
+    const paidAtDate = paidAt
+
+    // Update all relevant row states
+    const applyPaid = (row: OwnerInvoiceRow) =>
+      row.invoice.id === invoiceId
+        ? { ...row, invoice: { ...row.invoice, status: 'PAID', paidAt: paidAtDate } }
+        : row
+
+    setCurrentRows((prev) => prev.map(applyPaid))
+    setPreviousRows((prev) => prev.filter((r) => r.invoice.id !== invoiceId))
+    setFailedRows((prev) => prev.filter((r) => r.invoice.id !== invoiceId))
+
+    // Update invoice preview cache
+    setInvoicePreviews((prev) => {
+      const existing = prev[invoiceId]
+      if (!existing?.data) return prev
+      return { ...prev, [invoiceId]: { loading: false, data: { ...existing.data, status: 'PAID', paidAt: paidAtDate } } }
+    })
+
+    await loadHistory()
+    setMarkPaidModal(null)
+    setMarkPaidReason('')
+    setMarkPaidLoading(false)
   }
 
   const handleCancelInvoice = async () => {
@@ -916,7 +977,7 @@ export function CollectionsPage() {
               : viewMode === 'history'
               ? 'Paid invoices and documents.'
               : viewMode === 'transactions'
-              ? 'All PayPal payment transactions (success and failed).'
+              ? 'Successful PayPal payment transactions.'
               : 'Previous month totals ready to charge.'}
           </p>
           {viewMode === 'history' && historyLabel && (
@@ -1020,6 +1081,7 @@ export function CollectionsPage() {
                         <th className="text-right p-3 font-medium text-gray-600">Amount</th>
                         <th className="text-center p-3 font-medium text-gray-600">Status</th>
                         <th className="text-left p-3 font-medium text-gray-600">Notes</th>
+                        <th className="text-center p-3 font-medium text-gray-600">PDF</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1070,6 +1132,27 @@ export function CollectionsPage() {
                           </td>
                           <td className="p-3 text-gray-500 max-w-[200px] truncate" title={tx.notes || ''}>
                             {tx.notes || '—'}
+                          </td>
+                          <td className="p-3 text-center">
+                            {tx.invoiceId ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  const [mm, yyyy] = (tx.invoicePeriod || '').split('/')
+                                  handleDownloadInvoice(
+                                    tx.invoiceId!,
+                                    parseInt(mm || '1', 10),
+                                    parseInt(yyyy || '0', 10),
+                                    null
+                                  )
+                                }}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -1235,7 +1318,7 @@ export function CollectionsPage() {
                               invoice.invoiceNumber
                             )
                           }
-                          disabled={isUpdatingRow || invoice.status !== 'PAID'}
+                          disabled={isUpdatingRow}
                         >
                           <Download className="h-4 w-4 mr-2" />
                           Download
@@ -1259,10 +1342,26 @@ export function CollectionsPage() {
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Process Payment
                         </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            setMarkPaidModal({
+                              invoiceId: invoice.id,
+                              ownerEmail: row.owner.email || '',
+                              periodMonth: invoice.periodMonth,
+                              periodYear: invoice.periodYear,
+                              amount: resolveDisplayTotal(invoice),
+                            })
+                          }
+                          disabled={isUpdatingRow || invoice.status === 'PAID'}
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        >
+                          Mark as Paid
+                        </Button>
                         <Badge
                           variant={getPayPalEnvironment(row.owner) === 'sandbox' ? 'secondary' : 'destructive'}
-                          className={getPayPalEnvironment(row.owner) === 'sandbox' 
-                            ? 'text-xs bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                          className={getPayPalEnvironment(row.owner) === 'sandbox'
+                            ? 'text-xs bg-yellow-100 text-yellow-800 border border-yellow-300'
                             : 'text-xs bg-red-100 text-red-800 border border-red-300'}
                         >
                           {getPayPalEnvironment(row.owner) === 'sandbox' ? '🧪 SANDBOX' : '🔴 LIVE'}
@@ -1271,7 +1370,7 @@ export function CollectionsPage() {
                     )}
 
                     {isFailedView && (
-                      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto] md:items-center">
+                      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto_auto_auto_auto] md:items-center">
                         <Input
                           placeholder="Admin notes..."
                           value={notesByInvoice[invoice.id] || ''}
@@ -1282,6 +1381,21 @@ export function CollectionsPage() {
                             }))
                           }
                         />
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            handleDownloadInvoice(
+                              invoice.id,
+                              invoice.periodMonth,
+                              invoice.periodYear,
+                              invoice.invoiceNumber
+                            )
+                          }
+                          disabled={isUpdatingRow}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -1293,13 +1407,29 @@ export function CollectionsPage() {
                           </Button>
                           <Badge
                             variant={getPayPalEnvironment(row.owner) === 'sandbox' ? 'secondary' : 'destructive'}
-                            className={getPayPalEnvironment(row.owner) === 'sandbox' 
-                              ? 'text-xs bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                            className={getPayPalEnvironment(row.owner) === 'sandbox'
+                              ? 'text-xs bg-yellow-100 text-yellow-800 border border-yellow-300'
                               : 'text-xs bg-red-100 text-red-800 border border-red-300'}
                           >
                             {getPayPalEnvironment(row.owner) === 'sandbox' ? '🧪 SANDBOX' : '🔴 LIVE'}
                           </Badge>
                         </div>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            setMarkPaidModal({
+                              invoiceId: invoice.id,
+                              ownerEmail: row.owner.email || '',
+                              periodMonth: invoice.periodMonth,
+                              periodYear: invoice.periodYear,
+                              amount: resolveDisplayTotal(invoice),
+                            })
+                          }
+                          disabled={isUpdatingRow}
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        >
+                          Mark as Paid
+                        </Button>
                         <Button
                           variant="outline"
                           onClick={() => handleSaveNotes(invoice.id, 'FAILED')}
@@ -1826,6 +1956,64 @@ export function CollectionsPage() {
               }}
             >
               Save Notes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Paid Manually Modal */}
+      <Dialog open={!!markPaidModal} onOpenChange={(open) => { if (!open) { setMarkPaidModal(null); setMarkPaidReason('') } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-emerald-700 flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Mark Invoice as Paid Manually
+            </DialogTitle>
+            <DialogDescription className="text-base space-y-2 pt-2">
+              {markPaidModal && (
+                <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-1 text-sm">
+                  <p><strong>Owner:</strong> {markPaidModal.ownerEmail}</p>
+                  <p><strong>Period:</strong> {String(markPaidModal.periodMonth).padStart(2, '0')}/{markPaidModal.periodYear}</p>
+                  <p><strong>Amount:</strong> {formatUsd(markPaidModal.amount)}</p>
+                </div>
+              )}
+              <p className="text-amber-700 text-sm font-medium mt-2">
+                ⚠️ This bypasses PayPal entirely. Use only for bank transfers or confirmed payments via other channels.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <label className="text-sm font-medium text-gray-700">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              rows={3}
+              placeholder="e.g. Bank transfer confirmed on 11/03/2026 — ref. TX123456"
+              value={markPaidReason}
+              onChange={(e) => setMarkPaidReason(e.target.value)}
+              disabled={markPaidLoading}
+            />
+            <p className="text-xs text-gray-400">Minimum 5 characters. This reason will be stored in the invoice notes and audit log.</p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setMarkPaidModal(null); setMarkPaidReason('') }}
+              disabled={markPaidLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={handleMarkPaidManually}
+              disabled={markPaidLoading || markPaidReason.trim().length < 5}
+            >
+              {markPaidLoading ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</>
+              ) : (
+                <><CheckCircle className="h-4 w-4 mr-2" /> Confirm Mark as Paid</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

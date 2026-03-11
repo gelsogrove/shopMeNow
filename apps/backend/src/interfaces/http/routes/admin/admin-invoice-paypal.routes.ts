@@ -9,6 +9,7 @@ import { Router, Request, Response } from "express"
 import { prisma } from "@echatbot/database"
 import { authMiddleware } from "../../middlewares/auth.middleware"
 import { platformAdminMiddleware } from "../../middlewares/platform-admin.middleware"
+import { invoiceService } from "../../../../application/services/invoice.service"
 import logger from "../../../../utils/logger"
 
 const router = Router()
@@ -277,6 +278,173 @@ router.post(
       res.status(500).json({
         success: false,
         error: errorMessage,
+      })
+    }
+  }
+)
+
+// ── Mark invoice as paid manually (admin override) ──────────────────────────
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}/mark-paid-manually:
+ *   post:
+ *     summary: Mark invoice as paid manually (admin override, no PayPal)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - reason
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Mandatory reason for manual override (e.g. "Bank transfer confirmed")
+ *     responses:
+ *       200:
+ *         description: Invoice marked as paid successfully
+ *       400:
+ *         description: Invalid request (already paid, cancelled, or missing reason)
+ *       404:
+ *         description: Invoice not found
+ */
+router.post(
+  "/admin/invoices/:invoiceId/mark-paid-manually",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      const { reason } = req.body as { reason?: string }
+      const adminUser = (req as any).user
+
+      if (!adminUser?.id) {
+        res.status(401).json({ success: false, error: "Unauthorized" })
+        return
+      }
+
+      // Reason is mandatory — this is an irreversible financial override
+      if (!reason || reason.trim().length < 5) {
+        res.status(400).json({
+          success: false,
+          error: "A reason is required (minimum 5 characters) to mark an invoice as paid manually",
+        })
+        return
+      }
+
+      const invoice = await prisma.monthlyInvoice.findUnique({
+        where: { id: invoiceId },
+        include: {
+          user: {
+            select: { id: true, email: true, creditBalance: true },
+          },
+        },
+      })
+
+      if (!invoice) {
+        res.status(404).json({ success: false, error: "Invoice not found" })
+        return
+      }
+
+      if (invoice.status === "PAID") {
+        res.status(400).json({ success: false, error: "Invoice is already paid" })
+        return
+      }
+
+      if (invoice.status === "CANCELLED") {
+        res.status(400).json({ success: false, error: "Cannot mark a cancelled invoice as paid" })
+        return
+      }
+
+      // Statuses allowed: DRAFT, PENDING, FAILED
+      const allowedStatuses = ["DRAFT", "PENDING", "FAILED"]
+      if (!allowedStatuses.includes(invoice.status)) {
+        res.status(400).json({
+          success: false,
+          error: `Invoice status '${invoice.status}' cannot be manually marked as paid`,
+        })
+        return
+      }
+
+      const paidAt = new Date()
+      const adminNote = `[MANUAL OVERRIDE by ${adminUser.email}] ${reason.trim()}`
+
+      // 1. Update invoice status to PAID
+      await prisma.monthlyInvoice.update({
+        where: { id: invoiceId },
+        data: {
+          status: "PAID",
+          paidAt,
+          adminNotes: adminNote,
+          adminMarkedById: adminUser.id,
+          adminMarkedAt: paidAt,
+        },
+      })
+
+      // 2. Generate invoice number (same logic as PayPal webhook path)
+      const invoiceNumber = await invoiceService.ensureInvoiceNumber(invoiceId, paidAt)
+
+      // 3. Create PayPalTransaction record for audit trail (no PayPal, just a record)
+      await prisma.payPalTransaction.create({
+        data: {
+          userId: invoice.user.id,
+          invoiceId,
+          amount: invoice.totalAmount,
+          currency: "USD",
+          status: "SUCCESS",
+          notes: adminNote,
+          adminUserId: adminUser.id,
+        },
+      })
+
+      // 4. Create BillingTransaction record (same as webhook path)
+      await prisma.billingTransaction.create({
+        data: {
+          userId: invoice.user.id,
+          workspaceId: null,
+          type: "INVOICE_PAID",
+          amount: invoice.totalAmount,
+          balanceAfter: invoice.user.creditBalance,
+          description: `Invoice ${invoice.periodMonth}/${invoice.periodYear} marked paid manually`,
+          referenceId: invoiceId,
+          referenceType: "invoice",
+        },
+      })
+
+      logger.info("[ADMIN] Invoice manually marked as paid:", {
+        invoiceId,
+        invoiceNumber,
+        adminId: adminUser.id,
+        adminEmail: adminUser.email,
+        amount: Number(invoice.totalAmount),
+        reason: reason.trim(),
+      })
+
+      res.json({
+        success: true,
+        data: {
+          invoiceId,
+          invoiceNumber,
+          status: "PAID",
+          paidAt: paidAt.toISOString(),
+        },
+      })
+    } catch (error) {
+      logger.error("[ADMIN] Error manually marking invoice as paid:", error)
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to mark invoice as paid",
       })
     }
   }

@@ -1990,11 +1990,13 @@ export function LoginPage() {
                     <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-300 rounded-3xl rotate-3 opacity-30" />
                     <div className="relative bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
                       <div className="text-center mb-6 space-y-3">
-                        <img
-                          src="/survey.png"
-                          alt="Survey illustration"
-                          className="mx-auto h-20 w-20 drop-shadow-md"
-                        />
+                        <div className="mx-auto h-28 w-28 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg flex items-center justify-center border border-green-100">
+                          <img
+                            src="/survey.png"
+                            alt="Survey illustration"
+                            className="h-24 w-24 drop-shadow-xl"
+                          />
+                        </div>
                         <p className="text-lg font-semibold text-green-700">
                           {qLang === "it"
                             ? "Questionario eChatbot"

@@ -137,7 +137,21 @@ export async function processPayment(
 ): Promise<ProcessPaymentResult> {
   try {
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 1: Lock and validate invoice (skip rate limit for DRAFT sandbox testing)
+    // STEP 0: Rate limit check — prevent double charges
+    // ═══════════════════════════════════════════════════════════════════
+    const lastAttempt = processingInvoices.get(invoiceId)
+    if (lastAttempt && Date.now() - lastAttempt < RATE_LIMIT_MS) {
+      const secondsLeft = Math.ceil((RATE_LIMIT_MS - (Date.now() - lastAttempt)) / 1000)
+      return {
+        success: false,
+        error: `Rate limited: wait ${secondsLeft}s before retrying`,
+        errorCode: "RATE_LIMITED",
+      }
+    }
+    processingInvoices.set(invoiceId, Date.now())
+
+    // ═══════════════════════════════════════════════════════════════════
+    // STEP 1: Lock and validate invoice
     // ═══════════════════════════════════════════════════════════════════
     const invoice = await prisma.$transaction(async (tx) => {
       // Lock invoice row for update (prevents concurrent processing)
@@ -373,10 +387,22 @@ export async function handlePaymentSuccess(
     return
   }
 
-  // Match invoice by amount (closest match)
-  const matchedInvoice = pendingInvoices.find(
+  // Match invoice by amount (exact match first, then fallback to oldest)
+  // NOTE: do NOT blindly fall back to oldest if amount doesn't match — log warning instead
+  const exactMatch = pendingInvoices.find(
     (inv) => Math.abs(Number(inv.totalAmount) - paymentAmount) < 0.01
-  ) || pendingInvoices[0] // Fallback to oldest pending
+  )
+  if (!exactMatch) {
+    logger.warn("[PAYPAL] No invoice matched payment amount exactly. Amounts:", {
+      paymentAmount,
+      pendingAmounts: pendingInvoices.map((inv) => ({
+        id: inv.id,
+        amount: Number(inv.totalAmount),
+        period: `${inv.periodMonth}/${inv.periodYear}`,
+      })),
+    })
+  }
+  const matchedInvoice = exactMatch || pendingInvoices[0]
 
   // Update invoice to PAID
   await prisma.monthlyInvoice.update({

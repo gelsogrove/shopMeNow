@@ -204,7 +204,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "LIMIT" as const,
     key: "WHATSAPP_RATE_LIMIT_CUSTOMER_PER_MIN",
-    value: "60",
+    value: "15",
     description:
       "Max inbound WhatsApp messages per CUSTOMER per minute (refill rate)",
     isActive: true,
@@ -212,7 +212,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "LIMIT" as const,
     key: "WHATSAPP_RATE_LIMIT_CUSTOMER_BURST",
-    value: "30",
+    value: "10",
     description:
       "Extra burst tokens for CUSTOMER inbound WhatsApp messages",
     isActive: true,
@@ -220,7 +220,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "LIMIT" as const,
     key: "WHATSAPP_RATE_LIMIT_WORKSPACE_PER_MIN",
-    value: "1200",
+    value: "300",
     description:
       "Max inbound WhatsApp messages per WORKSPACE per minute (refill rate)",
     isActive: true,
@@ -228,7 +228,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "LIMIT" as const,
     key: "WHATSAPP_RATE_LIMIT_WORKSPACE_BURST",
-    value: "600",
+    value: "150",
     description:
       "Extra burst tokens for WORKSPACE inbound WhatsApp messages",
     isActive: true,
@@ -236,7 +236,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "LIMIT" as const,
     key: "WHATSAPP_RATE_LIMIT_IP_PER_MIN",
-    value: "1200",
+    value: "600",
     description:
       "Max inbound WhatsApp requests per IP per minute (edge protection)",
     isActive: true,
@@ -244,7 +244,7 @@ export const platformConfigData: PlatformConfigData[] = [
   {
     type: "LIMIT" as const,
     key: "WHATSAPP_RATE_LIMIT_IP_BURST",
-    value: "600",
+    value: "300",
     description:
       "Extra burst tokens for inbound WhatsApp requests per IP",
     isActive: true,

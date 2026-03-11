@@ -209,21 +209,15 @@ export function WidgetToWhatsAppPage() {
                 </div>
               </div>
 
-              {/* Right: Dual-channel illustration */}
-              <div className="relative">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Widget chat */}
-                  <div className="relative">
-                    <img src="/surver-widget.png" alt="Widget Chat" className="w-full h-auto rounded-2xl shadow-lg object-contain" />
-                  </div>
-                  {/* Arrow */}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-green-600 rounded-full p-3 shadow-xl">
-                    <ArrowRight className="h-6 w-6 text-white" />
-                  </div>
-                  {/* WhatsApp conversation */}
-                  <div className="relative">
-                    <img src="/home.png" alt="WhatsApp Conversation" className="w-full h-auto rounded-2xl shadow-lg object-contain" />
-                  </div>
+              {/* Right: New single illustration */}
+              <div className="relative flex justify-center">
+                <div className="relative w-full max-w-xl">
+                  <div className="absolute -inset-6 bg-gradient-to-br from-emerald-200/40 via-white to-teal-200/40 rounded-[36px] blur-3xl" />
+                  <img
+                    src="/survey.png"
+                    alt="Widget to WhatsApp illustration"
+                    className="relative w-full h-auto rounded-[28px] shadow-2xl border border-white/60 object-contain"
+                  />
                 </div>
               </div>
             </motion.div>
