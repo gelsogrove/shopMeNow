@@ -245,7 +245,7 @@ export function ContactPage() {
                   transition={{ duration: 0.5 }}
                 >
                   <div className="rounded-2xl overflow-hidden shadow-xl mb-8">
-                    <img src="/contactus.png" alt="Contact us" className="w-full h-64 object-cover" />
+                    <img src="/contactus.png" alt="Contact us" className="w-full h-80 object-cover" />
                   </div>
 
                   <div className="space-y-4">

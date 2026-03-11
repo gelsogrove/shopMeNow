@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { LegalDocumentEditDialog } from "@/components/legal-documents/LegalDocumentEditDialog"
-import { Edit } from "lucide-react"
+import { Edit, RefreshCw } from "lucide-react"
 
 interface LegalDocument {
   id: string
@@ -19,6 +19,7 @@ interface LegalDocument {
 export function LawsDocumentsPage() {
   const [documents, setDocuments] = useState<LegalDocument[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isInitializing, setIsInitializing] = useState(false)
   const [selectedDocument, setSelectedDocument] = useState<LegalDocument | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
@@ -52,6 +53,25 @@ export function LawsDocumentsPage() {
     }
   }
 
+  const handleInitialize = async () => {
+    setIsInitializing(true)
+    try {
+      const response = await api.post(`/legal-documents/initialize`)
+      const data = await response.json()
+      if (data.success) {
+        toast.success(`${data.message}`)
+        await fetchDocuments()
+      } else {
+        toast.error(data.error || 'Failed to initialize documents')
+      }
+    } catch (error) {
+      toast.error('Failed to initialize legal documents')
+      console.error(error)
+    } finally {
+      setIsInitializing(false)
+    }
+  }
+
   const handleEdit = (document: LegalDocument) => {
     setSelectedDocument(document)
     setIsEditDialogOpen(true)
@@ -80,8 +100,22 @@ export function LawsDocumentsPage() {
 
       <div className="grid gap-4">
         {documents.length === 0 && !isLoading && (
-          <div className="text-center py-8 text-gray-500">
-            Nessun documento trovato. Esegui il seed del database.
+          <div className="text-center py-12 space-y-4">
+            <p className="text-gray-500">No legal documents found in the database.</p>
+            <Button
+              onClick={handleInitialize}
+              disabled={isInitializing}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {isInitializing ? (
+                <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Initializing...</>
+              ) : (
+                <><RefreshCw className="h-4 w-4 mr-2" /> Initialize Default Documents</>
+              )}
+            </Button>
+            <p className="text-xs text-gray-400">
+              This will load GDPR, Privacy Policy, Terms of Service, and Refund Policy from the default seed files.
+            </p>
           </div>
         )}
 

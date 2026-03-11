@@ -128,6 +128,66 @@ router.put(
   (req: any, res: any) => legalDocumentController.updateLegalDocument(req, res)
 )
 
-logger.info("✅ GLOBAL legal documents routes configured (PUBLIC GET, PLATFORM ADMIN PUT)")
+/**
+ * @swagger
+ * /api/legal-documents/initialize:
+ *   post:
+ *     summary: Initialize legal documents from seed files (PLATFORM ADMIN ONLY)
+ *     description: |
+ *       Upserts all 4 legal documents (GDPR, Privacy Policy, Terms, Refund Policy)
+ *       from the HTML seed files. Safe to call multiple times (idempotent).
+ *     tags: [Legal Documents]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Documents initialized successfully
+ */
+router.post(
+  "/initialize",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: any, res: any) => {
+    try {
+      const { legalDocuments } = await import("@echatbot/database/prisma/data/legalDocuments")
+      const { prisma } = await import("@echatbot/database")
+
+      const results: string[] = []
+      for (const doc of legalDocuments) {
+        await prisma.legalDocument.upsert({
+          where: { type: doc.type },
+          update: {
+            titleIt: doc.titleIt,
+            titleEn: doc.titleEn,
+            titleEs: doc.titleEs,
+            titlePt: doc.titlePt,
+            contentIt: doc.contentIt,
+            contentEn: doc.contentEn,
+            contentEs: doc.contentEs,
+            contentPt: doc.contentPt,
+            isActive: doc.isActive,
+          },
+          create: doc,
+        })
+        results.push(doc.type)
+        logger.info(`[LegalDocs] Initialized: ${doc.type}`)
+      }
+
+      res.json({
+        success: true,
+        initialized: results,
+        message: `${results.length} legal documents initialized successfully`,
+      })
+    } catch (error) {
+      logger.error("[LegalDocs] Error initializing documents:", error)
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to initialize legal documents",
+      })
+    }
+  }
+)
+
+logger.info("✅ GLOBAL legal documents routes configured (PUBLIC GET, PLATFORM ADMIN PUT/POST)")
 
 export const legalDocumentRoutes = router

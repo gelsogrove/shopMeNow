@@ -1316,8 +1316,9 @@ export class WidgetChatController {
       }
 
       // 🛠️ DEBUG MODE (WIP) - after security checks, return WIP message
-      if (workspace.debugMode === true) {
-        logger.info("🛠️ Widget WIP - debug mode", {
+      // ⚠️ BYPASS: isPlayground=true (backoffice admin testing) ignores WIP → chatbot responds normally
+      if (workspace.debugMode === true && isPlayground !== true) {
+        logger.info("🛠️ Widget WIP - debug mode (real customer blocked)", {
           workspaceId,
           visitorId,
           debugMode: workspace.debugMode,
@@ -1335,6 +1336,14 @@ export class WidgetChatController {
           success: true,
           status: "wip",
           response: wipResponse,
+        })
+      }
+
+      if (workspace.debugMode === true && isPlayground === true) {
+        logger.info("🧪 Widget playground - bypassing WIP (admin test mode)", {
+          workspaceId,
+          visitorId,
+          debugMode: workspace.debugMode,
         })
       }
 

@@ -66,11 +66,21 @@ export class LegalDocumentService {
     if (data.contentEs) this.validateHtml(data.contentEs)
     if (data.contentPt) this.validateHtml(data.contentPt)
 
-    const updatedDocument = await prisma.legalDocument.update({
-      where: {
+    const updatedDocument = await prisma.legalDocument.upsert({
+      where: { type: type as LegalDocumentType },
+      update: data,
+      create: {
         type: type as LegalDocumentType,
+        titleIt: data.titleIt ?? type,
+        titleEn: data.titleEn ?? type,
+        titleEs: data.titleEs ?? type,
+        titlePt: data.titlePt ?? type,
+        contentIt: data.contentIt ?? "",
+        contentEn: data.contentEn ?? "",
+        contentEs: data.contentEs ?? "",
+        contentPt: data.contentPt ?? "",
+        isActive: data.isActive ?? true,
       },
-      data,
     })
 
     logger.info(`✅ Updated GLOBAL legal document: ${type}`)
