@@ -251,7 +251,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
   }, [])
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-hidden">
+    <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-visible">
       <div className="max-w-7xl mx-auto px-4 lg:px-12">
 
         {/* Mini top-bar — identical to homepage */}

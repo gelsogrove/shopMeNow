@@ -1949,111 +1949,29 @@ export function LoginPage() {
       {/* Survey CTA Section - MOVED BEFORE HOW IT WORKS */}
       {(() => {
         const qLang = language as string
-        const qMap: Record<string, { title: string; desc: string; cta: string }> = {
-          it: {
-            title: "Aiutaci a costruire il chatbot perfetto per te",
-            desc: "Il segreto di un buon chatbot è la qualità delle risposte. Rispondi a qualche domanda sulle tue esigenze — supporto umano, marketing push, widget, vendite, e-commerce e privacy — e ti mostreremo come eChatbot può fare la differenza. Circa 2 minuti, zero impegno.",
-            cta: "Avvia il survey →",
-          },
-          es: {
-            title: "Ayúdanos a construir el chatbot perfecto para ti",
-            desc: "El secreto de un buen chatbot son las respuestas de calidad. Responde algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia. Unos 2 minutos, sin compromiso.",
-            cta: "Iniciar el survey →",
-          },
-          pt: {
-            title: "Ajude-nos a construir o chatbot perfeito para você",
-            desc: "O segredo de um bom chatbot são as respostas de qualidade. Responda algumas perguntas sobre suas necessidades — suporte humano, marketing push, widget, vendas, e-commerce e privacidade — e mostraremos como o eChatbot pode fazer a diferença. Cerca de 2 minutos, sem compromisso.",
-            cta: "Iniciar o survey →",
-          },
-          en: {
-            title: "Help us build the perfect chatbot for you",
-            desc: "The secret to a great chatbot is quality responses. Answer a few questions about your needs — human support, push marketing, widget, sales, e-commerce, and privacy — and we'll show you how eChatbot can make a real difference. About 2 minutes, no commitment.",
-            cta: "Start the survey →",
-          },
-        }
-        const q = qMap[qLang] || qMap["en"]
 
         return (
-          <section className="py-24 bg-gradient-to-br from-emerald-50 via-white to-green-50 border-t border-emerald-100">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                className="flex flex-col lg:flex-row items-center gap-16"
-              >
-                {/* Left: Visual grid of topics */}
-                <div className="lg:w-1/2 flex justify-center">
-                  <div className="relative w-full max-w-md">
-                    {/* Decorative background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-300 rounded-3xl rotate-3 opacity-30" />
-                    <div className="relative bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
-                      <div className="text-center mb-6 space-y-3">
-                        <div className="mx-auto h-28 w-28 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg flex items-center justify-center border border-green-100">
-                          <img
-                            src="/survey.png"
-                            alt="Survey illustration"
-                            className="h-24 w-24 drop-shadow-xl"
-                          />
-                        </div>
-                        <p className="text-lg font-semibold text-green-700">
-                          {qLang === "it"
-                            ? "Questionario eChatbot"
-                            : qLang === "es"
-                            ? "Cuestionario eChatbot"
-                            : qLang === "pt"
-                            ? "Questionário eChatbot"
-                            : "eChatbot Questionnaire"}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        {[
-                          { emoji: "🤝", label: qLang === "it" ? "Supporto umano" : qLang === "es" ? "Soporte humano" : qLang === "pt" ? "Suporte humano" : "Human support" },
-                          { emoji: "📣", label: qLang === "it" ? "Marketing push" : "Push marketing" },
-                          { emoji: "🌐", label: "Widget" },
-                          { emoji: "🛍️", label: qLang === "it" ? "Agenti vendita" : qLang === "es" ? "Agentes ventas" : qLang === "pt" ? "Agentes vendas" : "Sales agents" },
-                          { emoji: "🛒", label: "E-commerce" },
-                          { emoji: "🔒", label: "Privacy" },
-                        ].map(({ emoji, label }) => (
-                          <div
-                            key={label}
-                            className="flex items-center gap-3 bg-green-50 rounded-xl px-4 py-3 border border-green-100"
-                          >
-                            <span className="text-2xl">{emoji}</span>
-                            <span className="text-sm font-medium text-green-800">{label}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Progress bar decoration */}
-                      <div className="mt-6 h-3 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full w-4/6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full" />
-                      </div>
-                      <p className="text-sm text-slate-400 text-center mt-2">2 min</p>
-                    </div>
-                  </div>
+          <section className="py-20 bg-gradient-to-b from-emerald-50 via-white to-green-50 border-t border-emerald-100">
+            <div className="max-w-3xl mx-auto px-6 text-center">
+              <div className="relative bg-white rounded-3xl shadow-2xl border border-emerald-100 px-6 py-10">
+                <div className="absolute inset-6 rounded-3xl bg-emerald-100 blur-3xl opacity-30" />
+                <div className="relative mx-auto h-36 w-36 rounded-3xl bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg flex items-center justify-center border border-green-100">
+                  <img
+                    src="/survey.png"
+                    alt="Survey illustration"
+                    className="h-32 w-32 object-contain drop-shadow-xl"
+                  />
                 </div>
-
-                {/* Right: Text + CTA */}
-                <div className="lg:w-1/2 text-center lg:text-left">
-                  <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
-                    Survey
-                  </span>
-                  <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
-                    {q.title}
-                  </h2>
-                  <p className="text-lg text-slate-600 mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                    {q.desc}
-                  </p>
-                  <Link
-                    to="/survey"
-                    className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-                  >
-                    <span className="text-2xl">📋</span>
-                    <span>{q.cta}</span>
-                  </Link>
-                </div>
-              </motion.div>
+                <h2 className="relative mt-6 text-3xl font-bold text-green-700">
+                  {qLang === "it"
+                    ? "Questionario eChatbot"
+                    : qLang === "es"
+                    ? "Cuestionario eChatbot"
+                    : qLang === "pt"
+                    ? "Questionário eChatbot"
+                    : "eChatbot Questionnaire"}
+                </h2>
+              </div>
             </div>
           </section>
         )

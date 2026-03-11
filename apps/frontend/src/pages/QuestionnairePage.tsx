@@ -121,8 +121,8 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_q: "Onestamente, quanto sei interessato a eChatbot per la tua attività? Seleziona da 0 (per niente) a 5 (molto interessato).\n\nSe selezioni 0, non ti chiediamo nessun dato personale. Se sei interessato, ti mostreremo una breve form di contatto — ci permetteremo di contattarti nei prossimi giorni per capire come possiamo aiutarci a vicenda.",
 
     // Step 10: Other (textarea)
-    other_title: "Hai altro da aggiungere?",
-    other_q: "C'è qualcosa di specifico che vorresti fare con un chatbot AI e che non abbiamo coperto? Un caso d'uso particolare, un'integrazione specifica, una funzionalità che hai in mente? Qualsiasi dettaglio ci aiuta a capire meglio come possiamo aiutarti.",
+    other_title: "Ci siamo quasi!",
+    other_q: "Abbiamo capito! Costruiremo un chatbot AI su misura per il tuo business. C'è qualcos'altro che vorresti comunicarci? Un'integrazione specifica, una funzionalità che hai in mente, un caso d'uso particolare? Qualsiasi dettaglio ci aiuta a creare qualcosa di davvero utile per te.",
     other_placeholder: "Scrivi qui le tue idee o domande… (opzionale)",
 
     // Step 10: Contact consent
@@ -256,8 +256,8 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_q: "Honestly, how interested are you in eChatBot for your business? Select from 0 (not at all) to 5 (very interested).\n\nIf you select 0, we won't ask for any personal data. If you are interested, we'll show you a short contact form — we'll reach out in the coming days to see how we can help each other.",
 
     // Step 10: Other (textarea)
-    other_title: "Anything Else?",
-    other_q: "Is there something specific you'd like to do with an AI chatbot that we haven't covered? A particular use case, a specific integration, a feature you have in mind? Any details help us better understand how we can help you.",
+    other_title: "Almost There!",
+    other_q: "Got it! We'll build a custom AI chatbot tailored to your business. Is there anything else you'd like to tell us? A specific integration, a feature you have in mind, a particular use case? Any detail helps us create something truly useful for you.",
     other_placeholder: "Write your ideas or questions here… (optional)",
 
     contact_title: "Let's Talk",
@@ -386,8 +386,8 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_q: "Honestamente, ¿cuánto te interesa eChatBot para tu negocio? Selecciona de 0 (nada) a 5 (muy interesado).\n\nSi seleccionas 0, no te pediremos ningún dato personal. Si estás interesado, te mostraremos un breve formulario de contacto — nos pondremos en contacto contigo en los próximos días para ver cómo podemos ayudarnos mutuamente.",
 
     // Step 10: Other (textarea)
-    other_title: "¿Algo más?",
-    other_q: "¿Hay algo específico que quisieras hacer con un chatbot de IA y que no hayamos cubierto? ¿Un caso de uso particular, una integración específica, una función que tengas en mente? Cualquier detalle nos ayuda a entender mejor cómo podemos ayudarte.",
+    other_title: "¡Ya casi!",
+    other_q: "¡Entendido! Crearemos un chatbot de IA a medida para tu negocio. ¿Hay algo más que quisieras comunicarnos? Una integración específica, una función que tengas en mente, un caso de uso particular. Cualquier detalle nos ayuda a crear algo realmente útil para ti.",
     other_placeholder: "Escribe tus ideas o preguntas aquí… (opcional)",
 
     contact_title: "Hablemos",
@@ -516,8 +516,8 @@ const QT: Record<Lang, Record<string, string>> = {
     interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado).\n\nSe selecionar 0, não pediremos nenhum dado pessoal. Se estiver interessado, mostraremos um breve formulário de contato — entraremos em contato nos próximos dias para ver como podemos ajudar uns aos outros.",
 
     // Step 10: Other (textarea)
-    other_title: "Algo mais?",
-    other_q: "Há algo específico que você gostaria de fazer com um chatbot de IA e que não cobrimos? Um caso de uso particular, uma integração específica, uma funcionalidade que você tem em mente? Qualquer detalhe nos ajuda a entender melhor como podemos ajudá-lo.",
+    other_title: "Quase lá!",
+    other_q: "Entendemos! Criaremos um chatbot de IA sob medida para o seu negócio. Há mais alguma coisa que gostaria de nos comunicar? Uma integração específica, uma funcionalidade que você tem em mente, um caso de uso particular? Qualquer detalhe nos ajuda a criar algo realmente útil para você.",
     other_placeholder: "Escreva suas ideias ou perguntas aqui… (opcional)",
 
     contact_title: "Vamos Conversar",

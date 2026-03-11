@@ -245,7 +245,7 @@ export function ContactPage() {
                   transition={{ duration: 0.5 }}
                 >
                   <div className="rounded-2xl overflow-hidden shadow-xl mb-8">
-                    <img src="/contactus.png" alt="Contact us" className="w-full h-80 object-cover" />
+                    <img src="/contactus.png" alt="Contact us" className="w-full h-[400px] object-cover" />
                   </div>
 
                   <div className="space-y-4">
@@ -261,11 +261,11 @@ export function ContactPage() {
 
                     <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
                       <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <MapPin className="h-5 w-5 text-green-600" />
+                        <Phone className="h-5 w-5 text-green-600" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.info3Title}</p>
-                        <p className="text-slate-900 font-medium">{t.infoLocation}</p>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.info2Title}</p>
+                        <p className="text-slate-900 font-medium">+34</p>
                       </div>
                     </div>
                   </div>

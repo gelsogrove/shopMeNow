@@ -1,4 +1,4 @@
 - paypall
 - WAPI
+- new channel
 - consegnare il quetionario foto robottibo
- 

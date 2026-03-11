@@ -219,7 +219,7 @@ export function HumanSupportPage() {
                 <img
                   src="/contactus.png"
                   alt="Human + AI collaboration"
-                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-cover"
+                  className="relative w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/60 object-cover"
                 />
               </div>
               <div className="order-1 lg:order-2">
