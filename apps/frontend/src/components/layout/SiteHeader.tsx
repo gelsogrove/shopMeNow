@@ -125,9 +125,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
-  const [isLangOpen, setIsLangOpen] = useState(false)
   const resourcesRef = useRef<HTMLDivElement>(null)
-  const langRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   const t = translations[language]
 
@@ -241,15 +239,11 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
   }
 
   const isActive = (path: string) => location.pathname === path
-  const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[1]
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (resourcesRef.current && !resourcesRef.current.contains(e.target as Node)) {
         setIsResourcesOpen(false)
-      }
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
-        setIsLangOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
@@ -343,41 +337,46 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             </Link>
           </nav>
 
-          {/* Right: Language dropdown (same style as homepage) + CTA */}
-          <div className="flex items-center justify-end gap-2 md:gap-4">
+          {/* Right: Language + Auth (identical layout to homepage) */}
+          <div className="flex items-center justify-end gap-2 md:gap-6">
 
-            {/* Language Dropdown — flag + code + chevron, identical to homepage */}
-            <div className="relative" ref={langRef}>
-              <button
-                onClick={() => setIsLangOpen(!isLangOpen)}
-                className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors"
-              >
-                <span className="text-xl">{currentLang.flag}</span>
-                <span className="text-sm font-medium text-slate-700">{currentLang.code.toUpperCase()}</span>
-                <ChevronDown className="h-4 w-4 text-slate-500" />
-              </button>
-
-              {isLangOpen && (
-                <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider px-3 py-2 font-semibold">{t.language}</p>
-                  <div className="border-t border-slate-100 mb-1" />
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <button
-                      key={lang.code}
-                      onClick={() => { setLanguage(lang.code); setIsLangOpen(false) }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-green-50 hover:text-green-600 transition-colors ${language === lang.code ? "text-green-600 font-semibold" : "text-slate-700"}`}
-                    >
-                      <span className="text-xl">{lang.flag}</span>
-                      <span>{lang.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Language Selector — Shadcn DropdownMenu, identical to homepage */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+                >
+                  <span className="text-xl">
+                    {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
+                  </span>
+                  <span className="hidden sm:inline text-sm font-medium text-slate-700">
+                    {language === "it" ? "IT" : language === "en" ? "EN" : language === "es" ? "ES" : "PT"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-slate-500" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-48" align="end">
+                <DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider px-2 py-1.5">{t.language}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("it")}>
+                  <span className="text-xl">🇮🇹</span><span className="font-medium">Italiano</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("en")}>
+                  <span className="text-xl">🇬🇧</span><span className="font-medium">English</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("es")}>
+                  <span className="text-xl">🇪🇸</span><span className="font-medium">Español</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("pt")}>
+                  <span className="text-xl">🇵🇹</span><span className="font-medium">Português</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Auth Section — logged in or logged out */}
             {isLoggedIn ? (
-              <div className="hidden lg:flex items-center gap-3">
+              <div className="hidden lg:flex items-center gap-4">
                 {/* Support Inbox */}
                 <TooltipProvider delayDuration={100}>
                   <Tooltip>
