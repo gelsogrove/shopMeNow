@@ -561,6 +561,14 @@ router.use("/platform-config", platformConfigRoutes)
 logger.info("✅ Registered platform config routes (/api/platform-config)")
 
 // ========================================
+// 🌍 LEGAL DOCUMENTS ROUTES (Public GET, Platform Admin PUT only)
+// IMPORTANT: MUST be before customersRouter (mounted at '/') which adds
+// authMiddleware to ALL routes, blocking public endpoints like this one
+// ========================================
+router.use("/legal-documents", legalDocumentRoutes)
+logger.info("🌍 Registered GLOBAL legal documents routes: /api/legal-documents (PUBLIC GET, PLATFORM ADMIN PUT)")
+
+// ========================================
 // 👥 USER ADMIN ROUTES (Platform Admin only)
 // ========================================
 router.use("/users", userAdminRoutes)
@@ -769,11 +777,6 @@ router.use("/languages", createLanguagesRouter())
 router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)
 router.use("/gdpr", gdprRoutes)
 logger.info("Registered GDPR routes (/api/workspaces/:workspaceId/gdpr, /api/gdpr)")
-
-// Mount Legal Documents routes - GLOBAL (eCHATBOT platform, NOT workspace-specific)
-// Security: GET=PUBLIC, PUT=PLATFORM ADMIN ONLY
-router.use("/legal-documents", legalDocumentRoutes)
-logger.info("🌍 Registered GLOBAL legal documents routes: /api/legal-documents (PUBLIC GET, PLATFORM ADMIN PUT)")
 
 // 🆕 Mount Widget routes (v2) - PUBLIC API with unified queue
 // Security: Rate limited + 5-step validation (NO auth required)

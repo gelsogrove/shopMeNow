@@ -1,4 +1,6 @@
 - paypall
 - WAPI
 - new channel
+- legacy
 - consegnare il quetionario foto robottibo
+- GDPR PER OGNI CANALE CI VUOLE
