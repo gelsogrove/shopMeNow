@@ -1983,39 +1983,18 @@ export function LoginPage() {
                 transition={{ duration: 0.6, ease: "easeOut" }}
                 className="flex flex-col lg:flex-row items-center gap-16"
               >
-                {/* Left: Visual grid of topics */}
+                {/* Left: Illustration */}
                 <div className="lg:w-1/2 flex justify-center">
                   <div className="relative w-full max-w-md">
                     {/* Decorative background */}
                     <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-300 rounded-3xl rotate-3 opacity-30" />
-                    <div className="relative bg-white rounded-3xl shadow-2xl p-8 border border-green-100">
-                      <div className="text-center mb-6">
-                        <span className="text-6xl">🤖</span>
-                        <p className="text-lg font-semibold text-green-700 mt-2">eChatbot Quiz</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        {[
-                          { emoji: "🤝", label: qLang === "it" ? "Supporto umano" : qLang === "es" ? "Soporte humano" : qLang === "pt" ? "Suporte humano" : "Human support" },
-                          { emoji: "📣", label: qLang === "it" ? "Marketing push" : "Push marketing" },
-                          { emoji: "🌐", label: "Widget" },
-                          { emoji: "🛍️", label: qLang === "it" ? "Agenti vendita" : qLang === "es" ? "Agentes ventas" : qLang === "pt" ? "Agentes vendas" : "Sales agents" },
-                          { emoji: "🛒", label: "E-commerce" },
-                          { emoji: "🔒", label: "Privacy" },
-                        ].map(({ emoji, label }) => (
-                          <div
-                            key={label}
-                            className="flex items-center gap-3 bg-green-50 rounded-xl px-4 py-3 border border-green-100"
-                          >
-                            <span className="text-2xl">{emoji}</span>
-                            <span className="text-sm font-medium text-green-800">{label}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Progress bar decoration */}
-                      <div className="mt-6 h-3 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full w-4/6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full" />
-                      </div>
-                      <p className="text-sm text-slate-400 text-center mt-2">2 min</p>
+                    <div className="relative bg-white rounded-3xl shadow-2xl p-4 sm:p-6 border border-green-100">
+                      <img
+                        src="https://www.echatbot.ai/survey.png"
+                        alt="eChatbot survey illustration"
+                        className="w-full h-full object-contain rounded-2xl"
+                        loading="lazy"
+                      />
                     </div>
                   </div>
                 </div>

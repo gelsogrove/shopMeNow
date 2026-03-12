@@ -30,7 +30,7 @@ const T = {
     phone: "Telefono (opzionale)",
     phonePlaceholder: "+39 000 000 0000",
     subject: "Oggetto",
-    subjectPlaceholder: "Di cosa hai bisogno?",
+    subjectPlaceholder: "Scrivi qui l'oggetto…",
     message: "Messaggio",
     messagePlaceholder: "Raccontaci il tuo caso d'uso, le tue esigenze o le tue domande...",
     send: "Invia Messaggio",
@@ -63,7 +63,7 @@ const T = {
     phone: "Phone (optional)",
     phonePlaceholder: "+1 000 000 0000",
     subject: "Subject",
-    subjectPlaceholder: "What do you need?",
+    subjectPlaceholder: "Put your subject here…",
     message: "Message",
     messagePlaceholder: "Tell us about your use case, needs, or questions...",
     send: "Send Message",
@@ -96,7 +96,7 @@ const T = {
     phone: "Teléfono (opcional)",
     phonePlaceholder: "+34 000 000 000",
     subject: "Asunto",
-    subjectPlaceholder: "¿Qué necesitas?",
+    subjectPlaceholder: "Escribe aquí el asunto…",
     message: "Mensaje",
     messagePlaceholder: "Cuéntanos tu caso de uso, tus necesidades o preguntas...",
     send: "Enviar Mensaje",
@@ -129,7 +129,7 @@ const T = {
     phone: "Telefone (opcional)",
     phonePlaceholder: "+351 000 000 000",
     subject: "Assunto",
-    subjectPlaceholder: "Do que precisa?",
+    subjectPlaceholder: "Coloque aqui o assunto…",
     message: "Mensagem",
     messagePlaceholder: "Conte-nos o seu caso de uso, necessidades ou perguntas...",
     send: "Enviar Mensagem",
@@ -265,7 +265,7 @@ export function ContactPage() {
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.info2Title}</p>
-                        <p className="text-slate-900 font-medium">+34</p>
+                        <p className="text-slate-900 font-medium">WhatsApp: +34602119358</p>
                       </div>
                     </div>
                   </div>
