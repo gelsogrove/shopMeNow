@@ -2,17 +2,25 @@
 <p><strong>Última actualización:</strong> 12 marzo 2026</p>
 
 <p>eChatbot (“nosotros”) opera la plataforma echatbot.ai, las integraciones de WhatsApp, el widget, el backoffice y las API (el “Servicio”). Esta política explica cómo recopilamos, usamos, conservamos y compartimos datos personales cuando utilizas el Servicio.</p>
-
+<p><strong>A quién aplica:</strong> (1) <em>Usuarios Plataforma</em> — empresas y desarrolladores que crean una cuenta eChatbot para gestionar canales con IA; (2) <em>Clientes Finales</em> — clientes de esas empresas que interactúan vía WhatsApp o widget. Esta política cubre ambas categorías.</p>
 <h2>1. Responsable & Contacto</h2>
-<p>Responsable: eChatbot S.L., Carrer de Balmes 123, 08008 Barcelona, España. Email: <a href="mailto:privacy@echatbot.ai">privacy@echatbot.ai</a>.</p>
+<p>Responsable: eChatbot S.L., Carrer de Balmes 123, 08008 Barcelona, España.<br>
+Email: <a href="mailto:privacy@echatbot.ai">privacy@echatbot.ai</a>.<br>
+Todas las solicitudes de privacidad son gestionadas por nuestro equipo de cumplimiento. Responderemos en 30 días.</p>
 
 <h2>2. Datos que tratamos</h2>
+<h3>Usuarios Plataforma</h3>
 <ul>
-  <li><strong>Datos de cuenta:</strong> nombre, correo, hash de contraseña, datos del workspace, identificadores de facturación.</li>
-  <li><strong>Uso y dispositivo:</strong> IP, cabeceras, logs, telemetría, cookies o identificadores similares.</li>
-  <li><strong>Datos de conversación:</strong> mensajes a través de WhatsApp, widget o APIs; archivos opcionales que subas.</li>
-  <li><strong>Datos de pago:</strong> gestionados por Stripe/PayPal; guardamos solo tokens, 4 últimos dígitos y caducidad para recibos.</li>
-  <li><strong>Soporte:</strong> tickets, grabaciones o capturas que proporciones.</li>
+  <li><strong>Datos de cuenta:</strong> nombre, correo, hash de contraseña, nombre del workspace, datos de empresa, identificadores de facturación.</li>
+  <li><strong>Uso y datos técnicos:</strong> IP, cabeceras, logs, trazas de error, telemetría, identificadores de sesión, cookies.</li>
+  <li><strong>Datos de pago:</strong> gestionados por Stripe o PayPal; guardamos solo los últimos 4 dígitos, marca de tarjeta, caducidad y tokens del proveedor para los recibos.</li>
+  <li><strong>Soporte:</strong> tickets, grabaciones o capturas que proporcionas a nuestro equipo.</li>
+</ul>
+<h3>Clientes Finales</h3>
+<ul>
+  <li><strong>Datos de contacto:</strong> número de WhatsApp y nombre mostrado proporcionados por Meta.</li>
+  <li><strong>Datos de conversación:</strong> mensajes intercambiados con el asistente IA, historial de pedidos, carrito.</li>
+  <li><strong>Archivos:</strong> imágenes o documentos compartidos opcionalmente en el chat.</li>
 </ul>
 
 <h2>3. Finalidades y bases legales</h2>
@@ -25,38 +33,64 @@
 </ul>
 
 <h2>4. Procesamiento con IA</h2>
-<p>Usamos proveedores LLM (p. ej., OpenAI) para generar respuestas. Evitamos enviar datos de pago o categorías especiales. Los inputs se procesan temporalmente para responder y no se usan para entrenar modelos públicos.</p>
-
-<h2>5. Compartición de datos</h2>
+<p>Usamos proveedores LLM de terceros (principalmente a través de OpenRouter, que enruta a proveedores como OpenAI, Anthropic y otros) para generar respuestas de IA. Aplicamos las siguientes medidas:</p>
 <ul>
-  <li><strong>Infraestructura:</strong> centros de datos AWS/OCI en la UE cuando es posible.</li>
-  <li><strong>LLM:</strong> OpenAI (EE. UU./UE) bajo Cláusulas Contractuales Tipo.</li>
-  <li><strong>Mensajería:</strong> Meta (WhatsApp), Twilio/WAAPI para la entrega.</li>
-  <li><strong>Pagos:</strong> Stripe y PayPal como responsables independientes de los datos de tarjeta.</li>
-  <li><strong>Analítica/monitorización:</strong> herramientas como Sentry o PostHog con enmascarado de IP cuando sea posible.</li>
+  <li>Los datos de pago, contraseñas y datos de categorías especiales <strong>nunca</strong> se incluyen en los prompts LLM.</li>
+  <li>Los inputs se procesan de forma transitoria para generar la respuesta y <strong>no se usan para entrenar modelos públicos</strong>.</li>
+  <li>El contenido específico del workspace (catálogos, FAQs) inyectado en los prompts se trata como confidencial.</li>
 </ul>
+<p>El procesamiento IA se basa en el art. 6(1)(f) RGPD (interés legítimo) y el art. 6(1)(b) para Usuarios Plataforma.</p>
+
+<h2>5. Compartición de datos y sub-encargados</h2>
+<ul>
+  <li><strong>Infraestructura cloud:</strong> Heroku (Salesforce) para el alojamiento; centros de datos AWS y OCI en la UE cuando es posible.</li>
+  <li><strong>Proveedores LLM:</strong> OpenRouter, OpenAI y otros proveedores de IA bajo Cláusulas Contractuales Tipo de la UE.</li>
+  <li><strong>Mensajería:</strong> Meta (WhatsApp Business Platform) para la entrega; WAAPI y Twilio como intermediarios.</li>
+  <li><strong>Pagos:</strong> Stripe y PayPal como responsables independientes de los datos de transacción.</li>
+  <li><strong>Almacenamiento de medios:</strong> Cloudinary para alojamiento y optimización de imágenes.</li>
+  <li><strong>Monitorización y errores:</strong> Sentry y herramientas similares con enmascarado de IP donde sea posible.</li>
+</ul>
+<p><strong>No vendemos</strong> tus datos personales ni los compartimos con fines publicitarios.</p>
 
 <h2>6. Transferencias internacionales</h2>
 <p>Si los datos salen del EEE/Reino Unido, aplicamos Cláusulas Contractuales Tipo y salvaguardas adicionales (cifrado en tránsito y en reposo, control de acceso).</p>
 
 <h2>7. Conservación</h2>
 <ul>
-  <li>Datos de cuenta: mientras la cuenta esté activa; eliminación en 90 días tras cierre salvo obligación legal.</li>
-  <li>Transcripciones: los administradores pueden borrarlas; de lo contrario, se eliminan a los 24 meses o a petición.</li>
-  <li>Registros de facturación: hasta 10 años por normativa fiscal.</li>
+  <li><strong>Datos de cuenta:</strong> mientras la cuenta esté activa; eliminación en 90 días tras cierre salvo obligación legal.</li>
+  <li><strong>Transcripciones:</strong> los administradores pueden borrarlas en cualquier momento desde el panel; de lo contrario, se eliminan a los 24 meses o a petición.</li>
+  <li><strong>Registros de facturación:</strong> hasta 10 años por normativa fiscal.</li>
+  <li><strong>Logs de servidor:</strong> típicamente conservados 30–90 días, luego eliminados.</li>
 </ul>
 
 <h2>8. Tus derechos</h2>
-<p>Puedes ejercer acceso, rectificación, supresión, limitación, portabilidad u oposición. El consentimiento puede retirarse sin afectar al tratamiento previo. Escribe a <a href="mailto:privacy@echatbot.ai">privacy@echatbot.ai</a>. También puedes reclamar ante tu autoridad de control.</p>
+<p>Tienes derecho a: <strong>acceso</strong>, <strong>rectificación</strong>, <strong>supresión</strong> ("derecho al olvido"), <strong>limitación</strong>, <strong>portabilidad</strong> y <strong>oposición</strong> al tratamiento. El consentimiento puede retirarse sin afectar al tratamiento previo.</p>
+<p>Escribe a <a href="mailto:privacy@echatbot.ai">privacy@echatbot.ai</a>. Respondemos en 30 días. También puedes reclamar ante tu autoridad de control (p. ej., la AEPD en España).</p>
+<p><strong>Residentes en California (CCPA/CPRA):</strong> tienes derecho a conocer, eliminar, corregir y oponerte a la venta de datos personales. No vendemos datos. Contacta privacy@echatbot.ai.</p>
+<p><strong>Brasil (LGPD):</strong> tienes derechos equivalentes bajo la Lei Geral de Proteção de Dados. Contacta privacy@echatbot.ai.</p>
 
 <h2>9. Seguridad</h2>
-<p>Usamos cifrado en tránsito (TLS), cifrado en reposo, accesos basados en roles, audit logs y principio de mínimo privilegio. Ningún sistema es infalible: usa contraseñas robustas y 2FA si está disponible.</p>
+<p>Implementamos medidas técnicas y organizativas que incluyen:</p>
+<ul>
+  <li>Cifrado en tránsito (TLS 1.2+) para todo el tráfico API y web.</li>
+  <li>Cifrado en reposo para bases de datos y almacenamiento sensible.</li>
+  <li>Control de acceso basado en roles con principio de mínimo privilegio.</li>
+  <li>Registro de auditoría para todas las operaciones administrativas.</li>
+  <li>Revisiones de seguridad y análisis de vulnerabilidades periódicos.</li>
+</ul>
+<p>Ningún sistema es infalible. Usa contraseñas robustas y activa la autenticación de dos factores (2FA) donde esté disponible.</p>
 
 <h2>10. Cookies</h2>
-<p>Usamos cookies esenciales para autenticación y sesión, y cookies de analítica opcionales (opt-in donde sea necesario). Consulta el Aviso de Cookies para más detalles.</p>
+<p>Usamos las siguientes categorías de cookies:</p>
+<ul>
+  <li><strong>Esenciales:</strong> necesarias para autenticación y gestión de sesión (tokens de sesión, protección CSRF). No se pueden desactivar.</li>
+  <li><strong>Funcionales:</strong> recuerdan tus preferencias como idioma y workspace seleccionado.</li>
+  <li><strong>Analítica:</strong> datos de uso agregados y anonimizados para mejorar la plataforma. Opt-in donde sea exigido por ley.</li>
+</ul>
+<p>Puedes gestionar las preferencias de cookies en la configuración de tu navegador. Desactivar las cookies no esenciales no afecta a la funcionalidad principal del Servicio.</p>
 
 <h2>11. Menores</h2>
-<p>El Servicio no está dirigido a menores de 16 años. No recopilamos intencionadamente sus datos.</p>
+<p>El Servicio no está dirigido a menores de 16 años. No recopilamos intencionadamente sus datos. Si crees que un menor nos ha proporcionado datos, contacta <a href="mailto:privacy@echatbot.ai">privacy@echatbot.ai</a> y los eliminaremos de inmediato.</p>
 
 <h2>12. Cambios</h2>
-<p>Podemos actualizar esta política. Los cambios relevantes se notificarán por email o aviso en la app. El uso continuado implica aceptación.</p>
+<p>Podemos actualizar esta política. Los cambios relevantes se notificarán por email o aviso en la app al menos 7 días antes de su entrada en vigor. La fecha de "Última actualización" refleja la revisión más reciente. El uso continuado tras la entrada en vigor implica aceptación.</p>

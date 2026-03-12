@@ -1873,10 +1873,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         >
           <div className="flex h-auto sm:h-[750px] max-h-[90vh]">
             {/* LEFT SIDEBAR - Step Indicators - hidden on mobile */}
-            <div className="hidden sm:flex w-[240px] lg:w-[340px] bg-gray-50 border-r border-gray-200 p-6 flex-col rounded-l-2xl">
+            <div className="hidden sm:flex w-[240px] lg:w-[340px] bg-gradient-to-b from-gray-50 via-gray-50 to-green-50/30 border-r border-gray-200 p-6 flex-col rounded-l-2xl">
               <div className="mb-8">
-                <h2 className="text-xl font-bold text-gray-900">New Channel</h2>
-                <p className="text-gray-500 text-sm mt-1">Setup wizard</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                    <Zap className="w-4 h-4 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">New Channel</h2>
+                </div>
+                <p className="text-gray-500 text-sm mt-1 ml-10">Setup wizard</p>
               </div>
               
               <div className="flex-1 space-y-1">
@@ -1964,9 +1969,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Your Business</h3>
-                      <p className="text-sm text-gray-500 mt-1">Help us personalise your setup in seconds</p>
+                    {/* Step illustration header */}
+                    <div className="relative bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 rounded-xl p-5 overflow-hidden border border-green-100">
+                      <div className="flex items-center gap-5">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900">Your Business</h3>
+                          <p className="text-sm text-gray-500 mt-1">Help us personalise your setup in seconds</p>
+                        </div>
+                        <img src="/survery-start.png" alt="" className="w-28 h-20 object-cover rounded-lg shadow-sm flex-shrink-0 opacity-90" loading="lazy" />
+                      </div>
                     </div>
 
                     {/* Industry */}
@@ -1981,15 +1992,17 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         ].map((item) => (
                           <div
                             key={item.value}
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                               wizardData.industry === item.value
-                                ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-green-500 bg-green-50 shadow-sm shadow-green-100'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                             }`}
                             onClick={() => updateWizardData('industry', item.value as WizardFormData['industry'])}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{item.emoji}</span>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${
+                                wizardData.industry === item.value ? 'bg-green-100' : 'bg-gray-100'
+                              }`}>{item.emoji}</div>
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-medium text-gray-900 text-sm">{item.label}</h4>
                                 <p className="text-xs text-gray-500">{item.desc}</p>
@@ -2015,10 +2028,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         ].map((item) => (
                           <div
                             key={item.value}
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                               wizardData.businessGoal === item.value
-                                ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-green-500 bg-green-50 shadow-sm shadow-green-100'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                             }`}
                             onClick={() => {
                               updateWizardData('businessGoal', item.value as WizardFormData['businessGoal'])
@@ -2027,8 +2040,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                               else if (item.value === 'support' || item.value === 'appointments') updateWizardData('sellsProductsAndServices', false)
                             }}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{item.emoji}</span>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${
+                                wizardData.businessGoal === item.value ? 'bg-green-100' : 'bg-gray-100'
+                              }`}>{item.emoji}</div>
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-medium text-gray-900 text-sm">{item.label}</h4>
                                 <p className="text-xs text-gray-500">{item.desc}</p>
@@ -2049,9 +2064,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 2 && (
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Channel Setup</h3>
-                      <p className="text-sm text-gray-500 mt-1">Choose your channel type and enter basic details</p>
+                    {/* Step illustration header */}
+                    <div className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 rounded-xl p-5 overflow-hidden border border-blue-100">
+                      <div className="flex items-center gap-5">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900">Channel Setup</h3>
+                          <p className="text-sm text-gray-500 mt-1">Choose your channel type and enter basic details</p>
+                        </div>
+                        <img src="/surver-widget.png" alt="" className="w-28 h-20 object-cover rounded-lg shadow-sm flex-shrink-0 opacity-90" loading="lazy" />
+                      </div>
                     </div>
 
                     {/* Channel Type Selection */}
@@ -2059,8 +2080,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <div
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                           wizardData.channelType === 'WHATSAPP'
-                            ? 'border-green-500 bg-green-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-green-500 bg-green-50 shadow-sm shadow-green-100'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                         }`}
                         onClick={() => {
                           updateWizardData('channelType', 'WHATSAPP')
@@ -2088,8 +2109,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <div
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                           wizardData.channelType === 'WIDGET'
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-blue-500 bg-blue-50 shadow-sm shadow-blue-100'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                         }`}
                         onClick={() => {
                           updateWizardData('channelType', 'WIDGET')
@@ -2172,26 +2193,34 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         <Label className="text-sm font-medium">Do you sell products?</Label>
                         <div className="grid grid-cols-2 gap-3 mt-2">
                           <div
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center ${
+                            className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all text-center ${
                               wizardData.sellsProductsAndServices
-                                ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-green-500 bg-green-50 shadow-sm shadow-green-100'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                             }`}
                             onClick={() => updateWizardData('sellsProductsAndServices', true)}
                           >
-                            <Store className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-1.5 ${
+                              wizardData.sellsProductsAndServices ? 'bg-green-100' : 'bg-gray-100'
+                            }`}>
+                              <Store className="w-5 h-5 text-gray-600" />
+                            </div>
                             <p className="text-sm font-medium text-gray-900">Yes</p>
                             <p className="text-xs text-gray-500">Catalog, cart & orders</p>
                           </div>
                           <div
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all text-center ${
+                            className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all text-center ${
                               !wizardData.sellsProductsAndServices
-                                ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-green-500 bg-green-50 shadow-sm shadow-green-100'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                             }`}
                             onClick={() => updateWizardData('sellsProductsAndServices', false)}
                           >
-                            <MessageSquare className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mx-auto mb-1.5 ${
+                              !wizardData.sellsProductsAndServices ? 'bg-green-100' : 'bg-gray-100'
+                            }`}>
+                              <MessageSquare className="w-5 h-5 text-gray-600" />
+                            </div>
                             <p className="text-sm font-medium text-gray-900">No</p>
                             <p className="text-xs text-gray-500">Support only</p>
                           </div>
@@ -2206,17 +2235,23 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 3 && (
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Connection Provider</h3>
-                      <p className="text-sm text-gray-500 mt-1">How do you want to connect your WhatsApp number?</p>
+                    {/* Step illustration header */}
+                    <div className="relative bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-xl p-5 overflow-hidden border border-amber-100">
+                      <div className="flex items-center gap-5">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900">Connection Provider</h3>
+                          <p className="text-sm text-gray-500 mt-1">How do you want to connect your WhatsApp number?</p>
+                        </div>
+                        <img src="/survery-secuiry.png" alt="" className="w-28 h-20 object-cover rounded-lg shadow-sm flex-shrink-0 opacity-90" loading="lazy" />
+                      </div>
                     </div>
 
                     {/* WaAPI — Recommended */}
                     <div
                       className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         wizardData.whatsappProvider === 'waapi'
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-green-500 bg-green-50 shadow-md shadow-green-100'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                       }`}
                       onClick={() => updateWizardData('whatsappProvider', 'waapi')}
                     >
@@ -2248,8 +2283,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     <div
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         wizardData.whatsappProvider === 'meta'
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-blue-500 bg-blue-50 shadow-sm shadow-blue-100'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                       }`}
                       onClick={() => updateWizardData('whatsappProvider', 'meta')}
                     >
@@ -2276,8 +2311,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     <div
                       className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                         wizardData.whatsappProvider === 'ultramsg'
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-purple-500 bg-purple-50 shadow-sm shadow-purple-100'
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                       }`}
                       onClick={() => updateWizardData('whatsappProvider', 'ultramsg')}
                     >
@@ -2316,9 +2351,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 4 && (
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Bot Personality</h3>
-                      <p className="text-sm text-gray-500 mt-1">Define how your bot communicates and introduces itself</p>
+                    {/* Step illustration header */}
+                    <div className="relative bg-gradient-to-br from-purple-50 via-fuchsia-50 to-pink-50 rounded-xl p-5 overflow-hidden border border-purple-100">
+                      <div className="flex items-center gap-5">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-bold text-gray-900">Bot Personality</h3>
+                          <p className="text-sm text-gray-500 mt-1">Define how your bot communicates and introduces itself</p>
+                        </div>
+                        <img src="/survey-agent.png" alt="" className="w-28 h-20 object-cover rounded-lg shadow-sm flex-shrink-0 opacity-90" loading="lazy" />
+                      </div>
                     </div>
 
                     {/* Tone of Voice grid */}
@@ -2333,15 +2374,17 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         ].map((tone) => (
                           <div
                             key={tone.value}
-                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                            className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
                               wizardData.toneOfVoice === tone.value
-                                ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 hover:border-gray-300'
+                                ? 'border-green-500 bg-green-50 shadow-sm shadow-green-100'
+                                : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                             }`}
                             onClick={() => updateWizardData('toneOfVoice', tone.value as WizardFormData['toneOfVoice'])}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{tone.emoji}</span>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0 ${
+                                wizardData.toneOfVoice === tone.value ? 'bg-green-100' : 'bg-gray-100'
+                              }`}>{tone.emoji}</div>
                               <div className="flex-1 min-w-0">
                                 <h4 className="font-medium text-gray-900 text-sm">{tone.label}</h4>
                                 <p className="text-xs text-gray-500">{tone.desc}</p>
@@ -2356,9 +2399,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </div>
 
                     {/* Tone preview */}
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs font-medium text-gray-600 mb-1">Example response:</p>
-                      <p className="text-sm text-gray-800 italic">
+                    <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-100">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">💬 Example response</p>
+                      <p className="text-sm text-gray-800 italic leading-relaxed">
                         {wizardData.toneOfVoice === 'friendly' && '"Hey there! 👋 Great to hear from you! How can I help you today?"'}
                         {wizardData.toneOfVoice === 'professional' && '"Good day. Thank you for contacting us. How may I assist you?"'}
                         {wizardData.toneOfVoice === 'formal' && '"Good afternoon. It is my pleasure to assist you. How may I be of service?"'}
@@ -2419,12 +2462,37 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   <div className="space-y-6">
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'waapi' && (
                       <>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">Scan to Connect WhatsApp</h3>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Open WhatsApp on your phone → Settings → Linked Devices → Link a Device
-                          </p>
+                        {/* Step illustration header */}
+                        <div className="relative bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-5 overflow-hidden border border-green-100">
+                          <div className="flex items-center gap-5">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-bold text-gray-900">Scan to Connect WhatsApp</h3>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Open WhatsApp on your phone → Settings → Linked Devices → Link a Device
+                              </p>
+                            </div>
+                            <img src="/survey-support.png" alt="" className="w-28 h-20 object-cover rounded-lg shadow-sm flex-shrink-0 opacity-90" loading="lazy" />
+                          </div>
                         </div>
+
+                        {/* Idle / Preparing — shown immediately when entering Step 5 */}
+                        {wizardWaapiStatus === 'idle' && (
+                          <div className="flex flex-col items-center justify-center py-12 gap-4">
+                            {newlyCreatedWorkspaceId ? (
+                              <>
+                                <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
+                                <p className="text-sm text-gray-500">Preparing WhatsApp connection…</p>
+                              </>
+                            ) : (
+                              <>
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center w-full">
+                                  <p className="text-sm text-red-700 font-medium">Workspace not created</p>
+                                  <p className="text-xs text-red-500 mt-1">Go back and try again.</p>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
 
                         {/* QR Loading */}
                         {wizardWaapiStatus === 'initializing' && (
@@ -2496,8 +2564,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
                         {/* Steps guide */}
                         {wizardQrCode && (
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">How to scan</p>
+                          <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-100 space-y-2.5">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">📱 How to scan</p>
                             {[
                               'Open WhatsApp on your phone',
                               'Tap ⋮ (Android) or Settings (iPhone)',
@@ -2517,11 +2585,17 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {/* Meta / UltraMsg — credentials note */}
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'waapi' && (
                       <>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            {wizardData.whatsappProvider === 'meta' ? 'Meta Business API' : 'UltraMsg'} Setup
-                          </h3>
-                          <p className="text-sm text-gray-500 mt-1">Your channel has been created. Configure credentials in Settings.</p>
+                        {/* Step illustration header */}
+                        <div className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 rounded-xl p-5 overflow-hidden border border-blue-100">
+                          <div className="flex items-center gap-5">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-bold text-gray-900">
+                                {wizardData.whatsappProvider === 'meta' ? 'Meta Business API' : 'UltraMsg'} Setup
+                              </h3>
+                              <p className="text-sm text-gray-500 mt-1">Your channel has been created. Configure credentials in Settings.</p>
+                            </div>
+                            <img src="/survey-support.png" alt="" className="w-28 h-20 object-cover rounded-lg shadow-sm flex-shrink-0 opacity-90" loading="lazy" />
+                          </div>
                         </div>
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                           <div className="flex items-start gap-3">
@@ -2544,9 +2618,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {/* Widget — embed code */}
                     {wizardData.channelType === 'WIDGET' && (
                       <>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">Your Widget is Ready!</h3>
-                          <p className="text-sm text-gray-500 mt-1">Copy the embed code and add it to your website.</p>
+                        {/* Step illustration header */}
+                        <div className="relative bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 rounded-xl p-5 overflow-hidden border border-blue-100">
+                          <div className="flex items-center gap-5">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-bold text-gray-900">Your Widget is Ready!</h3>
+                              <p className="text-sm text-gray-500 mt-1">Copy the embed code and add it to your website.</p>
+                            </div>
+                            <img src="/surver-widget.png" alt="" className="w-28 h-20 object-cover rounded-lg shadow-sm flex-shrink-0 opacity-90" loading="lazy" />
+                          </div>
                         </div>
                         <div className="p-4 bg-gray-900 rounded-xl">
                           <p className="text-xs text-gray-400 mb-2 font-mono">Paste before &lt;/body&gt;</p>
@@ -2581,9 +2661,11 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 6 && (
                   <div className="space-y-6">
-                    <div className="text-center py-4">
-                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <PartyPopper className="w-8 h-8 text-green-600" />
+                    {/* Celebration header with image */}
+                    <div className="relative bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 rounded-xl p-6 overflow-hidden border border-green-100 text-center">
+                      <img src="/survey.png" alt="" className="w-32 h-24 object-cover rounded-lg shadow-sm mx-auto mb-4 opacity-90" loading="lazy" />
+                      <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <PartyPopper className="w-7 h-7 text-green-600" />
                       </div>
                       <h3 className="text-xl font-bold text-gray-900">Your channel is ready!</h3>
                       <p className="text-sm text-gray-500 mt-2">

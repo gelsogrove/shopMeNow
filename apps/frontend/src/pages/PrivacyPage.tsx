@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { ArrowLeft } from "lucide-react"
 import { Link } from "react-router-dom"
+import DOMPurify from "dompurify"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -72,16 +73,16 @@ export function PrivacyPage() {
               </h1>
             </div>
 
-            {/* Content from DB (HTML) */}
+            {/* Content from DB (HTML) - sanitized for security */}
             <div
               className="prose prose-gray max-w-none"
-              dangerouslySetInnerHTML={{ __html: doc.content }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(doc.content) }}
             />
 
             {/* Footer */}
             <div className="mt-12 pt-8 border-t border-gray-200">
               <p className="text-sm text-gray-500 text-center">
-                © 2025 eChatbot. {t("footer.rights")}
+                © 2026 eChatbot. {t("footer.rights")}
               </p>
             </div>
           </>
