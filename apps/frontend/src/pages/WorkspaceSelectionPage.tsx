@@ -1937,23 +1937,40 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
             {/* RIGHT CONTENT - Step Forms */}
             <div className="flex-1 flex flex-col relative overflow-hidden">
-              {/* Progress bar (survey style) */}
-              <div className="h-1.5 bg-slate-100 flex-shrink-0">
-                <div
-                  className="h-full bg-green-500 transition-all duration-300"
-                  style={{ width: `${((wizardStep) / getVisibleSteps().length) * 100}%` }}
-                />
+              {/* Progress bar + step counter (survey style) */}
+              <div className="flex-shrink-0">
+                <div className="h-1.5 bg-slate-100">
+                  <div
+                    className="h-full bg-green-500 transition-all duration-300"
+                    style={{ width: `${((wizardStep) / getVisibleSteps().length) * 100}%` }}
+                  />
+                </div>
+                <div className="flex justify-between items-center px-6 py-3">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Step {getVisibleSteps().findIndex(s => s.id === wizardStep) + 1} of {getVisibleSteps().length}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1">
+                      {getVisibleSteps().map((s, i) => (
+                        <div
+                          key={s.id}
+                          className={`h-1.5 w-5 rounded-full transition-colors ${
+                            i <= getVisibleSteps().findIndex(st => st.id === wizardStep) ? 'bg-green-500' : 'bg-slate-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeWizardDialog}
+                      className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                      aria-label="Close"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-
-              {/* Close button */}
-              <button
-                type="button"
-                onClick={closeWizardDialog}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors z-10"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
 
               {/* Error message (se c'è) */}
               {errorMessage && errorMessage !== "Enter an alias" && (
@@ -1964,23 +1981,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
               {/* Step Content */}
               <div className="flex-1 p-6 overflow-y-auto">
-
-                {/* Step counter + dots (survey style) */}
-                <div className="flex justify-between items-center mb-6">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Step {getVisibleSteps().findIndex(s => s.id === wizardStep) + 1} of {getVisibleSteps().length}
-                  </span>
-                  <div className="flex gap-1">
-                    {getVisibleSteps().map((s, i) => (
-                      <div
-                        key={s.id}
-                        className={`h-1.5 w-5 rounded-full transition-colors ${
-                          i <= getVisibleSteps().findIndex(st => st.id === wizardStep) ? 'bg-green-500' : 'bg-slate-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {/* STEP 1 — Your Business (questionnaire-style) */}
