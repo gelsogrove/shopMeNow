@@ -915,7 +915,7 @@ Escalate IMMEDIATELY (call contactOperator) when customer:
         toneOfVoice: "PROFESSIONAL",
         botIdentityResponse:
           "I'm the eChatbot product specialist. Automate sales, support, and campaigns on WhatsApp — in one platform. 💼 How can I help you today?",
-        chatbotName: "Alex",
+        chatbotName: "Sofia",
         businessType: "technology",
         registrationPage: null, // Uses default /registration page
         requireManualApproval: false, // If true, new customers go to PENDING_APPROVAL after registration
