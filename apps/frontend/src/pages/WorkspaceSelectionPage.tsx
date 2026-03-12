@@ -80,7 +80,6 @@ interface WizardFormData {
 const WIZARD_STEPS = [
   { id: 1, title: "Your Business", description: "Industry & goals", icon: Building2 },
   { id: 2, title: "Channel Setup", description: "Type & name", icon: Smartphone },
-  { id: 3, title: "Provider", description: "Connection method", icon: Zap },
   { id: 4, title: "Bot Personality", description: "Tone & identity", icon: Bot },
   { id: 5, title: "Connect", description: "Link your channel", icon: Link2 },
   { id: 6, title: "All Done!", description: "Channel ready", icon: CheckCircle2 },
@@ -309,8 +308,6 @@ export function WorkspaceSelectionPage() {
           )
         }
         return true
-      case 3: // Provider — always valid (WaAPI pre-selected)
-        return true
       case 4: // Bot Personality: require bot identity
         return wizardData.botIdentityResponse.trim().length > 0
       case 5: // Connect — WaAPI: must be ready; others always valid
@@ -326,22 +323,18 @@ export function WorkspaceSelectionPage() {
   }
 
   const getVisibleSteps = () => {
-    // Widget channels skip Step 3 (Provider)
-    if (wizardData.channelType === 'WIDGET') {
-      return WIZARD_STEPS.filter(step => step.id !== 3) as unknown as typeof WIZARD_STEPS[number][]
-    }
     return WIZARD_STEPS as unknown as typeof WIZARD_STEPS[number][]
   }
 
   const getNextStep = () => {
-    // Widget channels skip Step 3 (Provider)
-    if (wizardStep === 2 && wizardData.channelType === 'WIDGET') return 4
+    // Step 2 → 4 (Step 3 removed — WaAPI auto-selected)
+    if (wizardStep === 2) return 4
     return wizardStep + 1
   }
 
   const getPrevStep = () => {
-    // Widget channels skip Step 3 (Provider)
-    if (wizardStep === 4 && wizardData.channelType === 'WIDGET') return 2
+    // Step 4 → 2 (Step 3 removed)
+    if (wizardStep === 4) return 2
     return wizardStep - 1
   }
 
@@ -1943,7 +1936,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
             </div>
 
             {/* RIGHT CONTENT - Step Forms */}
-            <div className="flex-1 flex flex-col relative">
+            <div className="flex-1 flex flex-col relative overflow-hidden">
+              {/* Progress bar (survey style) */}
+              <div className="h-1.5 bg-slate-100 flex-shrink-0">
+                <div
+                  className="h-full bg-green-500 transition-all duration-300"
+                  style={{ width: `${((wizardStep) / getVisibleSteps().length) * 100}%` }}
+                />
+              </div>
+
               {/* Close button */}
               <button
                 type="button"
@@ -1964,25 +1965,44 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               {/* Step Content */}
               <div className="flex-1 p-6 overflow-y-auto">
 
+                {/* Step counter + dots (survey style) */}
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Step {getVisibleSteps().findIndex(s => s.id === wizardStep) + 1} of {getVisibleSteps().length}
+                  </span>
+                  <div className="flex gap-1">
+                    {getVisibleSteps().map((s, i) => (
+                      <div
+                        key={s.id}
+                        className={`h-1.5 w-5 rounded-full transition-colors ${
+                          i <= getVisibleSteps().findIndex(st => st.id === wizardStep) ? 'bg-green-500' : 'bg-slate-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {/* STEP 1 — Your Business (questionnaire-style) */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-2">
-                      <img src="/survery-start.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
+                    <div className="-mx-6 -mt-6 mb-6">
+                      <img src="/survery-start.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">🏢</span>
-                      <h3 className="text-xl font-bold text-slate-900">Your Business</h3>
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-4xl">🏢</span>
+                        <h2 className="text-xl font-bold text-slate-900">Your Business</h2>
+                      </div>
+                      <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>Help us personalise your setup in seconds</p>
                     </div>
-                    <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>Help us personalise your setup in seconds</p>
 
                     {/* Industry */}
                     <div>
                       <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">What industry are you in?</Label>
-                      <div className="space-y-2.5 mt-3">
+                      <div className="space-y-3 mt-3">
                         {[
                           { value: 'ecommerce',   label: 'E-commerce',   emoji: '🛒', desc: 'Online store & sales' },
                           { value: 'services',    label: 'Services',     emoji: '🏥', desc: 'Professionals & agencies' },
@@ -2017,7 +2037,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {/* Business Goal */}
                     <div>
                       <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">What is your main goal with this channel?</Label>
-                      <div className="space-y-2.5 mt-3">
+                      <div className="space-y-3 mt-3">
                         {[
                           { value: 'sell',         label: 'Sell online',       emoji: '💰', desc: 'Products & e-commerce' },
                           { value: 'leads',        label: 'Generate leads',    emoji: '🎯', desc: 'Capture & qualify leads' },
@@ -2061,17 +2081,19 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {wizardStep === 2 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-2">
-                      <img src="/surver-widget.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
+                    <div className="-mx-6 -mt-6 mb-6">
+                      <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">📡</span>
-                      <h3 className="text-xl font-bold text-slate-900">Channel Setup</h3>
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-4xl">📡</span>
+                        <h2 className="text-xl font-bold text-slate-900">Channel Setup</h2>
+                      </div>
+                      <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>Choose your channel type and enter basic details</p>
                     </div>
-                    <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>Choose your channel type and enter basic details</p>
 
                     {/* Channel Type Selection */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       <button
                         type="button"
                         className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
@@ -2183,7 +2205,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {wizardData.channelType === 'WHATSAPP' && (
                       <div>
                         <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Do you sell products?</Label>
-                        <div className="space-y-2.5 mt-3">
+                        <div className="space-y-3 mt-3">
                           <button
                             type="button"
                             className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
@@ -2231,86 +2253,26 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 )}
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* STEP 3 — Provider (WhatsApp only) */}
-                {/* ═══════════════════════════════════════════════════════════════ */}
-                {wizardStep === 3 && (
-                  <div className="space-y-6">
-                    {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-2">
-                      <img src="/survery-secuiry.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">⚙️</span>
-                      <h3 className="text-xl font-bold text-slate-900">Connection Provider</h3>
-                    </div>
-                    <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>How do you want to connect your WhatsApp number?</p>
-
-                    {/* Provider options — survey radio style */}
-                    <div className="space-y-2.5">
-                      {[
-                        { value: 'waapi', emoji: '⚡', label: 'WaAPI — Instant Setup', desc: 'Scan a QR code and go live in under 2 minutes. No Meta approval needed.', recommended: true },
-                        { value: 'meta', emoji: '📘', label: 'Meta Business API', desc: 'Official Meta integration. Requires a verified Meta Business account.', recommended: false },
-                        { value: 'ultramsg', emoji: '☁️', label: 'UltraMsg', desc: 'Cloud-based alternative. Requires an UltraMsg account and instance token.', recommended: false },
-                      ].map((provider) => (
-                        <button
-                          key={provider.value}
-                          type="button"
-                          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
-                            wizardData.whatsappProvider === provider.value
-                              ? 'border-green-500 bg-green-50 text-green-800'
-                              : 'border-slate-200 hover:border-green-300 text-slate-700'
-                          }`}
-                          onClick={() => updateWizardData('whatsappProvider', provider.value)}
-                        >
-                          <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                            wizardData.whatsappProvider === provider.value ? 'bg-green-500 border-green-500' : 'border-slate-300'
-                          }`}>
-                            {wizardData.whatsappProvider === provider.value && <span className="w-2 h-2 rounded-full bg-white" />}
-                          </span>
-                          <span className="text-xl">{provider.emoji}</span>
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium text-sm flex items-center gap-2">
-                              {provider.label}
-                              {provider.recommended && (
-                                <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold uppercase">Recommended</span>
-                              )}
-                            </span>
-                            <p className="text-xs text-slate-500 mt-0.5">{provider.desc}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                      <div className="flex gap-2">
-                        <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-700">
-                          Not sure which to choose? <strong>WaAPI works for 95% of businesses</strong> — no Meta account or approval required.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* STEP 4 — Bot Personality (moved from old Step 2) */}
+                {/* STEP 4 — Bot Personality */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 4 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-2">
-                      <img src="/survey-agent.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
+                    <div className="-mx-6 -mt-6 mb-6">
+                      <img src="/survey-agent.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">🤖</span>
-                      <h3 className="text-xl font-bold text-slate-900">Bot Personality</h3>
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-4xl">🤖</span>
+                        <h2 className="text-xl font-bold text-slate-900">Bot Personality</h2>
+                      </div>
+                      <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>Define how your bot communicates and introduces itself</p>
                     </div>
-                    <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>Define how your bot communicates and introduces itself</p>
 
                     {/* Tone of Voice — survey radio style */}
                     <div>
                       <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Tone of Voice</p>
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         {[
                           { value: 'friendly', label: 'Friendly', emoji: '😊', desc: 'Warm & approachable' },
                           { value: 'professional', label: 'Professional', emoji: '💼', desc: 'Business-like & clear' },
@@ -2407,16 +2369,18 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'waapi' && (
                       <>
                         {/* Full-bleed step image (survey style) */}
-                        <div className="-mx-6 -mt-6 mb-2">
-                          <img src="/survey-support.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
+                        <div className="-mx-6 -mt-6 mb-6">
+                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-3xl">📱</span>
-                          <h3 className="text-xl font-bold text-slate-900">Scan to Connect WhatsApp</h3>
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-4xl">📱</span>
+                            <h2 className="text-xl font-bold text-slate-900">Scan to Connect WhatsApp</h2>
+                          </div>
+                          <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>
+                            Open WhatsApp on your phone → Settings → Linked Devices → Link a Device
+                          </p>
                         </div>
-                        <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>
-                          Open WhatsApp on your phone → Settings → Linked Devices → Link a Device
-                        </p>
 
                         {/* Idle / Preparing — shown immediately when entering Step 5 */}
                         {wizardWaapiStatus === 'idle' && (
@@ -2529,16 +2493,18 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'waapi' && (
                       <>
                         {/* Full-bleed step image (survey style) */}
-                        <div className="-mx-6 -mt-6 mb-2">
-                          <img src="/survey-support.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
+                        <div className="-mx-6 -mt-6 mb-6">
+                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-3xl">🔧</span>
-                          <h3 className="text-xl font-bold text-slate-900">
-                            {wizardData.whatsappProvider === 'meta' ? 'Meta Business API' : 'UltraMsg'} Setup
-                          </h3>
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-4xl">🔧</span>
+                            <h2 className="text-xl font-bold text-slate-900">
+                              {wizardData.whatsappProvider === 'meta' ? 'Meta Business API' : 'UltraMsg'} Setup
+                            </h2>
+                          </div>
+                          <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>Your channel has been created. Configure credentials in Settings.</p>
                         </div>
-                        <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>Your channel has been created. Configure credentials in Settings.</p>
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                           <div className="flex items-start gap-3">
                             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -2561,14 +2527,16 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {wizardData.channelType === 'WIDGET' && (
                       <>
                         {/* Full-bleed step image (survey style) */}
-                        <div className="-mx-6 -mt-6 mb-2">
-                          <img src="/surver-widget.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
+                        <div className="-mx-6 -mt-6 mb-6">
+                          <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-3xl">🌐</span>
-                          <h3 className="text-xl font-bold text-slate-900">Your Widget is Ready!</h3>
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-4xl">🌐</span>
+                            <h2 className="text-xl font-bold text-slate-900">Your Widget is Ready!</h2>
+                          </div>
+                          <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>Copy the embed code and add it to your website.</p>
                         </div>
-                        <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>Copy the embed code and add it to your website.</p>
                         <div className="p-4 bg-gray-900 rounded-xl">
                           <p className="text-xs text-gray-400 mb-2 font-mono">Paste before &lt;/body&gt;</p>
                           <code className="text-xs text-green-400 font-mono break-all">
@@ -2603,15 +2571,15 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {wizardStep === 6 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-2">
-                      <img src="/survey.png" alt="" className="w-full h-44 object-cover" loading="lazy" />
+                    <div className="-mx-6 -mt-6 mb-6">
+                      <img src="/survey.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
                     </div>
                     <div className="text-center py-2">
                       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <PartyPopper className="w-8 h-8 text-green-600" />
                       </div>
-                      <h3 className="text-xl font-bold text-slate-900">Your channel is ready!</h3>
-                      <p className="text-slate-500 mt-2" style={{ fontSize: '1.05rem' }}>
+                      <h2 className="text-xl font-bold text-slate-900">Your channel is ready!</h2>
+                      <p className="text-slate-500 mt-2" style={{ fontSize: '1.15rem' }}>
                         <strong>{wizardData.alias}</strong> has been created and connected.
                       </p>
                     </div>
@@ -2702,18 +2670,17 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
               </div>
 
-              {/* Footer with navigation */}
-              <div className="p-6 border-t bg-gray-50 flex items-center justify-end">
-                <div className="flex items-center gap-3">
+              {/* Footer with navigation (survey style) */}
+              <div className="px-6 py-4 border-t border-slate-100 bg-white">
+                <div className="flex gap-3">
                   {/* Back: visible for steps 2-4 only (no back once connecting) */}
                   {wizardStep > 1 && wizardStep < 5 && (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={handlePrevStep}
-                      className="gap-2"
+                      className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50"
                     >
-                      <ChevronLeft className="w-4 h-4" />
                       Back
                     </Button>
                   )}
@@ -2723,23 +2690,17 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     <Button
                       onClick={handleNextStep}
                       disabled={!validateCurrentStep() || isLoading}
-                      className="bg-green-600 hover:bg-green-700 gap-2"
+                      className="flex-[2] bg-green-600 hover:bg-green-700 text-white px-8"
                     >
                       {isLoading ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           Creating channel…
                         </>
                       ) : wizardStep === 4 ? (
-                        <>
-                          Connect Channel
-                          <Link2 className="w-4 h-4" />
-                        </>
+                        'Connect Channel'
                       ) : (
-                        <>
-                          Next
-                          <ChevronRight className="w-4 h-4" />
-                        </>
+                        'Next'
                       )}
                     </Button>
                   )}
@@ -2750,10 +2711,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   ) && (
                     <Button
                       onClick={() => setWizardStep(6)}
-                      className="bg-green-600 hover:bg-green-700 gap-2"
+                      className="flex-[2] bg-green-600 hover:bg-green-700 text-white px-8"
                     >
                       Continue
-                      <ChevronRight className="w-4 h-4" />
                     </Button>
                   )}
 
@@ -2762,7 +2722,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     wizardData.channelType === 'WHATSAPP' &&
                     wizardData.whatsappProvider === 'waapi' &&
                     wizardWaapiStatus !== 'ready' && (
-                    <p className="text-xs text-gray-400 italic">Waiting for QR scan…</p>
+                    <p className="text-xs text-slate-400 italic">Waiting for QR scan…</p>
                   )}
 
                   {/* Step 6: Go to Dashboard */}
@@ -2772,10 +2732,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         closeWizardDialog()
                         window.location.reload()
                       }}
-                      className="bg-green-600 hover:bg-green-700 gap-2"
+                      className="flex-[2] bg-green-600 hover:bg-green-700 text-white px-8"
                     >
                       Go to Dashboard
-                      <ChevronRight className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
