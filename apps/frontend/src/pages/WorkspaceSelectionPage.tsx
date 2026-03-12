@@ -40,7 +40,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { getPayPalConnectUrl, getPayPalStatus, disconnectPayPal, getPayPalConfig, type PayPalStatusResponse, type PayPalConfigResponse } from "@/services/paypalApi"
-import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Trash2, Plus, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power, Monitor } from "lucide-react"
+import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power, Monitor, Building2, Link2, RefreshCw, Loader2, PartyPopper, ExternalLink } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import {
@@ -50,34 +50,40 @@ import {
   workspaceApi,
   type WorkspaceChecklist,
 } from "@/services/workspaceApi"
+import { initializeWaapiInstance, regenerateWaapiQr } from "@/services/waapiApi"
 
 // ============================================================================
 // WIZARD TYPES & CONFIGURATION
 // ============================================================================
 
 interface WizardFormData {
-  // Step 1: Channel Details
+  // Step 1: Business Goal (new — from questionnaire)
+  industry: 'ecommerce' | 'services' | 'hospitality' | 'other'
+  businessGoal: 'sell' | 'support' | 'leads' | 'appointments'
+  // Step 2: Channel Setup
   alias: string
   channelType: 'WHATSAPP' | 'WIDGET'
   whatsappNumber: string // Only required if channelType === 'WHATSAPP'
-  // Step 2: Business Type (E-commerce) - ONLY for WhatsApp
   sellsProductsAndServices: boolean
-  // Step 3: Human Support (was Step 4, renumbered after Sales Agents removal)
+  // Step 3: Provider (WhatsApp only)
+  whatsappProvider: 'waapi' | 'meta' | 'ultramsg'
+  // Step 4: Bot Personality
+  toneOfVoice: 'formal' | 'friendly' | 'professional' | 'casual'
+  botIdentityResponse: string
+  // Support (always enabled by default — configurable in Settings later)
   hasHumanSupport: boolean
   humanSupportInstructions: string
-  // Step 5: AUTO - email/phone from user profile (not in form)
-  // Step 6: Tone of Voice
-  toneOfVoice: 'formal' | 'friendly' | 'professional' | 'casual'
-  // Step 7: Bot Identity
-  botIdentityResponse: string
-  // Step 8: FAQs
+  // FAQs
   faqs: Array<{ question: string; answer: string }>
 }
 
 const WIZARD_STEPS = [
-  { id: 1, title: "Channel Basics", description: "Type, name & settings", icon: Smartphone },
-  { id: 2, title: "Bot Personality", description: "Tone & identity", icon: Bot },
-  { id: 3, title: "Review & Create", description: "Confirm your setup", icon: CheckCircle2 },
+  { id: 1, title: "Your Business", description: "Industry & goals", icon: Building2 },
+  { id: 2, title: "Channel Setup", description: "Type & name", icon: Smartphone },
+  { id: 3, title: "Provider", description: "Connection method", icon: Zap },
+  { id: 4, title: "Bot Personality", description: "Tone & identity", icon: Bot },
+  { id: 5, title: "Connect", description: "Link your channel", icon: Link2 },
+  { id: 6, title: "All Done!", description: "Channel ready", icon: CheckCircle2 },
 ] as const
 
 const PLAN_LABELS: Record<PlanType, string> = {
@@ -190,14 +196,22 @@ const CHECKLIST_ITEM_HELP: Record<string, { title: string; description: string; 
 }
 
 const initialWizardData: WizardFormData = {
+  // Step 1: Business Goal
+  industry: 'ecommerce',
+  businessGoal: 'sell',
+  // Step 2: Channel Setup
   alias: "",
   channelType: 'WHATSAPP',
   whatsappNumber: "",
   sellsProductsAndServices: true,
-  hasHumanSupport: true,
-  humanSupportInstructions: "",
+  // Step 3: Provider
+  whatsappProvider: 'waapi',
+  // Step 4: Bot Personality
   toneOfVoice: 'friendly',
   botIdentityResponse: "",
+  // Support defaults
+  hasHumanSupport: true,
+  humanSupportInstructions: "",
   faqs: [],
 }
 
@@ -220,6 +234,12 @@ export function WorkspaceSelectionPage() {
   const [wizardStep, setWizardStep] = useState(1)
   const [wizardData, setWizardData] = useState<WizardFormData>(initialWizardData)
   const [wizardOpen, setWizardOpen] = useState(false)
+  // New workspace created during wizard (set when entering Step 5)
+  const [newlyCreatedWorkspaceId, setNewlyCreatedWorkspaceId] = useState<string | null>(null)
+  // WaAPI connection state for Step 5
+  const [wizardQrCode, setWizardQrCode] = useState<string | null>(null)
+  const [wizardWaapiStatus, setWizardWaapiStatus] = useState<'idle' | 'initializing' | 'pending' | 'authenticated' | 'ready' | 'failed'>('idle')
+  const [wizardWaapiRegenerating, setWizardWaapiRegenerating] = useState(false)
   
   const [userEmail, setUserEmail] = useState("") // Email from token (auto-filled)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
@@ -278,7 +298,9 @@ export function WorkspaceSelectionPage() {
 
   const validateCurrentStep = (): boolean => {
     switch (wizardStep) {
-      case 1: // Channel Basics: alias + phone (if WhatsApp)
+      case 1: // Business Goal — always valid (defaults preset)
+        return true
+      case 2: // Channel Setup: alias required; phone required for WhatsApp
         if (!wizardData.alias.trim()) return false
         if (wizardData.channelType === 'WHATSAPP') {
           return !!(
@@ -287,9 +309,16 @@ export function WorkspaceSelectionPage() {
           )
         }
         return true
-      case 2: // Bot Personality: require botIdentityResponse
+      case 3: // Provider — always valid (WaAPI pre-selected)
+        return true
+      case 4: // Bot Personality: require bot identity
         return wizardData.botIdentityResponse.trim().length > 0
-      case 3: // Review & Create - always valid
+      case 5: // Connect — WaAPI: must be ready; others always valid
+        if (wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'waapi') {
+          return wizardWaapiStatus === 'ready'
+        }
+        return true
+      case 6: // Done — always valid
         return true
       default:
         return true
@@ -297,15 +326,22 @@ export function WorkspaceSelectionPage() {
   }
 
   const getVisibleSteps = () => {
-    // All 3 steps always visible
+    // Widget channels skip Step 3 (Provider)
+    if (wizardData.channelType === 'WIDGET') {
+      return WIZARD_STEPS.filter(step => step.id !== 3) as unknown as typeof WIZARD_STEPS[number][]
+    }
     return WIZARD_STEPS as unknown as typeof WIZARD_STEPS[number][]
   }
 
   const getNextStep = () => {
+    // Widget channels skip Step 3 (Provider)
+    if (wizardStep === 2 && wizardData.channelType === 'WIDGET') return 4
     return wizardStep + 1
   }
 
   const getPrevStep = () => {
+    // Widget channels skip Step 3 (Provider)
+    if (wizardStep === 4 && wizardData.channelType === 'WIDGET') return 2
     return wizardStep - 1
   }
 
@@ -321,16 +357,27 @@ export function WorkspaceSelectionPage() {
     }
   }, [selectedChecklist?.workspaceId, showOnlyPending])
 
-  const handleNextStep = () => {
-    if (validateCurrentStep()) {
-      const next = getNextStep()
-      if (next <= 3) {
-        setWizardStep(next)
+  const handleNextStep = async () => {
+    if (!validateCurrentStep()) return
+    const next = getNextStep()
+
+    // Step 4 → 5: create workspace first (silently), then advance
+    if (next === 5 && !newlyCreatedWorkspaceId) {
+      const success = await handleCreateWorkspace()
+      if (success) {
+        setWizardStep(5)
       }
+      return
+    }
+
+    if (next <= 6) {
+      setWizardStep(next)
     }
   }
 
   const handlePrevStep = () => {
+    // Cannot go back once channel is being connected (Step 5+)
+    if (wizardStep >= 5) return
     const prev = getPrevStep()
     if (prev >= 1) {
       setWizardStep(prev)
@@ -342,6 +389,10 @@ export function WorkspaceSelectionPage() {
     setWizardData({ ...initialWizardData })
     setErrorMessage("")
     setValidationErrors({})
+    setNewlyCreatedWorkspaceId(null)
+    setWizardQrCode(null)
+    setWizardWaapiStatus('idle')
+    setWizardWaapiRegenerating(false)
   }, [])
 
   const closeWizardDialog = () => {
@@ -870,100 +921,165 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     navigate(item.action.path)
   }
 
-  // Gestisce la creazione di un nuovo workspace (from wizard)
-  const handleCreateWorkspace = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
+  // ============================================================================
+  // WIZARD WAAPI HELPERS
+  // ============================================================================
 
-    // Use wizard data
+  // Auto-initialize WaAPI QR code when entering Step 5 (workspace already created)
+  const handleWizardInitWaapi = async () => {
+    if (!newlyCreatedWorkspaceId) return
+    setWizardWaapiStatus('initializing')
+    try {
+      const response = await initializeWaapiInstance(newlyCreatedWorkspaceId, {
+        phoneNumber: wizardData.whatsappNumber,
+        displayName: wizardData.alias || undefined,
+      })
+      setWizardQrCode(response.waapiQrCodeData)
+      setWizardWaapiStatus((response.waapiInstanceStatus as typeof wizardWaapiStatus) || 'pending')
+      toast.success('QR code ready — scan with WhatsApp!')
+    } catch (error: any) {
+      setWizardWaapiStatus('failed')
+      toast.error(error.response?.data?.error || 'Failed to generate QR code')
+    }
+  }
+
+  // Regenerate QR from Step 5
+  const handleWizardRegenerateQr = async () => {
+    if (!newlyCreatedWorkspaceId) return
+    setWizardWaapiRegenerating(true)
+    try {
+      const newQr = await regenerateWaapiQr(newlyCreatedWorkspaceId)
+      setWizardQrCode(newQr)
+      toast.success('QR code regenerated')
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to regenerate QR')
+    } finally {
+      setWizardWaapiRegenerating(false)
+    }
+  }
+
+  // Auto-init WaAPI when entering Step 5 with WaAPI provider
+  useEffect(() => {
+    if (
+      wizardStep === 5 &&
+      newlyCreatedWorkspaceId &&
+      wizardData.channelType === 'WHATSAPP' &&
+      wizardData.whatsappProvider === 'waapi' &&
+      wizardWaapiStatus === 'idle'
+    ) {
+      handleWizardInitWaapi()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardStep, newlyCreatedWorkspaceId])
+
+  // Poll WaAPI connection status (pending/authenticated → ready)
+  useEffect(() => {
+    if (
+      (wizardWaapiStatus === 'pending' || wizardWaapiStatus === 'authenticated') &&
+      newlyCreatedWorkspaceId
+    ) {
+      const interval = setInterval(async () => {
+        try {
+          const { data } = await api.get(`/workspaces/${newlyCreatedWorkspaceId}`)
+          const status = data.waapiInstanceStatus
+          if (status) {
+            setWizardWaapiStatus(status as typeof wizardWaapiStatus)
+            if (status === 'ready') {
+              toast.success('WhatsApp connected successfully!')
+              setWizardStep(6) // Advance to Done
+            }
+          }
+        } catch (err) {
+          logger.error('WaAPI status poll failed:', err)
+        }
+      }, 3000)
+      return () => clearInterval(interval)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wizardWaapiStatus, newlyCreatedWorkspaceId])
+
+  // ============================================================================
+  // WORKSPACE CREATION (called at Step 4 → 5 transition)
+  // ============================================================================
+
+  // Creates workspace and stores ID. Returns true if successful.
+  const handleCreateWorkspace = async (): Promise<boolean> => {
+
     const channelAlias = wizardData.alias.trim()
     const phoneNumber = wizardData.channelType === 'WHATSAPP' ? wizardData.whatsappNumber : ''
 
     if (!channelAlias.trim()) {
       setErrorMessage("Enter a channel name")
-      return
+      return false
     }
 
-    // WhatsApp requires phone number
     if (wizardData.channelType === 'WHATSAPP' && !phoneNumber.trim()) {
       setErrorMessage("Enter a phone number for WhatsApp channel")
-      return
+      return false
     }
 
     try {
       setIsLoading(true)
-      
-      // 🆕 Widget channels CANNOT sell products (Andrea's rule)
+      setErrorMessage("")
+
+      // Widget channels CANNOT sell products (Andrea's rule)
       const finalSellsProducts = wizardData.channelType === 'WIDGET' ? false : wizardData.sellsProductsAndServices
-      
-      // 🆕 Auto-use email from logged user (from token)
+
       const allowedLinks = ["echatbot.ai", "paypal.com"]
-      
+
       const workspaceConfig = {
         name: channelAlias,
-        planType: 'FREE_TRIAL', // 🆕 Explicit plan type for new workspaces (14-day trial)
-        channelType: wizardData.channelType, // 🆕 WHATSAPP or WIDGET
+        planType: 'FREE_TRIAL',
+        channelType: wizardData.channelType,
         whatsappPhoneNumber: phoneNumber || undefined,
-        whatsappProvider: wizardData.channelType === 'WHATSAPP' ? 'waapi' : undefined, // 🆕 WAAPI as default for new WhatsApp channels
+        // Provider: only for WhatsApp
+        whatsappProvider: wizardData.channelType === 'WHATSAPP' ? wizardData.whatsappProvider : undefined,
         language: "en",
-        adminEmail: userEmail, // 🆕 AUTO from token (Andrea's requirement)
+        adminEmail: userEmail,
         allowedExternalLinks: allowedLinks,
-        // 🆕 Channel Configuration (Simplified Wizard)
         sellsProductsAndServices: finalSellsProducts,
         hasHumanSupport: wizardData.hasHumanSupport,
-        humanSupportInstructions: wizardData.hasHumanSupport 
+        humanSupportInstructions: wizardData.hasHumanSupport
           ? (wizardData.humanSupportInstructions || "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝")
           : undefined,
-        operatorContactMethod: 'email', // 🆕 Default to email (changed to whatsapp if enabled in Settings)
-        operatorEmail: userEmail, // 🆕 AUTO from token (Andrea's requirement)
+        operatorContactMethod: 'email',
+        operatorEmail: userEmail,
         toneOfVoice: wizardData.toneOfVoice,
         botIdentityResponse: wizardData.botIdentityResponse || undefined,
-        // FAQs will be created by the backend from initialFAQs, 
-        // but we can pass custom FAQs if user edited them
         faqs: wizardData.faqs.filter(faq => faq.answer.trim() !== ''),
       }
-      
+
       const newWorkspace = await createWorkspace(workspaceConfig)
+      setNewlyCreatedWorkspaceId(newWorkspace.id)
 
-      logger.info("✅ Workspace created successfully:", newWorkspace.id)
-      logger.info("📋 Wizard configuration:", {
+      logger.info("✅ Workspace created:", newWorkspace.id, {
         channelType: wizardData.channelType,
+        provider: wizardData.whatsappProvider,
         sellsProductsAndServices: finalSellsProducts,
-        hasHumanSupport: wizardData.hasHumanSupport,
-        toneOfVoice: wizardData.toneOfVoice,
       })
-      
-      toast.success("Channel created successfully!")
-      closeWizardDialog()
 
-      // 🔄 REFRESH PAGE - Reload workspace-selection to show new workspace with all agents
-      logger.info("🔄 Reloading workspace-selection page...")
-      window.location.reload()
+      return true
     } catch (error: any) {
-      // Check if it's a channel limit error
       if (error?.response?.data?.code === "CHANNEL_LIMIT_EXCEEDED") {
-        const limitMsg =
-          error.response.data.message ||
+        const limitMsg = error.response.data.message ||
           `Channel limit reached (${currentChannelUsage}/${currentChannelLimit}). Upgrade your plan to add more channels.`
         setErrorMessage(limitMsg)
         toast.error(limitMsg)
-        // Apri dialog Change Plan
         closeWizardDialog()
         setOpenChangePlanDialog(true)
       } else if (error?.response?.data?.code === "PAYPAL_NOT_CONNECTED") {
-        const msg =
-          error.response.data.message ||
-          "Connect PayPal to create a new channel."
+        const msg = error.response.data.message || "Connect PayPal to create a new channel."
         setErrorMessage(msg)
         toast.error(msg)
         closeWizardDialog()
         setPaypalConnectModalOpen(true)
       } else {
-        const genericMessage =
-          error?.response?.data?.message || error?.message || "Failed to create channel"
+        const genericMessage = error?.response?.data?.message || error?.message || "Failed to create channel"
         setErrorMessage(genericMessage)
         toast.error(genericMessage)
       }
       logger.error("❌ Error creating workspace:", error)
+      return false
     } finally {
       setIsLoading(false)
     }
@@ -1842,12 +1958,100 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
               {/* Step Content */}
               <div className="flex-1 p-6 overflow-y-auto">
-                {/* STEP 1: Channel Basics (merged old Steps 1 + 2) */}
+
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* STEP 1 — Your Business (questionnaire-style) */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Channel Basics</h3>
-                      <p className="text-sm text-gray-500 mt-1">Choose your channel type and configure basics</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Your Business</h3>
+                      <p className="text-sm text-gray-500 mt-1">Help us personalise your setup in seconds</p>
+                    </div>
+
+                    {/* Industry */}
+                    <div>
+                      <Label className="text-sm font-medium">What industry are you in?</Label>
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                        {[
+                          { value: 'ecommerce',   label: 'E-commerce',   emoji: '🛒', desc: 'Online store & sales' },
+                          { value: 'services',    label: 'Services',     emoji: '🏥', desc: 'Professionals & agencies' },
+                          { value: 'hospitality', label: 'Hospitality',  emoji: '🏨', desc: 'Hotels, restaurants & more' },
+                          { value: 'other',       label: 'Other',        emoji: '📋', desc: 'Any other business' },
+                        ].map((item) => (
+                          <div
+                            key={item.value}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              wizardData.industry === item.value
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateWizardData('industry', item.value as WizardFormData['industry'])}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">{item.emoji}</span>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 text-sm">{item.label}</h4>
+                                <p className="text-xs text-gray-500">{item.desc}</p>
+                              </div>
+                              {wizardData.industry === item.value && (
+                                <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Business Goal */}
+                    <div>
+                      <Label className="text-sm font-medium">What is your main goal with this channel?</Label>
+                      <div className="grid grid-cols-2 gap-3 mt-2">
+                        {[
+                          { value: 'sell',         label: 'Sell online',       emoji: '💰', desc: 'Products & e-commerce' },
+                          { value: 'leads',        label: 'Generate leads',    emoji: '🎯', desc: 'Capture & qualify leads' },
+                          { value: 'support',      label: 'Customer support',  emoji: '💬', desc: 'Answer questions fast' },
+                          { value: 'appointments', label: 'Bookings',          emoji: '📅', desc: 'Appointments & reservations' },
+                        ].map((item) => (
+                          <div
+                            key={item.value}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                              wizardData.businessGoal === item.value
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => {
+                              updateWizardData('businessGoal', item.value as WizardFormData['businessGoal'])
+                              // Auto-set e-commerce flag based on goal
+                              if (item.value === 'sell') updateWizardData('sellsProductsAndServices', true)
+                              else if (item.value === 'support' || item.value === 'appointments') updateWizardData('sellsProductsAndServices', false)
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">{item.emoji}</span>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 text-sm">{item.label}</h4>
+                                <p className="text-xs text-gray-500">{item.desc}</p>
+                              </div>
+                              {wizardData.businessGoal === item.value && (
+                                <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* STEP 2 — Channel Setup */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {wizardStep === 2 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Channel Setup</h3>
+                      <p className="text-sm text-gray-500 mt-1">Choose your channel type and enter basic details</p>
                     </div>
 
                     {/* Channel Type Selection */}
@@ -1861,7 +2065,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         onClick={() => {
                           updateWizardData('channelType', 'WHATSAPP')
                           if (wizardData.channelType !== 'WHATSAPP') {
-                            updateWizardData('sellsProductsAndServices', true)
+                            // Respect step 1 goal: only auto-enable e-commerce for sell/leads goals
+                            const shouldSell = wizardData.businessGoal === 'sell' || wizardData.businessGoal === 'leads'
+                            updateWizardData('sellsProductsAndServices', shouldSell)
                           }
                         }}
                       >
@@ -1995,8 +2201,120 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
 
-                {/* STEP 2: Bot Personality (merged old Steps 5 + 6) */}
-                {wizardStep === 2 && (
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* STEP 3 — Provider (WhatsApp only) */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {wizardStep === 3 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Connection Provider</h3>
+                      <p className="text-sm text-gray-500 mt-1">How do you want to connect your WhatsApp number?</p>
+                    </div>
+
+                    {/* WaAPI — Recommended */}
+                    <div
+                      className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        wizardData.whatsappProvider === 'waapi'
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => updateWizardData('whatsappProvider', 'waapi')}
+                    >
+                      {/* Recommended badge */}
+                      <span className="absolute -top-2.5 left-4 bg-green-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                        <Zap className="w-3 h-3" />
+                        Recommended
+                      </span>
+                      <div className="flex items-start gap-4 mt-1">
+                        <div className={`p-2.5 rounded-lg mt-0.5 ${wizardData.whatsappProvider === 'waapi' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          <Zap className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">WaAPI — Instant Setup</h4>
+                          <p className="text-sm text-gray-500 mt-0.5">No Meta approval needed. Scan a QR code and you're live in under 2 minutes.</p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {['Any WhatsApp number', 'QR code scan', 'No approval', 'Instant'].map(tag => (
+                              <span key={tag} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                        {wizardData.whatsappProvider === 'waapi' && (
+                          <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Meta Business API */}
+                    <div
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        wizardData.whatsappProvider === 'meta'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => updateWizardData('whatsappProvider', 'meta')}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2.5 rounded-lg ${wizardData.whatsappProvider === 'meta' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          <MessageCircle className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">Meta Business API</h4>
+                          <p className="text-sm text-gray-500 mt-0.5">Official Meta integration. Requires a verified Meta Business account and approval process.</p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {['Official API', 'Meta verified', 'Higher limits'].map(tag => (
+                              <span key={tag} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                        {wizardData.whatsappProvider === 'meta' && (
+                          <Check className="w-5 h-5 text-blue-500 flex-shrink-0 mt-1" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* UltraMsg */}
+                    <div
+                      className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                        wizardData.whatsappProvider === 'ultramsg'
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => updateWizardData('whatsappProvider', 'ultramsg')}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className={`p-2.5 rounded-lg ${wizardData.whatsappProvider === 'ultramsg' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          <MessageSquare className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">UltraMsg</h4>
+                          <p className="text-sm text-gray-500 mt-0.5">Cloud-based alternative. Requires an UltraMsg account and instance token.</p>
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {['Cloud API', 'Token setup', 'Alternative'].map(tag => (
+                              <span key={tag} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{tag}</span>
+                            ))}
+                          </div>
+                        </div>
+                        {wizardData.whatsappProvider === 'ultramsg' && (
+                          <Check className="w-5 h-5 text-purple-500 flex-shrink-0 mt-1" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex gap-2">
+                        <Info className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-700">
+                          Not sure which to choose? <strong>WaAPI works for 95% of businesses</strong> — no Meta account or approval required.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* STEP 4 — Bot Personality (moved from old Step 2) */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {wizardStep === 4 && (
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Bot Personality</h3>
@@ -2094,160 +2412,265 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
 
-                {/* STEP 3: Review & Create */}
-                {wizardStep === 3 && (
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* STEP 5 — Connect (QR / Embed code / Credentials) */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {wizardStep === 5 && (
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Review & Create</h3>
-                      <p className="text-sm text-gray-500 mt-1">Confirm your channel setup</p>
-                    </div>
+                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'waapi' && (
+                      <>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Scan to Connect WhatsApp</h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            Open WhatsApp on your phone → Settings → Linked Devices → Link a Device
+                          </p>
+                        </div>
 
-                    {/* Summary card */}
-                    <div className="bg-gray-50 rounded-xl p-5 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase">Channel Type</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            {wizardData.channelType === 'WHATSAPP' ? (
-                              <MessageCircle className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <Globe className="w-4 h-4 text-blue-600" />
-                            )}
-                            <p className="text-sm font-medium text-gray-900">
-                              {wizardData.channelType === 'WHATSAPP' ? 'WhatsApp' : 'Web Widget'}
-                            </p>
+                        {/* QR Loading */}
+                        {wizardWaapiStatus === 'initializing' && (
+                          <div className="flex flex-col items-center justify-center py-12 gap-4">
+                            <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
+                            <p className="text-sm text-gray-500">Generating your QR code…</p>
                           </div>
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase">Channel Name</p>
-                          <p className="text-sm font-medium text-gray-900 mt-1">{wizardData.alias}</p>
-                        </div>
-                        {wizardData.channelType === 'WHATSAPP' && (
-                          <>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 uppercase">Phone Number</p>
-                              <p className="text-sm font-medium text-gray-900 mt-1">{wizardData.whatsappNumber}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-gray-500 uppercase">E-commerce</p>
-                              <p className="text-sm font-medium text-gray-900 mt-1">
-                                {wizardData.sellsProductsAndServices ? 'Yes' : 'No'}
-                              </p>
-                            </div>
-                          </>
                         )}
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 uppercase">Tone of Voice</p>
-                          <p className="text-sm font-medium text-gray-900 mt-1 capitalize">{wizardData.toneOfVoice}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase">Bot Identity</p>
-                        <p className="text-sm text-gray-700 mt-1 line-clamp-2">{wizardData.botIdentityResponse}</p>
-                      </div>
-                    </div>
 
-                    {/* Human Support toggle */}
-                    <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <Headphones className="w-5 h-5 text-gray-600" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">Human Support</p>
-                          <p className="text-xs text-gray-500">Allow customers to request a human operator</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => updateWizardData('hasHumanSupport', !wizardData.hasHumanSupport)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          wizardData.hasHumanSupport ? 'bg-green-500' : 'bg-gray-300'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          wizardData.hasHumanSupport ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
-                    </div>
-
-                    {/* Collapsible FAQs section */}
-                    <details className="bg-white rounded-xl border border-gray-200">
-                      <summary className="flex items-center justify-between p-4 cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <HelpCircle className="w-5 h-5 text-gray-600" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">FAQs</p>
-                            <p className="text-xs text-gray-500">
-                              {wizardData.faqs.length > 0
-                                ? `${wizardData.faqs.length} question${wizardData.faqs.length > 1 ? 's' : ''} added`
-                                : 'Add common questions (optional)'}
-                            </p>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-400 transition-transform [details[open]_&]:rotate-90" />
-                      </summary>
-                      <div className="px-4 pb-4 space-y-3">
-                        {wizardData.faqs.map((faq, index) => (
-                          <div key={index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                <Input
-                                  value={faq.question}
-                                  onChange={(e) => {
-                                    const newFaqs = [...wizardData.faqs]
-                                    newFaqs[index] = { ...newFaqs[index], question: e.target.value }
-                                    updateWizardData('faqs', newFaqs)
-                                  }}
-                                  placeholder="Question..."
-                                  className="text-sm"
-                                />
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const newFaqs = wizardData.faqs.filter((_, i) => i !== index)
-                                  updateWizardData('faqs', newFaqs)
-                                }}
-                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                        {/* QR Code display */}
+                        {wizardQrCode && (wizardWaapiStatus === 'pending' || wizardWaapiStatus === 'authenticated') && (
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm">
+                              <img src={wizardQrCode} alt="WhatsApp QR Code" className="w-52 h-52" />
                             </div>
-                            <Textarea
-                              value={faq.answer}
-                              onChange={(e) => {
-                                const newFaqs = [...wizardData.faqs]
-                                newFaqs[index] = { ...newFaqs[index], answer: e.target.value }
-                                updateWizardData('faqs', newFaqs)
-                              }}
-                              placeholder="Answer..."
-                              className="text-sm min-h-[50px]"
-                              rows={2}
-                            />
+
+                            {wizardWaapiStatus === 'pending' && (
+                              <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                                <div className="flex items-center justify-center gap-2 text-amber-700">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span className="text-sm font-medium">Waiting for scan…</span>
+                                </div>
+                              </div>
+                            )}
+                            {wizardWaapiStatus === 'authenticated' && (
+                              <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                                <div className="flex items-center justify-center gap-2 text-blue-700">
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span className="text-sm font-medium">Connecting… almost there!</span>
+                                </div>
+                              </div>
+                            )}
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={wizardWaapiRegenerating}
+                              onClick={handleWizardRegenerateQr}
+                              className="gap-2"
+                            >
+                              {wizardWaapiRegenerating
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <RefreshCw className="w-4 h-4" />
+                              }
+                              Regenerate QR
+                            </Button>
                           </div>
-                        ))}
+                        )}
+
+                        {/* Failed */}
+                        {wizardWaapiStatus === 'failed' && (
+                          <div className="flex flex-col items-center gap-4 py-6">
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center w-full">
+                              <p className="text-sm text-red-700 font-medium">QR generation failed</p>
+                              <p className="text-xs text-red-500 mt-1">Check your phone number and try again.</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleWizardInitWaapi}
+                              className="gap-2"
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                              Try Again
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Steps guide */}
+                        {wizardQrCode && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">How to scan</p>
+                            {[
+                              'Open WhatsApp on your phone',
+                              'Tap ⋮ (Android) or Settings (iPhone)',
+                              'Select "Linked Devices" → "Link a Device"',
+                              'Point your phone camera at the QR code',
+                            ].map((step, i) => (
+                              <div key={i} className="flex items-start gap-2">
+                                <span className="w-5 h-5 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
+                                <p className="text-sm text-gray-600">{step}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Meta / UltraMsg — credentials note */}
+                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'waapi' && (
+                      <>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {wizardData.whatsappProvider === 'meta' ? 'Meta Business API' : 'UltraMsg'} Setup
+                          </h3>
+                          <p className="text-sm text-gray-500 mt-1">Your channel has been created. Configure credentials in Settings.</p>
+                        </div>
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                          <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-blue-800">Next step: add your credentials</p>
+                              <p className="text-sm text-blue-700 mt-1">
+                                {wizardData.whatsappProvider === 'meta'
+                                  ? 'Go to Settings → WhatsApp → Meta Business API and enter your Phone Number ID and Access Token.'
+                                  : 'Go to Settings → WhatsApp → UltraMsg and enter your Instance ID and Token.'
+                                }
+                              </p>
+                              <p className="text-xs text-blue-500 mt-2">You can complete this after closing the wizard.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Widget — embed code */}
+                    {wizardData.channelType === 'WIDGET' && (
+                      <>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Your Widget is Ready!</h3>
+                          <p className="text-sm text-gray-500 mt-1">Copy the embed code and add it to your website.</p>
+                        </div>
+                        <div className="p-4 bg-gray-900 rounded-xl">
+                          <p className="text-xs text-gray-400 mb-2 font-mono">Paste before &lt;/body&gt;</p>
+                          <code className="text-xs text-green-400 font-mono break-all">
+                            {`<script src="https://cdn.echatbot.ai/widget.js" data-workspace="${newlyCreatedWorkspaceId || 'YOUR_WORKSPACE_ID'}"></script>`}
+                          </code>
+                        </div>
                         <Button
                           type="button"
                           variant="outline"
-                          size="sm"
+                          className="gap-2 w-full"
                           onClick={() => {
-                            updateWizardData('faqs', [
-                              ...wizardData.faqs,
-                              { question: '', answer: '' }
-                            ])
+                            navigator.clipboard.writeText(`<script src="https://cdn.echatbot.ai/widget.js" data-workspace="${newlyCreatedWorkspaceId || ''}"></script>`)
+                            toast.success('Embed code copied!')
                           }}
-                          className="w-full gap-2 border-dashed"
                         >
-                          <Plus className="w-3.5 h-3.5" />
-                          Add FAQ
+                          <Code2 className="w-4 h-4" />
+                          Copy Embed Code
                         </Button>
-                      </div>
-                    </details>
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-xs text-blue-700">
+                            Full widget configuration (color, language, position) available in <strong>Settings → Widget</strong>.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
 
-                    {/* Info note */}
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-xs text-blue-700">
-                        You can customize everything later in <strong>Settings</strong> — FAQs, human support, messages, and more.
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* STEP 6 — Done! */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {wizardStep === 6 && (
+                  <div className="space-y-6">
+                    <div className="text-center py-4">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <PartyPopper className="w-8 h-8 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900">Your channel is ready!</h3>
+                      <p className="text-sm text-gray-500 mt-2">
+                        <strong>{wizardData.alias}</strong> has been created and connected.
                       </p>
+                    </div>
+
+                    {/* Next Steps */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recommended next steps</p>
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all text-left"
+                          onClick={() => {
+                            closeWizardDialog()
+                            window.location.reload()
+                          }}
+                        >
+                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Bot className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">Configure your AI chatbot</p>
+                            <p className="text-xs text-gray-500">Set its personality, rules and knowledge base</p>
+                          </div>
+                          <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        </button>
+
+                        <button
+                          type="button"
+                          className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all text-left"
+                          onClick={() => {
+                            closeWizardDialog()
+                            window.location.reload()
+                          }}
+                        >
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <HelpCircle className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">Add your first FAQs</p>
+                            <p className="text-xs text-gray-500">Teach the bot your most common questions</p>
+                          </div>
+                          <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        </button>
+
+                        {wizardData.sellsProductsAndServices && (
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all text-left"
+                            onClick={() => {
+                              closeWizardDialog()
+                              window.location.reload()
+                            }}
+                          >
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Store className="w-4 h-4 text-amber-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900">Upload your product catalog</p>
+                              <p className="text-xs text-gray-500">Add products so the bot can recommend and sell</p>
+                            </div>
+                            <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          </button>
+                        )}
+
+                        {wizardData.channelType === 'WHATSAPP' && (
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all text-left"
+                            onClick={() => {
+                              closeWizardDialog()
+                              window.location.reload()
+                            }}
+                          >
+                            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Megaphone className="w-4 h-4 text-green-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900">Create your first campaign</p>
+                              <p className="text-xs text-gray-500">Send broadcast messages to your customers</p>
+                            </div>
+                            <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2257,7 +2680,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               {/* Footer with navigation */}
               <div className="p-6 border-t bg-gray-50 flex items-center justify-end">
                 <div className="flex items-center gap-3">
-                  {wizardStep > 1 && (
+                  {/* Back: visible for steps 2-4 only (no back once connecting) */}
+                  {wizardStep > 1 && wizardStep < 5 && (
                     <Button
                       type="button"
                       variant="outline"
@@ -2269,23 +2693,64 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </Button>
                   )}
 
-                  {wizardStep < 3 ? (
+                  {/* Steps 1-4: Next / Connect Channel */}
+                  {wizardStep >= 1 && wizardStep <= 4 && (
                     <Button
                       onClick={handleNextStep}
-                      disabled={!validateCurrentStep()}
+                      disabled={!validateCurrentStep() || isLoading}
                       className="bg-green-600 hover:bg-green-700 gap-2"
                     >
-                      Next
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Creating channel…
+                        </>
+                      ) : wizardStep === 4 ? (
+                        <>
+                          Connect Channel
+                          <Link2 className="w-4 h-4" />
+                        </>
+                      ) : (
+                        <>
+                          Next
+                          <ChevronRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Step 5 Widget/Meta/UltraMsg: Continue to success screen */}
+                  {wizardStep === 5 && (
+                    wizardData.channelType !== 'WHATSAPP' || wizardData.whatsappProvider !== 'waapi'
+                  ) && (
+                    <Button
+                      onClick={() => setWizardStep(6)}
+                      className="bg-green-600 hover:bg-green-700 gap-2"
+                    >
+                      Continue
                       <ChevronRight className="w-4 h-4" />
                     </Button>
-                  ) : (
+                  )}
+
+                  {/* Step 5 WaAPI: auto-advances, just show status hint */}
+                  {wizardStep === 5 &&
+                    wizardData.channelType === 'WHATSAPP' &&
+                    wizardData.whatsappProvider === 'waapi' &&
+                    wizardWaapiStatus !== 'ready' && (
+                    <p className="text-xs text-gray-400 italic">Waiting for QR scan…</p>
+                  )}
+
+                  {/* Step 6: Go to Dashboard */}
+                  {wizardStep === 6 && (
                     <Button
-                      onClick={handleCreateWorkspace}
-                      disabled={isLoading || !validateCurrentStep()}
+                      onClick={() => {
+                        closeWizardDialog()
+                        window.location.reload()
+                      }}
                       className="bg-green-600 hover:bg-green-700 gap-2"
                     >
-                      {isLoading ? "Creating..." : "Create Channel"}
-                      {!isLoading && <Check className="w-4 h-4" />}
+                      Go to Dashboard
+                      <ChevronRight className="w-4 h-4" />
                     </Button>
                   )}
                 </div>

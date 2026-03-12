@@ -787,7 +787,7 @@ export class CallingFunctionsService {
         // L'AI deve vedere il link diretto, non [LINK_CHECKOUT_WITH_TOKEN]
         return {
           success: true,
-          message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 15 minuti`,
+          message: `✅ Ho aggiunto ${request.quantity} x "${product.name}" al carrello!\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 7 giorni`,
           productName: product.name,
           quantity: request.quantity,
           cartCode: cart.id,
@@ -959,7 +959,7 @@ export class CallingFunctionsService {
 
         return {
           success: true,
-          message: `✅ Ho aggiunto ${request.quantity} x "${service.name}" al carrello!\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 15 minuti`,
+          message: `✅ Ho aggiunto ${request.quantity} x "${service.name}" al carrello!\n\n🛒 Vedi il tuo carrello: ${cartUrl}\n\n⏰ Link valido per 7 giorni`,
           serviceName: service.name,
           quantity: request.quantity,
           cartCode: cart.id,

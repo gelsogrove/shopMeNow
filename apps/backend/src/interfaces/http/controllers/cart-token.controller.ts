@@ -52,7 +52,7 @@ export class CartTokenController {
         "cart", // tipo token
         workspaceId,
         { purpose: "cart_view", access: "read_only", customerId }, // 🔧 FIX: Include customerId nel payload!
-        "24h", // durata 24 ore
+        "7d", // durata 7 giorni
         undefined, // userId (non necessario per cart view)
         undefined, // phoneNumber (non necessario)
         req.ip, // IP address per sicurezza
@@ -74,7 +74,7 @@ export class CartTokenController {
           token,
           customerId,
           workspaceId,
-          expiresIn: "24h",
+          expiresIn: "7d",
           purpose: "cart_view",
         },
       })
