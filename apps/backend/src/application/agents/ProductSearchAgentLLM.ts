@@ -29,13 +29,14 @@
  * @critical NEVER call LLMService - this is a SPECIALIST with OWN LLM
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
 import { SearchConversationRepository } from "../../repositories/searchConversation.repository"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { getSystemContextService, SystemContextService, ListItem } from "../../services/system-context.service"
 import logger from "../../utils/logger"
+import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 // NOTE: ProductSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
 
 import { CustomerData } from "../../types/agent.types"
@@ -78,6 +79,7 @@ export class ProductSearchAgentLLM {
   private systemContextService: SystemContextService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
+  private agentConfigRepo: AgentConfigRepository
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
@@ -85,6 +87,7 @@ export class ProductSearchAgentLLM {
     this.searchConversationRepo = new SearchConversationRepository()
     this.templateLoader = TemplateLoaderService.getInstance(prisma)
     this.systemContextService = getSystemContextService(prisma)
+    this.agentConfigRepo = new AgentConfigRepository(prisma)
 
     // OpenRouter API configuration
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
@@ -391,13 +394,27 @@ export class ProductSearchAgentLLM {
       // STEP 3: Define function calls for product search
       const functions = this.getProductSearchFunctions()
 
-      // STEP 4: Call LLM (OpenRouter) with default config
+      // STEP 4: Resolve model/temperature from DB or fallback defaults
+      const agentConfig =
+        (await this.agentConfigRepo.findByType(
+          context.workspaceId,
+          "PRODUCT_SEARCH" as AgentType
+        )) || undefined
+
+      const model = agentConfig?.model || "gpt-4o-mini" // 🆕 Default model from template
+      const temperature =
+        agentConfig?.temperature !== undefined
+          ? Number(agentConfig.temperature)
+          : 0.3 // Slightly higher to avoid over-constraint while keeping responses stable
+      const maxTokens = agentConfig?.maxTokens || 2000 // 🆕 Default max tokens
+
+      // STEP 4: Call LLM (OpenRouter) with DB-aware config
       const llmResponse = await this.callLLM({
-        model: "gpt-4o-mini", // 🆕 Default model from template
+        model,
         messages,
         functions,
-        temperature: 0.3, // Slightly higher to avoid over-constraint while keeping responses stable
-        maxTokens: 2000, // 🆕 Default max tokens
+        temperature, // Slightly higher to avoid over-constraint while keeping responses stable
+        maxTokens,
       })
 
       let totalTokens = llmResponse.tokensUsed
@@ -469,7 +486,7 @@ export class ProductSearchAgentLLM {
           model: "gpt-4o-mini", // 🆕 Default model from template
           messages,
           functions,
-          temperature: 0.3, // Match primary call for consistent behavior
+          temperature, // Match primary call for consistent behavior
           maxTokens: 2000, // 🆕 Default max tokens
         })
 
@@ -925,7 +942,7 @@ Rispondi ORA con i gruppi, NON con la lista prodotti.`,
       model: "gpt-4o-mini",
       messages: correctionMessages,
       functions,
-      temperature: 0.2, // Lower temperature for more deterministic grouping
+      temperature, // Use DB-configured temperature (can be tuned low by config)
       maxTokens: 1500,
     })
 

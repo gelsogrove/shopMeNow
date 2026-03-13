@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Zap, CheckCircle, Eye, Trash2, FileDown } from "lucide-react"
+import { Zap, CheckCircle, Eye, Trash2, FileDown, QrCode, Smartphone, ShieldCheck } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -15,12 +15,12 @@ const T = {
     seoTitle: "Privacy by Design - GDPR Compliance e Sicurezza dei Dati | eChatbot",
     ctaTitle: "La privacy dei tuoi clienti è al sicuro",
     ctaSub: "Richiedi una demo e scopri come eChatbot gestisce i dati.",
-    seoDesc: "eChatbot è progettato con Privacy by Design. Conformità GDPR, DSGVO, LGPD. Crittografia end-to-end, data retention configurabile, diritto all'oblio, esportazione dati su richiesta.",
-    seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, protezione dati conversazioni whatsapp, dsgvo chatbot, lgpd chatbot, sicurezza dati e-commerce",
+    seoDesc: "eChatbot è progettato con Privacy by Design. Conformità GDPR. Crittografia end-to-end, data retention configurabile, diritto all'oblio, esportazione dati su richiesta.",
+    seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, protezione dati conversazioni whatsapp, sicurezza dati e-commerce",
     breadcrumb: "Privacy by Design",
     badge: "Privacy & GDPR",
     heroTitle: "Privacy by Design\nnon come aggiunta",
-    heroSub: "eChatbot è stato progettato con la privacy al centro fin dal primo giorno. I dati dei tuoi clienti sono protetti da zero-knowledge architecture, crittografia end-to-end e controlli granulari di retention. Conformità GDPR, DSGVO e LGPD inclusa.",
+    heroSub: "eChatbot è stato progettato con la privacy al centro fin dal primo giorno. I dati dei tuoi clienti sono protetti da zero-knowledge architecture, crittografia end-to-end e controlli granulari di retention. Conformità GDPR inclusa.",
     cta: "Richiedi Demo",
     principlesTitle: "I 7 principi Privacy by Design implementati",
     principles: [
@@ -35,8 +35,6 @@ const T = {
     complianceTitle: "Conformità Normativa",
     complianceItems: [
       { norm: "GDPR", region: "Unione Europea", status: "✅ Conforme", features: ["Consenso granulare", "Diritto all'oblio", "Portabilità dati", "DPA disponibile"] },
-      { norm: "DSGVO", region: "Germania / Austria / Svizzera", status: "✅ Conforme", features: ["Datenschutz integrato", "Auftragsverarbeitung", "TOM documentate", "Report DPA"] },
-      { norm: "LGPD", region: "Brasile", status: "✅ Conforme", features: ["Consentimento explícito", "Direito ao esquecimento", "Portabilidade dados", "Relatório de impacto"] },
     ],
     techTitle: "Misure Tecniche di Sicurezza",
     techFeatures: [
@@ -49,6 +47,13 @@ const T = {
       "Backup cifrati con chiavi separate per workspace",
       "Penetration testing annuale da terze parti",
     ],
+    twoFaTitle: "Autenticazione a Due Fattori (2FA)",
+    twoFaDesc: "Proteggi l'accesso alla dashboard con la verifica in due passaggi. Scansiona il QR code con la tua app di autenticazione (Google Authenticator, Authy, ecc.) per aggiungere un livello di sicurezza extra al tuo account.",
+    twoFaFeatures: [
+      { icon: QrCode, label: "Setup con QR Code", desc: "Configurazione immediata: scansiona il QR code con la tua app di autenticazione preferita per attivare la 2FA in pochi secondi." },
+      { icon: Smartphone, label: "App Authenticator compatibile", desc: "Compatibile con Google Authenticator, Authy, Microsoft Authenticator e tutte le app TOTP standard." },
+      { icon: ShieldCheck, label: "Protezione accesso garantita", desc: "Anche se la password viene compromessa, il tuo account resta protetto. Codici temporanei a 6 cifre con scadenza di 30 secondi." },
+    ],
     rightsTitle: "Diritti degli Interessati",
     rights: [
       { icon: Eye, label: "Accesso ai dati", desc: "Il cliente può richiedere all'azienda l'export completo di tutte le sue conversazioni e dati." },
@@ -60,12 +65,12 @@ const T = {
     seoTitle: "Privacy by Design - GDPR Compliance and Data Security | eChatbot",
     ctaTitle: "Your customers' privacy is protected",
     ctaSub: "Request a demo and discover how eChatbot handles data.",
-    seoDesc: "eChatbot is built with Privacy by Design. GDPR, DSGVO, LGPD compliance. End-to-end encryption, configurable data retention, right to erasure, data export on request.",
-    seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, whatsapp conversation data protection, dsgvo chatbot, lgpd chatbot, e-commerce data security",
+    seoDesc: "eChatbot is built with Privacy by Design. GDPR compliance. End-to-end encryption, configurable data retention, right to erasure, data export on request.",
+    seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, whatsapp conversation data protection, e-commerce data security",
     breadcrumb: "Privacy by Design",
     badge: "Privacy & GDPR",
     heroTitle: "Privacy by Design\nnot as an add-on",
-    heroSub: "eChatbot was designed with privacy at its core from day one. Your customers' data is protected by zero-knowledge architecture, end-to-end encryption and granular retention controls. GDPR, DSGVO and LGPD compliance included.",
+    heroSub: "eChatbot was designed with privacy at its core from day one. Your customers' data is protected by zero-knowledge architecture, end-to-end encryption and granular retention controls. GDPR compliance included.",
     cta: "Request Demo",
     principlesTitle: "The 7 Privacy by Design principles implemented",
     principles: [
@@ -80,8 +85,6 @@ const T = {
     complianceTitle: "Regulatory Compliance",
     complianceItems: [
       { norm: "GDPR", region: "European Union", status: "✅ Compliant", features: ["Granular consent", "Right to erasure", "Data portability", "DPA available"] },
-      { norm: "DSGVO", region: "Germany / Austria / Switzerland", status: "✅ Compliant", features: ["Integrated Datenschutz", "Auftragsverarbeitung", "Documented TOMs", "DPA report"] },
-      { norm: "LGPD", region: "Brazil", status: "✅ Compliant", features: ["Explicit consent", "Right to be forgotten", "Data portability", "Impact assessment"] },
     ],
     techTitle: "Technical Security Measures",
     techFeatures: [
@@ -94,6 +97,13 @@ const T = {
       "Encrypted backups with separate keys per workspace",
       "Annual third-party penetration testing",
     ],
+    twoFaTitle: "Two-Factor Authentication (2FA)",
+    twoFaDesc: "Protect dashboard access with two-step verification. Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.) to add an extra layer of security to your account.",
+    twoFaFeatures: [
+      { icon: QrCode, label: "QR Code Setup", desc: "Instant setup: scan the QR code with your preferred authenticator app to enable 2FA in seconds." },
+      { icon: Smartphone, label: "Authenticator App Compatible", desc: "Works with Google Authenticator, Authy, Microsoft Authenticator and all standard TOTP apps." },
+      { icon: ShieldCheck, label: "Guaranteed Access Protection", desc: "Even if your password is compromised, your account stays protected. 6-digit temporary codes with 30-second expiry." },
+    ],
     rightsTitle: "Data Subject Rights",
     rights: [
       { icon: Eye, label: "Data Access", desc: "Customers can request a complete export of all their conversations and data from the business." },
@@ -105,12 +115,12 @@ const T = {
     seoTitle: "Privacy by Design - Cumplimiento GDPR y Seguridad de Datos | eChatbot",
     ctaTitle: "La privacidad de tus clientes está protegida",
     ctaSub: "Solicita una demo y descubre cómo eChatbot gestiona los datos.",
-    seoDesc: "eChatbot está construido con Privacy by Design. Cumplimiento GDPR, DSGVO, LGPD. Cifrado de extremo a extremo, retención de datos configurable, derecho al olvido, exportación de datos a pedido.",
-    seoKeys: "privacy by design gdpr chatbot whatsapp, cumplimiento gdpr chatbot, protección datos conversaciones whatsapp, dsgvo chatbot, lgpd chatbot, seguridad datos e-commerce",
+    seoDesc: "eChatbot está construido con Privacy by Design. Cumplimiento GDPR. Cifrado de extremo a extremo, retención de datos configurable, derecho al olvido, exportación de datos a pedido.",
+    seoKeys: "privacy by design gdpr chatbot whatsapp, cumplimiento gdpr chatbot, protección datos conversaciones whatsapp, seguridad datos e-commerce",
     breadcrumb: "Privacy by Design",
     badge: "Privacidad & GDPR",
     heroTitle: "Privacy by Design\nno como añadido",
-    heroSub: "eChatbot fue diseñado con la privacidad en el centro desde el primer día. Los datos de tus clientes están protegidos por arquitectura zero-knowledge, cifrado de extremo a extremo y controles granulares de retención. Cumplimiento GDPR, DSGVO y LGPD incluido.",
+    heroSub: "eChatbot fue diseñado con la privacidad en el centro desde el primer día. Los datos de tus clientes están protegidos por arquitectura zero-knowledge, cifrado de extremo a extremo y controles granulares de retención. Cumplimiento GDPR incluido.",
     cta: "Solicitar Demo",
     principlesTitle: "Los 7 principios de Privacy by Design implementados",
     principles: [
@@ -125,8 +135,6 @@ const T = {
     complianceTitle: "Cumplimiento Normativo",
     complianceItems: [
       { norm: "GDPR", region: "Unión Europea", status: "✅ Conforme", features: ["Consentimiento granular", "Derecho al olvido", "Portabilidad de datos", "DPA disponible"] },
-      { norm: "DSGVO", region: "Alemania / Austria / Suiza", status: "✅ Conforme", features: ["Datenschutz integrado", "Auftragsverarbeitung", "TOMs documentadas", "Informe DPA"] },
-      { norm: "LGPD", region: "Brasil", status: "✅ Conforme", features: ["Consentimiento explícito", "Derecho al olvido", "Portabilidad datos", "Evaluación de impacto"] },
     ],
     techTitle: "Medidas Técnicas de Seguridad",
     techFeatures: [
@@ -139,6 +147,13 @@ const T = {
       "Copias de seguridad cifradas con claves separadas por workspace",
       "Pruebas de penetración anuales por terceros",
     ],
+    twoFaTitle: "Autenticación de Dos Factores (2FA)",
+    twoFaDesc: "Protege el acceso al panel de control con la verificación en dos pasos. Escanea el código QR con tu app de autenticación (Google Authenticator, Authy, etc.) para añadir una capa extra de seguridad a tu cuenta.",
+    twoFaFeatures: [
+      { icon: QrCode, label: "Configuración con QR Code", desc: "Configuración inmediata: escanea el código QR con tu app de autenticación preferida para activar la 2FA en segundos." },
+      { icon: Smartphone, label: "Compatible con apps Authenticator", desc: "Compatible con Google Authenticator, Authy, Microsoft Authenticator y todas las apps TOTP estándar." },
+      { icon: ShieldCheck, label: "Protección de acceso garantizada", desc: "Incluso si tu contraseña se ve comprometida, tu cuenta permanece protegida. Códigos temporales de 6 dígitos con expiración de 30 segundos." },
+    ],
     rightsTitle: "Derechos del Interesado",
     rights: [
       { icon: Eye, label: "Acceso a los datos", desc: "El cliente puede solicitar a la empresa la exportación completa de todas sus conversaciones y datos." },
@@ -150,12 +165,12 @@ const T = {
     seoTitle: "Privacy by Design - Conformidade GDPR e Segurança de Dados | eChatbot",
     ctaTitle: "A privacidade dos seus clientes está protegida",
     ctaSub: "Solicite uma demo e descubra como o eChatbot gere os dados.",
-    seoDesc: "O eChatbot é construído com Privacy by Design. Conformidade GDPR, DSGVO, LGPD. Criptografia ponta a ponta, retenção de dados configurável, direito ao esquecimento, exportação de dados sob demanda.",
-    seoKeys: "privacy by design gdpr chatbot whatsapp, conformidade gdpr chatbot, proteção dados conversas whatsapp, dsgvo chatbot, lgpd chatbot, segurança dados e-commerce",
+    seoDesc: "O eChatbot é construído com Privacy by Design. Conformidade GDPR. Criptografia ponta a ponta, retenção de dados configurável, direito ao esquecimento, exportação de dados sob demanda.",
+    seoKeys: "privacy by design gdpr chatbot whatsapp, conformidade gdpr chatbot, proteção dados conversas whatsapp, segurança dados e-commerce",
     breadcrumb: "Privacy by Design",
     badge: "Privacidade & GDPR",
     heroTitle: "Privacy by Design\nnão como adicional",
-    heroSub: "O eChatbot foi projetado com a privacidade no centro desde o primeiro dia. Os dados dos seus clientes são protegidos por arquitetura zero-knowledge, criptografia ponta a ponta e controles granulares de retenção. Conformidade GDPR, DSGVO e LGPD incluída.",
+    heroSub: "O eChatbot foi projetado com a privacidade no centro desde o primeiro dia. Os dados dos seus clientes são protegidos por arquitetura zero-knowledge, criptografia ponta a ponta e controles granulares de retenção. Conformidade GDPR incluída.",
     cta: "Solicitar Demo",
     principlesTitle: "Os 7 princípios de Privacy by Design implementados",
     principles: [
@@ -170,8 +185,6 @@ const T = {
     complianceTitle: "Conformidade Regulatória",
     complianceItems: [
       { norm: "GDPR", region: "União Europeia", status: "✅ Conforme", features: ["Consentimento granular", "Direito ao esquecimento", "Portabilidade de dados", "DPA disponível"] },
-      { norm: "DSGVO", region: "Alemanha / Áustria / Suíça", status: "✅ Conforme", features: ["Datenschutz integrado", "Auftragsverarbeitung", "TOMs documentadas", "Relatório DPA"] },
-      { norm: "LGPD", region: "Brasil", status: "✅ Conforme", features: ["Consentimento explícito", "Direito ao esquecimento", "Portabilidade dados", "Relatório de impacto"] },
     ],
     techTitle: "Medidas Técnicas de Segurança",
     techFeatures: [
@@ -183,6 +196,13 @@ const T = {
       "Direito ao esquecimento: exclusão verificável em <72h",
       "Backups criptografados com chaves separadas por workspace",
       "Testes de penetração anuais por terceiros",
+    ],
+    twoFaTitle: "Autenticação de Dois Fatores (2FA)",
+    twoFaDesc: "Proteja o acesso ao painel com a verificação em dois passos. Escaneie o código QR com seu app de autenticação (Google Authenticator, Authy, etc.) para adicionar uma camada extra de segurança à sua conta.",
+    twoFaFeatures: [
+      { icon: QrCode, label: "Configuração com QR Code", desc: "Configuração imediata: escaneie o código QR com seu app de autenticação preferido para ativar a 2FA em segundos." },
+      { icon: Smartphone, label: "Compatível com apps Authenticator", desc: "Compatível com Google Authenticator, Authy, Microsoft Authenticator e todos os apps TOTP padrão." },
+      { icon: ShieldCheck, label: "Proteção de acesso garantida", desc: "Mesmo que sua senha seja comprometida, sua conta permanece protegida. Códigos temporários de 6 dígitos com expiração de 30 segundos." },
     ],
     rightsTitle: "Direitos dos Titulares dos Dados",
     rights: [
@@ -313,6 +333,43 @@ export function PrivacyByDesignPage() {
                   ))}
                 </ul>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 2FA */}
+        <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-14"
+            >
+              <div className="h-20 w-20 bg-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <QrCode className="h-10 w-10 text-indigo-600" />
+              </div>
+              <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.twoFaTitle}</h2>
+              <p className="text-lg text-slate-600 max-w-3xl mx-auto leading-relaxed">{t.twoFaDesc}</p>
+            </motion.div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {t.twoFaFeatures.map((f, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.15 }}
+                  className="text-center p-8 bg-white rounded-2xl shadow-lg border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all"
+                >
+                  <div className="h-16 w-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                    <f.icon className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-3">{f.label}</h3>
+                  <p className="text-slate-600 text-sm leading-relaxed">{f.desc}</p>
+                </motion.div>
+              ))}
             </div>
           </div>
         </section>

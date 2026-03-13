@@ -12,12 +12,13 @@
  * @functions handlePushNotifications(value: boolean) - Enable/disable push notifications
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { PROFILE_MANAGEMENT_FUNCTIONS } from "../../config/agent-functions.config"
 import { PromptBuilderService } from "../../application/services/prompt-builder/prompt-builder.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
+import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 
 export interface ProfileManagementContext {
   workspaceId: string
@@ -44,12 +45,14 @@ export interface ProfileManagementResponse {
 export class ProfileManagementAgentLLM {
   private openRouterApiKey: string
   private openRouterBaseUrl = "https://openrouter.ai/api/v1"
+  private agentConfigRepo: AgentConfigRepository
 
   constructor(private prisma: PrismaClient, private promptBuilder: PromptBuilderService) {
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     if (!this.openRouterApiKey) {
       throw new Error("OPENROUTER_API_KEY is required")
     }
+    this.agentConfigRepo = new AgentConfigRepository(prisma)
   }
 
   async handleQuery(
@@ -110,6 +113,19 @@ export class ProfileManagementAgentLLM {
       let finalResponse = ""
       let getProfileLinkCalled = false // Track if getProfileLink was executed
 
+      // Resolve model/temperature from AgentConfig or fall back to previous defaults
+      const agentConfig =
+        (await this.agentConfigRepo.findByType(
+          context.workspaceId,
+          "PROFILE_MANAGEMENT" as AgentType
+        )) || undefined
+      const model = agentConfig?.model || "openai/gpt-4o-mini"
+      const temperature =
+        agentConfig?.temperature !== undefined
+          ? Number(agentConfig.temperature)
+          : 0.7
+      const maxTokens = agentConfig?.maxTokens || 1000
+
       while (iterations < maxIterations) {
         iterations++
 
@@ -119,11 +135,11 @@ export class ProfileManagementAgentLLM {
 
         // Call LLM with function calling
         const llmResponse = await this.callLLM({
-          model: "openai/gpt-4o-mini",
+          model,
           messages,
           functions: profileFunctions,
-          temperature: 0.7,
-          maxTokens: 1000,
+          temperature,
+          maxTokens,
         })
 
         totalTokens += llmResponse.tokensUsed

@@ -34,13 +34,14 @@
  * @critical NEVER call LLMService - this is a SPECIALIST with OWN LLM
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
 import { FAQRepository } from "../../repositories/faq.repository"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
+import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 
 import { CustomerData } from "../../types/agent.types"
 
@@ -73,11 +74,13 @@ export class CustomerSupportAgentLLM {
   private templateLoader: TemplateLoaderService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
+  private agentConfigRepo: AgentConfigRepository
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
     this.faqRepo = new FAQRepository(prisma)
     this.templateLoader = TemplateLoaderService.getInstance(prisma)
+    this.agentConfigRepo = new AgentConfigRepository(prisma)
 
     // OpenRouter API configuration
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
@@ -289,13 +292,27 @@ export class CustomerSupportAgentLLM {
         includeContactOperator: workspace?.hasHumanSupport !== false,
       })
 
+      // STEP 4: Resolve model/temperature from DB (AgentConfig) or fallback defaults
+      const agentConfig =
+        (await this.agentConfigRepo.findByType(
+          context.workspaceId,
+          templateAgentType as AgentType
+        )) || undefined
+
+      const model = agentConfig?.model || "gpt-4o-mini"
+      const temperature =
+        agentConfig?.temperature !== undefined
+          ? Number(agentConfig.temperature)
+          : 0.7
+      const maxTokens = agentConfig?.maxTokens || 2000
+
       // STEP 4: Call LLM (OpenRouter)
       const llmResponse = await this.callLLM({
-        model: "gpt-4o-mini",
+        model,
         messages,
         functions,
-        temperature: 0.7,
-        maxTokens: 2000,
+        temperature,
+        maxTokens,
       })
 
       let totalTokens = llmResponse.tokensUsed
@@ -376,11 +393,11 @@ export class CustomerSupportAgentLLM {
           })
 
           const finalLLMResponse = await this.callLLM({
-            model: "gpt-4o-mini",
+            model,
             messages,
             functions,
-            temperature: 0.7,
-            maxTokens: 2000,
+            temperature,
+            maxTokens,
           })
 
           totalTokens += finalLLMResponse.tokensUsed

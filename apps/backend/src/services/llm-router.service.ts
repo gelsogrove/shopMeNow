@@ -1189,12 +1189,18 @@ export class LLMRouterService {
         logger.info("📋 [SystemContext] No context available for this conversation")
       }
 
-      // Create processed router agent with replaced prompt and default config
+      // Load router agent config from DB to respect workspace settings
+      const routerAgentConfig = await this.agentConfigRepo.findByTypeCached(
+        params.workspaceId,
+        mainAgentType as AgentType
+      )
+
+      // Create processed router agent with replaced prompt and DB-backed config
       const processedRouterAgent = {
         systemPrompt: processedRouterPrompt,
-        model: "gpt-4o-mini", // 🆕 Default Router model
-        temperature: 0, // Deterministic routing to avoid mis-mapping numeric selections
-        maxTokens: 2000, // 🆕 Default max tokens
+        model: routerAgentConfig?.model || "gpt-4o-mini", // default if missing
+        temperature: routerAgentConfig?.temperature ?? 0, // fallback deterministic routing
+        maxTokens: routerAgentConfig?.maxTokens ?? 2000,
       }
 
       // STEP 5: Function Calling Loop

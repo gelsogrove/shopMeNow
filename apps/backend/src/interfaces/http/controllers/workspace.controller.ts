@@ -380,7 +380,86 @@ export class WorkspaceController {
       })
 
       logger.info(`✅ Workspace created: ${workspace.id} for user ${userId}`)
-      return res.status(201).json(workspace)
+
+      // 🔧 FIX: Serialize domain entity to plain object (getters are NOT included by JSON.stringify)
+      // Without this, frontend receives { props: { id, ... } } instead of { id, ... }
+      const whatsappSettings = await prisma.whatsappSettings.findUnique({
+        where: { workspaceId: workspace.id },
+        select: { webhookId: true }
+      })
+
+      const serializedWorkspace = {
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        description: workspace.description,
+        whatsappPhoneNumber: workspace.whatsappPhoneNumber,
+        whatsappApiKey: workspace.whatsappApiKey,
+        whatsappAppName: workspace.whatsappAppName ?? null,
+        whatsappAppSecret: workspace.whatsappAppSecret ?? null,
+        whatsappPhoneNumberId: workspace.whatsappPhoneNumberId,
+        whatsappVerifyToken: workspace.whatsappVerifyToken,
+        webhookUrl: workspace.webhookUrl,
+        whatsappWebhookToken: workspace.whatsappWebhookToken ?? null,
+        whatsappBusinessAccountId: workspace.whatsappBusinessAccountId ?? null,
+        whatsappProvider: workspace.whatsappProvider ?? "meta",
+        ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
+        ultraMsgToken: workspace.ultraMsgToken ?? null,
+        ultraMsgApiUrl: workspace.ultraMsgApiUrl ?? null,
+        whatsappWebhookId: whatsappSettings?.webhookId ?? null,
+        notificationEmail: workspace.notificationEmail,
+        adminEmail: workspace.adminEmail,
+        language: workspace.language,
+        defaultLanguage: workspace.defaultLanguage ?? "it",
+        currency: workspace.currency,
+        messageLimit: workspace.messageLimit,
+        blocklist: workspace.blocklist,
+        welcomeMessage: workspace.welcomeMessage,
+        wipMessage: workspace.wipMessage,
+        channelStatus: workspace.channelStatus,
+        url: workspace.url,
+        debugMode: workspace.debugMode,
+        createdAt: workspace.createdAt,
+        updatedAt: workspace.updatedAt,
+        allowedExternalLinks: workspace.allowedExternalLinks,
+        planType: workspace.planType,
+        trialEndsAt: workspace.trialEndsAt,
+        channelType: workspace.channelType,
+        enableWhatsapp: workspace.enableWhatsapp,
+        enableWidget: workspace.enableWidget,
+        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        hasSalesAgents: workspace.hasSalesAgents,
+        hasHumanSupport: workspace.hasHumanSupport,
+        humanSupportInstructions: workspace.humanSupportInstructions,
+        frustrationEscalationInstructions: workspace.frustrationEscalationInstructions,
+        operatorContactMethod: workspace.operatorContactMethod,
+        operatorEmail: workspace.operatorEmail,
+        operatorWhatsappNumber: workspace.operatorWhatsappNumber,
+        toneOfVoice: workspace.toneOfVoice,
+        botIdentityResponse: workspace.botIdentityResponse,
+        address: workspace.address,
+        customAiRules: workspace.customAiRules,
+        registrationPage: workspace.registrationPage ?? null,
+        requireManualApproval: workspace.requireManualApproval ?? false,
+        logoUrl: workspace.logoUrl,
+        chatbotName: workspace.chatbotName,
+        businessType: workspace.businessType,
+        widgetLogoUrl: workspace.widgetLogoUrl ?? null,
+        widgetLogoKey: workspace.widgetLogoKey ?? null,
+        widgetTitle: workspace.widgetTitle ?? null,
+        widgetLanguage: workspace.widgetLanguage ?? "it",
+        widgetPrimaryColor: workspace.widgetPrimaryColor ?? "#22c55e",
+        widgetIcon: workspace.widgetIcon ?? "chat",
+        widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
+        widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
+        widgetQuickReplies: workspace.widgetQuickReplies ?? [],
+        translateProductNames: workspace.translateProductNames,
+        translateCategoryNames: workspace.translateCategoryNames,
+        translateServiceNames: workspace.translateServiceNames,
+        catalogBaseLanguage: workspace.catalogBaseLanguage,
+      }
+
+      return res.status(201).json(serializedWorkspace)
     } catch (error) {
       logger.error("❌ Error creating workspace:", {
         error: error instanceof Error ? error.message : String(error),

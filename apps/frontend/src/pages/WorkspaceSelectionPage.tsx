@@ -57,9 +57,8 @@ import { initializeWaapiInstance, regenerateWaapiQr } from "@/services/waapiApi"
 // ============================================================================
 
 interface WizardFormData {
-  // Step 1: Business Goal (new — from questionnaire)
-  industry: 'ecommerce' | 'services' | 'hospitality' | 'other'
-  businessGoal: 'sell' | 'support' | 'leads' | 'appointments'
+  // Step 1: Business Type (same values as Settings → BusinessConfigSection)
+  businessType: 'retail' | 'restaurant' | 'healthcare' | 'education' | 'finance' | 'realestate' | 'technology' | 'other'
   // Step 2: Channel Setup
   alias: string
   channelType: 'WHATSAPP' | 'WIDGET'
@@ -195,9 +194,8 @@ const CHECKLIST_ITEM_HELP: Record<string, { title: string; description: string; 
 }
 
 const initialWizardData: WizardFormData = {
-  // Step 1: Business Goal
-  industry: 'ecommerce',
-  businessGoal: 'sell',
+  // Step 1: Business Type
+  businessType: 'retail',
   // Step 2: Channel Setup
   alias: "",
   channelType: 'WHATSAPP',
@@ -1031,6 +1029,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
         adminEmail: userEmail,
         allowedExternalLinks: allowedLinks,
         sellsProductsAndServices: finalSellsProducts,
+        businessType: wizardData.businessType,
         hasHumanSupport: wizardData.hasHumanSupport,
         humanSupportInstructions: wizardData.hasHumanSupport
           ? (wizardData.humanSupportInstructions || "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝")
@@ -1999,69 +1998,39 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>Help us personalise your setup in seconds</p>
                     </div>
 
-                    {/* Industry */}
+                    {/* Business Type — same options as Settings → BusinessConfigSection */}
                     <div>
-                      <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">What industry are you in?</Label>
+                      <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">What type of business do you have?</Label>
                       <div className="space-y-3 mt-3">
                         {[
-                          { value: 'ecommerce',   label: 'E-commerce',   emoji: '🛒', desc: 'Online store & sales' },
-                          { value: 'services',    label: 'Services',     emoji: '🏥', desc: 'Professionals & agencies' },
-                          { value: 'hospitality', label: 'Hospitality',  emoji: '🏨', desc: 'Hotels, restaurants & more' },
-                          { value: 'other',       label: 'Other',        emoji: '📋', desc: 'Any other business' },
+                          { value: 'retail',      label: 'Retail & E-commerce', emoji: '🛒', desc: 'Online or physical store' },
+                          { value: 'restaurant',  label: 'Restaurant & Food',   emoji: '🍽️', desc: 'Food services' },
+                          { value: 'healthcare',  label: 'Healthcare',          emoji: '🏥', desc: 'Medical services' },
+                          { value: 'education',   label: 'Education',           emoji: '🎓', desc: 'Schools, courses' },
+                          { value: 'finance',     label: 'Finance & Banking',   emoji: '🏦', desc: 'Financial services' },
+                          { value: 'realestate',  label: 'Real Estate',         emoji: '🏠', desc: 'Real estate services' },
+                          { value: 'technology',  label: 'Technology & IT',     emoji: '💻', desc: 'Tech services' },
+                          { value: 'other',       label: 'Other',               emoji: '📋', desc: 'Other business type' },
                         ].map((item) => (
                           <button
                             type="button"
                             key={item.value}
                             className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
-                              wizardData.industry === item.value
-                                ? 'border-green-500 bg-green-50 text-green-800'
-                                : 'border-slate-200 hover:border-green-300 text-slate-700'
-                            }`}
-                            onClick={() => updateWizardData('industry', item.value as WizardFormData['industry'])}
-                          >
-                            <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              wizardData.industry === item.value ? 'bg-green-500 border-green-500' : 'border-slate-300'
-                            }`}>
-                              {wizardData.industry === item.value && <span className="w-2 h-2 rounded-full bg-white" />}
-                            </span>
-                            <span className="text-xl">{item.emoji}</span>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium text-sm">{item.label}</span>
-                              <p className="text-xs text-slate-500">{item.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Business Goal */}
-                    <div>
-                      <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">What is your main goal with this channel?</Label>
-                      <div className="space-y-3 mt-3">
-                        {[
-                          { value: 'sell',         label: 'Sell online',       emoji: '💰', desc: 'Products & e-commerce' },
-                          { value: 'leads',        label: 'Generate leads',    emoji: '🎯', desc: 'Capture & qualify leads' },
-                          { value: 'support',      label: 'Customer support',  emoji: '💬', desc: 'Answer questions fast' },
-                          { value: 'appointments', label: 'Bookings',          emoji: '📅', desc: 'Appointments & reservations' },
-                        ].map((item) => (
-                          <button
-                            type="button"
-                            key={item.value}
-                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
-                              wizardData.businessGoal === item.value
+                              wizardData.businessType === item.value
                                 ? 'border-green-500 bg-green-50 text-green-800'
                                 : 'border-slate-200 hover:border-green-300 text-slate-700'
                             }`}
                             onClick={() => {
-                              updateWizardData('businessGoal', item.value as WizardFormData['businessGoal'])
-                              if (item.value === 'sell') updateWizardData('sellsProductsAndServices', true)
-                              else if (item.value === 'support' || item.value === 'appointments') updateWizardData('sellsProductsAndServices', false)
+                              updateWizardData('businessType', item.value as WizardFormData['businessType'])
+                              // Auto-set sellsProductsAndServices based on business type
+                              const sellsTypes = ['retail', 'restaurant']
+                              updateWizardData('sellsProductsAndServices', sellsTypes.includes(item.value))
                             }}
                           >
                             <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              wizardData.businessGoal === item.value ? 'bg-green-500 border-green-500' : 'border-slate-300'
+                              wizardData.businessType === item.value ? 'bg-green-500 border-green-500' : 'border-slate-300'
                             }`}>
-                              {wizardData.businessGoal === item.value && <span className="w-2 h-2 rounded-full bg-white" />}
+                              {wizardData.businessType === item.value && <span className="w-2 h-2 rounded-full bg-white" />}
                             </span>
                             <span className="text-xl">{item.emoji}</span>
                             <div className="flex-1 min-w-0">
@@ -2104,8 +2073,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         onClick={() => {
                           updateWizardData('channelType', 'WHATSAPP')
                           if (wizardData.channelType !== 'WHATSAPP') {
-                            const shouldSell = wizardData.businessGoal === 'sell' || wizardData.businessGoal === 'leads'
-                            updateWizardData('sellsProductsAndServices', shouldSell)
+                            const sellsTypes = ['retail', 'restaurant']
+                            updateWizardData('sellsProductsAndServices', sellsTypes.includes(wizardData.businessType))
                           }
                         }}
                       >

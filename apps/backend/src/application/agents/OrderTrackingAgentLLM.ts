@@ -29,7 +29,7 @@
  * @critical NEVER call LLMService - this is a SPECIALIST with OWN LLM
  */
 
-import { PrismaClient } from "@echatbot/database"
+import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
 import { OrderRepository } from "../../repositories/order.repository"
@@ -39,6 +39,7 @@ import { CallingFunctionsService } from "../../services/calling-functions.servic
 import { SystemContextService, getSystemContextService } from "../../services/system-context.service"
 import logger from "../../utils/logger"
 import { LinkGeneratorService } from "../services/link-generator.service"
+import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 
 import { CustomerData } from "../../types/agent.types"
 import type { AgentOptionMapping } from "../../types/option-mapping.types"
@@ -77,12 +78,14 @@ export class OrderTrackingAgentLLM {
   private systemContextService: SystemContextService
   private openRouterApiKey: string
   private openRouterBaseUrl: string
+  private agentConfigRepo: AgentConfigRepository
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
     this.orderRepo = new OrderRepository()
     this.templateLoader = TemplateLoaderService.getInstance(prisma)
     this.systemContextService = getSystemContextService(prisma)
+    this.agentConfigRepo = new AgentConfigRepository(prisma)
 
     // Initialize CallingFunctionsService with LinkGeneratorService
     const linkGeneratorService = new LinkGeneratorService()
@@ -226,13 +229,27 @@ export class OrderTrackingAgentLLM {
       // STEP 3: Define function calls for order tracking
       const functions = this.getOrderTrackingFunctions()
 
+      // STEP 4: Resolve model/temperature from DB or fallback defaults
+      const agentConfig =
+        (await this.agentConfigRepo.findByType(
+          context.workspaceId,
+          "ORDER_TRACKING" as AgentType
+        )) || undefined
+
+      const model = agentConfig?.model || "gpt-4o-mini"
+      const temperature =
+        agentConfig?.temperature !== undefined
+          ? Number(agentConfig.temperature)
+          : 0.7
+      const maxTokens = agentConfig?.maxTokens || 2000
+
       // STEP 4: Call LLM (OpenRouter)
       const llmResponse = await this.callLLM({
-        model: "gpt-4o-mini",
+        model,
         messages,
         functions,
-        temperature: 0.7,
-        maxTokens: 2000,
+        temperature,
+        maxTokens,
       })
 
       let totalTokens = llmResponse.tokensUsed
@@ -373,11 +390,11 @@ export class OrderTrackingAgentLLM {
           })
 
           const finalLLMResponse = await this.callLLM({
-            model: "gpt-4o-mini",
+            model,
             messages,
             functions,
-            temperature: 0.7,
-            maxTokens: 2000,
+            temperature,
+            maxTokens,
           })
 
           totalTokens += finalLLMResponse.tokensUsed
