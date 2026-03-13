@@ -96,6 +96,20 @@ class BackofficeApi {
     this.token = null
   }
 
+  // Admin backup (streamed download, no server-side storage)
+  adminBackup = {
+    download: async (): Promise<Response> => {
+      const headers: HeadersInit = {
+        ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      }
+      // Return raw Response for blob streaming
+      return fetch(`${API_BASE}/users/admin/backup/download`, {
+        method: 'POST',
+        headers,
+      })
+    },
+  }
+
   private async fetch<T>(
     endpoint: string,
     options: RequestInit = {}

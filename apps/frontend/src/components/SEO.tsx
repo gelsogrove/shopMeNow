@@ -8,6 +8,8 @@ interface SEOProps {
   url?: string
   type?: "website" | "article"
   lang?: "it" | "en" | "es" | "pt"
+  robots?: string
+  hreflangs?: Array<{ lang: string; url: string }>
 }
 
 export function SEO({
@@ -18,6 +20,8 @@ export function SEO({
   url,
   type = "website",
   lang = "en",
+  robots = "index, follow",
+  hreflangs = [],
 }: SEOProps) {
   const siteUrl = "https://www.echatbot.ai"
   const fullUrl = url ? `${siteUrl}${url}` : siteUrl
@@ -32,6 +36,8 @@ export function SEO({
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={fullUrl} />
+      <meta name="robots" content={robots} />
+      <meta name="googlebot" content={robots} />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />
@@ -49,10 +55,23 @@ export function SEO({
       <meta name="twitter:image" content={image} />
 
       {/* Additional Meta Tags */}
-      <meta name="robots" content="index, follow" />
-      <meta name="googlebot" content="index, follow" />
       <meta name="author" content="eChatbot" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+      {/* Hreflang alternates */}
+      {hreflangs.map((alt) => {
+        const href = alt.url.startsWith("http")
+          ? alt.url
+          : `${siteUrl}${alt.url}`
+        return (
+          <link
+            key={`${alt.lang}-${href}`}
+            rel="alternate"
+            hrefLang={alt.lang}
+            href={href}
+          />
+        )
+      })}
     </Helmet>
   )
 }

@@ -1469,6 +1469,21 @@ export class WidgetChatController {
               customerId: customer.id,
               sessionId: operatorSession.id,
             })
+
+            // 🚀 WEBSOCKET: Notify admin dashboard about new customer message in operator mode
+            try {
+              const { websocketService } = require("../../../services/websocket.service")
+              websocketService.notifyNewMessage(workspaceId, {
+                id: `widget-operator-${Date.now()}`,
+                sessionId: operatorSession.id,
+                content: message,
+                sender: "customer",
+                timestamp: new Date().toISOString(),
+                workspaceId,
+              })
+            } catch (wsError) {
+              logger.warn("[WIDGET] ⚠️ WebSocket notification failed (operator mode)", wsError)
+            }
           }
 
           // Relay customer message to operator's WhatsApp number (same as WhatsApp channel)

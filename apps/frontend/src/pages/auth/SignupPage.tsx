@@ -103,6 +103,7 @@ export default function SignupPage() {
       <SEO
         title="Sign up"
         description="Create your eChatbot account with a fully responsive experience on any device."
+        robots="noindex, nofollow"
       />
       <div className="signup-background">
       <AuthLogo />

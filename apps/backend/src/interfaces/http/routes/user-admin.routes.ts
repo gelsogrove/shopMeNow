@@ -19,6 +19,7 @@ import { prisma, UserStatus } from "@echatbot/database"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { platformAdminMiddleware } from "../middlewares/platform-admin.middleware"
 import logger from "../../../utils/logger"
+import { spawn } from "child_process"
 
 // Sub-routers (extracted for file size reduction)
 import adminInvoiceRoutes from "./admin/admin-invoice.routes"
@@ -157,6 +158,90 @@ router.get(
       logger.error("❌ Error fetching admin workspaces:", error)
       res.status(500).json({ error: "Failed to fetch workspaces" })
     }
+  }
+)
+
+/**
+ * @swagger
+ * /api/users/admin/backup/download:
+ *   post:
+ *     summary: Stream a database backup for local download (no server-side file saved)
+ *     description: Generates a pg_dump on the fly and streams it to the client as an attachment.
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: SQL dump stream
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Platform admin access required
+ *       500:
+ *         description: Backup generation failed
+ */
+router.post(
+  "/admin/backup/download",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (_req: Request, res: Response) => {
+    const dbUrl = process.env.DATABASE_URL
+    if (!dbUrl) {
+      return res.status(500).json({ error: "DATABASE_URL not configured" })
+    }
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:T]/g, "-")
+      .replace(/\..+/, "")
+    const filename = `backup-${timestamp}.sql`
+
+    res.setHeader("Content-Type", "application/octet-stream")
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`
+    )
+
+    logger.info("💾 Admin backup download started", { filename })
+
+    const dump = spawn("pg_dump", ["--no-owner", "--no-privileges", "--dbname", dbUrl], {
+      env: process.env,
+    })
+
+    dump.stdout.pipe(res)
+
+    let errorBuffered = ""
+
+    dump.stderr.on("data", (data) => {
+      errorBuffered += data.toString()
+    })
+
+    dump.on("error", (error) => {
+      logger.error("❌ Failed to start pg_dump", error)
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: "Failed to start backup", detail: error.message })
+      } else {
+        res.end()
+      }
+    })
+
+    dump.on("close", (code) => {
+      if (code === 0) {
+        logger.info("✅ Admin backup download completed", { filename })
+      } else {
+        logger.error("❌ pg_dump exited with error", { code, stderr: errorBuffered })
+        if (!res.headersSent) {
+          res.status(500).json({
+            error: "Backup failed",
+            detail: errorBuffered || `pg_dump exited with code ${code}`,
+          })
+        } else {
+          res.end()
+        }
+      }
+    })
   }
 )
 

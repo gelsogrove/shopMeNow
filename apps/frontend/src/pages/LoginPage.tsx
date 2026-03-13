@@ -997,6 +997,7 @@ export function LoginPage() {
       <SEO
         title="Login"
         description="Access eChatbot to sign in, register, or explore the platform with a mobile-friendly experience."
+        robots="noindex, nofollow"
       />
       <div
         className="w-full min-h-screen"

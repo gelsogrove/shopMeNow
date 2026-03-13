@@ -6,7 +6,6 @@ import { LLMRouterService } from "../../../services/llm-router.service"
 import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import { usageService } from "../../../services/usage.service"
 import { websocketService } from "../../../services/websocket.service"
-import { TranslationAgent } from "../../../application/agents/TranslationAgent"
 import { SecurityAgent } from "../../../application/agents/SecurityAgent"
 import logger from "../../../utils/logger"
 
@@ -434,45 +433,11 @@ export class ChatController {
       
       debugSteps.push(operatorDebugStep)
 
-      // 🌍 STEP 2: Translation Layer FIRST (before saving)
+      // 🚫 NO Translation for operator messages (Andrea's rule: operator writes in the language they choose)
+      // Only apply Widget Security Layer if needed
       let finalMessage = content
       const isWidgetChannel = chatSession.channel === "widget"
       try {
-        const translationAgent = new TranslationAgent(this.prisma)
-        const translationResult = await translationAgent.process({
-          workspaceId: workspaceId,
-          message: content,
-          targetLanguage: chatSession.customer.language || "en",
-          customerName: chatSession.customer.name || "Cliente",
-          customerId: chatSession.customer.id,
-          channel: chatSession.channel,
-        })
-
-        finalMessage = translationResult.message || content
-        
-        // 🆕 ADD Translation debug step
-        debugSteps.push({
-          type: "safety",
-          agent: "Translation Layer",
-          model: "openai/gpt-4o-mini",
-          temperature: 0,
-          timestamp: new Date().toISOString(),
-          input: {
-            originalMessage: content,
-            targetLanguage: chatSession.customer.language || "en",
-            customerName: chatSession.customer.name || "Cliente",
-          },
-          output: {
-            translatedText: finalMessage,
-            decision: translationResult.translated ? "translated" : "passthrough",
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: translationResult.tokensUsed || 0,
-            totalTokens: translationResult.tokensUsed || 0,
-          },
-        })
-
         if (isWidgetChannel) {
           const securityAgent = new SecurityAgent(this.prisma)
           const securityResult = await securityAgent.process({
@@ -522,7 +487,7 @@ export class ChatController {
         }
 
         logger.info(
-          `[CHAT-SEND] ✅ Operator message processed (translation${isWidgetChannel ? " + widget security" : ""})`
+          `[CHAT-SEND] ✅ Operator message processed${isWidgetChannel ? " (widget security applied)" : " (no translation - operator direct)"}`
         )
       } catch (safetyError) {
         logger.warn(

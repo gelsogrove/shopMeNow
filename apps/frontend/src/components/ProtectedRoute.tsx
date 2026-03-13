@@ -3,6 +3,7 @@ import { storage } from "@/lib/storage"
 import { useEffect, useState } from "react"
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { api } from "../services/api"
+import { Helmet } from "react-helmet-async"
 
 /**
  * 🔒 PROTECTED ROUTE COMPONENT
@@ -86,5 +87,13 @@ export function ProtectedRoute() {
   }
 
   // Token is valid, render nested routes via Outlet
-  return <Outlet />
+  return (
+    <>
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+        <meta name="googlebot" content="noindex, nofollow" />
+      </Helmet>
+      <Outlet />
+    </>
+  )
 }

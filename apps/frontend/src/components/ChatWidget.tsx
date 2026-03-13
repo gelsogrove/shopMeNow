@@ -537,6 +537,63 @@ export function ChatWidget({
     })
   }, [isOpen])
 
+  // ── Operator takeover detection ──────────────────────────────────────────
+  // When the widget is open and a conversation exists, poll every 8s to detect
+  // if the operator took over the chat (set activeChatbot=false from admin).
+  // Without this, the widget only discovers the takeover when the customer
+  // sends a new message — causing operator messages to be invisible until refresh.
+  useEffect(() => {
+    // Only run when: widget open, NOT already in operator mode, has session + visitor
+    if (botDisabled || !isOpen || !visitorId || !resolvedWorkspaceId || !sessionId) return
+
+    const checkOperatorTakeover = async () => {
+      try {
+        const resp = await fetch(
+          `${resolvedApiUrl}/widget/operator-messages?visitorId=${encodeURIComponent(visitorId)}&workspaceId=${encodeURIComponent(resolvedWorkspaceId)}&since=${encodeURIComponent("1970-01-01T00:00:00.000Z")}`
+        )
+        if (!resp.ok) return
+        const data = await resp.json()
+
+        // Operator took over — switch to operator mode and show any pending messages
+        if (data.activeChatbot === false) {
+          setBotDisabled(true)
+          lastOperatorMsgAt.current = new Date().toISOString()
+          console.log("🔒 [WIDGET] Detected operator takeover via status poll")
+
+          if (Array.isArray(data.messages) && data.messages.length > 0) {
+            setOperatorHasReplied(true)
+            const newMsgs = (
+              data.messages as { id: string; content: string; createdAt: string }[]
+            ).map((m) => ({
+              role: "bot" as const,
+              content: m.content,
+              timestamp: m.createdAt,
+            }))
+            setMessages((prev) => {
+              // Deduplicate: skip messages already shown (by content + timestamp)
+              const existingKeys = new Set(prev.map(m => `${m.content}|${m.timestamp}`))
+              const uniqueNew = newMsgs.filter((m: { content: string; timestamp: string }) =>
+                !existingKeys.has(`${m.content}|${m.timestamp}`)
+              )
+              if (uniqueNew.length === 0) return prev
+              const updated = [...prev, ...uniqueNew]
+              if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+              return updated
+            })
+            const latest = data.messages[data.messages.length - 1].createdAt
+            lastOperatorMsgAt.current = latest
+          }
+        }
+      } catch {
+        // Silently ignore — best-effort status check
+      }
+    }
+
+    const interval = setInterval(checkOperatorTakeover, 8000)
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [botDisabled, isOpen, visitorId, resolvedWorkspaceId, sessionId, resolvedApiUrl])
+
   // ── Operator handoff polling ────────────────────────────────────────────
   // When the chatbot is disabled (operator mode), poll every 5s for new
   // messages sent by the operator and check if the chatbot was re-enabled.

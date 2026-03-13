@@ -6178,6 +6178,21 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         conversationId,
         content: userMessage,
       })
+
+      // 🚀 WEBSOCKET: Notify admin dashboard about new customer message (real-time)
+      try {
+        const { websocketService } = await import("../../services/websocket.service")
+        websocketService.notifyNewMessage(workspaceId, {
+          id: `user-${Date.now()}`,
+          sessionId: conversationId,
+          content: userMessage,
+          sender: "customer",
+          timestamp: new Date().toISOString(),
+          workspaceId,
+        })
+      } catch (wsError) {
+        logger.warn("[WebSocket] Failed to notify new customer message from ChatEngine:", wsError)
+      }
       
       // 🆕 Create minimal debugInfo if not provided (for FAST-PATH responses)
       const finalDebugInfo = debugInfo || {
@@ -6207,6 +6222,21 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         tokensUsed,
         debugInfo: finalDebugInfo,  // 🆕 Always have debugInfo for Message Flow Dialog
       })
+
+      // 🚀 WEBSOCKET: Notify admin dashboard about assistant response (real-time)
+      try {
+        const { websocketService } = await import("../../services/websocket.service")
+        websocketService.notifyNewMessage(workspaceId, {
+          id: assistantMessageId || `assistant-${Date.now()}`,
+          sessionId: conversationId,
+          content: assistantMessage,
+          sender: "assistant",
+          timestamp: new Date().toISOString(),
+          workspaceId,
+        })
+      } catch (wsError) {
+        logger.warn("[WebSocket] Failed to notify new assistant message from ChatEngine:", wsError)
+      }
       
       logger.debug("💾 [ChatEngine] Messages saved to history (user + assistant)", { 
         hasDebugInfo: true,

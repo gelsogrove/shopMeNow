@@ -30,6 +30,7 @@ const menuItems = [
   { path: '/laws-documents', label: 'Laws Documents', icon: Scale },
   { path: '/support-tickets', label: 'Support Tickets', icon: MessageSquare },
   { path: '/questionnaire', label: 'Questionnaire', icon: ClipboardList },
+  { path: '/backup', label: 'Backup', icon: Shield },
   { path: '/schedulers', label: 'Schedulers', icon: Clock },
   { path: '/trash', label: 'Trash', icon: Trash2 },
 ]
