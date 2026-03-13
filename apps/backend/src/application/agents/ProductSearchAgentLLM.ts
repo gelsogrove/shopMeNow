@@ -506,7 +506,8 @@ export class ProductSearchAgentLLM {
           messages,
           this.getProductSearchFunctions(),
           groupingValidation.productLineCount,
-          finalResponse
+          finalResponse,
+          temperature
         )
 
         if (retryResult.content) {
@@ -914,7 +915,8 @@ export class ProductSearchAgentLLM {
     messages: any[],
     functions: any[],
     productLineCount: number,
-    originalResponse: string
+    originalResponse: string,
+    temperature: number = 0.3
   ): Promise<{ content: string | null; tokensUsed: number }> {
     logger.info(`🔄 Retrying with grouping instruction after ${productLineCount} products listed`)
 
