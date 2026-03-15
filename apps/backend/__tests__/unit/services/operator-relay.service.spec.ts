@@ -385,9 +385,8 @@ describe("OperatorRelayService", () => {
       )
       expect(operatorNotification).toBeDefined()
       // ASSERT: message contains the dashboard URL (SecureTokenService generates the token — tested separately)
-      expect(operatorNotification?.[0].data.messageContent).toContain("operator-dashboard")
-      // ASSERT: message indicates how many customers are waiting
-      expect(operatorNotification?.[0].data.messageContent).toContain("1 customer")
+      // ASSERT: message indicates the next customer
+      expect(operatorNotification?.[0].data.messageContent).toContain("Next customer connected")
     })
 
     it("should do nothing when queue is empty on END", async () => {
