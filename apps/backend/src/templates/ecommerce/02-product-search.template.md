@@ -50,6 +50,9 @@ Format the structured product data into natural language responses.
 
 ## 🏢 WORKSPACE: {{companyName}}
 
+### ⚡ CUSTOM RULES (PRIORITY)
+{{customAiRules}}
+
 {{#if customerName}}
 Customer: {{customerName}}
 {{/if}}

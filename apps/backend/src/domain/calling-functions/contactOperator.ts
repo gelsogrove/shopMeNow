@@ -45,10 +45,10 @@ export async function contactOperator(
   request: ContactOperatorRequest
 ): Promise<ContactOperatorResult> {
   // Use imported prisma singleton from @echatbot/database
-  
+
   // 📧 Track email sending status (accessible in all scopes)
   let emailSentSuccessfully = false
-  
+
   // 📧 Track Summary Agent data for debug timeline
   let generatedSummary = ""
   let conversationMessages: any[] = []
@@ -178,7 +178,7 @@ export async function contactOperator(
 
       // �📧 SEND EMAIL TO AGENT with summary of last hour conversation
       let chatSummary = "" // 📧 Declare chatSummary in outer scope
-      
+
       try {
         // Get active chat session
         const session = await prisma.chatSession.findFirst({
@@ -260,11 +260,11 @@ export async function contactOperator(
                 // contactOperator is WhatsApp-only feature (human operator request)
                 // The summary is internal (for operator) so no need for customer-facing translation
                 const finalSummary = summaryResult.summary
-                
+
                 logger.info(
                   "⏭️ [contactOperator] Skipping Translation/Security (internal summary for operator)"
                 )
-                
+
                 // If summary is empty, throw error to trigger fallback
                 if (!finalSummary || finalSummary.trim().length === 0) {
                   throw new Error("Summary generated but empty")
@@ -399,7 +399,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           }
         }
 
-// 📱 WHATSAPP NOTIFICATION — sent whenever operatorWhatsappNumber is configured
+        // 📱 WHATSAPP NOTIFICATION — sent whenever operatorWhatsappNumber is configured
         // (independent of operatorContactMethod: if a WA number is set, we always notify)
         if (workspace?.operatorWhatsappNumber || (customer.salesId && customer.sales?.phone)) {
           logger.info("📱 [contactOperator] WhatsApp notification enabled", {
@@ -410,7 +410,7 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
           // PRIORITY LOGIC (Andrea's spec):
           // 1. If customer has salesId → send to agent's phone
           // 2. Otherwise → send to workspace.operatorWhatsappNumber
-          
+
           let targetPhoneNumber: string | null = null
           let targetName = "Operatore"
 
@@ -438,8 +438,8 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
               let compactSummary = ""
               if (chatSummary) {
                 // Extract just the summary part (skip customer details header)
-                const summaryMatch = chatSummary.match(/📋 Riassunto.*:\n([\s\S]+)/) || 
-                                   chatSummary.match(/📜 Messaggi.*:\n([\s\S]+)/)
+                const summaryMatch = chatSummary.match(/📋 Riassunto.*:\n([\s\S]+)/) ||
+                  chatSummary.match(/📜 Messaggi.*:\n([\s\S]+)/)
                 if (summaryMatch && summaryMatch[1]) {
                   const fullSummary = summaryMatch[1].trim()
                   // Take first 200 chars or first 3 lines, whichever is shorter
@@ -468,7 +468,7 @@ Rispondi direttamente su WhatsApp.
 
 ✅ *Scrivi END quando hai finito per riattivare il chatbot.*
               `.trim()
-              
+
               await prisma.whatsAppQueue.create({
                 data: {
                   workspaceId: request.workspaceId,
@@ -523,15 +523,15 @@ Rispondi direttamente su WhatsApp.
 
       // 📝 Build response message with variable replacement (Andrea's spec)
       // Use humanSupportInstructions (message to send) NOT frustrationEscalationInstructions (triggers)
-      let responseMessage = workspace?.humanSupportInstructions || 
+      let responseMessage = workspace?.humanSupportInstructions ||
         "Hello {{nameUser}}, I'm connecting you with our support team. They will contact you as soon as possible. We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝"
 
       // 🔧 Replace {{nameUser}} variable (Andrea's requirement)
       responseMessage = responseMessage.replace(/\{\{nameUser\}\}/g, customer.name)
-      
+
       // 🔧 Replace other common variables if present
-      const agentName = customer.sales 
-        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim() 
+      const agentName = customer.sales
+        ? `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
         : "Support Team"
       const agentPhone = customer.sales?.phone || workspace?.operatorWhatsappNumber || "N/A"
       const agentEmail = customer.sales?.email || workspace?.operatorEmail || workspace?.whatsappSettings?.adminEmail || "N/A"
@@ -540,12 +540,24 @@ Rispondi direttamente su WhatsApp.
         .replace(/\{\{agentName\}\}/g, agentName)
         .replace(/\{\{agentPhone\}\}/g, agentPhone)
         .replace(/\{\{agentEmail\}\}/g, agentEmail)
-      
+
       logger.info("✅ [contactOperator] Response message prepared:", {
         hasCustomMessage: !!workspace?.humanSupportInstructions,
         customerName: customer.name,
         replacedNameUser: responseMessage.includes(customer.name),
       })
+
+      // 📋 NEW: Include queue position in customer's language (if waiting)
+      if (queuePosition > 1) {
+        const peopleAhead = queuePosition - 1
+        // Add placeholder info that TranslationAgent will handle or just append in English for translation
+        responseMessage += `\n\nThere are ${peopleAhead} people ahead of you in the queue.`
+
+        logger.info("📋 [contactOperator] Added queue position info:", {
+          queuePosition,
+          peopleAhead
+        })
+      }
 
       // 🌍 Translate response to customer language via TranslationAgent
       const customerLanguage = customer.language || "en"

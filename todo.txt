@@ -3,6 +3,3 @@
 - resposive?
 - WAPI
 - GDPR PER OGNI CANALE CI VUOLE
-
-
-

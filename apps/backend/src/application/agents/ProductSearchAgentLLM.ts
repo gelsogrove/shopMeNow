@@ -148,9 +148,18 @@ export class ProductSearchAgentLLM {
         )
       }
 
-      // STEP 0.2: Load conversational memory for context
-      // Feature 191: Removed hardcoded product selection logic
-      // Now the LLM uses getProductDetails() function call to lookup products
+      // STEP 0.2: Load workspace config for dynamic fields (customAiRules, botIdentityResponse, etc.)
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: context.workspaceId },
+        select: {
+          name: true,
+          address: true,
+          customAiRules: true,
+          botIdentityResponse: true,
+        },
+      })
+
+      // STEP 0.3: Load conversational memory for context
       const conversation = await this.searchConversationRepo.findBySessionId(
         context.sessionId,
         context.workspaceId
@@ -327,6 +336,12 @@ export class ProductSearchAgentLLM {
           categories: categoriesText,
           services: servicesText, // ✅ Feature 191: Include services for product/services search
           offers: offersText,
+        },
+        undefined, // workspaceUrl
+        {
+          address: workspace?.address || "",
+          customAiRules: workspace?.customAiRules || "",
+          botIdentityResponse: context.customerData?.botIdentityResponse || workspace?.botIdentityResponse || "",
         }
       )
 

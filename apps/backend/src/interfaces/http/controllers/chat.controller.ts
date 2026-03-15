@@ -401,13 +401,41 @@ export class ChatController {
         return
       }
 
+      // 🔀 "END" COMMAND DETECTION (Operator Dashboard)
+      // If the operator sends "END" from the backoffice chat, it should trigger the same
+      // logic as sending "END" from WhatsApp: close session and process next in queue.
+      const isEndCommand = content.trim().toUpperCase() === "END"
+      if (isEndCommand) {
+        logger.info(`[CHAT-SEND] 🔒 "END" command detected from dashboard - closing session for customer ${chatSession.customerId}`)
+
+        try {
+          const { OperatorRelayService } = require("../../../application/services/operator-relay.service")
+          const operatorRelayService = new OperatorRelayService(this.prisma)
+          await operatorRelayService.processEndCommand(workspaceId)
+
+          res.status(200).json({
+            success: true,
+            message: "Session closed successfully via END command",
+            isEndCommand: true
+          })
+          return
+        } catch (endError) {
+          logger.error(`[CHAT-SEND] ❌ Failed to process END command:`, endError)
+          res.status(500).json({
+            success: false,
+            error: "Failed to close session via END command"
+          })
+          return
+        }
+      }
+
       logger.info(
         `[CHAT-SEND] 📱 Processing operator message: "${content}"`
       )
 
       // 🆕 CREATE DEBUG STEPS for Operator Message (for timeline visibility)
       const debugSteps = []
-      
+
       // Step 1: Operator Input
       const operatorDebugStep = {
         type: "operator_message",
@@ -430,7 +458,7 @@ export class ChatController {
           totalTokens: 0,
         },
       }
-      
+
       debugSteps.push(operatorDebugStep)
 
       // 🚫 NO Translation for operator messages (Andrea's rule: operator writes in the language they choose)
@@ -652,7 +680,7 @@ export class ChatController {
           logger.info(
             `[CHAT-SEND] 💰 Usage tracked for operator response: $${config.llm.defaultPrice}`
           )
-          
+
         }
       } catch (usageError) {
         logger.warn(
@@ -675,7 +703,7 @@ export class ChatController {
             conversationMessageId: conversationMessage.id,
           })
           logger.info(`[CHAT-SEND] ✅ Message added to WhatsApp queue (channel: whatsapp)`)
-          
+
           // 🆕 ADD WhatsApp queue debug step
           debugSteps.push({
             type: "function_call",
@@ -710,7 +738,7 @@ export class ChatController {
             queueError.message
           )
           // Continue - message is saved even if queue fails
-          
+
           // 🆕 ADD WhatsApp queue error debug step
           debugSteps.push({
             type: "function_call",
@@ -744,7 +772,7 @@ export class ChatController {
         // Widget customer: message already saved to conversationMessage table
         // Widget polls for new messages via GET /widget/operator-messages endpoint
         logger.info(`[CHAT-SEND] ✅ Widget message saved - delivery via polling (channel: widget)`)
-        
+
         // 🆕 ADD Widget polling delivery debug step
         debugSteps.push({
           type: "function_call",
@@ -775,7 +803,7 @@ export class ChatController {
       } else {
         // Unknown channel - log warning but don't fail
         logger.warn(`[CHAT-SEND] ⚠️ Unknown channel: ${chatSession.channel} - message saved but delivery uncertain`)
-        
+
         debugSteps.push({
           type: "function_call",
           agent: "⚠️ Unknown Channel",

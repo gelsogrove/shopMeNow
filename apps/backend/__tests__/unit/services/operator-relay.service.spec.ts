@@ -363,7 +363,9 @@ describe("OperatorRelayService", () => {
       const workspace = { operatorWhatsappNumber: "+39111222333" }
       const session = makeSession()
 
-      mockPrisma.customers.findFirst.mockResolvedValueOnce(customerA) // getActiveCustomer
+      mockPrisma.customers.findFirst
+        .mockResolvedValueOnce(customerA) // initial getActiveCustomer
+        .mockResolvedValueOnce(customerB) // nextActive check
 
       // getQueuedCustomers (remaining.length check) + reorderQueue both call findMany
       mockPrisma.customers.findMany.mockResolvedValue([customerB])

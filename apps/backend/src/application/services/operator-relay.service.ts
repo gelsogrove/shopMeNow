@@ -72,7 +72,7 @@ export interface AssignQueueResult {
 // ============================================================================
 
 export class OperatorRelayService {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) { }
 
   // ─────────────────────────────────────────────────────────────────────────
   // PUBLIC: Queue Management
@@ -270,16 +270,17 @@ export class OperatorRelayService {
     workspaceId: string,
     messageText: string
   ): Promise<void> {
-    const trimmed = messageText.trim()
+    // Sanitize message text to handle bold formatting like *END* from WhatsApp
+    const sanitized = messageText.replace(/\*/g, "").trim().toUpperCase()
 
     logger.info("[OperatorRelay] 📩 Message from operator", {
       workspaceId,
-      messageLength: trimmed.length,
-      isEnd: trimmed.toUpperCase() === "END",
+      messageLength: messageText.trim().length,
+      isEnd: sanitized === "END",
     })
 
     // "END" terminates the current session and moves to the next customer
-    if (trimmed.toUpperCase() === "END") {
+    if (sanitized === "END") {
       await this.processEndCommand(workspaceId)
       return
     }
@@ -296,7 +297,7 @@ export class OperatorRelayService {
       return
     }
 
-    await this.relayToCustomer(activeCustomer, workspaceId, trimmed)
+    await this.relayToCustomer(activeCustomer, workspaceId, messageText.trim())
   }
 
   /**
@@ -349,21 +350,40 @@ export class OperatorRelayService {
       customerId: activeCustomer.id,
     })
 
-    // 3. Get remaining queue AFTER releasing the active customer
-    //    (the update above cleared operatorQueuePosition, so they no longer appear)
-    const remaining = await this.getQueuedCustomers(workspaceId)
+    // 4. Reorder positions (1, 2, 3...)
+    await this.reorderQueue(workspaceId)
 
-    if (remaining.length === 0) {
+    // Count remaining customers for notifications
+    const remainingCount = (await this.getQueuedCustomers(workspaceId)).length
+
+    // 5. AUTOMATIC HANDOFF: If there's a new customer at position 1, 
+    //    notify both the customer and the operator immediately.
+    const nextActive = await this.getActiveCustomer(workspaceId)
+
+    if (nextActive) {
+      logger.info("[OperatorRelay] 🔀 Automatic handoff — connecting operator to next customer", {
+        workspaceId,
+        nextCustomerId: nextActive.id,
+        nextCustomerName: nextActive.name,
+      })
+
+      // A. Notify the customer that they are now being served
+      await this.relayToCustomer(
+        nextActive,
+        workspaceId,
+        "👋 Good news! An operator is now available and will assist you shortly. You can start typing your messages here. 😊"
+      )
+
+      // B. Notify the operator via WhatsApp that a new customer is connected
+      // We send a summary and the direct chat link
+      await this.sendDashboardLinkToOperator(workspaceId, remainingCount, nextActive.id, nextActive.name)
+    } else {
+      // Queue is empty
       logger.info("[OperatorRelay] 🎉 Queue empty — all customers served", {
         workspaceId,
       })
       await this.sendMessageToOperator(workspaceId, "✅ All done! Queue empty.", activeCustomer.id)
-      return
     }
-
-    // 4. Reorder positions (1, 2, 3...) and send dashboard link to operator
-    await this.reorderQueue(workspaceId)
-    await this.sendDashboardLinkToOperator(workspaceId, remaining.length, activeCustomer.id)
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -533,6 +553,9 @@ export class OperatorRelayService {
    * Called after a customer exits the queue (END command).
    */
   private async reorderQueue(workspaceId: string): Promise<void> {
+    const { TranslationAgent } = require("../agents/TranslationAgent")
+    const translationAgent = new TranslationAgent(this.prisma)
+
     // Re-fetch remaining queue ordered by current position + entry time
     const remaining = await this.prisma.customers.findMany({
       where: {
@@ -544,15 +567,53 @@ export class OperatorRelayService {
         { operatorQueuePosition: "asc" },
         { operatorQueueEnteredAt: "asc" },
       ],
-      select: { id: true },
+      select: {
+        id: true,
+        name: true,
+        language: true,
+        phone: true,
+        originChannel: true,
+        operatorQueuePosition: true
+      },
     })
 
     // Assign positions 1, 2, 3, ...
     for (let i = 0; i < remaining.length; i++) {
-      await this.prisma.customers.update({
-        where: { id: remaining[i].id },
-        data: { operatorQueuePosition: i + 1 },
-      })
+      const newPosition = i + 1
+      const customer = remaining[i]
+
+      // Only update if position changed
+      if (customer.operatorQueuePosition !== newPosition) {
+        await this.prisma.customers.update({
+          where: { id: customer.id },
+          data: { operatorQueuePosition: newPosition },
+        })
+
+        // 🔔 NOTIFY waiting customers (position > 1) that their position updated
+        // Note: Position 1 notification is handled by the calling method (processEndCommand)
+        if (newPosition > 1) {
+          const peopleAhead = newPosition - 1
+          let notifyMsg = `Your position in the queue has been updated. There are ${peopleAhead} people ahead of you.`
+
+          try {
+            const translationResult = await translationAgent.process({
+              workspaceId,
+              message: notifyMsg,
+              targetLanguage: customer.language || "en",
+              customerName: customer.name || "Customer",
+              customerId: customer.id,
+              channel: "whatsapp",
+            })
+            if (translationResult.message) {
+              notifyMsg = translationResult.message
+            }
+          } catch (tError) {
+            logger.warn("[OperatorRelay] Position update translation failed", { customerId: customer.id })
+          }
+
+          await this.relayToCustomer(customer, workspaceId, notifyMsg)
+        }
+      }
     }
 
     logger.info("[OperatorRelay] 🔢 Queue reordered", {
@@ -610,11 +671,13 @@ export class OperatorRelayService {
    *
    * @param workspaceId  - Workspace scope
    * @param queueLength  - Number of customers still waiting
+   * @param nextCustomerName - Optional name of the next customer (for automatic handoff)
    */
   private async sendDashboardLinkToOperator(
     workspaceId: string,
     queueLength: number,
-    customerId: string
+    customerId: string,
+    nextCustomerName?: string
   ): Promise<void> {
     try {
       const dashboardToken = await secureTokenService.createToken(
@@ -627,11 +690,20 @@ export class OperatorRelayService {
       const frontendUrl = process.env.FRONTEND_URL || "https://www.echatbot.ai"
       const dashboardUrl = `${frontendUrl}/operator-dashboard?token=${dashboardToken}`
 
-      const message = [
-        "✅ Chat closed.",
-        `👥 ${queueLength} customer(s) waiting.`,
-        `Choose next: ${dashboardUrl}`,
-      ].join("\n")
+      let messageLines = ["✅ Chat closed."]
+
+      if (nextCustomerName) {
+        messageLines.push(`🔀 *Next customer connected*: ${nextCustomerName}`)
+        if (queueLength > 1) {
+          messageLines.push(`👥 ${queueLength - 1} more waiting in queue.`)
+        }
+      } else {
+        messageLines.push(`👥 ${queueLength} customer(s) waiting.`)
+      }
+
+      messageLines.push(`Open dashboard: ${dashboardUrl}`)
+
+      const message = messageLines.join("\n")
 
       await this.sendMessageToOperator(workspaceId, message, customerId)
 

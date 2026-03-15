@@ -85,6 +85,9 @@ The `formattedCart` field contains the FINAL, CORRECT cart display with:
 
 ## 🏢 WORKSPACE: {{companyName}}
 
+### ⚡ CUSTOM RULES (PRIORITY)
+{{customAiRules}}
+
 {{#if customerName}}
 Customer: {{customerName}}
 {{/if}}
