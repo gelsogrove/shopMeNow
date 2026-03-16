@@ -50,7 +50,6 @@ import {
   workspaceApi,
   type WorkspaceChecklist,
 } from "@/services/workspaceApi"
-import { initializeWaapiInstance, regenerateWaapiQr } from "@/services/waapiApi"
 import { WasenderOnboarding } from "@/components/WasenderOnboarding"
 
 // ============================================================================
@@ -66,7 +65,7 @@ interface WizardFormData {
   whatsappNumber: string // Only required if channelType === 'WHATSAPP'
   sellsProductsAndServices: boolean
   // Step 3: Provider (WhatsApp only)
-  whatsappProvider: 'waapi' | 'meta' | 'ultramsg' | 'wasender'
+  whatsappProvider: 'meta' | 'ultramsg' | 'wasender'
   // Step 4: Bot Personality
   toneOfVoice: 'formal' | 'friendly' | 'professional' | 'casual'
   botIdentityResponse: string
@@ -203,7 +202,7 @@ const initialWizardData: WizardFormData = {
   whatsappNumber: "",
   sellsProductsAndServices: true,
   // Step 3: Provider
-  whatsappProvider: 'waapi',
+  whatsappProvider: 'wasender',
   // Step 4: Bot Personality
   toneOfVoice: 'friendly',
   botIdentityResponse: "",
@@ -234,10 +233,6 @@ export function WorkspaceSelectionPage() {
   const [wizardOpen, setWizardOpen] = useState(false)
   // New workspace created during wizard (set when entering Step 5)
   const [newlyCreatedWorkspaceId, setNewlyCreatedWorkspaceId] = useState<string | null>(null)
-  // WaAPI connection state for Step 5
-  const [wizardQrCode, setWizardQrCode] = useState<string | null>(null)
-  const [wizardWaapiStatus, setWizardWaapiStatus] = useState<'idle' | 'initializing' | 'pending' | 'authenticated' | 'ready' | 'failed'>('idle')
-  const [wizardWaapiRegenerating, setWizardWaapiRegenerating] = useState(false)
   
   const [userEmail, setUserEmail] = useState("") // Email from token (auto-filled)
   const [justCreatedId, setJustCreatedId] = useState<string | null>(null)
@@ -309,10 +304,7 @@ export function WorkspaceSelectionPage() {
         return true
       case 4: // Bot Personality: require bot identity
         return wizardData.botIdentityResponse.trim().length > 0
-      case 5: // Connect — WaAPI: must be ready; others always valid
-        if (wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'waapi') {
-          return wizardWaapiStatus === 'ready'
-        }
+      case 5: // Connect — always valid (Wasender handles its own completion)
         return true
       case 6: // Done — always valid
         return true
@@ -2177,7 +2169,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">WhatsApp Provider</Label>
                         <div className="space-y-3 mt-3">
                           {[
-                            { value: 'waapi',     emoji: '⚡', label: 'WaAPI',       desc: 'Fast QR scan setup — free plan available',       badge: 'Popular' },
                             { value: 'wasender',  emoji: '📱', label: 'WasenderAPI', desc: 'Reliable QR scan — $4.50/month per session',      badge: null },
                           ].map((p) => (
                             <button
