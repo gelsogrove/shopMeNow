@@ -134,7 +134,16 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
 
       toast.success('QR code generated — scan with WhatsApp now')
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to start WhatsApp session')
+      const httpStatus = error.response?.status
+      const code = error.response?.data?.code
+
+      if (httpStatus === 402 || code === 'WASENDER_PLAN_LIMIT') {
+        toast.error('WasenderAPI session limit reached — upgrade your plan at wasenderapi.com to add more channels')
+      } else if (code === 'WASENDER_AUTH_ERROR') {
+        toast.error('WasenderAPI configuration error — contact your administrator')
+      } else {
+        toast.error(error.response?.data?.error || 'Failed to start WhatsApp session')
+      }
       setStatus('failed')
     } finally {
       setIsInitializing(false)

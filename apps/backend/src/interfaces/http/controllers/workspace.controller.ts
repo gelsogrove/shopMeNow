@@ -1249,6 +1249,22 @@ export class WorkspaceController {
       return res.status(200).json(workspace)
     } catch (error: any) {
       logger.error('[Wasender] Failed to initialize session:', error)
+
+      if (error.message?.startsWith('WASENDER_PLAN_LIMIT')) {
+        return res.status(402).json({
+          error: 'Plan limit reached',
+          message: 'Your WasenderAPI account has reached the maximum number of sessions. Upgrade your WasenderAPI plan at wasenderapi.com to add more channels.',
+          code: 'WASENDER_PLAN_LIMIT',
+        })
+      }
+      if (error.message?.startsWith('WASENDER_AUTH_ERROR')) {
+        return res.status(503).json({
+          error: 'WasenderAPI authentication failed',
+          message: 'Invalid or expired WasenderAPI Personal Access Token. Contact your administrator.',
+          code: 'WASENDER_AUTH_ERROR',
+        })
+      }
+
       return res.status(400).json({ error: error.message })
     }
   }
