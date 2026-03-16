@@ -121,18 +121,22 @@ export class WasenderClientService {
     webhookUrl: string
   ): Promise<{ sessionId: string; apiKey: string }> {
     try {
+      // WasenderAPI requires phone number as digits only (no + prefix)
+      const phoneDigits = phoneNumber.replace(/^\+/, '')
+
+      // Webhook URL must be a complete https URL — guard against misconfigured env
+      const safeWebhookUrl = webhookUrl.startsWith('http') ? webhookUrl : null
+
       const { data } = await this.managementClient.post<WasenderCreateSessionResponse>(
         '/api/whatsapp-sessions',
         {
           name: `echatbot-${workspaceId}`,
-          phone_number: phoneNumber,
-          account_protection: true,
-          log_messages: true,
-          webhook_url: webhookUrl,
-          webhook_enabled: true,
-          webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
-          read_incoming_messages: false,
-          auto_reject_calls: true,
+          phone_number: phoneDigits,
+          ...(safeWebhookUrl && {
+            webhook_url: safeWebhookUrl,
+            webhook_enabled: true,
+            webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
+          }),
         }
       )
 
