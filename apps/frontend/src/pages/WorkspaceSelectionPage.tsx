@@ -386,6 +386,16 @@ export function WorkspaceSelectionPage() {
     if (!dialog) return
 
     if (wizardOpen) {
+      // Preload all wizard step images so navigation is instant
+      const WIZARD_IMAGES = [
+        '/survery-start.png',
+        '/surver-widget.png',
+        '/survey-agent.png',
+        '/survey-support.png',
+        '/survey.png',
+      ]
+      WIZARD_IMAGES.forEach((src) => { const img = new Image(); img.src = src })
+
       if (!dialog.open) {
         try {
           dialog.showModal()
@@ -1901,7 +1911,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/survery-start.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                      <img src="/survery-start.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
@@ -1964,7 +1974,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                      <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
@@ -2083,42 +2093,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </div>
                     )}
 
-                    {/* Provider selection (ONLY for WhatsApp) */}
-                    {wizardData.channelType === 'WHATSAPP' && (
-                      <div>
-                        <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">WhatsApp Provider</Label>
-                        <div className="space-y-3 mt-3">
-                          {[
-                            { value: 'wasender',  emoji: '📱', label: 'WasenderAPI', desc: 'Reliable QR scan — $4.50/month per session',      badge: null },
-                          ].map((p) => (
-                            <button
-                              key={p.value}
-                              type="button"
-                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
-                                wizardData.whatsappProvider === p.value
-                                  ? 'border-green-500 bg-green-50 text-green-800'
-                                  : 'border-slate-200 hover:border-green-300 text-slate-700'
-                              }`}
-                              onClick={() => updateWizardData('whatsappProvider', p.value as WizardFormData['whatsappProvider'])}
-                            >
-                              <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                wizardData.whatsappProvider === p.value ? 'bg-green-500 border-green-500' : 'border-slate-300'
-                              }`}>
-                                {wizardData.whatsappProvider === p.value && <span className="w-2 h-2 rounded-full bg-white" />}
-                              </span>
-                              <span className="text-xl">{p.emoji}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">{p.label}</span>
-                                  {p.badge && <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-medium">{p.badge}</span>}
-                                </div>
-                                <p className="text-xs text-slate-500">{p.desc}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                     {wizardData.channelType === 'WHATSAPP' && (
                       <div>
                         <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Do you sell products?</Label>
@@ -2176,7 +2150,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/survey-agent.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                      <img src="/survey-agent.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
                     </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
@@ -2287,7 +2261,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'wasender' && (
                       <>
                         <div className="-mx-6 -mt-6 mb-6">
-                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
                         </div>
                         <div>
                           <div className="flex items-center gap-3 mb-2">
@@ -2318,7 +2292,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <>
                         {/* Full-bleed step image (survey style) */}
                         <div className="-mx-6 -mt-6 mb-6">
-                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
                         </div>
                         <div>
                           <div className="flex items-center gap-3 mb-2">
@@ -2352,7 +2326,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       <>
                         {/* Full-bleed step image (survey style) */}
                         <div className="-mx-6 -mt-6 mb-6">
-                          <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                          <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
                         </div>
                         <div>
                           <div className="flex items-center gap-3 mb-2">
@@ -2396,7 +2370,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/survey.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                      <img src="/survey.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
                     </div>
                     <div className="text-center py-2">
                       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">

@@ -1,6 +1,5 @@
 
 - wasenderapi
-- ultraMsg da togleire
 - PAGAMENTI ON CI SIAMO
 - GDPR PER OGNI CANALE CI VUOLE
 - NEW CHANNEL 
