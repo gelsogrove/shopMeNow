@@ -17,7 +17,7 @@
 import { Router } from 'express'
 import { authMiddleware } from '../middlewares/auth.middleware'
 import { sessionValidationMiddleware } from '../middlewares/session-validation.middleware'
-import { validateWorkspaceId } from '../middlewares/workspace-validation.middleware'
+import { workspaceValidationMiddleware } from '../middlewares/workspace-validation.middleware'
 import { WorkspaceController } from '../controllers/workspace.controller'
 import { WasenderWebhookController } from '../controllers/wasender-webhook.controller'
 import rateLimit from 'express-rate-limit'
@@ -43,7 +43,7 @@ router.post(
   '/workspaces/:workspaceId/wasender/initialize',
   authMiddleware,
   sessionValidationMiddleware,
-  validateWorkspaceId,
+  workspaceValidationMiddleware,
   workspaceController.initializeWasenderSession.bind(workspaceController)
 )
 
@@ -51,7 +51,7 @@ router.post(
   '/workspaces/:workspaceId/wasender/disconnect',
   authMiddleware,
   sessionValidationMiddleware,
-  validateWorkspaceId,
+  workspaceValidationMiddleware,
   workspaceController.disconnectWasenderSession.bind(workspaceController)
 )
 
@@ -59,7 +59,7 @@ router.post(
   '/workspaces/:workspaceId/wasender/delete',
   authMiddleware,
   sessionValidationMiddleware,
-  validateWorkspaceId,
+  workspaceValidationMiddleware,
   workspaceController.deleteWasenderSession.bind(workspaceController)
 )
 
@@ -67,7 +67,7 @@ router.post(
   '/workspaces/:workspaceId/wasender/regenerate-qr',
   authMiddleware,
   sessionValidationMiddleware,
-  validateWorkspaceId,
+  workspaceValidationMiddleware,
   workspaceController.regenerateWasenderQr.bind(workspaceController)
 )
 
@@ -75,7 +75,7 @@ router.post(
   '/workspaces/:workspaceId/wasender/restart',
   authMiddleware,
   sessionValidationMiddleware,
-  validateWorkspaceId,
+  workspaceValidationMiddleware,
   workspaceController.restartWasenderSession.bind(workspaceController)
 )
 
