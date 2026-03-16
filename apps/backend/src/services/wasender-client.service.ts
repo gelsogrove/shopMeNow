@@ -158,6 +158,11 @@ export class WasenderClientService {
       if (status === 401) {
         throw new Error('WASENDER_AUTH_ERROR: Invalid or expired WasenderAPI Personal Access Token. Check your WASENDER_PERSONAL_ACCESS_TOKEN configuration.')
       }
+      // 422 = validation error — expose full response body for debugging
+      if (status === 422) {
+        const detail = JSON.stringify(error.response?.data)
+        throw new Error(`WasenderAPI session creation failed (422 Unprocessable): ${detail}`)
+      }
       throw new Error(`WasenderAPI session creation failed: ${error.message}`)
     }
   }
