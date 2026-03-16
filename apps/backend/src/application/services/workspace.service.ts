@@ -797,7 +797,7 @@ For privacy inquiries, please contact our support team.`
     // → cannot guarantee cart/order persistence → e-commerce impossible
     // See: .specify/widget-ecommerce-restriction/spec.md
 
-    // Load current workspace to check state
+    // Load current workspace to check state + detect provider switch
     const currentWorkspace = await this.prisma.workspace.findUnique({
       where: { id },
       select: {
@@ -806,8 +806,67 @@ For privacy inquiries, please contact our support team.`
         sellsProductsAndServices: true,
         ownerId: true,
         deletedAt: true,
+        whatsappProvider: true,
+        wasenderSessionId: true,
+        waapiInstanceId: true,
       },
     })
+
+    // Provider switch cleanup: if moving AWAY from wasender → delete Wasender session on WasenderAPI
+    const switchingAwayFromWasender =
+      data.whatsappProvider &&
+      data.whatsappProvider !== 'wasender' &&
+      currentWorkspace?.whatsappProvider === 'wasender' &&
+      currentWorkspace?.wasenderSessionId
+
+    if (switchingAwayFromWasender) {
+      try {
+        await this.wasenderClient.deleteSession(currentWorkspace!.wasenderSessionId!)
+        logger.info('[Workspace] Wasender session deleted due to provider switch:', {
+          id,
+          from: 'wasender',
+          to: data.whatsappProvider,
+        })
+      } catch (err) {
+        logger.warn('[Workspace] Failed to delete Wasender session on provider switch (continuing):', err)
+      }
+      // Clear all wasender fields from DB
+      const d = data as any
+      d.wasenderSessionId = null
+      d.wasenderApiKey = null
+      d.wasenderSessionStatus = null
+      d.wasenderPhoneNumber = null
+      d.wasenderQrString = null
+      d.wasenderQrGeneratedAt = null
+      d.wasenderIsActive = false
+    }
+
+    // Provider switch cleanup: if moving AWAY from waapi → delete WaAPI instance
+    const switchingAwayFromWaapi =
+      data.whatsappProvider &&
+      data.whatsappProvider !== 'waapi' &&
+      currentWorkspace?.whatsappProvider === 'waapi' &&
+      currentWorkspace?.waapiInstanceId
+
+    if (switchingAwayFromWaapi) {
+      try {
+        await this.waapiClient.deleteInstance(currentWorkspace!.waapiInstanceId!)
+        logger.info('[Workspace] WaAPI instance deleted due to provider switch:', {
+          id,
+          from: 'waapi',
+          to: data.whatsappProvider,
+        })
+      } catch (err) {
+        logger.warn('[Workspace] Failed to delete WaAPI instance on provider switch (continuing):', err)
+      }
+      const d = data as any
+      d.waapiInstanceId = null
+      d.waapiInstanceStatus = null
+      d.waapiPhoneNumber = null
+      d.waapiQrCodeData = null
+      d.waapiQrGeneratedAt = null
+      d.waapiIsActive = false
+    }
 
     if (!currentWorkspace) {
       throw new Error(`Workspace not found: ${id}`)
@@ -934,9 +993,36 @@ For privacy inquiries, please contact our support team.`
 
   /**
    * Delete a workspace
+   * IMPORTANT: Clean up provider sessions before soft-deleting to avoid zombie sessions
    */
   async delete(id: string): Promise<boolean> {
     logger.info(`Deleting workspace with ID: ${id}`)
+
+    // Cleanup any active Wasender session on WasenderAPI servers
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id },
+      select: { wasenderSessionId: true, waapiInstanceId: true, whatsappProvider: true },
+    })
+
+    if (workspace?.wasenderSessionId) {
+      try {
+        await this.wasenderClient.deleteSession(workspace.wasenderSessionId)
+        logger.info('[Workspace] Wasender session deleted during workspace delete:', { id })
+      } catch (err) {
+        // Log but don't block delete — session may already be gone
+        logger.warn('[Workspace] Failed to delete Wasender session (continuing):', err)
+      }
+    }
+
+    if (workspace?.waapiInstanceId && workspace.whatsappProvider === 'waapi') {
+      try {
+        await this.waapiClient.deleteInstance(workspace.waapiInstanceId)
+        logger.info('[Workspace] WaAPI instance deleted during workspace delete:', { id })
+      } catch (err) {
+        logger.warn('[Workspace] Failed to delete WaAPI instance (continuing):', err)
+      }
+    }
+
     return this.repository.delete(id)
   }
 

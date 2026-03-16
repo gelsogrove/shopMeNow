@@ -26,14 +26,17 @@ import {
 
 interface WasenderOnboardingProps {
   onComplete: () => void
+  /** Optional: pass workspaceId directly (e.g. from wizard). Falls back to WorkspaceContext. */
+  workspaceId?: string
 }
 
 type SessionStatus = 'idle' | 'pending' | 'need_scan' | 'connected' | 'disconnected' | 'failed'
 
 const QR_EXPIRY_SECONDS = 45
 
-export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
+export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }: WasenderOnboardingProps) {
   const { workspace } = useWorkspace()
+  const workspaceId = workspaceIdProp ?? workspace?.id
 
   const [isInitializing, setIsInitializing] = useState(false)
   const [isRegenerating, setIsRegenerating] = useState(false)
@@ -47,11 +50,11 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
 
   // ─── Load current status from DB on mount (handles Settings re-visit) ─
   useEffect(() => {
-    if (!workspace?.id) {
+    if (!workspaceId) {
       setLoadingInitial(false)
       return
     }
-    getWasenderStatus(workspace.id)
+    getWasenderStatus(workspaceId)
       .then((data) => {
         const s = (data.wasenderSessionStatus as SessionStatus) || 'idle'
         setStatus(s)
@@ -65,7 +68,7 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
         // No session yet — stay idle
       })
       .finally(() => setLoadingInitial(false))
-  }, [workspace?.id])
+  }, [workspaceId])
 
   // ─── QR countdown timer ───────────────────────────────────────────────
   useEffect(() => {
@@ -82,9 +85,9 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
 
   // ─── Status polling (every 3s while waiting for scan) ────────────────
   const pollStatus = useCallback(async () => {
-    if (!workspace?.id) return
+    if (!workspaceId) return
     try {
-      const latest = await getWasenderStatus(workspace.id)
+      const latest = await getWasenderStatus(workspaceId)
       const newStatus = (latest.wasenderSessionStatus as SessionStatus) || 'idle'
       setStatus(newStatus)
 
@@ -101,7 +104,7 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
     } catch (err) {
       // Ignore polling errors silently
     }
-  }, [workspace?.id, qrString, onComplete])
+  }, [workspaceId, qrString, onComplete])
 
   useEffect(() => {
     if (status !== 'need_scan' && status !== 'pending') return
@@ -112,7 +115,7 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
 
   // ─── Initialize session ───────────────────────────────────────────────
   const handleInitialize = async () => {
-    if (!workspace?.id) {
+    if (!workspaceId) {
       toast.error('No workspace selected')
       return
     }
@@ -121,7 +124,7 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
       setIsInitializing(true)
       setQrAge(0)
 
-      const response = await initializeWasenderSession(workspace.id)
+      const response = await initializeWasenderSession(workspaceId)
 
       setStatus((response.wasenderSessionStatus as SessionStatus) || 'pending')
 
@@ -140,13 +143,13 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
 
   // ─── Regenerate QR ────────────────────────────────────────────────────
   const handleRegenerateQr = async () => {
-    if (!workspace?.id) return
+    if (!workspaceId) return
 
     try {
       setIsRegenerating(true)
       setQrAge(0)
 
-      const response = await regenerateWasenderQr(workspace.id)
+      const response = await regenerateWasenderQr(workspaceId)
       setQrString(response.wasenderQrString)
       setStatus((response.wasenderSessionStatus as SessionStatus) || 'need_scan')
 
@@ -159,10 +162,10 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
   }
   // ─── Restart session ──────────────────────────────────────────────────
   const handleRestart = async () => {
-    if (!workspace?.id) return
+    if (!workspaceId) return
     try {
       setIsRestarting(true)
-      await restartWasenderSession(workspace.id)
+      await restartWasenderSession(workspaceId)
       toast.success('Session restarted — reconnecting...')
       // After restart the session will emit session.status events via webhook
       // which will update the DB. Poll to reflect new state.
@@ -175,11 +178,11 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
   }
   // ─── Disconnect (pause) ───────────────────────────────────────────────
   const handleDisconnect = async () => {
-    if (!workspace?.id) return
+    if (!workspaceId) return
 
     try {
       setIsDisconnecting(true)
-      await disconnectWasenderSession(workspace.id)
+      await disconnectWasenderSession(workspaceId)
       setQrString(null)
       setStatus('disconnected')
       toast.success('WhatsApp session paused')
@@ -192,11 +195,11 @@ export function WasenderOnboarding({ onComplete }: WasenderOnboardingProps) {
 
   // ─── Delete session ───────────────────────────────────────────────────
   const handleDelete = async () => {
-    if (!workspace?.id) return
+    if (!workspaceId) return
     if (!window.confirm('Permanently delete this WhatsApp session? This cannot be undone.')) return
 
     try {
-      await deleteWasenderSession(workspace.id)
+      await deleteWasenderSession(workspaceId)
       setQrString(null)
       setStatus('idle')
       toast.success('WhatsApp session deleted')

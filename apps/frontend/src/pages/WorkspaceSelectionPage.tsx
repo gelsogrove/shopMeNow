@@ -51,6 +51,7 @@ import {
   type WorkspaceChecklist,
 } from "@/services/workspaceApi"
 import { initializeWaapiInstance, regenerateWaapiQr } from "@/services/waapiApi"
+import { WasenderOnboarding } from "@/components/WasenderOnboarding"
 
 // ============================================================================
 // WIZARD TYPES & CONFIGURATION
@@ -65,7 +66,7 @@ interface WizardFormData {
   whatsappNumber: string // Only required if channelType === 'WHATSAPP'
   sellsProductsAndServices: boolean
   // Step 3: Provider (WhatsApp only)
-  whatsappProvider: 'waapi' | 'meta' | 'ultramsg'
+  whatsappProvider: 'waapi' | 'meta' | 'ultramsg' | 'wasender'
   // Step 4: Bot Personality
   toneOfVoice: 'formal' | 'friendly' | 'professional' | 'casual'
   botIdentityResponse: string
@@ -2170,7 +2171,43 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </div>
                     )}
 
-                    {/* E-commerce toggle (ONLY for WhatsApp) */}
+                    {/* Provider selection (ONLY for WhatsApp) */}
+                    {wizardData.channelType === 'WHATSAPP' && (
+                      <div>
+                        <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">WhatsApp Provider</Label>
+                        <div className="space-y-3 mt-3">
+                          {[
+                            { value: 'waapi',     emoji: '⚡', label: 'WaAPI',       desc: 'Fast QR scan setup — free plan available',       badge: 'Popular' },
+                            { value: 'wasender',  emoji: '📱', label: 'WasenderAPI', desc: 'Reliable QR scan — $4.50/month per session',      badge: null },
+                          ].map((p) => (
+                            <button
+                              key={p.value}
+                              type="button"
+                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
+                                wizardData.whatsappProvider === p.value
+                                  ? 'border-green-500 bg-green-50 text-green-800'
+                                  : 'border-slate-200 hover:border-green-300 text-slate-700'
+                              }`}
+                              onClick={() => updateWizardData('whatsappProvider', p.value as WizardFormData['whatsappProvider'])}
+                            >
+                              <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                wizardData.whatsappProvider === p.value ? 'bg-green-500 border-green-500' : 'border-slate-300'
+                              }`}>
+                                {wizardData.whatsappProvider === p.value && <span className="w-2 h-2 rounded-full bg-white" />}
+                              </span>
+                              <span className="text-xl">{p.emoji}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{p.label}</span>
+                                  {p.badge && <span className="px-1.5 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-medium">{p.badge}</span>}
+                                </div>
+                                <p className="text-xs text-slate-500">{p.desc}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {wizardData.channelType === 'WHATSAPP' && (
                       <div>
                         <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Do you sell products?</Label>
@@ -2458,8 +2495,37 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </>
                     )}
 
+                    {/* WasenderAPI — QR scan */}
+                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'wasender' && (
+                      <>
+                        <div className="-mx-6 -mt-6 mb-6">
+                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <span className="text-4xl">📱</span>
+                            <h2 className="text-xl font-bold text-slate-900">Connect WhatsApp via WasenderAPI</h2>
+                          </div>
+                          <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>
+                            Scan the QR with your phone to link your WhatsApp number
+                          </p>
+                        </div>
+                        {newlyCreatedWorkspaceId ? (
+                          <WasenderOnboarding
+                            workspaceId={newlyCreatedWorkspaceId}
+                            onComplete={() => setWizardStep(6)}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center py-12 gap-3">
+                            <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+                            <p className="text-sm text-gray-500">Preparing connection…</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
                     {/* Meta / UltraMsg — credentials note */}
-                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'waapi' && (
+                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'waapi' && wizardData.whatsappProvider !== 'wasender' && (
                       <>
                         {/* Full-bleed step image (survey style) */}
                         <div className="-mx-6 -mt-6 mb-6">
@@ -2676,7 +2742,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
                   {/* Step 5 Widget/Meta/UltraMsg: Continue to success screen */}
                   {wizardStep === 5 && (
-                    wizardData.channelType !== 'WHATSAPP' || wizardData.whatsappProvider !== 'waapi'
+                    wizardData.channelType !== 'WHATSAPP' || (wizardData.whatsappProvider !== 'waapi' && wizardData.whatsappProvider !== 'wasender')
                   ) && (
                     <Button
                       onClick={() => setWizardStep(6)}

@@ -147,7 +147,17 @@ export class WasenderClientService {
 
       return { sessionId, apiKey }
     } catch (error: any) {
-      logger.error('[Wasender] Failed to create session:', error)
+      const status = error.response?.status
+      logger.error('[Wasender] Failed to create session:', { status, data: error.response?.data })
+
+      // 402 = plan limit exceeded (no more sessions available on Wasender account)
+      if (status === 402) {
+        throw new Error('WASENDER_PLAN_LIMIT: Your WasenderAPI plan has reached the maximum number of sessions. Upgrade your WasenderAPI plan at wasenderapi.com to add more channels.')
+      }
+      // 401 = invalid or expired Personal Access Token
+      if (status === 401) {
+        throw new Error('WASENDER_AUTH_ERROR: Invalid or expired WasenderAPI Personal Access Token. Check your WASENDER_PERSONAL_ACCESS_TOKEN configuration.')
+      }
       throw new Error(`WasenderAPI session creation failed: ${error.message}`)
     }
   }
