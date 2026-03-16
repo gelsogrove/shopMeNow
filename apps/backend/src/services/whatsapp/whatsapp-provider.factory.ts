@@ -12,6 +12,7 @@ import logger from '../../utils/logger'
 import { WhatsAppProvider } from './whatsapp-provider.interface'
 import { MetaWhatsAppProvider } from './meta-whatsapp-provider'
 import { UltraMsgWhatsAppProvider } from './ultramsg-whatsapp-provider'
+import { WasenderWhatsAppProvider } from './wasender-whatsapp-provider'
 
 export class WhatsAppProviderFactory {
   /**
@@ -29,6 +30,26 @@ export class WhatsAppProviderFactory {
       workspaceName: workspace.name,
       provider,
     })
+
+    // WasenderAPI Provider
+    if (provider === 'wasender') {
+      if (!workspace.wasenderApiKey) {
+        const error = 'WasenderAPI provider selected but session API key not configured'
+        logger.error('❌ WhatsAppProviderFactory: Configuration error', {
+          workspaceId: workspace.id,
+          error,
+        })
+        throw new Error(error)
+      }
+
+      logger.info('✅ WhatsAppProviderFactory: Creating WasenderAPI provider', {
+        workspaceId: workspace.id,
+      })
+
+      return new WasenderWhatsAppProvider({
+        sessionApiKey: workspace.wasenderApiKey,
+      })
+    }
 
     // UltraMsg Provider
     if (provider === 'ultramsg') {
@@ -81,6 +102,10 @@ export class WhatsAppProviderFactory {
   static isConfigured(workspace: any): boolean {
     const provider = workspace.whatsappProvider || 'meta'
 
+    if (provider === 'wasender') {
+      return !!workspace.wasenderApiKey
+    }
+
     if (provider === 'ultramsg') {
       return !!(workspace.ultraMsgInstanceId && workspace.ultraMsgToken)
     }
@@ -94,6 +119,7 @@ export class WhatsAppProviderFactory {
    */
   static getProviderDisplayName(workspace: any): string {
     const provider = workspace.whatsappProvider || 'meta'
+    if (provider === 'wasender') return 'WasenderAPI'
     return provider === 'ultramsg' ? 'UltraMsg' : 'Meta Business API'
   }
 }

@@ -14,6 +14,7 @@ import { toast } from "@/lib/toast"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { WaapiOnboarding } from "@/components/WaapiOnboarding"
 import { WaapiSettings } from "@/components/WaapiSettings"
+import { WasenderOnboarding } from "@/components/WasenderOnboarding"
 
 interface WhatsAppChannelSectionProps {
   formData: {
@@ -145,7 +146,7 @@ export function WhatsAppChannelSection({
             {/* Provider Selection */}
             <div className="space-y-3">
               <Label>WhatsApp Provider</Label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <button
                   type="button"
                   onClick={() => onFieldChange("whatsappProvider", "waapi")}
@@ -185,6 +186,19 @@ export function WhatsAppChannelSection({
                   <div className="font-semibold">UltraMsg</div>
                   <div className="text-xs text-gray-500 mt-1">Alternative provider</div>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => onFieldChange("whatsappProvider", "wasender")}
+                  disabled={!canEdit}
+                  className={`p-4 border-2 rounded-lg transition-all ${
+                    currentProvider === "wasender"
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className="font-semibold">WasenderAPI</div>
+                  <div className="text-xs text-gray-500 mt-1">Cost-effective QR</div>
+                </button>
               </div>
             </div>
 
@@ -204,8 +218,19 @@ export function WhatsAppChannelSection({
               </Card>
             )}
 
+            {/* WasenderAPI Provider Section */}
+            {currentProvider === "wasender" && (
+              <Card className="border-emerald-200 bg-emerald-50">
+                <CardContent className="pt-6">
+                  <WasenderOnboarding onComplete={async () => {
+                    toast.success('WhatsApp connected via WasenderAPI!');
+                  }} />
+                </CardContent>
+              </Card>
+            )}
+
             {/* Shared Field: Phone Number (Meta/UltraMsg only) */}
-            {currentProvider !== "waapi" && (
+            {currentProvider !== "waapi" && currentProvider !== "wasender" && (
               <div
                 className="space-y-2"
                 onFocus={() => onFieldFocus?.("whatsappPhoneNumber")}
@@ -336,8 +361,8 @@ export function WhatsAppChannelSection({
               </>
             )}
 
-            {/* Webhook URL - Common for both providers - READONLY */}
-            <div className="space-y-2">
+            {/* Webhook URL - Meta/WaAPI/UltraMsg only (Wasender uses its own webhook URL) */}
+            {currentProvider !== "wasender" && <div className="space-y-2">
               <Label>Callback URL</Label>
               <div className="flex gap-2 items-center">
                 <code className="flex-1 rounded border bg-slate-50 px-2 py-2 text-xs font-mono overflow-x-auto">
@@ -353,7 +378,7 @@ export function WhatsAppChannelSection({
                   Copy
                 </Button>
               </div>
-            </div>
+            </div>}
 
             </div>
             </>

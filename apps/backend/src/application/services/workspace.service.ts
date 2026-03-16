@@ -12,16 +12,19 @@ import logger from "../../utils/logger"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
 import { WaapiClientService } from "../../services/waapi-client.service"
+import { WasenderClientService } from "../../services/wasender-client.service"
 
 export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
   private prisma: PrismaClient
   private waapiClient: WaapiClientService
+  private wasenderClient: WasenderClientService
 
   constructor(prismaInstance?: PrismaClient) {
     this.prisma = prismaInstance || prisma
     this.repository = new WorkspaceRepository(this.prisma)
     this.waapiClient = new WaapiClientService()
+    this.wasenderClient = new WasenderClientService()
   }
 
   /**
@@ -1114,6 +1117,218 @@ For privacy inquiries, please contact our support team.`
 
     return qrCodeData;
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // WasenderAPI Methods
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Initialize WasenderAPI session and start QR onboarding flow.
+   *
+   * STEPS:
+   * 1. Verify user subscription / credits
+   * 2. Create WasenderAPI session (returns sessionId + apiKey)
+   * 3. Call connectSession() → returns initial QR string
+   * 4. Save credentials to workspace
+   *
+   * PREREQUISITE: User must have active subscription + credits
+   */
+  async initializeWasenderSession(
+    workspaceId: string,
+    userId: string,
+    phoneNumber: string
+  ) {
+    // STEP 0: Verify subscription
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        planType: true,
+        creditBalance: true,
+        subscriptionStatus: true,
+        trialEndsAt: true,
+      },
+    })
+
+    if (!user) throw new Error('User not found')
+
+    if (user.planType === 'FREE_TRIAL') {
+      if (!user.trialEndsAt || new Date() > user.trialEndsAt) {
+        throw new Error('Trial expired. Please upgrade to create a channel.')
+      }
+    }
+
+    if (user.subscriptionStatus !== 'ACTIVE') {
+      throw new Error('Active subscription required. Please upgrade your plan.')
+    }
+
+    if (Number(user.creditBalance) < 5.0) {
+      throw new Error('Insufficient credits. Minimum €5.00 required to create channel.')
+    }
+
+    // Webhook URL: includes workspaceId so Wasender knows which workspace to update
+    const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+
+    // 1. Create session
+    const { sessionId, apiKey } = await this.wasenderClient.createSession(
+      workspaceId,
+      phoneNumber,
+      webhookUrl
+    )
+
+    // 2. Connect → get initial QR string
+    const qrString = await this.wasenderClient.connectSession(sessionId)
+
+    // 3. Save to workspace
+    const workspace = await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        whatsappProvider: 'wasender',
+        wasenderSessionId: sessionId,
+        wasenderApiKey: apiKey,
+        wasenderPhoneNumber: phoneNumber,
+        wasenderSessionStatus: 'need_scan',
+        wasenderIsActive: false,
+        wasenderQrString: qrString,
+        wasenderQrGeneratedAt: qrString ? new Date() : null,
+        channelStatus: false, // Will be set true when session.status = connected
+      },
+    })
+
+    logger.info('[Workspace] Wasender session initialized:', {
+      workspaceId,
+      sessionId,
+      phoneNumber: this.maskPhoneNumber(phoneNumber),
+      hasQr: !!qrString,
+    })
+
+    return workspace
+  }
+
+  /**
+   * Disconnect Wasender session (pause — keeps session record on WasenderAPI).
+   * Use this when customer wants to temporarily pause the WhatsApp channel.
+   */
+  async disconnectWasenderSession(workspaceId: string, userId: string): Promise<void> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { wasenderSessionId: true, ownerId: true },
+    })
+
+    if (!workspace) throw new Error('Workspace not found')
+    if (workspace.ownerId !== userId) throw new Error('Access denied')
+    if (!workspace.wasenderSessionId) throw new Error('No Wasender session found')
+
+    // Disconnect on WasenderAPI
+    await this.wasenderClient.disconnectSession(workspace.wasenderSessionId)
+
+    // Update database
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        wasenderSessionStatus: 'disconnected',
+        wasenderIsActive: false,
+        channelStatus: false,
+      },
+    })
+
+    logger.info('[Workspace] Wasender session disconnected:', { workspaceId })
+  }
+
+  /**
+   * Permanently delete Wasender session.
+   * Call when switching provider or deleting workspace.
+   */
+  async deleteWasenderSession(workspaceId: string, userId: string): Promise<void> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { wasenderSessionId: true, ownerId: true },
+    })
+
+    if (!workspace) throw new Error('Workspace not found')
+    if (workspace.ownerId !== userId) throw new Error('Access denied')
+
+    if (workspace.wasenderSessionId) {
+      await this.wasenderClient.deleteSession(workspace.wasenderSessionId)
+    }
+
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        wasenderSessionId: null,
+        wasenderApiKey: null,
+        wasenderPhoneNumber: null,
+        wasenderSessionStatus: null,
+        wasenderIsActive: false,
+        wasenderQrString: null,
+        wasenderQrGeneratedAt: null,
+        channelStatus: false,
+      },
+    })
+
+    logger.info('[Workspace] Wasender session deleted:', { workspaceId })
+  }
+
+  /**
+   * Restart Wasender session (recover from stuck/disconnected state without re-scan).
+   * Uses WasenderAPI POST /api/whatsapp-sessions/{id}/restart.
+   */
+  async restartWasenderSession(workspaceId: string, userId: string): Promise<void> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { wasenderSessionId: true, ownerId: true },
+    })
+
+    if (!workspace) throw new Error('Workspace not found')
+    if (workspace.ownerId !== userId) throw new Error('Access denied')
+    if (!workspace.wasenderSessionId) throw new Error('No Wasender session found')
+
+    await this.wasenderClient.restartSession(workspace.wasenderSessionId)
+
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { wasenderSessionStatus: 'need_scan' },
+    })
+
+    logger.info('[Workspace] Wasender session restarted:', { workspaceId })
+  }
+
+  /**
+   * Regenerate Wasender QR code (previous QR expired after 45s).
+   * Calls connectSession() again which returns a fresh QR string.
+   */
+  async regenerateWasenderQr(workspaceId: string, userId: string): Promise<string> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        wasenderSessionId: true,
+        wasenderSessionStatus: true,
+        ownerId: true,
+      },
+    })
+
+    if (!workspace) throw new Error('Workspace not found')
+    if (workspace.ownerId !== userId) throw new Error('Access denied')
+    if (!workspace.wasenderSessionId) throw new Error('No Wasender session found')
+    if (workspace.wasenderSessionStatus === 'connected') {
+      throw new Error('Session already connected')
+    }
+
+    // Get fresh QR
+    const qrString = await this.wasenderClient.getQrCode(workspace.wasenderSessionId)
+
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        wasenderQrString: qrString,
+        wasenderQrGeneratedAt: new Date(),
+      },
+    })
+
+    logger.info('[Workspace] Wasender QR regenerated:', { workspaceId })
+    return qrString
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   /**
    * Mask phone number for logging (PII protection)

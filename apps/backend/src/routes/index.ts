@@ -846,6 +846,11 @@ import waapiRoutes from "../interfaces/http/routes/waapi.routes"
 router.use("/", waapiRoutes)
 logger.info("Registered WaAPI routes for instance management and webhooks")
 
+// Mount WasenderAPI routes
+import wasenderRoutes from "../interfaces/http/routes/wasender.routes"
+router.use("/", wasenderRoutes)
+logger.info("Registered WasenderAPI routes for session management and webhooks")
+
 // Mount public orders routes (for secure token validation and public access)
 router.use("/internal", publicOrdersRoutes)
 logger.info("Registered public orders routes for secure token validation")

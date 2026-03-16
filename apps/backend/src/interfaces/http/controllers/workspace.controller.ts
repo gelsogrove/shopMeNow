@@ -1185,4 +1185,242 @@ export class WorkspaceController {
       return res.status(400).json({ error: error.message })
     }
   }
+
+  // ─── WasenderAPI Methods ──────────────────────────────────────────────────
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/wasender/initialize:
+   *   post:
+   *     summary: Initialize WasenderAPI session (QR onboarding)
+   *     tags: [Wasender]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - phoneNumber
+   *             properties:
+   *               phoneNumber:
+   *                 type: string
+   *                 example: "+393331234567"
+   *     responses:
+   *       200:
+   *         description: Session created, QR string returned
+   *       400:
+   *         description: Validation error or insufficient credits
+   *       401:
+   *         description: Unauthorized
+   */
+  initializeWasenderSession = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { workspaceId } = req.params
+      const userId = (req as any).user?.id
+      const { phoneNumber } = req.body
+
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+      if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' })
+      if (!phoneNumber.startsWith('+')) {
+        return res.status(400).json({
+          error: 'Phone number must be in E.164 format (e.g., +393331234567)',
+        })
+      }
+
+      logger.info('[Wasender] Initializing session:', { workspaceId, userId })
+
+      const workspace = await this.workspaceService.initializeWasenderSession(
+        workspaceId,
+        userId,
+        phoneNumber
+      )
+
+      return res.status(200).json(workspace)
+    } catch (error: any) {
+      logger.error('[Wasender] Failed to initialize session:', error)
+      return res.status(400).json({ error: error.message })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/wasender/disconnect:
+   *   post:
+   *     summary: Disconnect Wasender session (pause)
+   *     tags: [Wasender]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Session disconnected
+   *       400:
+   *         description: Error
+   *       401:
+   *         description: Unauthorized
+   */
+  disconnectWasenderSession = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { workspaceId } = req.params
+      const userId = (req as any).user?.id
+
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+      logger.info('[Wasender] Disconnecting session:', { workspaceId, userId })
+
+      await this.workspaceService.disconnectWasenderSession(workspaceId, userId)
+
+      return res.status(200).json({ success: true, message: 'Session disconnected' })
+    } catch (error: any) {
+      logger.error('[Wasender] Failed to disconnect session:', error)
+      return res.status(400).json({ error: error.message })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/wasender/delete:
+   *   post:
+   *     summary: Permanently delete Wasender session
+   *     tags: [Wasender]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Session deleted
+   *       400:
+   *         description: Error
+   *       401:
+   *         description: Unauthorized
+   */
+  deleteWasenderSession = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { workspaceId } = req.params
+      const userId = (req as any).user?.id
+
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+      logger.info('[Wasender] Deleting session:', { workspaceId, userId })
+
+      await this.workspaceService.deleteWasenderSession(workspaceId, userId)
+
+      return res.status(200).json({ success: true, message: 'Session deleted' })
+    } catch (error: any) {
+      logger.error('[Wasender] Failed to delete session:', error)
+      return res.status(400).json({ error: error.message })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/wasender/regenerate-qr:
+   *   post:
+   *     summary: Regenerate Wasender QR code (expired after 45s)
+   *     tags: [Wasender]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Fresh QR string returned
+   *       400:
+   *         description: Error
+   *       401:
+   *         description: Unauthorized
+   */
+  regenerateWasenderQr = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { workspaceId } = req.params
+      const userId = (req as any).user?.id
+
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+      logger.info('[Wasender] Regenerating QR:', { workspaceId, userId })
+
+      const qrString = await this.workspaceService.regenerateWasenderQr(workspaceId, userId)
+
+      return res.status(200).json({ qrString })
+    } catch (error: any) {
+      logger.error('[Wasender] Failed to regenerate QR:', error)
+      return res.status(400).json({ error: error.message })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/wasender/restart:
+   *   post:
+   *     summary: Restart Wasender session (no re-scan needed if phone is still linked)
+   *     tags: [Wasender]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Session restarted
+   *       400:
+   *         description: Error
+   *       401:
+   *         description: Unauthorized
+   */
+  restartWasenderSession = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { workspaceId } = req.params
+      const userId = (req as any).user?.id
+
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+      logger.info('[Wasender] Restarting session:', { workspaceId, userId })
+
+      await this.workspaceService.restartWasenderSession(workspaceId, userId)
+
+      return res.status(200).json({ success: true })
+    } catch (error: any) {
+      logger.error('[Wasender] Failed to restart session:', error)
+      return res.status(400).json({ error: error.message })
+    }
+  }
 }
+
