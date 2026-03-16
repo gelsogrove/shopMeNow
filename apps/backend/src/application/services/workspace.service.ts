@@ -11,19 +11,16 @@ import { WorkspaceRepository } from "../../repositories/workspace.repository"
 import logger from "../../utils/logger"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
-import { WaapiClientService } from "../../services/waapi-client.service"
 import { WasenderClientService } from "../../services/wasender-client.service"
 
 export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
   private prisma: PrismaClient
-  private waapiClient: WaapiClientService
   private wasenderClient: WasenderClientService
 
   constructor(prismaInstance?: PrismaClient) {
     this.prisma = prismaInstance || prisma
     this.repository = new WorkspaceRepository(this.prisma)
-    this.waapiClient = new WaapiClientService()
     this.wasenderClient = new WasenderClientService()
   }
 
@@ -433,8 +430,8 @@ For privacy inquiries, please contact our support team.`
     if (!data.defaultLanguage) data.defaultLanguage = "en"
     if (!data.language) data.language = "en"
 
-    // 🆕 WAAPI as default provider for new WhatsApp channels
-    if (!data.whatsappProvider) data.whatsappProvider = "waapi"
+    // Default provider for new WhatsApp channels
+    if (!data.whatsappProvider) data.whatsappProvider = "wasender"
 
     // 🚨 CRITICAL: Widget + E-commerce Validation (Andrea's Rule)
     // Widget visitors use temporary visitorId (24h localStorage expiry)
@@ -808,7 +805,6 @@ For privacy inquiries, please contact our support team.`
         deletedAt: true,
         whatsappProvider: true,
         wasenderSessionId: true,
-        waapiInstanceId: true,
       },
     })
 
@@ -839,33 +835,6 @@ For privacy inquiries, please contact our support team.`
       d.wasenderQrString = null
       d.wasenderQrGeneratedAt = null
       d.wasenderIsActive = false
-    }
-
-    // Provider switch cleanup: if moving AWAY from waapi → delete WaAPI instance
-    const switchingAwayFromWaapi =
-      data.whatsappProvider &&
-      data.whatsappProvider !== 'waapi' &&
-      currentWorkspace?.whatsappProvider === 'waapi' &&
-      currentWorkspace?.waapiInstanceId
-
-    if (switchingAwayFromWaapi) {
-      try {
-        await this.waapiClient.deleteInstance(currentWorkspace!.waapiInstanceId!)
-        logger.info('[Workspace] WaAPI instance deleted due to provider switch:', {
-          id,
-          from: 'waapi',
-          to: data.whatsappProvider,
-        })
-      } catch (err) {
-        logger.warn('[Workspace] Failed to delete WaAPI instance on provider switch (continuing):', err)
-      }
-      const d = data as any
-      d.waapiInstanceId = null
-      d.waapiInstanceStatus = null
-      d.waapiPhoneNumber = null
-      d.waapiQrCodeData = null
-      d.waapiQrGeneratedAt = null
-      d.waapiIsActive = false
     }
 
     if (!currentWorkspace) {
@@ -1001,7 +970,7 @@ For privacy inquiries, please contact our support team.`
     // Cleanup any active Wasender session on WasenderAPI servers
     const workspace = await this.prisma.workspace.findUnique({
       where: { id },
-      select: { wasenderSessionId: true, waapiInstanceId: true, whatsappProvider: true },
+      select: { wasenderSessionId: true },
     })
 
     if (workspace?.wasenderSessionId) {
@@ -1014,15 +983,6 @@ For privacy inquiries, please contact our support team.`
       }
     }
 
-    if (workspace?.waapiInstanceId && workspace.whatsappProvider === 'waapi') {
-      try {
-        await this.waapiClient.deleteInstance(workspace.waapiInstanceId)
-        logger.info('[Workspace] WaAPI instance deleted during workspace delete:', { id })
-      } catch (err) {
-        logger.warn('[Workspace] Failed to delete WaAPI instance (continuing):', err)
-      }
-    }
-
     return this.repository.delete(id)
   }
 
@@ -1032,176 +992,6 @@ For privacy inquiries, please contact our support team.`
   async getWorkspacesForUser(userId: string): Promise<Workspace[]> {
     logger.info(`Getting workspaces for user: ${userId}`)
     return this.repository.findByUserId(userId)
-  }
-
-  /**
-   * Initialize WaAPI instance for workspace
-   * PREREQUISITE: User must have active subscription + credits
-   */
-  async initializeWaapiInstance(
-    workspaceId: string,
-    userId: string,
-    phoneNumber: string,
-    displayName?: string
-  ) {
-    // STEP 0: Verify subscription (CRITICAL!)
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        planType: true,
-        creditBalance: true,
-        subscriptionStatus: true,
-        trialEndsAt: true
-      }
-    });
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Check trial expiry
-    if (user.planType === 'FREE_TRIAL') {
-      if (!user.trialEndsAt || new Date() > user.trialEndsAt) {
-        throw new Error('Trial expired. Please upgrade to create a channel.');
-      }
-    }
-
-    // Check subscription status
-    if (user.subscriptionStatus !== 'ACTIVE') {
-      throw new Error('Active subscription required. Please upgrade your plan.');
-    }
-
-    // Check credits
-    if (Number(user.creditBalance) < 5.00) {
-      throw new Error('Insufficient credits. Minimum €5.00 required to create channel.');
-    }
-
-    // All checks passed - proceed with WaAPI creation
-    return await this.prisma.$transaction(async (tx) => {
-      // 1. Create WaAPI instance
-      const instanceId = await this.waapiClient.createInstance(phoneNumber, displayName);
-
-      // 2. Set webhook URL
-      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/waapi/webhook/${instanceId}`;
-      await this.waapiClient.setWebhook(instanceId, webhookUrl);
-
-      // 3. Get initial QR code
-      const qrCodeData = await this.waapiClient.getQrCode(instanceId);
-
-      // 4. Update workspace with WaAPI details
-      const workspace = await tx.workspace.update({
-        where: { id: workspaceId },
-        data: {
-          whatsappProvider: 'waapi',
-          waapiInstanceId: instanceId,
-          waapiInstanceStatus: 'pending',
-          waapiPhoneNumber: phoneNumber,
-          waapiPhoneName: displayName,
-          waapiWebhookUrl: webhookUrl,
-          waapiWebhookEvents: ['qr', 'authenticated', 'ready', 'disconnected', 'auth_failure'],
-          waapiQrCodeData: qrCodeData,
-          waapiQrGeneratedAt: new Date(),
-          waapiIsActive: true,
-          channelStatus: false // Will be enabled when status = 'ready'
-        }
-      });
-
-      logger.info('[Workspace] WaAPI instance initialized:', {
-        workspaceId,
-        instanceId,
-        phoneNumber: this.maskPhoneNumber(phoneNumber)
-      });
-
-      return workspace;
-    });
-  }
-
-  /**
-   * Disconnect WaAPI instance (set inactive + delete instance)
-   */
-  async disconnectWaapiInstance(workspaceId: string, userId: string) {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { waapiInstanceId: true, ownerId: true }
-    });
-
-    if (!workspace) {
-      throw new Error('Workspace not found');
-    }
-
-    if (workspace.ownerId !== userId) {
-      throw new Error('Access denied');
-    }
-
-    if (!workspace.waapiInstanceId) {
-      throw new Error('No WaAPI instance to disconnect');
-    }
-
-    return await this.prisma.$transaction(async (tx) => {
-      // 1. Delete WaAPI instance (irreversible)
-      await this.waapiClient.deleteInstance(workspace.waapiInstanceId!);
-
-      // 2. Clear WaAPI fields in database
-      await tx.workspace.update({
-        where: { id: workspaceId },
-        data: {
-          waapiInstanceId: null,
-          waapiInstanceStatus: null,
-          waapiQrCodeData: null,
-          waapiQrGeneratedAt: null,
-          waapiIsActive: false,
-          channelStatus: false
-        }
-      });
-
-      logger.info('[Workspace] WaAPI instance disconnected:', { workspaceId });
-    });
-  }
-
-  /**
-   * Request new QR code (called if QR expired)
-   */
-  async regenerateWaapiQr(workspaceId: string, userId: string) {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        waapiInstanceId: true,
-        waapiInstanceStatus: true,
-        ownerId: true
-      }
-    });
-
-    if (!workspace) {
-      throw new Error('Workspace not found');
-    }
-
-    if (workspace.ownerId !== userId) {
-      throw new Error('Access denied');
-    }
-
-    if (!workspace.waapiInstanceId) {
-      throw new Error('No WaAPI instance found');
-    }
-
-    if (workspace.waapiInstanceStatus === 'ready') {
-      throw new Error('Instance already connected');
-    }
-
-    // Get fresh QR code
-    const qrCodeData = await this.waapiClient.getQrCode(workspace.waapiInstanceId);
-
-    // Update database
-    await this.prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        waapiQrCodeData: qrCodeData,
-        waapiQrGeneratedAt: new Date()
-      }
-    });
-
-    logger.info('[Workspace] QR code regenerated:', { workspaceId });
-
-    return qrCodeData;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

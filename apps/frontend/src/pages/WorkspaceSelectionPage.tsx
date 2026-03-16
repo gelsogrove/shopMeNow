@@ -2504,6 +2504,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         {newlyCreatedWorkspaceId ? (
                           <WasenderOnboarding
                             workspaceId={newlyCreatedWorkspaceId}
+                            initialPhoneNumber={wizardData.whatsappNumber}
                             onComplete={() => setWizardStep(6)}
                           />
                         ) : (

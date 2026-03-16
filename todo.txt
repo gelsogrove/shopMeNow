@@ -1,5 +1,12 @@
+
+- wasenderapi
+- ultraMsg da togleire
+- PAGAMENTI ON CI SIAMO
+- GDPR PER OGNI CANALE CI VUOLE
+- NEW CHANNEL 
+- ECOMMERCE
+
+# TESTARE INTERO FLUSSO #
 - paypall
 - campagne
-- resposive?
-- WAPI
-- GDPR PER OGNI CANALE CI VUOLE
+- resposive ?

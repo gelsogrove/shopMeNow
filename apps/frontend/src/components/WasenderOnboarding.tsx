@@ -12,6 +12,8 @@ import { useState, useEffect, useCallback } from 'react'
 import QRCode from 'react-qr-code'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, RefreshCw, Wifi, WifiOff, CheckCircle2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
@@ -28,13 +30,15 @@ interface WasenderOnboardingProps {
   onComplete: () => void
   /** Optional: pass workspaceId directly (e.g. from wizard). Falls back to WorkspaceContext. */
   workspaceId?: string
+  /** Optional: pre-fill phone number (e.g. from wizard Step 2). */
+  initialPhoneNumber?: string
 }
 
 type SessionStatus = 'idle' | 'pending' | 'need_scan' | 'connected' | 'disconnected' | 'failed'
 
 const QR_EXPIRY_SECONDS = 45
 
-export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }: WasenderOnboardingProps) {
+export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, initialPhoneNumber }: WasenderOnboardingProps) {
   const { workspace } = useWorkspace()
   const workspaceId = workspaceIdProp ?? workspace?.id
 
@@ -47,6 +51,8 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
   const [status, setStatus] = useState<SessionStatus>('idle')
   const [qrAge, setQrAge] = useState(0) // seconds since QR was received
   const [loadingInitial, setLoadingInitial] = useState(true)
+  const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber ?? '')
+  const [phoneError, setPhoneError] = useState('')
 
   // ─── Load current status from DB on mount (handles Settings re-visit) ─
   useEffect(() => {
@@ -62,6 +68,10 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
         if (data.wasenderQrString && s === 'need_scan') {
           setQrString(data.wasenderQrString)
           setQrAge(0)
+        }
+        // Pre-fill phone number from DB if not already set via prop
+        if (data.wasenderPhoneNumber && !initialPhoneNumber) {
+          setPhoneNumber(data.wasenderPhoneNumber)
         }
       })
       .catch(() => {
@@ -120,11 +130,23 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
       return
     }
 
+    // Validate phone number — must be E.164 format
+    const trimmed = phoneNumber.trim()
+    if (!trimmed) {
+      setPhoneError('Phone number is required')
+      return
+    }
+    if (!trimmed.startsWith('+') || trimmed.length < 8) {
+      setPhoneError('Use international format, e.g. +393331234567')
+      return
+    }
+    setPhoneError('')
+
     try {
       setIsInitializing(true)
       setQrAge(0)
 
-      const response = await initializeWasenderSession(workspaceId)
+      const response = await initializeWasenderSession(workspaceId, { phoneNumber: trimmed })
 
       setStatus((response.wasenderSessionStatus as SessionStatus) || 'pending')
 
@@ -274,6 +296,29 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
           <p className="text-sm text-gray-500 mt-1">
             No Meta Business Account needed — just scan a QR code with your phone.
           </p>
+        </div>
+
+        {/* Phone number input */}
+        <div className="w-full max-w-xs space-y-1">
+          <Label htmlFor="wasender-phone" className="text-sm font-medium text-gray-700">
+            WhatsApp Phone Number
+          </Label>
+          <Input
+            id="wasender-phone"
+            type="tel"
+            value={phoneNumber}
+            onChange={(e) => {
+              setPhoneNumber(e.target.value)
+              if (phoneError) setPhoneError('')
+            }}
+            placeholder="+393331234567"
+            className={phoneError ? 'border-red-400 focus:ring-red-400' : ''}
+            disabled={isInitializing}
+          />
+          {phoneError && (
+            <p className="text-xs text-red-500">{phoneError}</p>
+          )}
+          <p className="text-xs text-gray-400">International format with country code (e.g. +39 for Italy)</p>
         </div>
 
         {status === 'failed' && (
