@@ -11,7 +11,6 @@ import {
   softDeleteCleanupJob,
   supportAttachmentsCleanupJob,
   pushCampaignsJob,
-  waapiQrCleanupJob,
   wasenderQrCleanupJob,
 } from './jobs'
 import logger from './utils/logger'
@@ -21,7 +20,7 @@ import logger from './utils/logger'
 // Cron Jobs (ordered by execution time):
 // 1. WhatsApp Channel Queue   - every 5 SECONDS (parallel send, with lock)
 // 2. Push Campaigns Runner      - every minute
-// 3. WaAPI QR Cleanup           - every 5 minutes (clear stale QR codes)
+// 3. Wasender QR Cleanup        - every 5 minutes (clear stale QR strings)
 // 4. Short URLs Cleanup         - daily at 23:00
 // 5. Storage Cleanup            - daily at 23:05 (unused images + temp + invoices)
 // 6. Messages Archive           - daily at 23:10 (archive messages older than 6 months)
@@ -55,12 +54,10 @@ async function main() {
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Job 2: QR Cleanup - every 5 minutes
-  // WaAPI: clears stale base64 QR codes (older than TTL)
-  // Wasender: clears stale raw QR strings (expires after ~45s, clean after 5m)
+  // Job 2: Wasender QR Cleanup - every 5 minutes
+  // Clears stale raw QR strings (expires after ~45s, cleaned after 5m)
   // ═══════════════════════════════════════════════════════════════════════════
   cron.schedule('*/5 * * * *', async () => {
-    await runJob('waapi-qr-cleanup', waapiQrCleanupJob)
     await runJob('wasender-qr-cleanup', wasenderQrCleanupJob)
   })
 
@@ -125,7 +122,7 @@ async function main() {
   logger.info('📋 Scheduled jobs:')
   logger.info('   1. WhatsApp Channel Queue       - every 5 SECONDS')
   logger.info('   2. Push Campaigns Runner        - every minute')
-  logger.info('   3. WaAPI+Wasender QR Cleanup   - every 5 minutes')
+  logger.info('   3. Wasender QR Cleanup         - every 5 minutes')
   logger.info('   4. Short URLs Cleanup           - daily at 23:00')
   logger.info('   5. Unused Images Cleanup        - daily at 23:05')
   logger.info('   6. Messages Archive             - daily at 23:10')

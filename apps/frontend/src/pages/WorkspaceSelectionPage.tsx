@@ -318,7 +318,7 @@ export function WorkspaceSelectionPage() {
   }
 
   const getNextStep = () => {
-    // Step 2 → 4 (Step 3 removed — WaAPI auto-selected)
+    // Step 2 → 4 (Step 3 removed)
     if (wizardStep === 2) return 4
     return wizardStep + 1
   }
@@ -374,9 +374,6 @@ export function WorkspaceSelectionPage() {
     setErrorMessage("")
     setValidationErrors({})
     setNewlyCreatedWorkspaceId(null)
-    setWizardQrCode(null)
-    setWizardWaapiStatus('idle')
-    setWizardWaapiRegenerating(false)
   }, [])
 
   const closeWizardDialog = () => {
@@ -904,83 +901,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     setChecklistOpen(false)
     navigate(item.action.path)
   }
-
-  // ============================================================================
-  // WIZARD WAAPI HELPERS
-  // ============================================================================
-
-  // Auto-initialize WaAPI QR code when entering Step 5 (workspace already created)
-  const handleWizardInitWaapi = async () => {
-    if (!newlyCreatedWorkspaceId) return
-    setWizardWaapiStatus('initializing')
-    try {
-      const response = await initializeWaapiInstance(newlyCreatedWorkspaceId, {
-        phoneNumber: wizardData.whatsappNumber,
-        displayName: wizardData.alias || undefined,
-      })
-      setWizardQrCode(response.waapiQrCodeData)
-      setWizardWaapiStatus((response.waapiInstanceStatus as typeof wizardWaapiStatus) || 'pending')
-      toast.success('QR code ready — scan with WhatsApp!')
-    } catch (error: any) {
-      setWizardWaapiStatus('failed')
-      toast.error(error.response?.data?.error || 'Failed to generate QR code')
-    }
-  }
-
-  // Regenerate QR from Step 5
-  const handleWizardRegenerateQr = async () => {
-    if (!newlyCreatedWorkspaceId) return
-    setWizardWaapiRegenerating(true)
-    try {
-      const newQr = await regenerateWaapiQr(newlyCreatedWorkspaceId)
-      setWizardQrCode(newQr)
-      toast.success('QR code regenerated')
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to regenerate QR')
-    } finally {
-      setWizardWaapiRegenerating(false)
-    }
-  }
-
-  // Auto-init WaAPI when entering Step 5 with WaAPI provider
-  useEffect(() => {
-    if (
-      wizardStep === 5 &&
-      newlyCreatedWorkspaceId &&
-      wizardData.channelType === 'WHATSAPP' &&
-      wizardData.whatsappProvider === 'waapi' &&
-      wizardWaapiStatus === 'idle'
-    ) {
-      handleWizardInitWaapi()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wizardStep, newlyCreatedWorkspaceId])
-
-  // Poll WaAPI connection status (pending/authenticated → ready)
-  useEffect(() => {
-    if (
-      (wizardWaapiStatus === 'pending' || wizardWaapiStatus === 'authenticated') &&
-      newlyCreatedWorkspaceId
-    ) {
-      const interval = setInterval(async () => {
-        try {
-          const { data } = await api.get(`/workspaces/${newlyCreatedWorkspaceId}`)
-          const status = data.waapiInstanceStatus
-          if (status) {
-            setWizardWaapiStatus(status as typeof wizardWaapiStatus)
-            if (status === 'ready') {
-              toast.success('WhatsApp connected successfully!')
-              setWizardStep(6) // Advance to Done
-            }
-          }
-        } catch (err) {
-          logger.error('WaAPI status poll failed:', err)
-        }
-      }, 3000)
-      return () => clearInterval(interval)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wizardWaapiStatus, newlyCreatedWorkspaceId])
 
   // ============================================================================
   // WORKSPACE CREATION (called at Step 4 → 5 transition)
@@ -2363,129 +2283,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 5 && (
                   <div className="space-y-6">
-                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'waapi' && (
-                      <>
-                        {/* Full-bleed step image (survey style) */}
-                        <div className="-mx-6 -mt-6 mb-6">
-                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="lazy" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className="text-4xl">📱</span>
-                            <h2 className="text-xl font-bold text-slate-900">Scan to Connect WhatsApp</h2>
-                          </div>
-                          <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>
-                            Open WhatsApp on your phone → Settings → Linked Devices → Link a Device
-                          </p>
-                        </div>
-
-                        {/* Idle / Preparing — shown immediately when entering Step 5 */}
-                        {wizardWaapiStatus === 'idle' && (
-                          <div className="flex flex-col items-center justify-center py-12 gap-4">
-                            {newlyCreatedWorkspaceId ? (
-                              <>
-                                <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
-                                <p className="text-sm text-gray-500">Preparing WhatsApp connection…</p>
-                              </>
-                            ) : (
-                              <>
-                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center w-full">
-                                  <p className="text-sm text-red-700 font-medium">Workspace not created</p>
-                                  <p className="text-xs text-red-500 mt-1">Go back and try again.</p>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        )}
-
-                        {/* QR Loading */}
-                        {wizardWaapiStatus === 'initializing' && (
-                          <div className="flex flex-col items-center justify-center py-12 gap-4">
-                            <Loader2 className="w-10 h-10 text-green-500 animate-spin" />
-                            <p className="text-sm text-gray-500">Generating your QR code…</p>
-                          </div>
-                        )}
-
-                        {/* QR Code display */}
-                        {wizardQrCode && (wizardWaapiStatus === 'pending' || wizardWaapiStatus === 'authenticated') && (
-                          <div className="flex flex-col items-center gap-4">
-                            <div className="bg-white border-2 border-gray-200 rounded-xl p-4 shadow-sm">
-                              <img src={wizardQrCode} alt="WhatsApp QR Code" className="w-52 h-52" />
-                            </div>
-
-                            {wizardWaapiStatus === 'pending' && (
-                              <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                                <div className="flex items-center justify-center gap-2 text-amber-700">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span className="text-sm font-medium">Waiting for scan…</span>
-                                </div>
-                              </div>
-                            )}
-                            {wizardWaapiStatus === 'authenticated' && (
-                              <div className="w-full p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                                <div className="flex items-center justify-center gap-2 text-blue-700">
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span className="text-sm font-medium">Connecting… almost there!</span>
-                                </div>
-                              </div>
-                            )}
-
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={wizardWaapiRegenerating}
-                              onClick={handleWizardRegenerateQr}
-                              className="gap-2"
-                            >
-                              {wizardWaapiRegenerating
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <RefreshCw className="w-4 h-4" />
-                              }
-                              Regenerate QR
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* Failed */}
-                        {wizardWaapiStatus === 'failed' && (
-                          <div className="flex flex-col items-center gap-4 py-6">
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center w-full">
-                              <p className="text-sm text-red-700 font-medium">QR generation failed</p>
-                              <p className="text-xs text-red-500 mt-1">Check your phone number and try again.</p>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={handleWizardInitWaapi}
-                              className="gap-2"
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                              Try Again
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* Steps guide */}
-                        {wizardQrCode && (
-                          <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-xl border border-gray-100 space-y-2.5">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">📱 How to scan</p>
-                            {[
-                              'Open WhatsApp on your phone',
-                              'Tap ⋮ (Android) or Settings (iPhone)',
-                              'Select "Linked Devices" → "Link a Device"',
-                              'Point your phone camera at the QR code',
-                            ].map((step, i) => (
-                              <div key={i} className="flex items-start gap-2">
-                                <span className="w-5 h-5 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
-                                <p className="text-sm text-gray-600">{step}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </>
-                    )}
-
                     {/* WasenderAPI — QR scan */}
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'wasender' && (
                       <>
@@ -2517,7 +2314,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     )}
 
                     {/* Meta / UltraMsg — credentials note */}
-                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'waapi' && wizardData.whatsappProvider !== 'wasender' && (
+                    {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'wasender' && (
                       <>
                         {/* Full-bleed step image (survey style) */}
                         <div className="-mx-6 -mt-6 mb-6">
@@ -2734,7 +2531,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
                   {/* Step 5 Widget/Meta/UltraMsg: Continue to success screen */}
                   {wizardStep === 5 && (
-                    wizardData.channelType !== 'WHATSAPP' || (wizardData.whatsappProvider !== 'waapi' && wizardData.whatsappProvider !== 'wasender')
+                    wizardData.channelType !== 'WHATSAPP' || wizardData.whatsappProvider !== 'wasender'
                   ) && (
                     <Button
                       onClick={() => setWizardStep(6)}
@@ -2744,13 +2541,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </Button>
                   )}
 
-                  {/* Step 5 WaAPI: auto-advances, just show status hint */}
-                  {wizardStep === 5 &&
-                    wizardData.channelType === 'WHATSAPP' &&
-                    wizardData.whatsappProvider === 'waapi' &&
-                    wizardWaapiStatus !== 'ready' && (
-                    <p className="text-xs text-slate-400 italic">Waiting for QR scan…</p>
-                  )}
 
                   {/* Step 6: Go to Dashboard */}
                   {wizardStep === 6 && (

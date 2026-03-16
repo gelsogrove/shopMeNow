@@ -68,7 +68,7 @@ model Workspace {
   toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
   
   // 🆕 WhatsApp Provider Configuration (Multi-provider support)
-  whatsappProvider      String  @default("waapi") // "meta" | "ultramsg" | "waapi" | "wasender" - selects which WhatsApp provider to use
+  whatsappProvider      String  @default("wasender") // "meta" | "ultramsg" | "wasender" - selects which WhatsApp provider to use
   // Meta Business API fields (existing fields kept for compatibility)
   metaPhoneNumberId     String? // Meta Phone Number ID
   metaAccessToken       String? // Meta Access Token
@@ -77,17 +77,6 @@ model Workspace {
   ultraMsgInstanceId    String? // UltraMsg Instance ID
   ultraMsgToken         String? // UltraMsg API Token
   ultraMsgApiUrl        String? // UltraMsg API Base URL (from UltraMsg dashboard)
-  // WaAPI fields
-  waapiInstanceId       String? // WaAPI Instance ID
-  waapiInstanceStatus   String? // 'pending' | 'authenticated' | 'ready' | 'disconnected' | 'failed'
-  waapiPhoneNumber      String? // WhatsApp number for WaAPI instance
-  waapiPhoneName        String? // Display name for WaAPI instance
-  waapiWebhookUrl       String? // Webhook URL configured for WaAPI instance
-  waapiWebhookEvents    String[] @default([]) // Webhook events subscribed (e.g., 'qr', 'authenticated', 'ready')
-  waapiQrCodeData       String? @db.Text // Base64 QR code data URL (ephemeral)
-  waapiQrGeneratedAt    DateTime? // Timestamp when QR code was generated (for TTL tracking)
-  waapiIsActive         Boolean  @default(true) // Whether WaAPI instance is active
-  waapiLastSyncAt       DateTime? // Last sync timestamp from webhook
   // WasenderAPI fields
   wasenderSessionId       String?   // WasenderAPI numeric session ID (stored as string)
   wasenderApiKey          String?   // Per-session API key used for messaging (Bearer auth)
@@ -172,7 +161,6 @@ model Workspace {
   @@index([ownerId])
   @@index([planType])
   @@index([deletedAt])
-  @@index([waapiInstanceId])
   @@index([wasenderApiKey])
 }
 

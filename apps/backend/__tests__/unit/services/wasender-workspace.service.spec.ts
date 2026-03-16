@@ -34,17 +34,6 @@ jest.mock('../../../src/services/wasender-client.service', () => ({
   WasenderClientService: jest.fn().mockImplementation(() => mockWasenderClient),
 }))
 
-// ─── Mock WaapiClientService ─────────────────────────────────────────────────
-const mockWaapiClient = {
-  createInstance: jest.fn(),
-  deleteInstance: jest.fn(),
-  setWebhook: jest.fn(),
-  getQrCode: jest.fn(),
-}
-jest.mock('../../../src/services/waapi-client.service', () => ({
-  WaapiClientService: jest.fn().mockImplementation(() => mockWaapiClient),
-}))
-
 // ─── Mock Workspace repository ────────────────────────────────────────────────
 const mockRepository = {
   findById: jest.fn(),
@@ -102,7 +91,6 @@ function wasenderWorkspace(overrides: Record<string, any> = {}) {
     wasenderSessionId: SESSION_ID,
     wasenderApiKey: API_KEY,
     wasenderSessionStatus: 'connected',
-    waapiInstanceId: null,
     ...overrides,
   }
 }
@@ -368,36 +356,17 @@ describe('WorkspaceService — WasenderAPI', () => {
       expect(mockRepository.delete).toHaveBeenCalledWith(WORKSPACE_ID)
     })
 
-    it('should call waapiClient.deleteInstance when workspace uses waapi', async () => {
-      // SCENARIO: workspace uses WaAPI provider — should clean up WaAPI instance too
-      mockPrismaGlobal.workspace.findUnique.mockResolvedValue({
-        ...wasenderWorkspace(),
-        whatsappProvider: 'waapi',
-        wasenderSessionId: null,
-        waapiInstanceId: 'waapi-inst-999',
-      })
-      mockWaapiClient.deleteInstance.mockResolvedValue(undefined)
-      mockRepository.delete.mockResolvedValue(true)
-
-      await service.delete(WORKSPACE_ID)
-
-      expect(mockWaapiClient.deleteInstance).toHaveBeenCalledWith('waapi-inst-999')
-      expect(mockWasenderClient.deleteSession).not.toHaveBeenCalled()
-    })
-
     it('should not call any provider API if workspace has no session', async () => {
       // SCENARIO: workspace uses Meta or no provider configured — nothing to clean up
       mockPrismaGlobal.workspace.findUnique.mockResolvedValue({
         whatsappProvider: 'meta',
         wasenderSessionId: null,
-        waapiInstanceId: null,
       })
       mockRepository.delete.mockResolvedValue(true)
 
       await service.delete(WORKSPACE_ID)
 
       expect(mockWasenderClient.deleteSession).not.toHaveBeenCalled()
-      expect(mockWaapiClient.deleteInstance).not.toHaveBeenCalled()
     })
   })
 
@@ -415,8 +384,7 @@ describe('WorkspaceService — WasenderAPI', () => {
         deletedAt: null,
         whatsappProvider: currentProvider,
         wasenderSessionId: sessionId,
-        waapiInstanceId: currentProvider === 'waapi' ? 'waapi-inst-999' : null,
-      })
+        })
       mockRepository.update.mockResolvedValue({ id: WORKSPACE_ID })
     }
 
@@ -463,18 +431,6 @@ describe('WorkspaceService — WasenderAPI', () => {
 
       await service.update(WORKSPACE_ID, { whatsappProvider: 'ultramsg' } as any)
 
-      expect(mockWasenderClient.deleteSession).not.toHaveBeenCalled()
-    })
-
-    it('should delete WaAPI instance when switching from waapi to wasender', async () => {
-      // SCENARIO: user switches from WaAPI to Wasender
-      // RULE: old WaAPI instance must be removed to avoid billing on WaAPI side
-      setupUpdateMocks('waapi')
-      mockWaapiClient.deleteInstance.mockResolvedValue(undefined)
-
-      await service.update(WORKSPACE_ID, { whatsappProvider: 'wasender' } as any)
-
-      expect(mockWaapiClient.deleteInstance).toHaveBeenCalledWith('waapi-inst-999')
       expect(mockWasenderClient.deleteSession).not.toHaveBeenCalled()
     })
 

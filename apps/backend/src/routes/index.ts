@@ -841,11 +841,6 @@ logger.info("Registered push notification routes for chatbot reactivation")
 router.use("/whatsapp", whatsappRoutes)
 logger.info("Registered WhatsApp routes for webhook and send message")
 
-// Mount WaAPI routes
-import waapiRoutes from "../interfaces/http/routes/waapi.routes"
-router.use("/", waapiRoutes)
-logger.info("Registered WaAPI routes for instance management and webhooks")
-
 // Mount WasenderAPI routes
 import wasenderRoutes from "../interfaces/http/routes/wasender.routes"
 router.use("/", wasenderRoutes)

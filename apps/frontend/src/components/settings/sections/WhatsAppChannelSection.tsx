@@ -330,7 +330,7 @@ export function WhatsAppChannelSection({
               </>
             )}
 
-            {/* Webhook URL - Meta/WaAPI/UltraMsg only (Wasender uses its own webhook URL) */}
+            {/* Webhook URL - Meta/UltraMsg only (Wasender uses its own webhook URL) */}
             {currentProvider !== "wasender" && <div className="space-y-2">
               <Label>Callback URL</Label>
               <div className="flex gap-2 items-center">
