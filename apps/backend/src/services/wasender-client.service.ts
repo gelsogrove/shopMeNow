@@ -133,12 +133,13 @@ export class WasenderClientService {
         '/api/whatsapp-sessions',
         {
           name: `echatbot-${workspaceId}`,
-          account_protection: true,    // required by WasenderAPI (false is treated as missing by their validator)
+          account_protection: true,    // required boolean
+          log_messages: false,         // required boolean
           ...(phoneFormatted.length >= 8 && { phone_number: phoneFormatted }),
           ...(safeWebhookUrl && {
             webhook_url: safeWebhookUrl,
             webhook_enabled: true,
-            webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
+            webhook_events: ['messages.received', 'session.status', 'qr.code.updated'],
           }),
         }
       )
