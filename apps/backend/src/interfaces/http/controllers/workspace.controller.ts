@@ -230,6 +230,14 @@ export class WorkspaceController {
           translateCategoryNames: workspace.translateCategoryNames,
           translateServiceNames: workspace.translateServiceNames,
           catalogBaseLanguage: workspace.catalogBaseLanguage,
+          // 🆕 WasenderAPI fields (needed by QR polling in WasenderOnboarding)
+          wasenderSessionId: workspace.wasenderSessionId ?? null,
+          wasenderApiKey: workspace.wasenderApiKey ?? null,
+          wasenderSessionStatus: workspace.wasenderSessionStatus ?? null,
+          wasenderPhoneNumber: workspace.wasenderPhoneNumber ?? null,
+          wasenderIsActive: workspace.wasenderIsActive ?? false,
+          wasenderQrString: workspace.wasenderQrString ?? null,
+          wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
         }
 
         return res.json(serializedWorkspace)
@@ -476,6 +484,14 @@ export class WorkspaceController {
         translateCategoryNames: workspace.translateCategoryNames,
         translateServiceNames: workspace.translateServiceNames,
         catalogBaseLanguage: workspace.catalogBaseLanguage,
+        // 🆕 WasenderAPI fields (needed by QR polling in WasenderOnboarding)
+        wasenderSessionId: workspace.wasenderSessionId ?? null,
+        wasenderApiKey: workspace.wasenderApiKey ?? null,
+        wasenderSessionStatus: workspace.wasenderSessionStatus ?? null,
+        wasenderPhoneNumber: workspace.wasenderPhoneNumber ?? null,
+        wasenderIsActive: workspace.wasenderIsActive ?? false,
+        wasenderQrString: workspace.wasenderQrString ?? null,
+        wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
       }
 
       return res.status(201).json(serializedWorkspace)
@@ -643,6 +659,14 @@ export class WorkspaceController {
         translateCategoryNames: workspace.translateCategoryNames,
         translateServiceNames: workspace.translateServiceNames,
         catalogBaseLanguage: workspace.catalogBaseLanguage,
+        // 🆕 WasenderAPI fields (needed by QR polling in WasenderOnboarding)
+        wasenderSessionId: workspace.wasenderSessionId ?? null,
+        wasenderApiKey: workspace.wasenderApiKey ?? null,
+        wasenderSessionStatus: workspace.wasenderSessionStatus ?? null,
+        wasenderPhoneNumber: workspace.wasenderPhoneNumber ?? null,
+        wasenderIsActive: workspace.wasenderIsActive ?? false,
+        wasenderQrString: workspace.wasenderQrString ?? null,
+        wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
       }
 
       logger.info(
