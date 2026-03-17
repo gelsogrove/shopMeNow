@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { api } from '@/services/api'
+import { toast } from '@/lib/toast'
 import {
   AlertCircle,
   CheckCircle,
@@ -87,6 +88,12 @@ const getPreviousMonthFromDate = (date: Date) => {
   cursor.setMonth(cursor.getMonth() - 1)
   return { month: cursor.getMonth() + 1, year: cursor.getFullYear() }
 }
+
+const isSamePeriod = (periodMonth: number, periodYear: number, targetMonth: number, targetYear: number) =>
+  periodMonth === targetMonth && periodYear === targetYear
+
+const isBeforePeriod = (periodMonth: number, periodYear: number, targetMonth: number, targetYear: number) =>
+  periodYear < targetYear || (periodYear === targetYear && periodMonth < targetMonth)
 
 const getPeriodRange = (month: number, year: number) => {
   const start = new Date(year, month - 1, 1)
@@ -315,8 +322,28 @@ export function CollectionsPage() {
       return
     }
 
-    setPreviousRows(response.data)
-    applyNotesFromRows(response.data)
+    const previousMonthRows = response.data.filter((row) =>
+      isSamePeriod(row.invoice.periodMonth, row.invoice.periodYear, previousDefaults.month, previousDefaults.year)
+    )
+    const overdueRows = response.data.filter((row) =>
+      isBeforePeriod(row.invoice.periodMonth, row.invoice.periodYear, previousDefaults.month, previousDefaults.year)
+    )
+
+    if (overdueRows.length) {
+      setFailedRows((prev) => {
+        const existing = new Set(prev.map((r) => r.invoice.id))
+        const merged = [...prev]
+        overdueRows.forEach((row) => {
+          if (!existing.has(row.invoice.id)) {
+            merged.push({ ...row, invoice: { ...row.invoice, status: 'FAILED' } })
+          }
+        })
+        return merged
+      })
+    }
+
+    setPreviousRows(previousMonthRows)
+    applyNotesFromRows(previousMonthRows)
     setIsPreviousLoading(false)
   }
 
@@ -916,6 +943,99 @@ export function CollectionsPage() {
     setUpdating(null)
   }
 
+  const findRowByInvoiceId = (invoiceId: string): OwnerInvoiceRow | undefined =>
+    currentRows.find((row) => row.invoice.id === invoiceId) ||
+    previousRows.find((row) => row.invoice.id === invoiceId) ||
+    failedRows.find((row) => row.invoice.id === invoiceId) ||
+    historyRows.find((row) => row.invoice.id === invoiceId)
+
+  const syncPreviewStatus = (invoiceId: string, status: string, paidAt: string | null) => {
+    setInvoicePreviews((prev) => {
+      const existing = prev[invoiceId]
+      if (!existing?.data) return prev
+      return {
+        ...prev,
+        [invoiceId]: {
+          loading: false,
+          data: {
+            ...existing.data,
+            status,
+            paidAt,
+          },
+        },
+      }
+    })
+  }
+
+  const handleMoveToFailed = async (invoiceId: string) => {
+    setUpdating(invoiceId)
+    const response = await api.users.updateInvoice(invoiceId, {
+      status: 'FAILED',
+      adminNotes: notesByInvoice[invoiceId] ?? undefined,
+    })
+
+    if (!response.success || !response.data) {
+      setError(response.error || 'Failed to move invoice to failed')
+      setUpdating(null)
+      return
+    }
+
+    const sourceRow = findRowByInvoiceId(invoiceId)
+    if (sourceRow) {
+      const updatedRow = { ...sourceRow, invoice: { ...sourceRow.invoice, status: 'FAILED', paidAt: null } }
+      setCurrentRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
+      setPreviousRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
+      setFailedRows((prev) => {
+        const without = prev.filter((row) => row.invoice.id !== invoiceId)
+        return [updatedRow, ...without]
+      })
+    }
+
+    syncPreviewStatus(invoiceId, 'FAILED', null)
+    setUpdating(null)
+  }
+
+  const handleMarkUnpaid = async (invoiceId: string) => {
+    const targetRow = findRowByInvoiceId(invoiceId)
+    const canReturnToPrevious = targetRow
+      ? isSamePeriod(
+          targetRow.invoice.periodMonth,
+          targetRow.invoice.periodYear,
+          previousDefaults.month,
+          previousDefaults.year
+        )
+      : false
+
+    if (!canReturnToPrevious) {
+      setError('Only previous-month invoices can be marked unpaid and moved back.')
+      return
+    }
+
+    setUpdating(invoiceId)
+    const response = await api.users.updateInvoice(invoiceId, {
+      status: 'PENDING',
+      adminNotes: notesByInvoice[invoiceId] ?? undefined,
+    })
+
+    if (!response.success || !response.data) {
+      setError(response.error || 'Failed to mark invoice as unpaid')
+      setUpdating(null)
+      return
+    }
+
+    if (targetRow) {
+      const updatedRow = { ...targetRow, invoice: { ...targetRow.invoice, status: 'PENDING', paidAt: null } }
+      setFailedRows((prev) => prev.filter((row) => row.invoice.id !== invoiceId))
+      setPreviousRows((prev) => {
+        const without = prev.filter((row) => row.invoice.id !== invoiceId)
+        return [updatedRow, ...without]
+      })
+    }
+
+    syncPreviewStatus(invoiceId, 'PENDING', null)
+    setUpdating(null)
+  }
+
 
   const isViewLoading =
     viewMode === 'history'
@@ -1180,6 +1300,12 @@ export function CollectionsPage() {
                 const detail = previewState?.data
                 const formattedPeriod = formatMonthYear(invoice.periodMonth, invoice.periodYear)
                 const periodRange = getPeriodRange(invoice.periodMonth, invoice.periodYear)
+                const canReturnToPrevious = isSamePeriod(
+                  invoice.periodMonth,
+                  invoice.periodYear,
+                  previousDefaults.month,
+                  previousDefaults.year
+                )
                 return (
                   <div
                     key={invoice.id}
@@ -1342,11 +1468,11 @@ export function CollectionsPage() {
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Process Payment
                         </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() =>
-                            setMarkPaidModal({
-                              invoiceId: invoice.id,
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setMarkPaidModal({
+                          invoiceId: invoice.id,
                               ownerEmail: row.owner.email || '',
                               periodMonth: invoice.periodMonth,
                               periodYear: invoice.periodYear,
@@ -1357,6 +1483,29 @@ export function CollectionsPage() {
                           className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                         >
                           Mark as Paid
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleMoveToFailed(invoice.id)}
+                          disabled={isUpdatingRow}
+                        >
+                          Move to Failed
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            setCancelModal({
+                              invoiceId: invoice.id,
+                              ownerEmail: row.owner.email,
+                              periodMonth: invoice.periodMonth,
+                              periodYear: invoice.periodYear,
+                              retryCount: invoice.paymentRetryCount || 0,
+                            })
+                          }
+                          disabled={isUpdatingRow}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Cancel
                         </Button>
                         <Badge
                           variant={getPayPalEnvironment(row.owner) === 'sandbox' ? 'secondary' : 'destructive'}
@@ -1431,12 +1580,20 @@ export function CollectionsPage() {
                           Mark as Paid
                         </Button>
                         <Button
+                          variant="secondary"
+                          onClick={() => handleMarkUnpaid(invoice.id)}
+                          disabled={isUpdatingRow || !canReturnToPrevious}
+                          title={!canReturnToPrevious ? 'Only previous-month invoices can be moved back' : undefined}
+                        >
+                          Mark as Unpaid
+                        </Button>
+                        <Button
                           variant="outline"
                           onClick={() => handleSaveNotes(invoice.id, 'FAILED')}
                           disabled={isUpdatingRow}
                         >
                           <FileText className="h-4 w-4 mr-2" />
-                          Move to History
+                          Save Notes
                         </Button>
                         <Button
                           variant="destructive"

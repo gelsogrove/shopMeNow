@@ -161,10 +161,15 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
 
       if (httpStatus === 402 || code === 'WASENDER_PLAN_LIMIT') {
         toast.error('WasenderAPI session limit reached — upgrade your plan at wasenderapi.com to add more channels')
+      } else if (code === 'WASENDER_SUBSCRIPTION_REQUIRED') {
+        toast.error('WasenderAPI requires a paid subscription. Free plan does not include API access. Please upgrade at wasenderapi.com')
       } else if (code === 'WASENDER_AUTH_ERROR') {
         toast.error('WasenderAPI configuration error — contact your administrator')
       } else {
-        toast.error(error.response?.data?.error || 'Failed to start WhatsApp session')
+        // Show full error detail for debugging
+        const detail = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to start WhatsApp session'
+        toast.error(detail)
+        console.error('[WasenderOnboarding] Initialize error:', { httpStatus, code, detail, fullResponse: error.response?.data })
       }
       setStatus('failed')
     } finally {

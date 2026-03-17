@@ -1003,9 +1003,10 @@ For privacy inquiries, please contact our support team.`
    *
    * STEPS:
    * 1. Verify user subscription / credits
-   * 2. Create WasenderAPI session (returns sessionId + apiKey)
-   * 3. Call connectSession() → returns initial QR string
-   * 4. Save credentials to workspace
+   * 2. Check if workspace already has a WasenderAPI session
+   *    - YES → call connectSession() to get fresh QR (don't create duplicate)
+   *    - NO  → create new session + connect
+   * 3. Save credentials to workspace
    *
    * PREREQUISITE: User must have active subscription + credits
    */
@@ -1041,20 +1042,50 @@ For privacy inquiries, please contact our support team.`
       throw new Error('Insufficient credits. Minimum €5.00 required to create channel.')
     }
 
-    // Webhook URL: includes workspaceId so Wasender knows which workspace to update
-    const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+    // STEP 1: Check if workspace already has a WasenderAPI session
+    const existingWorkspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        wasenderSessionId: true,
+        wasenderApiKey: true,
+        wasenderSessionStatus: true,
+      },
+    })
 
-    // 1. Create session
-    const { sessionId, apiKey } = await this.wasenderClient.createSession(
-      workspaceId,
-      phoneNumber,
-      webhookUrl
-    )
+    let sessionId: string
+    let apiKey: string
 
-    // 2. Connect → get initial QR string
+    if (existingWorkspace?.wasenderSessionId) {
+      // Session already exists → reuse it, just reconnect for fresh QR
+      sessionId = existingWorkspace.wasenderSessionId
+      apiKey = existingWorkspace.wasenderApiKey || ''
+
+      logger.info('[Workspace] Reusing existing Wasender session:', {
+        workspaceId,
+        sessionId,
+        previousStatus: existingWorkspace.wasenderSessionStatus,
+      })
+    } else {
+      // No session → create new one
+      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+
+      const result = await this.wasenderClient.createSession(
+        workspaceId,
+        phoneNumber,
+        webhookUrl
+      )
+      sessionId = result.sessionId
+      apiKey = result.apiKey
+    }
+
+    // STEP 2: Connect → get fresh QR string
     const qrString = await this.wasenderClient.connectSession(sessionId)
 
-    // 3. Save to workspace
+    // If connectSession returns null → session is already connected (no QR needed)
+    const sessionStatus = qrString ? 'need_scan' : 'connected'
+    const isActive = !qrString // connected = active, need_scan = not active yet
+
+    // STEP 3: Save to workspace
     const workspace = await this.prisma.workspace.update({
       where: { id: workspaceId },
       data: {
@@ -1062,11 +1093,11 @@ For privacy inquiries, please contact our support team.`
         wasenderSessionId: sessionId,
         wasenderApiKey: apiKey,
         wasenderPhoneNumber: phoneNumber,
-        wasenderSessionStatus: 'need_scan',
-        wasenderIsActive: false,
+        wasenderSessionStatus: sessionStatus,
+        wasenderIsActive: isActive,
         wasenderQrString: qrString,
         wasenderQrGeneratedAt: qrString ? new Date() : null,
-        channelStatus: false, // Will be set true when session.status = connected
+        channelStatus: isActive, // true if already connected
       },
     })
 

@@ -15,6 +15,21 @@ import { roundMoney } from "../../../../utils/money"
 
 const router = Router()
 
+// Helpers for period comparisons
+const getPreviousMonthPeriod = (ref: Date) => {
+  const cursor = new Date(ref.getFullYear(), ref.getMonth(), 1)
+  cursor.setMonth(cursor.getMonth() - 1)
+  return { month: cursor.getMonth() + 1, year: cursor.getFullYear() }
+}
+
+const isBeforePeriod = (periodMonth: number, periodYear: number, refMonth: number, refYear: number) => {
+  return periodYear < refYear || (periodYear === refYear && periodMonth < refMonth)
+}
+
+const isSamePeriod = (periodMonth: number, periodYear: number, refMonth: number, refYear: number) => {
+  return periodYear === refYear && periodMonth === refMonth
+}
+
 // ── Invoice history ─────────────────────────────────────────────────────────
 
 /**
@@ -258,6 +273,7 @@ router.get(
       const now = new Date()
       const currentMonth = now.getMonth() + 1
       const currentYear = now.getFullYear()
+      const { month: previousMonth, year: previousYear } = getPreviousMonthPeriod(now)
 
       const invoices = await prisma.monthlyInvoice.findMany({
         where: {
@@ -288,12 +304,41 @@ router.get(
         },
       })
 
+      // Auto-move any unpaid invoices older than the previous month to FAILED
+      const overdueInvoices = invoices.filter((invoice) =>
+        isBeforePeriod(invoice.periodMonth, invoice.periodYear, previousMonth, previousYear)
+      )
+
+      if (overdueInvoices.length > 0) {
+        await Promise.all(
+          overdueInvoices.map((invoice) => {
+            const existingNotes = (invoice as any).adminNotes as string | null
+            const autoNote = "Auto-moved to FAILED: unpaid beyond previous month"
+            const adminNotes = existingNotes ? `${existingNotes} | ${autoNote}` : autoNote
+
+            return prisma.monthlyInvoice.update({
+              where: { id: invoice.id },
+              data: {
+                status: "FAILED",
+                adminNotes,
+                adminMarkedAt: new Date(),
+              },
+            })
+          })
+        )
+      }
+
+      // Only keep invoices from the immediately previous month in the response
+      const previousMonthInvoices = invoices.filter((invoice) =>
+        isSamePeriod(invoice.periodMonth, invoice.periodYear, previousMonth, previousYear)
+      )
+
       const recalculated = await Promise.all(
-        invoices.map((invoice) => invoiceService.recalculateInvoiceTotals(invoice.id))
+        previousMonthInvoices.map((invoice) => invoiceService.recalculateInvoiceTotals(invoice.id))
       )
       const recalculatedById = new Map(recalculated.map((invoice) => [invoice.id, invoice]))
 
-      const data = invoices.map((invoice) => {
+      const data = previousMonthInvoices.map((invoice) => {
         const updatedInvoice = recalculatedById.get(invoice.id) || invoice
         return {
         owner: {

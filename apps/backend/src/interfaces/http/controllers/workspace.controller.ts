@@ -1100,6 +1100,13 @@ export class WorkspaceController {
           code: 'WASENDER_AUTH_ERROR',
         })
       }
+      if (error.message?.startsWith('WASENDER_SUBSCRIPTION_REQUIRED')) {
+        return res.status(402).json({
+          error: 'WasenderAPI requires a paid subscription to create sessions. Free plan does not include API access. Please upgrade at wasenderapi.com.',
+          message: error.message,
+          code: 'WASENDER_SUBSCRIPTION_REQUIRED',
+        })
+      }
 
       return res.status(400).json({ error: error.message })
     }

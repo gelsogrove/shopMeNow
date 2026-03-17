@@ -166,12 +166,19 @@ export class WasenderClientService {
       if (status === 401) {
         throw new Error('WASENDER_AUTH_ERROR: Invalid or expired WasenderAPI Personal Access Token. Check your WASENDER_PERSONAL_ACCESS_TOKEN configuration.')
       }
+      // 403 = subscription required (free plan has no API access)
+      if (status === 403) {
+        const detail = JSON.stringify(error.response?.data)
+        throw new Error(`WASENDER_SUBSCRIPTION_REQUIRED: WasenderAPI requires an active paid subscription to create sessions. Free plan does not include API access. Details: ${detail}`)
+      }
       // 422 = validation error — expose full response body for debugging
       if (status === 422) {
         const detail = JSON.stringify(error.response?.data)
         throw new Error(`WasenderAPI session creation failed (422 Unprocessable): ${detail}`)
       }
-      throw new Error(`WasenderAPI session creation failed: ${error.message}`)
+      // Generic error — include status code and response body for debugging
+      const responseBody = error.response?.data ? JSON.stringify(error.response.data) : 'No response body'
+      throw new Error(`WasenderAPI session creation failed (HTTP ${status || 'unknown'}): ${responseBody}`)
     }
   }
 

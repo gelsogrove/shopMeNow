@@ -209,7 +209,7 @@ const initialWizardData: WizardFormData = {
   botIdentityResponse: "",
   // Support defaults
   hasHumanSupport: true,
-  humanSupportInstructions: "",
+  humanSupportInstructions: "Hello {{nameUser}}, I'm connecting you with our agent. They will contact you shortly.",
   faqs: [],
 }
 
@@ -323,6 +323,15 @@ export function WorkspaceSelectionPage() {
 
   const getVisibleSteps = () => {
     return WIZARD_STEPS as unknown as typeof WIZARD_STEPS[number][]
+  }
+
+  const getWizardStepImage = () => {
+    if (wizardStep === 1) return '/survery-start.png'
+    if (wizardStep === 2) return '/surver-widget.png'
+    if (wizardStep === 3) return '/survey-agent.png'
+    if (wizardStep === 4) return '/survey-agent.png'
+    if (wizardStep === 5) return wizardData.channelType === 'WIDGET' ? '/surver-widget.png' : '/survey-support.png'
+    return '/survey.png'
   }
 
   const getNextStep = () => {
@@ -1836,25 +1845,32 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 </div>
               </div>
 
-              {/* Error message (se c'è) */}
+              {/* Step Image — fixed header, never scrolls */}
+              <div className="flex-shrink-0 overflow-hidden">
+                <img
+                  key={getWizardStepImage()}
+                  src={getWizardStepImage()}
+                  alt=""
+                  className="w-full h-44 sm:h-52 object-cover"
+                  loading="eager"
+                />
+              </div>
+
+              {/* Error message */}
               {errorMessage && errorMessage !== "Enter an alias" && (
-                <div className="m-6 mb-0 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex-shrink-0">
                   <p className="text-sm text-red-700">{errorMessage}</p>
                 </div>
               )}
 
-              {/* Step Content */}
-              <div className="flex-1 p-6 overflow-y-auto">
+              {/* Step Content — only this scrolls */}
+              <div className="flex-1 px-6 pt-5 pb-2 overflow-y-auto">
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {/* STEP 1 — Your Business (questionnaire-style) */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 1 && (
                   <div className="space-y-6">
-                    {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/survery-start.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                    </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-4xl">🏢</span>
@@ -1914,10 +1930,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 2 && (
                   <div className="space-y-6">
-                    {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                    </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-4xl">📡</span>
@@ -2091,10 +2103,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ── Step 3: Human Support ───────────────────────────── */}
                 {wizardStep === 3 && (
                   <div className="space-y-6">
-                    {/* Full-bleed step image */}
-                    <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/survey-agent.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                    </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-4xl">🙋</span>
@@ -2155,10 +2163,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
                 {wizardStep === 4 && (
                   <div className="space-y-6">
-                    {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/survey-agent.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                    </div>
                     <div>
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-4xl">🤖</span>
@@ -2267,9 +2271,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {/* WasenderAPI — QR scan */}
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'wasender' && (
                       <>
-                        <div className="-mx-6 -mt-6 mb-6">
-                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                        </div>
                         <div>
                           <div className="flex items-center gap-3 mb-2">
                             <span className="text-4xl">📱</span>
@@ -2297,10 +2298,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {/* Meta / UltraMsg — credentials note */}
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider !== 'wasender' && (
                       <>
-                        {/* Full-bleed step image (survey style) */}
-                        <div className="-mx-6 -mt-6 mb-6">
-                          <img src="/survey-support.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                        </div>
                         <div>
                           <div className="flex items-center gap-3 mb-2">
                             <span className="text-4xl">🔧</span>

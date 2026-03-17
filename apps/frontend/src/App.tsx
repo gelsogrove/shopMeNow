@@ -125,7 +125,8 @@ function ProtectedAnalyticsRoute() {
 // Renders the platform support widget on all pages except /survey and /neapolis
 function GlobalChatWidget() {
   const location = useLocation()
-  const EXCLUDED_PATHS = ["/survey", "/neapolis"]
+  // Hide eChatbot HQ support widget on /chat (has its own playground when debugMode=true)
+  const EXCLUDED_PATHS = ["/survey", "/neapolis", "/chat"]
   if (EXCLUDED_PATHS.includes(location.pathname)) return null
   return (
     <ChatWidget
