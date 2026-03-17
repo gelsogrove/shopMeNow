@@ -1697,6 +1697,22 @@ export function CollectionsPage() {
                               Add Credit Note
                             </Button>
                           )}
+                          <Button
+                            variant="outline"
+                            onClick={() =>
+                              setCancelModal({
+                                invoiceId: invoice.id,
+                                ownerEmail: row.owner.email,
+                                periodMonth: invoice.periodMonth,
+                                periodYear: invoice.periodYear,
+                                retryCount: invoice.paymentRetryCount || 0,
+                              })
+                            }
+                            disabled={isUpdatingRow}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Cancel
+                          </Button>
                         </div>
                         {invoice.creditNotes && invoice.creditNotes.length > 0 && (
                           <div className="space-y-2">
