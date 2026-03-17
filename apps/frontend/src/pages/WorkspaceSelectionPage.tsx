@@ -41,7 +41,7 @@ import { api } from "@/services/api"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { getPayPalConnectUrl, getPayPalStatus, disconnectPayPal, getPayPalConfig, type PayPalStatusResponse, type PayPalConfigResponse } from "@/services/paypalApi"
 import { LogOut, PlusCircle, MessageSquare, ShoppingCart, AlertTriangle, MessageCircle, Smartphone, Crown, User, Ban, UserPlus, Clock, CreditCard, ArrowLeft, Check, ChevronRight, ChevronLeft, Store, Users, Headphones, Bot, X, HelpCircle, Mail, Briefcase, ImagePlus, Pencil, Globe, DollarSign, Languages, BarChart3, Zap, Layout, Megaphone, Wallet, Code2, Settings, Info, ListTodo, CheckCircle2, Circle, Power, Monitor, Building2, Link2, RefreshCw, Loader2, PartyPopper, ExternalLink } from "lucide-react"
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   createWorkspace,
@@ -225,6 +225,11 @@ interface WorkspaceBadgeStats {
 export function WorkspaceSelectionPage() {
   const navigate = useNavigate()
   const { setCurrentWorkspace } = useWorkspace()
+  
+  // Guard against concurrent/duplicate loadWorkspaces calls
+  const isLoadingRef = useRef(false)
+  const lastLoadTimestampRef = useRef(0)
+  const RELOAD_DEBOUNCE_MS = 3000 // Minimum 3s between reloads
   
   // ============================================================================
   // WIZARD STATE
@@ -684,17 +689,18 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   }, [])
 
   // 🔄 Reload workspaces when user returns to page (refresh channelStatus changes)
+  // NOTE: Only visibilitychange is used — "focus" was removed because both
+  //       fire at the same time when switching tabs, causing double reloads.
+  //       A debounce guard (RELOAD_DEBOUNCE_MS) prevents rapid successive calls.
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && hasLoadedWorkspaces) {
+        const now = Date.now()
+        if (now - lastLoadTimestampRef.current < RELOAD_DEBOUNCE_MS) {
+          logger.info("🔄 [WorkspaceSelectionPage] Skipping reload - debounced")
+          return
+        }
         logger.info("🔄 [WorkspaceSelectionPage] Page visible again - reloading workspaces")
-        loadWorkspaces()
-      }
-    }
-
-    const handleFocus = () => {
-      if (hasLoadedWorkspaces) {
-        logger.info("🔄 [WorkspaceSelectionPage] Window focused - reloading workspaces")
         loadWorkspaces()
       }
     }
@@ -706,12 +712,10 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("focus", handleFocus)
     window.addEventListener("workspace-updated", handleWorkspaceUpdate as EventListener)
     
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("focus", handleFocus)
       window.removeEventListener("workspace-updated", handleWorkspaceUpdate as EventListener)
     }
   }, [hasLoadedWorkspaces])
@@ -724,6 +728,14 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
   }, [hasLoadedWorkspaces, hasAutoOpenedWizard, openWizardDialog, workspaces.length])
 
   const loadWorkspaces = async () => {
+    // Guard: prevent concurrent or rapid successive calls
+    if (isLoadingRef.current) {
+      logger.info("🔄 [WorkspaceSelectionPage] Skipping reload - already loading")
+      return
+    }
+    isLoadingRef.current = true
+    lastLoadTimestampRef.current = Date.now()
+
     try {
       // Verify token exists before making API call
       const token = storage.getToken()
@@ -801,6 +813,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     } finally {
       setIsLoading(false)
       setHasLoadedWorkspaces(true)
+      isLoadingRef.current = false
     }
   }
 
