@@ -139,7 +139,7 @@ export class WasenderClientService {
           ...(safeWebhookUrl && {
             webhook_url: safeWebhookUrl,
             webhook_enabled: true,
-            webhook_events: ['messages.received', 'session.status'],
+            webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
           }),
         }
       )
