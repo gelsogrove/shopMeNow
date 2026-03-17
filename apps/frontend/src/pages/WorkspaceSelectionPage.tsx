@@ -77,12 +77,14 @@ interface WizardFormData {
 }
 
 const WIZARD_STEPS = [
-  { id: 1, title: "Your Business", description: "Industry & goals", icon: Building2 },
-  { id: 2, title: "Channel Setup", description: "Type & name", icon: Smartphone },
-  { id: 3, title: "Support", description: "Human escalation", icon: Headphones },
-  { id: 4, title: "Bot Personality", description: "Tone & identity", icon: Bot },
-  { id: 5, title: "Connect", description: "Link your channel", icon: Link2 },
-  { id: 6, title: "All Done!", description: "Channel ready", icon: CheckCircle2 },
+  { id: 1, title: "Your Business",    description: "Industry & goals",    icon: Building2 },
+  { id: 2, title: "Products & Sales", description: "E-commerce intent",   icon: ShoppingCart },
+  { id: 3, title: "Channel Type",     description: "WhatsApp or Widget",  icon: Smartphone },
+  { id: 4, title: "Channel Setup",    description: "Name & number",       icon: MessageCircle },
+  { id: 5, title: "Support",          description: "Human escalation",    icon: Headphones },
+  { id: 6, title: "Bot Personality",  description: "Tone & identity",     icon: Bot },
+  { id: 7, title: "Connect",          description: "Link your channel",   icon: Link2 },
+  { id: 8, title: "All Done!",        description: "Channel ready",       icon: CheckCircle2 },
 ] as const
 
 const PLAN_LABELS: Record<PlanType, string> = {
@@ -297,27 +299,20 @@ export function WorkspaceSelectionPage() {
 
   const validateCurrentStep = (): boolean => {
     switch (wizardStep) {
-      case 1: // Business Goal — always valid (defaults preset)
-        return true
-      case 2: // Channel Setup: alias required; phone required for WhatsApp
+      case 1: return true  // Business type — defaults preset
+      case 2: return true  // Do you sell products? — always has a default
+      case 3: return true  // Channel type — always has a default
+      case 4: // Channel Name + WhatsApp Number
         if (!wizardData.alias.trim()) return false
         if (wizardData.channelType === 'WHATSAPP') {
-          return !!(
-            wizardData.whatsappNumber.trim() &&
-            validateWhatsAppNumber(wizardData.whatsappNumber)
-          )
+          return !!(wizardData.whatsappNumber.trim() && validateWhatsAppNumber(wizardData.whatsappNumber))
         }
         return true
-      case 3: // Support — always valid (human support is optional)
-        return true
-      case 4: // Bot Personality: require bot identity
-        return wizardData.botIdentityResponse.trim().length > 0
-      case 5: // Connect — always valid (Wasender handles its own completion)
-        return true
-      case 6: // Done — always valid
-        return true
-      default:
-        return true
+      case 5: return true  // Human Support
+      case 6: return wizardData.botIdentityResponse.trim().length > 0  // Bot Personality
+      case 7: return true  // Connect
+      case 8: return true  // Done
+      default: return true
     }
   }
 
@@ -327,10 +322,12 @@ export function WorkspaceSelectionPage() {
 
   const getWizardStepImage = () => {
     if (wizardStep === 1) return '/survery-start.png'
-    if (wizardStep === 2) return '/surver-widget.png'
-    if (wizardStep === 3) return '/survey-agent.png'
-    if (wizardStep === 4) return '/survey-agent.png'
-    if (wizardStep === 5) return wizardData.channelType === 'WIDGET' ? '/surver-widget.png' : '/survey-support.png'
+    if (wizardStep === 2) return '/survery-start.png'
+    if (wizardStep === 3) return '/surver-widget.png'
+    if (wizardStep === 4) return '/surver-widget.png'
+    if (wizardStep === 5) return '/survey-agent.png'
+    if (wizardStep === 6) return '/survey-agent.png'
+    if (wizardStep === 7) return wizardData.channelType === 'WIDGET' ? '/surver-widget.png' : '/survey-support.png'
     return '/survey.png'
   }
 
@@ -358,23 +355,23 @@ export function WorkspaceSelectionPage() {
     if (!validateCurrentStep()) return
     const next = getNextStep()
 
-    // Step 4 → 5: create workspace first (silently), then advance
-    if (next === 5 && !newlyCreatedWorkspaceId) {
+    // Step 6 → 7: create workspace first (silently), then advance
+    if (next === 7 && !newlyCreatedWorkspaceId) {
       const success = await handleCreateWorkspace()
       if (success) {
-        setWizardStep(5)
+        setWizardStep(7)
       }
       return
     }
 
-    if (next <= 6) {
+    if (next <= 8) {
       setWizardStep(next)
     }
   }
 
   const handlePrevStep = () => {
-    // Cannot go back once channel is done (Step 6)
-    if (wizardStep >= 6) return
+    // Cannot go back once channel is done (Step 8)
+    if (wizardStep >= 8) return
     const prev = getPrevStep()
     if (prev >= 1) {
       setWizardStep(prev)

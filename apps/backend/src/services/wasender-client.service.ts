@@ -206,6 +206,11 @@ export class WasenderClientService {
       logger.info('[Wasender] Session already connected:', { sessionId })
       return null
     } catch (error: any) {
+      // 404 = session no longer exists on WasenderAPI (deleted, plan change, etc.)
+      if (error.response?.status === 404) {
+        logger.warn('[Wasender] Session not found (404) — stale session:', { sessionId })
+        throw new Error('WASENDER_SESSION_NOT_FOUND')
+      }
       logger.error('[Wasender] Failed to connect session:', error)
       throw new Error(`WasenderAPI connect failed: ${error.message}`)
     }

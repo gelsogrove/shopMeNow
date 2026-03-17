@@ -1055,6 +1055,16 @@ For privacy inquiries, please contact our support team.`
     let sessionId: string
     let apiKey: string
 
+    const createNewSession = async () => {
+      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+      const result = await this.wasenderClient.createSession(
+        workspaceId,
+        phoneNumber,
+        webhookUrl
+      )
+      return result
+    }
+
     if (existingWorkspace?.wasenderSessionId) {
       // Session already exists → reuse it, just reconnect for fresh QR
       sessionId = existingWorkspace.wasenderSessionId
@@ -1067,19 +1077,31 @@ For privacy inquiries, please contact our support team.`
       })
     } else {
       // No session → create new one
-      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
-
-      const result = await this.wasenderClient.createSession(
-        workspaceId,
-        phoneNumber,
-        webhookUrl
-      )
+      const result = await createNewSession()
       sessionId = result.sessionId
       apiKey = result.apiKey
     }
 
     // STEP 2: Connect → get fresh QR string
-    const qrString = await this.wasenderClient.connectSession(sessionId)
+    // If session is stale (404), clear it and create a new one
+    let qrString: string | null
+    try {
+      qrString = await this.wasenderClient.connectSession(sessionId)
+    } catch (connectError: any) {
+      if (connectError.message === 'WASENDER_SESSION_NOT_FOUND') {
+        logger.warn('[Workspace] Stale session detected, creating new one:', { workspaceId, staleSessionId: sessionId })
+
+        // Clear stale data and create fresh session
+        const result = await createNewSession()
+        sessionId = result.sessionId
+        apiKey = result.apiKey
+
+        // Connect the newly created session
+        qrString = await this.wasenderClient.connectSession(sessionId)
+      } else {
+        throw connectError
+      }
+    }
 
     // If connectSession returns null → session is already connected (no QR needed)
     const sessionStatus = qrString ? 'need_scan' : 'connected'
