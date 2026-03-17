@@ -79,6 +79,7 @@ interface WizardFormData {
 const WIZARD_STEPS = [
   { id: 1, title: "Your Business", description: "Industry & goals", icon: Building2 },
   { id: 2, title: "Channel Setup", description: "Type & name", icon: Smartphone },
+  { id: 3, title: "Support", description: "Human escalation", icon: Headphones },
   { id: 4, title: "Bot Personality", description: "Tone & identity", icon: Bot },
   { id: 5, title: "Connect", description: "Link your channel", icon: Link2 },
   { id: 6, title: "All Done!", description: "Channel ready", icon: CheckCircle2 },
@@ -302,6 +303,8 @@ export function WorkspaceSelectionPage() {
           )
         }
         return true
+      case 3: // Support — always valid (human support is optional)
+        return true
       case 4: // Bot Personality: require bot identity
         return wizardData.botIdentityResponse.trim().length > 0
       case 5: // Connect — always valid (Wasender handles its own completion)
@@ -318,14 +321,10 @@ export function WorkspaceSelectionPage() {
   }
 
   const getNextStep = () => {
-    // Step 2 → 4 (Step 3 removed)
-    if (wizardStep === 2) return 4
     return wizardStep + 1
   }
 
   const getPrevStep = () => {
-    // Step 4 → 2 (Step 3 removed)
-    if (wizardStep === 4) return 2
     return wizardStep - 1
   }
 
@@ -360,8 +359,8 @@ export function WorkspaceSelectionPage() {
   }
 
   const handlePrevStep = () => {
-    // Cannot go back once channel is being connected (Step 5+)
-    if (wizardStep >= 5) return
+    // Cannot go back once channel is done (Step 6)
+    if (wizardStep >= 6) return
     const prev = getPrevStep()
     if (prev >= 1) {
       setWizardStep(prev)
@@ -2076,6 +2075,71 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {/* STEP 4 — Bot Personality */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* ── Step 3: Human Support ───────────────────────────── */}
+                {wizardStep === 3 && (
+                  <div className="space-y-6">
+                    {/* Full-bleed step image */}
+                    <div className="-mx-6 -mt-6 mb-6">
+                      <img src="/survey-agent.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-4xl">🙋</span>
+                        <h2 className="text-xl font-bold text-slate-900">Human Support</h2>
+                      </div>
+                      <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>
+                        Allow customers to request a human agent when the bot can't help
+                      </p>
+                    </div>
+
+                    {/* Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setWizardData(d => ({ ...d, hasHumanSupport: !d.hasHumanSupport }))}
+                      className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl border-2 text-left transition-all ${
+                        wizardData.hasHumanSupport
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
+                    >
+                      <div className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 ${wizardData.hasHumanSupport ? 'bg-green-500' : 'bg-slate-300'}`}>
+                        <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-transform ${wizardData.hasHumanSupport ? 'translate-x-5 ml-0.5' : 'translate-x-0.5'}`} />
+                      </div>
+                      <div>
+                        <p className={`font-semibold ${wizardData.hasHumanSupport ? 'text-green-800' : 'text-slate-700'}`}>
+                          {wizardData.hasHumanSupport ? 'Human support enabled' : 'Bot only (no human escalation)'}
+                        </p>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                          {wizardData.hasHumanSupport
+                            ? 'Customers can ask to speak with a human agent'
+                            : 'The bot handles all conversations automatically'}
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Escalation message (shown only when enabled) */}
+                    {wizardData.hasHumanSupport && (
+                      <div>
+                        <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2 block">
+                          Escalation Message
+                        </Label>
+                        <p className="text-sm text-slate-500 mb-2">
+                          Message sent to the customer when they request a human agent. You can use{' '}
+                          <code className="bg-slate-100 px-1 rounded text-xs">{'{{nameUser}}'}</code>,{' '}
+                          <code className="bg-slate-100 px-1 rounded text-xs">{'{{agentName}}'}</code>
+                        </p>
+                        <Textarea
+                          value={wizardData.humanSupportInstructions}
+                          onChange={e => setWizardData(d => ({ ...d, humanSupportInstructions: e.target.value }))}
+                          placeholder="Hello {{nameUser}}, I'm connecting you with our agent. They will contact you shortly."
+                          rows={4}
+                          className="w-full text-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {wizardStep === 4 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
@@ -2401,8 +2465,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               {/* Footer with navigation (survey style) */}
               <div className="px-6 py-4 border-t border-slate-100 bg-white">
                 <div className="flex gap-3">
-                  {/* Back: visible for steps 2-4 only (no back once connecting) */}
-                  {wizardStep > 1 && wizardStep < 5 && (
+                  {/* Back: visible for steps 2-5 (no back once done) */}
+                  {wizardStep > 1 && wizardStep < 6 && (
                     <Button
                       type="button"
                       variant="outline"
