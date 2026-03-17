@@ -121,9 +121,10 @@ export class WasenderClientService {
     webhookUrl: string
   ): Promise<{ sessionId: string; apiKey: string }> {
     try {
-      // WasenderAPI requires phone number as digits only (no + prefix), min 7 digits
+      // WasenderAPI expects E.164 format with + prefix (e.g. "+34602119358")
+      // Strip spaces/dashes but keep the leading +
       // Omit entirely if blank or too short — phone_number is optional for QR-based sessions
-      const phoneDigits = phoneNumber?.replace(/[^\d]/g, '') || ''
+      const phoneFormatted = phoneNumber?.replace(/[^\d+]/g, '') || ''
 
       // Webhook URL must be a complete https URL — guard against misconfigured env
       const safeWebhookUrl = webhookUrl.startsWith('http') ? webhookUrl : null
@@ -133,7 +134,7 @@ export class WasenderClientService {
         {
           name: `echatbot-${workspaceId}`,
           account_protection: true,    // required by WasenderAPI (false is treated as missing by their validator)
-          ...(phoneDigits.length >= 7 && { phone_number: phoneDigits }),
+          ...(phoneFormatted.length >= 8 && { phone_number: phoneFormatted }),
           ...(safeWebhookUrl && {
             webhook_url: safeWebhookUrl,
             webhook_enabled: true,
