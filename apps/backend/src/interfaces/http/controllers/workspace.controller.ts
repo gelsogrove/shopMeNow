@@ -4,6 +4,7 @@ import { SubscriptionBillingService } from "../../../application/services/subscr
 import { WorkspaceChecklistService } from "../../../application/services/workspace-checklist.service"
 import { WorkspaceService } from "../../../application/services/workspace.service"
 import { workspaceMemberService } from "../../../application/services/workspace-member.service"
+import { EmailService } from "../../../application/services/email.service"
 import logger from "../../../utils/logger"
 import { storageService } from "../../../services/storage.service"
 import fs from "fs/promises"
@@ -14,11 +15,13 @@ export class WorkspaceController {
   private workspaceService: WorkspaceService
   private billingService: SubscriptionBillingService
   private checklistService: WorkspaceChecklistService
+  private emailService: EmailService
 
   constructor() {
     this.workspaceService = new WorkspaceService()
     this.billingService = new SubscriptionBillingService(prisma)
     this.checklistService = new WorkspaceChecklistService()
+    this.emailService = new EmailService()
   }
 
   /**
@@ -380,6 +383,22 @@ export class WorkspaceController {
       })
 
       logger.info(`✅ Workspace created: ${workspace.id} for user ${userId}`)
+
+      // Send "channel ready" email to the admin — fire-and-forget (non-blocking)
+      const adminEmailTarget = workspaceData.adminEmail || workspaceData.operatorEmail
+      if (adminEmailTarget) {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { firstName: true, lastName: true },
+        })
+        const firstName = user?.firstName || 'there'
+        this.emailService.sendChannelReadyEmail({
+          to: adminEmailTarget,
+          firstName,
+          channelName: workspaceData.name || workspace.name,
+          channelType: workspaceData.channelType || 'WHATSAPP',
+        }).catch((err: Error) => logger.error('sendChannelReadyEmail failed (non-blocking):', err))
+      }
 
       // 🔧 FIX: Serialize domain entity to plain object (getters are NOT included by JSON.stringify)
       // Without this, frontend receives { props: { id, ... } } instead of { id, ... }

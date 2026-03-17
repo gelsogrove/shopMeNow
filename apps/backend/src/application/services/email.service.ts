@@ -1166,4 +1166,82 @@ startxref
       return false
     }
   }
+
+  async sendChannelReadyEmail(data: {
+    to: string
+    firstName: string
+    channelName: string
+    channelType: 'WHATSAPP' | 'WIDGET'
+  }): Promise<boolean> {
+    try {
+      const typeLabel = data.channelType === 'WIDGET' ? 'Web Widget' : 'WhatsApp'
+      const typeIcon = data.channelType === 'WIDGET' ? '🌐' : '💬'
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f4f4f4;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td align="center" style="padding:40px 0;">
+        <table role="presentation" style="width:600px;max-width:95%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:36px 32px 24px;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);border-radius:12px 12px 0 0;text-align:center;">
+              <p style="margin:0 0 8px;font-size:32px;">${typeIcon}</p>
+              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Your channel is live!</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">Hi <strong>${data.firstName}</strong>,</p>
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">
+                Your <strong>${typeLabel}</strong> channel <strong>"${data.channelName}"</strong> has been created and is ready to use. 🚀
+              </p>
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:20px 0;">
+                <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#166534;">Recommended next steps:</p>
+                <ul style="margin:0;padding-left:18px;font-size:14px;color:#15803d;line-height:1.8;">
+                  <li>Configure your AI chatbot personality</li>
+                  <li>Add FAQs to train your bot</li>
+                  ${data.channelType === 'WHATSAPP' ? '<li>Upload your product catalog</li>' : ''}
+                  ${data.channelType === 'WIDGET' ? '<li>Copy the embed code and add it to your website</li>' : ''}
+                </ul>
+              </div>
+              <div style="text-align:center;margin-top:28px;">
+                <a href="${frontendUrl}" style="display:inline-block;padding:14px 36px;background:#22c55e;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;">
+                  Go to Dashboard
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;text-align:center;color:#9ca3af;font-size:12px;border-top:1px solid #f3f4f6;">
+              © eChatbot — All rights reserved
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+      await this.getTransporter().sendMail({
+        from: `"eChatbot" <${process.env.SMTP_FROM || 'noreply@echatbot.ai'}>`,
+        to: data.to,
+        subject: `Your channel "${data.channelName}" is ready! ${typeIcon}`,
+        html: htmlContent,
+      })
+
+      logger.info(`Channel ready email sent to ${data.to} for channel "${data.channelName}"`)
+      return true
+    } catch (error) {
+      logger.error('Failed to send channel ready email:', error)
+      return false
+    }
+  }
 }

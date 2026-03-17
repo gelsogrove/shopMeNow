@@ -2328,10 +2328,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {/* Widget — embed code */}
                     {wizardData.channelType === 'WIDGET' && (
                       <>
-                        {/* Full-bleed step image (survey style) */}
-                        <div className="-mx-6 -mt-6 mb-6">
-                          <img src="/surver-widget.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                        </div>
                         <div>
                           <div className="flex items-center gap-3 mb-2">
                             <span className="text-4xl">🌐</span>
@@ -2372,10 +2368,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 6 && (
                   <div className="space-y-6">
-                    {/* Full-bleed step image (survey style) */}
-                    <div className="-mx-6 -mt-6 mb-6">
-                      <img src="/survey.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
-                    </div>
                     <div className="text-center py-2">
                       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <PartyPopper className="w-8 h-8 text-green-600" />
