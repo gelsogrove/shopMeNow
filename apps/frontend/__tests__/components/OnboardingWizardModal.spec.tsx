@@ -462,7 +462,6 @@ describe('OnboardingWizardModal', () => {
       mockGetWasenderStatus.mockResolvedValue({ wasenderSessionStatus: 'connected', wasenderQrString: null })
 
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
       await fillAndSubmitRegistration(user)
       await waitFor(() => screen.getByLabelText(/code.*6 digits/i))
@@ -502,7 +501,6 @@ describe('OnboardingWizardModal', () => {
       mockGetWasenderStatus.mockResolvedValue({ wasenderSessionStatus: 'connected', wasenderQrString: null })
 
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
       await fillAndSubmitRegistration(user)
       await waitFor(() => screen.getByLabelText(/code.*6 digits/i))
