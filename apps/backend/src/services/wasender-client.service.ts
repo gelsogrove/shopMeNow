@@ -183,6 +183,41 @@ export class WasenderClientService {
   }
 
   /**
+   * Update webhook URL and events on an existing session.
+   * CRITICAL: call this when reusing an existing session to ensure the webhook
+   * is set even if it was missing/wrong from a previous initialization.
+   *
+   * @param sessionId  Numeric session ID (as string)
+   * @param webhookUrl Full https URL for webhook events
+   */
+  async updateSessionWebhook(sessionId: string, webhookUrl: string): Promise<void> {
+    try {
+      const safeWebhookUrl = webhookUrl.startsWith('http') ? webhookUrl : null
+      if (!safeWebhookUrl) {
+        logger.warn('[Wasender] Skipping webhook update — invalid URL:', { webhookUrl })
+        return
+      }
+
+      await this.managementClient.patch(`/api/whatsapp-sessions/${sessionId}`, {
+        webhook_url: safeWebhookUrl,
+        webhook_enabled: true,
+        webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
+      })
+
+      logger.info('[Wasender] Webhook updated on existing session:', {
+        sessionId,
+        webhookUrl,
+      })
+    } catch (error: any) {
+      // Non-fatal: log but don't throw — session still works, just webhook may miss events
+      logger.error('[Wasender] Failed to update session webhook:', {
+        sessionId,
+        error: error.response?.data || error.message,
+      })
+    }
+  }
+
+  /**
    * Initiate connection — MUST be called after createSession().
    * Returns QR string directly if phone needs scan.
    *

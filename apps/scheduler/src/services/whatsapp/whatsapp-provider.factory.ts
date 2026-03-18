@@ -7,21 +7,21 @@
  * @critical ALWAYS reads workspace.whatsappProvider to determine which provider to use
  */
 
-import { Workspace } from '@echatbot/database'
 import logger from '../../utils/logger'
 import { WhatsAppProvider } from './whatsapp-provider.interface'
 import { MetaWhatsAppProvider } from './meta-whatsapp-provider'
 import { UltraMsgWhatsAppProvider } from './ultramsg-whatsapp-provider'
+import { WasenderWhatsAppProvider } from './wasender-whatsapp-provider'
 
 export class WhatsAppProviderFactory {
   /**
    * Create WhatsApp provider based on workspace configuration
-   * 
+   *
    * @param workspace - Workspace with provider configuration
    * @returns Configured WhatsApp provider instance
    * @throws Error if provider is not configured properly
    */
-  static create(workspace: Workspace): WhatsAppProvider {
+  static create(workspace: any): WhatsAppProvider {
     const provider = workspace.whatsappProvider || 'meta'
 
     logger.info('🏭 WhatsAppProviderFactory: Creating provider', {
@@ -29,6 +29,26 @@ export class WhatsAppProviderFactory {
       workspaceName: workspace.name,
       provider,
     })
+
+    // WasenderAPI Provider
+    if (provider === 'wasender') {
+      if (!workspace.wasenderApiKey) {
+        const error = 'WasenderAPI provider selected but session API key not configured'
+        logger.error('❌ WhatsAppProviderFactory: Configuration error', {
+          workspaceId: workspace.id,
+          error,
+        })
+        throw new Error(error)
+      }
+
+      logger.info('✅ WhatsAppProviderFactory: Creating WasenderAPI provider', {
+        workspaceId: workspace.id,
+      })
+
+      return new WasenderWhatsAppProvider({
+        sessionApiKey: workspace.wasenderApiKey,
+      })
+    }
 
     // UltraMsg Provider
     if (provider === 'ultramsg') {
@@ -41,7 +61,7 @@ export class WhatsAppProviderFactory {
         throw new Error(error)
       }
 
-      const ultraMsgApiUrl = (workspace as any).ultraMsgApiUrl
+      const ultraMsgApiUrl = workspace.ultraMsgApiUrl
       logger.info('✅ WhatsAppProviderFactory: Creating UltraMsg provider', {
         workspaceId: workspace.id,
         instanceId: workspace.ultraMsgInstanceId,
@@ -79,8 +99,12 @@ export class WhatsAppProviderFactory {
   /**
    * Check if workspace has a WhatsApp provider configured
    */
-  static isConfigured(workspace: Workspace): boolean {
+  static isConfigured(workspace: any): boolean {
     const provider = workspace.whatsappProvider || 'meta'
+
+    if (provider === 'wasender') {
+      return !!workspace.wasenderApiKey
+    }
 
     if (provider === 'ultramsg') {
       return !!(workspace.ultraMsgInstanceId && workspace.ultraMsgToken)
@@ -93,8 +117,9 @@ export class WhatsAppProviderFactory {
   /**
    * Get provider name for display
    */
-  static getProviderDisplayName(workspace: Workspace): string {
+  static getProviderDisplayName(workspace: any): string {
     const provider = workspace.whatsappProvider || 'meta'
+    if (provider === 'wasender') return 'WasenderAPI'
     return provider === 'ultramsg' ? 'UltraMsg' : 'Meta Business API'
   }
 }
