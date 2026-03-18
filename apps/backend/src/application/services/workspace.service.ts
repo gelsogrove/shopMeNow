@@ -1173,7 +1173,7 @@ For privacy inquiries, please contact our support team.`
     let apiKey: string
 
     const createNewSession = async () => {
-      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
       const result = await this.wasenderClient.createSession(
         workspaceId,
         effectivePhone,
@@ -1195,7 +1195,7 @@ For privacy inquiries, please contact our support team.`
 
       // CRITICAL: Always re-set webhook URL when reusing — it may be missing or stale
       // (e.g. session created manually, or APP_WEBHOOK_BASE_URL changed)
-      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
       await this.wasenderClient.updateSessionWebhook(sessionId, webhookUrl)
     } else {
       // No session → create new one (webhook already set inside createNewSession)
@@ -1372,7 +1372,7 @@ For privacy inquiries, please contact our support team.`
       // When session is confirmed connected: also fix webhook URL automatically.
       // This avoids forcing the user to click "Connect WhatsApp" just to register the webhook.
       if (isConnected) {
-        const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+        const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
         await this.wasenderClient.updateSessionWebhook(workspace.wasenderSessionId, webhookUrl)
       }
 

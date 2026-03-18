@@ -2281,6 +2281,7 @@ export class ChatEngineService {
             input,
             workspaceConfig,
             conversationId,
+            chatSessionId: chatSession?.id,
             startTime,
             debugSteps,
           })

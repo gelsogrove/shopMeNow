@@ -198,7 +198,7 @@ export class WasenderClientService {
         return
       }
 
-      await this.managementClient.patch(`/api/whatsapp-sessions/${sessionId}`, {
+      await this.managementClient.put(`/api/whatsapp-sessions/${sessionId}`, {
         webhook_url: safeWebhookUrl,
         webhook_enabled: true,
         webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
