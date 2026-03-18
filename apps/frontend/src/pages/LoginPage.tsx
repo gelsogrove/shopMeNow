@@ -1,3 +1,4 @@
+import { OnboardingWizardModal } from "@/components/OnboardingWizardModal"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { PricingPlans } from "@/components/landing/PricingPlans"
@@ -113,6 +114,7 @@ export function LoginPage() {
   const [error, setError] = useState("")
   const [isValidatingSession, setIsValidatingSession] = useState(true)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false)
   
   // 👤 Logged-in user state (for showing avatar instead of login/register buttons)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -475,7 +477,12 @@ export function LoginPage() {
         return
       }
       
-      logger.info('🎯 [AUTO-OPEN] Detected register mode - switching to register form')
+      logger.info('🎯 [AUTO-OPEN] Detected register mode - opening onboarding wizard')
+      // Open wizard for fresh registrations; use old form only for invite flows
+      if (!inviteParam) {
+        setShowOnboardingWizard(true)
+        return
+      }
       setActiveTab('register')
       
       // Pre-fill form from invite data if available
@@ -1270,13 +1277,7 @@ export function LoginPage() {
                     className="bg-green-600 hover:bg-green-700 text-white font-medium text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-sm transition-all hover:shadow-md"
                     onClick={() => {
                       if (isAdminBypass || !workingInProgress) {
-                        setActiveTab('register')
-                        // Scroll to register form and focus first input
-                        setTimeout(() => {
-                          const registerSection = document.querySelector('[data-form="register"]')
-                          registerSection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                          setTimeout(() => registerEmailInputRef.current?.focus(), 300)
-                        }, 100)
+                        setShowOnboardingWizard(true)
                       } else {
                         setWipFeature('register')
                         setShowWIPModal(true)
@@ -1650,10 +1651,7 @@ export function LoginPage() {
                                 setShowWIPModal(true)
                                 return
                               }
-
-                              storage.clearAppState()
-                              setError("")
-                              setActiveTab("register")
+                              setShowOnboardingWizard(true)
                             }}
                             className={`text-green-600 hover:underline font-semibold ${(isRegisterDisabled && !isAdminBypass) ? "opacity-50 cursor-not-allowed" : ""}`}
                             aria-disabled={isRegisterDisabled && !isAdminBypass}
@@ -2088,10 +2086,7 @@ export function LoginPage() {
               setShowWIPModal(true)
               return
             }
-            setActiveTab('register')
-            setTimeout(() => {
-              document.getElementById("firstName")?.focus()
-            }, 0)
+            setShowOnboardingWizard(true)
           }}
           disableTrial={isRegisterDisabled}
         />
@@ -2759,12 +2754,7 @@ export function LoginPage() {
           {/* CTA Button */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button
-              onClick={() => {
-                setActiveTab('register')
-                setTimeout(() => {
-                  document.getElementById("firstName")?.focus()
-                }, 0)
-              }}
+              onClick={() => setShowOnboardingWizard(true)}
               className="group px-10 py-5 bg-white text-green-600 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-white/50 hover:scale-105 transition-all duration-300 flex items-center gap-3"
             >
               <span>{t("cta.button.start")}</span>
@@ -2813,6 +2803,12 @@ export function LoginPage() {
         isOpen={showWIPModal}
         feature={wipFeature}
         onClose={() => setShowWIPModal(false)}
+      />
+
+      {/* Onboarding Wizard - full guided registration flow */}
+      <OnboardingWizardModal
+        open={showOnboardingWizard}
+        onClose={() => setShowOnboardingWizard(false)}
       />
 
       </div>
