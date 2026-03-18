@@ -358,14 +358,6 @@ export async function pushCampaignsJob(): Promise<void> {
               errorMessage: (error as Error).message,
             },
           })
-          await prisma.pushCampaignRecipient.update({
-            where: { id: recipient.id },
-            data: {
-              status: 'FAILED',
-              errorCode: 'SEND_ERROR',
-              errorMessage: (error as Error).message,
-            },
-          })
         }
       }
 

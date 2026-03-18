@@ -91,6 +91,11 @@ interface WorkspaceConfig {
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
+/** Invalidate cached workspace config — call after workspace settings are updated */
+export function invalidateWorkspaceConfig(workspaceId: string): void {
+  workspaceConfigCache.delete(workspaceId)
+}
+
 const formatCartPrice = (value?: number | null) =>
   formatRoundedCurrency(value ?? 0, {
     minimumFractionDigits: 2,
@@ -744,7 +749,7 @@ export class ChatEngineService {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
           reason: requestIntent.reason || input.message,
-          channel: "widget",
+          channel: input.channel || "whatsapp",
         })
 
         // 🔧 FIX: Use the message returned by contactOperator (with variables replaced)
@@ -969,18 +974,26 @@ export class ChatEngineService {
   /**
    * Deterministically append registration reminder (bypasses LLM obedience).
    * Avoids duplicates if the placeholder is already present.
+   * Uses customerLanguage to provide the reminder in the correct language.
    */
   private appendRegistrationReminder(
     message: string,
     registrationPromptLevel?: number,
-    debugSteps?: DebugStep[]
+    debugSteps?: DebugStep[],
+    customerLanguage?: string
   ): string {
     if (!registrationPromptLevel || registrationPromptLevel <= 0) {
       return message
     }
 
-    const reminder =
-      "Se vuoi ricevere le nostre offerte o notizie registrati a questo link [LINK_REGISTRATION]."
+    const lang = (customerLanguage || "it").toLowerCase().split("-")[0]
+    const REMINDER_BY_LANG: Record<string, string> = {
+      it: "Se vuoi ricevere le nostre offerte o notizie registrati a questo link [LINK_REGISTRATION].",
+      en: "To receive our offers and news, register at this link [LINK_REGISTRATION].",
+      es: "Para recibir nuestras ofertas y novedades, regístrate en este enlace [LINK_REGISTRATION].",
+      pt: "Para receber nossas ofertas e novidades, registre-se neste link [LINK_REGISTRATION].",
+    }
+    const reminder = REMINDER_BY_LANG[lang] ?? REMINDER_BY_LANG["en"]
 
     if (message.includes("[LINK_REGISTRATION]")) {
       return message
@@ -1590,7 +1603,8 @@ export class ChatEngineService {
       let finalMessage = this.appendRegistrationReminder(
         result.message,
         input.registrationPromptLevel,
-        debugSteps
+        debugSteps,
+        input.customerLanguage
       )
       let translationTokens = 0
       let safetyTokens = 0
@@ -5694,7 +5708,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     finalMessage = this.appendRegistrationReminder(
       finalMessage,
       input.registrationPromptLevel,
-      debugSteps
+      debugSteps,
+      input.customerLanguage
     )
 
     try {

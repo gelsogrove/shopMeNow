@@ -167,6 +167,7 @@ async function checkCustomerBlacklist(
     const customer = await prisma.customers.findFirst({
       where: {
         phone: phoneNumber.replace(/\s+/g, ""),
+        workspaceId,
         isActive: true,
       },
       select: {

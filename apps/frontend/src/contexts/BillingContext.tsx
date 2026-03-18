@@ -240,6 +240,15 @@ export const BillingProvider: React.FC<BillingProviderProps> = ({ children }) =>
     }
   }, [planType, isLoadingBalance, refreshBalance])
 
+  // Periodic polling every 30s to keep balance up-to-date
+  useEffect(() => {
+    if (!isAuthenticated()) return
+    const interval = setInterval(() => {
+      refreshBalance()
+    }, 30_000)
+    return () => clearInterval(interval)
+  }, [refreshBalance])
+
   const value: BillingContextState = {
     creditBalance,
     isLowBalance,

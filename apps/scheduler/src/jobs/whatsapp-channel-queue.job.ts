@@ -529,7 +529,9 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             (!message.conversationMessageId && !message.pushCampaignId) ||
             message.skipSecurityCheck === true
 
-          const skipBilling = process.env.NODE_ENV === 'test' || isSystemNotification
+          // Push messages are pre-billed when enqueued by push-campaigns.job.ts
+          // Skip credit check here to avoid double billing
+          const skipBilling = process.env.NODE_ENV === 'test' || isSystemNotification || isPushMessage
           if (!skipBilling) {
             const hasCredit = await billingService.hasOwnerCredit(
               workspace.id,
@@ -563,12 +565,12 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             continue
           }
 
-          // 🔒 SECURITY CHECK: Skip for system/operator notifications.
-          // Two cases bypass security:
-          //  1. No conversationMessageId (old system notifications before relay tracking)
-          //  2. skipSecurityCheck=true (operator replies relayed back to customers — safe by design)
-          const securityCheck = isSystemNotification
-            ? { isSafe: true as const, debugModel: 'bypass/system-notification', debugPrompt: 'Skipped: system-generated operator notification' }
+          // 🔒 SECURITY CHECK: Skip for system/operator notifications and widget messages.
+          // Cases bypassed:
+          //  1. isSystemNotification: system-generated operator notification
+          //  2. message.channel === 'widget': ChatEngineService already ran SecurityAgent on the response
+          const securityCheck = (isSystemNotification || message.channel === 'widget')
+            ? { isSafe: true as const, debugModel: 'bypass/system-notification', debugPrompt: isSystemNotification ? 'Skipped: system-generated operator notification' : 'Skipped: widget channel already checked by ChatEngine' }
             : await securityAgent.validateMessage({
                 workspaceId: workspace.id,
                 messageContent: message.messageContent,
@@ -642,9 +644,10 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             }
 
             // 🔧 CRITICAL FIX #2: DB-backed throttle check (persistent across restarts)
-            // Check when we last sent a message to this phone number using WhatsAppQueue history
+            // Scoped to this workspace only — prevents cross-workspace throttle interference
             const lastSentMessage = await prisma.whatsAppQueue.findFirst({
               where: {
+                workspaceId: workspace.id,
                 phoneNumber: message.phoneNumber,
                 status: 'sent',
               },
@@ -682,15 +685,11 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
             await prisma.whatsAppQueue.update({
               where: { id: message.id },
-              data: { 
+              data: {
                 status: 'sent',
                 deliveredAt: new Date(),
               },
             })
-            // Deduct push billing on successful send (non-test path)
-            if (isPushMessage) {
-              await billingService.deductMessageCredit(workspace.id, message.id, 'PUSH')
-            }
             deliveryNote = `✅ Message delivered to ${message.phoneNumber}${sendResult.messageId ? ` (waId: ${sendResult.messageId})` : ''}`
           }
           
@@ -727,28 +726,23 @@ export async function whatsappChannelQueueJob(): Promise<void> {
           }
 
           if (!isWipMessage) {
-            // 💰 BILLING: Deduct credit for sent message (sequential to avoid double-spend)
-            const deductResult = await billingService.deductMessageCredit(
-              workspace.id,
-              message.id,
-              isPushMessage ? 'PUSH' : 'MESSAGE'
-            )
-            if (deductResult.success) {
-              logger.info(`[WhatsApp Queue] 💰 Credit deducted for message ${message.id}: €${deductResult.amountDeducted?.toFixed(2)} → Balance: €${deductResult.newBalance?.toFixed(2)}`)
-              if (isPushMessage && deductResult.amountDeducted !== undefined) {
-                await prisma.pushCampaignRecipient.updateMany({
-                  where: { messageId: message.id },
-                  data: {
-                    priceCharged: new Prisma.Decimal(deductResult.amountDeducted.toFixed(2)),
-                    sentAt: new Date(),
-                    status: 'SENT',
-                  },
-                })
-              }
+            if (isPushMessage) {
+              // Push messages are pre-billed at campaign enqueue time (push-campaigns.job.ts)
+              // Only update delivery timestamp — do NOT deduct credit again
+              await prisma.pushCampaignRecipient.updateMany({
+                where: { messageId: message.id },
+                data: { sentAt: new Date() },
+              })
             } else {
-              await markQueue('error', `Billing failed: ${deductResult.error}`)
-              workspaceErrors++
-              continue
+              // 💰 BILLING: Deduct credit for regular sent message
+              const deductResult = await billingService.deductMessageCredit(workspace.id, message.id, 'MESSAGE')
+              if (deductResult.success) {
+                logger.info(`[WhatsApp Queue] 💰 Credit deducted for message ${message.id}: €${deductResult.amountDeducted?.toFixed(2)} → Balance: €${deductResult.newBalance?.toFixed(2)}`)
+              } else {
+                // Message was already delivered to WhatsApp — do NOT mark as error
+                // to avoid false-negative analytics and prevent incorrect retries
+                logger.warn(`[WhatsApp Queue] ⚠️ Billing failed after delivery for message ${message.id}: ${deductResult.error}. Message was delivered; billing must be reconciled manually.`)
+              }
             }
           }
 

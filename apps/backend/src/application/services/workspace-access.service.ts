@@ -26,6 +26,7 @@ export const PAYMENT_FAILURE_BLOCK_THRESHOLD = 3
 
 export type BlockReason =
   | "PAUSED"
+  | "CANCELLED"
   | "PAYMENT_FAILED"
   | "CREDIT_EXHAUSTED"
   | "DEBUG_MODE"
@@ -35,7 +36,6 @@ export type BlockReason =
   | "NO_OWNER"
   | "OWNER_NOT_FOUND"
   | "OWNER_DELETED"
-  // | "CANCELLED" // TODO: Add when CANCELLED status is added to schema
 
 export interface AccessCheckResult {
   canProcess: boolean
@@ -182,10 +182,22 @@ export class WorkspaceAccessService {
         }
       }
 
-      // NOTE: CANCELLED status not in current schema. When added, uncomment:
-      // if (owner.subscriptionStatus === "CANCELLED") {
-      //   return { canProcess: false, blockReason: "CANCELLED", ... }
-      // }
+      // 3b. Check owner subscription status - CANCELLED
+      if (subscriptionStatus === "CANCELLED") {
+        logger.info(
+          `[ACCESS] 🚫 Owner subscription cancelled for workspace: ${workspace.name} (owner: ${workspace.ownerId})`
+        )
+        return {
+          canProcess: false,
+          blockReason: "CANCELLED",
+          message: "Subscription has been cancelled. Please resubscribe to continue using the service.",
+          details: {
+            subscriptionStatus: owner.subscriptionStatus,
+            creditBalance,
+            ownerId: workspace.ownerId,
+          },
+        }
+      }
 
       // 4. Check owner credit balance (allow negative up to -€10)
       if (creditBalance < CREDIT_MIN_THRESHOLD) {
@@ -276,9 +288,9 @@ export class WorkspaceAccessService {
     const result = await this.canProcessMessages(workspaceId, true) // skip channel check
     return (
       result.blockReason === "PAUSED" ||
+      result.blockReason === "CANCELLED" ||
       result.blockReason === "PAYMENT_FAILED" ||
       result.blockReason === "CREDIT_EXHAUSTED"
-      // || result.blockReason === "CANCELLED" // TODO: Add when schema supports it
     )
   }
 
@@ -291,7 +303,7 @@ export class WorkspaceAccessService {
    * @returns Detailed access status
    */
   async getAccessStatus(workspaceId: string): Promise<{
-    status: "active" | "paused" | "payment_failed" | "credit_exhausted" | "wip" | "no_owner"
+    status: "active" | "paused" | "cancelled" | "payment_failed" | "credit_exhausted" | "wip" | "no_owner"
     canProcessMessages: boolean
     creditBalance: number
     subscriptionStatus: SubscriptionStatus | null
@@ -323,12 +335,14 @@ export class WorkspaceAccessService {
     const creditBalance = workspace.owner ? Number(workspace.owner.creditBalance) : 0
     const subscriptionStatus = workspace.owner?.subscriptionStatus || null
 
-    let status: "active" | "paused" | "payment_failed" | "credit_exhausted" | "wip" | "no_owner" = "active"
+    let status: "active" | "paused" | "cancelled" | "payment_failed" | "credit_exhausted" | "wip" | "no_owner" = "active"
 
     if (accessResult.blockReason === "NO_OWNER") {
       status = "no_owner"
     } else if (accessResult.blockReason === "PAUSED") {
       status = "paused"
+    } else if (accessResult.blockReason === "CANCELLED") {
+      status = "cancelled"
     } else if (accessResult.blockReason === "PAYMENT_FAILED") {
       status = "payment_failed"
     } else if (accessResult.blockReason === "CREDIT_EXHAUSTED") {
@@ -385,6 +399,19 @@ export class WorkspaceAccessService {
           canProcess: false,
           blockReason: "PAUSED",
           message: "Subscription is paused. Resume to continue using the service.",
+          details: {
+            subscriptionStatus: owner.subscriptionStatus,
+            creditBalance,
+            ownerId: owner.id,
+          },
+        }
+      }
+
+      if (owner.subscriptionStatus === "CANCELLED") {
+        return {
+          canProcess: false,
+          blockReason: "CANCELLED",
+          message: "Subscription has been cancelled. Please resubscribe to continue using the service.",
           details: {
             subscriptionStatus: owner.subscriptionStatus,
             creditBalance,
@@ -468,7 +495,7 @@ export class WorkspaceAccessService {
    * @returns Detailed owner access status
    */
   async getOwnerAccessStatus(userId: string): Promise<{
-    status: "active" | "paused" | "payment_failed" | "credit_exhausted"
+    status: "active" | "paused" | "cancelled" | "payment_failed" | "credit_exhausted"
     canProcessMessages: boolean
     creditBalance: number
     subscriptionStatus: SubscriptionStatus | null
@@ -489,10 +516,12 @@ export class WorkspaceAccessService {
     const accessResult = await this.canOwnerProcess(userId)
     const creditBalance = Number(owner.creditBalance)
 
-    let status: "active" | "paused" | "payment_failed" | "credit_exhausted" = "active"
+    let status: "active" | "paused" | "cancelled" | "payment_failed" | "credit_exhausted" = "active"
 
     if (accessResult.blockReason === "PAUSED") {
       status = "paused"
+    } else if (accessResult.blockReason === "CANCELLED") {
+      status = "cancelled"
     } else if (accessResult.blockReason === "PAYMENT_FAILED") {
       status = "payment_failed"
     } else if (accessResult.blockReason === "CREDIT_EXHAUSTED") {

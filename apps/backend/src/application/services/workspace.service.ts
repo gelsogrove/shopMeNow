@@ -12,6 +12,7 @@ import logger from "../../utils/logger"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
 import { WasenderClientService } from "../../services/wasender-client.service"
+import { invalidateWorkspaceConfig } from "../chat-engine/chat-engine.service"
 
 export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
@@ -1023,7 +1024,9 @@ For privacy inquiries, please contact our support team.`
         // If NOT changing channel toggles, skip limit check (allow settings edit)
         if (!isChangingWhatsapp && !isChangingWidget) {
           logger.info(`✅ Allowing settings edit for FREE_TRIAL user (not changing channel toggles)`)
-          return this.repository.update(id, data)
+          const updated = await this.repository.update(id, data)
+          invalidateWorkspaceConfig(id)
+          return updated
         }
 
         // User IS trying to change channel toggles - check limits
@@ -1060,7 +1063,9 @@ For privacy inquiries, please contact our support team.`
       }
     }
 
-    return this.repository.update(id, data)
+    const updated = await this.repository.update(id, data)
+    invalidateWorkspaceConfig(id)
+    return updated
   }
 
   /**
@@ -1187,8 +1192,13 @@ For privacy inquiries, please contact our support team.`
         sessionId,
         previousStatus: existingWorkspace.wasenderSessionStatus,
       })
+
+      // CRITICAL: Always re-set webhook URL when reusing — it may be missing or stale
+      // (e.g. session created manually, or APP_WEBHOOK_BASE_URL changed)
+      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+      await this.wasenderClient.updateSessionWebhook(sessionId, webhookUrl)
     } else {
-      // No session → create new one
+      // No session → create new one (webhook already set inside createNewSession)
       const result = await createNewSession()
       sessionId = result.sessionId
       apiKey = result.apiKey
@@ -1358,6 +1368,13 @@ For privacy inquiries, please contact our support team.`
       const actualStatus = await this.wasenderClient.getSessionStatus(workspace.wasenderSessionId)
       const normalized = actualStatus.toLowerCase()
       const isConnected = normalized === 'connected'
+
+      // When session is confirmed connected: also fix webhook URL automatically.
+      // This avoids forcing the user to click "Connect WhatsApp" just to register the webhook.
+      if (isConnected) {
+        const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
+        await this.wasenderClient.updateSessionWebhook(workspace.wasenderSessionId, webhookUrl)
+      }
 
       const updated = await this.prisma.workspace.update({
         where: { id: workspaceId },

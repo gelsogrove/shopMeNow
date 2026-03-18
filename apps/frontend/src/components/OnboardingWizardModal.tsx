@@ -11,7 +11,7 @@
  * when not explicitly collected here (sellsProductsAndServices, hasHumanSupport, etc.)
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import QRCode from 'react-qr-code'
@@ -137,6 +137,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const [wasenderStatus, setWasenderStatus] = useState<'idle' | 'pending' | 'need_scan' | 'connected' | 'failed'>('idle')
   const [isRegeneratingQr, setIsRegeneratingQr] = useState(false)
   const [creatingPhase, setCreatingPhase] = useState(0)
+  // Guard against React StrictMode double-invocation of the creating effect
+  const isCreatingRef = useRef(false)
 
   // ── Reset on open ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -148,11 +150,14 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     setPendingUserId(''); setTotpQrCode(''); setTotpCode('')
     setCreatedWorkspaceId(''); setQrString(''); setQrAge(0)
     setWasenderStatus('idle'); setCreatingPhase(0); setIsLoading(false)
+    isCreatingRef.current = false
   }, [open])
 
   // ── Auto-create workspace when entering 'creating' step ───────────────────────
   useEffect(() => {
     if (step !== 'creating') return
+    if (isCreatingRef.current) return
+    isCreatingRef.current = true
 
     const run = async () => {
       try {
