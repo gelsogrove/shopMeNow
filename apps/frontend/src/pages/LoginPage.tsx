@@ -2472,13 +2472,13 @@ export function LoginPage() {
                     <div className="flex flex-wrap gap-3 items-center justify-center lg:justify-start">
                       <Link
                         to="/team-collaboration"
-                        className="w-full sm:w-[220px] sm:h-[48px] inline-flex justify-center items-center px-6 py-3 text-base font-semibold rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                        className="w-full sm:w-[220px] sm:h-[48px] inline-flex justify-center items-center px-6 py-3 text-base font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                       >
                         {t("common.viewMore")}
                       </Link>
                       <Link
                         to="/team-collaboration"
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-purple-700 hover:text-purple-900 hover:underline transition-colors"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-900 hover:underline transition-colors"
                       >
                         {t("common.viewMore")}
                       </Link>
