@@ -14,8 +14,9 @@ import { useNavigate } from 'react-router-dom'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import QRCode from 'react-qr-code'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { DialogTitle, DialogDescription, DialogPortal } from '@/components/ui/dialog'
+import { Dialog } from '@/components/ui/dialog'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -764,7 +765,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v && !isTransitionStep) onClose() }}>
-      <DialogContent className="fixed inset-0 w-full h-full max-w-none m-0 rounded-none p-0 border-0 bg-transparent shadow-none overflow-y-auto">
+      <DialogPortal>
+        {/* Transparent overlay — background is handled by our own div */}
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50" />
+        <DialogPrimitive.Content className="fixed inset-0 z-50 overflow-y-auto outline-none">
         <DialogTitle className="sr-only">eChatbot Setup</DialogTitle>
         <DialogDescription className="sr-only">Multi-step onboarding wizard to configure your workspace</DialogDescription>
 
@@ -926,7 +930,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
             </div>
           </div>
         </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   )
 }
