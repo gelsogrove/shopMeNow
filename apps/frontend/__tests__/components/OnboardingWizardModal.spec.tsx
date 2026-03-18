@@ -9,6 +9,9 @@
  * - Workspace + Wasender auto-creation after authentication
  * - WhatsApp QR polling → done
  * - Done: hard-redirects to /workspace-selection
+ *
+ * NOTE: Component flow (no intro step):
+ *   industry → business → workspace-type → channel-type → human-support → auth → totp → creating → [qr-scan] → done
  */
 
 import { render, screen, waitFor } from '@testing-library/react'
@@ -96,30 +99,32 @@ const renderWizard = (onClose = vi.fn()) =>
   )
 
 /**
- * Navigates through intro → industry (auto-advance) → business name → workspace-type (auto-advance)
- * ending on the channel (phone) step. Reflects new survey-style flow.
+ * Navigates through:
+ *   industry (auto-advance) → business name → workspace-type (auto-advance) →
+ *   channel-type (auto-advance, picks "WhatsApp only") → human-support (auto-advance)
+ * Ends on the auth step where first name / email fields are visible.
+ *
+ * Current flow: NO intro step, NO phone number step.
+ * Channel type and human-support are survey tiles that auto-advance on click.
  */
-async function goToChannel(user: ReturnType<typeof userEvent.setup>, name = 'Test Shop') {
-  // STEP: intro — click "Start setup" CTA
-  await user.click(screen.getByRole('button', { name: /start setup/i }))
-  // STEP: industry — click any tile (auto-advances to business after 250ms)
+async function goToAuth(user: ReturnType<typeof userEvent.setup>, name = 'Test Shop') {
+  // STEP: industry — first step shown on open, click any tile (auto-advances to business after 250ms)
   await waitFor(() => screen.getByText(/what industry/i))
   await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('Retail'))!)
   // STEP: business — type name and click Next
   await waitFor(() => screen.getByPlaceholderText(/e\.g\. Roma Pizza/i))
   await user.type(screen.getByPlaceholderText(/e\.g\. Roma Pizza/i), name)
   await user.click(screen.getByRole('button', { name: /next/i }))
-  // STEP: workspace-type — click any tile (auto-advances to channel after 250ms)
+  // STEP: workspace-type — click any tile (auto-advances to channel-type after 250ms)
   await waitFor(() => screen.getByText(/how will you use/i))
   await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('Sell products'))!)
-  // Now on channel step
-  await waitFor(() => screen.getByLabelText(/phone number/i))
-}
-
-/** Fills the phone step and clicks Next to reach auth step */
-async function goToAuth(user: ReturnType<typeof userEvent.setup>, phone = '+393331234567') {
-  await user.type(screen.getByLabelText(/phone number/i), phone)
-  await user.click(screen.getByRole('button', { name: /next/i }))
+  // STEP: channel-type — click "WhatsApp only" tile (auto-advances to human-support after 250ms)
+  await waitFor(() => screen.getByText(/how do you want to receive/i))
+  await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('WhatsApp only'))!)
+  // STEP: human-support — click "Yes" tile (auto-advances to auth after 250ms)
+  await waitFor(() => screen.getByText(/human support/i))
+  await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('Yes'))!)
+  // Now on auth step
   await waitFor(() => screen.getByLabelText(/first name/i))
 }
 
@@ -139,92 +144,52 @@ describe('OnboardingWizardModal', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => vi.resetAllMocks())
 
-  // ── Step 1: Intro ─────────────────────────────────────────────────────────
+  // ── Step 1: Industry (first step — no intro) ─────────────────────────────
 
-  describe('Step 1 — Intro', () => {
-    it('DISPLAY: shows welcome title and start CTA on open', () => {
-      // RULE: first screen is the welcome intro — no data fields visible yet
+  describe('Step 1 — Industry', () => {
+    it('DISPLAY: shows industry selection as the first step on open', () => {
+      // RULE: first screen is industry selection — no intro step
       renderWizard()
-      expect(screen.getByText(/welcome to echatbot/i)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /start setup/i })).toBeInTheDocument()
+      expect(screen.getByText(/what industry/i)).toBeInTheDocument()
     })
 
-    it('NAVIGATION: clicking Start Setup advances to industry selection', async () => {
-      // RULE: intro → industry on CTA click
-      const user = userEvent.setup()
-      renderWizard()
-      await user.click(screen.getByRole('button', { name: /start setup/i }))
-      await waitFor(() => expect(screen.getByText(/what industry/i)).toBeInTheDocument())
-    })
-  })
-
-  // ── Step 2: Industry + Business ──────────────────────────────────────────
-
-  describe('Step 2 — Industry & Business', () => {
-    it('INDUSTRY GRID: renders all 14 industry options', async () => {
+    it('INDUSTRY GRID: renders all 14 industry options', () => {
       // RULE: expanded industry list (14 sectors) to match survey page
-      const user = userEvent.setup()
       renderWizard()
-      await user.click(screen.getByRole('button', { name: /start setup/i }))
-      await waitFor(() => screen.getByText(/what industry/i))
       const industries = ['Retail', 'Restaurant', 'Healthcare', 'Beauty', 'Education',
         'Tourism', 'Fashion', 'Fitness', 'Transport', 'Technology', 'Real Estate', 'Finance', 'Legal', 'Other']
       industries.forEach(ind => expect(screen.getByText(ind)).toBeInTheDocument())
     })
+  })
 
+  // ── Step 2: Business ─────────────────────────────────────────────────────
+
+  describe('Step 2 — Business', () => {
     it('VALIDATION: shows error and stays on business step when name is empty', async () => {
       // RULE: businessName is mandatory — wizard must not advance without it
       const user = userEvent.setup()
       renderWizard()
-      await user.click(screen.getByRole('button', { name: /start setup/i }))
+      // Click industry tile to advance to business step
       await waitFor(() => screen.getByText(/what industry/i))
       await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('Retail'))!)
       await waitFor(() => screen.getByPlaceholderText(/e\.g\. Roma Pizza/i))
       // Click Next without typing a name
       await user.click(screen.getByRole('button', { name: /next/i }))
       expect(screen.getByText(/required field/i)).toBeInTheDocument()
-      // Still on business step — phone number field not visible yet
-      expect(screen.queryByLabelText(/phone number/i)).not.toBeInTheDocument()
     })
 
-    it('NAVIGATION: advances to channel step after completing intro → industry → business → workspace-type', async () => {
-      // RULE: full pre-auth flow completes on channel step
+    it('NAVIGATION: advances to auth step after completing industry → business → workspace-type → channel-type → human-support', async () => {
+      // RULE: full pre-auth flow completes on auth step
       const user = userEvent.setup()
       renderWizard()
-      await goToChannel(user)
-      expect(screen.getByLabelText(/phone number/i)).toBeInTheDocument()
-    })
-  })
-
-  // ── Step 3: Channel ───────────────────────────────────────────────────────
-
-  describe('Step 3 — Channel', () => {
-    it('VALIDATION: shows error when phone does not start with +', async () => {
-      // RULE: E.164 format required — must start with country code (+39...)
-      const user = userEvent.setup()
-      renderWizard()
-      await goToChannel(user)
-
-      await user.type(screen.getByLabelText(/phone number/i), '3331234567') // missing +
-      await user.click(screen.getByRole('button', { name: /next/i }))
-
-      expect(screen.getByText(/international format/i)).toBeInTheDocument()
-    })
-
-    it('NAVIGATION: advances to auth step with valid E.164 phone', async () => {
-      // RULE: +CC format unlocks step 3
-      const user = userEvent.setup()
-      renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
-
       expect(screen.getByLabelText(/first name/i)).toBeInTheDocument()
     })
   })
 
-  // ── Step 4: Auth — Email registration ────────────────────────────────────
+  // ── Step 3: Auth — Email registration ────────────────────────────────────
 
-  describe('Step 4 — Email Registration', () => {
+  describe('Step 3 — Email Registration', () => {
     it('SUCCESS: calls /auth/register and advances to TOTP setup when registration succeeds', async () => {
       // SCENARIO: New user fills form → backend creates user + returns TOTP QR code
       const user = userEvent.setup()
@@ -232,7 +197,6 @@ describe('OnboardingWizardModal', () => {
         data: { user: { id: 'user-123' }, qrCode: 'otpauth://totp/test' },
       })
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
       await fillAndSubmitRegistration(user)
 
@@ -257,7 +221,6 @@ describe('OnboardingWizardModal', () => {
         response: { data: { message: 'Email already in use' } },
       })
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
       await fillAndSubmitRegistration(user)
 
@@ -268,7 +231,6 @@ describe('OnboardingWizardModal', () => {
       // RULE: GDPR acceptance is mandatory — cannot register without it
       const user = userEvent.setup()
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
 
       await user.type(screen.getByLabelText(/first name/i), 'Jane')
@@ -282,9 +244,9 @@ describe('OnboardingWizardModal', () => {
     })
   })
 
-  // ── Step 4: Auth — Google OAuth ───────────────────────────────────────────
+  // ── Step 3: Auth — Google OAuth ───────────────────────────────────────────
 
-  describe('Step 4 — Google OAuth', () => {
+  describe('Step 3 — Google OAuth', () => {
     it('NEW USER: requiresSetup=true → advances to TOTP with QR code visible', async () => {
       // SCENARIO: First-time Google login — must set up TOTP before accessing app
       const user = userEvent.setup()
@@ -292,7 +254,6 @@ describe('OnboardingWizardModal', () => {
         data: { requiresSetup: true, user: { id: 'g-123' }, qrCode: 'otpauth://totp/google' },
       })
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
 
       await user.click(screen.getByTestId('google-btn'))
@@ -308,7 +269,6 @@ describe('OnboardingWizardModal', () => {
         data: { requires2FA: true, user: { id: 'g-456' } },
       })
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
 
       await user.click(screen.getByTestId('google-btn'))
@@ -326,7 +286,6 @@ describe('OnboardingWizardModal', () => {
         data: { token: 'admin-token', sessionId: 'sess-1', user: { id: 'admin-1', isPlatformAdmin: true } },
       })
       render(<BrowserRouter><OnboardingWizardModal open={true} onClose={mockOnClose} /></BrowserRouter>)
-      await goToChannel(user)
       await goToAuth(user)
 
       await user.click(screen.getByTestId('google-btn'))
@@ -340,9 +299,9 @@ describe('OnboardingWizardModal', () => {
     })
   })
 
-  // ── Step 5: TOTP ──────────────────────────────────────────────────────────
+  // ── Step 4: TOTP ──────────────────────────────────────────────────────────
 
-  describe('Step 5 — TOTP Verification', () => {
+  describe('Step 4 — TOTP Verification', () => {
     const setupTotpStep = async (isNewUser = true) => {
       const user = userEvent.setup()
       if (isNewUser) {
@@ -355,7 +314,6 @@ describe('OnboardingWizardModal', () => {
         })
       }
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
 
       if (isNewUser) {
@@ -437,8 +395,9 @@ describe('OnboardingWizardModal', () => {
   // ── Creating workspace ────────────────────────────────────────────────────
 
   describe('Auto workspace creation', () => {
-    it('calls createWorkspace with business name + phone, then initWasender with workspace id', async () => {
+    it('calls createWorkspace with business name and channel flags, then initWasender with workspace id', async () => {
       // SCENARIO: After TOTP success, workspace is created automatically — no user action needed
+      // RULE: New flow passes enableWhatsapp/enableWidget/hasHumanSupport instead of phone number
       const user = userEvent.setup()
 
       // Mock registration
@@ -450,8 +409,7 @@ describe('OnboardingWizardModal', () => {
       mockInitWasender.mockResolvedValueOnce({ wasenderQrString: 'qr-string', wasenderSessionStatus: 'need_scan' })
 
       renderWizard()
-      await goToChannel(user, 'My Boutique')       // step 1: business name
-      await goToAuth(user, '+391234567890')         // step 2: phone number
+      await goToAuth(user, 'My Boutique')
       await fillAndSubmitRegistration(user)
 
       await waitFor(() => expect(screen.getByLabelText(/code.*6 digits/i)).toBeInTheDocument())
@@ -459,11 +417,11 @@ describe('OnboardingWizardModal', () => {
       await user.click(screen.getByRole('button', { name: /verify/i }))
 
       await waitFor(() => {
-        // RULE: workspace created with business name (from step 1) and phone (from step 2)
+        // RULE: workspace created with business name and channel/support flags
         expect(mockCreateWorkspace).toHaveBeenCalledWith(
-          expect.objectContaining({ name: 'My Boutique', whatsappPhoneNumber: '+391234567890' })
+          expect.objectContaining({ name: 'My Boutique', enableWhatsapp: true })
         )
-        expect(mockInitWasender).toHaveBeenCalledWith('ws-new', { phoneNumber: '+391234567890' })
+        expect(mockInitWasender).toHaveBeenCalledWith('ws-new', {})
       }, { timeout: 8000 })
     })
 
@@ -476,7 +434,6 @@ describe('OnboardingWizardModal', () => {
       mockInitWasender.mockResolvedValueOnce({ wasenderQrString: 'wa-qr-data', wasenderSessionStatus: 'need_scan' })
 
       renderWizard()
-      await goToChannel(user)
       await goToAuth(user)
       await fillAndSubmitRegistration(user)
       await waitFor(() => screen.getByLabelText(/code.*6 digits/i))
