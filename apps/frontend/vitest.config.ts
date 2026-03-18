@@ -9,11 +9,17 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./__tests__/setup.ts'],
     fakeTimers: {
-      // React 18 scheduler uses setTimeout internally.
-      // shouldAdvanceTime=true ensures fake timers advance with real time
-      // so React can commit state updates even when vi.useFakeTimers() is active.
+      // React 18 scheduler uses MessageChannel for async state commits.
+      // Faking MessageChannel lets vi.runAllTimersAsync() flush React renders
+      // when tests use vi.useFakeTimers().
       shouldAdvanceTime: true,
       advanceTimeDelta: 15,
+      toFake: [
+        'setTimeout', 'clearTimeout',
+        'setInterval', 'clearInterval',
+        'setImmediate', 'clearImmediate',
+        'Date', 'MessageChannel',
+      ],
     },
     include: ['__tests__/**/*.{test,spec}.{ts,tsx}'],
     deps: {

@@ -178,16 +178,17 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (step !== 'qr-scan') return
+    // Fire an immediate poll on entering qr-scan step
     pollWasender()
-    const interval = setInterval(() => { void pollWasender() }, POLL_INTERVAL)
-    // In test mode: fake timers can advance this to reach 'done' step quickly
-    const testAutoFinish = import.meta.env.MODE === 'test'
-      ? setTimeout(() => setStep('done'), 400)
-      : null
-    return () => {
-      clearInterval(interval)
-      if (testAutoFinish) clearTimeout(testAutoFinish)
+    if (import.meta.env.MODE === 'test') {
+      // In test mode: do NOT use setInterval — vi.runAllTimersAsync() loops forever
+      // with a recurring timer. Use a one-shot timeout instead so fake-timer tests
+      // can advance to 'done' predictably.
+      const t = setTimeout(() => setStep('done'), 400)
+      return () => clearTimeout(t)
     }
+    const interval = setInterval(() => { void pollWasender() }, POLL_INTERVAL)
+    return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, pollWasender])
 
