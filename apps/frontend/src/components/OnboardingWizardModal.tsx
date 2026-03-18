@@ -2,9 +2,8 @@
  * OnboardingWizardModal – survey-style multi-step onboarding
  *
  * Flow:
- *   intro → industry → business → workspace-type →
+ *   industry → business → workspace-type →
  *   channel-type → human-support →
- *   [channel (phone) — only if whatsapp or both] →
  *   auth → totp → creating →
  *   [qr-scan — only if whatsapp or both] →
  *   done
@@ -32,6 +31,7 @@ import { storage } from '@/lib/storage'
 import { createWorkspace } from '@/services/workspaceApi'
 import { initializeWasenderSession, regenerateWasenderQr, getWasenderStatus } from '@/services/wasenderApi'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { logger } from '@/lib/logger'
 import {
   OWT, INDUSTRIES, INDUSTRY_EMOJI, WORKSPACE_TYPE_EMOJI,
@@ -43,40 +43,40 @@ const QR_EXPIRY = 45
 const POLL_INTERVAL = import.meta.env.MODE === 'test' ? 50 : 3000
 
 type ChannelChoice = 'whatsapp' | 'widget' | 'both'
-type WizardStep = 'intro' | 'industry' | 'business' | 'workspace-type' | 'channel-type' | 'human-support' | 'channel' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
+type WizardStep = 'industry' | 'business' | 'workspace-type' | 'channel-type' | 'human-support' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
-// Progress bar fill (0–100) per step
-const STEP_PROGRESS: Record<WizardStep, number> = {
-  intro: 0, industry: 10, business: 20, 'workspace-type': 30,
-  'channel-type': 40, 'human-support': 50, channel: 58,
-  auth: 66, totp: 78, creating: 88, 'qr-scan': 94, done: 100,
-}
-
-// Steps that show progress dots
+// Data steps (shown in step counter)
 const DATA_STEPS: WizardStep[] = ['industry', 'business', 'workspace-type', 'channel-type', 'human-support', 'auth']
 
-// Header images per step
-const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
-  intro: '/survey.png',
-  industry: '/survey.png',
-  'workspace-type': '/survey-ecommerce.png',
-  'channel-type': '/survey-agent.png',
-  'human-support': '/survey-agent.png',
+// Progress bar fill (0–100) per step
+const STEP_PROGRESS: Record<WizardStep, number> = {
+  industry: 8, business: 24, 'workspace-type': 40,
+  'channel-type': 56, 'human-support': 72, auth: 84,
+  totp: 90, creating: 95, 'qr-scan': 98, done: 100,
 }
 
-// Slide animation variants
+// Full-bleed image per step
+const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
+  industry: '/survey.png',
+  business: '/survery-start.png',
+  'workspace-type': '/survey-ecommerce.png',
+  'channel-type': '/surver-widget.png',
+  'human-support': '/survey-support.png',
+  auth: '/survery-secuiry.png',
+}
+
+// Green banner title per step (uses translation key)
 const slideVariants = {
   enter: (d: number) => ({ x: d > 0 ? 56 : -56, opacity: 0 }),
   center: { x: 0, opacity: 1 },
   exit: (d: number) => ({ x: d > 0 ? -56 : 56, opacity: 0 }),
 }
 
-// ─── Password validation ──────────────────────────────────────────────────────
 function validatePassword(p: string): string | null {
   if (p.length < 8) return 'Min 8 characters'
   if (!/[A-Z]/.test(p)) return 'Need at least one uppercase letter'
@@ -94,7 +94,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const navigate = useNavigate()
 
   // ── Navigation ──────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<WizardStep>('intro')
+  const [step, setStep] = useState<WizardStep>('industry')
   const [direction, setDirection] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -111,7 +111,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const [workspaceType, setWorkspaceType] = useState<WorkspaceType>('ecommerce')
   const [channelChoice, setChannelChoice] = useState<ChannelChoice>('whatsapp')
   const [hasHumanSupport, setHasHumanSupport] = useState(true)
-  const [phoneNumber, setPhoneNumber] = useState('')
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   const [firstName, setFirstName] = useState('')
@@ -134,16 +133,19 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const [creatingPhase, setCreatingPhase] = useState(0)
   const isCreatingRef = useRef(false)
 
-  // ── Derived: does this setup involve WhatsApp? ───────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────────────────
   const needsWhatsApp = channelChoice === 'whatsapp' || channelChoice === 'both'
   const needsWidget = channelChoice === 'widget' || channelChoice === 'both'
+  const isTransitionStep = step === 'creating' || step === 'qr-scan' || step === 'done'
+  const stepDotIndex = DATA_STEPS.indexOf(step)
+  const progress = STEP_PROGRESS[step]
 
   // ── Reset on open ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return
-    setStep('intro'); setError(''); setDirection(1)
+    setStep('industry'); setError(''); setDirection(1)
     setIndustry('other'); setBusinessName(''); setWorkspaceType('ecommerce')
-    setChannelChoice('whatsapp'); setHasHumanSupport(true); setPhoneNumber('')
+    setChannelChoice('whatsapp'); setHasHumanSupport(true)
     setFirstName(''); setLastName(''); setEmail(''); setPassword('')
     setShowPassword(false); setGdprAccepted(false)
     setPendingUserId(''); setTotpQrCode(''); setTotpCode('')
@@ -163,7 +165,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         setCreatingPhase(0)
         const workspace = await createWorkspace({
           name: businessName,
-          whatsappPhoneNumber: phoneNumber || undefined,
           language: lang,
           sellsProductsAndServices: workspaceType === 'ecommerce',
           hasHumanSupport,
@@ -174,7 +175,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         setCreatingPhase(1)
 
         if (needsWhatsApp) {
-          const wasResp = await initializeWasenderSession(workspace.id, { phoneNumber: phoneNumber || undefined })
+          const wasResp = await initializeWasenderSession(workspace.id, {})
           setCreatedWorkspaceId(workspace.id)
           if (wasResp.wasenderQrString) {
             setQrString(wasResp.wasenderQrString)
@@ -267,14 +268,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   const handleSelectHumanSupport = (value: boolean) => {
     setHasHumanSupport(value)
-    const needsPhone = (choice: ChannelChoice) => choice === 'whatsapp' || choice === 'both'
-    setTimeout(() => goTo(needsPhone(channelChoice) ? 'channel' : 'auth'), 250)
-  }
-
-  const handleNextChannel = () => {
-    const trimmed = phoneNumber.trim()
-    if (!trimmed.startsWith('+') || trimmed.length < 8) { setError(t.errors.phoneFormat); return }
-    goTo('auth')
+    setTimeout(() => goTo('auth'), 250)
   }
 
   const handleEmailRegister = async () => {
@@ -359,13 +353,11 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── Back navigation ───────────────────────────────────────────────────────────
   const getBackStep = (): WizardStep | null => {
     switch (step) {
-      case 'industry': return 'intro'
       case 'business': return 'industry'
       case 'workspace-type': return 'business'
       case 'channel-type': return 'workspace-type'
       case 'human-support': return 'channel-type'
-      case 'channel': return 'human-support'
-      case 'auth': return needsWhatsApp ? 'channel' : 'human-support'
+      case 'auth': return 'human-support'
       default: return null
     }
   }
@@ -381,64 +373,44 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     channelChoice === 'both' ? t.creating.phasesBoth :
     t.creating.phasesWhatsapp
 
-  // ── Done subtitle ─────────────────────────────────────────────────────────────
   const doneSubtitle =
     channelChoice === 'widget' ? t.done.subtitleWidget :
     channelChoice === 'both' ? t.done.subtitleBoth :
     t.done.subtitleWhatsapp
 
-  // ──────────────────────────────────────────────────────────────────────────────
-  //  Step content
-  // ──────────────────────────────────────────────────────────────────────────────
-
-  const progress = STEP_PROGRESS[step]
   const qrExpired = qrAge >= QR_EXPIRY
-  const isTransitionStep = step === 'creating' || step === 'qr-scan' || step === 'done'
-  const stepDotIndex = DATA_STEPS.indexOf(step)
-  const stepImage = STEP_IMAGES[step]
+
+  // ── Step banner title ─────────────────────────────────────────────────────────
+  const getBannerTitle = (): string => {
+    switch (step) {
+      case 'industry': return t.industry.title
+      case 'business': return t.business.title
+      case 'workspace-type': return t.workspaceType.title
+      case 'channel-type': return t.channelType.title
+      case 'human-support': return t.humanSupport.title
+      case 'auth': return t.auth.title
+      case 'totp': return t.totp.title
+      default: return ''
+    }
+  }
+
+  // ── Whether the current step auto-advances (no Next button needed) ────────────
+  const isAutoAdvanceStep = ['industry', 'workspace-type', 'channel-type', 'human-support'].includes(step)
+
+  // ──────────────────────────────────────────────────────────────────────────────
+  //  Step content (inside card)
+  // ──────────────────────────────────────────────────────────────────────────────
 
   const renderStepContent = () => {
     switch (step) {
-
-      // ── INTRO ────────────────────────────────────────────────────────────────
-      case 'intro':
-        return (
-          <div className="flex flex-col items-center text-center gap-5 py-2">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
-                {t.intro.title}
-              </h2>
-              <p className="text-slate-500 mt-2 leading-relaxed text-base whitespace-pre-line">
-                {t.intro.subtitle}
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {t.intro.benefits.map((b: string, i: number) => (
-                <span key={i} className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-3 py-1">
-                  {b}
-                </span>
-              ))}
-            </div>
-            <Button
-              className="mt-2 bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-base w-full sm:w-auto rounded-xl"
-              onClick={() => goTo('industry')}
-            >
-              {t.intro.cta}
-            </Button>
-          </div>
-        )
 
       // ── INDUSTRY ─────────────────────────────────────────────────────────────
       case 'industry':
         return (
           <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Step 1 / {DATA_STEPS.length}
-              </p>
-              <h2 className="text-xl font-bold text-slate-900">{t.industry.title}</h2>
-              <p className="text-sm text-slate-500 mt-1 whitespace-pre-line">{t.industry.subtitle}</p>
-            </div>
+            <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>
+              {t.industry.subtitle}
+            </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {INDUSTRIES.map(ind => (
                 <button
@@ -464,13 +436,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       case 'business':
         return (
           <div className="space-y-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Step 2 / {DATA_STEPS.length}
-              </p>
-              <h2 className="text-xl font-bold text-slate-900">{t.business.title}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t.business.subtitle}</p>
-            </div>
+            <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.business.subtitle}</p>
             <div className="flex items-center gap-2.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
               <span className="text-xl">{INDUSTRY_EMOJI[industry]}</span>
               <span className="text-sm text-slate-600">{t.industries[industry]}</span>
@@ -494,13 +460,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       case 'workspace-type':
         return (
           <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Step 3 / {DATA_STEPS.length}
-              </p>
-              <h2 className="text-xl font-bold text-slate-900">{t.workspaceType.title}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t.workspaceType.subtitle}</p>
-            </div>
+            <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.workspaceType.subtitle}</p>
             <div className="space-y-2.5">
               {(['ecommerce', 'services', 'info'] as WorkspaceType[]).map(type => {
                 const isSelected = workspaceType === type
@@ -514,6 +474,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                       isSelected ? 'bg-green-50 border-green-500 shadow-sm' : 'border-slate-200 hover:border-green-300',
                     ].join(' ')}
                   >
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+                      style={{ borderColor: isSelected ? '#22c55e' : '#cbd5e1', backgroundColor: isSelected ? '#22c55e' : 'transparent' }}>
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-white" />}
+                    </span>
                     <span className="text-2xl flex-shrink-0">{WORKSPACE_TYPE_EMOJI[type]}</span>
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm font-semibold ${isSelected ? 'text-green-800' : 'text-slate-800'}`}>
@@ -523,13 +487,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                         {t.workspaceType.options[type].desc}
                       </div>
                     </div>
-                    {isSelected && (
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
                   </button>
                 )
               })}
@@ -541,13 +498,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       case 'channel-type':
         return (
           <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Step 4 / {DATA_STEPS.length}
-              </p>
-              <h2 className="text-xl font-bold text-slate-900">{t.channelType.title}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t.channelType.subtitle}</p>
-            </div>
+            <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.channelType.subtitle}</p>
             <div className="space-y-2.5">
               {(['whatsapp', 'widget', 'both'] as ChannelChoice[]).map(choice => {
                 const opt = t.channelType.options[choice]
@@ -562,20 +513,15 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                       isSelected ? 'bg-green-50 border-green-500 shadow-sm' : 'border-slate-200 hover:border-green-300',
                     ].join(' ')}
                   >
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+                      style={{ borderColor: isSelected ? '#22c55e' : '#cbd5e1', backgroundColor: isSelected ? '#22c55e' : 'transparent' }}>
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-white" />}
+                    </span>
                     <span className="text-2xl flex-shrink-0">{opt.emoji}</span>
                     <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-semibold ${isSelected ? 'text-green-800' : 'text-slate-800'}`}>
-                        {opt.label}
-                      </div>
+                      <div className={`text-sm font-semibold ${isSelected ? 'text-green-800' : 'text-slate-800'}`}>{opt.label}</div>
                       <div className="text-xs text-slate-500 mt-0.5">{opt.desc}</div>
                     </div>
-                    {isSelected && (
-                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
                   </button>
                 )
               })}
@@ -587,13 +533,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       case 'human-support':
         return (
           <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Step 5 / {DATA_STEPS.length}
-              </p>
-              <h2 className="text-xl font-bold text-slate-900">{t.humanSupport.title}</h2>
-              <p className="text-sm text-slate-500 mt-2 leading-relaxed">{t.humanSupport.subtitle}</p>
-            </div>
+            <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.05rem' }}>{t.humanSupport.subtitle}</p>
             <div className="space-y-2.5">
               {([true, false] as boolean[]).map(value => {
                 const opt = value ? t.humanSupport.yes : t.humanSupport.no
@@ -608,49 +548,15 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                       isSelected ? 'bg-green-50 border-green-500 shadow-sm' : 'border-slate-200 hover:border-green-300',
                     ].join(' ')}
                   >
-                    <span className="text-2xl flex-shrink-0">{opt.emoji}</span>
-                    <span className={`text-sm font-medium ${isSelected ? 'text-green-800' : 'text-slate-800'}`}>
-                      {opt.label}
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+                      style={{ borderColor: isSelected ? '#22c55e' : '#cbd5e1', backgroundColor: isSelected ? '#22c55e' : 'transparent' }}>
+                      {isSelected && <span className="w-2 h-2 rounded-full bg-white" />}
                     </span>
-                    {isSelected && (
-                      <div className="ml-auto flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
+                    <span className="text-2xl flex-shrink-0">{opt.emoji}</span>
+                    <span className={`text-sm font-medium ${isSelected ? 'text-green-800' : 'text-slate-800'}`}>{opt.label}</span>
                   </button>
                 )
               })}
-            </div>
-          </div>
-        )
-
-      // ── CHANNEL (WhatsApp number) ─────────────────────────────────────────────
-      case 'channel':
-        return (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">{t.channel.title}</h2>
-              <p className="text-sm text-slate-500 mt-1 whitespace-pre-line">{t.channel.subtitle}</p>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl">
-              <span className="text-lg">📱</span>
-              <span className="text-sm font-medium text-green-800">WhatsApp Business</span>
-            </div>
-            <div>
-              <Label htmlFor="ob-phone">{t.channel.phone}</Label>
-              <Input
-                id="ob-phone"
-                className="mt-1.5 text-lg tracking-wider"
-                type="tel"
-                value={phoneNumber}
-                onChange={e => { setPhoneNumber(e.target.value); setError('') }}
-                placeholder={t.channel.phonePh}
-                onKeyDown={e => e.key === 'Enter' && handleNextChannel()}
-                autoFocus
-              />
-              <p className="text-xs text-slate-400 mt-1.5">{t.channel.hint}</p>
             </div>
           </div>
         )
@@ -659,13 +565,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       case 'auth':
         return (
           <div className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Step 6 / {DATA_STEPS.length}
-              </p>
-              <h2 className="text-xl font-bold text-slate-900">{t.auth.title}</h2>
-              <p className="text-sm text-slate-500 mt-1">{t.auth.subtitle}</p>
-            </div>
+            <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.auth.subtitle}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="ob-fn">{t.auth.fname}</Label>
@@ -693,6 +593,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p className="text-xs text-slate-400 mt-1">Min 8 chars, uppercase, lowercase, number, special character</p>
             </div>
             <div className="flex items-start gap-2 pt-1">
               <Checkbox id="ob-gdpr" checked={gdprAccepted}
@@ -727,12 +628,9 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       // ── TOTP ──────────────────────────────────────────────────────────────────
       case 'totp':
         return (
-          <div className="flex flex-col items-center space-y-5">
+          <div className="flex flex-col items-center space-y-5 py-4">
             <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
               <Shield className="h-7 w-7 text-green-600" />
-            </div>
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-slate-900">{t.totp.title}</h2>
             </div>
             {isNewUser && totpQrCode ? (
               <>
@@ -762,7 +660,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       // ── CREATING ──────────────────────────────────────────────────────────────
       case 'creating':
         return (
-          <div className="flex flex-col items-center gap-6 py-8">
+          <div className="flex flex-col items-center gap-6 py-12">
             <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-green-600" />
             </div>
@@ -780,7 +678,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       // ── QR SCAN ───────────────────────────────────────────────────────────────
       case 'qr-scan':
         return (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 py-4">
             <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
               <Wifi className="h-6 w-6 text-green-600" />
             </div>
@@ -802,7 +700,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                 {qrString && !qrExpired ? (
                   <div className="relative p-4 bg-white border-2 border-green-300 rounded-xl shadow-sm">
                     <QRCode value={qrString} size={Math.min(210, window.innerWidth - 120)} level="M" />
-                    <span className="sr-only">{qrString}</span>
                     <div className="absolute bottom-2 right-3 text-xs text-gray-400 bg-white/80 rounded px-1">
                       {QR_EXPIRY - qrAge}{t.qr.wait}
                     </div>
@@ -836,7 +733,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       // ── DONE ──────────────────────────────────────────────────────────────────
       case 'done':
         return (
-          <div className="flex flex-col items-center gap-5 py-6 text-center">
+          <div className="flex flex-col items-center gap-5 py-10 text-center">
             <div className="relative">
               <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
                 <CheckCircle2 className="h-11 w-11 text-green-600" />
@@ -858,103 +755,176 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     }
   }
 
-  // Footer CTA (steps that need manual advance)
-  const footerCTA = (() => {
-    if (step === 'business') {
-      return (
-        <Button className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl" onClick={handleNextBusiness}>
-          {t.next}
-        </Button>
-      )
-    }
-    if (step === 'channel') {
-      return (
-        <Button className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl" onClick={handleNextChannel}>
-          {t.next}
-        </Button>
-      )
-    }
-    return null
-  })()
-
   // ──────────────────────────────────────────────────────────────────────────────
   //  Render
   // ──────────────────────────────────────────────────────────────────────────────
 
+  const stepImage = STEP_IMAGES[step]
+  const bannerTitle = getBannerTitle()
+
   return (
     <Dialog open={open} onOpenChange={v => { if (!v && !isTransitionStep) onClose() }}>
-      <DialogContent className="w-full h-dvh max-w-none m-0 rounded-none flex flex-col p-0 sm:h-auto sm:max-w-xl sm:m-auto sm:rounded-2xl overflow-hidden bg-white">
+      <DialogContent className="fixed inset-0 w-full h-full max-w-none m-0 rounded-none p-0 border-0 bg-transparent shadow-none overflow-y-auto">
         <DialogTitle className="sr-only">eChatbot Setup</DialogTitle>
         <DialogDescription className="sr-only">Multi-step onboarding wizard to configure your workspace</DialogDescription>
 
-        {/* Progress bar */}
-        <div className="h-1.5 bg-slate-100 shrink-0">
-          <div className="h-full bg-green-500 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
-        </div>
-
-        {/* Step dots */}
-        {stepDotIndex >= 0 && (
-          <div className="flex justify-center gap-2 pt-3 pb-1 shrink-0">
-            {DATA_STEPS.map((s, i) => (
-              <div
-                key={s}
-                className={[
-                  'rounded-full transition-all duration-300',
-                  i < stepDotIndex ? 'w-2 h-2 bg-green-500' :
-                  i === stepDotIndex ? 'w-4 h-2 bg-green-500' :
-                  'w-2 h-2 bg-slate-200',
-                ].join(' ')}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Header image */}
-        {stepImage && (
-          <div className="shrink-0 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
-            <img src={stepImage} alt="" className="w-full h-40 sm:h-48 object-cover object-center" />
-          </div>
-        )}
-
-        {/* Scrollable content */}
-        <div className="flex flex-col flex-1 overflow-y-auto">
-          {canGoBack && (
-            <div className="px-6 pt-4 shrink-0">
+        {/* Full-page green gradient background */}
+        <div
+          className="min-h-full flex flex-col"
+          style={{ background: 'linear-gradient(135deg, rgba(248,250,252,0.97) 0%, rgba(236,253,245,0.95) 50%, rgba(240,253,244,0.97) 100%)' }}
+        >
+          {/* ── Sticky header ── */}
+          <header className="bg-white shadow-sm sticky top-0 z-50 shrink-0">
+            <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between gap-2">
+              <span className="text-lg sm:text-xl font-bold text-green-600">eChatbot</span>
+              <LanguageSelector />
               <button
-                onClick={handleBack}
-                className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+                onClick={onClose}
+                className="text-xs sm:text-sm font-medium text-slate-600 hover:text-green-600 transition-colors text-right"
               >
-                <ChevronLeft className="h-4 w-4" />{t.back}
+                <span className="hidden sm:inline">← Back to homepage</span>
+                <span className="sm:hidden">← Home</span>
               </button>
             </div>
-          )}
+          </header>
 
-          <div className={`px-6 flex-1 pb-4 ${canGoBack ? 'pt-3' : stepImage ? 'pt-5' : 'pt-6'}`}>
-            {error && (
-              <Alert className="mb-4 border-red-200 bg-red-50">
-                <AlertDescription className="text-red-700 text-sm">{error}</AlertDescription>
-              </Alert>
-            )}
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={step}
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-              >
-                {renderStepContent()}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+          {/* ── Centered card ── */}
+          <div className="flex-1 flex items-start sm:items-center justify-center px-3 sm:px-4 py-6 sm:py-10">
+            <div className="w-full max-w-[727px]">
 
-          {footerCTA && (
-            <div className="px-6 pb-6 shrink-0">
-              {footerCTA}
+              {/* Transition steps (creating, qr-scan, done) — plain card */}
+              {isTransitionStep ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl shadow-xl overflow-hidden"
+                >
+                  <div className="p-6 sm:p-10">
+                    {renderStepContent()}
+                  </div>
+                </motion.div>
+              ) : (
+                /* Data steps — survey card layout */
+                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+
+                  {/* Progress bar */}
+                  <div className="h-1.5 bg-slate-100">
+                    <motion.div
+                      className="h-full bg-green-500"
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+
+                  {/* Green gradient banner with title + step counter */}
+                  {bannerTitle && (
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 sm:px-8 py-5 text-white">
+                      <div className="flex items-center justify-between">
+                        <h1 className="text-xl sm:text-2xl font-bold leading-tight">{bannerTitle}</h1>
+                        {stepDotIndex >= 0 && (
+                          <span className="text-sm font-semibold text-green-100 shrink-0 ml-3">
+                            {stepDotIndex + 1} / {DATA_STEPS.length}
+                          </span>
+                        )}
+                      </div>
+                      {/* Dots */}
+                      {stepDotIndex >= 0 && (
+                        <div className="flex gap-1.5 mt-3">
+                          {DATA_STEPS.map((_, i) => (
+                            <div
+                              key={i}
+                              className={[
+                                'h-1.5 rounded-full transition-all duration-300',
+                                i < stepDotIndex ? 'w-5 bg-white' :
+                                i === stepDotIndex ? 'w-8 bg-white' :
+                                'w-5 bg-white/40',
+                              ].join(' ')}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Full-bleed image */}
+                  {stepImage ? (
+                    <div className="overflow-hidden">
+                      <img
+                        src={stepImage}
+                        alt=""
+                        className="w-full h-44 sm:h-52 object-cover object-center"
+                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-44 sm:h-52 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-dashed border-emerald-200 flex items-center justify-center">
+                      <span className="text-4xl opacity-20">🖼️</span>
+                    </div>
+                  )}
+
+                  {/* Content */}
+                  <div className="p-4 sm:p-8">
+                    {error && (
+                      <Alert className="mb-4 border-red-200 bg-red-50">
+                        <AlertDescription className="text-red-700 text-sm">{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <AnimatePresence mode="wait" custom={direction}>
+                      <motion.div
+                        key={step}
+                        custom={direction}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+                      >
+                        {renderStepContent()}
+                      </motion.div>
+                    </AnimatePresence>
+
+                    {/* Bottom nav — Back + Next (auto-advance steps only show Back if applicable) */}
+                    {!isAutoAdvanceStep && (
+                      <div className="flex gap-3 mt-8">
+                        {canGoBack && (
+                          <Button
+                            variant="outline"
+                            onClick={handleBack}
+                            className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50"
+                          >
+                            <ChevronLeft className="h-4 w-4 mr-1" />{t.back}
+                          </Button>
+                        )}
+                        {step === 'business' && (
+                          <Button
+                            className="flex-2 bg-green-600 hover:bg-green-700 text-white px-8"
+                            onClick={handleNextBusiness}
+                          >
+                            {t.next}
+                          </Button>
+                        )}
+                        {step === 'auth' && null /* auth has its own register button */}
+                        {step === 'totp' && null /* totp has its own verify button */}
+                      </div>
+                    )}
+
+                    {/* Back-only for auto-advance steps */}
+                    {isAutoAdvanceStep && canGoBack && (
+                      <div className="mt-6">
+                        <button
+                          onClick={handleBack}
+                          className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+                        >
+                          <ChevronLeft className="h-4 w-4" />{t.back}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
