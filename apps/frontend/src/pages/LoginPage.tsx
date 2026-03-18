@@ -2417,17 +2417,14 @@ export function LoginPage() {
                   </div>
                   
                   <div className="pt-4 flex flex-wrap items-center gap-4 justify-center lg:justify-start">
-                    <Button
-                      type="button"
-                      className="w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-                      onClick={() => {
-                        document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })
-                      }}
+                    <Link
+                      to="/crm-integration"
+                      className="w-full sm:w-[220px] sm:h-[52px] inline-flex justify-center items-center px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                     >
                       <span className="flex items-center gap-3">
                         <span>{t("integration.crm.button")}</span>
                       </span>
-                    </Button>
+                    </Link>
                     <Link
                       to="/crm-integration"
                       className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline transition-colors"
@@ -2458,7 +2455,7 @@ export function LoginPage() {
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
                 {/* Left: Content */}
-                <div className="space-y-6 text-center lg:text-left">
+                  <div className="space-y-6 text-center lg:text-left">
                   <div className="space-y-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
                       <span>👥</span>
@@ -2472,12 +2469,20 @@ export function LoginPage() {
                     </p>
                   </div>
                   <div className="pt-4 flex justify-center lg:justify-start">
-                    <Link
-                      to="/team-collaboration"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-purple-700 hover:text-purple-900 hover:underline transition-colors"
-                    >
-                      {t("common.viewMore")}
-                    </Link>
+                    <div className="flex flex-wrap gap-3 items-center justify-center lg:justify-start">
+                      <Link
+                        to="/team-collaboration"
+                        className="w-full sm:w-[220px] sm:h-[48px] inline-flex justify-center items-center px-6 py-3 text-base font-semibold rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+                      >
+                        {t("common.viewMore")}
+                      </Link>
+                      <Link
+                        to="/team-collaboration"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-purple-700 hover:text-purple-900 hover:underline transition-colors"
+                      >
+                        {t("common.viewMore")}
+                      </Link>
+                    </div>
                   </div>
                 </div>
 
