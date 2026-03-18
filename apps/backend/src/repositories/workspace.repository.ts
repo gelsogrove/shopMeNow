@@ -184,6 +184,14 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       translateCategoryNames: workspace.translateCategoryNames,
       translateServiceNames: workspace.translateServiceNames,
       catalogBaseLanguage: workspace.catalogBaseLanguage,
+      // 🆕 WasenderAPI fields
+      wasenderSessionId: workspace.wasenderSessionId ?? null,
+      wasenderApiKey: workspace.wasenderApiKey ?? null,
+      wasenderSessionStatus: workspace.wasenderSessionStatus ?? null,
+      wasenderPhoneNumber: workspace.wasenderPhoneNumber ?? null,
+      wasenderQrString: workspace.wasenderQrString ?? null,
+      wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
+      wasenderIsActive: workspace.wasenderIsActive ?? false,
     }
   }
 
@@ -818,6 +826,13 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           translateCategoryNames: true,
           translateServiceNames: true,
           catalogBaseLanguage: true,
+          wasenderSessionId: true,
+          wasenderApiKey: true,
+          wasenderSessionStatus: true,
+          wasenderPhoneNumber: true,
+          wasenderQrString: true,
+          wasenderQrGeneratedAt: true,
+          wasenderIsActive: true,
           ownerId: true,
           creditBalance: true,
           whatsappSettings: {

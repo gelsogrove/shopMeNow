@@ -217,8 +217,8 @@ export function HumanSupportPage() {
               <div className="relative order-2 lg:order-1">
                 <div className="absolute -inset-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl blur-xl opacity-40" />
                 <img
-                  src="/contactus.png"
-                  alt="Human + AI collaboration"
+                  src="/humansupporto.png"
+                  alt="Human support collaborating with AI"
                   className="relative w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/60 object-cover"
                 />
               </div>

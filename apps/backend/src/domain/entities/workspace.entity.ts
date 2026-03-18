@@ -22,6 +22,14 @@ export interface WorkspaceProps {
   ultraMsgInstanceId?: string | null
   ultraMsgToken?: string | null
   ultraMsgApiUrl?: string | null
+  // 🆕 WasenderAPI fields
+  wasenderSessionId?: string | null
+  wasenderApiKey?: string | null
+  wasenderSessionStatus?: string | null
+  wasenderPhoneNumber?: string | null
+  wasenderQrString?: string | null
+  wasenderQrGeneratedAt?: Date | null
+  wasenderIsActive?: boolean | null
   notificationEmail?: string | null
   webhookUrl?: string | null
   language: string
@@ -194,6 +202,34 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get ultraMsgApiUrl(): string | null | undefined {
     return this.props.ultraMsgApiUrl
+  }
+
+  get wasenderSessionId(): string | null | undefined {
+    return this.props.wasenderSessionId
+  }
+
+  get wasenderApiKey(): string | null | undefined {
+    return this.props.wasenderApiKey
+  }
+
+  get wasenderSessionStatus(): string | null | undefined {
+    return this.props.wasenderSessionStatus
+  }
+
+  get wasenderPhoneNumber(): string | null | undefined {
+    return this.props.wasenderPhoneNumber
+  }
+
+  get wasenderQrString(): string | null | undefined {
+    return this.props.wasenderQrString
+  }
+
+  get wasenderQrGeneratedAt(): Date | null | undefined {
+    return this.props.wasenderQrGeneratedAt
+  }
+
+  get wasenderIsActive(): boolean | null | undefined {
+    return this.props.wasenderIsActive
   }
 
   get webhookVerifyToken(): string | null | undefined {
