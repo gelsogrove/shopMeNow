@@ -5840,10 +5840,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     input: ChatEngineInput
     workspaceConfig: WorkspaceConfig
     conversationId: string
+    chatSessionId?: string
     startTime: number
     debugSteps: DebugStep[]
   }): Promise<ChatEngineOutput> {
-    const { input, workspaceConfig, conversationId, startTime, debugSteps } = params
+    const { input, workspaceConfig, conversationId, chatSessionId, startTime, debugSteps } = params
     const customerName = input.customerName || "Cliente"
 
     const history = await this.conversationManager.loadHistory(
@@ -5917,6 +5918,18 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       items: itemsWithSkus,
       listType: "CATEGORIES",
     })
+
+    // FIX: Set FSM state to BROWSING_CATEGORIES so the next numeric input
+    // (e.g. user sends "4" to select a category) is resolved correctly.
+    // Without this, state remains IDLE and the next number triggers another
+    // re-greeting loop instead of selecting the category.
+    if (chatSessionId) {
+      await this.conversationStateService.setState(
+        chatSessionId,
+        ConversationState.BROWSING_CATEGORIES,
+        {}
+      )
+    }
 
     const processingTimeMs = Date.now() - startTime
     const savedMessages = await this.saveMessages(
