@@ -8,6 +8,13 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./__tests__/setup.ts'],
+    fakeTimers: {
+      // React 18 scheduler uses setTimeout internally.
+      // shouldAdvanceTime=true ensures fake timers advance with real time
+      // so React can commit state updates even when vi.useFakeTimers() is active.
+      shouldAdvanceTime: true,
+      advanceTimeDelta: 15,
+    },
     include: ['__tests__/**/*.{test,spec}.{ts,tsx}'],
     deps: {
       inline: [

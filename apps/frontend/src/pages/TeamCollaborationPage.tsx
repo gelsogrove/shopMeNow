@@ -203,8 +203,8 @@ export function TeamCollaborationPage() {
               <div className="relative flex items-center justify-center">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-violet-100 rounded-3xl rotate-1 scale-105 opacity-60" />
                 <img
-                  src="/survey-support.png"
-                  alt="Team support dashboard"
+                  src="/team.png"
+                  alt="Team collaboration illustration"
                   className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain"
                 />
               </div>
@@ -309,7 +309,7 @@ export function TeamCollaborationPage() {
               <div className="relative flex items-center justify-center">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-violet-100 rounded-2xl rotate-1 scale-105 opacity-60" />
                 <img
-                  src="/survey-agent.png"
+                  src="/panelcontro.png"
                   alt="Manager dashboard real-time view"
                   className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/60 object-contain"
                 />
