@@ -192,100 +192,103 @@ router.post(
   "/admin/:userId/impersonate",
   authMiddleware,
   platformAdminMiddleware,
-  async (req: Request, res: Response) => {
-    try {
-      const { userId } = req.params
-      const adminUser = (req as any).user
+  impersonateHandler
+)
 
-      // Find target user
-      const targetUser = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          isPlatformAdmin: true,
-          status: true,
-        },
-      })
+// Exported for unit tests (avoids network listen restrictions)
+export async function impersonateHandler(req: Request, res: Response) {
+  try {
+    const { userId } = req.params
+    const adminUser = (req as any).user
 
-      if (!targetUser) {
-        return res.status(404).json({
-          success: false,
-          error: "User not found",
-        })
-      }
+    // Find target user
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        isPlatformAdmin: true,
+        status: true,
+      },
+    })
 
-      // Track when one platform admin impersonates another for audit visibility
-      if (targetUser.isPlatformAdmin) {
-        logger.warn(
-          `⚠️ Platform admin ${adminUser.email} is impersonating another platform admin ${targetUser.email}`
-        )
-      }
-
-      // Check user is active
-      if (targetUser.status !== UserStatus.ACTIVE) {
-        return res.status(400).json({
-          success: false,
-          error: "Cannot impersonate inactive users",
-        })
-      }
-
-      // Generate impersonation token (1 hour expiry)
-      const tokenPayload = {
-        userId: targetUser.id,
-        email: targetUser.email,
-        isImpersonating: true,
-        impersonatorId: adminUser.id,
-        impersonatorEmail: adminUser.email,
-      }
-
-      const tokenOptions: SignOptions = {
-        expiresIn: "1h",
-      }
-
-      const token = jwt.sign(tokenPayload, config.jwtSecret, tokenOptions)
-
-      // Create session for impersonation (allows API access)
-      const sessionId = await adminSessionService.createSession(
-        targetUser.id,
-        null, // workspaceId will be selected later
-        req.ip,
-        req.headers["user-agent"]
-      )
-
-      // Build redirect URL with both token and sessionId
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
-      const redirectUrl = `${frontendUrl}/impersonate?token=${token}&sessionId=${sessionId}`
-
-      logger.info(
-        `🔑 Admin ${adminUser.email} is impersonating user ${targetUser.email} (session: ${sessionId.substring(0, 8)}...)`
-      )
-
-      res.json({
-        success: true,
-        data: {
-          token,
-          sessionId,
-          redirectUrl,
-          targetUser: {
-            id: targetUser.id,
-            email: targetUser.email,
-            firstName: targetUser.firstName,
-            lastName: targetUser.lastName,
-          },
-        },
-      })
-    } catch (error: any) {
-      logger.error("Error creating impersonation token:", error)
-      res.status(500).json({
+    if (!targetUser) {
+      return res.status(404).json({
         success: false,
-        error: error.message || "Failed to create impersonation token",
+        error: "User not found",
       })
     }
+
+    // Track when one platform admin impersonates another for audit visibility
+    if (targetUser.isPlatformAdmin) {
+      logger.warn(
+        `⚠️ Platform admin ${adminUser.email} is impersonating another platform admin ${targetUser.email}`
+      )
+    }
+
+    // Check user is active
+    if (targetUser.status !== UserStatus.ACTIVE) {
+      return res.status(400).json({
+        success: false,
+        error: "Cannot impersonate inactive users",
+      })
+    }
+
+    // Generate impersonation token (1 hour expiry)
+    const tokenPayload = {
+      userId: targetUser.id,
+      email: targetUser.email,
+      isImpersonating: true,
+      impersonatorId: adminUser.id,
+      impersonatorEmail: adminUser.email,
+    }
+
+    const tokenOptions: SignOptions = {
+      expiresIn: "1h",
+    }
+
+    const token = jwt.sign(tokenPayload, config.jwtSecret, tokenOptions)
+
+    // Create session for impersonation (allows API access)
+    const sessionId = await adminSessionService.createSession(
+      targetUser.id,
+      null, // workspaceId will be selected later
+      req.ip,
+      req.headers["user-agent"]
+    )
+
+    // Build redirect URL with both token and sessionId
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
+    const redirectUrl = `${frontendUrl}/impersonate?token=${token}&sessionId=${sessionId}`
+
+    logger.info(
+      `🔑 Admin ${adminUser.email} is impersonating user ${targetUser.email} (session: ${sessionId.substring(0, 8)}...)`
+    )
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        sessionId,
+        redirectUrl,
+        targetUser: {
+          id: targetUser.id,
+          email: targetUser.email,
+          firstName: targetUser.firstName,
+          lastName: targetUser.lastName,
+        },
+      },
+    })
+  } catch (error: any) {
+    logger.error("Error creating impersonation token:", error)
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to create impersonation token",
+    })
   }
-)
+}
 
 // =============================================================================
 // 📅 TRIAL EXTENSION

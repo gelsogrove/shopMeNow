@@ -1,10 +1,7 @@
-import request from "supertest"
-import express from "express"
-
-let app: any
 let prismaMock: any
 let authedUser: any = null
 let createSessionMock: jest.Mock
+let impersonateHandler: any
 
 describe("POST /api/v1/users/admin/:userId/impersonate", () => {
   beforeEach(() => {
@@ -62,12 +59,25 @@ describe("POST /api/v1/users/admin/:userId/impersonate", () => {
       platformAdminMiddleware: (_req: any, _res: any, next: any) => next(),
     }))
 
-    // Build a lightweight app with only the user admin routes
-    const userAdminRoutes = require("../../src/interfaces/http/routes/user-admin.routes").default
-    app = express()
-    app.use(express.json())
-    app.use("/api/v1/users", userAdminRoutes)
+    jest.isolateModules(() => {
+      impersonateHandler = require("../../src/interfaces/http/routes/admin/admin-user-security.routes").impersonateHandler
+    })
+
   })
+
+  const buildRes = () => {
+    const res: any = {}
+    res.statusCode = 200
+    res.status = (code: number) => {
+      res.statusCode = code
+      return res
+    }
+    res.json = (payload: any) => {
+      res.body = payload
+      return res
+    }
+    return res
+  }
 
   it("allows impersonating another platform admin (no 400 anymore)", async () => {
     const targetUser = {
@@ -81,11 +91,17 @@ describe("POST /api/v1/users/admin/:userId/impersonate", () => {
 
     prismaMock.user.findUnique.mockResolvedValue(targetUser)
 
-    const res = await request(app)
-      .post(`/api/v1/users/admin/${targetUser.id}/impersonate`)
-      .set("User-Agent", "jest-test")
+    const req: any = {
+      params: { userId: targetUser.id },
+      user: authedUser,
+      ip: "127.0.0.1",
+      headers: { "user-agent": "jest-test" },
+    }
+    const res = buildRes()
 
-    expect(res.status).toBe(200)
+    await impersonateHandler(req, res as any)
+
+    expect(res.statusCode).toBe(200)
     expect(res.body.success).toBe(true)
     expect(res.body.data.targetUser.id).toBe(targetUser.id)
     expect(createSessionMock).toHaveBeenCalledWith(
@@ -108,11 +124,17 @@ describe("POST /api/v1/users/admin/:userId/impersonate", () => {
 
     prismaMock.user.findUnique.mockResolvedValue(inactiveUser)
 
-    const res = await request(app)
-      .post(`/api/v1/users/admin/${inactiveUser.id}/impersonate`)
-      .set("User-Agent", "jest-test")
+    const req: any = {
+      params: { userId: inactiveUser.id },
+      user: authedUser,
+      ip: "127.0.0.1",
+      headers: { "user-agent": "jest-test" },
+    }
+    const res = buildRes()
 
-    expect(res.status).toBe(400)
+    await impersonateHandler(req, res as any)
+
+    expect(res.statusCode).toBe(400)
     expect(res.body.error).toContain("Cannot impersonate inactive users")
     expect(createSessionMock).not.toHaveBeenCalled()
   })

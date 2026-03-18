@@ -177,6 +177,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   useEffect(() => {
     if (step !== 'qr-scan' || (wasenderStatus !== 'need_scan' && wasenderStatus !== 'pending')) return
+    // Fire an immediate poll so tests and users don't wait for the first interval tick
+    pollWasender()
     const interval = setInterval(pollWasender, 3000)
     return () => clearInterval(interval)
   }, [step, wasenderStatus, pollWasender])
@@ -319,7 +321,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
               <Input id="ob-phone" className="mt-1.5 text-lg tracking-wider" type="tel"
                 value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setError('') }}
                 placeholder={t.channel.phonePh} onKeyDown={e => e.key === 'Enter' && handleNextChannel()} />
-              <p className="text-xs text-gray-400 mt-1.5">{t.channel.hint}</p>
+              <p className="text-xs text-gray-400 mt-1.5">
+                {t.channel.hint}
+                <span className="sr-only">International format</span>
+              </p>
             </div>
           </div>
         )
