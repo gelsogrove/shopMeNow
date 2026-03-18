@@ -95,7 +95,11 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
     expect(sentCall?.[0].data.status).toBe('sent')
   })
 
-  it('charges push cost when queue message belongs to a push campaign', async () => {
+  it('does NOT re-charge push cost in queue — push is pre-billed at enqueue in push-campaigns.job', async () => {
+    // SCENARIO: Message in queue belongs to a push campaign (recipient found)
+    // RULE: Push is pre-billed by push-campaigns.job.ts at enqueue time.
+    //       The queue job must NOT bill again — only update sentAt on the recipient.
+    // HISTORY: Previously caused 3x billing (push-campaigns + queue line 692 + queue line 731).
     mockedGetConfig.mockResolvedValue({
       workspaceId: 'w1',
       phoneNumber: '19999999999',
@@ -138,7 +142,12 @@ describe('whatsappChannelQueueJob - WhatsApp send', () => {
 
     await whatsappChannelQueueJob()
 
-    expect(billingSpy).toHaveBeenCalledWith('w1', 'q1', 'PUSH')
+    // Push messages must NOT trigger deductMessageCredit — pre-billed at enqueue
+    expect(billingSpy).not.toHaveBeenCalled()
+    // Instead, sentAt must be updated on the push recipient
+    expect(pushCampaignRecipientModel.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { messageId: 'q1' }, data: expect.objectContaining({ sentAt: expect.any(Date) }) })
+    )
   })
 
   it('uses phoneNumberId in Graph API URL (Meta expects ID, not display number)', async () => {

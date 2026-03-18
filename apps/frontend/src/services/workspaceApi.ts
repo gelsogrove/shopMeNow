@@ -57,8 +57,6 @@ export interface Workspace {
   address?: string
   customAiRules?: string
   logoUrl?: string
-  // 🆕 Channel branding
-  logoUrl?: string
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -105,12 +103,15 @@ export interface WorkspaceChecklist {
 
 export interface CreateWorkspaceData {
   name: string
-  whatsappPhoneNumber: string
+  whatsappPhoneNumber?: string
   language?: string
   description?: string
   welcomeMessage?: string
   adminEmail?: string
   sellsProductsAndServices?: boolean
+  hasHumanSupport?: boolean
+  enableWhatsapp?: boolean
+  enableWidget?: boolean
 }
 
 export interface UpdateWorkspaceData {

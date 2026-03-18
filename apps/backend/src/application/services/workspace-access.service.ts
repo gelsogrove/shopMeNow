@@ -393,8 +393,9 @@ export class WorkspaceAccessService {
       }
 
       const creditBalance = Number(owner.creditBalance)
+      const ownerStatus = (owner.subscriptionStatus as string) || ""
 
-      if (owner.subscriptionStatus === "PAUSED") {
+      if (ownerStatus === "PAUSED") {
         return {
           canProcess: false,
           blockReason: "PAUSED",
@@ -407,7 +408,7 @@ export class WorkspaceAccessService {
         }
       }
 
-      if (owner.subscriptionStatus === "CANCELLED") {
+      if (ownerStatus === "CANCELLED") {
         return {
           canProcess: false,
           blockReason: "CANCELLED",

@@ -530,8 +530,9 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             message.skipSecurityCheck === true
 
           // Push messages are pre-billed when enqueued by push-campaigns.job.ts
-          // Skip credit check here to avoid double billing
-          const skipBilling = process.env.NODE_ENV === 'test' || isSystemNotification || isPushMessage
+          // Skip credit check for: system notifications (no billing) and push messages (pre-billed)
+          // NOTE: NODE_ENV=test is NOT included here so credit checks can be tested
+          const skipBilling = isSystemNotification || isPushMessage
           if (!skipBilling) {
             const hasCredit = await billingService.hasOwnerCredit(
               workspace.id,
@@ -544,7 +545,7 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             }
           }
 
-          // 🧪 TEST FAST-PATH: In test environment, bypass provider plumbing but still exercise billing + status updates
+          // 🧪 TEST FAST-PATH: In test environment, bypass provider plumbing but still exercise status updates
           if (process.env.NODE_ENV === 'test') {
             const phoneId =
               workspace.metaPhoneNumberId ||
@@ -559,7 +560,13 @@ export async function whatsappChannelQueueJob(): Promise<void> {
             })
 
             if (isPushMessage) {
-              await billingService.deductMessageCredit(workspace.id, message.id, 'PUSH')
+              // Push pre-billed at enqueue — only update delivery timestamp
+              await prisma.pushCampaignRecipient.updateMany({
+                where: { messageId: message.id },
+                data: { sentAt: new Date() },
+              })
+            } else if (!isWipMessage) {
+              await billingService.deductMessageCredit(workspace.id, message.id, 'MESSAGE')
             }
             workspaceProcessed++
             continue

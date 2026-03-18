@@ -54,6 +54,21 @@ export const OWT = {
         info: { label: 'Condivido informazioni', desc: 'Supporto clienti, FAQ e informazioni' },
       },
     },
+    channelType: {
+      title: 'Come vuoi ricevere i messaggi?',
+      subtitle: 'Scegli dove il chatbot interagirà con i tuoi clienti',
+      options: {
+        whatsapp: { label: 'Solo WhatsApp', desc: 'Il chatbot risponde su WhatsApp', emoji: '💬' },
+        widget: { label: 'Solo Widget web', desc: 'Chat integrata nel tuo sito web', emoji: '🌐' },
+        both: { label: 'Entrambi', desc: 'WhatsApp + Widget sul sito web', emoji: '🔗' },
+      },
+    },
+    humanSupport: {
+      title: 'Supporto umano',
+      subtitle: 'Una delle caratteristiche di eChatbot è il passaggio intelligente dal chatbot a un operatore umano, senza perdere il contesto della conversazione. Quando un cliente ha un problema complesso, il chatbot trasferisce la chat a un operatore che riceve una notifica WhatsApp con tutta la cronologia. Vuoi questa funzionalità?',
+      yes: { label: 'Sì, voglio il passaggio a operatore umano', emoji: '✅' },
+      no: { label: 'No, la gestione automatica va bene', emoji: '🤖' },
+    },
     channel: {
       title: 'Il tuo numero WhatsApp',
       subtitle: 'I clienti ti scriveranno\na questo numero',
@@ -78,7 +93,9 @@ export const OWT = {
     },
     creating: {
       title: 'Configurazione in corso...',
-      phases: ['Creo il tuo workspace...', 'Configuro il canale WhatsApp...', 'Quasi pronto...'],
+      phasesWhatsapp: ['Creo il tuo workspace...', 'Configuro il canale WhatsApp...', 'Quasi pronto...'],
+      phasesWidget: ['Creo il tuo workspace...', 'Configuro il widget...', 'Quasi pronto...'],
+      phasesBoth: ['Creo il tuo workspace...', 'Configuro WhatsApp e widget...', 'Quasi pronto...'],
     },
     qr: {
       title: 'Collega WhatsApp',
@@ -87,7 +104,9 @@ export const OWT = {
     },
     done: {
       title: 'Tutto pronto!',
-      subtitle: 'Il tuo workspace è configurato e WhatsApp è connesso.',
+      subtitleWhatsapp: 'Il tuo workspace è configurato e WhatsApp è connesso.',
+      subtitleWidget: 'Il tuo workspace è configurato. Trovi il codice widget nelle impostazioni.',
+      subtitleBoth: 'Il tuo workspace è configurato. WhatsApp connesso e widget pronto.',
       cta: 'Vai alla Dashboard',
     },
     industries: {
@@ -132,6 +151,21 @@ export const OWT = {
         info: { label: 'Share information', desc: 'Customer support, FAQ and information' },
       },
     },
+    channelType: {
+      title: 'How do you want to receive messages?',
+      subtitle: 'Choose where your chatbot will interact with customers',
+      options: {
+        whatsapp: { label: 'WhatsApp only', desc: 'Chatbot replies on WhatsApp', emoji: '💬' },
+        widget: { label: 'Web widget only', desc: 'Chat integrated in your website', emoji: '🌐' },
+        both: { label: 'Both', desc: 'WhatsApp + website widget', emoji: '🔗' },
+      },
+    },
+    humanSupport: {
+      title: 'Human Support',
+      subtitle: 'One of eChatbot\'s strengths is the intelligent handoff from AI to a human agent, without losing conversation context. When a customer has a complex issue, the AI agent instantly transfers the chat to an operator who receives a WhatsApp notification with the full conversation history. Would you like this capability integrated into your chatbot?',
+      yes: { label: 'Yes, I want human handoff capability', emoji: '✅' },
+      no: { label: 'Full automation works for me', emoji: '🤖' },
+    },
     channel: {
       title: 'Your WhatsApp number',
       subtitle: 'Customers will message you\nat this number',
@@ -156,7 +190,9 @@ export const OWT = {
     },
     creating: {
       title: 'Setting everything up...',
-      phases: ['Creating your workspace...', 'Configuring WhatsApp channel...', 'Almost ready...'],
+      phasesWhatsapp: ['Creating your workspace...', 'Configuring WhatsApp channel...', 'Almost ready...'],
+      phasesWidget: ['Creating your workspace...', 'Configuring web widget...', 'Almost ready...'],
+      phasesBoth: ['Creating your workspace...', 'Configuring WhatsApp and widget...', 'Almost ready...'],
     },
     qr: {
       title: 'Connect WhatsApp',
@@ -165,7 +201,9 @@ export const OWT = {
     },
     done: {
       title: 'All set!',
-      subtitle: 'Your workspace is configured and WhatsApp is connected.',
+      subtitleWhatsapp: 'Your workspace is configured and WhatsApp is connected.',
+      subtitleWidget: 'Your workspace is configured. Find the widget code in settings.',
+      subtitleBoth: 'Your workspace is configured. WhatsApp connected and widget ready.',
       cta: 'Go to Dashboard',
     },
     industries: {
@@ -210,6 +248,21 @@ export const OWT = {
         info: { label: 'Comparto información', desc: 'Soporte al cliente, FAQ e información' },
       },
     },
+    channelType: {
+      title: '¿Cómo quieres recibir mensajes?',
+      subtitle: 'Elige dónde interactuará el chatbot con tus clientes',
+      options: {
+        whatsapp: { label: 'Solo WhatsApp', desc: 'El chatbot responde en WhatsApp', emoji: '💬' },
+        widget: { label: 'Solo widget web', desc: 'Chat integrado en tu sitio web', emoji: '🌐' },
+        both: { label: 'Ambos', desc: 'WhatsApp + widget en el sitio web', emoji: '🔗' },
+      },
+    },
+    humanSupport: {
+      title: 'Soporte humano',
+      subtitle: 'Una de las fortalezas de eChatbot es la transferencia inteligente del chatbot a un agente humano, sin perder el contexto. ¿Quieres esta capacidad integrada?',
+      yes: { label: 'Sí, quiero transferencia a agente humano', emoji: '✅' },
+      no: { label: 'La automatización completa me sirve', emoji: '🤖' },
+    },
     channel: {
       title: 'Tu número de WhatsApp',
       subtitle: 'Los clientes te escribirán\na este número',
@@ -234,7 +287,9 @@ export const OWT = {
     },
     creating: {
       title: 'Configurando todo...',
-      phases: ['Creando tu workspace...', 'Configurando el canal WhatsApp...', '¡Casi listo!'],
+      phasesWhatsapp: ['Creando tu workspace...', 'Configurando canal WhatsApp...', '¡Casi listo!'],
+      phasesWidget: ['Creando tu workspace...', 'Configurando el widget...', '¡Casi listo!'],
+      phasesBoth: ['Creando tu workspace...', 'Configurando WhatsApp y widget...', '¡Casi listo!'],
     },
     qr: {
       title: 'Conectar WhatsApp',
@@ -243,7 +298,9 @@ export const OWT = {
     },
     done: {
       title: '¡Todo listo!',
-      subtitle: 'Tu workspace está configurado y WhatsApp está conectado.',
+      subtitleWhatsapp: 'Tu workspace está configurado y WhatsApp está conectado.',
+      subtitleWidget: 'Tu workspace está configurado. Encuentra el código del widget en ajustes.',
+      subtitleBoth: 'Tu workspace está configurado. WhatsApp conectado y widget listo.',
       cta: 'Ir al Panel',
     },
     industries: {
@@ -288,6 +345,21 @@ export const OWT = {
         info: { label: 'Compartilho informações', desc: 'Suporte ao cliente, FAQ e informações' },
       },
     },
+    channelType: {
+      title: 'Como você quer receber mensagens?',
+      subtitle: 'Escolha onde o chatbot vai interagir com seus clientes',
+      options: {
+        whatsapp: { label: 'Só WhatsApp', desc: 'O chatbot responde no WhatsApp', emoji: '💬' },
+        widget: { label: 'Só widget web', desc: 'Chat integrado no seu site', emoji: '🌐' },
+        both: { label: 'Ambos', desc: 'WhatsApp + widget no site', emoji: '🔗' },
+      },
+    },
+    humanSupport: {
+      title: 'Suporte humano',
+      subtitle: 'Um dos pontos fortes do eChatbot é a transferência inteligente do chatbot para um agente humano, sem perder o contexto. Quer essa capacidade integrada?',
+      yes: { label: 'Sim, quero transferência para agente humano', emoji: '✅' },
+      no: { label: 'Automação completa está bem para mim', emoji: '🤖' },
+    },
     channel: {
       title: 'Seu número do WhatsApp',
       subtitle: 'Os clientes vão te escrever\nneste número',
@@ -312,7 +384,9 @@ export const OWT = {
     },
     creating: {
       title: 'Configurando tudo...',
-      phases: ['Criando seu workspace...', 'Configurando o canal WhatsApp...', 'Quase pronto...'],
+      phasesWhatsapp: ['Criando seu workspace...', 'Configurando canal WhatsApp...', 'Quase pronto...'],
+      phasesWidget: ['Criando seu workspace...', 'Configurando o widget...', 'Quase pronto...'],
+      phasesBoth: ['Criando seu workspace...', 'Configurando WhatsApp e widget...', 'Quase pronto...'],
     },
     qr: {
       title: 'Conectar WhatsApp',
@@ -321,7 +395,9 @@ export const OWT = {
     },
     done: {
       title: 'Tudo pronto!',
-      subtitle: 'Seu workspace está configurado e o WhatsApp está conectado.',
+      subtitleWhatsapp: 'Seu workspace está configurado e o WhatsApp está conectado.',
+      subtitleWidget: 'Seu workspace está configurado. Encontre o código do widget nas configurações.',
+      subtitleBoth: 'Seu workspace está configurado. WhatsApp conectado e widget pronto.',
       cta: 'Ir ao Painel',
     },
     industries: {
