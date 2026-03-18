@@ -212,6 +212,127 @@ For privacy inquiries, please contact our support team.`
   }
 
   /**
+   * Sync system calling functions when workspace type changes (info ↔ ecommerce).
+   * - ECOMMERCE-ONLY functions: productSearchAgent, cartManagementAgent, orderTrackingAgent
+   *   → enable (or create if missing) when switching TO ecommerce
+   *   → disable (isActive=false) when switching TO info
+   * - CUSTOM (non-system) functions added by the client are NEVER touched.
+   * @private
+   */
+  private async syncSystemCallingFunctions(workspaceId: string, isEcommerce: boolean): Promise<void> {
+    const ECOMMERCE_ONLY_FUNCTIONS = ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent']
+
+    if (isEcommerce) {
+      // Enable or create the ecommerce-only system functions
+      const definitions: Record<string, { description: string; parameters: object }> = {
+        productSearchAgent: {
+          description: "Delegate to Product Search Agent for product catalog browsing, search, filters. Use when customer asks about products, prices, categories, certifications.",
+          parameters: { type: "object", properties: { query: { type: "string", description: "Customer's product search query" } }, required: ["query"] }
+        },
+        cartManagementAgent: {
+          description: "Delegate to Cart Management Agent for add/remove products, view cart, modify quantities. Use when customer wants to add to cart or modify cart contents.",
+          parameters: { type: "object", properties: { query: { type: "string", description: "Cart-related request" } }, required: ["query"] }
+        },
+        orderTrackingAgent: {
+          description: "Delegate to Order Tracking Agent for order history, tracking, checkout confirmation. Use for orders, delivery status, checkout.",
+          parameters: { type: "object", properties: { query: { type: "string", description: "Order-related question" } }, required: ["query"] }
+        },
+      }
+
+      for (const functionName of ECOMMERCE_ONLY_FUNCTIONS) {
+        try {
+          const existing = await this.prisma.workspaceCallingFunction.findUnique({
+            where: { workspaceId_functionName: { workspaceId, functionName } }
+          })
+          if (existing) {
+            await this.prisma.workspaceCallingFunction.update({
+              where: { workspaceId_functionName: { workspaceId, functionName } },
+              data: { isActive: true }
+            })
+            logger.info(`✅ Re-enabled system function ${functionName} for workspace ${workspaceId}`)
+          } else {
+            const def = definitions[functionName]
+            await this.prisma.workspaceCallingFunction.create({
+              data: {
+                workspaceId,
+                functionName,
+                description: def.description,
+                parameters: def.parameters,
+                isSystemFunction: true,
+                executionType: "DELEGATE_TO_AGENT",
+                isActive: true
+              }
+            })
+            logger.info(`✅ Created missing system function ${functionName} for workspace ${workspaceId}`)
+          }
+        } catch (error) {
+          logger.warn(`⚠️ Failed to enable/create system function ${functionName}:`, error)
+        }
+      }
+    } else {
+      // Disable ONLY ecommerce-only SYSTEM functions — custom client functions are untouched
+      try {
+        const result = await this.prisma.workspaceCallingFunction.updateMany({
+          where: {
+            workspaceId,
+            functionName: { in: ECOMMERCE_ONLY_FUNCTIONS },
+            isSystemFunction: true
+          },
+          data: { isActive: false }
+        })
+        logger.info(`✅ Disabled ${result.count} ecommerce system functions for workspace ${workspaceId}`)
+      } catch (error) {
+        logger.warn(`⚠️ Failed to disable ecommerce system functions:`, error)
+      }
+    }
+  }
+
+  /**
+   * Reset all default agent prompts to the correct templates for the workspace type.
+   * Called when workspace type changes (sellsProductsAndServices toggled).
+   * Uses upsert so missing agents are created and existing ones get the fresh default prompt.
+   * @private
+   */
+  private async resetDefaultAgentPrompts(workspaceId: string, isEcommerce: boolean): Promise<void> {
+    const agents = dynamicAgents(workspaceId, isEcommerce)
+    let resetCount = 0
+
+    for (const agent of agents) {
+      try {
+        await this.prisma.agentConfig.upsert({
+          where: { workspaceId_type: { workspaceId, type: agent.type } },
+          update: {
+            systemPrompt: agent.systemPrompt,
+            isActive: agent.isActive,
+            availableFunctions: agent.availableFunctions as any,
+            name: agent.name,
+            model: agent.model,
+            temperature: agent.temperature,
+            maxTokens: agent.maxTokens,
+          },
+          create: {
+            workspaceId,
+            name: agent.name,
+            type: agent.type,
+            systemPrompt: agent.systemPrompt,
+            model: agent.model,
+            temperature: agent.temperature,
+            maxTokens: agent.maxTokens,
+            order: agent.order,
+            isActive: agent.isActive,
+            availableFunctions: agent.availableFunctions as any,
+          }
+        })
+        resetCount++
+      } catch (error) {
+        logger.warn(`⚠️ Failed to reset prompt for agent ${agent.type}:`, error)
+      }
+    }
+
+    logger.info(`✅ Reset ${resetCount} default agent prompts for workspace ${workspaceId} (ecommerce: ${isEcommerce})`)
+  }
+
+  /**
    * Get default agent prompt content from file
    * @private
    */
@@ -863,31 +984,13 @@ For privacy inquiries, please contact our support team.`
       throw err
     }
 
-    // 🆕 Feature 199: Auto-toggle e-commerce agents based on sellsProductsAndServices
-    const ecommerceAgentTypes = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
-
-    if (data.sellsProductsAndServices === false) {
-      logger.info(`⚠️ sellsProductsAndServices = false → Disabling e-commerce agents`)
-
-      for (const agentType of ecommerceAgentTypes) {
-        try {
-          await this.repository.updateAgentStatus(id, agentType, false)
-          logger.info(`✅ Disabled ${agentType} agent for workspace ${id}`)
-        } catch (error) {
-          logger.warn(`⚠️ Failed to disable ${agentType} agent:`, error)
-        }
-      }
-    } else if (data.sellsProductsAndServices === true) {
-      logger.info(`✅ sellsProductsAndServices = true → Enabling e-commerce agents`)
-
-      for (const agentType of ecommerceAgentTypes) {
-        try {
-          await this.repository.updateAgentStatus(id, agentType, true)
-          logger.info(`✅ Enabled ${agentType} agent for workspace ${id}`)
-        } catch (error) {
-          logger.warn(`⚠️ Failed to enable ${agentType} agent:`, error)
-        }
-      }
+    // When workspace type changes: sync calling functions + reset default prompts
+    if (data.sellsProductsAndServices !== undefined &&
+        data.sellsProductsAndServices !== currentWorkspace.sellsProductsAndServices) {
+      const isEcommerce = data.sellsProductsAndServices
+      logger.info(`🔄 Workspace type changed → ecommerce: ${isEcommerce} — syncing functions & prompts`)
+      await this.syncSystemCallingFunctions(id, isEcommerce)
+      await this.resetDefaultAgentPrompts(id, isEcommerce)
     }
 
     // Generate slug if name is updated and slug is not provided

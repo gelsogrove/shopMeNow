@@ -77,7 +77,7 @@ export const OWT = {
       subtitle: 'Customers will message you at this number',
       phone: 'Phone number',
       phonePh: '+393331234567',
-      hint: 'International format with country code (+1 for US, +39 for Italy)',
+      hint: 'Add the +country code, e.g. +1 (US) or +39 (Italy)',
     },
     auth: {
       title: 'Create your account',

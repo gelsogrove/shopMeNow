@@ -24,7 +24,6 @@ import { ChatProvider } from "./contexts/ChatContext"
 import { AcceptInvitePage } from "./pages/AcceptInvitePage"
 import { AgentConfigurationPage } from "./pages/AgentConfigurationPage"
 import { AnalyticsPage } from "./pages/AnalyticsPage"
-import SignupPage from "./pages/auth/SignupPage"
 import Setup2FAPage from "./pages/auth/Setup2FAPage"
 import Verify2FAPage from "./pages/auth/Verify2FAPage"
 import TwoFactorResetPage from "./pages/auth/TwoFactorResetPage"
@@ -195,7 +194,7 @@ function AppWithProviders() {
                 <Route path="/auth">
                   {/* ✅ Preserve query params (e.g., ?admin=true) during redirect */}
                   <Route path="login" element={<AuthLoginRedirect />} />
-                  <Route path="signup" element={<SignupPage />} />
+                  <Route path="signup" element={<Navigate to="/?action=register" replace />} />
                   <Route path="register" element={<Navigate to="/?action=register" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
                   <Route path="verify-2fa" element={<Verify2FAPage />} />

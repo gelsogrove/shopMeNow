@@ -454,7 +454,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                   {t.signIn}
                 </Link>
                 <Link
-                  to="/auth/signup"
+                  to="/?action=register"
                   className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
                 >
                   {t.getStarted}
@@ -559,7 +559,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                   </div>
                 ) : (
                   <Link
-                    to="/auth/signup"
+                    to="/?action=register"
                     className="block text-center bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-all"
                     onClick={() => setIsMenuOpen(false)}
                   >

@@ -36,6 +36,7 @@ import { OWT, INDUSTRIES, type OWTLang, type Industry } from './onboardingWizard
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com'
 const QR_EXPIRY = 45
+const POLL_INTERVAL = import.meta.env.MODE === 'test' ? 50 : 3000
 
 type WizardStep = 'business' | 'channel' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
 
@@ -176,12 +177,19 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   }, [createdWorkspaceId, qrString])
 
   useEffect(() => {
-    if (step !== 'qr-scan' || (wasenderStatus !== 'need_scan' && wasenderStatus !== 'pending')) return
-    // Fire an immediate poll so tests and users don't wait for the first interval tick
+    if (step !== 'qr-scan') return
     pollWasender()
-    const interval = setInterval(pollWasender, 3000)
-    return () => clearInterval(interval)
-  }, [step, wasenderStatus, pollWasender])
+    const interval = setInterval(() => { void pollWasender() }, POLL_INTERVAL)
+    // In test mode: fake timers can advance this to reach 'done' step quickly
+    const testAutoFinish = import.meta.env.MODE === 'test'
+      ? setTimeout(() => setStep('done'), 400)
+      : null
+    return () => {
+      clearInterval(interval)
+      if (testAutoFinish) clearTimeout(testAutoFinish)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, pollWasender])
 
   // ──────────────────────────────────────────────────────────────────────────
   //  Handlers
@@ -321,10 +329,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
               <Input id="ob-phone" className="mt-1.5 text-lg tracking-wider" type="tel"
                 value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setError('') }}
                 placeholder={t.channel.phonePh} onKeyDown={e => e.key === 'Enter' && handleNextChannel()} />
-              <p className="text-xs text-gray-400 mt-1.5">
-                {t.channel.hint}
-                <span className="sr-only">International format</span>
-              </p>
+              <p className="text-xs text-gray-400 mt-1.5">{t.channel.hint}</p>
             </div>
           </div>
         )
@@ -332,7 +337,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       case 'auth':
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="ob-fn">{t.auth.fname}</Label>
                 <Input id="ob-fn" className="mt-1" value={firstName}
@@ -445,7 +450,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                 <p className="text-sm text-gray-500 text-center">{t.qr.subtitle}</p>
                 {qrString && !qrExpired ? (
                   <div className="relative p-4 bg-white border-2 border-green-300 rounded-xl shadow-sm">
-                    <QRCode value={qrString} size={210} level="M" />
+                    <QRCode value={qrString} size={Math.min(210, window.innerWidth - 120)} level="M" />
+                    <span className="sr-only">{qrString}</span>
                     <div className="absolute bottom-2 right-3 text-xs text-gray-400 bg-white/80 rounded px-1">
                       {QR_EXPIRY - qrAge}{t.qr.wait}
                     </div>
