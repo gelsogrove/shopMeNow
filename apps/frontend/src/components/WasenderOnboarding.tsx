@@ -55,7 +55,9 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
   // Ref to avoid stale closure in auto-regenerate
   const isRegeneratingRef = useRef(false)
 
-  // ─── Load current status from DB on mount + auto-sync with WasenderAPI ──
+  // ─── Load current status from DB on mount + ALWAYS sync with WasenderAPI ──
+  // RULE: "il codice deve vincere" — WasenderAPI is the source of truth, not DB.
+  // ALWAYS sync when sessionId exists, regardless of DB status.
   useEffect(() => {
     if (!workspaceId) {
       setLoadingInitial(false)
@@ -65,37 +67,38 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
     const loadStatus = async () => {
       try {
         const data = await getWasenderStatus(workspaceId)
-        const s = (data.wasenderSessionStatus as SessionStatus) || 'idle'
+        const dbStatus = (data.wasenderSessionStatus as SessionStatus) || 'idle'
 
-        // If session exists in DB but not confirmed connected → sync with WasenderAPI
-        // This fixes: session connected on WasenderAPI but DB status is stale
-        if (data.wasenderSessionId && s !== 'connected') {
+        // If session exists → ALWAYS sync with WasenderAPI to get real status
+        // Don't trust DB status — WasenderAPI is the single source of truth
+        if (data.wasenderSessionId) {
           try {
             const synced = await syncWasenderStatus(workspaceId)
-            const syncedStatus = (synced.wasenderSessionStatus as SessionStatus) || s
-            setStatus(syncedStatus)
+            const realStatus = (synced.wasenderSessionStatus as SessionStatus) || dbStatus
+            setStatus(realStatus)
 
-            if (syncedStatus === 'connected') {
-              // Sync detected session is connected → channelStatus now set to true in DB
+            if (realStatus === 'connected') {
+              // Session confirmed connected by WasenderAPI → show connected page
               return
             }
 
             // Restore QR if still in need_scan after sync
-            if (synced.wasenderQrString && syncedStatus === 'need_scan') {
+            if (synced.wasenderQrString && realStatus === 'need_scan') {
               setQrString(synced.wasenderQrString)
               setQrAge(0)
             }
           } catch {
             // Sync failed → fall back to DB status
-            setStatus(s)
-            if (data.wasenderQrString && s === 'need_scan') {
+            setStatus(dbStatus)
+            if (data.wasenderQrString && dbStatus === 'need_scan') {
               setQrString(data.wasenderQrString)
               setQrAge(0)
             }
           }
         } else {
-          setStatus(s)
-          if (data.wasenderQrString && s === 'need_scan') {
+          // No session in DB → idle, show "Connect WhatsApp" button
+          setStatus(dbStatus)
+          if (data.wasenderQrString && dbStatus === 'need_scan') {
             setQrString(data.wasenderQrString)
             setQrAge(0)
           }
