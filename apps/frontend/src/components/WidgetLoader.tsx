@@ -98,6 +98,8 @@ export function WidgetLoader() {
           logoUrl: config.logoUrl,
           useChannelLogo: config.useChannelLogo ?? false,
           icon: config.icon || workspace?.widgetIcon || "chat",
+          autoSuggestionsEnabled: config.autoSuggestionsEnabled ?? false,
+          quickReplies: Array.isArray(config.quickReplies) ? config.quickReplies : [],
         }
 
         // Notify any live widget listeners to re-render with the new config

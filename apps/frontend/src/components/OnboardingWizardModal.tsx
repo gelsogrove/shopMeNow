@@ -1,30 +1,32 @@
 /**
- * OnboardingWizardModal
+ * OnboardingWizardModal – survey-style multi-step onboarding
  *
- * Full-screen guided onboarding for new users:
- *   Business → Channel → Auth → 2FA setup → Workspace creation → WhatsApp QR → Done
+ * Flow: intro → industry → business → workspace-type → channel → auth → totp → creating → qr-scan → done
  *
- * Handles the complete auth flow inline (no page navigation) supporting both
- * email/password registration and Google OAuth.
+ * Design inspired by echatbot.ai/survey: animated step transitions (Framer Motion),
+ * header images from /public, emoji tiles for industry/workspace-type, auto-advance
+ * on single-choice steps, green color scheme, fully multilingual (it/en/es/pt).
+ *
+ * NOTE: Default channel/workspace values are always set by the backend service even
+ * when not explicitly collected here (sellsProductsAndServices, hasHumanSupport, etc.)
  */
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import QRCode from 'react-qr-code'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
+import { motion, AnimatePresence } from 'framer-motion'
+import { DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Loader2, CheckCircle2, RefreshCw, ChevronLeft, Eye, EyeOff, Shield, Wifi, PartyPopper } from 'lucide-react'
+import {
+  Loader2, CheckCircle2, RefreshCw, ChevronLeft,
+  Eye, EyeOff, Shield, Wifi, PartyPopper,
+} from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { api } from '@/services/api'
 import { storage } from '@/lib/storage'
@@ -32,25 +34,47 @@ import { createWorkspace } from '@/services/workspaceApi'
 import { initializeWasenderSession, regenerateWasenderQr, getWasenderStatus } from '@/services/wasenderApi'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { logger } from '@/lib/logger'
-import { OWT, INDUSTRIES, type OWTLang, type Industry } from './onboardingWizardTranslations'
+import {
+  OWT, INDUSTRIES, INDUSTRY_EMOJI, WORKSPACE_TYPE_EMOJI,
+  type OWTLang, type Industry, type WorkspaceType,
+} from './onboardingWizardTranslations'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com'
 const QR_EXPIRY = 45
 const POLL_INTERVAL = import.meta.env.MODE === 'test' ? 50 : 3000
 
-type WizardStep = 'business' | 'channel' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
+type WizardStep = 'intro' | 'industry' | 'business' | 'workspace-type' | 'channel' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
-// Map step → visual progress (0–100)
+// Progress bar fill (0–100) per step
 const STEP_PROGRESS: Record<WizardStep, number> = {
-  business: 15, channel: 35, auth: 55, totp: 75, creating: 88, 'qr-scan': 95, done: 100,
+  intro: 0, industry: 12, business: 24, 'workspace-type': 38,
+  channel: 52, auth: 66, totp: 80, creating: 90, 'qr-scan': 96, done: 100,
 }
 
-// ─── Password validation ─────────────────────────────────────────────────────
+// Steps that show progress dots and step counter
+const DATA_STEPS: WizardStep[] = ['industry', 'business', 'workspace-type', 'channel', 'auth']
+
+// Header images per step (served from /public)
+const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
+  intro: '/survey.png',
+  industry: '/survey.png',
+  'workspace-type': '/survey-ecommerce.png',
+  channel: '/survey-agent.png',
+}
+
+// Slide animation variants
+const slideVariants = {
+  enter: (d: number) => ({ x: d > 0 ? 56 : -56, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (d: number) => ({ x: d > 0 ? -56 : 56, opacity: 0 }),
+}
+
+// ─── Password validation ──────────────────────────────────────────────────────
 function validatePassword(p: string): string | null {
   if (p.length < 8) return 'Min 8 characters'
   if (!/[A-Z]/.test(p)) return 'Need at least one uppercase letter'
@@ -63,24 +87,36 @@ function validatePassword(p: string): string | null {
 export function OnboardingWizardModal({ open, onClose }: Props) {
   const { language } = useLanguage()
   const lang: OWTLang = (['it', 'en', 'es', 'pt'] as const).includes(language as OWTLang)
-    ? (language as OWTLang)
-    : 'en'
+    ? (language as OWTLang) : 'en'
   const t = OWT[lang]
   const navigate = useNavigate()
 
-  // ── Step ──────────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<WizardStep>('business')
+  // ── Navigation ──────────────────────────────────────────────────────────────
+  const [step, setStep] = useState<WizardStep>('intro')
+  const [direction, setDirection] = useState(1)    // 1 = forward, -1 = back
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // ── Step 1: Business ──────────────────────────────────────────────────────
-  const [businessName, setBusinessName] = useState('')
+  const goTo = (target: WizardStep, dir: 1 | -1 = 1) => {
+    setDirection(dir)
+    setError('')
+    setStep(target)
+  }
+
+  // ── Step: industry ───────────────────────────────────────────────────────────
   const [industry, setIndustry] = useState<Industry>('other')
 
-  // ── Step 2: Channel ───────────────────────────────────────────────────────
+  // ── Step: business ───────────────────────────────────────────────────────────
+  const [businessName, setBusinessName] = useState('')
+
+  // ── Step: workspace-type ─────────────────────────────────────────────────────
+  // Sets sellsProductsAndServices: ecommerce=true, services/info=false
+  const [workspaceType, setWorkspaceType] = useState<WorkspaceType>('ecommerce')
+
+  // ── Step: channel ────────────────────────────────────────────────────────────
   const [phoneNumber, setPhoneNumber] = useState('')
 
-  // ── Step 3: Auth ──────────────────────────────────────────────────────────
+  // ── Step: auth ───────────────────────────────────────────────────────────────
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -88,13 +124,13 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const [showPassword, setShowPassword] = useState(false)
   const [gdprAccepted, setGdprAccepted] = useState(false)
 
-  // ── After auth response ───────────────────────────────────────────────────
+  // ── After auth response ───────────────────────────────────────────────────────
   const [pendingUserId, setPendingUserId] = useState('')
-  const [totpQrCode, setTotpQrCode] = useState('')   // otpauth:// URL for Google Authenticator
-  const [isNewUser, setIsNewUser] = useState(true)   // true = show QR + verify, false = verify only
+  const [totpQrCode, setTotpQrCode] = useState('')
+  const [isNewUser, setIsNewUser] = useState(true)
   const [totpCode, setTotpCode] = useState('')
 
-  // ── Workspace / wasender ──────────────────────────────────────────────────
+  // ── Workspace / wasender ─────────────────────────────────────────────────────
   const [createdWorkspaceId, setCreatedWorkspaceId] = useState('')
   const [qrString, setQrString] = useState('')
   const [qrAge, setQrAge] = useState(0)
@@ -102,28 +138,33 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const [isRegeneratingQr, setIsRegeneratingQr] = useState(false)
   const [creatingPhase, setCreatingPhase] = useState(0)
 
-  // ── Reset on open ─────────────────────────────────────────────────────────
+  // ── Reset on open ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return
-    setStep('business'); setError('')
-    setBusinessName(''); setIndustry('other'); setPhoneNumber('')
-    setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setGdprAccepted(false)
+    setStep('intro'); setError(''); setDirection(1)
+    setIndustry('other'); setBusinessName(''); setWorkspaceType('ecommerce'); setPhoneNumber('')
+    setFirstName(''); setLastName(''); setEmail(''); setPassword('')
+    setShowPassword(false); setGdprAccepted(false)
     setPendingUserId(''); setTotpQrCode(''); setTotpCode('')
     setCreatedWorkspaceId(''); setQrString(''); setQrAge(0)
     setWasenderStatus('idle'); setCreatingPhase(0); setIsLoading(false)
   }, [open])
 
-  // ── Auto-create workspace when entering 'creating' step ───────────────────
+  // ── Auto-create workspace when entering 'creating' step ───────────────────────
   useEffect(() => {
     if (step !== 'creating') return
 
     const run = async () => {
       try {
         setCreatingPhase(0)
+        // Pass sellsProductsAndServices based on workspace type choice.
+        // All other defaults (hasHumanSupport, toneOfVoice, channelType, etc.)
+        // are set by the backend workspace.service.ts — we never override them here.
         const workspace = await createWorkspace({
           name: businessName,
           whatsappPhoneNumber: phoneNumber,
           language: lang,
+          sellsProductsAndServices: workspaceType === 'ecommerce',
         })
 
         setCreatingPhase(1)
@@ -139,26 +180,26 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
         setCreatingPhase(2)
         await new Promise(r => setTimeout(r, 700))
-        setStep('qr-scan')
+        goTo('qr-scan')
       } catch (err: any) {
         const msg = err.response?.data?.error || err.message || 'Failed to create workspace'
         logger.error('[OnboardingWizard] workspace creation failed:', err)
         toast.error(msg)
         setWasenderStatus('failed')
-        setStep('qr-scan')
+        goTo('qr-scan')
       }
     }
     run()
   }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── QR countdown ──────────────────────────────────────────────────────────
+  // ── QR countdown ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (step !== 'qr-scan' || !qrString || wasenderStatus === 'connected') return
     const timer = setInterval(() => setQrAge(a => a + 1), 1000)
     return () => clearInterval(timer)
   }, [step, qrString, wasenderStatus])
 
-  // ── Poll wasender status ───────────────────────────────────────────────────
+  // ── Poll wasender status ──────────────────────────────────────────────────────
   const pollWasender = useCallback(async () => {
     if (!createdWorkspaceId) return
     try {
@@ -167,44 +208,52 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       setWasenderStatus(s)
       if (s === 'connected') {
         toast.success('WhatsApp connected successfully!')
-        setStep('done')
+        goTo('done')
       }
       if (latest.wasenderQrString && latest.wasenderQrString !== qrString) {
         setQrString(latest.wasenderQrString)
         setQrAge(0)
       }
     } catch {}
-  }, [createdWorkspaceId, qrString])
+  }, [createdWorkspaceId, qrString]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (step !== 'qr-scan') return
-    // Fire an immediate poll on entering qr-scan step
     pollWasender()
     if (import.meta.env.MODE === 'test') {
-      // In test mode: do NOT use setInterval — vi.runAllTimersAsync() loops forever
-      // with a recurring timer. Use a one-shot timeout instead so fake-timer tests
-      // can advance to 'done' predictably.
-      const t = setTimeout(() => setStep('done'), 400)
+      // In test mode: one-shot timeout so fake-timer tests can advance predictably
+      const t = setTimeout(() => goTo('done'), 400)
       return () => clearTimeout(t)
     }
     const interval = setInterval(() => { void pollWasender() }, POLL_INTERVAL)
     return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, pollWasender])
+  }, [step, pollWasender]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ──────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
   //  Handlers
-  // ──────────────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────────────────
+
+  // Industry: auto-advance after selection
+  const handleSelectIndustry = (ind: Industry) => {
+    setIndustry(ind)
+    setTimeout(() => goTo('business'), 250)
+  }
 
   const handleNextBusiness = () => {
     if (!businessName.trim()) { setError(t.errors.required); return }
-    setError(''); setStep('channel')
+    goTo('workspace-type')
+  }
+
+  // Workspace type: auto-advance after selection
+  const handleSelectWorkspaceType = (type: WorkspaceType) => {
+    setWorkspaceType(type)
+    setTimeout(() => goTo('channel'), 250)
   }
 
   const handleNextChannel = () => {
     const trimmed = phoneNumber.trim()
     if (!trimmed.startsWith('+') || trimmed.length < 8) { setError(t.errors.phoneFormat); return }
-    setError(''); setStep('auth')
+    goTo('auth')
   }
 
   const handleEmailRegister = async () => {
@@ -219,7 +268,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       const resp = await api.post('/auth/register', { email, password, firstName, lastName, gdprAccepted: true })
       const { user, qrCode } = resp.data
       setPendingUserId(user.id); setTotpQrCode(qrCode); setIsNewUser(true)
-      setStep('totp')
+      goTo('totp')
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed')
     } finally {
@@ -243,8 +292,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       setPendingUserId(user.id)
       if (requiresSetup) { setTotpQrCode(qrCode); setIsNewUser(true) }
       else if (requires2FA) { setIsNewUser(false) }
-      setStep('totp')
-    } catch (err: any) {
+      goTo('totp')
+    } catch {
       setError('Google authentication failed. Please try again.')
     } finally {
       setIsLoading(false)
@@ -261,7 +310,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       storage.clearAppState()
       storage.setToken(token); storage.setSessionId(sessionId)
       if (user) storage.setUser(user)
-      setStep('creating')
+      goTo('creating')
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid verification code')
     } finally {
@@ -288,56 +337,220 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     window.location.href = '/workspace-selection'
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  //  Render
-  // ──────────────────────────────────────────────────────────────────────────
+  // ── Back navigation ───────────────────────────────────────────────────────────
+  const BACK_MAP: Partial<Record<WizardStep, WizardStep>> = {
+    industry: 'intro',
+    business: 'industry',
+    'workspace-type': 'business',
+    channel: 'workspace-type',
+    auth: 'channel',
+  }
+  const canGoBack = step in BACK_MAP
+  const handleBack = () => {
+    const prev = BACK_MAP[step]
+    if (prev) goTo(prev, -1)
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────────
+  //  Derived state
+  // ──────────────────────────────────────────────────────────────────────────────
 
   const progress = STEP_PROGRESS[step]
   const qrExpired = qrAge >= QR_EXPIRY
+  const isTransitionStep = step === 'creating' || step === 'qr-scan' || step === 'done'
+  const stepDotIndex = DATA_STEPS.indexOf(step)   // -1 = dots hidden
+  const stepImage = STEP_IMAGES[step]
 
-  const renderStep = () => {
+  // ──────────────────────────────────────────────────────────────────────────────
+  //  Step content
+  // ──────────────────────────────────────────────────────────────────────────────
+
+  const renderStepContent = () => {
     switch (step) {
+
+      // ── INTRO ────────────────────────────────────────────────────────────────
+      case 'intro':
+        return (
+          <div className="flex flex-col items-center text-center gap-5 py-2">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                {t.intro.title}
+              </h2>
+              <p className="text-slate-500 mt-2 leading-relaxed text-base whitespace-pre-line">
+                {t.intro.subtitle}
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {t.intro.benefits.map((b, i) => (
+                <span key={i} className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-3 py-1">
+                  {b}
+                </span>
+              ))}
+            </div>
+            <Button
+              className="mt-2 bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-base w-full sm:w-auto rounded-xl"
+              onClick={() => goTo('industry')}
+            >
+              {t.intro.cta}
+            </Button>
+          </div>
+        )
+
+      // ── INDUSTRY ─────────────────────────────────────────────────────────────
+      case 'industry':
+        return (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Step 1 / {DATA_STEPS.length}
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">{t.industry.title}</h2>
+              <p className="text-sm text-slate-500 mt-1 whitespace-pre-line">{t.industry.subtitle}</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {INDUSTRIES.map(ind => (
+                <button
+                  key={ind}
+                  type="button"
+                  onClick={() => handleSelectIndustry(ind)}
+                  className={[
+                    'flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all text-left text-sm',
+                    industry === ind
+                      ? 'bg-green-50 border-green-500 text-green-800 font-semibold shadow-sm'
+                      : 'border-slate-200 text-slate-700 hover:border-green-300',
+                  ].join(' ')}
+                >
+                  <span className="text-lg flex-shrink-0">{INDUSTRY_EMOJI[ind]}</span>
+                  <span className="leading-tight">{t.industries[ind]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+
+      // ── BUSINESS NAME ─────────────────────────────────────────────────────────
       case 'business':
         return (
           <div className="space-y-5">
             <div>
-              <Label htmlFor="ob-bname">{t.business.name}</Label>
-              <Input id="ob-bname" className="mt-1.5" value={businessName}
-                onChange={e => { setBusinessName(e.target.value); setError('') }}
-                placeholder={t.business.namePh} onKeyDown={e => e.key === 'Enter' && handleNextBusiness()} />
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Step 2 / {DATA_STEPS.length}
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">{t.business.title}</h2>
+              <p className="text-sm text-slate-500 mt-1">{t.business.subtitle}</p>
+            </div>
+            {/* Show selected industry as context badge */}
+            <div className="flex items-center gap-2.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+              <span className="text-xl">{INDUSTRY_EMOJI[industry]}</span>
+              <span className="text-sm text-slate-600">{t.industries[industry]}</span>
             </div>
             <div>
-              <Label>{t.business.industry}</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5">
-                {INDUSTRIES.map(ind => (
-                  <button key={ind} type="button"
-                    onClick={() => setIndustry(ind)}
-                    className={`px-2 py-2 text-xs rounded-lg border transition-colors text-center ${industry === ind ? 'bg-green-50 border-green-500 text-green-700 font-semibold' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
-                  >
-                    {t.industries[ind]}
-                  </button>
-                ))}
-              </div>
+              <Label htmlFor="ob-bname">{t.business.name}</Label>
+              <Input
+                id="ob-bname"
+                className="mt-1.5 text-base"
+                value={businessName}
+                onChange={e => { setBusinessName(e.target.value); setError('') }}
+                placeholder={t.business.namePh}
+                onKeyDown={e => e.key === 'Enter' && handleNextBusiness()}
+                autoFocus
+              />
             </div>
           </div>
         )
 
+      // ── WORKSPACE TYPE ────────────────────────────────────────────────────────
+      case 'workspace-type':
+        return (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Step 3 / {DATA_STEPS.length}
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">{t.workspaceType.title}</h2>
+              <p className="text-sm text-slate-500 mt-1">{t.workspaceType.subtitle}</p>
+            </div>
+            <div className="space-y-2.5">
+              {(['ecommerce', 'services', 'info'] as WorkspaceType[]).map(type => {
+                const isSelected = workspaceType === type
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handleSelectWorkspaceType(type)}
+                    className={[
+                      'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left',
+                      isSelected
+                        ? 'bg-green-50 border-green-500 shadow-sm'
+                        : 'border-slate-200 hover:border-green-300',
+                    ].join(' ')}
+                  >
+                    <span className="text-2xl flex-shrink-0">{WORKSPACE_TYPE_EMOJI[type]}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-semibold ${isSelected ? 'text-green-800' : 'text-slate-800'}`}>
+                        {t.workspaceType.options[type].label}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {t.workspaceType.options[type].desc}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+
+      // ── CHANNEL (WhatsApp number) ─────────────────────────────────────────────
       case 'channel':
         return (
           <div className="space-y-4">
             <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Step 4 / {DATA_STEPS.length}
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">{t.channel.title}</h2>
+              <p className="text-sm text-slate-500 mt-1 whitespace-pre-line">{t.channel.subtitle}</p>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl">
+              <span className="text-lg">📱</span>
+              <span className="text-sm font-medium text-green-800">WhatsApp Business</span>
+            </div>
+            <div>
               <Label htmlFor="ob-phone">{t.channel.phone}</Label>
-              <Input id="ob-phone" className="mt-1.5 text-lg tracking-wider" type="tel"
-                value={phoneNumber} onChange={e => { setPhoneNumber(e.target.value); setError('') }}
-                placeholder={t.channel.phonePh} onKeyDown={e => e.key === 'Enter' && handleNextChannel()} />
-              <p className="text-xs text-gray-400 mt-1.5">{t.channel.hint}</p>
+              <Input
+                id="ob-phone"
+                className="mt-1.5 text-lg tracking-wider"
+                type="tel"
+                value={phoneNumber}
+                onChange={e => { setPhoneNumber(e.target.value); setError('') }}
+                placeholder={t.channel.phonePh}
+                onKeyDown={e => e.key === 'Enter' && handleNextChannel()}
+                autoFocus
+              />
+              <p className="text-xs text-slate-400 mt-1.5">{t.channel.hint}</p>
             </div>
           </div>
         )
 
+      // ── AUTH ──────────────────────────────────────────────────────────────────
       case 'auth':
         return (
           <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Step 5 / {DATA_STEPS.length}
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">{t.auth.title}</h2>
+              <p className="text-sm text-slate-500 mt-1">{t.auth.subtitle}</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="ob-fn">{t.auth.fname}</Label>
@@ -379,8 +592,12 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
               {t.auth.register}
             </Button>
             <div className="relative my-1">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
-              <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-gray-400">{t.auth.or}</span></div>
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white px-2 text-gray-400">{t.auth.or}</span>
+              </div>
             </div>
             <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
               <div className="flex justify-center">
@@ -392,10 +609,16 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           </div>
         )
 
+      // ── TOTP ──────────────────────────────────────────────────────────────────
       case 'totp':
         return (
           <div className="flex flex-col items-center space-y-5">
-            <Shield className="h-10 w-10 text-green-600" />
+            <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
+              <Shield className="h-7 w-7 text-green-600" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-slate-900">{t.totp.title}</h2>
+            </div>
             {isNewUser && totpQrCode ? (
               <>
                 <p className="text-sm text-gray-500 text-center">{t.totp.setupSubtitle}</p>
@@ -421,10 +644,15 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           </div>
         )
 
+      // ── CREATING ──────────────────────────────────────────────────────────────
       case 'creating':
         return (
-          <div className="flex flex-col items-center gap-6 py-6">
-            <Loader2 className="h-14 w-14 animate-spin text-green-500" />
+          <div className="flex flex-col items-center gap-6 py-8">
+            <div className="relative">
+              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+              </div>
+            </div>
             <div className="text-center space-y-1">
               <p className="font-semibold text-gray-800">{t.creating.title}</p>
               <p className="text-sm text-gray-500">{t.creating.phases[Math.min(creatingPhase, 2)]}</p>
@@ -436,16 +664,25 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           </div>
         )
 
+      // ── QR SCAN ───────────────────────────────────────────────────────────────
       case 'qr-scan':
         return (
           <div className="flex flex-col items-center gap-4">
-            <Wifi className="h-8 w-8 text-green-500" />
+            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+              <Wifi className="h-6 w-6 text-green-600" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">{t.qr.title}</h2>
             {wasenderStatus === 'failed' ? (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertDescription className="text-red-700 text-sm">
-                  Failed to connect WhatsApp. Please try again from Settings after login.
-                </AlertDescription>
-              </Alert>
+              <>
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-700 text-sm">
+                    Failed to connect WhatsApp. You can configure it from Settings after login.
+                  </AlertDescription>
+                </Alert>
+                <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleDone}>
+                  Go to Dashboard anyway
+                </Button>
+              </>
             ) : (
               <>
                 <p className="text-sm text-gray-500 text-center">{t.qr.subtitle}</p>
@@ -480,28 +717,24 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                 )}
               </>
             )}
-            {wasenderStatus === 'failed' && (
-              <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={handleDone}>
-                Go to Dashboard anyway
-              </Button>
-            )}
           </div>
         )
 
+      // ── DONE ──────────────────────────────────────────────────────────────────
       case 'done':
         return (
-          <div className="flex flex-col items-center gap-5 py-4 text-center">
+          <div className="flex flex-col items-center gap-5 py-6 text-center">
             <div className="relative">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-9 w-9 text-green-600" />
+              <div className="h-20 w-20 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-11 w-11 text-green-600" />
               </div>
-              <PartyPopper className="h-6 w-6 text-amber-400 absolute -top-1 -right-2" />
+              <PartyPopper className="h-7 w-7 text-amber-400 absolute -top-1 -right-2" />
             </div>
             <div>
-              <p className="text-xl font-bold text-gray-900">{t.done.title}</p>
-              <p className="text-sm text-gray-500 mt-1">{t.done.subtitle}</p>
+              <p className="text-2xl font-bold text-gray-900">{t.done.title}</p>
+              <p className="text-sm text-gray-500 mt-2 leading-relaxed">{t.done.subtitle}</p>
             </div>
-            <Button className="bg-green-600 hover:bg-green-700 text-white px-8" onClick={handleDone}>
+            <Button className="bg-green-600 hover:bg-green-700 text-white px-10 py-2.5 rounded-xl" onClick={handleDone}>
               {t.done.cta}
             </Button>
           </div>
@@ -512,74 +745,113 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     }
   }
 
-  const canGoBack = step === 'channel' || step === 'auth'
-  const handleBack = () => {
-    setError('')
-    if (step === 'channel') setStep('business')
-    else if (step === 'auth') setStep('channel')
-  }
+  // Footer CTA button (only for steps that require manual advance)
+  const footerCTA = (() => {
+    if (step === 'business') {
+      return (
+        <Button className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl" onClick={handleNextBusiness}>
+          {t.next}
+        </Button>
+      )
+    }
+    if (step === 'channel') {
+      return (
+        <Button className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl" onClick={handleNextChannel}>
+          {t.next}
+        </Button>
+      )
+    }
+    return null
+  })()
 
-  // Titles for header
-  const stepTitles: Record<WizardStep, string> = {
-    business: t.business.title,
-    channel: t.channel.title,
-    auth: t.auth.title,
-    totp: t.totp.title,
-    creating: t.creating.title,
-    'qr-scan': t.qr.title,
-    done: t.done.title,
-  }
-  const stepSubtitles: Record<WizardStep, string> = {
-    business: t.business.subtitle,
-    channel: t.channel.subtitle,
-    auth: t.auth.subtitle,
-    totp: isNewUser ? t.totp.setupSubtitle : t.totp.verifySubtitle,
-    creating: t.creating.phases[Math.min(creatingPhase, 2)],
-    'qr-scan': '',
-    done: '',
-  }
-
-  const isTransitionStep = step === 'creating' || step === 'qr-scan' || step === 'done'
+  // ──────────────────────────────────────────────────────────────────────────────
+  //  Render
+  // ──────────────────────────────────────────────────────────────────────────────
 
   return (
     <Dialog open={open} onOpenChange={v => { if (!v && !isTransitionStep) onClose() }}>
-      <DialogContent className="w-full h-dvh max-w-none m-0 rounded-none flex flex-col p-0 sm:h-auto sm:max-w-lg sm:m-auto sm:rounded-2xl overflow-hidden">
-        {/* Progress bar */}
-        <div className="h-1.5 bg-gray-100 shrink-0">
-          <div className="h-full bg-green-500 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+      <DialogContent className="w-full h-dvh max-w-none m-0 rounded-none flex flex-col p-0 sm:h-auto sm:max-w-xl sm:m-auto sm:rounded-2xl overflow-hidden bg-white">
+        {/* Accessibility labels (visually hidden) */}
+        <DialogTitle className="sr-only">eChatbot Setup</DialogTitle>
+        <DialogDescription className="sr-only">Multi-step onboarding wizard to configure your WhatsApp workspace</DialogDescription>
+
+        {/* ── Progress bar ─────────────────────────────────────────────────── */}
+        <div className="h-1.5 bg-slate-100 shrink-0">
+          <div
+            className="h-full bg-green-500 transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         </div>
 
+        {/* ── Step dots (data collection steps only) ───────────────────────── */}
+        {stepDotIndex >= 0 && (
+          <div className="flex justify-center gap-2 pt-3 pb-1 shrink-0">
+            {DATA_STEPS.map((s, i) => (
+              <div
+                key={s}
+                className={[
+                  'rounded-full transition-all duration-300',
+                  i < stepDotIndex ? 'w-2 h-2 bg-green-500' :
+                  i === stepDotIndex ? 'w-4 h-2 bg-green-500' :
+                  'w-2 h-2 bg-slate-200',
+                ].join(' ')}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ── Header image (intro / industry / workspace-type / channel) ────── */}
+        {stepImage && (
+          <div className="shrink-0 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
+            <img
+              src={stepImage}
+              alt=""
+              className="w-full h-40 sm:h-48 object-cover object-center"
+            />
+          </div>
+        )}
+
+        {/* ── Scrollable content ──────────────────────────────────────────────── */}
         <div className="flex flex-col flex-1 overflow-y-auto">
-          {/* Header */}
-          <DialogHeader className="px-6 pt-5 pb-2 shrink-0">
-            {canGoBack && (
-              <button onClick={handleBack} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 mb-2 transition-colors">
+
+          {/* Back button */}
+          {canGoBack && (
+            <div className="px-6 pt-4 shrink-0">
+              <button
+                onClick={handleBack}
+                className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+              >
                 <ChevronLeft className="h-4 w-4" />{t.back}
               </button>
-            )}
-            <DialogTitle className="text-xl font-bold text-gray-900">{stepTitles[step]}</DialogTitle>
-            {stepSubtitles[step] && step !== 'totp' && (
-              <DialogDescription className="text-sm text-gray-500 mt-0.5">{stepSubtitles[step]}</DialogDescription>
-            )}
-          </DialogHeader>
+            </div>
+          )}
 
-          {/* Body */}
-          <div className="px-6 pb-6 pt-2 flex-1">
+          {/* Animated step content */}
+          <div className={`px-6 flex-1 pb-4 ${canGoBack ? 'pt-3' : stepImage ? 'pt-5' : 'pt-6'}`}>
             {error && (
               <Alert className="mb-4 border-red-200 bg-red-50">
                 <AlertDescription className="text-red-700 text-sm">{error}</AlertDescription>
               </Alert>
             )}
-            {renderStep()}
+            <AnimatePresence mode="wait" custom={direction}>
+              <motion.div
+                key={step}
+                custom={direction}
+                variants={slideVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                {renderStepContent()}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          {/* Footer CTA for simple steps */}
-          {(step === 'business' || step === 'channel') && (
+          {/* Footer CTA */}
+          {footerCTA && (
             <div className="px-6 pb-6 shrink-0">
-              <Button className="w-full bg-green-600 hover:bg-green-700 text-white"
-                onClick={step === 'business' ? handleNextBusiness : handleNextChannel}>
-                {t.next}
-              </Button>
+              {footerCTA}
             </div>
           )}
         </div>

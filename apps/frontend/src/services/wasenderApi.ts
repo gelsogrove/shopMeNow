@@ -96,6 +96,18 @@ export const restartWasenderSession = async (workspaceId: string): Promise<void>
   await api.post(`/workspaces/${workspaceId}/wasender/restart`)
 }
 
+/**
+ * Sync session status from WasenderAPI → fixes stale DB state.
+ * Call on settings page load to detect if session is already connected.
+ * Also sets channelStatus=true in DB when confirmed connected (fixes chatbot not responding).
+ */
+export const syncWasenderStatus = async (
+  workspaceId: string
+): Promise<WasenderStatusResponse> => {
+  const response = await api.post(`/workspaces/${workspaceId}/wasender/sync-status`)
+  return response.data
+}
+
 export default {
   initializeWasenderSession,
   disconnectWasenderSession,
@@ -103,4 +115,5 @@ export default {
   regenerateWasenderQr,
   restartWasenderSession,
   getWasenderStatus,
+  syncWasenderStatus,
 }

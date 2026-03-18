@@ -2,18 +2,17 @@
  * WasenderOnboarding - WhatsApp Self-Registration via QR Code (WasenderAPI)
  *
  * Flow:
- *  1. User clicks "Connect WhatsApp" → calls initialize endpoint
- *  2. Backend creates session + connects → returns QR string
- *  3. Frontend renders QR using react-qr-code
- *  4. Polls every 3s — when status = "connected" → onComplete()
- *  5. QR expires after 45s → user can regenerate
+ *  1. On mount: if sessionId exists → sync status from WasenderAPI (fixes stale DB)
+ *  2. If already connected → show "Connected" state immediately
+ *  3. If not connected → show "Connect WhatsApp" button (no phone number needed)
+ *  4. On connect: backend creates/reuses session → returns QR string
+ *  5. QR auto-refreshes every 45s via handleRegenerateQr
+ *  6. Polls every 3s — when status = "connected" → onComplete()
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import QRCode from 'react-qr-code'
 import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, RefreshCw, Wifi, WifiOff, CheckCircle2 } from 'lucide-react'
 import { toast } from '@/lib/toast'
@@ -24,6 +23,7 @@ import {
   deleteWasenderSession,
   restartWasenderSession,
   getWasenderStatus,
+  syncWasenderStatus,
 } from '@/services/wasenderApi'
 
 interface WasenderOnboardingProps {
@@ -38,7 +38,7 @@ type SessionStatus = 'idle' | 'pending' | 'need_scan' | 'connected' | 'disconnec
 
 const QR_EXPIRY_SECONDS = 45
 
-export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, initialPhoneNumber }: WasenderOnboardingProps) {
+export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }: WasenderOnboardingProps) {
   const { workspace } = useWorkspace()
   const workspaceId = workspaceIdProp ?? workspace?.id
 
@@ -51,33 +51,63 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
   const [status, setStatus] = useState<SessionStatus>('idle')
   const [qrAge, setQrAge] = useState(0) // seconds since QR was received
   const [loadingInitial, setLoadingInitial] = useState(true)
-  const [phoneNumber, setPhoneNumber] = useState(initialPhoneNumber ?? '')
-  const [phoneError, setPhoneError] = useState('')
 
-  // ─── Load current status from DB on mount (handles Settings re-visit) ─
+  // Ref to avoid stale closure in auto-regenerate
+  const isRegeneratingRef = useRef(false)
+
+  // ─── Load current status from DB on mount + auto-sync with WasenderAPI ──
   useEffect(() => {
     if (!workspaceId) {
       setLoadingInitial(false)
       return
     }
-    getWasenderStatus(workspaceId)
-      .then((data) => {
+
+    const loadStatus = async () => {
+      try {
+        const data = await getWasenderStatus(workspaceId)
         const s = (data.wasenderSessionStatus as SessionStatus) || 'idle'
-        setStatus(s)
-        // If QR is still valid and we're in need_scan, restore it
-        if (data.wasenderQrString && s === 'need_scan') {
-          setQrString(data.wasenderQrString)
-          setQrAge(0)
+
+        // If session exists in DB but not confirmed connected → sync with WasenderAPI
+        // This fixes: session connected on WasenderAPI but DB status is stale
+        if (data.wasenderSessionId && s !== 'connected') {
+          try {
+            const synced = await syncWasenderStatus(workspaceId)
+            const syncedStatus = (synced.wasenderSessionStatus as SessionStatus) || s
+            setStatus(syncedStatus)
+
+            if (syncedStatus === 'connected') {
+              // Sync detected session is connected → channelStatus now set to true in DB
+              return
+            }
+
+            // Restore QR if still in need_scan after sync
+            if (synced.wasenderQrString && syncedStatus === 'need_scan') {
+              setQrString(synced.wasenderQrString)
+              setQrAge(0)
+            }
+          } catch {
+            // Sync failed → fall back to DB status
+            setStatus(s)
+            if (data.wasenderQrString && s === 'need_scan') {
+              setQrString(data.wasenderQrString)
+              setQrAge(0)
+            }
+          }
+        } else {
+          setStatus(s)
+          if (data.wasenderQrString && s === 'need_scan') {
+            setQrString(data.wasenderQrString)
+            setQrAge(0)
+          }
         }
-        // Pre-fill phone number from DB if not already set via prop
-        if (data.wasenderPhoneNumber && !initialPhoneNumber) {
-          setPhoneNumber(data.wasenderPhoneNumber)
-        }
-      })
-      .catch(() => {
+      } catch {
         // No session yet — stay idle
-      })
-      .finally(() => setLoadingInitial(false))
+      } finally {
+        setLoadingInitial(false)
+      }
+    }
+
+    loadStatus()
   }, [workspaceId])
 
   // ─── QR countdown timer ───────────────────────────────────────────────
@@ -92,6 +122,29 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
   }, [qrString, status])
 
   const qrExpired = qrAge >= QR_EXPIRY_SECONDS
+
+  // ─── Auto-regenerate when QR expires ─────────────────────────────────
+  useEffect(() => {
+    if (!qrExpired || isRegeneratingRef.current || !workspaceId) return
+    if (status !== 'need_scan' && status !== 'pending') return
+
+    const autoRegen = async () => {
+      if (isRegeneratingRef.current) return
+      isRegeneratingRef.current = true
+      try {
+        const response = await regenerateWasenderQr(workspaceId)
+        setQrString(response.wasenderQrString)
+        setStatus((response.wasenderSessionStatus as SessionStatus) || 'need_scan')
+        setQrAge(0)
+      } catch {
+        // Auto-regen failed — user can click "New QR Code" manually
+      } finally {
+        isRegeneratingRef.current = false
+      }
+    }
+
+    autoRegen()
+  }, [qrExpired, workspaceId, status])
 
   // ─── Status polling (every 3s while waiting for scan) ────────────────
   const pollStatus = useCallback(async () => {
@@ -111,7 +164,7 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
         setQrString(latest.wasenderQrString)
         setQrAge(0)
       }
-    } catch (err) {
+    } catch {
       // Ignore polling errors silently
     }
   }, [workspaceId, qrString, onComplete])
@@ -130,23 +183,12 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
       return
     }
 
-    // Validate phone number — must be E.164 format
-    const trimmed = phoneNumber.trim()
-    if (!trimmed) {
-      setPhoneError('Phone number is required')
-      return
-    }
-    if (!trimmed.startsWith('+') || trimmed.length < 8) {
-      setPhoneError('Use international format, e.g. +393331234567')
-      return
-    }
-    setPhoneError('')
-
     try {
       setIsInitializing(true)
       setQrAge(0)
 
-      const response = await initializeWasenderSession(workspaceId, { phoneNumber: trimmed })
+      // Phone number is optional — backend uses workspace's stored phone
+      const response = await initializeWasenderSession(workspaceId)
 
       setStatus((response.wasenderSessionStatus as SessionStatus) || 'pending')
 
@@ -154,7 +196,12 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
         setQrString(response.wasenderQrString)
       }
 
-      toast.success('QR code generated — scan with WhatsApp now')
+      if (response.wasenderSessionStatus === 'connected') {
+        toast.success('WhatsApp already connected!')
+        onComplete()
+      } else {
+        toast.success('QR code generated — scan with WhatsApp now')
+      }
     } catch (error: any) {
       const httpStatus = error.response?.status
       const code = error.response?.data?.code
@@ -166,10 +213,8 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
       } else if (code === 'WASENDER_AUTH_ERROR') {
         toast.error('WasenderAPI configuration error — contact your administrator')
       } else {
-        // Show full error detail for debugging
         const detail = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to start WhatsApp session'
         toast.error(detail)
-        console.error('[WasenderOnboarding] Initialize error:', { httpStatus, code, detail, fullResponse: error.response?.data })
       }
       setStatus('failed')
     } finally {
@@ -196,6 +241,7 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
       setIsRegenerating(false)
     }
   }
+
   // ─── Restart session ──────────────────────────────────────────────────
   const handleRestart = async () => {
     if (!workspaceId) return
@@ -203,8 +249,6 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
       setIsRestarting(true)
       await restartWasenderSession(workspaceId)
       toast.success('Session restarted — reconnecting...')
-      // After restart the session will emit session.status events via webhook
-      // which will update the DB. Poll to reflect new state.
       setTimeout(pollStatus, 3000)
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Failed to restart session')
@@ -212,6 +256,7 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
       setIsRestarting(false)
     }
   }
+
   // ─── Disconnect (pause) ───────────────────────────────────────────────
   const handleDisconnect = async () => {
     if (!workspaceId) return
@@ -246,7 +291,6 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
 
   // ─── Render ───────────────────────────────────────────────────────────
 
-  // Loading initial status from DB
   if (loadingInitial) {
     return (
       <div className="flex items-center justify-center gap-2 py-8 text-gray-400">
@@ -301,29 +345,6 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
           <p className="text-sm text-gray-500 mt-1">
             No Meta Business Account needed — just scan a QR code with your phone.
           </p>
-        </div>
-
-        {/* Phone number input */}
-        <div className="w-full max-w-xs space-y-1">
-          <Label htmlFor="wasender-phone" className="text-sm font-medium text-gray-700">
-            WhatsApp Phone Number
-          </Label>
-          <Input
-            id="wasender-phone"
-            type="tel"
-            value={phoneNumber}
-            onChange={(e) => {
-              setPhoneNumber(e.target.value)
-              if (phoneError) setPhoneError('')
-            }}
-            placeholder="+393331234567"
-            className={phoneError ? 'border-red-400 focus:ring-red-400' : ''}
-            disabled={isInitializing}
-          />
-          {phoneError && (
-            <p className="text-xs text-red-500">{phoneError}</p>
-          )}
-          <p className="text-xs text-gray-400">International format with country code (e.g. +39 for Italy)</p>
         </div>
 
         {status === 'failed' && (
@@ -384,9 +405,8 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp, i
         </div>
       ) : qrExpired ? (
         <div className="flex flex-col items-center gap-3 p-8 border-2 border-dashed border-amber-300 rounded-xl bg-amber-50">
-          <RefreshCw className="h-8 w-8 text-amber-500" />
-          <p className="text-sm font-medium text-amber-700">QR code expired</p>
-          <p className="text-xs text-amber-600">QR codes expire after 45 seconds</p>
+          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+          <p className="text-sm font-medium text-amber-700">Refreshing QR code...</p>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 p-8">

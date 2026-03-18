@@ -79,6 +79,14 @@ router.post(
   workspaceController.restartWasenderSession.bind(workspaceController)
 )
 
+router.post(
+  '/workspaces/:workspaceId/wasender/sync-status',
+  authMiddleware,
+  sessionValidationMiddleware,
+  workspaceValidationMiddleware,
+  workspaceController.syncWasenderStatus.bind(workspaceController)
+)
+
 // ─── Webhook (Public - called by WasenderAPI) ─────────────────────────────────
 
 /**

@@ -985,8 +985,15 @@ export class WidgetChatController {
         tokensUsed: llmResult.tokensUsed,
       })
 
-      // RULE: First message (welcome) has NO suggestions
-      const suggestions: string[] = []
+      // Generate AI suggestions for first message too (so user sees quick reply buttons)
+      const suggestions = workspace.widgetAutoSuggestionsEnabled === true
+        ? await buildWidgetSuggestionsWithAI(
+            llmResult.response || "",
+            normalizedLanguage || "en",
+            workspace.widgetQuickReplies as any,
+            resolvedWorkspaceId
+          )
+        : []
 
       // 11. Save LLM response to conversation history
       await prisma.conversationMessage.create({

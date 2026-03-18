@@ -78,6 +78,14 @@ vi.mock('react-qr-code', () => ({
   default: ({ value }: { value: string }) => <div data-testid="qr-code">{value}</div>,
 }))
 
+// Framer Motion: render children immediately without animations (no timing delays in tests)
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  },
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+}))
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const renderWizard = (onClose = vi.fn()) =>
@@ -87,16 +95,32 @@ const renderWizard = (onClose = vi.fn()) =>
     </BrowserRouter>
   )
 
-/** Fills Step 1 (business name) and clicks Next */
+/**
+ * Navigates through intro → industry (auto-advance) → business name → workspace-type (auto-advance)
+ * ending on the channel (phone) step. Reflects new survey-style flow.
+ */
 async function goToChannel(user: ReturnType<typeof userEvent.setup>, name = 'Test Shop') {
+  // STEP: intro — click "Start setup" CTA
+  await user.click(screen.getByRole('button', { name: /start setup/i }))
+  // STEP: industry — click any tile (auto-advances to business after 250ms)
+  await waitFor(() => screen.getByText(/what industry/i))
+  await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('Retail'))!)
+  // STEP: business — type name and click Next
+  await waitFor(() => screen.getByPlaceholderText(/e\.g\. Roma Pizza/i))
   await user.type(screen.getByPlaceholderText(/e\.g\. Roma Pizza/i), name)
   await user.click(screen.getByRole('button', { name: /next/i }))
+  // STEP: workspace-type — click any tile (auto-advances to channel after 250ms)
+  await waitFor(() => screen.getByText(/how will you use/i))
+  await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('Sell products'))!)
+  // Now on channel step
+  await waitFor(() => screen.getByLabelText(/phone number/i))
 }
 
-/** Fills Step 2 (phone) and clicks Next */
+/** Fills the phone step and clicks Next to reach auth step */
 async function goToAuth(user: ReturnType<typeof userEvent.setup>, phone = '+393331234567') {
   await user.type(screen.getByLabelText(/phone number/i), phone)
   await user.click(screen.getByRole('button', { name: /next/i }))
+  await waitFor(() => screen.getByLabelText(/first name/i))
 }
 
 /** Fills the email registration form and clicks Create Account */
@@ -115,41 +139,66 @@ describe('OnboardingWizardModal', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => vi.resetAllMocks())
 
-  // ── Step 1: Business ──────────────────────────────────────────────────────
+  // ── Step 1: Intro ─────────────────────────────────────────────────────────
 
-  describe('Step 1 — Business', () => {
-    it('VALIDATION: shows error and stays on step 1 when business name is empty', async () => {
-      // RULE: businessName is mandatory — wizard must not advance without it
-      const user = userEvent.setup()
+  describe('Step 1 — Intro', () => {
+    it('DISPLAY: shows welcome title and start CTA on open', () => {
+      // RULE: first screen is the welcome intro — no data fields visible yet
       renderWizard()
-
-      await user.click(screen.getByRole('button', { name: /next/i }))
-
-      expect(screen.getByText(/required field/i)).toBeInTheDocument()
-      // Still on step 1 — phone number field not visible yet
-      expect(screen.queryByLabelText(/phone number/i)).not.toBeInTheDocument()
+      expect(screen.getByText(/welcome to echatbot/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /start setup/i })).toBeInTheDocument()
     })
 
-    it('NAVIGATION: advances to channel step when business name is filled', async () => {
-      // RULE: valid business name unlocks step 2
+    it('NAVIGATION: clicking Start Setup advances to industry selection', async () => {
+      // RULE: intro → industry on CTA click
       const user = userEvent.setup()
       renderWizard()
-
-      await goToChannel(user)
-
-      expect(screen.getByLabelText(/phone number/i)).toBeInTheDocument()
-    })
-
-    it('INDUSTRY GRID: renders all 8 industry options', () => {
-      renderWizard()
-      const industries = ['Retail', 'Restaurant', 'Healthcare', 'Education', 'Finance', 'Real Estate', 'Technology', 'Other']
-      industries.forEach(ind => expect(screen.getByText(ind)).toBeInTheDocument())
+      await user.click(screen.getByRole('button', { name: /start setup/i }))
+      await waitFor(() => expect(screen.getByText(/what industry/i)).toBeInTheDocument())
     })
   })
 
-  // ── Step 2: Channel ───────────────────────────────────────────────────────
+  // ── Step 2: Industry + Business ──────────────────────────────────────────
 
-  describe('Step 2 — Channel', () => {
+  describe('Step 2 — Industry & Business', () => {
+    it('INDUSTRY GRID: renders all 14 industry options', async () => {
+      // RULE: expanded industry list (14 sectors) to match survey page
+      const user = userEvent.setup()
+      renderWizard()
+      await user.click(screen.getByRole('button', { name: /start setup/i }))
+      await waitFor(() => screen.getByText(/what industry/i))
+      const industries = ['Retail', 'Restaurant', 'Healthcare', 'Beauty', 'Education',
+        'Tourism', 'Fashion', 'Fitness', 'Transport', 'Technology', 'Real Estate', 'Finance', 'Legal', 'Other']
+      industries.forEach(ind => expect(screen.getByText(ind)).toBeInTheDocument())
+    })
+
+    it('VALIDATION: shows error and stays on business step when name is empty', async () => {
+      // RULE: businessName is mandatory — wizard must not advance without it
+      const user = userEvent.setup()
+      renderWizard()
+      await user.click(screen.getByRole('button', { name: /start setup/i }))
+      await waitFor(() => screen.getByText(/what industry/i))
+      await user.click(screen.getAllByRole('button').find(b => b.textContent?.includes('Retail'))!)
+      await waitFor(() => screen.getByPlaceholderText(/e\.g\. Roma Pizza/i))
+      // Click Next without typing a name
+      await user.click(screen.getByRole('button', { name: /next/i }))
+      expect(screen.getByText(/required field/i)).toBeInTheDocument()
+      // Still on business step — phone number field not visible yet
+      expect(screen.queryByLabelText(/phone number/i)).not.toBeInTheDocument()
+    })
+
+    it('NAVIGATION: advances to channel step after completing intro → industry → business → workspace-type', async () => {
+      // RULE: full pre-auth flow completes on channel step
+      const user = userEvent.setup()
+      renderWizard()
+      await goToChannel(user)
+      expect(screen.getByLabelText(/phone number/i)).toBeInTheDocument()
+    })
+  })
+
+  // ── Step 3: Channel ───────────────────────────────────────────────────────
+
+  describe('Step 3 — Channel', () => {
     it('VALIDATION: shows error when phone does not start with +', async () => {
       // RULE: E.164 format required — must start with country code (+39...)
       const user = userEvent.setup()
@@ -173,9 +222,9 @@ describe('OnboardingWizardModal', () => {
     })
   })
 
-  // ── Step 3: Auth — Email registration ────────────────────────────────────
+  // ── Step 4: Auth — Email registration ────────────────────────────────────
 
-  describe('Step 3 — Email Registration', () => {
+  describe('Step 4 — Email Registration', () => {
     it('SUCCESS: calls /auth/register and advances to TOTP setup when registration succeeds', async () => {
       // SCENARIO: New user fills form → backend creates user + returns TOTP QR code
       const user = userEvent.setup()
@@ -233,9 +282,9 @@ describe('OnboardingWizardModal', () => {
     })
   })
 
-  // ── Step 3: Auth — Google OAuth ───────────────────────────────────────────
+  // ── Step 4: Auth — Google OAuth ───────────────────────────────────────────
 
-  describe('Step 3 — Google OAuth', () => {
+  describe('Step 4 — Google OAuth', () => {
     it('NEW USER: requiresSetup=true → advances to TOTP with QR code visible', async () => {
       // SCENARIO: First-time Google login — must set up TOTP before accessing app
       const user = userEvent.setup()
@@ -291,9 +340,9 @@ describe('OnboardingWizardModal', () => {
     })
   })
 
-  // ── Step 4: TOTP ──────────────────────────────────────────────────────────
+  // ── Step 5: TOTP ──────────────────────────────────────────────────────────
 
-  describe('Step 4 — TOTP Verification', () => {
+  describe('Step 5 — TOTP Verification', () => {
     const setupTotpStep = async (isNewUser = true) => {
       const user = userEvent.setup()
       if (isNewUser) {

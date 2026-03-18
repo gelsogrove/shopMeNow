@@ -110,6 +110,7 @@ export interface CreateWorkspaceData {
   description?: string
   welcomeMessage?: string
   adminEmail?: string
+  sellsProductsAndServices?: boolean
 }
 
 export interface UpdateWorkspaceData {

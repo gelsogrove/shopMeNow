@@ -3,20 +3,60 @@
  * Supports: it, en, es, pt
  */
 
+export const INDUSTRIES = [
+  'retail', 'restaurant', 'healthcare', 'beauty', 'education',
+  'tourism', 'fashion', 'fitness', 'transport', 'technology',
+  'realestate', 'finance', 'legal', 'other',
+] as const
+
+export type Industry = (typeof INDUSTRIES)[number]
+
+export const INDUSTRY_EMOJI: Record<Industry, string> = {
+  retail: '🛍️', restaurant: '🍕', healthcare: '🏥', beauty: '💄',
+  education: '📚', tourism: '✈️', fashion: '👗', fitness: '💪',
+  transport: '🚚', technology: '💻', realestate: '🏠', finance: '💰',
+  legal: '⚖️', other: '🏢',
+}
+
+export const WORKSPACE_TYPES = ['ecommerce', 'services', 'info'] as const
+export type WorkspaceType = (typeof WORKSPACE_TYPES)[number]
+
+export const WORKSPACE_TYPE_EMOJI: Record<WorkspaceType, string> = {
+  ecommerce: '🛒', services: '🛎️', info: '💬',
+}
+
 export const OWT = {
   it: {
-    titleStep: ['1 di 4', '2 di 4', '3 di 4', '4 di 4'],
-    next: 'Avanti', back: 'Indietro',
+    back: 'Indietro',
+    next: 'Avanti',
+    intro: {
+      title: 'Benvenuto in eChatbot',
+      subtitle: 'Configura il tuo assistente WhatsApp\nin meno di 3 minuti',
+      benefits: ['✅ Setup in 3 minuti', '✅ 14 giorni gratis', '✅ Nessuna carta richiesta'],
+      cta: 'Inizia la configurazione →',
+    },
+    industry: {
+      title: 'Qual è il tuo settore?',
+      subtitle: 'Scegliamo le funzionalità più adatte\nalla tua attività',
+    },
     business: {
-      title: 'La tua attività',
-      subtitle: 'Dicci come si chiama la tua attività',
+      title: 'Come si chiama la tua attività?',
+      subtitle: 'I tuoi clienti vedranno questo nome',
       name: 'Nome attività o brand',
       namePh: 'es. Pizzeria Roma',
-      industry: 'Settore',
+    },
+    workspaceType: {
+      title: 'Come vuoi usare eChatbot?',
+      subtitle: 'Configuriamo le funzionalità giuste per te',
+      options: {
+        ecommerce: { label: 'Vendo prodotti', desc: 'Catalogo prodotti, carrello e ordini online' },
+        services: { label: 'Offro servizi', desc: 'Preventivi, appuntamenti e prenotazioni' },
+        info: { label: 'Condivido informazioni', desc: 'Supporto clienti, FAQ e informazioni' },
+      },
     },
     channel: {
       title: 'Il tuo numero WhatsApp',
-      subtitle: 'I clienti scriveranno a questo numero',
+      subtitle: 'I clienti ti scriveranno\na questo numero',
       phone: 'Numero di telefono',
       phonePh: '+393331234567',
       hint: "Formato internazionale con prefisso (+39 per l'Italia)",
@@ -41,9 +81,9 @@ export const OWT = {
       phases: ['Creo il tuo workspace...', 'Configuro il canale WhatsApp...', 'Quasi pronto...'],
     },
     qr: {
-      title: 'Scansiona per connettere WhatsApp',
+      title: 'Collega WhatsApp',
       subtitle: 'WhatsApp → Dispositivi collegati → Collega dispositivo → Scansiona',
-      expired: 'QR scaduto', newQr: 'Nuovo QR', wait: 'secondi',
+      expired: 'QR scaduto', newQr: 'Nuovo QR', wait: 's',
     },
     done: {
       title: 'Tutto pronto!',
@@ -51,9 +91,11 @@ export const OWT = {
       cta: 'Vai alla Dashboard',
     },
     industries: {
-      retail: 'Vendita al dettaglio', restaurant: 'Ristorazione', healthcare: 'Sanità',
-      education: 'Educazione', finance: 'Finanza', realestate: 'Immobiliare',
-      technology: 'Tecnologia', other: 'Altro',
+      retail: 'Retail', restaurant: 'Ristorazione', healthcare: 'Sanità',
+      beauty: 'Beauty', education: 'Educazione', tourism: 'Turismo',
+      fashion: 'Moda', fitness: 'Fitness', transport: 'Trasporti',
+      technology: 'Tecnologia', realestate: 'Immobiliare', finance: 'Finanza',
+      legal: 'Legale', other: 'Altro',
     },
     errors: {
       required: 'Campo obbligatorio',
@@ -63,21 +105,39 @@ export const OWT = {
     },
   },
   en: {
-    titleStep: ['1 of 4', '2 of 4', '3 of 4', '4 of 4'],
-    next: 'Next', back: 'Back',
+    back: 'Back',
+    next: 'Next',
+    intro: {
+      title: 'Welcome to eChatbot',
+      subtitle: 'Set up your WhatsApp assistant\nin less than 3 minutes',
+      benefits: ['✅ 3-minute setup', '✅ 14 days free', '✅ No credit card required'],
+      cta: 'Start setup →',
+    },
+    industry: {
+      title: 'What industry are you in?',
+      subtitle: 'We\'ll pick the best features\nfor your business',
+    },
     business: {
-      title: 'Your business',
-      subtitle: 'Tell us what your business is called',
+      title: 'What\'s your business name?',
+      subtitle: 'Your customers will see this name',
       name: 'Business or brand name',
       namePh: 'e.g. Roma Pizza',
-      industry: 'Industry',
+    },
+    workspaceType: {
+      title: 'How will you use eChatbot?',
+      subtitle: 'We\'ll configure the right features for you',
+      options: {
+        ecommerce: { label: 'Sell products', desc: 'Product catalog, cart and online orders' },
+        services: { label: 'Offer services', desc: 'Quotes, appointments and bookings' },
+        info: { label: 'Share information', desc: 'Customer support, FAQ and information' },
+      },
     },
     channel: {
       title: 'Your WhatsApp number',
-      subtitle: 'Customers will message you at this number',
+      subtitle: 'Customers will message you\nat this number',
       phone: 'Phone number',
       phonePh: '+393331234567',
-      hint: 'Add the +country code, e.g. +1 (US) or +39 (Italy)',
+      hint: 'Add the country code, e.g. +1 (US) or +39 (Italy)',
     },
     auth: {
       title: 'Create your account',
@@ -99,9 +159,9 @@ export const OWT = {
       phases: ['Creating your workspace...', 'Configuring WhatsApp channel...', 'Almost ready...'],
     },
     qr: {
-      title: 'Scan to connect WhatsApp',
+      title: 'Connect WhatsApp',
       subtitle: 'WhatsApp → Linked Devices → Link a Device → Scan',
-      expired: 'QR expired', newQr: 'New QR', wait: 'seconds',
+      expired: 'QR expired', newQr: 'New QR', wait: 's',
     },
     done: {
       title: 'All set!',
@@ -110,8 +170,10 @@ export const OWT = {
     },
     industries: {
       retail: 'Retail', restaurant: 'Restaurant', healthcare: 'Healthcare',
-      education: 'Education', finance: 'Finance', realestate: 'Real Estate',
-      technology: 'Technology', other: 'Other',
+      beauty: 'Beauty', education: 'Education', tourism: 'Tourism',
+      fashion: 'Fashion', fitness: 'Fitness', transport: 'Transport',
+      technology: 'Technology', realestate: 'Real Estate', finance: 'Finance',
+      legal: 'Legal', other: 'Other',
     },
     errors: {
       required: 'Required field',
@@ -121,18 +183,36 @@ export const OWT = {
     },
   },
   es: {
-    titleStep: ['1 de 4', '2 de 4', '3 de 4', '4 de 4'],
-    next: 'Siguiente', back: 'Atrás',
+    back: 'Atrás',
+    next: 'Siguiente',
+    intro: {
+      title: 'Bienvenido a eChatbot',
+      subtitle: 'Configura tu asistente WhatsApp\nen menos de 3 minutos',
+      benefits: ['✅ Setup en 3 minutos', '✅ 14 días gratis', '✅ Sin tarjeta de crédito'],
+      cta: 'Comenzar configuración →',
+    },
+    industry: {
+      title: '¿En qué sector operas?',
+      subtitle: 'Elegiremos las funciones más adecuadas\npara tu negocio',
+    },
     business: {
-      title: 'Tu negocio',
-      subtitle: 'Cuéntanos cómo se llama tu negocio',
+      title: '¿Cómo se llama tu negocio?',
+      subtitle: 'Tus clientes verán este nombre',
       name: 'Nombre del negocio o marca',
       namePh: 'ej. Pizzería Roma',
-      industry: 'Sector',
+    },
+    workspaceType: {
+      title: '¿Cómo usarás eChatbot?',
+      subtitle: 'Configuraremos las funciones adecuadas para ti',
+      options: {
+        ecommerce: { label: 'Vendo productos', desc: 'Catálogo, carrito y pedidos online' },
+        services: { label: 'Ofrezco servicios', desc: 'Presupuestos, citas y reservas' },
+        info: { label: 'Comparto información', desc: 'Soporte al cliente, FAQ e información' },
+      },
     },
     channel: {
       title: 'Tu número de WhatsApp',
-      subtitle: 'Los clientes te escribirán a este número',
+      subtitle: 'Los clientes te escribirán\na este número',
       phone: 'Número de teléfono',
       phonePh: '+34612345678',
       hint: 'Formato internacional con código de país (+34 para España)',
@@ -157,9 +237,9 @@ export const OWT = {
       phases: ['Creando tu workspace...', 'Configurando el canal WhatsApp...', '¡Casi listo!'],
     },
     qr: {
-      title: 'Escanea para conectar WhatsApp',
+      title: 'Conectar WhatsApp',
       subtitle: 'WhatsApp → Dispositivos vinculados → Vincular dispositivo → Escanear',
-      expired: 'QR expirado', newQr: 'Nuevo QR', wait: 'segundos',
+      expired: 'QR expirado', newQr: 'Nuevo QR', wait: 's',
     },
     done: {
       title: '¡Todo listo!',
@@ -167,9 +247,11 @@ export const OWT = {
       cta: 'Ir al Panel',
     },
     industries: {
-      retail: 'Venta al detalle', restaurant: 'Restauración', healthcare: 'Salud',
-      education: 'Educación', finance: 'Finanzas', realestate: 'Inmobiliario',
-      technology: 'Tecnología', other: 'Otro',
+      retail: 'Retail', restaurant: 'Restauración', healthcare: 'Salud',
+      beauty: 'Belleza', education: 'Educación', tourism: 'Turismo',
+      fashion: 'Moda', fitness: 'Fitness', transport: 'Transporte',
+      technology: 'Tecnología', realestate: 'Inmobiliario', finance: 'Finanzas',
+      legal: 'Legal', other: 'Otro',
     },
     errors: {
       required: 'Campo requerido',
@@ -179,18 +261,36 @@ export const OWT = {
     },
   },
   pt: {
-    titleStep: ['1 de 4', '2 de 4', '3 de 4', '4 de 4'],
-    next: 'Próximo', back: 'Voltar',
+    back: 'Voltar',
+    next: 'Próximo',
+    intro: {
+      title: 'Bem-vindo ao eChatbot',
+      subtitle: 'Configure seu assistente WhatsApp\nem menos de 3 minutos',
+      benefits: ['✅ Setup em 3 minutos', '✅ 14 dias grátis', '✅ Sem cartão de crédito'],
+      cta: 'Iniciar configuração →',
+    },
+    industry: {
+      title: 'Qual é o seu setor?',
+      subtitle: 'Escolheremos as melhores funcionalidades\npara o seu negócio',
+    },
     business: {
-      title: 'Seu negócio',
-      subtitle: 'Diga-nos o nome do seu negócio',
+      title: 'Qual é o nome do seu negócio?',
+      subtitle: 'Seus clientes verão este nome',
       name: 'Nome do negócio ou marca',
       namePh: 'ex. Pizzaria Roma',
-      industry: 'Setor',
+    },
+    workspaceType: {
+      title: 'Como você vai usar o eChatbot?',
+      subtitle: 'Configuraremos as funcionalidades certas para você',
+      options: {
+        ecommerce: { label: 'Vendo produtos', desc: 'Catálogo, carrinho e pedidos online' },
+        services: { label: 'Ofereço serviços', desc: 'Orçamentos, agendamentos e reservas' },
+        info: { label: 'Compartilho informações', desc: 'Suporte ao cliente, FAQ e informações' },
+      },
     },
     channel: {
       title: 'Seu número do WhatsApp',
-      subtitle: 'Os clientes vão te escrever neste número',
+      subtitle: 'Os clientes vão te escrever\nneste número',
       phone: 'Número de telefone',
       phonePh: '+553312345678',
       hint: 'Formato internacional com código do país (+55 para Brasil)',
@@ -215,9 +315,9 @@ export const OWT = {
       phases: ['Criando seu workspace...', 'Configurando o canal WhatsApp...', 'Quase pronto...'],
     },
     qr: {
-      title: 'Escaneie para conectar WhatsApp',
+      title: 'Conectar WhatsApp',
       subtitle: 'WhatsApp → Dispositivos vinculados → Vincular dispositivo → Escanear',
-      expired: 'QR expirado', newQr: 'Novo QR', wait: 'segundos',
+      expired: 'QR expirado', newQr: 'Novo QR', wait: 's',
     },
     done: {
       title: 'Tudo pronto!',
@@ -226,8 +326,10 @@ export const OWT = {
     },
     industries: {
       retail: 'Varejo', restaurant: 'Restaurante', healthcare: 'Saúde',
-      education: 'Educação', finance: 'Finanças', realestate: 'Imóveis',
-      technology: 'Tecnologia', other: 'Outro',
+      beauty: 'Beleza', education: 'Educação', tourism: 'Turismo',
+      fashion: 'Moda', fitness: 'Fitness', transport: 'Transporte',
+      technology: 'Tecnologia', realestate: 'Imóveis', finance: 'Finanças',
+      legal: 'Jurídico', other: 'Outro',
     },
     errors: {
       required: 'Campo obrigatório',
@@ -240,6 +342,3 @@ export const OWT = {
 
 export type OWTLang = keyof typeof OWT
 export type OWTTranslations = (typeof OWT)[OWTLang]
-
-export const INDUSTRIES = ['retail', 'restaurant', 'healthcare', 'education', 'finance', 'realestate', 'technology', 'other'] as const
-export type Industry = typeof INDUSTRIES[number]

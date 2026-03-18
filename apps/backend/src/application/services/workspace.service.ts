@@ -1116,7 +1116,7 @@ For privacy inquiries, please contact our support team.`
   async initializeWasenderSession(
     workspaceId: string,
     userId: string,
-    phoneNumber: string
+    phoneNumber?: string
   ) {
     // STEP 0: Verify subscription
     const user = await this.prisma.user.findUnique({
@@ -1152,8 +1152,17 @@ For privacy inquiries, please contact our support team.`
         wasenderSessionId: true,
         wasenderApiKey: true,
         wasenderSessionStatus: true,
+        wasenderPhoneNumber: true,
+        whatsappPhoneNumber: true,
       },
     })
+
+    // Phone number is optional — fall back to workspace's stored phone or empty string
+    // WasenderAPI only uses it as a label, not for QR-based authentication
+    const effectivePhone = phoneNumber
+      || existingWorkspace?.wasenderPhoneNumber
+      || existingWorkspace?.whatsappPhoneNumber
+      || ''
 
     let sessionId: string
     let apiKey: string
@@ -1162,7 +1171,7 @@ For privacy inquiries, please contact our support team.`
       const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/wasender/webhook/${workspaceId}`
       const result = await this.wasenderClient.createSession(
         workspaceId,
-        phoneNumber,
+        effectivePhone,
         webhookUrl
       )
       return result
@@ -1217,7 +1226,7 @@ For privacy inquiries, please contact our support team.`
         whatsappProvider: 'wasender',
         wasenderSessionId: sessionId,
         wasenderApiKey: apiKey,
-        wasenderPhoneNumber: phoneNumber,
+        wasenderPhoneNumber: effectivePhone || undefined,
         wasenderSessionStatus: sessionStatus,
         wasenderIsActive: isActive,
         wasenderQrString: qrString,
@@ -1229,7 +1238,7 @@ For privacy inquiries, please contact our support team.`
     logger.info('[Workspace] Wasender session initialized:', {
       workspaceId,
       sessionId,
-      phoneNumber: this.maskPhoneNumber(phoneNumber),
+      phoneNumber: this.maskPhoneNumber(effectivePhone),
       hasQr: !!qrString,
     })
 
@@ -1322,6 +1331,55 @@ For privacy inquiries, please contact our support team.`
     })
 
     logger.info('[Workspace] Wasender session restarted:', { workspaceId })
+  }
+
+  /**
+   * Sync Wasender session status from WasenderAPI → update DB.
+   * Call this on settings page load to detect if session is already connected
+   * without going through full initialization flow (no subscription check needed).
+   *
+   * Fixes: channelStatus stuck at false even when WasenderAPI session is connected.
+   */
+  async syncWasenderStatus(workspaceId: string): Promise<{
+    wasenderSessionStatus: string | null
+    wasenderIsActive: boolean
+    wasenderQrString: string | null
+  }> {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { wasenderSessionId: true },
+    })
+
+    if (!workspace?.wasenderSessionId) {
+      return { wasenderSessionStatus: 'idle', wasenderIsActive: false, wasenderQrString: null }
+    }
+
+    try {
+      const actualStatus = await this.wasenderClient.getSessionStatus(workspace.wasenderSessionId)
+      const normalized = actualStatus.toLowerCase()
+      const isConnected = normalized === 'connected'
+
+      const updated = await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: {
+          wasenderSessionStatus: normalized,
+          wasenderIsActive: isConnected,
+          channelStatus: isConnected,
+          ...(isConnected ? { wasenderQrString: null, wasenderQrGeneratedAt: null } : {}),
+        },
+        select: {
+          wasenderSessionStatus: true,
+          wasenderIsActive: true,
+          wasenderQrString: true,
+        },
+      })
+
+      logger.info('[Workspace] Wasender status synced:', { workspaceId, status: normalized, isConnected })
+      return updated
+    } catch (error: any) {
+      logger.warn('[Workspace] Wasender status sync failed (session may not exist):', { workspaceId, error: error.message })
+      return { wasenderSessionStatus: 'disconnected', wasenderIsActive: false, wasenderQrString: null }
+    }
   }
 
   /**

@@ -1110,8 +1110,9 @@ export class WorkspaceController {
       const { phoneNumber } = req.body
 
       if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-      if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' })
-      if (!phoneNumber.startsWith('+')) {
+      // Phone number is optional — WasenderAPI uses it only as a label for new sessions.
+      // If omitted, service falls back to workspace's stored phone number.
+      if (phoneNumber && !phoneNumber.startsWith('+')) {
         return res.status(400).json({
           error: 'Phone number must be in E.164 format (e.g., +393331234567)',
         })
@@ -1274,7 +1275,7 @@ export class WorkspaceController {
 
       const qrString = await this.workspaceService.regenerateWasenderQr(workspaceId, userId)
 
-      return res.status(200).json({ qrString })
+      return res.status(200).json({ wasenderQrString: qrString, wasenderSessionStatus: 'need_scan' })
     } catch (error: any) {
       logger.error('[Wasender] Failed to regenerate QR:', error)
       return res.status(400).json({ error: error.message })
@@ -1321,6 +1322,39 @@ export class WorkspaceController {
       return res.status(200).json({ success: true })
     } catch (error: any) {
       logger.error('[Wasender] Failed to restart session:', error)
+      return res.status(400).json({ error: error.message })
+    }
+  }
+
+  /**
+   * @swagger
+   * /api/workspaces/{workspaceId}/wasender/sync-status:
+   *   post:
+   *     summary: Sync Wasender session status from WasenderAPI (fixes stale DB state)
+   *     tags: [Wasender]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Current session status
+   */
+  syncWasenderStatus = async (req: Request, res: Response) => {
+    try {
+      const { workspaceId } = req.params
+      const userId = (req as any).user?.id
+
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+      logger.info('[Wasender] Syncing session status:', { workspaceId })
+
+      const result = await this.workspaceService.syncWasenderStatus(workspaceId)
+      return res.status(200).json(result)
+    } catch (error: any) {
+      logger.error('[Wasender] Failed to sync status:', error)
       return res.status(400).json({ error: error.message })
     }
   }
