@@ -1,10 +1,13 @@
 
 - wasenderapi - NEW CHANNEL 
-- PAGAMENTI ON CI SIAMO
+- PAGAMENTI NON CI SIAMO
 - GDPR PER OGNI CANALE CI VUOLE
 - ECOMMERCE
+- funziona?
 
 # TESTARE INTERO FLUSSO #
+- ONBOARDING
 - paypall
 - campagne
 - resposive ?
+- widget¿

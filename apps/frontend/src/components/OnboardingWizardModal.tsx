@@ -64,7 +64,7 @@ const STEP_PROGRESS: Record<WizardStep, number> = {
 // Full-bleed image per step
 const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
   industry: '/survey.png',
-  business: '/survery-start.png',
+  business: '/survey-agent.png',
   'workspace-type': '/survey-ecommerce.png',
   'channel-type': '/surver-widget.png',
   'human-support': '/survey-support.png',
@@ -564,50 +564,65 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       // ── AUTH ──────────────────────────────────────────────────────────────────
       case 'auth':
         return (
-          <div className="space-y-4">
-            <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.auth.subtitle}</p>
+          <div className="space-y-3">
+            <p className="text-slate-500 text-sm">{t.auth.subtitle}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="ob-fn">{t.auth.fname}</Label>
-                <Input id="ob-fn" className="mt-1" value={firstName}
+                <Label htmlFor="ob-fn" className="text-xs font-medium text-slate-600">{t.auth.fname}</Label>
+                <Input id="ob-fn" className="mt-1 h-9 text-sm" value={firstName}
                   onChange={e => { setFirstName(e.target.value); setError('') }} />
               </div>
               <div>
-                <Label htmlFor="ob-ln">{t.auth.lname}</Label>
-                <Input id="ob-ln" className="mt-1" value={lastName}
+                <Label htmlFor="ob-ln" className="text-xs font-medium text-slate-600">{t.auth.lname}</Label>
+                <Input id="ob-ln" className="mt-1 h-9 text-sm" value={lastName}
                   onChange={e => { setLastName(e.target.value); setError('') }} />
               </div>
             </div>
             <div>
-              <Label htmlFor="ob-email">{t.auth.email}</Label>
-              <Input id="ob-email" type="email" className="mt-1" value={email}
+              <Label htmlFor="ob-email" className="text-xs font-medium text-slate-600">{t.auth.email}</Label>
+              <Input id="ob-email" type="email" className="mt-1 h-9 text-sm" value={email}
                 onChange={e => { setEmail(e.target.value); setError('') }} autoComplete="email" />
             </div>
             <div>
-              <Label htmlFor="ob-pass">{t.auth.pass}</Label>
+              <Label htmlFor="ob-pass" className="text-xs font-medium text-slate-600">{t.auth.pass}</Label>
               <div className="relative mt-1">
                 <Input id="ob-pass" type={showPassword ? 'text' : 'password'} value={password}
-                  onChange={e => { setPassword(e.target.value); setError('') }} className="pr-10" />
+                  onChange={e => { setPassword(e.target.value); setError('') }} className="pr-10 h-9 text-sm" />
                 <button type="button" onClick={() => setShowPassword(v => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-slate-400 mt-1">Min 8 chars, uppercase, lowercase, number, special character</p>
+              <p className="text-[11px] text-slate-400 mt-1">Min 8 chars, uppercase, lowercase, number, special character</p>
             </div>
-            <div className="flex items-start gap-2 pt-1">
+            <div className="flex items-start gap-2 pt-0.5">
               <Checkbox id="ob-gdpr" checked={gdprAccepted}
                 onCheckedChange={v => { setGdprAccepted(!!v); setError('') }} />
-              <Label htmlFor="ob-gdpr" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
-                {t.auth.gdpr}
-              </Label>
+              <label htmlFor="ob-gdpr" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
+                {lang === 'it' && <>Accetto i{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Termini di Servizio</a>
+                  {' '}e la{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Privacy Policy</a>
+                </>}
+                {lang === 'es' && <>Acepto los{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Términos de Servicio</a>
+                  {' '}y la{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Política de Privacidad</a>
+                </>}
+                {lang === 'pt' && <>Aceito os{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Termos de Serviço</a>
+                  {' '}e a{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Política de Privacidade</a>
+                </>}
+                {(lang === 'en' || !['it','es','pt'].includes(lang)) && <>I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Terms of Service</a>
+                  {' '}and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Privacy Policy</a>
+                </>}
+              </label>
             </div>
-            <Button className="w-full bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleEmailRegister} disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {t.auth.register}
-            </Button>
-            <div className="relative my-1">
+            {/* Google OAuth as alternative */}
+            <div className="relative pt-1">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200" />
               </div>
@@ -871,39 +886,56 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                       </Alert>
                     )}
 
-                    <AnimatePresence mode="wait" custom={direction}>
-                      <motion.div
-                        key={step}
-                        custom={direction}
-                        variants={slideVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
-                      >
-                        {renderStepContent()}
-                      </motion.div>
-                    </AnimatePresence>
+                    {/* Fixed-height scrollable content area — same height across all steps */}
+                    <div className="min-h-[300px] overflow-y-auto">
+                      <AnimatePresence mode="wait" custom={direction}>
+                        <motion.div
+                          key={step}
+                          custom={direction}
+                          variants={slideVariants}
+                          initial="enter"
+                          animate="center"
+                          exit="exit"
+                          transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+                        >
+                          {renderStepContent()}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
 
-                    {/* 5. Navigation */}
-                    <div className="flex gap-3 mt-8">
-                      {canGoBack && (
-                        <Button
-                          variant="outline"
-                          onClick={handleBack}
-                          className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50"
-                        >
-                          {t.back}
-                        </Button>
-                      )}
-                      {step === 'business' && (
-                        <Button
-                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                          onClick={handleNextBusiness}
-                        >
-                          {t.next}
-                        </Button>
-                      )}
+                    {/* 5. Navigation — Back on left, primary action on right */}
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
+                      <div>
+                        {canGoBack && (
+                          <Button
+                            variant="outline"
+                            onClick={handleBack}
+                            className="px-6 border-slate-200 text-slate-600 hover:bg-slate-50"
+                          >
+                            ← {t.back}
+                          </Button>
+                        )}
+                      </div>
+                      <div>
+                        {step === 'business' && (
+                          <Button
+                            className="px-6 bg-green-600 hover:bg-green-700 text-white"
+                            onClick={handleNextBusiness}
+                          >
+                            {t.next} →
+                          </Button>
+                        )}
+                        {step === 'auth' && (
+                          <Button
+                            className="px-6 bg-green-600 hover:bg-green-700 text-white"
+                            onClick={handleEmailRegister}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            {t.auth.register} →
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
