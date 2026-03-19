@@ -21,9 +21,7 @@ export function QRCodeDisplay({ userId }: QRCodeDisplayProps) {
       }
 
       try {
-        const response = await api.get("/auth/2fa/setup", {
-          params: { userId },
-        })
+        const response = await api.get(`/auth/2fa/setup/${userId}`)
         const { otpAuthUrl } = response.data
         const qrCode = await QRCode.toDataURL(otpAuthUrl)
         setQrCodeUrl(qrCode)

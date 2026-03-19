@@ -16,6 +16,7 @@ export interface UserProfile {
   authProvider?: string  // 'email' | 'google' | 'multi' etc. (Feature 189)
   hasPassword?: boolean  // True if user has a password set (Feature 189)
   logo?: string          // Company logo URL
+  twoFactorEnabled?: boolean // True if 2FA is enabled
 }
 
 export interface UpdateProfileData {

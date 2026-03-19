@@ -32,8 +32,9 @@ import { toast } from '@/lib/toast'
 import { api } from '@/services/api'
 import { storage } from '@/lib/storage'
 import { createWorkspace } from '@/services/workspaceApi'
-import { initializeWasenderSession, regenerateWasenderQr, getWasenderStatus } from '@/services/wasenderApi'
+import { initializeWasenderSession, regenerateWasenderQr, getWasenderStatus, syncWasenderStatus } from '@/services/wasenderApi'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { logger } from '@/lib/logger'
 import {
@@ -97,6 +98,7 @@ function validatePassword(p: string): string | null {
 
 export function OnboardingWizardModal({ open, onClose }: Props) {
   const { language } = useLanguage()
+  const { setCurrentWorkspace } = useWorkspace()
   const lang: OWTLang = (['it', 'en', 'es', 'pt'] as const).includes(language as OWTLang)
     ? (language as OWTLang) : 'en'
   const t = OWT[lang]
@@ -122,6 +124,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const [workspaceType, setWorkspaceType] = useState<WorkspaceType>('ecommerce')
   const [channelChoice, setChannelChoice] = useState<ChannelChoice>('whatsapp')
   const [hasHumanSupport, setHasHumanSupport] = useState(true)
+  const [whatsappPhoneNumber, setWhatsappPhoneNumber] = useState('')
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   const [email, setEmail] = useState('')
@@ -155,6 +158,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     setStep('industry'); setError(''); setDirection(1)
     setIndustry('other'); setBusinessName(''); setBotName(''); setChannelTone('friendly')
     setWorkspaceType('ecommerce'); setChannelChoice('whatsapp'); setHasHumanSupport(true)
+    setWhatsappPhoneNumber('')
     setEmail(''); setPassword('')
     setShowPassword(false); setGdprAccepted(false)
     setPendingUserId(''); setTotpQrCode(''); setTotpCode('')
@@ -181,10 +185,15 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           enableWidget: needsWidget,
         })
 
+        // Immediately persist workspace so subsequent calls (headers, context) use it
+        setCurrentWorkspace(workspace)
+
         setCreatingPhase(1)
 
         if (needsWhatsApp) {
-          const wasResp = await initializeWasenderSession(workspace.id, {})
+          const wasResp = await initializeWasenderSession(workspace.id, {
+            phoneNumber: whatsappPhoneNumber.trim(),
+          })
           setCreatedWorkspaceId(workspace.id)
           if (wasResp.wasenderQrString) {
             setQrString(wasResp.wasenderQrString)
@@ -221,6 +230,33 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     const timer = setInterval(() => setQrAge(a => a + 1), 1000)
     return () => clearInterval(timer)
   }, [step, qrString, wasenderStatus])
+
+  // ── Sync status once when entering QR step (fallback if webhook missing) ───────
+  useEffect(() => {
+    if (step !== 'qr-scan' || !createdWorkspaceId) return
+    let cancelled = false
+    const sync = async () => {
+      try {
+        const latest = await syncWasenderStatus(createdWorkspaceId)
+        if (cancelled) return
+        if (latest.wasenderSessionStatus) {
+          const s = (latest.wasenderSessionStatus as any) || 'idle'
+          setWasenderStatus(s)
+          if (s === 'connected') {
+            toast.success('WhatsApp connected successfully!')
+            goTo('done')
+            return
+          }
+        }
+        if (latest.wasenderQrString && latest.wasenderQrString !== qrString) {
+          setQrString(latest.wasenderQrString)
+          setQrAge(0)
+        }
+      } catch {}
+    }
+    sync()
+    return () => { cancelled = true }
+  }, [step, createdWorkspaceId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Poll wasender status ──────────────────────────────────────────────────────
   const pollWasender = useCallback(async () => {
@@ -286,13 +322,18 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   const handleEmailRegister = async () => {
     if (!email.trim()) { setError(t.errors.emailRequired); return }
+    if (needsWhatsApp && !whatsappPhoneNumber.trim()) { setError('Phone number is required for WhatsApp'); return }
+    if (needsWhatsApp && whatsappPhoneNumber.trim() && !whatsappPhoneNumber.trim().startsWith('+')) {
+      setError('Phone number must start with + and country code')
+      return
+    }
     const pwErr = validatePassword(password)
     if (pwErr) { setError(pwErr); return }
     if (!gdprAccepted) { setError(t.errors.gdprRequired); return }
 
     setIsLoading(true); setError('')
     try {
-      const resp = await api.post('/auth/register', { email, password, gdprAccepted: true })
+      const resp = await api.post('/auth/register', { email, password, gdprAccepted: true, skipSetup: true })
       const { token, sessionId, user } = resp.data
       storage.clearAppState()
       storage.setToken(token); storage.setSessionId(sessionId)
@@ -307,6 +348,11 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   }
 
   const handleGoogleAuth = async (credentialResponse: any) => {
+    if (needsWhatsApp && !whatsappPhoneNumber.trim()) { setError('Phone number is required for WhatsApp'); return }
+    if (needsWhatsApp && whatsappPhoneNumber.trim() && !whatsappPhoneNumber.trim().startsWith('+')) {
+      setError('Phone number must start with + and country code')
+      return
+    }
     setIsLoading(true); setError('')
     storage.clearAppState()
     try {
@@ -647,6 +693,15 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
               <Input id="ob-email" type="email" className="mt-1 h-9 text-sm" value={email}
                 onChange={e => { setEmail(e.target.value); setError('') }} autoComplete="email" />
             </div>
+            {needsWhatsApp && (
+              <div>
+                <Label htmlFor="ob-phone" className="text-xs font-medium text-slate-600">WhatsApp Phone (E.164)</Label>
+                <Input id="ob-phone" type="tel" className="mt-1 h-9 text-sm" value={whatsappPhoneNumber}
+                  onChange={e => { setWhatsappPhoneNumber(e.target.value); setError('') }}
+                  placeholder="+393331234567" />
+                <p className="text-[11px] text-slate-400 mt-1">Include country code, e.g. +39</p>
+              </div>
+            )}
             <div>
               <Label htmlFor="ob-pass" className="text-xs font-medium text-slate-600">{t.auth.pass}</Label>
               <div className="relative mt-1">
@@ -931,16 +986,20 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                     </div>
                   )}
 
-                  {/* 3. Full-bleed photo */}
+                  {/* 3. Full-bleed photo — compact for auth step */}
                   {stepImage ? (
                     <img
                       src={stepImage}
                       alt=""
-                      className="w-full h-36 sm:h-44 object-cover object-center"
+                      className={`w-full object-cover object-center ${
+                        step === 'auth' ? 'h-24 sm:h-28' : 'h-36 sm:h-44'
+                      }`}
                       onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                     />
                   ) : (
-                    <div className="w-full h-36 sm:h-44 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+                    <div className={`w-full bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center ${
+                      step === 'auth' ? 'h-24 sm:h-28' : 'h-36 sm:h-44'
+                    }`}>
                       <span className="text-4xl opacity-20">🖼️</span>
                     </div>
                   )}

@@ -31,7 +31,7 @@ import {
   setPassword,
   deleteMyAccount,
 } from "@/services/userApi"
-import { Building2, Key, Loader2, User, Phone, Trash2, AlertTriangle, Globe, ImageIcon } from "lucide-react"
+import { Building2, Key, Loader2, User, Phone, Trash2, AlertTriangle, Globe, ImageIcon, Shield } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
@@ -73,6 +73,7 @@ export default function ProfilePage() {
     authProvider?: string
     hasPassword?: boolean
     logo?: string
+    twoFactorEnabled?: boolean
   }>({
     id: "",
     firstName: "",
@@ -86,6 +87,7 @@ export default function ProfilePage() {
     billingPhone: "",
     billingAddress: "",
     logo: "",
+    twoFactorEnabled: false,
   })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [passwordData, setPasswordData] = useState({
@@ -93,6 +95,7 @@ export default function ProfilePage() {
     newPassword: "",
     confirmPassword: "",
   })
+  const [is2FALoading, setIs2FALoading] = useState(false)
   const [newPasswordData, setNewPasswordData] = useState({
     password: "",
     confirmPassword: "",
@@ -113,6 +116,7 @@ export default function ProfilePage() {
         authProvider: (userData as any).authProvider || "email",
         hasPassword: (userData as any).hasPassword !== false, // Default to true unless explicitly false
         logo: (userData as any).logo || "",
+        twoFactorEnabled: !!(userData as any).twoFactorEnabled,
       })
     }
   }, [userData])
@@ -255,6 +259,41 @@ export default function ProfilePage() {
       toast.error(errorMessage)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleSetup2FA = async () => {
+    if (!user.id) {
+      toast.error("User ID not available")
+      return
+    }
+    if (user.twoFactorEnabled) {
+      toast.success("Two-factor authentication is already enabled")
+      return
+    }
+
+    try {
+      setIs2FALoading(true)
+      const response = await api.get(`/auth/2fa/setup/${user.id}`)
+      const { qrCode } = response.data
+      if (!qrCode) {
+        toast.error("Failed to generate 2FA QR code")
+        return
+      }
+
+      navigate("/auth/setup-2fa", {
+        state: {
+          userId: user.id,
+          qrCode,
+          provider: user.authProvider || "email",
+          returnUrl: "/profile",
+        },
+      })
+    } catch (error) {
+      logger.error("Failed to start 2FA setup:", error)
+      toast.error("Failed to start 2FA setup")
+    } finally {
+      setIs2FALoading(false)
     }
   }
 
@@ -546,6 +585,45 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+        {/* Two-Factor Authentication */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-600">
+              <Shield className="h-5 w-5" />
+              Two-Factor Authentication
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Add an extra layer of security by scanning a QR code with your authenticator app.
+            </p>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleSetup2FA}
+                disabled={is2FALoading || user.twoFactorEnabled}
+                className="gap-2"
+              >
+                {is2FALoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating QR...
+                  </>
+                ) : user.twoFactorEnabled ? (
+                  "2FA Enabled"
+                ) : (
+                  "Enable 2FA"
+                )}
+              </Button>
+              {user.twoFactorEnabled && (
+                <span className="text-xs text-muted-foreground">
+                  2FA is active for your account
+                </span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
 

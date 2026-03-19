@@ -455,6 +455,8 @@ export class AuthController {
         // 🔐 Auth provider info
         authProvider: user.authProvider || "email",
         hasPassword: !!user.passwordHash,
+        // 🔐 2FA status
+        twoFactorEnabled: !!user.twoFactorEnabled,
       },
     })
   }

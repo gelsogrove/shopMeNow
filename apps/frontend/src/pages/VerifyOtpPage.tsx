@@ -26,7 +26,7 @@ export function VerifyOtpPage() {
 
     // Fetch QR code for 2FA setup
     api
-      .get("/auth/2fa/setup", { params: { userId } })
+      .get(`/auth/2fa/setup/${userId}`)
       .then((response) => {
         if (response.data?.qrCode) {
           setQrCode(response.data.qrCode)

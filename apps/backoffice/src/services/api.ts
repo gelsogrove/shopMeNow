@@ -1116,7 +1116,7 @@ class BackofficeApi {
       deletedAt: string
       recoveryWindowDays: number
     }>> => {
-      return this.fetch(`/admin/users/${userId}/unsubscribe`, {
+      return this.fetch(`/admin/trash/users/${userId}/unsubscribe`, {
         method: 'POST',
         body: JSON.stringify(data),
       })

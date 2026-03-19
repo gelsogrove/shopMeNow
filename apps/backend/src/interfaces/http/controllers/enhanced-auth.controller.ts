@@ -72,17 +72,18 @@ export class EnhancedAuthController {
    * Register new user with email/password
    * POST /api/auth/register
    * 
-   * Body: { email, password, firstName, lastName, gdprAccepted }
-   * Response: { user, qrCode } - User created, must setup 2FA next
+   * Body: { email, password, firstName?, lastName?, gdprAccepted, skipSetup? }
+   * - skipSetup=true (onboarding wizard): returns token+sessionId immediately, 2FA deferred
+   * - skipSetup=false/missing (standard): returns qrCode, user must verify 2FA first
    */
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, firstName, lastName, gdprAccepted } = req.body
+      const { email, password, firstName, lastName, gdprAccepted, skipSetup } = req.body
       const ipAddress = req.ip || req.socket.remoteAddress
       const userAgent = req.headers['user-agent']
 
-      // Validate input
-      if (!email || !password || !firstName || !lastName) {
+      // Validate input — firstName/lastName optional (can be set later from profile)
+      if (!email || !password) {
         throw new AppError(400, 'Missing required fields')
       }
 
@@ -95,25 +96,19 @@ export class EnhancedAuthController {
         {
           email,
           password,
-          firstName,
-          lastName,
+          firstName: firstName || '',
+          lastName: lastName || '',
           gdprAccepted: new Date(),
         },
         ipAddress,
         userAgent
       )
 
-      // Generate 2FA QR code
-      const qrCode = await this.otpService.setupTwoFactor(user.id)
-
-      // 🔒 SECURITY: NO session/token until 2FA is verified!
-      // User must complete 2FA setup before getting authenticated
-
       // Send welcome email
       try {
         await this.emailService.sendWelcomeEmail({
           to: user.email,
-          firstName: user.firstName,
+          firstName: user.firstName || user.email.split('@')[0],
         })
         logger.info(`✅ Welcome email sent to: ${user.email}`)
       } catch (emailError) {
@@ -121,6 +116,55 @@ export class EnhancedAuthController {
         // Don't fail registration if email fails
       }
 
+      // skipSetup=true (onboarding wizard): Skip 2FA, return token+sessionId immediately
+      // Same pattern as Google OAuth — user configures 2FA later from profile settings
+      if (skipSetup) {
+        logger.info(`🔧 [Register] New user ${email} — skipping 2FA setup (onboarding skipSetup=true)`)
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() },
+        })
+
+        const sessionId = await this.adminSessionService.createSession(
+          user.id,
+          null,
+          ipAddress,
+          userAgent
+        )
+
+        const token = this.generateToken(user)
+
+        await logAuthAttempt({
+          userId: user.id,
+          email: user.email,
+          attemptType: 'registration',
+          success: true,
+          ipAddress,
+          userAgent,
+          metadata: { action: 'register_skip_2fa_onboarding' },
+        })
+
+        res.status(201).json({
+          sessionId,
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            authProvider: 'email',
+          },
+          message: 'Registration successful (2FA deferred to profile settings)',
+        })
+        return
+      }
+
+      // Standard flow: Setup 2FA immediately
+      const qrCode = await this.otpService.setupTwoFactor(user.id)
+
+      // 🔒 SECURITY: NO session/token until 2FA is verified!
       res.status(201).json({
         message: 'Registration successful. Please setup 2FA.',
         user: {

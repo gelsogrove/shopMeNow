@@ -33,6 +33,16 @@ const mockRegenerateQr = vi.hoisted(() => vi.fn())
 const mockStorage = vi.hoisted(() => ({
   setToken: vi.fn(), setSessionId: vi.fn(), setUser: vi.fn(), clearAppState: vi.fn(),
 }))
+const mockSetCurrentWorkspace = vi.hoisted(() => vi.fn())
+
+vi.mock('@/contexts/WorkspaceContext', () => ({
+  useWorkspace: vi.fn(() => ({
+    workspace: null,
+    setCurrentWorkspace: mockSetCurrentWorkspace,
+    loading: false,
+    error: null,
+  })),
+}))
 
 vi.mock('@/contexts/LanguageContext', () => ({
   useLanguage: vi.fn(() => ({ language: 'en' })),

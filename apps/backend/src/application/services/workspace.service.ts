@@ -1162,12 +1162,18 @@ For privacy inquiries, please contact our support team.`
       },
     })
 
-    // Phone number is optional — fall back to workspace's stored phone or empty string
-    // WasenderAPI only uses it as a label, not for QR-based authentication
+    // Phone number is required by WasenderAPI for session creation.
+    // Fall back to workspace's stored phone if not provided.
     const effectivePhone = phoneNumber
       || existingWorkspace?.wasenderPhoneNumber
       || existingWorkspace?.whatsappPhoneNumber
       || ''
+    if (!effectivePhone) {
+      throw new Error('WASENDER_PHONE_REQUIRED: Phone number is required to create a Wasender session.')
+    }
+    if (!effectivePhone.startsWith('+')) {
+      throw new Error('WASENDER_PHONE_INVALID: Phone number must be in E.164 format (e.g., +393331234567).')
+    }
 
     let sessionId: string
     let apiKey: string
@@ -1400,7 +1406,17 @@ For privacy inquiries, please contact our support team.`
 
     try {
       const actualStatus = await this.wasenderClient.getSessionStatus(workspace.wasenderSessionId)
-      const normalized = actualStatus.toLowerCase()
+      const normalizedRaw = actualStatus.toLowerCase()
+      const normalized =
+        normalizedRaw === 'connected'
+          ? 'connected'
+          : normalizedRaw === 'need_scan' || normalizedRaw === 'scan_qr' || normalizedRaw === 'logged_out' || normalizedRaw === 'expired'
+            ? 'need_scan'
+            : normalizedRaw === 'connecting'
+              ? 'pending'
+              : normalizedRaw === 'disconnected'
+                ? 'disconnected'
+                : normalizedRaw
       const isConnected = normalized === 'connected'
 
       // When session is confirmed connected: also fix webhook URL automatically.

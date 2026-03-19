@@ -1151,6 +1151,20 @@ export class WorkspaceController {
           code: 'WASENDER_SUBSCRIPTION_REQUIRED',
         })
       }
+      if (error.message?.startsWith('WASENDER_PHONE_REQUIRED')) {
+        return res.status(400).json({
+          error: 'Phone number is required to create a WhatsApp session.',
+          message: 'Provide a phone number in E.164 format (e.g., +393331234567).',
+          code: 'WASENDER_PHONE_REQUIRED',
+        })
+      }
+      if (error.message?.startsWith('WASENDER_PHONE_INVALID')) {
+        return res.status(400).json({
+          error: 'Invalid phone number format.',
+          message: 'Phone number must be in E.164 format (e.g., +393331234567).',
+          code: 'WASENDER_PHONE_INVALID',
+        })
+      }
 
       return res.status(400).json({ error: error.message })
     }
@@ -1359,4 +1373,3 @@ export class WorkspaceController {
     }
   }
 }
-
