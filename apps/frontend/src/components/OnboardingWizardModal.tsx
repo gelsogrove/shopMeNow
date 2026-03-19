@@ -329,6 +329,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   const handleNextBusiness = () => {
     if (!businessName.trim()) { setError(t.errors.required); return }
+    if (whatsappPhoneNumber.trim() && !whatsappPhoneNumber.trim().startsWith('+')) {
+      setError('Phone number must start with + and country code (e.g. +39...)')
+      return
+    }
     goTo('channel-personality')
   }
 
@@ -353,11 +357,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   const handleEmailRegister = async () => {
     if (!email.trim()) { setError(t.errors.emailRequired); return }
-    if (needsWhatsApp && !whatsappPhoneNumber.trim()) { setError('Phone number is required for WhatsApp'); return }
-    if (needsWhatsApp && whatsappPhoneNumber.trim() && !whatsappPhoneNumber.trim().startsWith('+')) {
-      setError('Phone number must start with + and country code')
-      return
-    }
     const pwErr = validatePassword(password)
     if (pwErr) { setError(pwErr); return }
     if (!gdprAccepted) { setError(t.errors.gdprRequired); return }
@@ -379,11 +378,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   }
 
   const handleGoogleAuth = async (credentialResponse: any) => {
-    if (needsWhatsApp && !whatsappPhoneNumber.trim()) { setError('Phone number is required for WhatsApp'); return }
-    if (needsWhatsApp && whatsappPhoneNumber.trim() && !whatsappPhoneNumber.trim().startsWith('+')) {
-      setError('Phone number must start with + and country code')
-      return
-    }
     setIsLoading(true); setError('')
     storage.clearAppState()
     try {
@@ -568,6 +562,18 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                 autoFocus
               />
             </div>
+            <div>
+              <Label htmlFor="ob-phone" className="text-xs font-medium text-slate-600">WhatsApp Phone</Label>
+              <Input
+                id="ob-phone"
+                type="tel"
+                className="mt-1.5 text-base"
+                value={whatsappPhoneNumber}
+                onChange={e => { setWhatsappPhoneNumber(e.target.value); setError('') }}
+                placeholder="+393331234567"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Include country code, e.g. +39 — optional if you only use the web widget</p>
+            </div>
           </div>
         )
 
@@ -736,15 +742,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
               <Input id="ob-email" type="email" className="mt-1 h-9 text-sm" value={email}
                 onChange={e => { setEmail(e.target.value); setError('') }} autoComplete="email" />
             </div>
-            {needsWhatsApp && (
-              <div>
-                <Label htmlFor="ob-phone" className="text-xs font-medium text-slate-600">WhatsApp Phone (E.164)</Label>
-                <Input id="ob-phone" type="tel" className="mt-1 h-9 text-sm" value={whatsappPhoneNumber}
-                  onChange={e => { setWhatsappPhoneNumber(e.target.value); setError('') }}
-                  placeholder="+393331234567" />
-                <p className="text-[11px] text-slate-400 mt-1">Include country code, e.g. +39</p>
-              </div>
-            )}
             <div>
               <Label htmlFor="ob-pass" className="text-xs font-medium text-slate-600">{t.auth.pass}</Label>
               <div className="relative mt-1">
