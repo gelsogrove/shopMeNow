@@ -195,8 +195,8 @@ function AppWithProviders() {
                 <Route path="/auth">
                   {/* ✅ Preserve query params (e.g., ?admin=true) during redirect */}
                   <Route path="login" element={<AuthLoginRedirect />} />
-                  <Route path="signup" element={<Navigate to="/?action=register" replace />} />
-                  <Route path="register" element={<Navigate to="/?action=register" replace />} />
+                  <Route path="signup" element={<Navigate to="/onboarding" replace />} />
+                  <Route path="register" element={<Navigate to="/onboarding" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
                   <Route path="verify-2fa" element={<Verify2FAPage />} />
                   <Route path="2fa-reset/:token" element={<TwoFactorResetPage />} />
@@ -424,8 +424,8 @@ function AppWithProviders() {
                   element={<Navigate to="/" replace />}
                 />
 
-                <Route path="/register" element={<Navigate to="/?action=register" replace />} />
-                <Route path="/signup" element={<Navigate to="/?action=register" replace />} />
+                <Route path="/register" element={<Navigate to="/onboarding" replace />} />
+                <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
                 <Route
                   path="/registration-success"
                   element={<RegistrationSuccess />}
