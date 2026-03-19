@@ -205,24 +205,36 @@ export class WasenderWebhookController {
 
     try {
       switch (status) {
-        case 'connected':
+        case 'connected': {
+          // Fetch the connected phone number from WasenderAPI to store in DB
+          const workspace = await prisma.workspace.findUnique({
+            where: { id: workspaceId },
+            select: { wasenderApiKey: true },
+          })
+          let connectedPhone: string | null = null
+          if (workspace?.wasenderApiKey) {
+            connectedPhone = await this.wasenderClient.getConnectedUserPhone(workspace.wasenderApiKey)
+          }
+
           await prisma.workspace.update({
             where: { id: workspaceId },
             data: {
               wasenderSessionStatus: 'connected',
               wasenderIsActive: true,
-              wasenderQrString: null, // QR no longer needed
+              wasenderQrString: null,
               wasenderQrGeneratedAt: null,
-              channelStatus: true, // Enable message queue
+              channelStatus: true,
+              ...(connectedPhone && { whatsappPhoneNumber: connectedPhone }),
             },
           })
-          logger.info('[WASENDER-Webhook] ✅ Session connected:', { workspaceId })
+          logger.info('[WASENDER-Webhook] ✅ Session connected:', { workspaceId, connectedPhone: connectedPhone ? '****' : 'unknown' })
 
           // Notify frontend
           try {
             websocketService.notifyChatUpdated(workspaceId, { type: 'wasender:connected' })
           } catch { /* optional */ }
           break
+        }
 
         case 'disconnected':
           await prisma.workspace.update({

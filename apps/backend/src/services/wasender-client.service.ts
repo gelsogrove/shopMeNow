@@ -433,6 +433,36 @@ export class WasenderClientService {
     }
   }
 
+  // ─── Connected user info (Session API Key) ────────────────────────────────
+
+  /**
+   * Get the phone number of the WhatsApp account connected to this session.
+   * Call after QR scan is confirmed to populate workspace.whatsappPhoneNumber.
+   *
+   * @param sessionApiKey  workspace.wasenderApiKey (per-session key)
+   * @returns phone number in E.164 format (e.g. "+39331234567") or null
+   */
+  async getConnectedUserPhone(sessionApiKey: string): Promise<string | null> {
+    try {
+      const client = axios.create({
+        baseURL: this.baseUrl,
+        headers: { Authorization: `Bearer ${sessionApiKey}`, 'Content-Type': 'application/json' },
+        timeout: 10000,
+      })
+      const { data } = await client.get('/api/user')
+      // Response: { data: { id: "391234567890@s.whatsapp.net", ... } }
+      const jid: string = data?.data?.id || ''
+      if (!jid) return null
+      const number = jid.replace(/@.*$/, '') // strip @s.whatsapp.net
+      const phone = number.startsWith('+') ? number : `+${number}`
+      logger.info('[Wasender] Connected user phone fetched:', { phone: this.maskPhoneNumber(phone) })
+      return phone
+    } catch (error: any) {
+      logger.warn('[Wasender] Could not fetch connected user phone:', error.message)
+      return null
+    }
+  }
+
   // ─── Session Restart (Personal Access Token) ─────────────────────────────
 
   /**
