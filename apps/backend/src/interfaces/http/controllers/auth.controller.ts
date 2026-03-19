@@ -289,20 +289,31 @@ export class AuthController {
       const user = await this.userService.create({
         email,
         password,
-        firstName,
-        lastName,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
         gdprAccepted: new Date(), // Store the timestamp of GDPR acceptance
       })
 
-      // 🔐 Generate 2FA secret and QR code for new user
-      const { secret, qrCode } = await this.authService.generate2FASecret(
+      // 🔐 Generate 2FA secret and QR code for new user (can be configured from profile later)
+      const { qrCode } = await this.authService.generate2FASecret(
         user.email,
         user.id
       )
 
-      logger.info(`✅ Registration successful for user ${user.id}, 2FA secret generated`)
+      // Create a session immediately so the onboarding wizard can proceed without TOTP
+      const sessionId = await adminSessionService.createSession(
+        user.id,
+        null,
+        req.ip,
+        req.headers["user-agent"]
+      )
 
-      // Return success response with user info and QR code for 2FA setup
+      const jwtToken = this.generateToken(user)
+      this.setTokenCookie(res, jwtToken)
+
+      logger.info(`✅ Registration successful for user ${user.id}, session created: ${sessionId.substring(0, 8)}...`)
+
+      // Return user info + session credentials + 2FA QR code (optional, user can set up 2FA from profile)
       res.status(201).json({
         message: "Registration successful",
         user: {
@@ -310,8 +321,11 @@ export class AuthController {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          role: user.role,
         },
-        qrCode, // 🔐 QR code for 2FA setup
+        token: jwtToken,
+        sessionId,
+        qrCode, // 🔐 QR code for 2FA setup (optional — can be configured later from profile)
       })
     } catch (error) {
       logger.error("Registration error:", error)

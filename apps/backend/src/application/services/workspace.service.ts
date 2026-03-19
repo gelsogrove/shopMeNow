@@ -1198,10 +1198,24 @@ For privacy inquiries, please contact our support team.`
       const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
       await this.wasenderClient.updateSessionWebhook(sessionId, webhookUrl)
     } else {
-      // No session → create new one (webhook already set inside createNewSession)
-      const result = await createNewSession()
-      sessionId = result.sessionId
-      apiKey = result.apiKey
+      // No session in DB → check WasenderAPI for existing sessions that our DB
+      // lost track of (created via dashboard, DB reset, previous init failed after
+      // creating session but before saving, etc.)
+      const adopted = await this.adoptExistingWasenderSession(workspaceId)
+
+      if (adopted) {
+        sessionId = adopted.sessionId
+        apiKey = adopted.apiKey
+        logger.info('[Workspace] Adopted existing Wasender session:', {
+          workspaceId,
+          sessionId,
+        })
+      } else {
+        // No existing sessions on WasenderAPI → create new one
+        const result = await createNewSession()
+        sessionId = result.sessionId
+        apiKey = result.apiKey
+      }
     }
 
     // STEP 2: Connect → get fresh QR string
@@ -1361,6 +1375,26 @@ For privacy inquiries, please contact our support team.`
     })
 
     if (!workspace?.wasenderSessionId) {
+      // No session tracked in DB → try to discover existing sessions on WasenderAPI.
+      // This handles: session created via dashboard, DB reset, previous init failure, etc.
+      const adopted = await this.adoptExistingWasenderSession(workspaceId)
+      if (adopted) {
+        // Save adopted session to DB and set provider
+        await this.prisma.workspace.update({
+          where: { id: workspaceId },
+          data: {
+            whatsappProvider: 'wasender',
+            wasenderSessionId: adopted.sessionId,
+            wasenderApiKey: adopted.apiKey,
+          },
+        })
+        logger.info('[Workspace] Adopted existing Wasender session during sync:', {
+          workspaceId,
+          sessionId: adopted.sessionId,
+        })
+        // Re-sync with the now-tracked session
+        return this.syncWasenderStatus(workspaceId)
+      }
       return { wasenderSessionStatus: 'idle', wasenderIsActive: false, wasenderQrString: null }
     }
 

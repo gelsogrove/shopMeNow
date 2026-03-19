@@ -25,6 +25,10 @@ export const WORKSPACE_TYPE_EMOJI: Record<WorkspaceType, string> = {
   ecommerce: '🛒', services: '🛎️', info: '💬',
 }
 
+export type ChannelTone = 'friendly' | 'professional' | 'formal' | 'casual'
+
+export const TONE_OPTIONS: ChannelTone[] = ['friendly', 'professional', 'formal', 'casual']
+
 export const OWT = {
   it: {
     back: 'Indietro',
@@ -40,10 +44,23 @@ export const OWT = {
       subtitle: 'Scegliamo le funzionalità più adatte\nalla tua attività',
     },
     business: {
-      title: 'Come si chiama la tua attività?',
+      title: 'Come si chiama il tuo canale?',
       subtitle: 'I tuoi clienti vedranno questo nome',
-      name: 'Nome attività o brand',
+      name: 'Nome del canale',
       namePh: 'es. Pizzeria Roma',
+    },
+    channelPersonality: {
+      title: 'Personalità del canale',
+      subtitle: 'Definisci come si presenta il tuo assistente AI',
+      botName: 'Nome dell\'assistente AI',
+      botNamePh: 'es. Sofia, Marco, Assistente...',
+      tone: 'Tono di voce',
+      tones: {
+        friendly:     { label: 'Amichevole',    desc: 'Caldo, vicino, empatico',             emoji: '😊' },
+        professional: { label: 'Professionale', desc: 'Chiaro, competente, affidabile',      emoji: '👔' },
+        formal:       { label: 'Formale',       desc: 'Preciso, autorevole, istituzionale',  emoji: '🎩' },
+        casual:       { label: 'Informale',     desc: 'Rilassato, diretto, colloquiale',     emoji: '😎' },
+      },
     },
     workspaceType: {
       title: 'Come vuoi usare eChatbot?',
@@ -68,13 +85,6 @@ export const OWT = {
       subtitle: 'Una delle caratteristiche di eChatbot è il passaggio intelligente dal chatbot a un operatore umano, senza perdere il contesto della conversazione. Quando un cliente ha un problema complesso, il chatbot trasferisce la chat a un operatore che riceve una notifica WhatsApp con tutta la cronologia. Vuoi questa funzionalità?',
       yes: { label: 'Sì, voglio il passaggio a operatore umano', emoji: '✅' },
       no: { label: 'No, la gestione automatica va bene', emoji: '🤖' },
-    },
-    channel: {
-      title: 'Il tuo numero WhatsApp',
-      subtitle: 'I clienti ti scriveranno\na questo numero',
-      phone: 'Numero di telefono',
-      phonePh: '+393331234567',
-      hint: "Formato internazionale con prefisso (+39 per l'Italia)",
     },
     auth: {
       title: 'Crea il tuo account',
@@ -137,10 +147,23 @@ export const OWT = {
       subtitle: 'We\'ll pick the best features\nfor your business',
     },
     business: {
-      title: 'What\'s your business name?',
+      title: 'What\'s your channel name?',
       subtitle: 'Your customers will see this name',
-      name: 'Business or brand name',
+      name: 'Channel name',
       namePh: 'e.g. Roma Pizza',
+    },
+    channelPersonality: {
+      title: 'Channel personality',
+      subtitle: 'Define how your AI assistant presents itself',
+      botName: 'AI assistant name',
+      botNamePh: 'e.g. Sofia, Alex, Assistant...',
+      tone: 'Tone of voice',
+      tones: {
+        friendly:     { label: 'Friendly',      desc: 'Warm, approachable, empathetic',   emoji: '😊' },
+        professional: { label: 'Professional',  desc: 'Clear, competent, trustworthy',    emoji: '👔' },
+        formal:       { label: 'Formal',        desc: 'Precise, authoritative, corporate',emoji: '🎩' },
+        casual:       { label: 'Casual',        desc: 'Relaxed, direct, conversational',  emoji: '😎' },
+      },
     },
     workspaceType: {
       title: 'How will you use eChatbot?',
@@ -165,13 +188,6 @@ export const OWT = {
       subtitle: 'One of eChatbot\'s strengths is the intelligent handoff from AI to a human agent, without losing conversation context. When a customer has a complex issue, the AI agent instantly transfers the chat to an operator who receives a WhatsApp notification with the full conversation history. Would you like this capability integrated into your chatbot?',
       yes: { label: 'Yes, I want human handoff capability', emoji: '✅' },
       no: { label: 'Full automation works for me', emoji: '🤖' },
-    },
-    channel: {
-      title: 'Your WhatsApp number',
-      subtitle: 'Customers will message you\nat this number',
-      phone: 'Phone number',
-      phonePh: '+393331234567',
-      hint: 'Add the country code, e.g. +1 (US) or +39 (Italy)',
     },
     auth: {
       title: 'Create your account',
@@ -234,10 +250,23 @@ export const OWT = {
       subtitle: 'Elegiremos las funciones más adecuadas\npara tu negocio',
     },
     business: {
-      title: '¿Cómo se llama tu negocio?',
+      title: '¿Cómo se llama tu canal?',
       subtitle: 'Tus clientes verán este nombre',
-      name: 'Nombre del negocio o marca',
+      name: 'Nombre del canal',
       namePh: 'ej. Pizzería Roma',
+    },
+    channelPersonality: {
+      title: 'Personalidad del canal',
+      subtitle: 'Define cómo se presenta tu asistente AI',
+      botName: 'Nombre del asistente AI',
+      botNamePh: 'ej. Sofia, Carlos, Asistente...',
+      tone: 'Tono de voz',
+      tones: {
+        friendly:     { label: 'Amigable',      desc: 'Cálido, cercano, empático',           emoji: '😊' },
+        professional: { label: 'Profesional',   desc: 'Claro, competente, confiable',        emoji: '👔' },
+        formal:       { label: 'Formal',        desc: 'Preciso, autoritativo, corporativo',  emoji: '🎩' },
+        casual:       { label: 'Informal',      desc: 'Relajado, directo, coloquial',        emoji: '😎' },
+      },
     },
     workspaceType: {
       title: '¿Cómo usarás eChatbot?',
@@ -262,13 +291,6 @@ export const OWT = {
       subtitle: 'Una de las fortalezas de eChatbot es la transferencia inteligente del chatbot a un agente humano, sin perder el contexto. ¿Quieres esta capacidad integrada?',
       yes: { label: 'Sí, quiero transferencia a agente humano', emoji: '✅' },
       no: { label: 'La automatización completa me sirve', emoji: '🤖' },
-    },
-    channel: {
-      title: 'Tu número de WhatsApp',
-      subtitle: 'Los clientes te escribirán\na este número',
-      phone: 'Número de teléfono',
-      phonePh: '+34612345678',
-      hint: 'Formato internacional con código de país (+34 para España)',
     },
     auth: {
       title: 'Crea tu cuenta',
@@ -331,10 +353,23 @@ export const OWT = {
       subtitle: 'Escolheremos as melhores funcionalidades\npara o seu negócio',
     },
     business: {
-      title: 'Qual é o nome do seu negócio?',
+      title: 'Qual é o nome do seu canal?',
       subtitle: 'Seus clientes verão este nome',
-      name: 'Nome do negócio ou marca',
+      name: 'Nome do canal',
       namePh: 'ex. Pizzaria Roma',
+    },
+    channelPersonality: {
+      title: 'Personalidade do canal',
+      subtitle: 'Defina como seu assistente AI se apresenta',
+      botName: 'Nome do assistente AI',
+      botNamePh: 'ex. Sofia, Lucas, Assistente...',
+      tone: 'Tom de voz',
+      tones: {
+        friendly:     { label: 'Amigável',      desc: 'Caloroso, próximo, empático',         emoji: '😊' },
+        professional: { label: 'Profissional',  desc: 'Claro, competente, confiável',        emoji: '👔' },
+        formal:       { label: 'Formal',        desc: 'Preciso, autoritativo, corporativo',  emoji: '🎩' },
+        casual:       { label: 'Informal',      desc: 'Relaxado, direto, coloquial',         emoji: '😎' },
+      },
     },
     workspaceType: {
       title: 'Como você vai usar o eChatbot?',
@@ -359,13 +394,6 @@ export const OWT = {
       subtitle: 'Um dos pontos fortes do eChatbot é a transferência inteligente do chatbot para um agente humano, sem perder o contexto. Quer essa capacidade integrada?',
       yes: { label: 'Sim, quero transferência para agente humano', emoji: '✅' },
       no: { label: 'Automação completa está bem para mim', emoji: '🤖' },
-    },
-    channel: {
-      title: 'Seu número do WhatsApp',
-      subtitle: 'Os clientes vão te escrever\nneste número',
-      phone: 'Número de telefone',
-      phonePh: '+553312345678',
-      hint: 'Formato internacional com código do país (+55 para Brasil)',
     },
     auth: {
       title: 'Crie sua conta',
@@ -417,4 +445,3 @@ export const OWT = {
 } as const
 
 export type OWTLang = keyof typeof OWT
-export type OWTTranslations = (typeof OWT)[OWTLang]

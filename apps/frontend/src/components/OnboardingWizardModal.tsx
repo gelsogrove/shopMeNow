@@ -2,11 +2,13 @@
  * OnboardingWizardModal – survey-style multi-step onboarding
  *
  * Flow:
- *   industry → business → workspace-type →
+ *   industry → business → channel-personality → workspace-type →
  *   channel-type → human-support →
- *   auth → totp → creating →
+ *   auth → creating →
  *   [qr-scan — only if whatsapp or both] →
  *   done
+ *
+ * Note: TOTP/2FA is deferred — users configure it from profile settings after onboarding
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -35,8 +37,8 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { LanguageSelector } from '@/components/shared/LanguageSelector'
 import { logger } from '@/lib/logger'
 import {
-  OWT, INDUSTRIES, INDUSTRY_EMOJI, WORKSPACE_TYPE_EMOJI,
-  type OWTLang, type Industry, type WorkspaceType,
+  OWT, INDUSTRIES, INDUSTRY_EMOJI, WORKSPACE_TYPE_EMOJI, TONE_OPTIONS,
+  type OWTLang, type Industry, type WorkspaceType, type ChannelTone,
 } from './onboardingWizardTranslations'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '988195920488-caj4sdf4t7elrsdedk36a5n5t1ndki4c.apps.googleusercontent.com'
@@ -44,27 +46,28 @@ const QR_EXPIRY = 45
 const POLL_INTERVAL = import.meta.env.MODE === 'test' ? 50 : 3000
 
 type ChannelChoice = 'whatsapp' | 'widget' | 'both'
-type WizardStep = 'industry' | 'business' | 'workspace-type' | 'channel-type' | 'human-support' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
+type WizardStep = 'industry' | 'business' | 'channel-personality' | 'workspace-type' | 'channel-type' | 'human-support' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
 
 interface Props {
   open: boolean
   onClose: () => void
 }
 
-// Data steps (shown in step counter)
-const DATA_STEPS: WizardStep[] = ['industry', 'business', 'workspace-type', 'channel-type', 'human-support', 'auth']
+// Data steps (shown in step counter) — 7 steps total
+const DATA_STEPS: WizardStep[] = ['industry', 'business', 'channel-personality', 'workspace-type', 'channel-type', 'human-support', 'auth']
 
 // Progress bar fill (0–100) per step
 const STEP_PROGRESS: Record<WizardStep, number> = {
-  industry: 8, business: 24, 'workspace-type': 40,
-  'channel-type': 56, 'human-support': 72, auth: 84,
-  totp: 90, creating: 95, 'qr-scan': 98, done: 100,
+  industry: 8, business: 22, 'channel-personality': 36,
+  'workspace-type': 50, 'channel-type': 64, 'human-support': 78, auth: 88,
+  totp: 92, creating: 96, 'qr-scan': 98, done: 100,
 }
 
 // Full-bleed image per step
 const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
   industry: '/survey.png',
   business: '/survey-agent.png',
+  'channel-personality': '/survery-crm.png',
   'workspace-type': '/survey-ecommerce.png',
   'channel-type': '/surver-widget.png',
   'human-support': '/survey-support.png',
@@ -73,8 +76,8 @@ const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
 
 // Icon per step (shown below photo)
 const STEP_ICONS: Partial<Record<WizardStep, string>> = {
-  industry: '🏢', business: '✏️', 'workspace-type': '🚀',
-  'channel-type': '📱', 'human-support': '🤝', auth: '👤',
+  industry: '🏢', business: '✏️', 'channel-personality': '🎭',
+  'workspace-type': '🚀', 'channel-type': '📱', 'human-support': '🤝', auth: '👤',
 }
 
 const slideVariants = {
@@ -114,13 +117,13 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── Step data ────────────────────────────────────────────────────────────────
   const [industry, setIndustry] = useState<Industry>('other')
   const [businessName, setBusinessName] = useState('')
+  const [botName, setBotName] = useState('')
+  const [channelTone, setChannelTone] = useState<ChannelTone>('friendly')
   const [workspaceType, setWorkspaceType] = useState<WorkspaceType>('ecommerce')
   const [channelChoice, setChannelChoice] = useState<ChannelChoice>('whatsapp')
   const [hasHumanSupport, setHasHumanSupport] = useState(true)
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -150,9 +153,9 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return
     setStep('industry'); setError(''); setDirection(1)
-    setIndustry('other'); setBusinessName(''); setWorkspaceType('ecommerce')
-    setChannelChoice('whatsapp'); setHasHumanSupport(true)
-    setFirstName(''); setLastName(''); setEmail(''); setPassword('')
+    setIndustry('other'); setBusinessName(''); setBotName(''); setChannelTone('friendly')
+    setWorkspaceType('ecommerce'); setChannelChoice('whatsapp'); setHasHumanSupport(true)
+    setEmail(''); setPassword('')
     setShowPassword(false); setGdprAccepted(false)
     setPendingUserId(''); setTotpQrCode(''); setTotpCode('')
     setCreatedWorkspaceId(''); setQrString(''); setQrAge(0)
@@ -259,6 +262,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   const handleNextBusiness = () => {
     if (!businessName.trim()) { setError(t.errors.required); return }
+    goTo('channel-personality')
+  }
+
+  const handleNextPersonality = () => {
     goTo('workspace-type')
   }
 
@@ -278,7 +285,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   }
 
   const handleEmailRegister = async () => {
-    if (!firstName.trim() || !lastName.trim()) { setError(t.errors.required); return }
     if (!email.trim()) { setError(t.errors.emailRequired); return }
     const pwErr = validatePassword(password)
     if (pwErr) { setError(pwErr); return }
@@ -286,10 +292,13 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
     setIsLoading(true); setError('')
     try {
-      const resp = await api.post('/auth/register', { email, password, firstName, lastName, gdprAccepted: true })
-      const { user, qrCode } = resp.data
-      setPendingUserId(user.id); setTotpQrCode(qrCode); setIsNewUser(true)
-      goTo('totp')
+      const resp = await api.post('/auth/register', { email, password, gdprAccepted: true })
+      const { token, sessionId, user } = resp.data
+      storage.clearAppState()
+      storage.setToken(token); storage.setSessionId(sessionId)
+      if (user) storage.setUser(user)
+      // Skip TOTP setup during onboarding — user can configure 2FA from profile settings later
+      goTo('creating')
     } catch (err: any) {
       setError(err.response?.data?.message || err.response?.data?.error || 'Registration failed')
     } finally {
@@ -566,18 +575,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         return (
           <div className="space-y-3">
             <p className="text-slate-500 text-sm">{t.auth.subtitle}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="ob-fn" className="text-xs font-medium text-slate-600">{t.auth.fname}</Label>
-                <Input id="ob-fn" className="mt-1 h-9 text-sm" value={firstName}
-                  onChange={e => { setFirstName(e.target.value); setError('') }} />
-              </div>
-              <div>
-                <Label htmlFor="ob-ln" className="text-xs font-medium text-slate-600">{t.auth.lname}</Label>
-                <Input id="ob-ln" className="mt-1 h-9 text-sm" value={lastName}
-                  onChange={e => { setLastName(e.target.value); setError('') }} />
-              </div>
-            </div>
             <div>
               <Label htmlFor="ob-email" className="text-xs font-medium text-slate-600">{t.auth.email}</Label>
               <Input id="ob-email" type="email" className="mt-1 h-9 text-sm" value={email}

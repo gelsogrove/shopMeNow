@@ -52,6 +52,37 @@ interface WasenderSessionStatusResponse {
   }
 }
 
+interface WasenderListSessionsResponse {
+  success: boolean
+  data: Array<{
+    id: number
+    name: string
+    phone_number: string | null
+    status: string
+    webhook_url: string | null
+    webhook_enabled: boolean
+    webhook_events: string[] | null
+    created_at: string
+    updated_at: string
+  }>
+}
+
+interface WasenderSessionDetailsResponse {
+  success: boolean
+  data: {
+    id: number
+    name: string
+    phone_number: string | null
+    status: string
+    api_key: string
+    webhook_url: string | null
+    webhook_enabled: boolean
+    webhook_secret?: string
+    created_at: string
+    updated_at: string
+  }
+}
+
 export interface WasenderSessionInfo {
   sessionId: string   // numeric ID as string
   apiKey: string      // per-session API key for messaging
@@ -285,6 +316,86 @@ export class WasenderClientService {
     } catch (error: any) {
       logger.error('[Wasender] Failed to get session status:', error)
       throw new Error(`WasenderAPI status check failed: ${error.message}`)
+    }
+  }
+
+  /**
+   * List all WhatsApp sessions on the WasenderAPI account.
+   * Uses Personal Access Token (management auth).
+   * Useful to discover existing sessions not tracked in our database
+   * (e.g. created via WasenderAPI dashboard, or DB lost track after migration).
+   */
+  async listSessions(): Promise<Array<{
+    id: string
+    name: string
+    phoneNumber: string | null
+    status: string
+    webhookUrl: string | null
+  }>> {
+    try {
+      const { data } = await this.managementClient.get<WasenderListSessionsResponse>(
+        '/api/whatsapp-sessions'
+      )
+
+      const sessions = (data.data || []).map(session => ({
+        id: String(session.id),
+        name: session.name,
+        phoneNumber: session.phone_number,
+        status: session.status?.toLowerCase() || 'unknown',
+        webhookUrl: session.webhook_url,
+      }))
+
+      logger.info('[Wasender] Listed sessions:', { count: sessions.length })
+      return sessions
+    } catch (error: any) {
+      logger.error('[Wasender] Failed to list sessions:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      })
+      throw new Error(`WasenderAPI list sessions failed: ${error.message}`)
+    }
+  }
+
+  /**
+   * Get full session details including api_key.
+   * Uses the session details endpoint which returns more data than the status-only call.
+   *
+   * @param sessionId  Numeric session ID (as string)
+   * @returns full session details including apiKey, or null if 404
+   */
+  async getSessionDetails(sessionId: string): Promise<{
+    id: string
+    name: string
+    phoneNumber: string | null
+    status: string
+    apiKey: string
+    webhookUrl: string | null
+  } | null> {
+    try {
+      const { data } = await this.managementClient.get<WasenderSessionDetailsResponse>(
+        `/api/whatsapp-sessions/${sessionId}`
+      )
+
+      return {
+        id: String(data.data.id),
+        name: data.data.name,
+        phoneNumber: data.data.phone_number,
+        status: data.data.status?.toLowerCase() || 'unknown',
+        apiKey: data.data.api_key,
+        webhookUrl: data.data.webhook_url,
+      }
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        logger.warn('[Wasender] Session not found (404):', { sessionId })
+        return null
+      }
+      logger.error('[Wasender] Failed to get session details:', {
+        sessionId,
+        status: error.response?.status,
+        message: error.message,
+      })
+      throw new Error(`WasenderAPI session details failed: ${error.message}`)
     }
   }
 
