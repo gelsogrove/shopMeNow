@@ -207,7 +207,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 w-full">
       <div className="px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-12">
           {/* Left: Hamburger (mobile) + Logo */}
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Hamburger menu - mobile only */}

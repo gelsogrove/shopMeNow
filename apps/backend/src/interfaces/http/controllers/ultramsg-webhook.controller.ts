@@ -45,6 +45,7 @@ import logger from '../../../utils/logger'
 import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
 import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
+import { OperatorRelayService } from '../../../application/services/operator-relay.service'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -60,6 +61,7 @@ const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
 const customerMessageLocks = new Map<string, Promise<void>>()
 
 export class UltraMsgWebhookController {
+  private readonly operatorRelayService = new OperatorRelayService(prisma)
   /**
    * Handle incoming webhook from UltraMsg
    * POST /api/whatsapp/ultramsg/:webhookId
@@ -172,6 +174,8 @@ export class UltraMsgWebhookController {
               whatsappProvider: true,
               ultraMsgInstanceId: true,
               ultraMsgToken: true,
+              whatsappPhoneNumber: true,
+              operatorWhatsappNumber: true,
               ownerId: true,
               owner: {
                 select: { status: true }
@@ -231,7 +235,10 @@ export class UltraMsgWebhookController {
       logger.info('[ULTRAMSG] ✅ InstanceId verified', { workspaceId })
 
       // Owner inactive or channel disabled (checked AFTER authentication)
-      if (workspace.owner?.status === 'INACTIVE' || workspace.channelStatus === false) {
+      const isOwnerInactive = workspace.owner?.status === 'INACTIVE'
+      const isChannelDisabled = workspace.channelStatus === false
+
+      if (isOwnerInactive || isChannelDisabled) {
         logger.warn('[ULTRAMSG] 🚫 Channel disabled or owner inactive', {
           workspaceId,
           channelStatus: workspace.channelStatus,
@@ -274,12 +281,21 @@ export class UltraMsgWebhookController {
         return res.status(400).json({ error: 'missing_phone_number' })
       }
 
+      const messageMarkdown = whatsAppToMarkdown(messageText)
+
       logger.info('[ULTRAMSG] 📞 Phone normalized', {
         rawPhone: from,
         cleanPhone: cleanFrom,
         normalizedPhone: phoneNumber,
         variants: phoneVariants.length,
       })
+
+      // 2.5. 🎧 Operator Detection
+      const isOperator =
+        (workspace.operatorWhatsappNumber &&
+          phoneVariants.includes(workspace.operatorWhatsappNumber)) ||
+        (workspace.whatsappPhoneNumber &&
+          phoneVariants.includes(workspace.whatsappPhoneNumber))
 
       // 3. 🔁 Deduplication - prevent double processing (EXACTLY like Meta)
       if (id) {
@@ -428,7 +444,7 @@ export class UltraMsgWebhookController {
                 },
               })
 
-              const messageMarkdown = whatsAppToMarkdown(messageText)
+              // 10. 🔄 Already converted at step 2.5
               await tx.conversationMessage.create({
                 data: {
                   workspaceId,
@@ -735,6 +751,33 @@ export class UltraMsgWebhookController {
         messageCount: welcomeMessageCount,
       })
 
+      // 4.5. 🎧 Operator Flow: If message is from operator, handle relaying back to customer
+      if (isOperator) {
+        logger.info('[ULTRAMSG] 🎧 Operator message detected - relaying to customer', {
+          workspaceId,
+          operatorPhone: phoneNumber,
+        })
+        await this.operatorRelayService.handleOperatorMessage(
+          workspaceId,
+          messageMarkdown
+        )
+        return res.status(200).json({ status: 'processed', source: 'operator_relay' })
+      }
+
+      // 4.7. 👤 Human Support Guard: If customer is in human support mode (chatbot disabled), relay to operator
+      if (customer.activeChatbot === false) {
+        logger.info('[ULTRAMSG] 👤 Customer in human support mode - relaying to operator', {
+          workspaceId,
+          customerId: customer.id,
+        })
+        await this.operatorRelayService.relayCustomerMessageToOperator(
+          workspaceId,
+          customer,
+          messageMarkdown
+        )
+        return res.status(200).json({ status: 'processed', source: 'customer_relay' })
+      }
+
       // 6. 🚦 Rate limiting (EXACTLY like Meta)
       const [
         customerPerMin,
@@ -1036,8 +1079,7 @@ export class UltraMsgWebhookController {
         })
       }
 
-      // 10. Convert message to markdown
-      const messageMarkdown = whatsAppToMarkdown(messageText)
+      // 10. Already converted at step 2.5
 
       // 11. 🔒 CRITICAL: If chatbot is disabled, ONLY save message (EXACTLY like Meta)
       if (customer && !customer.activeChatbot) {

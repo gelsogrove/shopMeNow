@@ -42,6 +42,7 @@ import logger from '../../../utils/logger'
 import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
 import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
+import { OperatorRelayService } from '../../../application/services/operator-relay.service'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -127,6 +128,7 @@ type WasenderWebhookPayload =
 
 export class WasenderWebhookController {
   private readonly wasenderClient = new WasenderClientService()
+  private readonly operatorRelayService = new OperatorRelayService(prisma)
 
   /**
    * POST /api/wasender/webhook/:workspaceId
@@ -368,6 +370,8 @@ export class WasenderWebhookController {
         owner: {
           select: { status: true },
         },
+        whatsappPhoneNumber: true,
+        operatorWhatsappNumber: true,
       },
     })
 
@@ -388,8 +392,16 @@ export class WasenderWebhookController {
     }
 
     // 3. 🚦 Channel status check
-    if (workspace.owner?.status === 'INACTIVE' || workspace.channelStatus === false) {
-      logger.warn('[WASENDER] 🚫 Channel disabled or owner inactive', { workspaceId })
+    const isOwnerInactive = workspace.owner?.status === 'INACTIVE'
+    const isChannelDisabled = workspace.channelStatus === false
+
+    if (isOwnerInactive || (isChannelDisabled && !workspace.wasenderIsActive)) {
+      logger.warn('[WASENDER] 🚫 Channel disabled or owner inactive', {
+        workspaceId,
+        isOwnerInactive,
+        isChannelDisabled,
+        wasenderIsActive: workspace.wasenderIsActive,
+      })
       return res.status(200).json({ status: 'ignored', reason: 'channel_disabled' })
     }
 
@@ -398,10 +410,18 @@ export class WasenderWebhookController {
     const phoneVariants = buildPhoneVariants(phoneWithPrefix)
     const phoneNumber = phoneVariants[0]
 
+    // 4.5. 🎧 Operator Detection
+    const isOperator =
+      (workspace.operatorWhatsappNumber &&
+        phoneVariants.includes(workspace.operatorWhatsappNumber)) ||
+      (workspace.whatsappPhoneNumber &&
+        phoneVariants.includes(workspace.whatsappPhoneNumber))
+
     logger.info('[WASENDER] 📞 Processing message:', {
       workspaceId,
       phone: phoneNumber.substring(0, 6) + '***',
       messageId,
+      isOperator,
     })
 
     // 5. 🔁 Deduplication
@@ -463,6 +483,36 @@ export class WasenderWebhookController {
           return res.status(500).json({ error: 'Failed to create customer' })
         }
       }
+    }
+
+    // 6. 🔄 Convert WhatsApp format → Markdown
+    const messageMarkdown = whatsAppToMarkdown(rawMessageText)
+
+    // 6.5. 🎧 Operator Flow: If message is from operator, handle relaying back to customer
+    if (isOperator) {
+      logger.info('[WASENDER] 🎧 Operator message detected - relaying to customer', {
+        workspaceId,
+        operatorPhone: phoneNumber,
+      })
+      await this.operatorRelayService.handleOperatorMessage(
+        workspaceId,
+        messageMarkdown
+      )
+      return res.status(200).json({ status: 'processed', source: 'operator_relay' })
+    }
+
+    // 6.7. 👤 Human Support Guard: If customer is in human support mode (chatbot disabled), relay to operator
+    if (customer.activeChatbot === false) {
+      logger.info('[WASENDER] 👤 Customer in human support mode - relaying to operator', {
+        workspaceId,
+        customerId: customer.id,
+      })
+      await this.operatorRelayService.relayCustomerMessageToOperator(
+        workspaceId,
+        customer,
+        messageMarkdown
+      )
+      return res.status(200).json({ status: 'processed', source: 'customer_relay' })
     }
 
     // 7. 💰 Workspace access check (billing, trial, channel limits)
@@ -535,8 +585,7 @@ export class WasenderWebhookController {
       }
     }
 
-    // 10. 🔄 Convert WhatsApp format → Markdown
-    const messageMarkdown = whatsAppToMarkdown(rawMessageText)
+    // 10. 🔄 Already converted at step 6
 
     // 10.5. ⌨️  Typing indicator — show "composing" while LLM processes
     if (workspace.wasenderApiKey && key.remoteJid) {
