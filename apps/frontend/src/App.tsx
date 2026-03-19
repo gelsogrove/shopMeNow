@@ -15,6 +15,7 @@ import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
 import { PricingPage } from "@/pages/PricingPage"
 import { ContactPage } from "@/pages/ContactPage"
 import { NeapolisPage } from "@/pages/NeapolisPage"
+import OnboardingPage from "@/pages/OnboardingPage"
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
 import { Toaster } from "sonner"
 import { MinimalLayout } from "./components/layout/MinimalLayout"
@@ -125,7 +126,7 @@ function ProtectedAnalyticsRoute() {
 function GlobalChatWidget() {
   const location = useLocation()
   // Hide eChatbot HQ support widget on /chat (has its own playground when debugMode=true)
-  const EXCLUDED_PATHS = ["/survey", "/neapolis", "/chat"]
+  const EXCLUDED_PATHS = ["/survey", "/neapolis", "/onboarding", "/chat"]
   if (EXCLUDED_PATHS.includes(location.pathname)) return null
   return (
     <ChatWidget
@@ -255,6 +256,9 @@ function AppWithProviders() {
 
                 {/* Survey - Public, no auth */}
                 <Route path="/survey" element={<QuestionnairePage />} />
+
+                {/* Onboarding - Public, dedicated page with its own header */}
+                <Route path="/onboarding" element={<OnboardingPage />} />
 
                 {/* NOTE: Short URLs (/s/:code) are handled by Vite proxy directly to backend */}
                 {/* No React route needed - see vite.config.ts proxy for "^/s/" */}
