@@ -227,18 +227,33 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── QR countdown ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (step !== 'qr-scan' || !qrString || wasenderStatus === 'connected') return
-    const timer = setInterval(() => setQrAge(a => a + 1), 1000)
-    return () => clearInterval(timer)
+    console.log('[QR DEBUG] Starting QR countdown. QR string:', qrString.substring(0, 20) + '...', 'Status:', wasenderStatus)
+    setQrAge(0)
+    const timer = setInterval(() => setQrAge(a => {
+      const newAge = a + 1
+      if (newAge % 5 === 0) console.log('[QR DEBUG] QR age:', newAge, '/', QR_EXPIRY, 'seconds')
+      return newAge
+    }), 1000)
+    return () => {
+      console.log('[QR DEBUG] Stopping QR countdown')
+      clearInterval(timer)
+    }
   }, [step, qrString, wasenderStatus])
 
   // ── Sync status once when entering QR step (fallback if webhook missing) ───────
   useEffect(() => {
     if (step !== 'qr-scan' || !createdWorkspaceId) return
+    console.log('[QR DEBUG] Syncing Wasender status for workspace:', createdWorkspaceId)
     let cancelled = false
     const sync = async () => {
       try {
         const latest = await syncWasenderStatus(createdWorkspaceId)
         if (cancelled) return
+        console.log('[QR DEBUG] Sync result:', { 
+          status: latest.wasenderSessionStatus, 
+          hasQr: !!latest.wasenderQrString,
+          qrChanged: latest.wasenderQrString !== qrString 
+        })
         if (latest.wasenderSessionStatus) {
           const s = (latest.wasenderSessionStatus as any) || 'idle'
           setWasenderStatus(s)
@@ -249,10 +264,13 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           }
         }
         if (latest.wasenderQrString && latest.wasenderQrString !== qrString) {
+          console.log('[QR DEBUG] QR code updated from sync')
           setQrString(latest.wasenderQrString)
           setQrAge(0)
         }
-      } catch {}
+      } catch (err) {
+        console.error('[QR DEBUG] Sync failed:', err)
+      }
     }
     sync()
     return () => { cancelled = true }
@@ -261,30 +279,43 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── Poll wasender status ──────────────────────────────────────────────────────
   const pollWasender = useCallback(async () => {
     if (!createdWorkspaceId) return
+    console.log('[QR DEBUG] Polling Wasender status...')
     try {
       const latest = await getWasenderStatus(createdWorkspaceId)
       const s = (latest.wasenderSessionStatus as any) || 'idle'
+      console.log('[QR DEBUG] Poll result:', { 
+        status: s, 
+        hasQr: !!latest.wasenderQrString,
+        qrChanged: latest.wasenderQrString !== qrString 
+      })
       setWasenderStatus(s)
       if (s === 'connected') {
         toast.success('WhatsApp connected successfully!')
         goTo('done')
       }
       if (latest.wasenderQrString && latest.wasenderQrString !== qrString) {
+        console.log('[QR DEBUG] QR code updated from poll - resetting age to 0')
         setQrString(latest.wasenderQrString)
         setQrAge(0)
       }
-    } catch {}
+    } catch (err) {
+      console.error('[QR DEBUG] Poll failed:', err)
+    }
   }, [createdWorkspaceId, qrString]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (step !== 'qr-scan') return
+    console.log('[QR DEBUG] Starting polling interval (every', POLL_INTERVAL, 'ms)')
     pollWasender()
     if (import.meta.env.MODE === 'test') {
       const t = setTimeout(() => goTo('done'), 400)
       return () => clearTimeout(t)
     }
     const interval = setInterval(() => { void pollWasender() }, POLL_INTERVAL)
-    return () => clearInterval(interval)
+    return () => {
+      console.log('[QR DEBUG] Stopping polling interval')
+      clearInterval(interval)
+    }
   }, [step, pollWasender]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ──────────────────────────────────────────────────────────────────────────────
@@ -410,11 +441,14 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
 
   const handleRegenerateQr = async () => {
     if (!createdWorkspaceId || isRegeneratingQr) return
+    console.log('[QR DEBUG] Manually regenerating QR code for workspace:', createdWorkspaceId)
     setIsRegeneratingQr(true)
     try {
       const resp = await regenerateWasenderQr(createdWorkspaceId)
+      console.log('[QR DEBUG] QR regenerated successfully. New QR:', resp.wasenderQrString?.substring(0, 20) + '...')
       setQrString(resp.wasenderQrString); setQrAge(0); setWasenderStatus('need_scan')
     } catch (err: any) {
+      console.error('[QR DEBUG] QR regeneration failed:', err)
       toast.error(err.response?.data?.error || 'Failed to regenerate QR')
     } finally {
       setIsRegeneratingQr(false)
@@ -456,6 +490,15 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     t.done.subtitleWhatsapp
 
   const qrExpired = qrAge >= QR_EXPIRY
+  
+  // Log QR expiration status
+  useEffect(() => {
+    if (step === 'qr-scan' && qrString) {
+      if (qrExpired) {
+        console.log('[QR DEBUG] ⚠️ QR CODE EXPIRED at age:', qrAge, '(limit:', QR_EXPIRY, 'seconds)')
+      }
+    }
+  }, [qrExpired, qrAge, qrString, step])
 
   // ── Step banner title ─────────────────────────────────────────────────────────
   const getBannerTitle = (): string => {

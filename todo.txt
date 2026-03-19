@@ -14,7 +14,3 @@
 - widget
 
 
-
-un altra cosa che dobbiamo verificare
-e' che la comunicazione tra wtahpp e llm funzioni 
-perche' io scrivo su whtapp ma non risponde 
