@@ -291,8 +291,8 @@ async function sendWhatsAppMessage(params: WhatsAppSendParams): Promise<{ succes
         : extractPlainTextFromMessage(message as WhatsAppMessage)
     const formattedText = formatForWhatsApp(baseText)
 
-    // UltraMsg: always send plain text (no interactive conversion)
-    if (providerKey === "ultramsg") {
+    // Wasender/UltraMsg: always send plain text (no interactive conversion)
+    if (providerKey === "wasender" || providerKey === "ultramsg") {
       const result = await provider.sendTextMessage(to, formattedText)
 
       if (result.success) {

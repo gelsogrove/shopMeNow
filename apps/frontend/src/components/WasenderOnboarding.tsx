@@ -38,7 +38,7 @@ interface WasenderOnboardingProps {
 
 type SessionStatus = 'idle' | 'pending' | 'need_scan' | 'connected' | 'disconnected' | 'failed'
 
-const QR_EXPIRY_SECONDS = 45
+const QR_EXPIRY_SECONDS = 120 // Increased from 45 for better UX
 
 export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }: WasenderOnboardingProps) {
   const { workspace } = useWorkspace()
@@ -244,10 +244,16 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
       const code = error.response?.data?.code
 
       if (httpStatus === 402 || code === 'WASENDER_PLAN_LIMIT') {
-        toast.error('WasenderAPI session limit reached — upgrade your plan at wasenderapi.com to add more channels')
+        toast.error('WasenderAPI session limit reached. You need to upgrade your plan at wasenderapi.com to add more WhatsApp channels.')
       } else if (code === 'WASENDER_SUBSCRIPTION_REQUIRED') {
-        toast.error('WasenderAPI requires a paid subscription. Free plan does not include API access. Please upgrade at wasenderapi.com')
+        toast.error('Your WasenderAPI plan does not include API access. Please upgrade to a paid plan at wasenderapi.com.')
       } else if (code === 'WASENDER_AUTH_ERROR') {
+        toast.error('Invalid Wasender API Key. Please check your settings and ensure the key is correct.')
+      } else if (code === 'WASENDER_SESSION_EXISTS') {
+        toast.error('This WhatsApp session already exists. Try restarting or syncing status instead.')
+      } else {
+        toast.error(error.response?.data?.error || 'Failed to initialize WhatsApp session. Please ensure your Wasender account is active.')
+      }
         toast.error('WasenderAPI configuration error — contact your administrator')
       } else {
         const detail = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to start WhatsApp session'

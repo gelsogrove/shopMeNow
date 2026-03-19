@@ -84,6 +84,13 @@ export class WorkspaceChecklistService {
             businessAccountId: true,
           },
         },
+        whatsappProvider: true,
+        wasenderSessionId: true,
+        wasenderIsActive: true,
+        wasenderSessionStatus: true,
+        ultraMsgInstanceId: true,
+        ultraMsgToken: true,
+        ultraMsgApiUrl: true,
       },
     })
 
@@ -237,16 +244,34 @@ export class WorkspaceChecklistService {
     }
 
     if (hasWhatsApp) {
-      this.addItem(items, {
-        key: "whatsapp-settings",
-        label: "WhatsApp Access Settings",
-        completed:
+      const whatsappProvider = (workspace as any).whatsappProvider || "meta"
+      let whatsappCompleted = false
+
+      if (whatsappProvider === "wasender") {
+        // Wasender needs sessionId and active status
+        whatsappCompleted =
+          this.isFilled((workspace as any).wasenderSessionId) &&
+          ((workspace as any).wasenderIsActive === true || (workspace as any).wasenderSessionStatus === "connected")
+      } else if (whatsappProvider === "ultramsg") {
+        // UltraMsg needs instanceId and token
+        whatsappCompleted =
+          this.isFilled((workspace as any).ultraMsgInstanceId) &&
+          this.isFilled((workspace as any).ultraMsgToken)
+      } else {
+        // Meta (default) needs all official fields
+        whatsappCompleted =
           this.isFilled(whatsappPhoneNumber) &&
           this.isFilled(whatsappApiKey) &&
           this.isFilled(workspace.whatsappPhoneNumberId) &&
           this.isFilled(whatsappBusinessAccountId) &&
           this.isFilled(whatsappVerifyToken) &&
-          this.isFilled(whatsappWebhookUrl),
+          this.isFilled(whatsappWebhookUrl)
+      }
+
+      this.addItem(items, {
+        key: "whatsapp-settings",
+        label: "WhatsApp Access Settings",
+        completed: whatsappCompleted,
         action: { path: "/settings", section: "whatsapp", focusKey: "whatsappAccess" },
       })
     }
