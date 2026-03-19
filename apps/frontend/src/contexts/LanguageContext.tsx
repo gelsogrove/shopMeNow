@@ -596,9 +596,6 @@ const translations = {
     "nav.support": "Supporto",
     "nav.settings": "Impostazioni",
     "nav.queue": "Coda Invio",
-    "nav.profile": "Profilo",
-    "nav.billing": "Fatturazione",
-    "nav.logout": "Esci",
     "unread.messages": "messaggi non letti",
   },
   en: {
@@ -1200,9 +1197,6 @@ const translations = {
     "nav.support": "Support",
     "nav.settings": "Settings",
     "nav.queue": "Queue",
-    "nav.profile": "Profile",
-    "nav.billing": "Billing",
-    "nav.logout": "Log out",
     "unread.messages": "unread messages",
   },
   es: {
@@ -1673,9 +1667,6 @@ const translations = {
     "nav.support": "Soporte",
     "nav.settings": "Ajustes",
     "nav.queue": "Cola",
-    "nav.profile": "Perfil",
-    "nav.billing": "Facturación",
-    "nav.logout": "Cerrar sesión",
     "unread.messages": "mensajes no leídos",
   },
   pt: {
