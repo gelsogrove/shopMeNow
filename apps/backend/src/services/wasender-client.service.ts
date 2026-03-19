@@ -170,7 +170,15 @@ export class WasenderClientService {
           ...(safeWebhookUrl && {
             webhook_url: safeWebhookUrl,
             webhook_enabled: true,
-            webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
+            webhook_events: [
+              'messages.received',
+              'messages.upsert',
+              'messages-personal.received',
+              'messages-group.received',
+              'messages-newsletter.received',
+              'session.status',
+              'qrcode.updated',
+            ],
           }),
         }
       )
@@ -232,7 +240,15 @@ export class WasenderClientService {
       await this.managementClient.put(`/api/whatsapp-sessions/${sessionId}`, {
         webhook_url: safeWebhookUrl,
         webhook_enabled: true,
-        webhook_events: ['messages.received', 'session.status', 'qrcode.updated'],
+        webhook_events: [
+          'messages.received',
+          'messages.upsert',
+          'messages-personal.received',
+          'messages-group.received',
+          'messages-newsletter.received',
+          'session.status',
+          'qrcode.updated',
+        ],
       })
 
       logger.info('[Wasender] Webhook updated on existing session:', {

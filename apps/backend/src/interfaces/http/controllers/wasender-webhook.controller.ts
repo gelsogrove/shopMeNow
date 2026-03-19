@@ -74,23 +74,47 @@ interface WasenderQrcodeUpdatedPayload {
 }
 
 interface WasenderMessageReceivedPayload {
-  event: 'messages.received'
+  event:
+    | 'messages.received'
+    | 'messages.upsert'
+    | 'messages-personal.received'
+    | 'messages-group.received'
+    | 'messages-newsletter.received'
   timestamp: number
   data: {
-    messages: {
-      key: {
-        id: string
-        fromMe: boolean
-        remoteJid: string       // e.g. "1234567890@s.whatsapp.net"
-        cleanedSenderPn: string // e.g. "1234567890"
-        senderPn?: string       // e.g. "1234567890@s.whatsapp.net"
-      }
-      messageBody: string
-      message: {
-        conversation?: string
-        extendedTextMessage?: { text: string }
-      }
-    }
+    messages:
+      | {
+          key: {
+            id: string
+            fromMe: boolean
+            remoteJid: string       // e.g. "1234567890@s.whatsapp.net"
+            cleanedSenderPn?: string // e.g. "1234567890"
+            senderPn?: string       // e.g. "1234567890@s.whatsapp.net"
+            cleanedParticipantPn?: string // group messages
+            participantPn?: string
+          }
+          messageBody?: string
+          message?: {
+            conversation?: string
+            extendedTextMessage?: { text: string }
+          }
+        }
+      | Array<{
+          key: {
+            id: string
+            fromMe: boolean
+            remoteJid: string
+            cleanedSenderPn?: string
+            senderPn?: string
+            cleanedParticipantPn?: string
+            participantPn?: string
+          }
+          messageBody?: string
+          message?: {
+            conversation?: string
+            extendedTextMessage?: { text: string }
+          }
+        }>
   }
 }
 
@@ -125,14 +149,30 @@ export class WasenderWebhookController {
       case 'session.status':
         return await this.handleSessionStatus(workspaceId, payload, res)
 
-      case 'messages.received': {
+      case 'messages.received':
+      case 'messages.upsert':
+      case 'messages-personal.received':
+      case 'messages-group.received':
+      case 'messages-newsletter.received': {
+        const messagesAny = (payload as WasenderMessageReceivedPayload).data.messages
+        const message = Array.isArray(messagesAny)
+          ? messagesAny.find(m => !m.key?.fromMe) || messagesAny[0]
+          : messagesAny
+
         // Skip messages the bot sent (fromMe = true)
-        if (payload.data.messages.key.fromMe) {
+        if (message?.key?.fromMe) {
           return res.status(200).json({ status: 'ignored', reason: 'own_message' })
         }
 
+        // Skip messages the bot sent (fromMe = true)
         // Extract phone for customer-level locking
-        const rawPhone = payload.data.messages.key.cleanedSenderPn || ''
+        const rawPhone =
+          message?.key?.cleanedSenderPn ||
+          message?.key?.cleanedParticipantPn ||
+          ''
+        if (!rawPhone) {
+          return res.status(200).json({ status: 'ignored', reason: 'no_phone' })
+        }
         const phoneForLock = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone}`
 
         const lockKey = `customer:${phoneForLock}`
@@ -283,12 +323,27 @@ export class WasenderWebhookController {
     res: Response
   ): Promise<Response> {
     const { messages } = payload.data
-    const { key, messageBody } = messages
+    const message = Array.isArray(messages)
+      ? messages.find(m => !m.key?.fromMe) || messages[0]
+      : messages
+    if (!message || !message.key) {
+      logger.warn('[WASENDER] ⚠️ Missing message payload', { workspaceId })
+      return res.status(200).json({ status: 'ignored', reason: 'no_message' })
+    }
+    const { key, messageBody } = message
 
     // Parse message data
-    const rawPhone = key.cleanedSenderPn || key.remoteJid?.replace(/@.*$/, '') || ''
+    const rawPhone =
+      key.cleanedSenderPn ||
+      key.cleanedParticipantPn ||
+      key.remoteJid?.replace(/@.*$/, '') ||
+      ''
     const messageId = key.id
-    const rawMessageText = messageBody || messages.message?.conversation || ''
+    const rawMessageText =
+      messageBody ||
+      message.message?.conversation ||
+      message.message?.extendedTextMessage?.text ||
+      ''
 
     if (!rawPhone) {
       logger.error('[WASENDER] ❌ Missing phone number in payload', { workspaceId, messageId })
