@@ -571,6 +571,14 @@ const translations = {
     "support.status.pending": "In Attesa",
     "support.status.inProgress": "In Corso",
     "support.status.closed": "Chiuso",
+
+    // Profile 2FA
+    "profile.2fa.title": "Autenticazione a Due Fattori",
+    "profile.2fa.description": "Aggiungi un ulteriore livello di sicurezza scansionando un codice QR con la tua app di autenticazione.",
+    "profile.2fa.enable": "Attiva 2FA",
+    "profile.2fa.enabled": "2FA Attiva",
+    "profile.2fa.generating": "Generazione QR...",
+    "profile.2fa.activeStatus": "La 2FA è attiva per il tuo account",
   },
   en: {
     // Header
