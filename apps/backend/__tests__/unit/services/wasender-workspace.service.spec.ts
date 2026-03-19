@@ -29,6 +29,9 @@ const mockWasenderClient = {
   restartSession: jest.fn(),
   sendPresenceUpdate: jest.fn(),
   markMessageAsRead: jest.fn(),
+  listSessions: jest.fn(),
+  getSessionDetails: jest.fn(),
+  updateSessionWebhook: jest.fn(),
 }
 jest.mock('../../../src/services/wasender-client.service', () => ({
   WasenderClientService: jest.fn().mockImplementation(() => mockWasenderClient),
@@ -101,6 +104,9 @@ describe('WorkspaceService — WasenderAPI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    // Default: no existing sessions to adopt on WasenderAPI
+    // Tests for adopt behavior override this
+    mockWasenderClient.listSessions.mockResolvedValue([])
     service = new WorkspaceService()
   })
 
@@ -206,6 +212,76 @@ describe('WorkspaceService — WasenderAPI', () => {
           wasenderQrGeneratedAt: null,
         }),
       })
+    })
+
+    it('should adopt existing WasenderAPI session instead of creating new one', async () => {
+      // SCENARIO: session exists on WasenderAPI (created via dashboard) but DB has no record.
+      // RULE: must discover and adopt existing session to avoid 402 plan limit error.
+      // This fixes the "Session initialization failed" error on production.
+      mockPrismaGlobal.user.findUnique.mockResolvedValue(activeUser())
+      // workspace.findUnique returns no wasenderSessionId
+      mockPrismaGlobal.workspace.findUnique.mockResolvedValue({
+        wasenderSessionId: null,
+        wasenderApiKey: null,
+        wasenderSessionStatus: null,
+        wasenderPhoneNumber: null,
+        whatsappPhoneNumber: null,
+      })
+      // WasenderAPI has an existing session
+      mockWasenderClient.listSessions.mockResolvedValue([
+        { id: '42', name: 'echatbot-ws-test-123', phoneNumber: PHONE, status: 'connected', webhookUrl: null },
+      ])
+      mockWasenderClient.getSessionDetails.mockResolvedValue({
+        id: '42',
+        name: 'echatbot-ws-test-123',
+        phoneNumber: PHONE,
+        status: 'connected',
+        apiKey: 'adopted-api-key',
+        webhookUrl: null,
+      })
+      mockWasenderClient.updateSessionWebhook.mockResolvedValue(undefined)
+      mockWasenderClient.connectSession.mockResolvedValue(null) // already connected
+      mockPrismaGlobal.workspace.update.mockResolvedValue({ id: WORKSPACE_ID })
+
+      await service.initializeWasenderSession(WORKSPACE_ID, USER_ID, PHONE)
+
+      // Should NOT have created a new session
+      expect(mockWasenderClient.createSession).not.toHaveBeenCalled()
+      // Should have used the adopted session's ID and apiKey
+      expect(mockPrismaGlobal.workspace.update).toHaveBeenCalledWith({
+        where: { id: WORKSPACE_ID },
+        data: expect.objectContaining({
+          wasenderSessionId: '42',
+          wasenderApiKey: 'adopted-api-key',
+        }),
+      })
+      // Should have updated the webhook URL on the adopted session
+      expect(mockWasenderClient.updateSessionWebhook).toHaveBeenCalledWith(
+        '42',
+        expect.stringContaining(`/api/v1/wasender/webhook/${WORKSPACE_ID}`)
+      )
+    })
+
+    it('should fall back to creating new session if adopt fails', async () => {
+      // SCENARIO: listSessions() throws (API error, network timeout)
+      // RULE: non-fatal — if discovery fails, fall back to creating a new session
+      mockPrismaGlobal.user.findUnique.mockResolvedValue(activeUser())
+      mockPrismaGlobal.workspace.findUnique.mockResolvedValue({
+        wasenderSessionId: null,
+        wasenderApiKey: null,
+        wasenderSessionStatus: null,
+        wasenderPhoneNumber: null,
+        whatsappPhoneNumber: null,
+      })
+      mockWasenderClient.listSessions.mockRejectedValue(new Error('API timeout'))
+      mockWasenderClient.createSession.mockResolvedValue({ sessionId: SESSION_ID, apiKey: API_KEY })
+      mockWasenderClient.connectSession.mockResolvedValue('QR_STRING_DATA')
+      mockPrismaGlobal.workspace.update.mockResolvedValue({ id: WORKSPACE_ID })
+
+      await service.initializeWasenderSession(WORKSPACE_ID, USER_ID, PHONE)
+
+      // Should have fallen back to createSession
+      expect(mockWasenderClient.createSession).toHaveBeenCalled()
     })
   })
 

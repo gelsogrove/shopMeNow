@@ -1476,8 +1476,14 @@ For privacy inquiries, please contact our support team.`
    * in our DB (e.g. created via the Wasender dashboard, after a DB reset, or
    * when a previous init call created the session but crashed before saving).
    *
-   * Returns the first session found with its sessionId + apiKey, or null if
-   * no sessions exist on the account.
+   * Strategy:
+   * 1. List all sessions on the WasenderAPI account
+   * 2. Prefer a session matching our naming convention (echatbot-{workspaceId})
+   * 3. Fall back to any available session (Basic plan has only 1 session)
+   * 4. Get full details (including api_key) via getSessionDetails()
+   * 5. Update webhook URL on the adopted session so messages arrive correctly
+   *
+   * Returns session info if found and adoptable, null if no sessions exist.
    * @private
    */
   private async adoptExistingWasenderSession(
@@ -1485,22 +1491,42 @@ For privacy inquiries, please contact our support team.`
   ): Promise<{ sessionId: string; apiKey: string } | null> {
     try {
       const sessions = await this.wasenderClient.listSessions()
-      if (!sessions.length) return null
+      if (!sessions.length) {
+        logger.info('[Workspace] No existing Wasender sessions to adopt:', { workspaceId })
+        return null
+      }
 
-      // Use the first available session on the account
-      const target = sessions[0]
+      // Prefer a session matching our naming convention (echatbot-{workspaceId})
+      const matchingSession = sessions.find(s => s.name === `echatbot-${workspaceId}`)
+      const target = matchingSession || sessions[0]
+
+      logger.info('[Workspace] Found existing Wasender session to adopt:', {
+        workspaceId,
+        sessionId: target.id,
+        sessionName: target.name,
+        status: target.status,
+        isExactMatch: !!matchingSession,
+        totalSessions: sessions.length,
+      })
+
+      // Get full details (including api_key — not returned by listSessions)
       const details = await this.wasenderClient.getSessionDetails(target.id)
-      if (!details) {
-        logger.warn('[Workspace] adoptExistingWasenderSession: session details not found', {
+      if (!details || !details.apiKey) {
+        logger.warn('[Workspace] Could not get session details or apiKey, skipping adopt:', {
           workspaceId,
           sessionId: target.id,
         })
         return null
       }
 
+      // CRITICAL: Update webhook URL to point to our workspace so messages arrive
+      const webhookUrl = `${process.env.APP_WEBHOOK_BASE_URL}/api/v1/wasender/webhook/${workspaceId}`
+      await this.wasenderClient.updateSessionWebhook(target.id, webhookUrl)
+
       return { sessionId: details.id, apiKey: details.apiKey }
     } catch (err: any) {
-      logger.error('[Workspace] adoptExistingWasenderSession failed:', {
+      // Non-fatal: if discovery fails, caller can fall back to creating new session
+      logger.warn('[Workspace] adoptExistingWasenderSession failed:', {
         workspaceId,
         message: err.message,
       })
