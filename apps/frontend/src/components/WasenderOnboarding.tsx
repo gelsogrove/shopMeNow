@@ -254,11 +254,6 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
       } else {
         toast.error(error.response?.data?.error || 'Failed to initialize WhatsApp session. Please ensure your Wasender account is active.')
       }
-        toast.error('WasenderAPI configuration error — contact your administrator')
-      } else {
-        const detail = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to start WhatsApp session'
-        toast.error(detail)
-      }
       setStatus('failed')
     } finally {
       setIsInitializing(false)
