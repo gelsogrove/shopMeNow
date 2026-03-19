@@ -1026,13 +1026,25 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     e.stopPropagation()
     setDebugSavingId(id)
     try {
-      const updatedWorkspace = await updateWorkspace(id, {
-        debugMode: !currentValue,
-      })
+      const enableDebug = !currentValue
+      const payload: Record<string, any> = { debugMode: enableDebug }
+
+      // If we enable Debug, force channel to inactive as requested
+      if (enableDebug) {
+        payload.channelStatus = false
+      }
+
+      const updatedWorkspace = await updateWorkspace(id, payload)
       const updatedWorkspaces = workspaces.map((w) =>
         w.id === id ? updatedWorkspace : w
       )
       setWorkspaces(updatedWorkspaces)
+
+      if (enableDebug) {
+        toast.success("Debug enabled and channel set to inactive")
+      } else {
+        toast.success("Debug disabled")
+      }
     } catch (error) {
       logger.error("Error updating debug mode:", error)
       toast.error("Failed to update debug mode")
