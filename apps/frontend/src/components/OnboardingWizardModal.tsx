@@ -23,7 +23,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
-  Loader2, CheckCircle2, RefreshCw, ChevronLeft,
+  Loader2, CheckCircle2, RefreshCw,
   Eye, EyeOff, Shield, Wifi, PartyPopper,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
@@ -71,7 +71,12 @@ const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
   auth: '/survery-secuiry.png',
 }
 
-// Green banner title per step (uses translation key)
+// Icon per step (shown below photo)
+const STEP_ICONS: Partial<Record<WizardStep, string>> = {
+  industry: '🏢', business: '✏️', 'workspace-type': '🚀',
+  'channel-type': '📱', 'human-support': '🤝', auth: '👤',
+}
+
 const slideVariants = {
   enter: (d: number) => ({ x: d > 0 ? 56 : -56, opacity: 0 }),
   center: { x: 0, opacity: 1 },
@@ -396,8 +401,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   }
 
   // ── Whether the current step auto-advances (no Next button needed) ────────────
-  const isAutoAdvanceStep = ['industry', 'workspace-type', 'channel-type', 'human-support'].includes(step)
-
   // ──────────────────────────────────────────────────────────────────────────────
   //  Step content (inside card)
   // ──────────────────────────────────────────────────────────────────────────────
@@ -438,10 +441,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         return (
           <div className="space-y-5">
             <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.business.subtitle}</p>
-            <div className="flex items-center gap-2.5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
-              <span className="text-xl">{INDUSTRY_EMOJI[industry]}</span>
-              <span className="text-sm text-slate-600">{t.industries[industry]}</span>
-            </div>
             <div>
               <Label htmlFor="ob-bname">{t.business.name}</Label>
               <Input
@@ -777,9 +776,9 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           className="min-h-full flex flex-col"
           style={{ background: 'linear-gradient(135deg, rgba(248,250,252,0.97) 0%, rgba(236,253,245,0.95) 50%, rgba(240,253,244,0.97) 100%)' }}
         >
-          {/* ── Sticky header ── */}
+          {/* ── Sticky header — thin like /survey ── */}
           <header className="bg-white shadow-sm sticky top-0 z-50 shrink-0">
-            <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-between gap-2">
+            <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
               <span className="text-lg sm:text-xl font-bold text-green-600">eChatbot</span>
               <LanguageSelector />
               <button
@@ -811,8 +810,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                 /* Data steps — survey card layout */
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
 
-                  {/* Progress bar */}
-                  <div className="h-1.5 bg-slate-100">
+                  {/* 1. Progress bar */}
+                  <div className="h-1 bg-slate-100">
                     <motion.div
                       className="h-full bg-green-500"
                       animate={{ width: `${progress}%` }}
@@ -820,54 +819,52 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                     />
                   </div>
 
-                  {/* Green gradient banner with title + step counter */}
-                  {bannerTitle && (
-                    <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 sm:px-8 py-5 text-white">
-                      <div className="flex items-center justify-between">
-                        <h1 className="text-xl sm:text-2xl font-bold leading-tight">{bannerTitle}</h1>
-                        {stepDotIndex >= 0 && (
-                          <span className="text-sm font-semibold text-green-100 shrink-0 ml-3">
-                            {stepDotIndex + 1} / {DATA_STEPS.length}
-                          </span>
-                        )}
+                  {/* 2. Step counter + dots row (above photo) */}
+                  {stepDotIndex >= 0 && (
+                    <div className="flex items-center justify-between px-4 sm:px-8 py-3">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        Step {stepDotIndex + 1} of {DATA_STEPS.length}
+                      </span>
+                      <div className="flex gap-1.5">
+                        {DATA_STEPS.map((_, i) => (
+                          <div
+                            key={i}
+                            className={[
+                              'h-1.5 rounded-full transition-all duration-300',
+                              i < stepDotIndex ? 'w-6 bg-green-500' :
+                              i === stepDotIndex ? 'w-8 bg-green-500' :
+                              'w-6 bg-slate-200',
+                            ].join(' ')}
+                          />
+                        ))}
                       </div>
-                      {/* Dots */}
-                      {stepDotIndex >= 0 && (
-                        <div className="flex gap-1.5 mt-3">
-                          {DATA_STEPS.map((_, i) => (
-                            <div
-                              key={i}
-                              className={[
-                                'h-1.5 rounded-full transition-all duration-300',
-                                i < stepDotIndex ? 'w-5 bg-white' :
-                                i === stepDotIndex ? 'w-8 bg-white' :
-                                'w-5 bg-white/40',
-                              ].join(' ')}
-                            />
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
 
-                  {/* Full-bleed image */}
+                  {/* 3. Full-bleed photo */}
                   {stepImage ? (
-                    <div className="overflow-hidden">
-                      <img
-                        src={stepImage}
-                        alt=""
-                        className="w-full h-44 sm:h-52 object-cover object-center"
-                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-                      />
-                    </div>
+                    <img
+                      src={stepImage}
+                      alt=""
+                      className="w-full h-44 sm:h-56 object-cover object-center"
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                    />
                   ) : (
-                    <div className="w-full h-44 sm:h-52 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-dashed border-emerald-200 flex items-center justify-center">
+                    <div className="w-full h-44 sm:h-56 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
                       <span className="text-4xl opacity-20">🖼️</span>
                     </div>
                   )}
 
-                  {/* Content */}
+                  {/* 4. Content (icon + title below photo, then question + options) */}
                   <div className="p-4 sm:p-8">
+                    {/* Icon + bold title — like survey */}
+                    {bannerTitle && (
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl">{STEP_ICONS[step]}</span>
+                        <h2 className="text-xl font-bold text-slate-900">{bannerTitle}</h2>
+                      </div>
+                    )}
+
                     {error && (
                       <Alert className="mb-4 border-red-200 bg-red-50">
                         <AlertDescription className="text-red-700 text-sm">{error}</AlertDescription>
@@ -888,42 +885,26 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                       </motion.div>
                     </AnimatePresence>
 
-                    {/* Bottom nav — Back + Next (auto-advance steps only show Back if applicable) */}
-                    {!isAutoAdvanceStep && (
-                      <div className="flex gap-3 mt-8">
-                        {canGoBack && (
-                          <Button
-                            variant="outline"
-                            onClick={handleBack}
-                            className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50"
-                          >
-                            <ChevronLeft className="h-4 w-4 mr-1" />{t.back}
-                          </Button>
-                        )}
-                        {step === 'business' && (
-                          <Button
-                            className="flex-2 bg-green-600 hover:bg-green-700 text-white px-8"
-                            onClick={handleNextBusiness}
-                          >
-                            {t.next}
-                          </Button>
-                        )}
-                        {step === 'auth' && null /* auth has its own register button */}
-                        {step === 'totp' && null /* totp has its own verify button */}
-                      </div>
-                    )}
-
-                    {/* Back-only for auto-advance steps */}
-                    {isAutoAdvanceStep && canGoBack && (
-                      <div className="mt-6">
-                        <button
+                    {/* 5. Navigation */}
+                    <div className="flex gap-3 mt-8">
+                      {canGoBack && (
+                        <Button
+                          variant="outline"
                           onClick={handleBack}
-                          className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-700 transition-colors"
+                          className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50"
                         >
-                          <ChevronLeft className="h-4 w-4" />{t.back}
-                        </button>
-                      </div>
-                    )}
+                          {t.back}
+                        </Button>
+                      )}
+                      {step === 'business' && (
+                        <Button
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                          onClick={handleNextBusiness}
+                        >
+                          {t.next}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
