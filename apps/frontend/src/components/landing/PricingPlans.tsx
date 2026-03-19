@@ -35,7 +35,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
     if (onStartFreeTrial) {
       onStartFreeTrial()
     } else {
-      navigate("/?action=register")
+      navigate("/onboarding")
     }
   }
 

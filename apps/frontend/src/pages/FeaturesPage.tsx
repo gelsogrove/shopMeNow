@@ -245,7 +245,7 @@ export function FeaturesPage() {
               </p>
 
               <Link
-                to="/"
+                to="/onboarding"
                 className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
               >
                 <Zap className="h-6 w-6" />
@@ -373,7 +373,7 @@ export function FeaturesPage() {
                 {t.ctaSub}
               </p>
               <Link
-                to="/"
+                to="/onboarding"
                 className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
               >
                 <Zap className="h-6 w-6" />
