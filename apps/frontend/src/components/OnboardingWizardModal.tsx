@@ -369,7 +369,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const getBackStep = (): WizardStep | null => {
     switch (step) {
       case 'business': return 'industry'
-      case 'workspace-type': return 'business'
+      case 'channel-personality': return 'business'
+      case 'workspace-type': return 'channel-personality'
       case 'channel-type': return 'workspace-type'
       case 'human-support': return 'channel-type'
       case 'auth': return 'human-support'
@@ -400,6 +401,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     switch (step) {
       case 'industry': return t.industry.title
       case 'business': return t.business.title
+      case 'channel-personality': return t.channelPersonality.title
       case 'workspace-type': return t.workspaceType.title
       case 'channel-type': return t.channelType.title
       case 'human-support': return t.humanSupport.title
@@ -461,6 +463,56 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                 onKeyDown={e => e.key === 'Enter' && handleNextBusiness()}
                 autoFocus
               />
+            </div>
+          </div>
+        )
+
+      // ── CHANNEL PERSONALITY ───────────────────────────────────────────────────
+      case 'channel-personality':
+        return (
+          <div className="space-y-5">
+            <p className="text-slate-500 text-sm">{t.channelPersonality.subtitle}</p>
+            <div>
+              <Label htmlFor="ob-botname" className="text-xs font-medium text-slate-600">
+                {t.channelPersonality.botName}
+              </Label>
+              <Input
+                id="ob-botname"
+                className="mt-1.5 text-base"
+                value={botName}
+                onChange={e => setBotName(e.target.value)}
+                placeholder={t.channelPersonality.botNamePh}
+                onKeyDown={e => e.key === 'Enter' && handleNextPersonality()}
+                autoFocus
+              />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-600 mb-2">{t.channelPersonality.tone}</p>
+              <div className="grid grid-cols-2 gap-2">
+                {TONE_OPTIONS.map(tone => {
+                  const opt = t.channelPersonality.tones[tone]
+                  const isSelected = channelTone === tone
+                  return (
+                    <button
+                      key={tone}
+                      type="button"
+                      onClick={() => setChannelTone(tone)}
+                      className={[
+                        'flex items-start gap-2.5 px-3 py-2.5 rounded-xl border-2 transition-all text-left',
+                        isSelected ? 'bg-green-50 border-green-500 shadow-sm' : 'border-slate-200 hover:border-green-300',
+                      ].join(' ')}
+                    >
+                      <span className="text-xl flex-shrink-0 mt-0.5">{opt.emoji}</span>
+                      <div className="min-w-0">
+                        <div className={`text-sm font-semibold leading-tight ${isSelected ? 'text-green-800' : 'text-slate-800'}`}>
+                          {opt.label}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5 leading-tight">{opt.desc}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         )
@@ -788,10 +840,15 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           className="min-h-full flex flex-col"
           style={{ background: 'linear-gradient(135deg, rgba(248,250,252,0.97) 0%, rgba(236,253,245,0.95) 50%, rgba(240,253,244,0.97) 100%)' }}
         >
-          {/* ── Sticky header — thin like /survey ── */}
+          {/* ── Sticky header — identical to /survey ── */}
           <header className="bg-white shadow-sm sticky top-0 z-50 shrink-0">
             <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
-              <span className="text-lg sm:text-xl font-bold text-green-600">eChatbot</span>
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1 shrink-0 text-lg sm:text-xl font-bold text-green-600 hover:opacity-80 transition-opacity"
+              >
+                eChatbot
+              </button>
               <LanguageSelector />
               <button
                 onClick={onClose}
@@ -915,19 +972,17 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                       </div>
                       <div>
                         {step === 'business' && (
-                          <Button
-                            className="px-6 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={handleNextBusiness}
-                          >
+                          <Button className="px-6 bg-green-600 hover:bg-green-700 text-white" onClick={handleNextBusiness}>
+                            {t.next} →
+                          </Button>
+                        )}
+                        {step === 'channel-personality' && (
+                          <Button className="px-6 bg-green-600 hover:bg-green-700 text-white" onClick={handleNextPersonality}>
                             {t.next} →
                           </Button>
                         )}
                         {step === 'auth' && (
-                          <Button
-                            className="px-6 bg-green-600 hover:bg-green-700 text-white"
-                            onClick={handleEmailRegister}
-                            disabled={isLoading}
-                          >
+                          <Button className="px-6 bg-green-600 hover:bg-green-700 text-white" onClick={handleEmailRegister} disabled={isLoading}>
                             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                             {t.auth.register} →
                           </Button>

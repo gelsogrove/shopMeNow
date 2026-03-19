@@ -1472,6 +1472,43 @@ For privacy inquiries, please contact our support team.`
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
+   * Discover a Wasender session that exists on WasenderAPI but is not tracked
+   * in our DB (e.g. created via the Wasender dashboard, after a DB reset, or
+   * when a previous init call created the session but crashed before saving).
+   *
+   * Returns the first session found with its sessionId + apiKey, or null if
+   * no sessions exist on the account.
+   * @private
+   */
+  private async adoptExistingWasenderSession(
+    workspaceId: string
+  ): Promise<{ sessionId: string; apiKey: string } | null> {
+    try {
+      const sessions = await this.wasenderClient.listSessions()
+      if (!sessions.length) return null
+
+      // Use the first available session on the account
+      const target = sessions[0]
+      const details = await this.wasenderClient.getSessionDetails(target.id)
+      if (!details) {
+        logger.warn('[Workspace] adoptExistingWasenderSession: session details not found', {
+          workspaceId,
+          sessionId: target.id,
+        })
+        return null
+      }
+
+      return { sessionId: details.id, apiKey: details.apiKey }
+    } catch (err: any) {
+      logger.error('[Workspace] adoptExistingWasenderSession failed:', {
+        workspaceId,
+        message: err.message,
+      })
+      return null
+    }
+  }
+
+  /**
    * Mask phone number for logging (PII protection)
    * @private
    */
