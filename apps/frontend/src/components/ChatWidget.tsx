@@ -989,15 +989,15 @@ export function ChatWidget({
     }
   }
   const positionClasses = {
-    "bottom-right": isEmbedded ? "bottom-2 right-2" : "bottom-6 right-6",
-    "bottom-left": isEmbedded ? "bottom-2 left-2" : "bottom-6 left-6",
-    "top-right": isEmbedded ? "top-2 right-2" : "top-6 right-6",
-    "top-left": isEmbedded ? "top-2 left-2" : "top-6 left-6",
+    "bottom-right": isEmbedded ? "bottom-2 right-2" : "bottom-4 right-4 sm:bottom-8 sm:right-8",
+    "bottom-left": isEmbedded ? "bottom-2 left-2" : "bottom-4 left-4 sm:bottom-8 sm:left-8",
+    "top-right": isEmbedded ? "top-2 right-2" : "top-4 right-4 sm:top-8 sm:right-8",
+    "top-left": isEmbedded ? "top-2 left-2" : "top-4 left-4 sm:top-8 sm:left-8",
   }
 
   const embeddedPopupSizeClasses = isEmbedded
     ? "w-full h-full rounded-[24px] shadow-none border-2"
-    : "w-[430px] h-[690px] rounded-3xl shadow-none border-2"
+    : "w-[92vw] sm:w-[410px] h-[85vh] sm:h-[680px] max-h-[800px] rounded-3xl sm:rounded-3xl shadow-2xl border-2"
     
   // Generate light version of primary color for border
   const getBorderColor = (color: string) => {
@@ -1012,7 +1012,9 @@ export function ChatWidget({
   }
   const borderColor = getBorderColor(resolvedPrimaryColor)
   
-  const embeddedButtonSizeClasses = isEmbedded ? "w-[62px] h-[62px]" : "w-[66px] h-[66px]"
+  const embeddedButtonSizeClasses = isEmbedded
+    ? "w-[56px] h-[56px]"
+    : "w-[60px] h-[60px] sm:w-[68px] sm:h-[68px]"
   const embeddedButtonShapeClasses = "rounded-full"
   const embeddedButtonRingClasses = isEmbedded
     ? "border-2 bg-transparent"
@@ -1038,6 +1040,13 @@ export function ChatWidget({
       })
     }
   }, [isOpen])
+
+  // 🚫 Global Guard: If channel is inactive, hide the entire widget
+  // (Unless in debug mode or we are the owner viewing it)
+  if (workspaceConfig && workspaceConfig.channelStatus === false && workspaceConfig.debugMode !== true) {
+    console.debug("🚫 ChatWidget hidden: channel is inactive")
+    return null
+  }
 
   return (
     <>
@@ -1135,7 +1144,7 @@ export function ChatWidget({
         >
           {/* Header */}
           <div
-            className="text-white px-6 py-4 flex items-center justify-between gap-3"
+            className="text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3"
             style={{ backgroundColor: resolvedPrimaryColor }}
           >
               <span
@@ -1281,7 +1290,7 @@ export function ChatWidget({
               </ScrollArea>
 
               {/* Registration submit footer */}
-              <div className="border-t border-gray-200 p-4 space-y-3">
+              <div className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3">
                 <button
                   onClick={handleRegistrationSubmit}
                   disabled={isLoading || !termsAccepted}
@@ -1350,8 +1359,8 @@ export function ChatWidget({
                   getAlignment={(msg) => (msg.role === "user" ? "right" : "left")}
                   getBubbleClassName={(msg) =>
                     cn(
-                      "rounded-2xl px-4 py-3 max-w-[85%] sm:max-w-[360px] mb-3 shadow-sm",
-                      "word-wrap break-words overflow-wrap-anywhere relative text-[15px] leading-relaxed",
+                      "rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[360px] mb-3 shadow-sm",
+                      "word-wrap break-words overflow-wrap-anywhere relative text-sm sm:text-[15px] leading-relaxed",
                       msg.role === "user"
                         ? "text-white rounded-br-md"
                         : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
@@ -1445,7 +1454,7 @@ export function ChatWidget({
               )}
 
               {/* Footer with Input */}
-              <div className="border-t border-gray-200 p-5 space-y-3">
+              <div className="border-t border-gray-200 p-3 sm:p-5 space-y-2 sm:space-y-3">
                 <div className="flex gap-3">
                   <textarea
                     value={inputValue}
@@ -1466,9 +1475,9 @@ export function ChatWidget({
                     disabled={isLoading || (botDisabled && !operatorHasReplied)}
                     rows={2}
                     className={cn(
-                      "flex-1 resize-none px-4 py-3 rounded-2xl border border-gray-300",
+                      "flex-1 resize-none px-3 sm:px-4 py-2 sm:py-3 rounded-2xl border border-gray-300",
                       "focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600",
-                      "text-[15px] placeholder-gray-400 leading-relaxed",
+                      "text-sm sm:text-[15px] placeholder-gray-400 leading-relaxed",
                       "disabled:bg-gray-50 disabled:text-gray-400"
                     )}
                   />
