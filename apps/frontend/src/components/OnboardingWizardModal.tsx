@@ -845,9 +845,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
             <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
               <button
                 onClick={onClose}
-                className="flex items-center gap-1 shrink-0 text-lg sm:text-xl font-bold text-green-600 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity"
               >
-                eChatbot
+                <img src="/logo.png" alt="eChatbot" className="h-8 w-8 object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                <span className="text-lg sm:text-xl font-bold text-green-600">eChatbot</span>
               </button>
               <LanguageSelector />
               <button
