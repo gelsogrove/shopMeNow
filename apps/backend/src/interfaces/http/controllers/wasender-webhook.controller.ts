@@ -362,6 +362,7 @@ export class WasenderWebhookController {
       where: { id: workspaceId },
       select: {
         id: true,
+        wasenderSessionId: true,
         wasenderApiKey: true,
         wasenderSessionStatus: true,
         wasenderIsActive: true,

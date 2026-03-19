@@ -10,7 +10,6 @@
 - ONBOARDING
 - paypall
 - campagne
-- resposive ?
-- widget
+
 
 
