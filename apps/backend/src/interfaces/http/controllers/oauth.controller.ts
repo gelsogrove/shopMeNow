@@ -87,10 +87,15 @@ export class OAuthController {
    * - NEW USER: { requiresSetup: true, userId, email, firstName, lastName, qrCode, provider: 'google' }
    * - EXISTING USER (2FA enabled): { requires2FA: true, userId, email, provider: 'google' }
    * - EXISTING USER (no 2FA): { sessionId, token, user } (should not happen - all users must have 2FA)
+   *
+   * Optional body param:
+   * - skipSetup: boolean — When true, skip 2FA setup for new users / users without 2FA.
+   *   Used during onboarding wizard. User can configure 2FA from profile settings later.
+   *   Existing users WITH 2FA enabled still require verification (security).
    */
   async googleAuth(req: Request, res: Response): Promise<void> {
     try {
-      const { credential } = req.body
+      const { credential, skipSetup } = req.body
       
       if (!credential) {
         throw new AppError(400, 'Google credential required')
@@ -218,11 +223,12 @@ export class OAuthController {
           return
         }
 
-        // Check if 2FA is enabled (BUT skip if Platform Admin or Developer User)
+        // Check if 2FA is enabled (BUT skip if Platform Admin or Developer User, OR if skipSetup from onboarding)
         if (!existingUser.twoFactorEnabled || !existingUser.twoFactorSecret) {
-          // 🔧 SKIP 2FA SETUP for Platform Admins and Developer Users (same as login check)
-          if (skip2FA) {
-            logger.info(`🔧 [OAuth Google] User ${email} has no 2FA but SKIPPING setup (isPlatformAdmin=${existingUser.isPlatformAdmin}, isDeveloperUser=${existingUser.isDeveloperUser})`)
+          // 🔧 SKIP 2FA SETUP for Platform Admins, Developer Users, or onboarding flow (skipSetup=true)
+          if (skip2FA || skipSetup) {
+            const reason = skip2FA ? 'admin/developer' : 'onboarding_skipSetup'
+            logger.info(`🔧 [OAuth Google] User ${email} has no 2FA but SKIPPING setup (reason=${reason})`)
             
             // 🕐 Update lastLogin timestamp
             await prisma.user.update({
@@ -248,7 +254,7 @@ export class OAuthController {
               success: true,
               ipAddress,
               userAgent,
-              metadata: { provider: 'google', action: 'login_skip_2fa_setup' },
+              metadata: { provider: 'google', action: `login_skip_2fa_setup_${reason}` },
             })
             
             // Return full login response (no 2FA needed, no setup needed)
@@ -267,7 +273,7 @@ export class OAuthController {
                 profilePicture: existingUser.profilePicture,
               },
               provider: 'google',
-              message: 'Login successful (2FA not required for admins/developers)',
+              message: `Login successful (2FA setup skipped: ${reason})`,
             })
             return
           }
@@ -362,6 +368,54 @@ export class OAuthController {
 
       logger.info(`✅ [OAuth Google] User created: ${newUser.id}`)
 
+      // skipSetup=true (onboarding): Skip 2FA, return token+sessionId immediately
+      // Same pattern as email registration — user configures 2FA later from profile settings
+      if (skipSetup) {
+        logger.info(`🔧 [OAuth Google] New user ${email} — skipping 2FA setup (onboarding skipSetup=true)`)
+        
+        await prisma.user.update({
+          where: { id: newUser.id },
+          data: { lastLogin: new Date() },
+        })
+        
+        const sessionId = await this.adminSessionService.createSession(
+          newUser.id,
+          null,
+          ipAddress,
+          userAgent
+        )
+        
+        const token = this.generateToken(newUser)
+        
+        await logAuthAttempt({
+          userId: newUser.id,
+          email: newUser.email,
+          attemptType: 'oauth',
+          success: true,
+          ipAddress,
+          userAgent,
+          metadata: { provider: 'google', action: 'register_skip_2fa_onboarding' },
+        })
+        
+        res.status(200).json({
+          sessionId,
+          token,
+          user: {
+            id: newUser.id,
+            email: newUser.email,
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+            role: newUser.role,
+            authProvider: 'google',
+            profilePicture: picture,
+          },
+          provider: 'google',
+          message: 'Registration successful (2FA deferred to profile settings)',
+        })
+        return
+      }
+
+      // Standard flow: Setup 2FA immediately
       // Generate 2FA secret and otpauth URL using OtpService
       // This will create the secret and save it to the user automatically
       const otpauthUrl = await this.otpService.setupTwoFactor(newUser.id)

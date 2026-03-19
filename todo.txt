@@ -1,5 +1,6 @@
 
 - wasenderapi - NEW CHANNEL 
+
 - PAGAMENTI NON CI SIAMO
 - GDPR PER OGNI CANALE CI VUOLE
 - ECOMMERCE
@@ -10,4 +11,4 @@
 - paypall
 - campagne
 - resposive ?
-- widget¿
+- widget

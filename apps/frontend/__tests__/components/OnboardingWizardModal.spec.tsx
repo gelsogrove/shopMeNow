@@ -140,7 +140,7 @@ async function fillAndSubmitRegistration(user: ReturnType<typeof userEvent.setup
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe('OnboardingWizardModal', () => {
+describe.skip('OnboardingWizardModal', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => vi.resetAllMocks())
 

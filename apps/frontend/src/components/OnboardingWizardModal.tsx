@@ -310,18 +310,33 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     setIsLoading(true); setError('')
     storage.clearAppState()
     try {
-      const resp = await api.post('/auth/oauth/google', { credential: credentialResponse.credential })
+      // Send skipSetup=true during onboarding — 2FA can be configured later from profile settings
+      const resp = await api.post('/auth/oauth/google', { credential: credentialResponse.credential, skipSetup: true })
       const { user, requiresSetup, requires2FA, qrCode, token, sessionId } = resp.data
 
       if (sessionId && token) {
-        storage.setToken(token); storage.setSessionId(sessionId); storage.setUser(user)
-        onClose(); navigate('/workspace-selection'); return
+        // Got full auth — continue onboarding (don't navigate away)
+        storage.setToken(token); storage.setSessionId(sessionId)
+        if (user) storage.setUser(user)
+        goTo('creating')
+        return
       }
 
-      setPendingUserId(user.id)
-      if (requiresSetup) { setTotpQrCode(qrCode); setIsNewUser(true) }
-      else if (requires2FA) { setIsNewUser(false) }
-      goTo('totp')
+      // Only show TOTP if the user already has 2FA enabled (requires verification)
+      if (requires2FA) {
+        setPendingUserId(user.id)
+        setIsNewUser(false)
+        goTo('totp')
+        return
+      }
+
+      // requiresSetup fallback (shouldn't happen with skipSetup=true)
+      if (requiresSetup) {
+        setPendingUserId(user.id)
+        setTotpQrCode(qrCode); setIsNewUser(true)
+        goTo('totp')
+        return
+      }
     } catch {
       setError('Google authentication failed. Please try again.')
     } finally {
@@ -840,26 +855,21 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           className="min-h-full flex flex-col"
           style={{ background: 'linear-gradient(135deg, rgba(248,250,252,0.97) 0%, rgba(236,253,245,0.95) 50%, rgba(240,253,244,0.97) 100%)' }}
         >
-          {/* ── Sticky header — identical to /survey ── */}
-          <header className="bg-white shadow-sm sticky top-0 z-50 shrink-0">
-            <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
+          {/* ── Minimal top bar — language selector only (survey-style) ── */}
+          <div className="shrink-0">
+            <div className="max-w-[727px] mx-auto px-4 py-2 flex items-center justify-between gap-2">
               <button
                 onClick={onClose}
-                className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity"
               >
-                <img src="/logo.png" alt="eChatbot" className="h-8 w-8 object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                <span className="text-lg sm:text-xl font-bold text-green-600">eChatbot</span>
+                <img src="/logo.png" alt="eChatbot" className="h-6 w-6 object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                <span className="text-sm font-bold text-green-600">eChatbot</span>
               </button>
-              <LanguageSelector />
-              <button
-                onClick={onClose}
-                className="text-xs sm:text-sm font-medium text-slate-600 hover:text-green-600 transition-colors text-right"
-              >
-                <span className="hidden sm:inline">← Back to homepage</span>
-                <span className="sm:hidden">← Home</span>
-              </button>
+              <div className="flex items-center gap-3">
+                <LanguageSelector />
+              </div>
             </div>
-          </header>
+          </div>
 
           {/* ── Centered card ── */}
           <div className="flex-1 flex items-start sm:items-center justify-center px-3 sm:px-4 py-6 sm:py-10">
@@ -889,24 +899,34 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                     />
                   </div>
 
-                  {/* 2. Step counter + dots row (above photo) */}
+                  {/* 2. Step counter + dots row + close button (survey-style) */}
                   {stepDotIndex >= 0 && (
-                    <div className="flex items-center justify-between px-4 sm:px-8 py-3">
+                    <div className="flex items-center justify-between px-4 sm:px-6 py-2.5">
                       <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                         Step {stepDotIndex + 1} of {DATA_STEPS.length}
                       </span>
-                      <div className="flex gap-1.5">
-                        {DATA_STEPS.map((_, i) => (
-                          <div
-                            key={i}
-                            className={[
-                              'h-1.5 rounded-full transition-all duration-300',
-                              i < stepDotIndex ? 'w-6 bg-green-500' :
-                              i === stepDotIndex ? 'w-8 bg-green-500' :
-                              'w-6 bg-slate-200',
-                            ].join(' ')}
-                          />
-                        ))}
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1">
+                          {DATA_STEPS.map((_, i) => (
+                            <div
+                              key={i}
+                              className={[
+                                'h-1.5 rounded-full transition-all duration-300',
+                                i < stepDotIndex ? 'w-5 bg-green-500' :
+                                i === stepDotIndex ? 'w-7 bg-green-500' :
+                                'w-5 bg-slate-200',
+                              ].join(' ')}
+                            />
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={onClose}
+                          className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                          aria-label="Close"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
                       </div>
                     </div>
                   )}
@@ -916,17 +936,17 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                     <img
                       src={stepImage}
                       alt=""
-                      className="w-full h-44 sm:h-56 object-cover object-center"
+                      className="w-full h-36 sm:h-44 object-cover object-center"
                       onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
                     />
                   ) : (
-                    <div className="w-full h-44 sm:h-56 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+                    <div className="w-full h-36 sm:h-44 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
                       <span className="text-4xl opacity-20">🖼️</span>
                     </div>
                   )}
 
                   {/* 4. Content (icon + title below photo, then question + options) */}
-                  <div className="p-4 sm:p-8">
+                  <div className="px-4 sm:px-6 pt-4 pb-4 sm:pb-5">
                     {/* Icon + bold title — like survey */}
                     {bannerTitle && (
                       <div className="flex items-center gap-3 mb-3">
@@ -941,8 +961,8 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                       </Alert>
                     )}
 
-                    {/* Fixed-height scrollable content area — same height across all steps */}
-                    <div className="min-h-[300px] overflow-y-auto">
+                    {/* Content area — natural height, no forced scrollbar */}
+                    <div>
                       <AnimatePresence mode="wait" custom={direction}>
                         <motion.div
                           key={step}
@@ -959,7 +979,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                     </div>
 
                     {/* 5. Navigation — Back on left, primary action on right */}
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
                       <div>
                         {canGoBack && (
                           <Button
