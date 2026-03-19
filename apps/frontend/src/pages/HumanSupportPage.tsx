@@ -231,7 +231,7 @@ export function HumanSupportPage() {
                 </h1>
                 <p className="text-xl text-slate-600 mb-10 leading-relaxed">{t.heroSub}</p>
                 <Link
-                  to="/"
+                  to="/onboarding"
                   className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
                 >
                   <Zap className="h-5 w-5" />
@@ -357,7 +357,7 @@ export function HumanSupportPage() {
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
             <p className="text-xl text-amber-100 mb-8">{t.ctaSub}</p>
-            <Link to="/" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-amber-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
+            <Link to="/onboarding" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-amber-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}
             </Link>

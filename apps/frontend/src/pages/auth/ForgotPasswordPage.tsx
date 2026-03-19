@@ -159,7 +159,7 @@ export default function ForgotPasswordPage() {
           <CardFooter className="flex flex-col space-y-4">
             <p className="text-sm text-muted-foreground">
               <Link
-                to="/?action=register"
+                to="/onboarding"
                 className="text-green-500 hover:text-green-600 hover:underline"
               >
                 {t("forgotPassword.backToLogin")}
