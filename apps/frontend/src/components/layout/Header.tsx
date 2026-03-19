@@ -22,6 +22,7 @@ import { toast } from "@/lib/toast"
 import { api } from "@/services/api"
 import { getBillingOverview } from "@/services/subscriptionBillingApi"
 import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   ArrowLeft,
   Bot,
@@ -47,6 +48,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
   // ✅ FIX: Use WorkspaceContext (single source of truth)
   const { workspace } = useWorkspace()
   const { isOwner, isSuperAdmin } = useWorkspaceRole(workspace?.id)
+  const { t } = useLanguage()
 
   const [userName, setUserName] = useState<string>("")
   const [userEmail, setUserEmail] = useState<string>("")
@@ -227,7 +229,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               onClick={() => navigate("/chat")}
               className="text-gray-600 hover:text-gray-900"
             >
-              Chat History
+              {t('nav.chatHistory')}
             </Button>
             <Button
               variant="ghost"
@@ -235,7 +237,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               onClick={() => navigate("/clients")}
               className="text-gray-600 hover:text-gray-900"
             >
-              Clients
+              {t('nav.clients')}
             </Button>
             <Button
               variant="ghost"
@@ -243,7 +245,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               onClick={() => navigate("/faq")}
               className="text-gray-600 hover:text-gray-900"
             >
-              FAQ
+              {t('nav.faq')}
             </Button>
             <Button
               variant="ghost"
@@ -251,7 +253,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               onClick={() => navigate("/agents")}
               className="text-gray-600 hover:text-gray-900"
             >
-              Agents
+              {t('nav.agents')}
             </Button>
             {workspace?.sellsProductsAndServices !== false && (
               <DropdownMenu>
@@ -261,18 +263,18 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                     size="sm"
                     className="text-gray-600 hover:text-gray-900"
                   >
-                    E-commerce
+                    {t('nav.ecommerce')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => navigate("/products")}>Products</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/services")}>Services</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/offers")}>Offers</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/suppliers")}>Suppliers</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/products")}>{t('nav.products')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/services")}>{t('nav.services')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/offers")}>{t('nav.offers')}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/suppliers")}>{t('nav.suppliers')}</DropdownMenuItem>
                   {workspace?.hasSalesAgents === true && (
-                    <DropdownMenuItem onClick={() => navigate("/sales")}>Sales</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/sales")}>{t('nav.sales')}</DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={() => navigate("/admin/orders")}>Orders</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/admin/orders")}>{t('nav.orders')}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -282,7 +284,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               onClick={() => navigate("/campaigns")}
               className="text-gray-600 hover:text-gray-900"
             >
-              Campaigns
+              {t('nav.campaigns')}
             </Button>
           </nav>
 
@@ -332,8 +334,8 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 <TooltipContent>
                   <p>
                     {supportUnreadCount > 0
-                      ? `${supportUnreadCount} unread message${supportUnreadCount > 1 ? "s" : ""}`
-                      : "Support Tickets"}
+                      ? `${supportUnreadCount} ${t('unread.messages')}`
+                      : t('nav.support')}
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -439,14 +441,14 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                     onClick={() => navigate("/settings")}
                   >
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <span>{t('nav.settings')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="p-2 cursor-pointer"
                     onClick={() => navigate("/queue")}
                   >
                     <Send className="mr-2 h-4 w-4" />
-                    <span>Queue</span>
+                    <span>{t('nav.queue')}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
@@ -459,7 +461,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 onClick={() => navigate("/profile")}
               >
                 <User className="mr-2 h-4 w-4 text-blue-500" />
-                <span>Profile</span>
+                <span>{t('nav.profile')}</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem
@@ -467,7 +469,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 onClick={() => navigate("/billing")}
               >
                 <CreditCard className="mr-2 h-4 w-4 text-emerald-500" />
-                <span>Billing</span>
+                <span>{t('nav.billing')}</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem
@@ -475,7 +477,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 onClick={() => navigate("/support/tickets")}
               >
                 <Mail className="mr-2 h-4 w-4 text-blue-500" />
-                <span>Support</span>
+                <span>{t('nav.support')}</span>
                 {supportUnreadCount > 0 && (
                   <span className="ml-auto h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
                     {supportUnreadCount > 9 ? "9+" : supportUnreadCount}
@@ -490,7 +492,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 onClick={handleLogout}
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                <span>{t('nav.logout')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
             </DropdownMenu>

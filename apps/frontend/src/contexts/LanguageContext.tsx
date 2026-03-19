@@ -599,6 +599,7 @@ const translations = {
     "nav.profile": "Profilo",
     "nav.billing": "Fatturazione",
     "nav.logout": "Esci",
+    "unread.messages": "messaggi non letti",
   },
   en: {
     // Header
@@ -1205,6 +1206,7 @@ const translations = {
     "nav.profile": "Profile",
     "nav.billing": "Billing",
     "nav.logout": "Log out",
+    "unread.messages": "unread messages",
   },
   es: {
     // Header
@@ -1680,6 +1682,7 @@ const translations = {
     "nav.profile": "Perfil",
     "nav.billing": "Facturación",
     "nav.logout": "Cerrar sesión",
+    "unread.messages": "mensajes no leídos",
   },
   pt: {
     // Header
@@ -2173,6 +2176,7 @@ const translations = {
     "nav.profile": "Perfil",
     "nav.billing": "Faturamento",
     "nav.logout": "Sair",
+    "unread.messages": "mensagens não lidas",
   },
 }
 

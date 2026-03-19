@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 interface SidebarProps {
   isOpen?: boolean
@@ -41,6 +42,7 @@ interface SidebarLink {
 export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
   // Get workspace from context to check hasSalesAgents
   const { workspace } = useWorkspace()
+  const { t } = useLanguage()
   console.log("🔍 Sidebar workspace:", workspace)
   console.log("🔍 sellsProductsAndServices:", workspace?.sellsProductsAndServices)
   const totalUnreadMessages = 0
@@ -80,62 +82,62 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
   const baseLinks: SidebarLink[] = [
     {
       href: "/chat",
-      label: "Chat History",
+      label: t('nav.chatHistory'),
       icon: MessageSquare,
       badge: totalUnreadMessages > 0 ? totalUnreadMessages : undefined,
     },
     {
       href: "/clients",
-      label: "Clients",
+      label: t('nav.clients'),
       icon: Users,
     },
     {
       href: "/faq",
-      label: "FAQ",
+      label: t('nav.faq'),
       icon: HelpCircle,
     },
     // E-commerce menu - only if sellsProductsAndServices is true
     ...(workspace?.sellsProductsAndServices === true ? [{
-      label: "E-commerce",
+      label: t('nav.ecommerce'),
       icon: ShoppingCart,
       key: "ecommerce",
       children: [
         {
           href: "/products",
-          label: "Products",
+          label: t('nav.products'),
           icon: Package2,
         },
         {
           href: "/services",
-          label: "Services",
+          label: t('nav.services'),
           icon: Wrench,
         },
         {
           href: "/offers",
-          label: "Offers",
+          label: t('nav.offers'),
           icon: Percent,
         },
         // Sales menu - visible if e-commerce is enabled (Andrea: "menu lo lasci aperto se è un utente di ecommerce")
         ...(workspace?.sellsProductsAndServices === true ? [{
           href: "/sales",
-          label: "Sales",
+          label: t('nav.sales'),
           icon: UserCircle,
         }] : []),
         {
           href: "/admin/orders",
-          label: "Orders",
+          label: t('nav.orders'),
           icon: ShoppingCart,
         },
       ],
     }] : []),
     {
       href: "/campaigns",
-      label: "Campaigns",
+      label: t('nav.campaigns'),
       icon: Megaphone,
     },
     {
       href: "/support/tickets",
-      label: "Support",
+      label: t('nav.support'),
       icon: LifeBuoy,
       badge: supportUnreadCount > 0 ? supportUnreadCount : undefined,
     },
