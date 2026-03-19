@@ -383,7 +383,7 @@ export class WasenderWebhookController {
     // 2. 🔑 Verify sessionId matches workspace API key (security check)
     // messages.received payload doesn't have sessionId at top level; cast to any for session routing events
     const payloadAny = payload as any
-    if (workspace.wasenderApiKey && payloadAny.sessionId && payloadAny.sessionId !== workspace.wasenderApiKey) {
+    if (workspace.wasenderSessionId && payloadAny.sessionId && payloadAny.sessionId !== workspace.wasenderSessionId) {
       logger.warn('[WASENDER] ❌ SessionId mismatch - potential spoofing', {
         workspaceId,
         receivedSessionId: (payloadAny.sessionId as string)?.substring(0, 8) + '...',

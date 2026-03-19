@@ -75,7 +75,7 @@ export const regenerateWasenderQr = async (
 export const getWasenderStatus = async (
   workspaceId: string
 ): Promise<WasenderStatusResponse> => {
-  const response = await api.get(`/workspaces/${workspaceId}`)
+  const response = await api.get(`/workspaces/${workspaceId}?_t=${Date.now()}`)
   // Workspace endpoint returns full workspace object — extract wasender fields
   const w = response.data
   return {
