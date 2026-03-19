@@ -36,6 +36,7 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "../lib/toast"
 import { ImageCropUpload } from "@/components/shared/ImageCropUpload"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // Supported languages for user interface
 const SUPPORTED_LANGUAGES = [
@@ -55,6 +56,7 @@ export default function ProfilePage() {
   } = useCurrentUser()
   const { workspace } = useWorkspace()
   const { isSuperAdmin } = useWorkspaceRole(workspace?.id)
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [showSetPasswordDialog, setShowSetPasswordDialog] = useState(false)
@@ -591,12 +593,12 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-green-600">
               <Shield className="h-5 w-5" />
-              Two-Factor Authentication
+              {t('profile.2fa.title')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Add an extra layer of security by scanning a QR code with your authenticator app.
+              {t('profile.2fa.description')}
             </p>
             <div className="flex items-center gap-3">
               <Button
@@ -608,17 +610,17 @@ export default function ProfilePage() {
                 {is2FALoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating QR...
+                    {t('profile.2fa.generating')}
                   </>
                 ) : user.twoFactorEnabled ? (
-                  "2FA Enabled"
+                  t('profile.2fa.enabled')
                 ) : (
-                  "Enable 2FA"
+                  t('profile.2fa.enable')
                 )}
               </Button>
               {user.twoFactorEnabled && (
                 <span className="text-xs text-muted-foreground">
-                  2FA is active for your account
+                  {t('profile.2fa.activeStatus')}
                 </span>
               )}
             </div>

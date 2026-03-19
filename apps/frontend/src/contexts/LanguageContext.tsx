@@ -1157,6 +1157,14 @@ const translations = {
     "support.status.pending": "Pending",
     "support.status.inProgress": "In Progress",
     "support.status.closed": "Closed",
+
+    // Profile 2FA
+    "profile.2fa.title": "Two-Factor Authentication",
+    "profile.2fa.description": "Add an extra layer of security by scanning a QR code with your authenticator app.",
+    "profile.2fa.enable": "Enable 2FA",
+    "profile.2fa.enabled": "2FA Enabled",
+    "profile.2fa.generating": "Generating QR...",
+    "profile.2fa.activeStatus": "2FA is active for your account",
   },
   es: {
     // Header
@@ -1604,6 +1612,14 @@ const translations = {
     "support.status.pending": "Pendiente",
     "support.status.inProgress": "En Progreso",
     "support.status.closed": "Cerrado",
+
+    // Profile 2FA
+    "profile.2fa.title": "Autenticación de Dos Factores",
+    "profile.2fa.description": "Agregue una capa adicional de seguridad escaneando un código QR con su aplicación de autenticación.",
+    "profile.2fa.enable": "Activar 2FA",
+    "profile.2fa.enabled": "2FA Activada",
+    "profile.2fa.generating": "Generando QR...",
+    "profile.2fa.activeStatus": "La 2FA está activa para su cuenta",
   },
   pt: {
     // Header
@@ -2069,6 +2085,14 @@ const translations = {
     "support.status.pending": "Pendente",
     "support.status.inProgress": "Em Andamento",
     "support.status.closed": "Encerrado",
+
+    // Profile 2FA
+    "profile.2fa.title": "Autenticação de Dois Fatores",
+    "profile.2fa.description": "Adicione uma camada extra de segurança digitalizando um código QR com o seu aplicativo de aplicativo.",
+    "profile.2fa.enable": "Ativar 2FA",
+    "profile.2fa.enabled": "2FA Ativada",
+    "profile.2fa.generating": "Gerando QR...",
+    "profile.2fa.activeStatus": "A 2FA está ativa para o seu conta",
   },
 }
 
