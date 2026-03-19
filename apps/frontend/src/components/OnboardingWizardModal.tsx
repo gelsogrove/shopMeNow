@@ -910,21 +910,21 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           className="min-h-full flex flex-col"
           style={{ background: 'linear-gradient(135deg, rgba(248,250,252,0.97) 0%, rgba(236,253,245,0.95) 50%, rgba(240,253,244,0.97) 100%)' }}
         >
-          {/* ── Minimal top bar — language selector only (survey-style) ── */}
-          <div className="shrink-0">
-            <div className="max-w-[727px] mx-auto px-4 py-2 flex items-center justify-between gap-2">
+          {/* ── Header ── */}
+          <header className="bg-white shadow-sm sticky top-0 z-50 shrink-0">
+            <div className="max-w-[727px] mx-auto px-3 sm:px-4 py-1 flex items-center justify-between gap-2">
               <button
                 onClick={onClose}
-                className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity"
+                className="flex items-center gap-1 shrink-0 hover:opacity-80 transition-opacity"
               >
-                <img src="/logo.png" alt="eChatbot" className="h-6 w-6 object-contain" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                <span className="text-sm font-bold text-green-600">eChatbot</span>
+                <img src="/logo.png" alt="eChatbot" className="w-9 h-9 sm:w-12 sm:h-12" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                <span className="text-base sm:text-xl font-bold text-green-600">eChatbot.AI</span>
               </button>
               <div className="flex items-center gap-3">
                 <LanguageSelector />
               </div>
             </div>
-          </div>
+          </header>
 
           {/* ── Centered card ── */}
           <div className="flex-1 flex items-start sm:items-center justify-center px-3 sm:px-4 py-6 sm:py-10">
