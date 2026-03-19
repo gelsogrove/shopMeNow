@@ -18,11 +18,11 @@ export const INDUSTRY_EMOJI: Record<Industry, string> = {
   legal: '⚖️', other: '🏢',
 }
 
-export const WORKSPACE_TYPES = ['ecommerce', 'services', 'info'] as const
+export const WORKSPACE_TYPES = ['ecommerce', 'info'] as const
 export type WorkspaceType = (typeof WORKSPACE_TYPES)[number]
 
 export const WORKSPACE_TYPE_EMOJI: Record<WorkspaceType, string> = {
-  ecommerce: '🛒', services: '🛎️', info: '💬',
+  ecommerce: '🛒', info: '💬',
 }
 
 export type ChannelTone = 'friendly' | 'professional' | 'formal' | 'casual'
@@ -67,7 +67,6 @@ export const OWT = {
       subtitle: 'Configuriamo le funzionalità giuste per te',
       options: {
         ecommerce: { label: 'Vendo prodotti', desc: 'Catalogo prodotti, carrello e ordini online' },
-        services: { label: 'Offro servizi', desc: 'Preventivi, appuntamenti e prenotazioni' },
         info: { label: 'Condivido informazioni', desc: 'Supporto clienti, FAQ e informazioni' },
       },
     },
@@ -170,7 +169,6 @@ export const OWT = {
       subtitle: 'We\'ll configure the right features for you',
       options: {
         ecommerce: { label: 'Sell products', desc: 'Product catalog, cart and online orders' },
-        services: { label: 'Offer services', desc: 'Quotes, appointments and bookings' },
         info: { label: 'Share information', desc: 'Customer support, FAQ and information' },
       },
     },
@@ -273,7 +271,6 @@ export const OWT = {
       subtitle: 'Configuraremos las funciones adecuadas para ti',
       options: {
         ecommerce: { label: 'Vendo productos', desc: 'Catálogo, carrito y pedidos online' },
-        services: { label: 'Ofrezco servicios', desc: 'Presupuestos, citas y reservas' },
         info: { label: 'Comparto información', desc: 'Soporte al cliente, FAQ e información' },
       },
     },
@@ -376,7 +373,6 @@ export const OWT = {
       subtitle: 'Configuraremos as funcionalidades certas para você',
       options: {
         ecommerce: { label: 'Vendo produtos', desc: 'Catálogo, carrinho e pedidos online' },
-        services: { label: 'Ofereço serviços', desc: 'Orçamentos, agendamentos e reservas' },
         info: { label: 'Compartilho informações', desc: 'Suporte ao cliente, FAQ e informações' },
       },
     },

@@ -584,7 +584,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
           <div className="space-y-4">
             <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.workspaceType.subtitle}</p>
             <div className="space-y-2.5">
-              {(['ecommerce', 'services', 'info'] as WorkspaceType[]).map(type => {
+              {(['ecommerce', 'info'] as WorkspaceType[]).map(type => {
                 const isSelected = workspaceType === type
                 return (
                   <button
