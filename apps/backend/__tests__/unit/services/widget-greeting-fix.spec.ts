@@ -18,10 +18,10 @@ describe("Widget Greeting Fix", () => {
   })
 
   describe("PromptVariableBuilder - customerName handling", () => {
-    it("should set customerName to empty string for widget channel", () => {
+    it("should keep customerName for widget channel if name is provided", () => {
       const customer = {
         id: "visitor-123",
-        name: "Mario Rossi", // Real name, but widget channel
+        name: "Mario Rossi", // Real name, widget channel
         email: null,
         phone: "widget-session-123",
       }
@@ -32,12 +32,12 @@ describe("Widget Greeting Fix", () => {
       }
 
       const context = {
-        channel: "widget", // 🚫 WIDGET CHANNEL
+        channel: "widget",
       }
 
       const variables = PromptVariableBuilder.build(customer, workspace, undefined, context)
 
-      expect(variables.customerName).toBe("") // Empty because widget channel
+      expect(variables.customerName).toBe("Mario Rossi") // Allowed because not "Visitor "
     })
 
     it("should set customerName to empty for Visitor pattern on ANY channel", () => {

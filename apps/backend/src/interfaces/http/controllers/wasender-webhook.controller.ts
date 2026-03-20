@@ -381,10 +381,9 @@ export class WasenderWebhookController {
       return res.status(404).json({ error: 'Workspace not found' })
     }
 
-    // 2. 🔑 Verify sessionId matches workspace API key (security check)
-    // messages.received payload doesn't have sessionId at top level; cast to any for session routing events
+    // RegExp check. `payloadAny.sessionId` can be a numeric type from Wasender API, so we MUST cast to string for comparison.
     const payloadAny = payload as any
-    if (workspace.wasenderSessionId && payloadAny.sessionId && payloadAny.sessionId !== workspace.wasenderSessionId) {
+    if (workspace.wasenderSessionId && payloadAny.sessionId && String(payloadAny.sessionId) !== workspace.wasenderSessionId) {
       logger.warn('[WASENDER] ❌ SessionId mismatch - potential spoofing', {
         workspaceId,
         receivedSessionId: (payloadAny.sessionId as string)?.substring(0, 8) + '...',

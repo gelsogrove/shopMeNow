@@ -155,10 +155,9 @@ export class PromptVariableBuilder {
     // Start with defaults
     const variables: PromptVariables = {
       // Customer variables
-      // 🚫 WIDGET FIX: Remove name from greetings for:
-      // 1. Widget channel (anonymous by design)
-      // 2. Names starting with "Visitor " (anonymous visitor pattern)
-      customerName: (context?.channel === 'widget' || isAnonymousVisitor)
+      // 🚫 WIDGET FIX: Remove name from greetings for anonymous visitors
+      // Names starting with "Visitor " (anonymous visitor pattern) shouldn't be greeted by name
+      customerName: isAnonymousVisitor
         ? '' // No name in greetings for anonymous visitors
         : (customer?.name || VARIABLE_DEFAULTS.customerName!),
       customerPhone: customer?.phone || '',

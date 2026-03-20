@@ -104,12 +104,12 @@ describe("Widget Visitor Name - Variable Replacement", () => {
 
   it("should handle various 'Visitor' name formats for widget channel", () => {
     const testCases = [
-      { name: "Visitor 12345", expected: "" }, // Widget channel = filtered
-      { name: "Visitor -173737", expected: "" }, // Widget channel = filtered
-      { name: "Visitor abc123", expected: "" }, // Widget channel = filtered
-      { name: "visitor 123", expected: "" }, // Widget channel = ALL names filtered
-      { name: "My Visitor Shop", expected: "" }, // Widget channel = ALL names filtered
-      { name: "Andrea", expected: "" }, // Widget = empty (even real names)
+      { name: "Visitor 12345", expected: "" }, // Starts with "Visitor " = filtered
+      { name: "Visitor -173737", expected: "" }, // Starts with "Visitor " = filtered
+      { name: "Visitor abc123", expected: "" }, // Starts with "Visitor " = filtered
+      { name: "visitor 123", expected: "visitor 123" }, // Case-sensitive check
+      { name: "My Visitor Shop", expected: "My Visitor Shop" }, // Legit name
+      { name: "Andrea", expected: "Andrea" }, // Widget allows real names!
     ]
 
     const workspace = {
