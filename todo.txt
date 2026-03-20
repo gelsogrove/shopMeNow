@@ -1,6 +1,5 @@
 
 - wasenderapi - NEW CHANNEL 
-
 - PAGAMENTI NON CI SIAMO
 - GDPR PER OGNI CANALE CI VUOLE
 - ECOMMERCE
@@ -10,6 +9,3 @@
 - ONBOARDING
 - paypall
 - campagne
-
-
-

@@ -107,6 +107,14 @@ const authMiddlewareAsync = async (
       return next()
     }
 
+    // 🔓 PUBLIC ROUTES: Skip authentication for Wasender webhooks
+    if (req.originalUrl.includes("/wasender/webhook/")) {
+      logger.info(
+        `🔓 Skipping auth for Wasender webhook: ${req.originalUrl}`
+      )
+      return next()
+    }
+
     // 🛡️ PRIORITY: Authorization header FIRST, then cookies
     // This ensures that when frontend clears localStorage and sends new token in header,
     // we use the new token instead of stale cookie from previous session

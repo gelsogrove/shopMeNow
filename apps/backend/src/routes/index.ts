@@ -471,13 +471,21 @@ router.get("/cart-tokens/:token/validate", cartTokenLimiter, (req, res) =>
 // 9. ROUTE DEFINITIONS
 // ============================================================================
 
+// ========================================
+// 🛡️ WEBHOOK ROUTES (NO SessionID required)
+// ========================================
+// Mount WhatsApp routes (Meta & UltraMsg)
+router.use("/whatsapp", whatsappRoutes)
+logger.info("Registered WhatsApp routes for webhook (Meta & UltraMsg)")
+
+// Mount WasenderAPI routes (status update + QR events)
+import wasenderRoutes from "../interfaces/http/routes/wasender.routes"
+router.use("/", wasenderRoutes)
+logger.info("Registered WasenderAPI routes for session management and webhooks")
+
 // WhatsApp webhook routes - Now handled by controller-based architecture
 // See: /interfaces/http/controllers/whatsapp-webhook.controller.ts
 // See: /interfaces/http/routes/whatsapp.routes.ts
-
-logger.info("Registered WhatsApp webhook routes (public, no authentication)")
-
-// Debug middleware removed - TypeScript errors fixed
 
 logger.info("Registered WhatsApp webhook routes (public, no authentication)")
 
@@ -838,14 +846,7 @@ logger.info("Registered debug routes for testing and analysis")
 router.use("/workspaces/:workspaceId/push", pushRoutes(pushController))
 logger.info("Registered push notification routes for chatbot reactivation")
 
-// Mount WhatsApp routes
-router.use("/whatsapp", whatsappRoutes)
-logger.info("Registered WhatsApp routes for webhook and send message")
-
-// Mount WasenderAPI routes
-import wasenderRoutes from "../interfaces/http/routes/wasender.routes"
-router.use("/", wasenderRoutes)
-logger.info("Registered WasenderAPI routes for session management and webhooks")
+// 💾 Mount customer routes (internal/admin mostly)
 
 // Mount public orders routes (for secure token validation and public access)
 router.use("/internal", publicOrdersRoutes)
