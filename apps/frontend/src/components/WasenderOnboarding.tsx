@@ -94,34 +94,26 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
           setSessionPhone(data.wasenderPhoneNumber)
         }
 
-        // If session exists → ALWAYS sync with WasenderAPI to get real status
+        // ALWAYS sync with WasenderAPI to get real status or adopt orphaned sessions
         // Don't trust DB status — WasenderAPI is the single source of truth
-        if (data.wasenderSessionId) {
-          try {
-            const synced = await syncWasenderStatus(workspaceId)
-            const realStatus = normalizeStatus(synced.wasenderSessionStatus, synced.wasenderIsActive)
-            setStatus(realStatus)
+        try {
+          const synced = await syncWasenderStatus(workspaceId)
+          const realStatus = normalizeStatus(synced.wasenderSessionStatus, synced.wasenderIsActive)
+          setStatus(realStatus)
 
-            if (realStatus === 'connected') {
-              // Session confirmed connected by WasenderAPI → show connected page
-              return
-            }
-
-            // Restore QR if still in need_scan after sync
-            if (synced.wasenderQrString && realStatus === 'need_scan') {
-              setQrString(synced.wasenderQrString)
-              setQrAge(0)
-            }
-          } catch {
-            // Sync failed → fall back to DB status
-            setStatus(dbStatus)
-            if (data.wasenderQrString && dbStatus === 'need_scan') {
-              setQrString(data.wasenderQrString)
-              setQrAge(0)
-            }
+          if (realStatus === 'connected') {
+            // Session confirmed connected by WasenderAPI → show connected page
+            return
           }
-        } else {
-          // No session in DB → idle, show "Connect WhatsApp" button
+
+          // Restore QR if still in need_scan after sync
+          if (synced.wasenderQrString && realStatus === 'need_scan') {
+            setQrString(synced.wasenderQrString)
+            setQrAge(0)
+          }
+        } catch {
+          // Sync failed → fall back to DB status
+          const dbStatus = normalizeStatus(data.wasenderSessionStatus, data.wasenderIsActive)
           setStatus(dbStatus)
           if (data.wasenderQrString && dbStatus === 'need_scan') {
             setQrString(data.wasenderQrString)
