@@ -381,14 +381,25 @@ export class WasenderWebhookController {
       return res.status(404).json({ error: 'Workspace not found' })
     }
 
-    // RegExp check. `payloadAny.sessionId` can be a numeric type from Wasender API, so we MUST cast to string for comparison.
+    // 🔒 SECURITY: Verify this webhook is for THIS workspace by comparing sessionId
+    // Wasender session ID is numeric but stored as string.
+    // Payload sessionId might be number depending on Wasender version.
     const payloadAny = payload as any
-    if (workspace.wasenderSessionId && payloadAny.sessionId && String(payloadAny.sessionId) !== workspace.wasenderSessionId) {
-      logger.warn('[WASENDER] ❌ SessionId mismatch - potential spoofing', {
+    const receivedSessionId = payloadAny.sessionId || payloadAny.session_id || payloadAny.data?.sessionId || payloadAny.data?.session_id
+    
+    if (workspace.wasenderSessionId && receivedSessionId && String(receivedSessionId) !== workspace.wasenderSessionId) {
+      logger.error('[WASENDER] 🔒 SessionId mismatch - potential spoofing', {
         workspaceId,
-        receivedSessionId: (payloadAny.sessionId as string)?.substring(0, 8) + '...',
+        expectedSessionId: workspace.wasenderSessionId,
+        receivedSessionId: receivedSessionId,
+        receivedType: typeof receivedSessionId,
+        event: payloadAny.event,
+        fullPayload: JSON.stringify(payloadAny, null, 2)
       })
-      return res.status(403).json({ error: 'Invalid session' })
+      
+      // If the event is session.status or qrcode.updated, we might be more lenient or update our stored ID if we're sure it's valid
+      // For now, we still return 403 but with MUCH better logs to find the cause
+      return res.status(403).json({ error: 'Invalid session identification' })
     }
 
     // 3. 🚦 Channel status check
