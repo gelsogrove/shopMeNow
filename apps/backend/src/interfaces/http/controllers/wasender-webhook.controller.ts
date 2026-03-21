@@ -387,19 +387,23 @@ export class WasenderWebhookController {
     const payloadAny = payload as any
     const receivedSessionId = payloadAny.sessionId || payloadAny.session_id || payloadAny.data?.sessionId || payloadAny.data?.session_id
     
-    if (workspace.wasenderSessionId && receivedSessionId && String(receivedSessionId) !== workspace.wasenderSessionId) {
-      logger.error('[WASENDER] 🔒 SessionId mismatch - potential spoofing', {
-        workspaceId,
-        expectedSessionId: workspace.wasenderSessionId,
-        receivedSessionId: receivedSessionId,
-        receivedType: typeof receivedSessionId,
-        event: payloadAny.event,
-        fullPayload: JSON.stringify(payloadAny, null, 2)
-      })
+    if (workspace.wasenderSessionId || workspace.wasenderApiKey) {
+      const matchesSessionId = workspace.wasenderSessionId && (String(receivedSessionId) === workspace.wasenderSessionId)
+      const matchesApiKey = workspace.wasenderApiKey && (String(receivedSessionId) === workspace.wasenderApiKey)
       
-      // If the event is session.status or qrcode.updated, we might be more lenient or update our stored ID if we're sure it's valid
-      // For now, we still return 403 but with MUCH better logs to find the cause
-      return res.status(403).json({ error: 'Invalid session identification' })
+      if (!matchesSessionId && !matchesApiKey) {
+        logger.error('[WASENDER] 🔒 SessionId mismatch - potential spoofing', {
+          workspaceId,
+          expectedSessionId: workspace.wasenderSessionId,
+          expectedApiKey: workspace.wasenderApiKey?.substring(0, 10) + '...',
+          receivedSessionId: receivedSessionId,
+          receivedType: typeof receivedSessionId,
+          event: payloadAny.event,
+          fullPayload: JSON.stringify(payloadAny, null, 2)
+        })
+        
+        return res.status(403).json({ error: 'Invalid session identification' })
+      }
     }
 
     // 3. 🚦 Channel status check
