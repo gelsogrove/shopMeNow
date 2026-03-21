@@ -195,7 +195,7 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
   useEffect(() => {
     if (status !== 'need_scan' && status !== 'pending') return
 
-    const interval = setInterval(pollStatus, 3000)
+    const interval = setInterval(pollStatus, 10000)
     return () => clearInterval(interval)
   }, [status, pollStatus])
 
