@@ -14,6 +14,9 @@ jest.mock("../../../src/lib/prisma", () => ({
     customers: {
       findFirst: jest.fn(),
     },
+    workspace: {
+      findUnique: jest.fn(),
+    },
   }),
 }))
 
@@ -110,6 +113,21 @@ describe("WhatsApp Webhook - Security & Rate Limits", () => {
         deletedAt: null,
         ownerId: "owner-1",
         owner: { status: "ACTIVE" },
+      },
+    })
+
+    prismaMock.workspace.findUnique.mockResolvedValue({
+      id: "ws-1",
+      name: "Workspace",
+      channelStatus: true,
+      debugMode: false,
+      deletedAt: null,
+      ownerId: "owner-1",
+      owner: { 
+        id: "owner-1",
+        status: "ACTIVE",
+        creditBalance: 100,
+        subscriptionStatus: "ACTIVE"
       },
     })
 
