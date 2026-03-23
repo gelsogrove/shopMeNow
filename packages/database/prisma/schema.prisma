@@ -23,7 +23,7 @@ model Workspace {
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
   deletedAt                 DateTime?
-  currency                  String    @default("USD")
+  currency                  String    @default("EUR")
   defaultLanguage           String    @default("en") // Default language for workspace (ISO 639-1: "en", "it", "es", "pt", "de", "fr")
   channelStatus             Boolean   @default(true) // true = channel active (queue enabled), false = channel disabled
   description               String?
@@ -404,7 +404,7 @@ model Customers {
   company                       String?
   discount                      Float?                  @default(0)
   language                      String?                 @default("en") // 🌍 Default to English (base language) - detects from phone prefix
-  currency                      String?                 @default("USD")
+  currency                      String?                 @default("EUR")
   notes                         String?
   tags                          String[]                @default([])
   serviceIds                    String[]                @default([])
@@ -762,7 +762,7 @@ model PaymentDetails {
   provider         String
   status           String   @default("PENDING")
   amount           Float
-  currency         String   @default("USD")
+  currency         String   @default("EUR")
   providerResponse Json?    @default("{}")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -963,7 +963,7 @@ model Services {
   name        String
   description String
   price       Float
-  currency    String       @default("USD")
+  currency    String       @default("EUR")
   isActive    Boolean      @default(true)
   workspaceId String
   createdAt   DateTime     @default(now())

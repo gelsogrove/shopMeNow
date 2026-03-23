@@ -86,7 +86,7 @@ async function updateOutstandingBalance(
         note: `Invoice ${invoiceId}`,
         capture_type: "OUTSTANDING_BALANCE",
         amount: {
-          currency_code: "USD",
+          currency_code: "EUR",
           value: amount.toFixed(2),
         },
       }),
@@ -269,7 +269,7 @@ export async function processPayment(
           userId: invoice.user.id,
           invoiceId: invoiceId,
           amount: invoice.totalAmount,
-          currency: "USD",
+          currency: "EUR",
           status: "SUCCESS", // PayPal accepted the charge request
           notes: notes ? `${notes} | env:${env}` : `Payment initiated | env:${env}`,
           adminUserId: adminUserId,
@@ -304,7 +304,7 @@ export async function processPayment(
           userId: invoice.user.id,
           invoiceId: invoiceId,
           amount: invoice.totalAmount,
-          currency: "USD",
+          currency: "EUR",
           status: "FAILED",
           notes: `Failed: ${result.error} | env:${env}`,
           adminUserId: adminUserId,

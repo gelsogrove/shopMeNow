@@ -38,7 +38,7 @@ export function CreditNoteDialog({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [existingCreditNotes, setExistingCreditNotes] = useState<CreditNote[]>([])
   const [loadingExisting, setLoadingExisting] = useState(false)
-  const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+  const currencySymbol = getCurrencySymbol(workspace?.currency || "EUR")
 
   // Calculate remaining amount that can be credited
   const existingTotal = existingCreditNotes.reduce((sum, cn) => sum + cn.amount, 0)

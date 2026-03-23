@@ -116,7 +116,7 @@ const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
 // ========================================
 // 💰 Format Currency
 // ========================================
-const formatCurrency = (amount: number, currency = "USD") => {
+const formatCurrency = (amount: number, currency = "EUR") => {
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
     currency,

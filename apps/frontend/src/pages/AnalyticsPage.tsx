@@ -215,7 +215,7 @@ export function AnalyticsPage() {
                             <p className="font-bold text-green-600">
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "USD",
+                                currency: "EUR",
                                 minimumFractionDigits: 0,
                               }).format(product.revenue)}
                             </p>
@@ -274,7 +274,7 @@ export function AnalyticsPage() {
                             <p className="font-bold text-blue-600">
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "USD",
+                                currency: "EUR",
                                 minimumFractionDigits: 0,
                               }).format(customer.totalSpent)}
                             </p>
@@ -285,7 +285,7 @@ export function AnalyticsPage() {
                               {t.average}:{" "}
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "USD",
+                                currency: "EUR",
                                 minimumFractionDigits: 0,
                               }).format(customer.averageOrderValue)}
                             </p>
@@ -340,7 +340,7 @@ export function AnalyticsPage() {
                             <p className="font-bold text-purple-600">
                               {new Intl.NumberFormat("en-US", {
                                 style: "currency",
-                                currency: "USD",
+                                currency: "EUR",
                                 minimumFractionDigits: 0,
                               }).format(seller.totalRevenue)}
                             </p>

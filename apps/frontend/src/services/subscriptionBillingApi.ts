@@ -266,7 +266,7 @@ export const getTransactions = async (
 
 /**
  * Recharge credit (Owner only)
- * @param amount - Amount in USD (min $10, max $1000)
+ * @param amount - Amount in EUR (min €10, max €1000)
  * If on FREE_TRIAL, auto-upgrades to BASIC
  */
 export const rechargeCredit = async (
@@ -278,7 +278,7 @@ export const rechargeCredit = async (
   }
 
   if (amount < 10 || amount > 1000) {
-    throw new Error("Amount must be between $10 and $1000")
+    throw new Error("Amount must be between €10 and €1000")
   }
 
   // CRITICAL: Billing is per OWNER (User), not per Workspace
@@ -352,7 +352,7 @@ export const formatCurrency = (
   amount: number,
   currency?: string
 ): string => {
-  const resolvedCurrency = currency || "USD"
+  const resolvedCurrency = currency || "EUR"
   const roundedAmount = roundMoney(amount)
 
   return new Intl.NumberFormat("en-US", {
@@ -665,13 +665,13 @@ export const getOwnerTransactions = async (
 /**
  * Recharge credit for authenticated owner (no workspaceId needed)
  * Feature 198: Owner-based billing
- * @param amount - Amount in USD (min $10, max $1000)
+ * @param amount - Amount in EUR (min €10, max €1000)
  */
 export const rechargeOwnerCredit = async (
   amount: number
 ): Promise<{ newBalance: number; amountCharged: number; upgradedToPlan?: string }> => {
   if (amount < 10 || amount > 1000) {
-    throw new Error("Amount must be between $10 and $1000")
+    throw new Error("Amount must be between €10 and €1000")
   }
 
   const response = await api.post("/subscription-billing/recharge", { amount })

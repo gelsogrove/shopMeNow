@@ -233,7 +233,7 @@ export function MessageRenderer({
         ) // Markdown strikethrough (double tilde)
         .replace(/~(.*?)~/g, "<s style='text-decoration: line-through;'>$1</s>") // WhatsApp strikethrough (single tilde)
         .replace(
-          /→\s*((?:[$€£]|CHF|CA\\$|A\\$|SEK|NOK|DKK|PLN|CZK|HUF|RON)\\s?[\\d.,]+)/g,
+          /→\s*((?:[$$£]|CHF|CA\\$|A\\$|SEK|NOK|DKK|PLN|CZK|HUF|RON)\\s?[\\d.,]+)/g,
           "→ <strong>$1</strong>"
         )
 

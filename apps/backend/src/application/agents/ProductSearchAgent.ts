@@ -190,7 +190,7 @@ export class ProductSearchAgent {
       where: { id: workspaceId },
       select: { currency: true },
     })
-    const workspaceCurrency = workspace?.currency || "USD"
+    const workspaceCurrency = workspace?.currency || "EUR"
 
     // STEP 2: Format products with prices
     return products.map((product) => {

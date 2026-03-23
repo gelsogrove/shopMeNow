@@ -96,7 +96,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat("it-IT", {
       style: "currency",
-      currency: "USD",
+      currency: "EUR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value)
@@ -120,7 +120,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({
   const formatUsageCost = (value: number): string => {
     return new Intl.NumberFormat("it-IT", {
       style: "currency",
-      currency: "USD",
+      currency: "EUR",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value)

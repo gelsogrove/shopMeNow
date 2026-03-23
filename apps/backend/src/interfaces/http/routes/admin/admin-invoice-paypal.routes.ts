@@ -401,7 +401,7 @@ router.post(
           userId: invoice.user.id,
           invoiceId,
           amount: invoice.totalAmount,
-          currency: "USD",
+          currency: "EUR",
           status: "SUCCESS",
           notes: adminNote,
           adminUserId: adminUser.id,

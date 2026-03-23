@@ -69,7 +69,7 @@ export class Service {
     }
 
     if (!this.currency) {
-      this.currency = "USD" // Default currency
+      this.currency = "EUR" // Default currency
     }
 
     return true

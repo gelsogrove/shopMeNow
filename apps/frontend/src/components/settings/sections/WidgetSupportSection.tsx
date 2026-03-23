@@ -174,7 +174,7 @@ export function WidgetSupportSection({
 - When customer explicitly asks for a human
 - For complaints or refund requests
 - When AI cannot resolve the issue after 3 attempts
-- For orders over $1000"
+- For orders over €1000"
                   disabled={!canEdit}
                   className="min-h-[120px]"
                 />

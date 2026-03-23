@@ -145,7 +145,7 @@ export class ServicesController {
         description: description || "",
         price: numericPrice,
         duration: numericDuration,
-        currency: workspace.currency || "USD",
+        currency: workspace.currency || "EUR",
         isActive: booleanIsActive,
         workspaceId,
       }

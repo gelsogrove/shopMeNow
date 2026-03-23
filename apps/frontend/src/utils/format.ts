@@ -1,12 +1,12 @@
 import { storage } from "@/lib/storage";
 
 export const SUPPORTED_CURRENCIES = [
-  { code: "USD", symbol: "$", label: "US Dollar ($)" },
-  { code: "EUR", symbol: "€", label: "Euro (€)" },
+  { code: "EUR", symbol: "€", label: "Euro ($)" },
+  { code: "EUR", symbol: "€", label: "Euro ($)" },
   { code: "GBP", symbol: "£", label: "British Pound (£)" },
   { code: "CHF", symbol: "CHF", label: "Swiss Franc (CHF)" },
-  { code: "CAD", symbol: "CA$", label: "Canadian Dollar (CA$)" },
-  { code: "AUD", symbol: "A$", label: "Australian Dollar (A$)" },
+  { code: "CAD", symbol: "CA€", label: "Canadian Dollar (CA$)" },
+  { code: "AUD", symbol: "A€", label: "Australian Dollar (A$)" },
   { code: "JPY", symbol: "¥", label: "Japanese Yen (¥)" },
   { code: "SEK", symbol: "SEK", label: "Swedish Krona (SEK)" },
   { code: "NOK", symbol: "NOK", label: "Norwegian Krone (NOK)" },
@@ -19,10 +19,10 @@ export const SUPPORTED_CURRENCIES = [
 
 /**
  * Get the currency symbol based on the currency code
- * @param currencyCode The currency code (e.g., USD, EUR, GBP)
- * @returns The currency symbol (e.g., $, €, £)
+ * @param currencyCode The currency code (e.g., EUR, EUR, GBP)
+ * @returns The currency symbol (e.g., $, $, £)
  */
-export const getCurrencySymbol = (currencyCode: string = "USD"): string => {
+export const getCurrencySymbol = (currencyCode: string = "EUR"): string => {
   const symbols: Record<string, string> = Object.fromEntries(
     SUPPORTED_CURRENCIES.map((currency) => [currency.code, currency.symbol])
   )
@@ -32,11 +32,11 @@ export const getCurrencySymbol = (currencyCode: string = "USD"): string => {
 
 /**
  * Get workspace currency from storage
- * @returns Currency code from workspace or default 'USD'
+ * @returns Currency code from workspace or default 'EUR'
  */
 const getWorkspaceCurrency = (): string => {
   if (typeof window === 'undefined') {
-    return 'USD'; // SSR fallback
+    return 'EUR'; // SSR fallback
   }
 
   const workspace = storage.getWorkspace<{ currency?: string }>()
@@ -44,14 +44,14 @@ const getWorkspaceCurrency = (): string => {
     return workspace.currency
   }
 
-  return 'USD'; // Default fallback
+  return 'EUR'; // Default fallback
 };
 
 /**
  * Format a price with the workspace currency symbol
  * @param price The price to format
  * @param currencyCode Optional currency code, defaults to workspace currency
- * @returns Formatted price with currency symbol (e.g., $10.00)
+ * @returns Formatted price with currency symbol (e.g., €10.00)
  */
 export const formatPrice = (price: number, currencyCode?: string): string => {
   const currency = currencyCode || getWorkspaceCurrency();
@@ -68,7 +68,7 @@ export const formatPrice = (price: number, currencyCode?: string): string => {
  */
 export const formatCurrency = (
   amount: number,
-  currency: string = "USD",
+  currency: string = "EUR",
   locale: string = "en-US"
 ): string => {
   if (isNaN(amount) || !isFinite(amount)) {

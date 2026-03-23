@@ -710,6 +710,15 @@ class BackofficeApi {
     },
 
     /**
+     * Delete invoice (admin)
+     */
+    deleteInvoice: async (invoiceId: string): Promise<ApiResponse<{ success: boolean }>> => {
+      return this.fetch(`/users/admin/invoices/${invoiceId}`, {
+        method: 'DELETE',
+      })
+    },
+
+    /**
      * Download invoice PDF (admin)
      */
     downloadInvoicePdf: async (invoiceId: string): Promise<Blob> => {

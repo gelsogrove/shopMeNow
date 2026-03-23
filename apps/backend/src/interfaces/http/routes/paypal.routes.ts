@@ -151,13 +151,13 @@ const ensurePlanId = async (
           sequence: 1,
           total_cycles: 0,
           pricing_scheme: {
-            fixed_price: { value: "1.00", currency_code: "USD" },
+            fixed_price: { value: "1.00", currency_code: "EUR" },
           },
         },
       ],
       payment_preferences: {
         auto_bill_outstanding: true,
-        setup_fee: { value: "0", currency_code: "USD" },
+        setup_fee: { value: "0", currency_code: "EUR" },
         setup_fee_failure_action: "CONTINUE",
         payment_failure_threshold: 3,
       },
@@ -272,7 +272,7 @@ const captureOutstandingBalance = async ({
         note: note || "Monthly invoice charge",
         capture_type: "OUTSTANDING_BALANCE",
         amount: {
-          currency_code: "USD",
+          currency_code: "EUR",
           value: amount.toFixed(2),
         },
       }),
@@ -446,7 +446,7 @@ paypalRoutes.post("/webhook", async (req: Request, res: Response) => {
                 data: {
                   userId: user.id,
                   amount: failedAmount,
-                  currency: "USD",
+                  currency: "EUR",
                   status: "FAILED",
                   notes: `Webhook PAYMENT.FAILED - Subscription: ${subscriptionId}`,
                 },

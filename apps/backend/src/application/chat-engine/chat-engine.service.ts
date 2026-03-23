@@ -1592,6 +1592,48 @@ export class ChatEngineService {
         }
       }
 
+      // 💰 BILLING CHECK: Ensure workspace can process messages
+      if (!input.isPlayground) {
+        const { WorkspaceAccessService } = await import("../services/workspace-access.service")
+        const workspaceAccessService = new WorkspaceAccessService(this.prisma)
+        const accessResult = await workspaceAccessService.canProcessMessages(input.workspaceId, false)
+
+        if (!accessResult.canProcess && 
+            (accessResult.blockReason === "CREDIT_EXHAUSTED" || 
+             accessResult.blockReason === "PAUSED" || 
+             accessResult.blockReason === "CANCELLED" ||
+             accessResult.blockReason === "PAYMENT_FAILED")) {
+          
+          const processingTimeMs = Date.now() - startTime
+          logger.warn("💰 [ChatEngine] 🚫 Billing block - skipping processing", {
+            workspaceId: input.workspaceId,
+            reason: accessResult.blockReason,
+            balance: accessResult.details?.creditBalance
+          })
+
+          return {
+            message: "",
+            agentType: AgentType.ROUTER,
+            wasHandled: false,
+            intent: "BILLING_BLOCKED",
+            confidence: "HIGH",
+            source: "PATTERN",
+            processingTimeMs,
+            debugInfo: {
+              steps: [],
+              blockReason: accessResult.blockReason,
+              executionTimeMs: processingTimeMs,
+            },
+            response: "",
+            agentUsed: AgentType.ROUTER,
+            tokensUsed: 0,
+            executionTimeMs: processingTimeMs,
+            wasFAQ: false,
+            isBlocked: true,
+          }
+        }
+      }
+
       // STEP 1: Process message through business logic pipeline
       const result = await this.processMessageInternal(input)
     

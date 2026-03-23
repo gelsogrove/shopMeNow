@@ -171,7 +171,7 @@ export const servicesRouter = (controller: ServicesController): Router => {
    *               currency:
    *                 type: string
    *                 description: Currency for the price
-   *                 default: USD
+   *                 default: EUR
    *               duration:
    *                 type: integer
    *                 description: Duration of the service in minutes

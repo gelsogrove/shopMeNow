@@ -100,7 +100,7 @@ import {
 // TYPES & CONSTANTS
 // ============================================================================
 
-const formatUsd = (value: number) => formatCurrency(roundMoney(value), "USD")
+const formatEur = (value: number) => formatCurrency(roundMoney(value), "EUR")
 
 interface RechargeAmountOption {
   value: number
@@ -108,10 +108,10 @@ interface RechargeAmountOption {
 }
 
 const RECHARGE_OPTIONS: RechargeAmountOption[] = [
-  { value: 10, label: "$10" },
-  { value: 30, label: "$30" },
-  { value: 50, label: "$50" },
-  { value: 100, label: "$100" },
+  { value: 10, label: "€10" },
+  { value: 30, label: "€30" },
+  { value: 50, label: "€50" },
+  { value: 100, label: "€100" },
 ]
 
 // Plan limits per type (used for downgrade validation)
@@ -663,7 +663,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               ⚠️ Your chatbots are DISABLED
             </p>
             <p className="text-sm text-red-700 dark:text-red-300">
-              Credit balance is {formatUsd(billing.creditBalance)} (below {formatUsd(creditMinThreshold)} threshold). Your chatbots will not respond to any customer messages until you recharge.
+              Credit balance is {formatEur(billing.creditBalance)} (below {formatEur(creditMinThreshold)} threshold). Your chatbots will not respond to any customer messages until you recharge.
             </p>
           </div>
           {isSuperAdmin && (
@@ -817,7 +817,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-4xl font-bold">
-                  {formatUsd(billing.creditBalance)}
+                  {formatEur(billing.creditBalance)}
                 </span>
                 {isSuperAdmin && (
                   <Button
@@ -846,19 +846,19 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                     <span className="text-muted-foreground">Subscription {planConfig.displayName}:</span>
                   </div>
                   <span className="font-medium text-emerald-600">
-                    {formatUsd(planConfig.monthlyFee)}
+                    {formatEur(planConfig.monthlyFee)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Recharges this month:</span>
                   <span className="font-medium text-emerald-600">
-                    {formatUsd(billing.totalRecharges || 0)}
+                    {formatEur(billing.totalRecharges || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Taxes (21%):</span>
                   <span className="font-medium text-emerald-600">
-                    {formatUsd((planConfig.monthlyFee + (billing.totalRecharges || 0)) * 0.21)}
+                    {formatEur((planConfig.monthlyFee + (billing.totalRecharges || 0)) * 0.21)}
                   </span>
                 </div>
                 {billing.planType !== "FREE_TRIAL" && (() => {
@@ -871,7 +871,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       <span className="text-green-600 font-bold text-lg">
                         {isLoadingCurrentInvoice || invoiceTotal === undefined
                           ? "—"
-                          : formatUsd(invoiceTotal)}
+                          : formatEur(invoiceTotal)}
                       </span>
                     </div>
                   )
@@ -1095,7 +1095,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                       <Calendar className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
                       <div>
                         <p className="font-medium text-gray-900">Billing resumes on 1st of next month</p>
-                        <p className="text-sm text-gray-600">An invoice will be generated for your {PLAN_CONFIGS[billing.planType]?.name || billing.planType} plan ({formatUsd(planConfig?.monthlyFee || 0)}/month) plus any recharges you make.</p>
+                        <p className="text-sm text-gray-600">An invoice will be generated for your {PLAN_CONFIGS[billing.planType]?.name || billing.planType} plan ({formatEur(planConfig?.monthlyFee || 0)}/month) plus any recharges you make.</p>
                       </div>
                     </div>
 
@@ -1508,13 +1508,13 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                                     {tx.description}
                                   </TableCell>
                                   <TableCell className="text-right font-medium text-emerald-600">
-                                    {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `+${formatUsd(tx.amount)}` : ""}
+                                    {tx.amount > 0 && tx.type !== "INITIAL_CREDIT" && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `+${formatEur(tx.amount)}` : ""}
                                   </TableCell>
                                   <TableCell className="text-right font-medium text-red-600">
-                                    {tx.amount < 0 && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `-${formatUsd(Math.abs(tx.amount))}` : ""}
+                                    {tx.amount < 0 && tx.type !== "UPGRADE_FEE" && tx.type !== "INVOICE_PAID" ? `-${formatEur(Math.abs(tx.amount))}` : ""}
                                   </TableCell>
                                   <TableCell className="text-right text-sm font-medium">
-                                    {tx.type !== "INVOICE_PAID" && tx.balanceAfter > 0 ? formatUsd(tx.balanceAfter) : ""}
+                                    {tx.type !== "INVOICE_PAID" && tx.balanceAfter > 0 ? formatEur(tx.balanceAfter) : ""}
                                   </TableCell>
                                 </TableRow>
                               )
@@ -1617,20 +1617,20 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                             <TableRow>
                               <TableCell className="font-medium">📋 Subscription Fee ({invoice.planType})</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatUsd(invoice.subscriptionAmount)}
+                                {formatEur(invoice.subscriptionAmount)}
                               </TableCell>
                             </TableRow>
                             <TableRow>
                               <TableCell className="font-medium">💬 Usage</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatUsd(invoice.creditUsage)}
+                                {formatEur(invoice.creditUsage)}
                               </TableCell>
                             </TableRow>
                             {invoice.creditDebt > 0 && (
                               <TableRow>
                                 <TableCell className="font-medium">📉 Credit Debt</TableCell>
                                 <TableCell className="text-right font-medium">
-                                  {formatUsd(invoice.creditDebt)}
+                                  {formatEur(invoice.creditDebt)}
                                 </TableCell>
                               </TableRow>
                             )}
@@ -1638,20 +1638,20 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                               <TableRow>
                                 <TableCell className="font-medium">🧾 Credit Notes</TableCell>
                                 <TableCell className="text-right font-medium text-emerald-600">
-                                  -{formatUsd(invoice.creditNotesTotal)}
+                                  -{formatEur(invoice.creditNotesTotal)}
                                 </TableCell>
                               </TableRow>
                             )}
                             <TableRow>
                               <TableCell className="font-medium">Taxes (22%)</TableCell>
                               <TableCell className="text-right font-medium text-emerald-600">
-                                {invoice.taxAmount > 0 ? `+${formatUsd(invoice.taxAmount)}` : '—'}
+                                {invoice.taxAmount > 0 ? `+${formatEur(invoice.taxAmount)}` : '—'}
                               </TableCell>
                             </TableRow>
                             <TableRow className="bg-gray-50 font-bold">
                               <TableCell>Monthly Balance</TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatUsd(invoice.totalAmount)}
+                                {formatEur(invoice.totalAmount)}
                               </TableCell>
                             </TableRow>
                           </TableBody>

@@ -36,7 +36,7 @@ export function WorkspacePage() {
               required
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              pattern="^[+]?[0-9\s]*$"
+              pattern="^[+]?[0-9\s]*€"
               title="Please enter a valid phone number starting with +"
             />
           </div>

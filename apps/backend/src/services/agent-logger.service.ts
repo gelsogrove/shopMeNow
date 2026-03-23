@@ -101,7 +101,7 @@ export interface AgentPerformanceReport {
     errorRate: number
   }>
   totalTokens: number
-  totalCost: number // Estimated cost in USD
+  totalCost: number // Estimated cost in EUR
 }
 
 export class AgentLoggerService {
@@ -283,7 +283,7 @@ export class AgentLoggerService {
         endDate
       )
 
-      // Estimate cost (rough estimation: $0.15 per 1M input tokens for GPT-4o-mini)
+      // Estimate cost (rough estimation: €0.15 per 1M input tokens for GPT-4o-mini)
       // This is a simplified calculation - should use actual pricing per model
       const totalCost = (tokenStats.totalTokens / 1_000_000) * 0.15
 

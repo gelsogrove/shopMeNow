@@ -215,7 +215,7 @@ billingRoutes.get(
  *                 type: number
  *                 minimum: 10
  *                 maximum: 1000
- *                 description: Amount to recharge in USD
+ *                 description: Amount to recharge in EUR
  *     responses:
  *       200:
  *         description: Recharge successful

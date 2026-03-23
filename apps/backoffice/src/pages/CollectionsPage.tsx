@@ -70,12 +70,12 @@ interface OwnerInvoiceRow {
   }
 }
 
-const usdFormatter = new Intl.NumberFormat('en-US', {
+const eurFormatter = new Intl.NumberFormat('it-IT', {
   style: 'currency',
-  currency: 'USD',
+  currency: 'EUR',
 })
 
-const formatUsd = (value: number) => usdFormatter.format(roundMoney(value))
+const formatEur = (value: number) => eurFormatter.format(roundMoney(value))
 
 const formatMonthYear = (month: number, year: number) => {
   const normalizedMonth = ((month + 11) % 12) + 1
@@ -720,6 +720,33 @@ export function CollectionsPage() {
     setUpdating(null)
   }
 
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!window.confirm('Are you sure you want to delete this invoice? This action is irreversible and will also delete related adjustments and credit notes.')) {
+      return
+    }
+
+    setUpdating(invoiceId)
+    try {
+      const response = await api.users.deleteInvoice(invoiceId)
+      
+      if (response && !response.success) {
+        toast.error(response.error || 'Failed to delete invoice')
+      } else {
+        toast.success('Invoice deleted successfully')
+        // Refresh appropriate tables
+        if (viewMode === 'current') await loadCurrentInvoices()
+        else if (viewMode === 'failed') await loadFailedInvoices()
+        else if (viewMode === 'history') await loadHistory()
+        else await loadPreviousInvoices()
+      }
+    } catch (err) {
+      console.error('Delete invoice error:', err)
+      toast.error('Failed to delete invoice')
+    } finally {
+      setUpdating(null)
+    }
+  }
+
   const handleMockPayment = async (invoiceId: string) => {
     const targetRow =
       previousRows.find((row) => row.invoice.id === invoiceId) ||
@@ -729,7 +756,7 @@ export function CollectionsPage() {
 
     // Simple confirmation popup with amount and email
     const confirmed = window.confirm(
-      `Charge ${ownerEmail} for ${amount ? formatUsd(amount) : "this invoice"}?`
+      `Charge ${ownerEmail} for ${amount ? formatEur(amount) : "this invoice"}?`
     )
     if (!confirmed) return
 
@@ -1091,7 +1118,7 @@ export function CollectionsPage() {
           <h1 className="text-2xl font-semibold text-gray-900">Monthly Collections</h1>
           <p className="text-sm text-gray-600">
             {viewMode === 'current'
-              ? 'Live USD totals for the current month.'
+              ? 'Live EUR totals for the current month.'
               : viewMode === 'failed'
               ? 'Retry or move failed payments to trash.'
               : viewMode === 'history'
@@ -1235,7 +1262,7 @@ export function CollectionsPage() {
                             )}
                           </td>
                           <td className="p-3 text-right font-medium">
-                            {formatUsd(tx.amount)} <span className="text-gray-400 text-xs">{tx.currency}</span>
+                            {formatEur(tx.amount)} <span className="text-gray-400 text-xs">{tx.currency}</span>
                           </td>
                           <td className="p-3 text-center">
                             {tx.status === 'SUCCESS' ? (
@@ -1343,7 +1370,7 @@ export function CollectionsPage() {
                           {isTrackingView ? 'Current month total' : 'Amount due'}
                         </div>
                         <div className="text-2xl font-semibold text-gray-900">
-                          {formatUsd(resolveDisplayTotal(invoice))}
+                          {formatEur(resolveDisplayTotal(invoice))}
                         </div>
                         {hasTotalMismatch(invoice) && (
                           <div className="text-xs text-amber-600">
@@ -1352,7 +1379,7 @@ export function CollectionsPage() {
                         )}
                         {isHistoryView && invoice.creditNotesTotal && invoice.creditNotesTotal > 0 && (
                           <div className="text-xs text-emerald-600">
-                            Credit notes: -{formatUsd(invoice.creditNotesTotal ?? 0)}
+                            Credit notes: -{formatEur(invoice.creditNotesTotal ?? 0)}
                           </div>
                         )}
                         {!isHistoryView && !isTrackingView && !isFailedView && (
@@ -1376,7 +1403,7 @@ export function CollectionsPage() {
                             <div className="space-y-1.5 text-sm text-gray-600">
                               <div className="flex items-center justify-between">
                                 <span>Subscription</span>
-                                <span>{formatUsd(detail.subscriptionAmount)}</span>
+                                <span>{formatEur(detail.subscriptionAmount)}</span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <button 
@@ -1385,21 +1412,21 @@ export function CollectionsPage() {
                                 >
                                   <span>Recharges this month</span>
                                 </button>
-                                <span>{formatUsd(detail.rechargesTotal)}</span>
+                                <span>{formatEur(detail.rechargesTotal)}</span>
                               </div>
                               {!isTrackingView && detail.adjustmentsTotal !== 0 && (
                                 <div className="flex items-center justify-between">
                                   <span>Adjustments</span>
-                                  <span>{formatUsd(detail.adjustmentsTotal)}</span>
+                                  <span>{formatEur(detail.adjustmentsTotal)}</span>
                                 </div>
                               )}
                               <div className="flex items-center justify-between">
                                 <span>Taxes ({(detail.taxRate * 100).toFixed(0)}%)</span>
-                                <span>{formatUsd(detail.taxAmount)}</span>
+                                <span>{formatEur(detail.taxAmount)}</span>
                               </div>
                               <div className="flex items-center justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
                                 <span>Total</span>
-                                <span>{formatUsd(detail.totalAmount)}</span>
+                                <span>{formatEur(detail.totalAmount)}</span>
                               </div>
                             </div>
                             <div className="text-[11px] text-gray-500">
@@ -1515,6 +1542,17 @@ export function CollectionsPage() {
                         >
                           {getPayPalEnvironment(row.owner) === 'sandbox' ? '🧪 SANDBOX' : '🔴 LIVE'}
                         </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                          disabled={isUpdatingRow}
+                          title="Irreversibly delete this invoice"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
                       </div>
                     )}
 
@@ -1603,6 +1641,17 @@ export function CollectionsPage() {
                           <Trash2 className="h-4 w-4 mr-2" />
                           Move to Trash
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                          disabled={isUpdatingRow}
+                          title="Irreversibly delete this invoice"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
                       </div>
                     )}
 
@@ -1629,7 +1678,7 @@ export function CollectionsPage() {
                             <div className="space-y-2 text-sm text-gray-600">
                               <div className="flex items-center justify-between">
                                 <span>Subscription</span>
-                                <span>{formatUsd(detail.subscriptionAmount)}</span>
+                                <span>{formatEur(detail.subscriptionAmount)}</span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <button 
@@ -1638,27 +1687,27 @@ export function CollectionsPage() {
                                 >
                                   <span>Recharges this month</span>
                                 </button>
-                                <span>{formatUsd(detail.rechargesTotal)}</span>
+                                <span>{formatEur(detail.rechargesTotal)}</span>
                               </div>
                               {detail.adjustmentsTotal !== 0 && (
                                 <div className="flex items-center justify-between">
                                   <span>Adjustments</span>
-                                  <span>{formatUsd(detail.adjustmentsTotal)}</span>
+                                  <span>{formatEur(detail.adjustmentsTotal)}</span>
                                 </div>
                               )}
                               {detail.creditNotesTotal > 0 && (
                                 <div className="flex items-center justify-between text-emerald-700">
                                   <span>Credit notes</span>
-                                  <span>-{formatUsd(detail.creditNotesTotal)}</span>
+                                  <span>-{formatEur(detail.creditNotesTotal)}</span>
                                 </div>
                               )}
                               <div className="flex items-center justify-between">
                                 <span>Taxes ({(detail.taxRate * 100).toFixed(0)}%)</span>
-                                <span>{formatUsd(detail.taxAmount)}</span>
+                                <span>{formatEur(detail.taxAmount)}</span>
                               </div>
                               <div className="flex items-center justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
                                 <span>Total</span>
-                                <span>{formatUsd(detail.totalAmount)}</span>
+                                <span>{formatEur(detail.totalAmount)}</span>
                               </div>
                             </div>
                           ) : (
@@ -1713,6 +1762,17 @@ export function CollectionsPage() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Cancel
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => handleDeleteInvoice(invoice.id)}
+                            disabled={isUpdatingRow}
+                            title="Irreversibly delete this invoice"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </Button>
                         </div>
                         {invoice.creditNotes && invoice.creditNotes.length > 0 && (
                           <div className="space-y-2">
@@ -1731,7 +1791,7 @@ export function CollectionsPage() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold text-emerald-700">
-                                    -{formatUsd(note.amount)}
+                                    -{formatEur(note.amount)}
                                   </span>
                                   <Button
                                     size="sm"
@@ -1862,7 +1922,7 @@ export function CollectionsPage() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <div className="text-sm font-medium">{formatUsd(note.amount)}</div>
+                      <div className="text-sm font-medium">{formatEur(note.amount)}</div>
                       <div className="text-xs text-gray-500">{note.reason || 'No reason'}</div>
                       <div className="flex gap-2 pt-2">
                         <Button size="sm" variant="outline" onClick={() => startEditCreditNote(note)}>
@@ -2002,7 +2062,7 @@ export function CollectionsPage() {
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <div className="text-sm font-medium">{formatUsd(adj.amount)}</div>
+                      <div className="text-sm font-medium">{formatEur(adj.amount)}</div>
                       <div className="text-xs text-gray-500">{adj.reason || 'No reason'}</div>
                       <div className="flex gap-2 pt-2">
                         <Button size="sm" variant="outline" onClick={() => startEditAdjustment(adj)}>
@@ -2147,7 +2207,7 @@ export function CollectionsPage() {
                 <div className="bg-amber-50 border border-amber-200 rounded p-3 space-y-1 text-sm">
                   <p><strong>Owner:</strong> {markPaidModal.ownerEmail}</p>
                   <p><strong>Period:</strong> {String(markPaidModal.periodMonth).padStart(2, '0')}/{markPaidModal.periodYear}</p>
-                  <p><strong>Amount:</strong> {formatUsd(markPaidModal.amount)}</p>
+                  <p><strong>Amount:</strong> {formatEur(markPaidModal.amount)}</p>
                 </div>
               )}
               <p className="text-amber-700 text-sm font-medium mt-2">

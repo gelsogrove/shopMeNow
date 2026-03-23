@@ -418,4 +418,40 @@ router.get(
   }
 )
 
+// ── Delete invoice ──────────────────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/users/admin/invoices/{invoiceId}:
+ *   delete:
+ *     summary: Delete invoice (admin only)
+ *     tags: [Users Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: invoiceId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.delete(
+  "/admin/invoices/:invoiceId([a-z0-9]{10,})",
+  authMiddleware,
+  platformAdminMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const { invoiceId } = req.params
+      await invoiceService.deleteInvoice(invoiceId)
+      res.json({ success: true, message: "Invoice deleted successfully" })
+    } catch (error: any) {
+      logger.error("[ADMIN] Error deleting invoice:", error)
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to delete invoice",
+      })
+    }
+  }
+)
+
 export default router

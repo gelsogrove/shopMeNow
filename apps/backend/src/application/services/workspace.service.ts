@@ -439,7 +439,7 @@ For privacy inquiries, please contact our support team.`
       notificationEmail: w.notificationEmail ?? undefined,
       language: w.language ?? 'it',
       defaultLanguage: (w as any).defaultLanguage ?? 'it', // 🌍 ISO-2 default language for customers
-      currency: w.currency ?? 'USD',
+      currency: w.currency ?? 'EUR',
       messageLimit: w.messageLimit ?? 1000,
       welcomeMessage: w.welcomeMessage ?? undefined,
       wipMessage: w.wipMessage ?? undefined,

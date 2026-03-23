@@ -930,7 +930,7 @@ export class MessageRepository {
               isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
               activeChatbot: true, // Enable chatbot to handle registration requests
               language: detectedLanguage,
-              currency: "USD",
+              currency: "EUR",
             },
           })
 
@@ -1262,7 +1262,7 @@ export class MessageRepository {
           if (customerIsActive) {
             // Registered customer: show price
             const price = service.price
-              ? `${getCurrencySymbol(service.currency || "USD")}${service.price.toFixed(2)}`
+              ? `${getCurrencySymbol(service.currency || "EUR")}${service.price.toFixed(2)}`
               : "Prezzo da definire"
             priceSection = ` - ${price}`
           } else {
@@ -1386,7 +1386,7 @@ export class MessageRepository {
         where: { id: workspaceId },
         select: { currency: true },
       })
-      const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+      const currencySymbol = getCurrencySymbol(workspace?.currency || "EUR")
 
       // Formatta l'output con prezzi scontati - versione compatta per evitare troncamento
       let formattedProducts = ""
@@ -1946,7 +1946,7 @@ export class MessageRepository {
           isActive: true,
           isBlacklisted: true, // 🚨 NEW USERS ARE BLOCKED until admin approval!
           activeChatbot: true, // Enable chatbot to handle registration requests
-          currency: "USD",
+          currency: "EUR",
         },
       })
       logger.info(

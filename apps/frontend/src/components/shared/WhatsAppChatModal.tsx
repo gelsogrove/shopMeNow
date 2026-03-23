@@ -1132,7 +1132,7 @@ export function WhatsAppChatModal({
                                             "Prompt Cost": `$${debugData.costInfo.promptCost || 0}`,
                                             "Completion Cost": `$${debugData.costInfo.completionCost || 0}`,
                                             "Total Cost": `$${debugData.costInfo.totalCost || 0}`,
-                                            Currency: debugData.costInfo.currency || "USD",
+                                            Currency: debugData.costInfo.currency || "EUR",
                                           }
                                         : "N/A",
                                       "🔧 Function Calls": debugData.functionCalls && debugData.functionCalls.length > 0

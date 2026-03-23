@@ -1003,6 +1003,27 @@ export class InvoiceService {
       doc.end()
     })
   }
+
+  /**
+   * Delete an invoice by ID (Admin only)
+   * Prisma schema handles cascading deletes for adjustments and credit notes.
+   * PayPalTransaction relation is SetNull.
+   */
+  async deleteInvoice(invoiceId: string): Promise<void> {
+    const invoice = await prisma.monthlyInvoice.findUnique({
+      where: { id: invoiceId },
+    })
+
+    if (!invoice) {
+        throw new Error('Invoice not found')
+    }
+
+    await prisma.monthlyInvoice.delete({
+      where: { id: invoiceId },
+    })
+
+    logger.info(`[Invoice] Deleted invoice ${invoiceId} for user ${invoice.userId}`)
+  }
 }
 
 // Singleton instance

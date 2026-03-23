@@ -110,7 +110,7 @@ export class MessageCatalogRepository {
           if (customerIsActive) {
             // Registered customer: show price
             const price = service.price
-              ? `${getCurrencySymbol(service.currency || "USD")}${service.price.toFixed(2)}`
+              ? `${getCurrencySymbol(service.currency || "EUR")}${service.price.toFixed(2)}`
               : "Prezzo da definire"
             priceSection = ` - ${price}`
           } else {
@@ -232,7 +232,7 @@ export class MessageCatalogRepository {
         where: { id: workspaceId },
         select: { currency: true },
       })
-      const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+      const currencySymbol = getCurrencySymbol(workspace?.currency || "EUR")
 
       // Formatta l'output con prezzi scontati - versione compatta per evitare troncamento
       let formattedProducts = ""

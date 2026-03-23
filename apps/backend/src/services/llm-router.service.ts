@@ -1814,14 +1814,15 @@ export class LLMRouterService {
       { role: "user" as const, content: PromptProcessorService.wrapUserInput(userMessage) },
     ]
 
-    // 🛡️ Sofia Fix: In informational workspaces (auto mode), ensure the LLM doesn't skip tools
-    // We inject a final instruction just before the user message to force tool usage for profile/support
-    if (!sellsProductsAndServices) {
-      messages.splice(messages.length - 1, 0, {
-        role: "system",
-        content: "CRITICAL: If the user request matches a function (Profile Management, Support, etc.), YOU MUST call the function. DO NOT answer with text instructions or your identity description if a function is available for the request."
-      })
-    }
+    // 🛡️ Sofia Fix: Ensure the LLM doesn't skip tools when a match exists
+    const toolCoachingMsg = sellsProductsAndServices
+      ? "CRITICAL: For business operations (products, cart, orders, profile or support issues), YOU MUST call the appropriate specialist function. DO NOT attempt to answer these with text directly."
+      : "CRITICAL: If the user request matches a function (Profile Management, Support, etc.), YOU MUST call the function. DO NOT answer with text instructions or your identity description if a function is available for the request."
+
+    messages.splice(messages.length - 1, 0, {
+      role: "system",
+      content: toolCoachingMsg
+    })
 
     let totalTokens = 0
     let iterations = 0
@@ -3032,7 +3033,7 @@ export class LLMRouterService {
           tools: (options.tools && options.tools.length > 0) ? options.tools : getFunctionsForRouter({
             sellsProductsAndServices: options.sellsProductsAndServices ?? true
           }),
-          tool_choice: options.sellsProductsAndServices === false ? "auto" : "required", // FORCE or AUTO based on mode
+          tool_choice: "auto", // 🆕 Allow direct text response (greetings/identity) or delegation for ALL modes
         },
         {
           headers: {

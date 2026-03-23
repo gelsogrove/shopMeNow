@@ -150,7 +150,7 @@ export class VariableResolverService {
     variables.workspaceName = workspace.name || ""
     variables.workspaceUrl = workspace.websiteUrl || workspace.url || ""
     variables.language = workspace.language || "ITA"
-    variables.currency = workspace.currency || "USD"
+    variables.currency = workspace.currency || "EUR"
     variables.toneOfVoice = workspace.toneOfVoice || "friendly"
     variables.botIdentityResponse = workspace.botIdentityResponse || ""
     variables.welcomeMessage = typeof workspace.welcomeMessage === 'string' 
@@ -317,7 +317,7 @@ export class VariableResolverService {
       where: { id: workspaceId },
       select: { currency: true },
     })
-    const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+    const currencySymbol = getCurrencySymbol(workspace?.currency || "EUR")
 
     const products = await this.prisma.products.findMany({
       where: { workspaceId, isActive: true },
@@ -362,7 +362,7 @@ export class VariableResolverService {
       where: { id: workspaceId },
       select: { currency: true },
     })
-    const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+    const currencySymbol = getCurrencySymbol(workspace?.currency || "EUR")
 
     const services = await this.prisma.services.findMany({
       where: { workspaceId, isActive: true },
@@ -449,7 +449,7 @@ export class VariableResolverService {
       where: { id: workspaceId },
       select: { currency: true },
     })
-    const currencySymbol = getCurrencySymbol(workspace?.currency || "USD")
+    const currencySymbol = getCurrencySymbol(workspace?.currency || "EUR")
 
     const items = order.items.map(i => 
       `- ${i.product?.name || "Item"} x${i.quantity}: ${currencySymbol}${Number(i.unitPrice).toFixed(2)}`

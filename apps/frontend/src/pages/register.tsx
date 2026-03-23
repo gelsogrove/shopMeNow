@@ -46,7 +46,7 @@ const RegisterPage = () => {
     company: "",
     email: "",
     language: "en", // Default, will be updated based on lang parameter (2-letter ISO 639-1)
-    currency: "USD", // Always USD by default
+    currency: "EUR", // Always EUR by default
     gdprConsent: false,
     pushNotificationsConsent: false,
   })
@@ -65,8 +65,8 @@ const RegisterPage = () => {
     setFormData((prev) => ({
       ...prev,
       language,
-      // Always use USD as currency regardless of language
-      currency: "USD",
+      // Always use EUR as currency regardless of language
+      currency: "EUR",
     }))
 
     logger.info(
@@ -137,8 +137,8 @@ const RegisterPage = () => {
 
   // Array of available currencies (kept for reference)
   const currencies = [
-    { code: "USD", name: "US Dollar ($)" },
-    { code: "EUR", name: "Euro (€)" },
+    { code: "EUR", name: "Euro ($)" },
+    { code: "EUR", name: "Euro ($)" },
     { code: "GBP", name: "British Pound (£)" },
   ]
 
@@ -599,8 +599,8 @@ const RegisterPage = () => {
             </select>
           </div>
 
-          {/* Currency is now hardcoded to USD */}
-          <input type="hidden" name="currency" value="USD" />
+          {/* Currency is now hardcoded to EUR */}
+          <input type="hidden" name="currency" value="EUR" />
 
           {/* Push notifications */}
           <div className="flex items-start gap-3">

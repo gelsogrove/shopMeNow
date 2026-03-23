@@ -91,7 +91,7 @@ export class Customer {
     this.company = props.company
     this.discount = props.discount || 0
     this.language = props.language || "ENG"
-    this.currency = props.currency || "USD"
+    this.currency = props.currency || "EUR"
     this.notes = props.notes
     this.tags = props.tags || []
     this.serviceIds = props.serviceIds || []

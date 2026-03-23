@@ -66,7 +66,7 @@ export class CustomerService {
           where: { id: data.workspaceId },
           select: { currency: true },
         })
-        data.currency = workspace?.currency || "USD"
+        data.currency = workspace?.currency || "EUR"
       }
 
       // Create a customer entity for validation
@@ -312,7 +312,7 @@ export class CustomerService {
         phone: null,
         isActive: false, // Not registered yet
         language: "ENG",
-        currency: "USD",
+        currency: "EUR",
       }
 
       const created = await this.customerRepository.create(visitorData)

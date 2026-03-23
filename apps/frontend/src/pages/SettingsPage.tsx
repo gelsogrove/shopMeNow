@@ -183,7 +183,7 @@ export function SettingsPage() {
     adminEmail: "",
     url: "http://localhost:3000",
     businessType: "retail",
-    currency: "USD",
+    currency: "EUR",
     defaultLanguage: "it",
     sellsProductsAndServices: true,
     channelStatus: true,
@@ -253,7 +253,7 @@ export function SettingsPage() {
         adminEmail: currentWorkspace.adminEmail || "",
         url: currentWorkspace.url || "http://localhost:3000",
         businessType: currentWorkspace.businessType || "retail",
-        currency: currentWorkspace.currency || "USD",
+        currency: currentWorkspace.currency || "EUR",
         defaultLanguage: currentWorkspace.defaultLanguage || "it", // ✅ Fix: API now returns defaultLanguage directly
         sellsProductsAndServices: currentWorkspace.sellsProductsAndServices ?? true,
         channelStatus: currentWorkspace.channelStatus ?? true,
