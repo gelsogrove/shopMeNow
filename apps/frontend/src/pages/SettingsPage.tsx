@@ -456,6 +456,44 @@ export function SettingsPage() {
     try {
       const updateData: any = { ...dataToSave }
       delete updateData.logoUrl
+      
+      // 🔒 PROTECTION: Only send boolean toggles if they actually changed
+      // This prevents accidental state changes when user is just updating other settings
+      if (currentWorkspace) {
+        // channelStatus
+        if (updateData.channelStatus === currentWorkspace.channelStatus) {
+          delete updateData.channelStatus
+          console.log('🛡️ channelStatus unchanged, not sending in update')
+        } else {
+          console.log(`📝 channelStatus changed: ${currentWorkspace.channelStatus} → ${updateData.channelStatus}`)
+        }
+
+        // widgetUseChannelLogo
+        if (updateData.widgetUseChannelLogo === currentWorkspace.widgetUseChannelLogo) {
+          delete updateData.widgetUseChannelLogo
+        }
+
+        // widgetAutoSuggestionsEnabled
+        if (updateData.widgetAutoSuggestionsEnabled === currentWorkspace.widgetAutoSuggestionsEnabled) {
+          delete updateData.widgetAutoSuggestionsEnabled
+        }
+
+        // hasHumanSupport
+        if (updateData.hasHumanSupport === currentWorkspace.hasHumanSupport) {
+          delete updateData.hasHumanSupport
+        }
+
+        // requireManualApproval
+        if (updateData.requireManualApproval === currentWorkspace.requireManualApproval) {
+          delete updateData.requireManualApproval
+        }
+
+        // debugMode (usually handled separately, but protect here too)
+        if (updateData.debugMode === currentWorkspace.debugMode) {
+          delete updateData.debugMode
+        }
+      }
+
       // Trim and cap quick replies
       if (updateData.widgetQuickReplies) {
         updateData.widgetQuickReplies = (updateData.widgetQuickReplies as string[])

@@ -24,7 +24,7 @@ vi.mock("@/hooks/useWorkspaceRole", () => ({
 
 vi.mock("@/services/subscriptionBillingApi", () => ({
   formatCurrency: (value: number) =>
-    value !== undefined && value !== null ? `$${value.toFixed(2)}` : "$0.00",
+    value !== undefined && value !== null ? `€${value.toFixed(2)}` : "€0.00",
   getTransactionTypeInfo: vi.fn(() => ({ icon: "💰", label: "Message" })),
   rechargeCredit: vi.fn(),
   getOwnerTransactions: vi.fn(),
@@ -102,7 +102,7 @@ describe("BillingSection", () => {
   // ===========================================================================
 
   describe("Credit Warnings", () => {
-    it("should NOT show warning when credit is sufficient ($25)", async () => {
+    it("should NOT show warning when credit is sufficient (€25)", async () => {
       render(<BillingSection />)
 
       await waitFor(() => {
@@ -115,7 +115,7 @@ describe("BillingSection", () => {
       })
     })
 
-    it("should show LOW CREDIT warning when below threshold ($3 < $5)", async () => {
+    it("should show LOW CREDIT warning when below threshold (€3 < €5)", async () => {
       vi.mocked(useBilling).mockReturnValue({
         billingOverview: {
           ...mockBillingOverview,
@@ -165,8 +165,8 @@ describe("BillingSection", () => {
       expect(
         screen.getByText((content) =>
           content.includes("Credit balance is") &&
-          content.includes("$-13.00") &&
-          content.includes("$-12.00") &&
+          content.includes("€-13.00") &&
+          content.includes("€-12.00") &&
           content.includes("chatbots will not respond")
         )
       ).toBeInTheDocument()
@@ -312,10 +312,10 @@ describe("BillingSection", () => {
 
       await waitFor(() => {
         // Check for preset amounts in the dialog
-        expect(screen.getByText("$10")).toBeInTheDocument()
-        expect(screen.getByText("$30")).toBeInTheDocument()
-        expect(screen.getByText("$50")).toBeInTheDocument()
-        expect(screen.getByText("$100")).toBeInTheDocument()
+        expect(screen.getByText("€10")).toBeInTheDocument()
+        expect(screen.getByText("€30")).toBeInTheDocument()
+        expect(screen.getByText("€50")).toBeInTheDocument()
+        expect(screen.getByText("€100")).toBeInTheDocument()
       })
     })
   })

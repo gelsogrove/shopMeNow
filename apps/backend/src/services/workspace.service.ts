@@ -600,6 +600,34 @@ export const workspaceService = {
       Object.entries(workspaceData).filter(([_, value]) => value !== "")
     )
 
+    // 🔒 PROTECTION: Preserve boolean toggles if not explicitly passed
+    // This prevents accidental state changes when only updating other settings
+    const booleanFields = [
+      'channelStatus',
+      'debugMode',
+      'enableWhatsapp',
+      'enableWidget',
+      'widgetUseChannelLogo',
+      'widgetAutoSuggestionsEnabled',
+      'hasHumanSupport',
+      'requireManualApproval',
+      'sellsProductsAndServices',
+      'hasSalesAgents',
+      'translateProductNames',
+      'translateCategoryNames',
+      'translateServiceNames',
+      'wasenderIsActive'
+    ]
+
+    for (const field of booleanFields) {
+      if (sanitizedData[field] === undefined) {
+        delete sanitizedData[field]
+        logger.info(`⚠️ ${field} not provided, preserving existing value`)
+      } else {
+        logger.info(`✅ ${field} explicitly set to: ${sanitizedData[field]}`)
+      }
+    }
+
     // Clamp widget quick replies (max 4, trim, remove empty)
     if (sanitizedData.widgetQuickReplies) {
       const replies = Array.isArray(sanitizedData.widgetQuickReplies)

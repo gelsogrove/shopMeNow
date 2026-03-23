@@ -510,7 +510,9 @@ export class WidgetChatController {
       }
 
       // 🚫 channelStatus=false = total shutdown (no WIP)
+      // 🧪 EXCEPTION: Playground mode with debugMode=true bypasses this (admin testing)
       if (workspace.channelStatus === false) {
+        // ⚠️ PUBLIC ACCESS BLOCKED - return disabled status
         return res.status(200).json({
           success: true,
           status: "disabled",
@@ -1324,12 +1326,38 @@ export class WidgetChatController {
 
       // 🛠️ DEBUG MODE (WIP) - after security checks, return WIP message
       // ⚠️ BYPASS: isPlayground=true (backoffice admin testing) ignores WIP → chatbot responds normally
+      // 🧪 This allows admins to test chatbot even when debugMode=true (channel in WIP)
       if (workspace.debugMode === true && isPlayground !== true) {
         logger.info("🛠️ Widget WIP - debug mode (real customer blocked)", {
           workspaceId,
           visitorId,
           debugMode: workspace.debugMode,
           channelStatus: workspace.channelStatus,
+        })
+
+        const rawLanguage = requestedLanguage || workspace.defaultLanguage || "ENG"
+        const wipResponse = await this.translateWipMessage(
+          workspace.wipMessage as Record<string, string> | string | null,
+          rawLanguage,
+          workspaceId
+        )
+
+        return res.status(200).json({
+          success: true,
+          status: "wip",
+          response: wipResponse,
+        })
+      }
+
+      // 🚫 channelStatus=false with debugMode=true - block UNLESS playground
+      // ⚠️ PUBLIC: channelStatus=false → WIP message
+      // 🧪 PLAYGROUND: channelStatus=false + debugMode=true → chatbot works (admin testing)
+      if (!workspace.channelStatus && isPlayground !== true) {
+        logger.info("🛠️ Widget WIP - channel disabled (real customer blocked)", {
+          workspaceId,
+          visitorId,
+          channelStatus: workspace.channelStatus,
+          debugMode: workspace.debugMode,
         })
 
         const rawLanguage = requestedLanguage || workspace.defaultLanguage || "ENG"

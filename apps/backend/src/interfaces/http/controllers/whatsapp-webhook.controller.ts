@@ -423,15 +423,41 @@ export class WhatsAppWebhookController {
       }
 
       // Owner inactive or channel disabled (checked AFTER authentication)
-      if (whatsappSettings.workspace.owner?.status === "INACTIVE" || whatsappSettings.workspace.channelStatus === false) {
-        logger.warn("[WEBHOOK] 🚫 Channel disabled or owner inactive", {
+      // 🧪 EXCEPTION: Playground mode with debugMode=true bypasses channelStatus check (admin testing)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: whatsappSettings.workspaceId },
+        select: { debugMode: true }
+      })
+
+      const allowPlaygroundBypass = isPlayground && workspace?.debugMode === true
+      
+      if (whatsappSettings.workspace.owner?.status === "INACTIVE") {
+        logger.warn("[WEBHOOK] 🚫 Owner inactive", {
+          webhookId,
+          workspaceId: whatsappSettings.workspace.id,
+          ownerStatus: whatsappSettings.workspace.owner?.status,
+        })
+        res.status(200).json({ success: true, message: "Owner inactive" })
+        return
+      }
+
+      if (!whatsappSettings.workspace.channelStatus && !allowPlaygroundBypass) {
+        logger.warn("[WEBHOOK] 🚫 Channel disabled", {
           webhookId,
           workspaceId: whatsappSettings.workspace.id,
           channelStatus: whatsappSettings.workspace.channelStatus,
-          ownerStatus: whatsappSettings.workspace.owner?.status,
+          isPlayground,
+          debugMode: workspace?.debugMode,
         })
         res.status(200).json({ success: true, message: "Channel disabled" })
         return
+      }
+
+      if (allowPlaygroundBypass) {
+        logger.info("[WEBHOOK] 🧪 Playground bypass active - channel disabled but debugMode=true", {
+          webhookId,
+          workspaceId: whatsappSettings.workspace.id,
+        })
       }
 
       workspaceId = whatsappSettings.workspaceId

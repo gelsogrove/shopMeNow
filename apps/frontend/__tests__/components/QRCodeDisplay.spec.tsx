@@ -45,9 +45,7 @@ describe("QRCodeDisplay", () => {
     render(<QRCodeDisplay userId="user-1" />)
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith("/auth/2fa/setup", {
-        params: { userId: "user-1" },
-      })
+      expect(api.get).toHaveBeenCalledWith("/auth/2fa/setup/user-1")
     })
 
     await waitFor(() => {

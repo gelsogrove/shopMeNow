@@ -13,7 +13,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/lib/toast"
-import { RichTextEditor, isRichTextEmpty } from "@/components/shared/RichTextEditor"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -156,7 +155,7 @@ function TicketDetailView({
   const [changingStatus, setChangingStatus] = useState(false)
 
   const handleSend = async () => {
-    if (isRichTextEmpty(newMessage) && attachments.length === 0) return
+    if (!newMessage.trim() && attachments.length === 0) return
 
     setSending(true)
     try {
@@ -338,11 +337,11 @@ function TicketDetailView({
 
         <div className="flex gap-2">
           <div className="flex-1">
-            <RichTextEditor
+            <textarea
               value={newMessage}
-              onChange={setNewMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type your reply..."
-              minHeight="100px"
+              className="w-full min-h-[100px] p-2 border rounded"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -364,7 +363,7 @@ function TicketDetailView({
             </Button>
             <Button
               onClick={handleSend}
-              disabled={sending || (isRichTextEmpty(newMessage) && attachments.length === 0)}
+              disabled={sending || (!newMessage.trim() && attachments.length === 0)}
               className="bg-purple-600 hover:bg-purple-700"
             >
               {sending ? (
@@ -619,7 +618,7 @@ export default function SupportTicketsAdminPage() {
       toast.error("Subject is required")
       return
     }
-    if (isRichTextEmpty(newMessage)) {
+    if (!newMessage.trim()) {
       toast.error("Message is required")
       return
     }
@@ -778,7 +777,7 @@ export default function SupportTicketsAdminPage() {
 
                 <div className="grid gap-2">
                   <Label>Message</Label>
-                  <RichTextEditor value={newMessage} onChange={setNewMessage} />
+                  <textarea value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className="w-full min-h-[150px] p-2 border rounded" />
                 </div>
               </div>
 
