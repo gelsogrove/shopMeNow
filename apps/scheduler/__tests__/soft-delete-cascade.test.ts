@@ -62,7 +62,7 @@ describe('Soft Delete - Complete Cascade Test', () => {
       whatsappSettings: { deleteMany: createDeleteMany() },
       gdprContent: { deleteMany: createDeleteMany() },
       whatsAppQueue: { deleteMany: createDeleteMany() },
-      productSearch: { deleteMany: createDeleteMany() },
+      // productSearch: REMOVED - table dropped
       secureToken: { deleteMany: createDeleteMany() },
       shortUrls: { deleteMany: createDeleteMany() },
       usage: { deleteMany: createDeleteMany() },

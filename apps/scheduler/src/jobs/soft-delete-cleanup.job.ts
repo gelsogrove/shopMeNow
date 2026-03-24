@@ -355,9 +355,7 @@ export async function softDeleteCleanupJob(): Promise<void> {
         where: { workspaceId: { in: workspaceIds } }
       })).count
 
-      deletedCounts.productSearch = (await tx.productSearch.deleteMany({
-        where: { workspaceId: { in: workspaceIds } }
-      })).count
+      // deletedCounts.productSearch - REMOVED: productSearch table dropped
 
       deletedCounts.secureToken = (await tx.secureToken.deleteMany({
         where: { workspaceId: { in: workspaceIds } }

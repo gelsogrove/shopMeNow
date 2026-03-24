@@ -142,7 +142,7 @@ export type {
   PlanConfiguration,
   RegistrationToken,
   SecureToken,
-  ProductSearch,
+  // ProductSearch, // REMOVED: Feature removed to reduce DB size
   MonthlyInvoice,     // Feature 197: Monthly invoices
   PayPalTransaction,
   // Support Ticket Types

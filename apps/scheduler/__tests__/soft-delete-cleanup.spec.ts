@@ -81,7 +81,7 @@ jest.mock('../src/config/database', () => ({
     whatsappSettings: { deleteMany: jest.fn() },
     gdprContent: { deleteMany: jest.fn() },
     whatsAppQueue: { deleteMany: jest.fn() },
-    productSearch: { deleteMany: jest.fn() },
+    // productSearch: REMOVED - table dropped
     secureToken: { deleteMany: jest.fn() },
     shortUrls: { deleteMany: jest.fn() },
     usage: { deleteMany: jest.fn() },
@@ -310,7 +310,6 @@ describe('Soft Delete Cleanup Job', () => {
         'gdprContent',
         // Operational tables
         'whatsAppQueue',
-        'productSearch',
         'secureToken',
         'shortUrls',
         'usage',
@@ -468,7 +467,7 @@ describe('Soft Delete Cleanup Job', () => {
         'customerFeedback', 'searchConversations', 'customers', 'certification',
         'type', 'products', 'categories', 'offers', 'services', 'fAQ',
         'documents', 'suppliers', 'sales', 'languages', 'agentConfig', 'whatsappSettings',
-        'gdprContent', 'whatsAppQueue', 'productSearch', 'secureToken', 'shortUrls',
+        'gdprContent', 'whatsAppQueue', 'secureToken', 'shortUrls',
         'usage', 'billing', 'billingTransaction', 'adminSession', 'workspaceInvitation',
         'registrationAttempts', 'softDeleteAuditLog', 'userWorkspace'
       ]
@@ -617,7 +616,6 @@ describe('Soft Delete Cleanup Job', () => {
         'gdprContent',
         // Operational
         'whatsAppQueue',
-        'productSearch',
         'secureToken',
         'shortUrls',
         'usage',
