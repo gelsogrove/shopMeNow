@@ -2,9 +2,5 @@
 -- Migration: remove-product-searches-table
 -- Date: 2026-03-24
 
-BEGIN;
-
--- Drop the table if exists
+-- Drop the table if exists (Prisma wraps migrations in its own transaction)
 DROP TABLE IF EXISTS "product_searches" CASCADE;
-
-COMMIT;

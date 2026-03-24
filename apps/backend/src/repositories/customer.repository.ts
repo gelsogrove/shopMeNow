@@ -501,11 +501,6 @@ export class CustomerRepository implements ICustomerRepository {
         where: { customerId: id },
       })
 
-      // Delete product searches
-      await prisma.productSearch.deleteMany({
-        where: { customerId: id },
-      })
-
       // Delete usage records
       await prisma.usage.deleteMany({
         where: { clientId: id },

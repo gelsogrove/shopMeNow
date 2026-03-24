@@ -650,7 +650,6 @@ export class TrashController {
           
           // ===== OPERATIONAL TABLES =====
           await tx.whatsAppQueue.deleteMany({ where: { workspaceId: wsId } })
-          await tx.productSearch.deleteMany({ where: { workspaceId: wsId } })
           await tx.secureToken.deleteMany({ where: { workspaceId: wsId } })
           await tx.shortUrls.deleteMany({ where: { workspaceId: wsId } })
           await tx.usage.deleteMany({ where: { workspaceId: wsId } })
@@ -749,7 +748,6 @@ export class TrashController {
             
             // ===== OPERATIONAL TABLES =====
             await tx.whatsAppQueue.deleteMany({ where: { workspaceId: wsId } })
-            await tx.productSearch.deleteMany({ where: { workspaceId: wsId } })
             await tx.secureToken.deleteMany({ where: { workspaceId: wsId } })
             await tx.shortUrls.deleteMany({ where: { workspaceId: wsId } })
             await tx.usage.deleteMany({ where: { workspaceId: wsId } })

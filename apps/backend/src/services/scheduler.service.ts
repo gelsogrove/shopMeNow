@@ -74,44 +74,12 @@ export class SchedulerService {
   }
 
   /**
-   * 📊 Cleanup old product search analytics data (older than 6 months)
-   *
-   * Runs weekly to maintain database performance and comply with data retention policy.
-   * Deletes ProductSearch records older than 6 months while maintaining workspace isolation.
-   */
-  private async cleanupOldAnalytics(): Promise<void> {
-    try {
-      const sixMonthsAgo = new Date()
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-
-      const result = await this.prisma.productSearch.deleteMany({
-        where: {
-          createdAt: {
-            lt: sixMonthsAgo,
-          },
-        },
-      })
-
-      if (result.count > 0) {
-        logger.info(
-          `📊 Analytics cleanup: removed ${result.count} product search records older than 6 months`
-        )
-      } else {
-        logger.debug("📊 Analytics cleanup: no old records to remove")
-      }
-    } catch (error) {
-      logger.error("❌ Error cleaning up old analytics data:", error)
-    }
-  }
-
-  /**
    * Inizia il processo di aggiornamento periodico
    */
   public startScheduledTasks(): void {
     // Esegui immediatamente al primo avvio
     this.updateExpiredOffers()
     this.cleanupUrls()
-    this.cleanupOldAnalytics() // 🆕 Cleanup analytics on startup
 
     // Imposta gli intervalli per le esecuzioni successive
     setInterval(() => {
@@ -124,7 +92,6 @@ export class SchedulerService {
 
     // 📊 Cleanup analytics settimanale (ogni 7 giorni)
     setInterval(() => {
-      this.cleanupOldAnalytics()
     }, this.ANALYTICS_CLEANUP_INTERVAL)
 
     logger.info(

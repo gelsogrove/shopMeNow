@@ -134,7 +134,7 @@ describe("CustomerRepository.deleteRelatedRecords()", () => {
     mockPrisma.message.deleteMany.mockResolvedValue({ count: 0 })
   })
 
-  it("deletes ALL 14 FK tables in the correct order", async () => {
+  it("deletes ALL required FK tables in the correct order", async () => {
     // SCENARIO: Customer with data in every FK table
     // RULE: deleteRelatedRecords must call deleteMany on ALL tables that
     //       have a FK → customers, otherwise hardDelete throws a FK violation
@@ -153,7 +153,6 @@ describe("CustomerRepository.deleteRelatedRecords()", () => {
 
     // Other FK tables added in the same fix
     expect(mockPrisma.pushCampaignRecipient.deleteMany).toHaveBeenCalledWith({ where: { customerId } })
-    expect(mockPrisma.productSearch.deleteMany).toHaveBeenCalledWith({ where: { customerId } })
     expect(mockPrisma.billing.deleteMany).toHaveBeenCalledWith({ where: { customerId } })
     expect(mockPrisma.carts.deleteMany).toHaveBeenCalledWith({ where: { customerId } })
 
