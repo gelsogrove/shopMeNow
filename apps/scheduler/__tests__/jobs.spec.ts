@@ -162,66 +162,10 @@ describe('Scheduler Jobs', () => {
       // Note: When no workspaces found, it logs to debug level, not info
       expect(mockLogger.debug).toHaveBeenCalledWith('[WhatsApp Queue] No workspaces with active channel found')
     })
-
-    it.skip('should process pending messages for active workspaces', async () => {
-      const mockWorkspace = {
-        id: 'ws-1',
-        name: 'Test Workspace',
-        whatsappApiKey: 'key-123',
-        whatsappPhoneNumber: '+1234567890',
-        channelStatus: true,
-        debugMode: false,
-      }
-      
-      const mockMessage = {
-        id: 'msg-1',
-        workspaceId: 'ws-1',
-        customerId: 'cust-1',
-        messageContent: 'Hello World',
-        status: 'pending',
-      }
-
-      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
-      mockPrisma.whatsAppQueue.findMany.mockResolvedValue([mockMessage])
-      mockPrisma.whatsAppQueue.update.mockResolvedValue({ ...mockMessage, status: 'sent' })
-
-      await whatsappChannelQueueJob()
-
-      expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledWith({
-        where: { id: 'msg-1' },
-        data: expect.objectContaining({ status: 'sent' }),
-      })
       expect(mockLogger.info).toHaveBeenCalledWith(
         expect.stringContaining('1 sent, 0 blocked')
       )
     })
-
-    it.skip('should deliver WIP messages when channelStatus is false', async () => {
-      const mockWorkspace = {
-        id: 'ws-1',
-        name: 'WIP Workspace',
-        whatsappApiKey: 'key-123',
-        whatsappPhoneNumber: '+1234567890',
-        channelStatus: false,
-        debugMode: false,
-      }
-
-      const mockMessage = {
-        id: 'msg-wip',
-        workspaceId: 'ws-1',
-        customerId: 'cust-1',
-        messageContent: 'Maintenance message',
-        status: 'pending',
-        conversationMessageId: 'conv-1',
-        channel: 'whatsapp',
-      }
-
-      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
-      mockPrisma.whatsAppQueue.findMany.mockResolvedValue([mockMessage])
-      mockPrisma.whatsAppQueue.update.mockResolvedValue({ ...mockMessage, status: 'sent' })
-      mockPrisma.conversationMessage.findUnique.mockResolvedValue({
-        debugInfo: JSON.stringify({ channelDisabled: true }),
-      })
       mockPrisma.conversationMessage.update.mockResolvedValue({})
 
       await whatsappChannelQueueJob()
@@ -242,35 +186,6 @@ describe('Scheduler Jobs', () => {
 
       expect(mockPrisma.whatsAppQueue.update).not.toHaveBeenCalled()
     })
-
-    it.skip('should process multiple messages in parallel using Promise.allSettled', async () => {
-      const mockWorkspace = {
-        id: 'ws-1',
-        name: 'Test Workspace',
-        whatsappApiKey: 'key-123',
-        whatsappPhoneNumber: '+1234567890',
-      }
-      
-      // Multiple messages to different customers
-      const mockMessages = [
-        { id: 'msg-1', workspaceId: 'ws-1', customerId: 'cust-1', messageContent: 'Hello 1', status: 'pending' },
-        { id: 'msg-2', workspaceId: 'ws-1', customerId: 'cust-2', messageContent: 'Hello 2', status: 'pending' },
-        { id: 'msg-3', workspaceId: 'ws-1', customerId: 'cust-3', messageContent: 'Hello 3', status: 'pending' },
-      ]
-
-      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
-      mockPrisma.whatsAppQueue.findMany.mockResolvedValue(mockMessages)
-      mockPrisma.whatsAppQueue.update.mockResolvedValue({ status: 'sent' })
-
-      await whatsappChannelQueueJob()
-
-      // All 3 messages should be processed
-      expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledTimes(3)
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('3 sent, 0 blocked')
-      )
-    })
-
     it.skip('should limit batch size to MAX_MESSAGES_PER_CYCLE (10)', async () => {
       const mockWorkspace = {
         id: 'ws-1',
@@ -563,15 +478,6 @@ describe('Job Runner Service', () => {
       expect.stringContaining('failing-job')
     )
   })
-
-  it.skip('should skip disabled jobs silently', async () => {
-    const { runJob } = require('../src/services/job-runner.service')
-    const mockJob = jest.fn().mockResolvedValue(undefined)
-
-    mockPrisma.schedulerJobStatus.findUnique.mockResolvedValue({
-      isActive: false,
-    })
-
     await runJob('disabled-job', mockJob)
 
     // Current implementation executes job regardless of SchedulerJobStatus (status checks disabled)

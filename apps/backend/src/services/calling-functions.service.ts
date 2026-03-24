@@ -1528,15 +1528,10 @@ export class CallingFunctionsService {
 
 
       try {
-        await prisma.productSearch.create({
-          data: {
-            workspaceId,
-            customerId,
-            query: query.trim(),
-          },
-        })
+        // ❌ REMOVED: product_searches table (was filling DB unnecessarily)
+        // Analytics now handled in-memory via ProductAnalyticsService
 
-        logger.info("✅ Product search saved successfully", {
+        logger.info("🔍 Product search (in-memory only)", {
           workspaceId,
           query: query.substring(0, 30),
         })

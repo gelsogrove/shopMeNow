@@ -38,6 +38,7 @@ export interface ContactEmailData {
   to: string
   subject: string
   message: string
+  html?: string
   metadata?: {
     ip?: string
     userAgent?: string
@@ -798,11 +799,13 @@ startxref
   }
 
   async sendContactEmail(data: ContactEmailData): Promise<boolean> {
+    const textMessage =
+      data.message?.trim() || (data.html ? this.stripHtml(data.html) : "")
     const text = [
       "New contact request",
       "",
       "Message:",
-      data.message,
+      textMessage,
       "",
       `IP: ${data.metadata?.ip || "N/A"}`,
       `User-Agent: ${data.metadata?.userAgent || "N/A"}`,
@@ -813,10 +816,26 @@ startxref
       to: data.to,
       subject: data.subject,
       text,
+      ...(data.html ? { html: data.html } : {}),
     }
 
     await this.getTransporter().sendMail(mailOptions)
     return true
+  }
+
+  private stripHtml(html: string): string {
+    return html
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|tr|h1|h2|h3|li)>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim()
   }
 
   async verifyConnection(): Promise<boolean> {

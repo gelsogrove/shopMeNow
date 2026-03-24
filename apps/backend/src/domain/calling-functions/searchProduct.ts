@@ -79,41 +79,18 @@ export async function searchProduct(
       }
     }
 
-    // prisma imported
+    // ❌ REMOVED: product_searches table (was filling database unnecessarily)
+    // Analytics now handled by in-memory aggregation (see ProductAnalyticsService)
 
-    try {
-      // Salva ricerca nel database
-      const productSearch = await prisma.productSearch.create({
-        data: {
-          query: request.productName.trim(),
-          customerId: request.customerId,
-          workspaceId: request.workspaceId,
-        },
-      })
+    logger.info("🔍 SearchProduct (in-memory only):", {
+      query: request.productName.trim(),
+      productName: request.productName,
+    })
 
-      logger.info("✅ SearchProduct saved:", {
-        searchId: productSearch.id,
-        productName: request.productName,
-      })
-
-      await prisma.$disconnect()
-
-      return {
-        success: true,
-        message: `Ricerca registrata: "${request.productName}"`,
-        searchId: productSearch.id,
-        timestamp: new Date().toISOString(),
-      }
-    } catch (dbError) {
-      logger.error("❌ Database error in SearchProduct:", dbError)
-      await prisma.$disconnect()
-
-      return {
-        success: false,
-        error: dbError instanceof Error ? dbError.message : "Database error",
-        message: "Errore nel salvataggio della ricerca.",
-        timestamp: new Date().toISOString(),
-      }
+    return {
+      success: true,
+      message: `Ricerca registrata: "${request.productName}"`,
+      timestamp: new Date().toISOString(),
     }
   } catch (error) {
     logger.error("❌ Error in SearchProduct:", error)
@@ -122,6 +99,12 @@ export async function searchProduct(
       error: error instanceof Error ? error.message : "Errore interno",
       message: "Errore interno del sistema.",
       timestamp: new Date().toISOString(),
+    }
+  } finally {
+    try {
+      await prisma.$disconnect()
+    } catch (disconnectError) {
+      logger.warn("⚠️ Prisma disconnect failed in SearchProduct", disconnectError)
     }
   }
 }

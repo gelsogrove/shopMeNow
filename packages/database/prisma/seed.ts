@@ -137,7 +137,7 @@ async function main() {
     await prisma.productType.deleteMany()
     await prisma.productCertification.deleteMany()
     await prisma.products.deleteMany()
-    await prisma.productSearch.deleteMany()
+    // await prisma.productSearch.deleteMany() // ❌ REMOVED: table dropped
     await prisma.categories.deleteMany()
     await prisma.sales.deleteMany()
     await prisma.languages.deleteMany()
@@ -2720,14 +2720,9 @@ Can I help with anything else?"`,
           ? customersList[Math.floor(Math.random() * customersList.length)]
           : null
 
-        await prisma.productSearch.create({
-          data: {
-            query: product.name,
-            workspaceId: workspace.id,
-            customerId: customer?.id,
-            createdAt: searchDate,
-          },
-        })
+        // ❌ REMOVED: product_searches table dropped (was filling DB with 40k+ records)
+        // Analytics now handled in-memory via ProductAnalyticsService
+        // await prisma.productSearch.create({ ... })
 
         totalSearches++
       }

@@ -118,35 +118,20 @@ describe("SearchProduct Calling Function", () => {
       expect(result.error).toContain("Nome prodotto vuoto")
     })
 
-    it("should trim whitespace from productName before saving", async () => {
-      mockProductSearchCreate.mockResolvedValue({
-        id: "search-123",
-        query: "Mozzarella",
-      })
-
-      await searchProduct({
+    it("should trim whitespace from productName before logging", async () => {
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "  Mozzarella  ",
       })
 
-      expect(mockProductSearchCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          query: "Mozzarella", // Trimmed
-        }),
-      })
+      expect(result.success).toBe(true)
+      expect(result.message).toContain("Mozzarella") // Trimmed
     })
   })
 
   describe("Successful Search Registration", () => {
-    it("should save search to database successfully", async () => {
-      mockProductSearchCreate.mockResolvedValue({
-        id: "search-123",
-        query: "Panettone italiano",
-        customerId: "customer-123",
-        workspaceId: "workspace-456",
-      })
-
+    it("should log search successfully without database write", async () => {
       const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
@@ -154,36 +139,24 @@ describe("SearchProduct Calling Function", () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.searchId).toBe("search-123")
       expect(result.message).toContain("Panettone italiano")
       expect(result.timestamp).toBeDefined()
+      // NOTE: No database write anymore - search is only logged in memory
     })
 
-    it("should call prisma with correct parameters", async () => {
-      mockProductSearchCreate.mockResolvedValue({
-        id: "search-123",
-      })
-
-      await searchProduct({
+    it("should return success without calling database", async () => {
+      const result = await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Vino rosso",
       })
 
-      expect(mockProductSearchCreate).toHaveBeenCalledWith({
-        data: {
-          query: "Vino rosso",
-          customerId: "customer-123",
-          workspaceId: "workspace-456",
-        },
-      })
+      expect(result.success).toBe(true)
+      expect(mockProductSearchCreate).not.toHaveBeenCalled()
+      // NOTE: productSearch table removed - no DB writes for search tracking
     })
 
     it("should disconnect from prisma after operation", async () => {
-      mockProductSearchCreate.mockResolvedValue({
-        id: "search-123",
-      })
-
       await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
@@ -195,27 +168,20 @@ describe("SearchProduct Calling Function", () => {
   })
 
   describe("Error Handling", () => {
-    it("should handle database errors gracefully", async () => {
-      mockProductSearchCreate.mockRejectedValue(
-        new Error("Database connection failed")
-      )
-
+    it("should handle validation errors gracefully", async () => {
       const result = await searchProduct({
-        customerId: "customer-123",
+        customerId: "", // Empty string is validation error
         workspaceId: "workspace-456",
         productName: "Mozzarella",
       })
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain("Database connection failed")
-      expect(result.message).toContain("Errore nel salvataggio")
+      expect(result.error).toBe("Parametri richiesti mancanti")
     })
 
-    it("should disconnect from prisma even on error", async () => {
-      mockProductSearchCreate.mockRejectedValue(new Error("Database error"))
-
+    it("should disconnect on validation errors", async () => {
       await searchProduct({
-        customerId: "customer-123",
+        customerId: "",
         workspaceId: "workspace-456",
         productName: "Mozzarella",
       })
@@ -224,10 +190,8 @@ describe("SearchProduct Calling Function", () => {
     })
 
     it("should include timestamp in error response", async () => {
-      mockProductSearchCreate.mockRejectedValue(new Error("Database error"))
-
       const result = await searchProduct({
-        customerId: "customer-123",
+        customerId: "",
         workspaceId: "workspace-456",
         productName: "Mozzarella",
       })
@@ -254,11 +218,6 @@ describe("SearchProduct Calling Function", () => {
     })
 
     it("should register search for products that do not exist", async () => {
-      mockProductSearchCreate.mockResolvedValue({
-        id: "search-124",
-        query: "Prodotto non esistente",
-      })
-
       // This is a valid use case - we track searches even for non-existent products
       const result = await searchProduct({
         customerId: "customer-123",
@@ -267,7 +226,9 @@ describe("SearchProduct Calling Function", () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.searchId).toBe("search-124")
+      expect(result.message).toContain("Prodotto non esistente")
+      expect(result.searchId).toBeUndefined()
+      expect(mockProductSearchCreate).not.toHaveBeenCalled()
     })
   })
 })

@@ -147,44 +147,29 @@ describe("WorkspaceId Filter in Calling Functions", () => {
       expect(result.error).toContain("Parametri richiesti mancanti")
     })
 
-    it("should save search with workspaceId", async () => {
-      mockProductSearchCreate.mockResolvedValue({
-        id: "search-123",
-        query: "Parmigiano",
-        workspaceId,
-      })
-
+    it("should accept valid workspaceId", async () => {
       const request: SearchProductRequest = {
         customerId,
         workspaceId,
         productName: "Parmigiano",
       }
 
-      await searchProduct(request)
+      const result = await searchProduct(request)
 
-      expect(mockProductSearchCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          workspaceId,
-        }),
-      })
+      expect(result.success).toBe(true)
+      expect(mockProductSearchCreate).not.toHaveBeenCalled()
+      // NOTE: productSearch table removed - no DB writes
     })
 
-    it("should include workspaceId in saved search data", async () => {
-      mockProductSearchCreate.mockResolvedValue({ id: "search-1" })
-
-      await searchProduct({
+    it("should validate workspaceId is provided", async () => {
+      const result = await searchProduct({
         customerId,
-        workspaceId,
+        workspaceId: "",
         productName: "Vino",
       })
 
-      expect(mockProductSearchCreate).toHaveBeenCalledWith({
-        data: {
-          query: "Vino",
-          customerId,
-          workspaceId,
-        },
-      })
+      expect(result.success).toBe(false)
+      expect(result.error).toContain("Parametri richiesti mancanti")
     })
   })
 

@@ -146,7 +146,7 @@ model Workspace {
   usage                  Usage[]
   whatsappSettings       WhatsappSettings?
   adminSessions          AdminSession[]
-  productSearches        ProductSearch[]
+  // productSearches        ProductSearch[] // ❌ REMOVED: table dropped
   searchConversations    SearchConversations[]
   certifications         Certification[]
   types                  Type[]
@@ -435,7 +435,7 @@ model Customers {
   billings                      Billing[]
   agentConversationLogs         AgentConversationLog[]
   conversationMessages          ConversationMessage[]
-  productSearches               ProductSearch[]
+  // productSearches               ProductSearch[] // ❌ REMOVED: table dropped
   whatsappQueue                 WhatsAppQueue[]
   pushCampaignRecipients        PushCampaignRecipient[] // Campaign recipients for this customer
 
@@ -940,22 +940,9 @@ model SecureToken {
   @@map("secure_tokens")
 }
 
-model ProductSearch {
-  id          String     @id @default(uuid())
-  query       String // Nome del prodotto ricercato (es: "Panettone italiano")
-  workspaceId String
-  customerId  String? // Opzionale se ricerca anonima
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id])
-  customer    Customers? @relation(fields: [customerId], references: [id])
-
-  @@index([workspaceId])
-  @@index([customerId])
-  @@index([createdAt])
-  @@index([query])
-  @@map("product_searches")
-}
+// ❌ REMOVED: ProductSearch model (table dropped - was filling DB with 40k+ duplicate logs)
+// Analytics now handled in-memory via ProductAnalyticsService
+// model ProductSearch { ... }
 
 model Services {
   id          String       @id @default(cuid())

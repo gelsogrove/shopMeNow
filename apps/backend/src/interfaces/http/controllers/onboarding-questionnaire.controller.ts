@@ -365,7 +365,8 @@ export class OnboardingQuestionnaireController {
     await this.emailService.sendContactEmail({
       to: adminEmail,
       subject: `[eChatbot] New questionnaire from ${record.fullName || "anonymous"}`,
-      message: html,
+      message: `New questionnaire submission from ${record.fullName || "anonymous"}`,
+      html,
     })
   }
 }
