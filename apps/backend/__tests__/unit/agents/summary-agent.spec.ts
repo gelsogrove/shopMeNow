@@ -55,15 +55,17 @@ Agente: {{agentName}}
   })
 
   describe("generateSummary()", () => {
-    it("should generate summary from conversation messages", async () => {
-      // Mock successful OpenRouter API response
+    it("should generate single-sentence summary from conversation", async () => {
+      // SCENARIO: Valid conversation with customer request
+      // RULE: Summary MUST be 1 sentence starting with "L'utente"
+      // Mock successful OpenRouter API response with new format
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
           choices: [
             {
               message: {
-                content: "CLIENTE: Test Customer, +39123456789\nRICHIESTA PRINCIPALE: Problema con ordine\nURGENZA: Media"
+                content: "L'utente si lamenta del ritardo nella consegna dell'ordine #1234"
               }
             }
           ]
@@ -74,16 +76,21 @@ Agente: {{agentName}}
         conversationHistory: [
           {
             role: "customer",
-            content: "Ho un problema con il mio ordine",
+            content: "Il mio ordine #1234 è in ritardo di 5 giorni!",
             createdAt: new Date("2024-01-10T10:00:00Z")
           },
           {
             role: "assistant",
-            content: "Mi dispiace sentire del problema. Può fornirmi il numero dell'ordine?",
+            content: "Mi dispiace per il ritardo. Controllo subito la situazione.",
             createdAt: new Date("2024-01-10T10:01:00Z")
+          },
+          {
+            role: "customer",
+            content: "Non è la prima volta che succede!",
+            createdAt: new Date("2024-01-10T10:02:00Z")
           }
         ],
-        customerName: "Test Customer",
+        customerName: "Mario Rossi",
         agentName: "eChatbot Assistant"
       }
 
@@ -92,8 +99,9 @@ Agente: {{agentName}}
 
       // Verify
       expect(result.success).toBe(true)
-      expect(result.summary).toContain("Test Customer")
-      expect(result.summary).toContain("Problema con ordine")
+      expect(result.summary).toBe("L'utente si lamenta del ritardo nella consegna dell'ordine #1234")
+      expect(result.summary).toMatch(/^L'utente/) // MUST start with "L'utente"
+      expect(result.summary?.length).toBeLessThanOrEqual(150) // Max 150 characters
       expect(mockFetch).toHaveBeenCalledWith(
         "https://openrouter.ai/api/v1/chat/completions",
         expect.objectContaining({
@@ -107,6 +115,8 @@ Agente: {{agentName}}
     })
 
     it("should handle empty conversation history", async () => {
+      // SCENARIO: No messages in conversation
+      // RULE: Must return error, NOT call API
       const request = {
         conversationHistory: [],
         customerName: "Test Customer"
@@ -119,6 +129,184 @@ Agente: {{agentName}}
       expect(result.success).toBe(false)
       expect(result.error).toBe("No conversation history available")
       expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it("should generate fallback 'Riassunto non disponibile' for unclear conversations", async () => {
+      // SCENARIO: LLM returns "Riassunto non disponibile" for unclear conversation
+      // RULE: This is a VALID response when conversation is too vague
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: "Riassunto non disponibile"
+              }
+            }
+          ]
+        })
+      } as Response)
+
+      const request = {
+        conversationHistory: [
+          {
+            role: "customer",
+            content: "Ciao",
+            createdAt: new Date()
+          },
+          {
+            role: "assistant",
+            content: "Ciao! Come posso aiutarti?",
+            createdAt: new Date()
+          }
+        ],
+        customerName: "Cliente Vago"
+      }
+
+      // Execute
+      const result = await summaryAgent.generateSummary(request)
+
+      // Verify
+      expect(result.success).toBe(true)
+      expect(result.summary).toBe("Riassunto non disponibile")
+    })
+
+    it("should generate 'L'utente vuole' pattern for purchase intent", async () => {
+      // SCENARIO: Customer wants to purchase specific product
+      // RULE: Use pattern "L'utente vuole [azione]"
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: "L'utente vuole acquistare un appartamento da 3 locali in zona Navigli"
+              }
+            }
+          ]
+        })
+      } as Response)
+
+      const request = {
+        conversationHistory: [
+          {
+            role: "customer",
+            content: "Cerco un appartamento con 3 locali",
+            createdAt: new Date()
+          },
+          {
+            role: "assistant",
+            content: "In quale zona?",
+            createdAt: new Date()
+          },
+          {
+            role: "customer",
+            content: "Zona Navigli",
+            createdAt: new Date()
+          }
+        ],
+        customerName: "Marco Verdi"
+      }
+
+      // Execute
+      const result = await summaryAgent.generateSummary(request)
+
+      // Verify
+      expect(result.success).toBe(true)
+      expect(result.summary).toMatch(/^L'utente vuole/)
+      expect(result.summary).toContain("appartamento")
+    })
+
+    it("should generate 'L'utente non è riuscito' pattern for failed actions", async () => {
+      // SCENARIO: Customer unable to complete action (payment, registration, etc.)
+      // RULE: Use pattern "L'utente non è riuscito a [azione]"
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: "L'utente non è riuscito a completare il pagamento con carta di credito"
+              }
+            }
+          ]
+        })
+      } as Response)
+
+      const request = {
+        conversationHistory: [
+          {
+            role: "customer",
+            content: "Il pagamento con carta non funziona",
+            createdAt: new Date()
+          },
+          {
+            role: "assistant",
+            content: "Che errore riceve?",
+            createdAt: new Date()
+          },
+          {
+            role: "customer",
+            content: "Dice transazione rifiutata",
+            createdAt: new Date()
+          }
+        ],
+        customerName: "Luca Bianchi"
+      }
+
+      // Execute
+      const result = await summaryAgent.generateSummary(request)
+
+      // Verify
+      expect(result.success).toBe(true)
+      expect(result.summary).toMatch(/^L'utente non è riuscito/)
+      expect(result.summary).toContain("pagamento")
+    })
+
+    it("should generate 'L'utente cerca' pattern for information requests", async () => {
+      // SCENARIO: Customer looking for information about products/services
+      // RULE: Use pattern "L'utente cerca [informazioni su cosa]"
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: "L'utente cerca informazioni sui prezzi degli immobili in centro"
+              }
+            }
+          ]
+        })
+      } as Response)
+
+      const request = {
+        conversationHistory: [
+          {
+            role: "customer",
+            content: "Vorrei sapere quanto costano gli immobili in centro",
+            createdAt: new Date()
+          },
+          {
+            role: "assistant",
+            content: "Dipende dalla zona e dalla dimensione",
+            createdAt: new Date()
+          },
+          {
+            role: "customer",
+            content: "Zona Duomo, 2 locali",
+            createdAt: new Date()
+          }
+        ],
+        customerName: "Sofia Rossi"
+      }
+
+      // Execute
+      const result = await summaryAgent.generateSummary(request)
+
+      // Verify
+      expect(result.success).toBe(true)
+      expect(result.summary).toMatch(/^L'utente cerca/)
+      expect(result.summary).toContain("prezzi")
     })
 
     it("should handle OpenRouter API errors", async () => {
@@ -286,13 +474,13 @@ Agente: {{agentName}}
       // Execute
       const result = await summaryAgent.generateSummary(request)
 
-      // Verify LLM configuration
+      // Verify LLM configuration (NEW: optimized for single-sentence summaries)
       const apiCall = mockFetch.mock.calls[0]
       const requestBody = JSON.parse(apiCall[1]?.body as string)
 
       expect(requestBody.model).toBe("openai/gpt-4o-mini")
-      expect(requestBody.temperature).toBe(0.5)
-      expect(requestBody.max_tokens).toBe(500)
+      expect(requestBody.temperature).toBe(0.3) // LOW for consistent factual summaries
+      expect(requestBody.max_tokens).toBe(50) // 1 sentence: max 150 chars (~30-40 tokens)
       expect(requestBody.messages).toHaveLength(2) // system + user
     })
 

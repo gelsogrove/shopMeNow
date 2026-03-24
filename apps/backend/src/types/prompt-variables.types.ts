@@ -75,21 +75,39 @@ export interface PromptVariables {
   // SALES AGENT VARIABLES (from customer.sales relation)
   // ══════════════════════════════════════════════════════════════
 
-  /** Nome agente commerciale assegnato
-   * Template: {{agentName}}
+  /** 🆕 Nome agente commerciale assegnato (STANDARD)
+   * Template: {{salesAgentName}}
    * Source: customer.sales?.firstName + lastName || 'Non assegnato'
+   * Used when: workspace.hasSalesAgents = true AND customer.salesId exists
+   */
+  salesAgentName: string
+
+  /** 🆕 Telefono agente commerciale (STANDARD)
+   * Template: {{salesAgentPhone}}
+   * Source: customer.sales?.phone || 'N/A'
+   * Used when: workspace.hasSalesAgents = true AND customer.salesId exists
+   */
+  salesAgentPhone: string
+
+  /** 🆕 Email agente commerciale (STANDARD)
+   * Template: {{salesAgentEmail}}
+   * Source: customer.sales?.email || 'N/A'
+   * Used when: workspace.hasSalesAgents = true AND customer.salesId exists
+   */
+  salesAgentEmail: string
+
+  /** @deprecated Use salesAgentName instead (backward compatibility)
+   * Template: {{agentName}}
    */
   agentName: string
 
-  /** Telefono agente commerciale
+  /** @deprecated Use salesAgentPhone instead (backward compatibility)
    * Template: {{agentPhone}}
-   * Source: customer.sales?.phone || 'N/A'
    */
   agentPhone: string
 
-  /** Email agente commerciale
+  /** @deprecated Use salesAgentEmail instead (backward compatibility)
    * Template: {{agentEmail}}
-   * Source: customer.sales?.email || 'N/A'
    */
   agentEmail: string
 
@@ -366,6 +384,11 @@ export const VARIABLE_ALIASES: Record<string, keyof PromptVariables> = {
   'email': 'customerEmail',
   'discountUser': 'customerDiscount',
 
+  // Sales agent aliases (backward compatibility)
+  'agentName': 'salesAgentName',
+  'agentPhone': 'salesAgentPhone',
+  'agentEmail': 'salesAgentEmail',
+
   // Order aliases
   'lastordercode': 'lastOrderCode',
 
@@ -408,6 +431,11 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   companyName: 'Shop',
   customerName: 'Cliente',
   languageUser: 'ITALIANO',
+  // Sales agent - standard names
+  salesAgentName: 'Non assegnato',
+  salesAgentPhone: 'N/A',
+  salesAgentEmail: 'N/A',
+  // Sales agent - legacy names (backward compatibility)
   agentName: 'Non assegnato',
   agentPhone: 'N/A',
   agentEmail: 'N/A',

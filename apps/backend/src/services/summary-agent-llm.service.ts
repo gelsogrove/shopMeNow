@@ -132,11 +132,11 @@ export class SummaryAgentLLM {
               },
               {
                 role: "user",
-                content: `Genera un riassunto della conversazione con ${request.customerName}. La conversazione contiene ${request.conversationHistory.length} messaggi dell'ultima ora.`,
+                content: `Analizza la conversazione con ${request.customerName} (${request.conversationHistory.length} messaggi) e genera UNA SINGOLA FRASE che inizi con "L'utente" oppure "Riassunto non disponibile".`,
               },
             ],
-            temperature: 0.5, // Balanced between creative and deterministic
-            max_tokens: 500, // ~250 words
+            temperature: 0.3, // Low temperature for consistent, factual summaries
+            max_tokens: 50, // 1 sentence: max 150 characters (~30-40 tokens)
           }),
         }
       )

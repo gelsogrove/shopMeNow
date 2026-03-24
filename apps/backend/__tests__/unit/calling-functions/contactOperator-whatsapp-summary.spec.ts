@@ -195,8 +195,8 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
   })
 
   it("should include fallback message list when summary generation fails", async () => {
-    // SCENARIO: SummaryAgentLLM fails → fallback to raw message list.
-    // RULE: Even with fallback, the WhatsApp notification should contain message history.
+    // SCENARIO: SummaryAgentLLM fails → fallback to "Riassunto non disponibile"
+    // RULE: Task 2 requirement - NO message list fallback, only "Riassunto non disponibile"
     mockGenerateSummary.mockRejectedValue(new Error("LLM Service unavailable"))
 
     const result = await contactOperator({
@@ -210,19 +210,19 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     const createCall = mockCreate.mock.calls[0][0]
     const messageContent = createCall.data.messageContent
 
-    // Should contain fallback message list (first 3 lines, max 250 chars)
-    expect(messageContent).toContain("Ho un problema con il mio ordine")
-    expect(messageContent).toContain("Capisco, posso aiutarti")
-    // Should NOT be empty
-    expect(messageContent.length).toBeGreaterThan(100)
-    // Verify compact format structure
-    expect(messageContent).toContain("*Riassunto*")
+    // Should contain fallback text (NOT message list)
+    expect(messageContent).toContain("Riassunto non disponibile")
+    // Should NOT contain raw messages (Andrea's requirement: "non voglio vedere gli ultimi messaggi")
+    expect(messageContent).not.toContain("Ho un problema con il mio ordine")
+    // Should still have operator instructions
     expect(messageContent).toContain("Scrivi END quando hai finito")
+    // Should contain customer details
+    expect(messageContent).toContain("Mario Rossi")
   })
 
   it("should include 'no messages' text when session has no recent messages", async () => {
     // SCENARIO: Session exists but no messages in last hour.
-    // RULE: Summary should say "no recent conversation" not be empty.
+    // RULE: Summary should show "Riassunto non disponibile" (Task 2 requirement)
     mockFindMany.mockResolvedValue([]) // No messages
 
     const result = await contactOperator({
@@ -236,8 +236,8 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     const createCall = mockCreate.mock.calls[0][0]
     const messageContent = createCall.data.messageContent
 
-    // Should contain the "no messages" fallback
-    expect(messageContent).toContain("Nessuna conversazione recente")
+    // Should contain the "Riassunto non disponibile" fallback (consistent with failed summary)
+    expect(messageContent).toContain("Riassunto non disponibile")
   })
 
   it("should send to operator WhatsApp number when customer has no assigned agent", async () => {

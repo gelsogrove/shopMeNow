@@ -159,6 +159,7 @@ export async function contactOperator(
           hasHumanSupport: true,
           humanSupportInstructions: true, // ✅ Message to send to customer when escalating
           frustrationEscalationInstructions: true, // 🎯 Triggers for when to escalate (not the message!)
+          hasSalesAgents: true, // 🆕 Sales agent routing enabled?
           whatsappSettings: {
             select: { adminEmail: true },
           },
@@ -270,15 +271,17 @@ export async function contactOperator(
                   throw new Error("Summary generated but empty")
                 }
 
+                // 🎯 NEW FORMAT: Single sentence summary (per Andrea's requirements)
+                // Format: "L'utente cerca/vuole/si lamenta..." or "Riassunto non disponibile"
                 chatSummary = `
+📋 Riassunto conversazione (${messages.length} messaggi ultima ora):
+${finalSummary}
+
 Cliente: ${customer.name}
 Telefono: ${customer.phone}
 Email: ${customer.email || "N/A"}
 Data richiesta: ${new Date().toLocaleString("it-IT")}
-${request.reason ? `\nMotivo: ${request.reason}` : ""}
-
-📋 Riassunto conversazione (ultima ora - ${messages.length} messaggi):
-${finalSummary}
+${request.reason ? `Motivo: ${request.reason}` : ""}
                 `.trim()
 
                 // 📧 Store generated summary for debug timeline
@@ -293,47 +296,38 @@ ${finalSummary}
                 )
               }
             } catch (summaryError) {
-              // Fallback to raw message list if summary generation fails
+              // Fallback: Use "Riassunto non disponibile" if summary generation fails
               logger.warn(
-                "⚠️ [contactOperator] Summary generation failed, falling back to raw history:",
+                "⚠️ [contactOperator] Summary generation failed, using fallback:",
                 summaryError
               )
 
-              const messageList = messages
-                .map((msg, idx) => {
-                  const role = msg.role === "user" ? "Cliente" : "Bot"
-                  const timestamp = new Date(msg.createdAt).toLocaleString(
-                    "it-IT"
-                  )
-                  return `${idx + 1}. [${timestamp}] ${role}: ${msg.content}`
-                })
-                .join("\n\n")
-
               chatSummary = `
+📋 Riassunto conversazione (${messages.length} messaggi ultima ora):
+Riassunto non disponibile
+
 Cliente: ${customer.name}
 Telefono: ${customer.phone}
 Email: ${customer.email || "N/A"}
 Data richiesta: ${new Date().toLocaleString("it-IT")}
-${request.reason ? `\nMotivo: ${request.reason}` : ""}
-
-📜 Messaggi conversazione (ultima ora - ${messages.length} messaggi):
-${messageList || "Nessun messaggio disponibile"}
+${request.reason ? `Motivo: ${request.reason}` : ""}
               `.trim()
             }
           } else {
-            // No messages in last hour
+            // No messages in last hour - use fallback
             logger.warn(
               "⚠️ No messages found in last hour for customer:",
               customer.id
             )
             chatSummary = `
+📋 Riassunto conversazione (0 messaggi ultima ora):
+Riassunto non disponibile
+
 Cliente: ${customer.name}
 Telefono: ${customer.phone}
 Email: ${customer.email || "N/A"}
 Data richiesta: ${new Date().toLocaleString("it-IT")}
-${request.reason ? `\nMotivo: ${request.reason}` : ""}
-
-ℹ️ Nessuna conversazione recente nell'ultima ora.
+${request.reason ? `Motivo: ${request.reason}` : ""}
             `.trim()
           }
 
@@ -356,11 +350,32 @@ ${request.reason ? `\nMotivo: ${request.reason}` : ""}
             } = require("../../application/services/email.service")
             const emailService = new EmailService()
 
-            // 🎯 Priority: agent email → workspace operatorEmail → adminEmail
-            const targetEmail =
-              customer.sales?.email ||
-              workspace.operatorEmail ||
-              workspace.whatsappSettings?.adminEmail
+            // 🎯 SALES AGENT ROUTING LOGIC
+            // Priority based on workspace.hasSalesAgents flag:
+            // 1. If hasSalesAgents = false → use general operator email
+            // 2. If hasSalesAgents = true AND customer has salesId → use sales agent email
+            // 3. Otherwise → fallback to general operator email
+            let targetEmail: string | null = null
+
+            if (workspace.hasSalesAgents && customer.salesId && customer.sales?.email) {
+              // ✅ Sales agent routing enabled AND customer has assigned agent
+              targetEmail = customer.sales.email
+              logger.info("📧 [contactOperator] Routing to assigned sales agent:", {
+                salesId: customer.salesId,
+                salesEmail: targetEmail,
+                customerPhone: customer.phone,
+              })
+            } else {
+              // ✅ Fallback to general operator
+              targetEmail = workspace.operatorEmail || workspace.whatsappSettings?.adminEmail
+              logger.info("📧 [contactOperator] Routing to general operator:", {
+                operatorEmail: targetEmail,
+                reason: workspace.hasSalesAgents 
+                  ? "No sales agent assigned to customer"
+                  : "Sales agent routing disabled",
+              })
+            }
+
             const targetName = "Operatore"
 
             logger.info("✅ [contactOperator] Sending email to operator:", {

@@ -167,7 +167,14 @@ export class PromptVariableBuilder {
       languageUser: this.getLanguageDisplayName(customer?.language || workspace?.language || 'en'),
       pushNotificationsConsent: customer?.push_notifications_consent ?? undefined,
 
-      // Sales agent variables
+      // Sales agent variables (STANDARD names)
+      salesAgentName: customer?.sales
+        ? `${customer.sales.firstName || ''} ${customer.sales.lastName || ''}`.trim() || VARIABLE_DEFAULTS.salesAgentName!
+        : VARIABLE_DEFAULTS.salesAgentName!,
+      salesAgentPhone: customer?.sales?.phone || VARIABLE_DEFAULTS.salesAgentPhone!,
+      salesAgentEmail: customer?.sales?.email || VARIABLE_DEFAULTS.salesAgentEmail!,
+
+      // Sales agent variables (LEGACY names - backward compatibility)
       agentName: customer?.sales
         ? `${customer.sales.firstName || ''} ${customer.sales.lastName || ''}`.trim() || VARIABLE_DEFAULTS.agentName!
         : VARIABLE_DEFAULTS.agentName!,

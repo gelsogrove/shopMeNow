@@ -105,6 +105,7 @@ describe("ContactOperator Email Notifications", () => {
     operatorEmail: "support@bellitalia.com",
     operatorWhatsappNumber: null,
     hasHumanSupport: true,
+    hasSalesAgents: true, // ✅ Enable sales agent routing
     whatsappSettings: {
       adminEmail: "admin@bellitalia.com",
     },
