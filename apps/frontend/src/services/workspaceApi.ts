@@ -78,6 +78,7 @@ export interface Workspace {
   widgetUseChannelLogo?: boolean
   widgetLogoUrl?: string
   widgetLogoKey?: string
+  channelType?: 'WHATSAPP' | 'WIDGET' | null
 }
 
 export interface ChecklistAction {

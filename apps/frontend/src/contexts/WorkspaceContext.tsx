@@ -85,6 +85,7 @@ export interface Workspace {
   businessType?: string // Business sector (e.g., "food", "fashion", "electronics")
   registrationPage?: string
   requireManualApproval?: boolean
+  channelType?: 'WHATSAPP' | 'WIDGET' | null
 }
 
 interface WorkspaceContextType {
