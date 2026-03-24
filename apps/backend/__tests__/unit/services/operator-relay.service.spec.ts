@@ -30,6 +30,15 @@ jest.mock("../../../src/application/services/secure-token.service", () => ({
   })),
 }))
 
+jest.mock("../../../src/application/agents/TranslationAgent", () => ({
+  TranslationAgent: jest.fn().mockImplementation(() => ({
+    process: jest.fn().mockResolvedValue({
+      success: true,
+      message: "Your position in the queue has been updated.",
+    }),
+  })),
+}))
+
 // ============================================================================
 // MOCK PRISMA
 // ============================================================================
