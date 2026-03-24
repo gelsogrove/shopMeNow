@@ -660,7 +660,11 @@ INPUT: customerMessage, customer, workspace, chatSession
 │  - {{faqs}} → FAQ knowledge base                            │
 │  - {{lastOrderCode}} → customer's last order                │
 │  - {{cartContents}} → current cart items                    │
+│  - {{salesAgentName}} → assigned sales agent name           │
+│  - {{salesAgentEmail}} → assigned sales agent email         │
+│  - {{salesAgentPhone}} → assigned sales agent phone         │
 │  - IF sellsProductsAndServices=false → skip ecommerce vars  │
+│  - IF customer has no sales agent → sales vars are empty    │
 └──────────────────────────────────────────────────────────────┘
                            │
                            ▼
@@ -909,7 +913,21 @@ INPUT: customerMessage, customer, workspace, chatSession
    - Set customer.activeChatbot=false (disable AI)
    - Set customer.operatorRequestedAt=NOW
    - Set customer.operatorQueuePosition=NEXT_AVAILABLE
-   - notification to workspace.operatorEmail (if operatorContactMethod='email')
+   
+   🆕 SALES AGENT ROUTING:
+   - IF workspace.hasSalesAgents=true AND customer.salesId exists:
+     → Email sent to customer.sales.email (priority routing)
+   - ELSE:
+     → Email sent to workspace.operatorEmail (general operator)
+   
+   🆕 CONVERSATION SUMMARY AI:
+   - SummaryAgentLLM generates 1-sentence intelligent summary
+   - Patterns: "L'utente vuole/cerca/si lamenta/non è riuscito..."
+   - Fallback: "Riassunto non disponibile" (never shows message list)
+   - LLM Config: temperature=0.3, max_tokens=50 (90% cost reduction)
+   - Summary shown at TOP of notification (most important info first)
+   
+   - notification to target email (if operatorContactMethod='email')
      OR add to WhatsApp queue for workspace.operatorWhatsappNumber
 5. Customer in queue → AI sends: "Sei in coda. Un operatore ti contatterà a breve."
 6. Operator panel (Frontend /operator-queue):
@@ -928,6 +946,8 @@ INPUT: customerMessage, customer, workspace, chatSession
 - Send manual messages (text, images, documents)
 - Transfer to another operator
 - End conversation (re-enable AI)
+- 🆕 **AI-generated conversation summary** in notification email (1 professional sentence)
+- 🆕 **Priority routing** to assigned sales agent when available
 
 ---
 
