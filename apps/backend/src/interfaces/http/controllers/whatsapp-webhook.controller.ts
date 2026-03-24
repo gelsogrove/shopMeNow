@@ -238,6 +238,7 @@ export class WhatsAppWebhookController {
       let whatsappMessageId: string
       let workspaceId: string | undefined
       let messageTimestamp: number | undefined
+      let isPlayground: boolean = false // 🧪 Playground flag (only from frontend simulator)
 
       // Check if it's WhatsApp API format
       const entry = data.entry?.[0]
@@ -277,6 +278,7 @@ export class WhatsAppWebhookController {
         messageText = data.message
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from standard format
+        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
 
         logger.info(
           "[WEBHOOK] 📨 Frontend simulator format (standard) detected",
@@ -284,6 +286,7 @@ export class WhatsAppWebhookController {
             from: phoneNumber,
             messageLength: messageText.length,
             workspaceId: data.workspaceId,
+            isPlayground,
           }
         )
       } else if (extractedMessage && data.phoneNumber) {
@@ -293,11 +296,13 @@ export class WhatsAppWebhookController {
         messageText = extractedMessage
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from weird format
+        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
 
         logger.info("[WEBHOOK] 📨 Frontend simulator format (weird) detected", {
           from: phoneNumber,
           messageLength: messageText.length,
           workspaceId: data.workspaceId,
+          isPlayground,
         })
       } else {
         // Not a message event (could be status update, etc.)

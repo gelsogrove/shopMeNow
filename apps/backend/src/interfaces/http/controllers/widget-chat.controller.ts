@@ -1121,8 +1121,6 @@ export class WidgetChatController {
         detectedFromBrowser: normalizedBrowserLang || '(none)',
         finalLanguage: requestedLanguage || '(fallback to workspace/customer)',
         languagePriority: explicitLanguage ? 'explicit' : detectedLanguageFromPhone ? 'phone' : normalizedBrowserLang ? 'browser' : 'fallback',
-
-        isPlayground: isPlayground === true, // 🧪 For billing skip only (not WIP bypass!)
       })
 
       // Validate visitorId format
