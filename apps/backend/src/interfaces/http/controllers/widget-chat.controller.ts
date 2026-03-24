@@ -1074,7 +1074,7 @@ export class WidgetChatController {
         })
       }
 
-      const { visitorId, message, sessionId, language, phoneNumber, isPlayground, customerId } = validation.data
+      const { visitorId, message, sessionId, language, phoneNumber, customerId } = validation.data
       
       // 🌍 Language detection priority:
       // 1. Explicit language from widget body/API (if provided) - HIGHEST PRIORITY! ✅
@@ -1121,7 +1121,8 @@ export class WidgetChatController {
         detectedFromBrowser: normalizedBrowserLang || '(none)',
         finalLanguage: requestedLanguage || '(fallback to workspace/customer)',
         languagePriority: explicitLanguage ? 'explicit' : detectedLanguageFromPhone ? 'phone' : normalizedBrowserLang ? 'browser' : 'fallback',
-        isPlayground: isPlayground === true
+
+        isPlayground: isPlayground === true, // 🧪 For billing skip only (not WIP bypass!)
       })
 
       // Validate visitorId format
@@ -1285,9 +1286,9 @@ export class WidgetChatController {
 
       logger.info("✅ Workspace validation passed")
 
-      // 💰 SUBSCRIPTION + CREDIT CHECK (skip for playground OR debugMode)
-      // RULE: Billing ONLY for widget/WhatsApp when debugMode=false AND NOT playground
-      if (isPlayground !== true && workspace.debugMode !== true) {
+      // 💰 SUBSCRIPTION + CREDIT CHECK (skip for debugMode)
+      // RULE: Billing ONLY for widget/WhatsApp when debugMode=false
+      if (workspace.debugMode !== true) {
         const workspaceAccessService = new WorkspaceAccessService(prisma)
         const accessResult = await workspaceAccessService.canProcessMessages(
           workspaceId,
@@ -1317,18 +1318,14 @@ export class WidgetChatController {
           })
         }
       } else {
-        const skipReason = isPlayground === true ? "Playground mode" : "Debug mode"
-        logger.info(`[WIDGET-BILLING] 🧪 ${skipReason} - skipping billing/access checks`, {
-          isPlayground,
+        logger.info("[WIDGET-BILLING] 🧪 Debug mode - skipping billing/access checks", {
           debugMode: workspace.debugMode,
         })
       }
 
       // 🛠️ DEBUG MODE (WIP) - after security checks, return WIP message
-      // ⚠️ BYPASS: isPlayground=true (backoffice admin testing) ignores WIP → chatbot responds normally
-      // 🧪 This allows admins to test chatbot even when debugMode=true (channel in WIP)
-      if (workspace.debugMode === true && isPlayground !== true) {
-        logger.info("🛠️ Widget WIP - debug mode (real customer blocked)", {
+      if (workspace.debugMode === true) {
+        logger.info("🛠️ Widget WIP - debug mode", {
           workspaceId,
           visitorId,
           debugMode: workspace.debugMode,
@@ -1349,15 +1346,12 @@ export class WidgetChatController {
         })
       }
 
-      // 🚫 channelStatus=false with debugMode=true - block UNLESS playground
-      // ⚠️ PUBLIC: channelStatus=false → WIP message
-      // 🧪 PLAYGROUND: channelStatus=false + debugMode=true → chatbot works (admin testing)
-      if (!workspace.channelStatus && isPlayground !== true) {
-        logger.info("🛠️ Widget WIP - channel disabled (real customer blocked)", {
+      // 🚫 channelStatus=false → WIP message
+      if (!workspace.channelStatus) {
+        logger.info("🛠️ Widget WIP - channel disabled", {
           workspaceId,
           visitorId,
           channelStatus: workspace.channelStatus,
-          debugMode: workspace.debugMode,
         })
 
         const rawLanguage = requestedLanguage || workspace.defaultLanguage || "ENG"
@@ -1371,14 +1365,6 @@ export class WidgetChatController {
           success: true,
           status: "wip",
           response: wipResponse,
-        })
-      }
-
-      if (workspace.debugMode === true && isPlayground === true) {
-        logger.info("🧪 Widget playground - bypassing WIP (admin test mode)", {
-          workspaceId,
-          visitorId,
-          debugMode: workspace.debugMode,
         })
       }
 
@@ -1692,9 +1678,9 @@ export class WidgetChatController {
       
       logger.debug("💾 [Widget] Messages already saved by ChatEngine - skipping duplicate save")
 
-      // 💰 BILLING: Deduct widget message credit ($0.005) unless playground
-      if (isPlayground === true) {
-        logger.info("[WIDGET-BILLING] 🧪 Playground mode - skipping billing")
+      // 💰 BILLING: Deduct widget message credit ($0.005) unless debug mode
+      if (workspace.debugMode) {
+        logger.info("[WIDGET-BILLING] 🧪 Debug mode - skipping widget message billing")
       } else {
         try {
           if (!workspace.ownerId) {

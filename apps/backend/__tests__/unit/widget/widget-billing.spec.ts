@@ -147,6 +147,9 @@ describe("Widget Billing", () => {
 
     controller = new WidgetChatController()
 
+    // Mock translateWipMessage method (called when debugMode=true)
+    jest.spyOn(controller as any, 'translateWipMessage').mockResolvedValue("Siamo in manutenzione")
+
     jsonMock = jest.fn()
     statusMock = jest.fn(() => ({ json: jsonMock }))
 
@@ -668,13 +671,13 @@ describe("Widget Billing", () => {
       )
     })
 
-    it("should bypass WIP and process normally when debugMode=true AND isPlayground=true", async () => {
-      // SCENARIO: Backoffice admin opens playground to test chatbot
-      // RULE: isPlayground=true ALWAYS bypasses debugMode WIP → chatbot responds normally
-      // WHY: debugMode=true is "under construction" for real customers, NOT for admin testing
+    it("should return WIP when debugMode=true (NO bypass even with isPlayground)", async () => {
+      // SCENARIO: Admin tests chatbot with debugMode=true
+      // RULE: debugMode=true → WIP message ALWAYS (NO bypass!)
+      // WHY: Andrea's requirement - debugMode must ALWAYS show WIP, no exceptions
       mockReq.body = {
         ...mockReq.body,
-        isPlayground: true, // 🧪 Backoffice admin testing
+        // isPlayground removed - doesn't exist in system
       }
 
       ;(mockPrisma.workspace.findFirst as jest.Mock).mockResolvedValue({
@@ -683,7 +686,7 @@ describe("Widget Billing", () => {
         ownerId: mockOwnerId,
         language: "ITA",
         channelStatus: true,
-        debugMode: true, // Debug mode ON (would block real customers)
+        debugMode: true, // Debug mode ON → WIP ALWAYS
         wipMessage: { it: "Siamo in manutenzione" },
         enableWidget: true,
         defaultLanguage: "it",
@@ -702,39 +705,19 @@ describe("Widget Billing", () => {
         status: "ACTIVE",
       })
 
-      ;(mockPrisma.customers.findFirst as jest.Mock).mockResolvedValue(null)
-      ;(mockPrisma.customers.create as jest.Mock).mockResolvedValue({
-        id: mockCustomerId,
-        workspaceId: mockWorkspaceId,
-        customId: mockReq.body.visitorId,
-        language: "it",
-        activeChatbot: true,
-      })
-      ;(mockPrisma.chatSession.findFirst as jest.Mock).mockResolvedValue(null)
-      ;(mockPrisma.chatSession.create as jest.Mock).mockResolvedValue({
-        id: mockSessionId,
-        workspaceId: mockWorkspaceId,
-        customerId: mockCustomerId,
-        status: "active",
-      })
-
-      mockLLMRouterService.routeMessage.mockResolvedValue({
-        response: "Ciao! Come posso aiutarti?",
-        messageId: "msg-xyz",
-      })
-
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      // 🎯 CRITICAL: LLM MUST be called (playground bypasses WIP)
-      expect(mockLLMRouterService.routeMessage).toHaveBeenCalled()
+      // 🎯 CRITICAL: LLM must NOT be called (debugMode blocks everyone)
+      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
 
-      // 🎯 CRITICAL: No WIP response (playground skips WIP check)
-      expect(jsonMock).not.toHaveBeenCalledWith(
-        expect.objectContaining({ status: "wip" })
-      )
-
-      // Response must be a real chatbot answer
+      // 🎯 CRITICAL: WIP response returned
       expect(statusMock).toHaveBeenCalledWith(200)
+      expect(jsonMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: "wip",
+          response: "Siamo in manutenzione",
+        })
+      )
     })
 
     it("should block message when channelStatus=false", async () => {

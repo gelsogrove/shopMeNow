@@ -48,7 +48,6 @@ export const WIDGET_MESSAGE_SCHEMA = z
       .describe("Optional phone number with country code (e.g., +39 899 1234567) - used to detect customer language"),
     language: z.string().optional().describe("Optional visitor language"),
     sessionId: SESSION_ID_SCHEMA,
-    isPlayground: z.boolean().optional().describe("If true, skip billing/queue and just respond"),
     customerId: z.string().uuid().optional().describe("Registered customer ID (from localStorage) - skip visitorId lookup"),
   })
   .strict() // Reject unknown properties

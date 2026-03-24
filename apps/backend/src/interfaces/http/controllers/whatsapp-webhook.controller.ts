@@ -237,7 +237,6 @@ export class WhatsAppWebhookController {
       let messageText: string
       let whatsappMessageId: string
       let workspaceId: string | undefined
-      let isPlayground: boolean = false // 🧪 Playground mode flag
       let messageTimestamp: number | undefined
 
       // Check if it's WhatsApp API format
@@ -263,7 +262,6 @@ export class WhatsAppWebhookController {
         messageText = extractMessageText(message)
         whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
-        isPlayground = value.isPlayground === true // 🧪 Extract playground flag
         messageTimestamp = message.timestamp ? Number(message.timestamp) * 1000 : undefined
 
         logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {
@@ -271,7 +269,6 @@ export class WhatsAppWebhookController {
           messageLength: messageText.length,
           whatsappMessageId,
           workspaceId,
-          isPlayground, // 🧪 Log playground mode
         })
       } else if (data.message && data.phoneNumber) {
         // Frontend simulator format (standard)
@@ -280,7 +277,6 @@ export class WhatsAppWebhookController {
         messageText = data.message
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from standard format
-        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
 
         logger.info(
           "[WEBHOOK] 📨 Frontend simulator format (standard) detected",
@@ -288,7 +284,6 @@ export class WhatsAppWebhookController {
             from: phoneNumber,
             messageLength: messageText.length,
             workspaceId: data.workspaceId,
-            isPlayground, // 🧪 Log playground mode
           }
         )
       } else if (extractedMessage && data.phoneNumber) {
@@ -298,13 +293,11 @@ export class WhatsAppWebhookController {
         messageText = extractedMessage
         whatsappMessageId = `frontend-${Date.now()}-${Math.random().toString(36).substring(7)}`
         workspaceId = data.workspaceId // ✅ Extract workspaceId from weird format
-        isPlayground = data.isPlayground === true // 🧪 Extract playground flag
 
         logger.info("[WEBHOOK] 📨 Frontend simulator format (weird) detected", {
           from: phoneNumber,
           messageLength: messageText.length,
           workspaceId: data.workspaceId,
-          isPlayground, // 🧪 Log playground mode
         })
       } else {
         // Not a message event (could be status update, etc.)
@@ -386,51 +379,38 @@ export class WhatsAppWebhookController {
 
       // 🔒 SECURITY: Verify signature BEFORE checking channelStatus
       // This prevents information disclosure (workspace enumeration attack)
-      // Verify signature (strict) - SKIP for playground mode
-      if (!isPlayground) {
-        const sigHeader = req.header("x-hub-signature-256")
-        if (!sigHeader) {
-          logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
-          res.status(403).json({ error: "missing_signature" })
+      const sigHeader = req.header("x-hub-signature-256")
+      if (!sigHeader) {
+        logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
+        res.status(403).json({ error: "missing_signature" })
+        return
+      }
+
+      try {
+        const appSecret = whatsappSettings.appSecret
+        if (!appSecret) {
+          logger.error("[WEBHOOK] ❌ Missing app secret in WhatsApp settings", { webhookId })
+          res.status(500).json({ error: "webhook_signature_config_missing" })
           return
         }
 
-        try {
-          const appSecret = whatsappSettings.appSecret
-          if (!appSecret) {
-            logger.error("[WEBHOOK] ❌ Missing app secret in WhatsApp settings", { webhookId })
-            res.status(500).json({ error: "webhook_signature_config_missing" })
-            return
-          }
+        const rawBody = (req as any).rawBody || req.body || {}
+        const isValid = verifyWhatsAppSignature(rawBody, sigHeader, appSecret)
 
-          const rawBody = (req as any).rawBody || req.body || {}
-          const isValid = verifyWhatsAppSignature(rawBody, sigHeader, appSecret)
-
-          if (!isValid) {
-            logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
-            res.status(403).json({ error: "invalid_signature" })
-            return
-          }
-        } catch (err) {
-          logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
-            error: (err as Error).message,
-          })
+        if (!isValid) {
+          logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
           res.status(403).json({ error: "invalid_signature" })
           return
         }
-      } else {
-        logger.info("[WEBHOOK] 🧪 Playground mode - skipping signature verification")
+      } catch (err) {
+        logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
+          error: (err as Error).message,
+        })
+        res.status(403).json({ error: "invalid_signature" })
+        return
       }
 
       // Owner inactive or channel disabled (checked AFTER authentication)
-      // 🧪 EXCEPTION: Playground mode with debugMode=true bypasses channelStatus check (admin testing)
-      const workspace = await prisma.workspace.findUnique({
-        where: { id: whatsappSettings.workspaceId },
-        select: { debugMode: true }
-      })
-
-      const allowPlaygroundBypass = isPlayground && workspace?.debugMode === true
-      
       if (whatsappSettings.workspace.owner?.status === "INACTIVE") {
         logger.warn("[WEBHOOK] 🚫 Owner inactive", {
           webhookId,
@@ -441,29 +421,20 @@ export class WhatsAppWebhookController {
         return
       }
 
-      if (!whatsappSettings.workspace.channelStatus && !allowPlaygroundBypass) {
+      if (!whatsappSettings.workspace.channelStatus) {
         logger.warn("[WEBHOOK] 🚫 Channel disabled", {
           webhookId,
           workspaceId: whatsappSettings.workspace.id,
           channelStatus: whatsappSettings.workspace.channelStatus,
-          isPlayground,
-          debugMode: workspace?.debugMode,
         })
         res.status(200).json({ success: true, message: "Channel disabled" })
         return
       }
 
-      if (allowPlaygroundBypass) {
-        logger.info("[WEBHOOK] 🧪 Playground bypass active - channel disabled but debugMode=true", {
-          webhookId,
-          workspaceId: whatsappSettings.workspace.id,
-        })
-      }
-
       workspaceId = whatsappSettings.workspaceId
 
       // 🔁 Deduplicate inbound webhook events (Meta retries can send same message multiple times)
-      if (!isPlayground && whatsappMessageId) {
+      if (whatsappMessageId) {
         try {
           const prismaAny = prisma as any
           await prismaAny.whatsappWebhookEvent.create({
@@ -1745,26 +1716,25 @@ export class WhatsAppWebhookController {
         messageCount,
       })
 
-      if (!isPlayground) {
-        // 🚦 RATE LIMIT CHECK (token bucket): prevent abuse but allow bursts
-        const [
-          customerPerMin,
-          customerBurst,
-          workspacePerMin,
-          workspaceBurst,
-        ] = await Promise.all([
-          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_CUSTOMER_PER_MIN"),
-          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_CUSTOMER_BURST"),
-          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_WORKSPACE_PER_MIN"),
-          platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_WORKSPACE_BURST"),
-        ])
+      // 🚦 RATE LIMIT CHECK (token bucket): prevent abuse but allow bursts
+      const [
+        customerPerMin,
+        customerBurst,
+        workspacePerMin,
+        workspaceBurst,
+      ] = await Promise.all([
+        platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_CUSTOMER_PER_MIN"),
+        platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_CUSTOMER_BURST"),
+        platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_WORKSPACE_PER_MIN"),
+        platformConfigService.getLimit("WHATSAPP_RATE_LIMIT_WORKSPACE_BURST"),
+      ])
 
-        const customerRateLimitKey = `customer:${customer.id}`
-        const customerLimiterConfig = buildTokenBucketConfig(
-          customerPerMin,
-          customerBurst
-        )
-        if (!whatsappMessageRateLimiter.isAllowed(customerRateLimitKey, customerLimiterConfig)) {
+      const customerRateLimitKey = `customer:${customer.id}`
+      const customerLimiterConfig = buildTokenBucketConfig(
+        customerPerMin,
+        customerBurst
+      )
+      if (!whatsappMessageRateLimiter.isAllowed(customerRateLimitKey, customerLimiterConfig)) {
           const timeToReset = whatsappMessageRateLimiter.getTimeToReset(
             customerRateLimitKey,
             customerLimiterConfig
@@ -1809,7 +1779,6 @@ export class WhatsAppWebhookController {
           })
           return
         }
-      }
 
       // 🆕 Feature 174: Removed 5-message limit for unregistered users - they can chat freely
       // Registration required only when attempting protected functions (cart/orders/profile)
@@ -2039,17 +2008,12 @@ export class WhatsAppWebhookController {
       )
       const workspaceAccessService = new WorkspaceAccessService(prisma)
       
-      // 🧪 PLAYGROUND EXCEPTION: Skip workspace access check for playground
-      // Playground must ALWAYS work (even with debugMode=true) to allow testing and setup
-      const skipAccessCheck = isPlayground
-      
       // Check ALL access conditions including channel status
-      const accessResult = skipAccessCheck 
-        ? { canProcess: true } 
-        : await workspaceAccessService.canProcessMessages(
-            customer.workspaceId,
-            false // DO check channelStatus - WIP mode needs special handling
-          )
+      // RULE: debugMode=true → WIP message (NO bypass!)
+      const accessResult = await workspaceAccessService.canProcessMessages(
+        customer.workspaceId,
+        false // DO check channelStatus - WIP mode needs special handling
+      )
 
       if (!accessResult.canProcess) {
         // 🚫 CHANNEL_DISABLED → Silent block (no response)
