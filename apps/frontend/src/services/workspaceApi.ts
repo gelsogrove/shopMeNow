@@ -11,7 +11,10 @@ export interface Language {
 export interface Workspace {
   id: string
   name: string
+  slug?: string
   description?: string
+  isActive: boolean
+  isDelete: boolean
   deletedAt?: string | null
   currency?: string
   url?: string
