@@ -83,11 +83,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       onwarn(warning, warn) {
-        // Ignora warnings TypeScript e importazioni non risolte
-        if (
-          warning.code?.startsWith("TS") ||
-          warning.code === "UNRESOLVED_IMPORT"
-        ) {
+        // Ignora solo warnings TypeScript
+        if (warning.code?.startsWith("TS")) {
           return
         }
         warn(warning)
