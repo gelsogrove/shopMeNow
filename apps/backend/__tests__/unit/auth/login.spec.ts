@@ -112,10 +112,12 @@ describe('User Login', () => {
 
     it('should reject login with non-existent email', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null)
+      bcrypt.compare.mockResolvedValue(false)
 
       await expect(
         authService.login('nonexistent@test.com', 'password')
       ).rejects.toThrow('Invalid credentials')
+      expect(bcrypt.compare).toHaveBeenCalledWith('password', expect.any(String))
     })
 
     it('should require 2FA if user has it enabled', async () => {

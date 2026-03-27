@@ -67,6 +67,15 @@ export class CertificationRepository {
     workspaceId: string,
     name: string
   ): Promise<Certification> {
+    // BUG#11 FIX: Verify ownership before mutating to prevent IDOR.
+    // The old code accepted workspaceId but never used it in the WHERE clause,
+    // allowing any authenticated user to rename certifications from other workspaces.
+    const existing = await this.prisma.certification.findFirst({
+      where: { id, workspaceId },
+    })
+    if (!existing) {
+      throw new Error(`Certification not found in workspace`)
+    }
     return this.prisma.certification.update({
       where: { id },
       data: { name: name.trim() },
@@ -77,6 +86,15 @@ export class CertificationRepository {
    * Delete certification (only if not used by products)
    */
   async delete(id: string, workspaceId: string): Promise<void> {
+    // BUG#11 FIX: Verify ownership before deleting to prevent IDOR.
+    // The old code accepted workspaceId but never used it in the WHERE clause,
+    // allowing any authenticated user to delete certifications from other workspaces.
+    const existing = await this.prisma.certification.findFirst({
+      where: { id, workspaceId },
+    })
+    if (!existing) {
+      throw new Error(`Certification not found in workspace`)
+    }
     await this.prisma.certification.delete({
       where: { id },
     })

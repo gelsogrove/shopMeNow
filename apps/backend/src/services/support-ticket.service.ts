@@ -218,8 +218,18 @@ export class SupportTicketService {
       for (const file of attachments) {
         try {
           logger.info(`📤 Uploading file: ${file.originalname} (${file.size} bytes, ${file.mimetype})`)
+          // BUG#15 FIX: Sanitize originalname before using as storage path/filename.
+          // Unsanitized names like "<script>alert(1)</script>.pdf" or "../../evil.sh"
+          // would be stored verbatim in the DB and rendered in the admin UI → XSS,
+          // and could cause unexpected behaviour in cloud storage key resolution.
+          const safeOriginalname = file.originalname
+            .replace(/[^a-zA-Z0-9._\-\s]/g, '_') // strip special chars
+            .replace(/\.{2,}/g, '.')              // collapse consecutive dots (path traversal)
+            .trim()
+            .substring(0, 200)                   // hard cap on length
+
           const { url, key } = await storageService.upload(file.buffer, {
-            filename: `${Date.now()}-${file.originalname}`,
+            filename: `${Date.now()}-${safeOriginalname}`,
             folder: `support-tickets/${input.ticketId}`,
             contentType: file.mimetype,
             isPublic: false,
@@ -228,7 +238,7 @@ export class SupportTicketService {
 
           await supportTicketRepository.addAttachment({
             messageId: message.id,
-            filename: file.originalname,
+            filename: safeOriginalname,
             url,
             storageKey: key,
             mimeType: file.mimetype,

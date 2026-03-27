@@ -29,6 +29,14 @@ export interface RegisterData {
   gdprAccepted?: Date
 }
 
+// BUG#10 FIX: Pre-computed dummy bcrypt hash used for constant-time response
+// when login is attempted with a non-existent email.  Without this, the server
+// responds ~100ms faster for unknown emails (bcrypt is skipped), which leaks
+// user-existence information via a timing side-channel.
+// Valid bcrypt hash (cost 10) for a dummy value. Any valid hash works; it just
+// needs to be well-formed so bcrypt.compare doesn't throw.
+const DUMMY_BCRYPT_HASH = '$2b$10$CwTycUXWue0Thq9StjUM0uJ8eYq8h1P0K1TKoPY1TGVtC1zP1i0yK'
+
 export interface LoginResult {
   user: User
   token: string
@@ -102,6 +110,10 @@ export class AuthService {
     })
 
     if (!user) {
+      // BUG#10 FIX: Always run bcrypt.compare even when user doesn't exist.
+      // Skipping it makes non-existent-user responses ~100ms faster than
+      // wrong-password responses, allowing enumeration of valid email addresses.
+      await bcrypt.compare(password, DUMMY_BCRYPT_HASH)
       throw new AppError(401, 'Invalid credentials')
     }
 

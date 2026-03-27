@@ -18,13 +18,15 @@ import os from "os"
 const tempDir = os.tmpdir()
 
 // Accepted MIME types
+// BUG#14 FIX: SVG removed — SVG files can embed <script> tags and JavaScript
+// event handlers that execute when the browser renders the file from the same
+// origin (Stored XSS).  Legitimate product images never need SVG.
 const ACCEPTED_MIME_TYPES = [
   "image/png",
   "image/jpeg",
   "image/jpg",
   "image/gif",
   "image/webp",
-  "image/svg+xml",
   "image/bmp",
 ]
 
@@ -67,8 +69,8 @@ const fileFilter = (req: any, file: any, cb: any) => {
     ".jpeg",
     ".gif",
     ".webp",
-    ".svg",
     ".bmp",
+    // .svg intentionally excluded — BUG#14 (Stored XSS via embedded script)
   ]
 
   if (!validExtensions.includes(ext)) {

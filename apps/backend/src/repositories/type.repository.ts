@@ -67,6 +67,15 @@ export class TypeRepository {
     workspaceId: string,
     name: string
   ): Promise<Type> {
+    // BUG#11 FIX: Verify ownership before mutating to prevent IDOR.
+    // The old code accepted workspaceId but never used it in the WHERE clause,
+    // allowing any authenticated user to rename transport types from other workspaces.
+    const existing = await this.prisma.type.findFirst({
+      where: { id, workspaceId },
+    })
+    if (!existing) {
+      throw new Error(`Transport type not found in workspace`)
+    }
     return this.prisma.type.update({
       where: { id },
       data: { name: name.trim() },
@@ -77,6 +86,15 @@ export class TypeRepository {
    * Delete transport type (only if not used by products)
    */
   async delete(id: string, workspaceId: string): Promise<void> {
+    // BUG#11 FIX: Verify ownership before deleting to prevent IDOR.
+    // The old code accepted workspaceId but never used it in the WHERE clause,
+    // allowing any authenticated user to delete transport types from other workspaces.
+    const existing = await this.prisma.type.findFirst({
+      where: { id, workspaceId },
+    })
+    if (!existing) {
+      throw new Error(`Transport type not found in workspace`)
+    }
     await this.prisma.type.delete({
       where: { id },
     })

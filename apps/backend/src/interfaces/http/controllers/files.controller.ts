@@ -56,9 +56,16 @@ export class FilesController {
         return
       }
 
-      // TODO: Add workspace isolation check
-      // Files should contain workspaceId in folder structure (e.g., /private/documents/ws-123/invoice.pdf)
-      // For now, we rely on auth middleware to ensure user has valid workspace access
+      // BUG#13 FIX: Enforce workspace isolation.
+      // Without this check any authenticated user can download private files from
+      // any other workspace by knowing or guessing the folder path.
+      // Convention: private files are stored under a folder that starts with the
+      // workspaceId, e.g. /private/<workspaceId>/invoices/INV-001.pdf
+      if (!folder.startsWith(workspaceId)) {
+        logger.warn(`🚨 Workspace isolation violation blocked: workspace ${workspaceId} attempted to access folder '${folder}'`)
+        res.status(403).json({ error: 'Forbidden', message: "Access denied to this workspace's files" })
+        return
+      }
 
       // Determine content type
       const ext = path.extname(filename).toLowerCase()
@@ -100,6 +107,7 @@ export class FilesController {
   async checkPrivateFile(req: Request, res: Response): Promise<void> {
     try {
       const { category, folder, filename } = req.params
+      const workspaceId = (req as any).workspaceId // Set by workspaceValidationMiddleware
 
       if (category !== 'private') {
         res.status(403).end()
@@ -113,6 +121,13 @@ export class FilesController {
       const normalizedPath = path.normalize(filePath)
       const uploadsDir = path.join(backendRoot, 'apps/backend/uploads', category)
       if (!normalizedPath.startsWith(uploadsDir)) {
+        res.status(403).end()
+        return
+      }
+
+      // BUG#13 FIX: Enforce workspace isolation on HEAD requests too
+      if (workspaceId && !folder.startsWith(workspaceId)) {
+        logger.warn(`🚨 Workspace isolation violation (HEAD) blocked: workspace ${workspaceId} attempted folder '${folder}'`)
         res.status(403).end()
         return
       }

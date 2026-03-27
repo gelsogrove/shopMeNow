@@ -27,16 +27,10 @@ function applyStrikethrough(text: string): string {
 // Load environment variables
 dotenv.config()
 
-// Log API key status (safely)
+// BUG#12 FIX: Log only presence, never prefix/length -- even a partial key
+// reduces the credential search space and leaks data to log aggregators.
 const apiKey = process.env.OPENAI_API_KEY || ""
-logger.info(
-  `OpenAI API key status: ${
-    apiKey ? "Present (length: " + apiKey.length + ")" : "Missing"
-  }`
-)
-if (apiKey) {
-  logger.info(`API key prefix: ${apiKey.substring(0, 10)}...`)
-}
+logger.debug(`OpenAI API key status: ${apiKey ? "Present" : "Missing"}`)
 
 // OpenAI client instance
 const openai = new OpenAI({
@@ -56,15 +50,8 @@ function isOpenAIConfigured() {
   }
 
   const apiKey = process.env.OPENAI_API_KEY
-  // Log for debugging
-  logger.info(
-    `API key check - key present: ${!!apiKey}, key length: ${
-      apiKey ? apiKey.length : 0
-    }`
-  )
-  if (apiKey) {
-    logger.info(`API key prefix: ${apiKey.substring(0, 10)}...`)
-  }
+  // BUG#12 FIX: log only boolean presence, never prefix or length
+  logger.debug(`API key check - present: ${!!apiKey}`)
   return apiKey && apiKey.length > 10 && apiKey !== "your-api-key-here"
 }
 
@@ -2013,13 +2000,13 @@ export class MessageRepository {
     message: string,
     conversationContext: any[] = []
   ): Promise<any> {
-    logger.info("🚨 DEBUG - callFunctionRouter CALLED with message:", message)
+    logger.debug("callFunctionRouter CALLED with message:", message)
     try {
-      // Check if OpenRouter is properly configured
-      logger.info("🔍 DEBUG - OPENROUTER_API_KEY check:", {
+      // BUG#12 FIX: Log only boolean presence — never prefix/length of keys.
+      // Logging even the first 15 chars reduces the credential search space
+      // and leaks data to any log aggregator (Papertrail, CloudWatch, etc.).
+      logger.debug("OpenRouter API key check:", {
         present: !!process.env.OPENROUTER_API_KEY,
-        length: process.env.OPENROUTER_API_KEY?.length || 0,
-        prefix: process.env.OPENROUTER_API_KEY?.substring(0, 15) || "MISSING",
       })
 
       if (!process.env.OPENROUTER_API_KEY) {
