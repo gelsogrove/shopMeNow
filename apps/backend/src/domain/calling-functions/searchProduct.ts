@@ -102,7 +102,6 @@ export async function searchProduct(
     }
   } finally {
     try {
-      await prisma.$disconnect()
     } catch (disconnectError) {
       logger.warn("⚠️ Prisma disconnect failed in SearchProduct", disconnectError)
     }

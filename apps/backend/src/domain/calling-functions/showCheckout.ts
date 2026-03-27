@@ -67,7 +67,6 @@ export async function showCheckout(
 
     if (!customer) {
       logger.error("❌ Customer not found in ShowCheckout")
-      await prisma.$disconnect()
       return {
         success: false,
         error: "Customer not found",
@@ -94,7 +93,6 @@ export async function showCheckout(
 
     if (!cart || !cart.items || cart.items.length === 0) {
       logger.error("❌ Cart empty in ShowCheckout")
-      await prisma.$disconnect()
       return {
         success: false,
         error: "Cart empty",
@@ -150,7 +148,6 @@ export async function showCheckout(
       }
     }
 
-    await prisma.$disconnect()
 
     // 5. Build checkout message (English - Translation Agent will translate)
     // Include discount info if customer has one
@@ -185,7 +182,6 @@ export async function showCheckout(
     }
   } catch (error) {
     logger.error("❌ Error in ShowCheckout:", error)
-    await prisma.$disconnect()
     return {
       success: false,
       error: error instanceof Error ? error.message : "Internal error",

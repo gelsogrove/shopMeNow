@@ -75,7 +75,7 @@ export class StockService {
             continue
           }
 
-          // Check if enough stock
+          // Check if enough stock (pre-flight, non-authoritative under concurrency)
           if (product.stock < item.quantity) {
             logger.warn(
               `[STOCK] Insufficient stock for product ${product.name}: ${product.stock} < ${item.quantity}`
@@ -84,15 +84,28 @@ export class StockService {
             continue
           }
 
-          // Update stock
-          const newStock = product.stock - item.quantity
-          await prisma.products.update({
-            where: { id: item.productId },
-            data: { stock: newStock },
+          // BUG#8 FIX: Atomic conditional decrement — prevents overselling under
+          // concurrent order confirmations. Using updateMany with stock >= quantity
+          // as the condition means only ONE concurrent update wins; if stock drops
+          // to zero between the read and this write, count === 0 and we skip.
+          const result = await prisma.products.updateMany({
+            where: {
+              id: item.productId,
+              stock: { gte: item.quantity }, // Atomic guard — only succeeds if still enough stock
+            },
+            data: { stock: { decrement: item.quantity } },
           })
 
+          if (result.count === 0) {
+            logger.warn(
+              `[STOCK] Atomic stock decrement failed for ${product.name} — concurrent update likely depleted stock (race condition prevented)`
+            )
+            continue
+          }
+
+          const newStock = product.stock - item.quantity // local approximation for log
           logger.info(
-            `[STOCK] Updated product ${product.name}: ${product.stock} → ${newStock} (-${item.quantity})`
+            `[STOCK] Atomically decremented product ${product.name}: ~${product.stock} → ~${newStock} (-${item.quantity})`
           )
 
           // Log stock change

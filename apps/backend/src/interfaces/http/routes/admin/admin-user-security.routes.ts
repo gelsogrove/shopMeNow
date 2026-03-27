@@ -388,24 +388,26 @@ router.post(
         })
       }
 
-      // Calculate new planStartedAt by subtracting days (moving start date back extends the trial)
+      // Calculate new trial end date correctly:
+      // - If trial already expired → extend from TODAY
+      // - If trial still active → extend from current end date
+      // Either way: new planStartedAt = new trialEndDate - 14 days
+      const TRIAL_DURATION_DAYS = 14
+      const now = new Date()
       const currentStartDate = new Date(owner.planStartedAt)
-      const newStartDate = new Date(currentStartDate.getTime() - (days * 24 * 60 * 60 * 1000))
+      const currentTrialEndDate = new Date(currentStartDate.getTime() + (TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000))
+
+      // Base: max(current end date, today) — never extend backwards
+      const baseDate = currentTrialEndDate > now ? currentTrialEndDate : now
+      const trialEndDate = new Date(baseDate.getTime() + (days * 24 * 60 * 60 * 1000))
+      const newStartDate = new Date(trialEndDate.getTime() - (TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000))
 
       // Update owner
-      const updatedUser = await prisma.user.update({
+      await prisma.user.update({
         where: { id: owner.id },
         data: { planStartedAt: newStartDate },
-        select: {
-          id: true,
-          planStartedAt: true,
-          planType: true,
-        },
       })
 
-      // Calculate new trial end date (14 days from new start)
-      const trialEndDate = new Date(newStartDate.getTime() + (14 * 24 * 60 * 60 * 1000))
-      const now = new Date()
       const daysRemaining = Math.ceil((trialEndDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
 
       logger.info(
@@ -420,6 +422,7 @@ router.post(
           workspaceName: workspace.name,
           ownerEmail: owner.email,
           previousStartDate: currentStartDate.toISOString(),
+          previousTrialEndDate: currentTrialEndDate.toISOString(),
           newStartDate: newStartDate.toISOString(),
           trialEndDate: trialEndDate.toISOString(),
           daysExtended: days,

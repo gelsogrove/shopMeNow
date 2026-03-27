@@ -621,6 +621,7 @@ export class WidgetChatController {
         language,
         firstMessage,
         pushNotificationsConsent,
+        isPlayground,
       } = validation.data
 
       // Normalize phone (strip spaces/dashes) for lookup + creation
@@ -683,14 +684,14 @@ export class WidgetChatController {
         })
       }
 
-      if (workspace.enableWidget !== true) {
+      if (workspace.enableWidget !== true && !isPlayground) {
         return res.status(403).json({
           error: "WIDGET_DISABLED",
           message: "Widget chat is disabled for this workspace",
         })
       }
 
-      if (workspace.channelStatus === false) {
+      if (workspace.channelStatus === false && !isPlayground) {
         return res.status(403).json({
           error: "CHANNEL_DISABLED",
           message: "Channel is disabled",
@@ -700,7 +701,8 @@ export class WidgetChatController {
       // 🛠️ DEBUG MODE (WIP) — block registration + LLM when workspace is under maintenance
       // NOTE: canProcessMessages below uses skipChannelCheck=true (avoids double channelStatus check),
       // which also skips debugMode. We must check it explicitly here.
-      if (workspace.debugMode === true) {
+      // 🧪 PLAYGROUND BYPASS: isPlayground=true skips WIP (admin testing)
+      if (workspace.debugMode === true && !isPlayground) {
         const lang = this.normalizeLanguage(language) || workspace.defaultLanguage || "ENG"
         const wipResponse = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
@@ -715,7 +717,8 @@ export class WidgetChatController {
       }
 
       // 🔒 Origin allow-list: only allow requests coming from configured domains
-      if (!isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
+      // 🧪 PLAYGROUND BYPASS: admin calls from dashboard domain bypass origin check
+      if (!isPlayground && !isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
         return res.status(403).json({
           error: "FORBIDDEN_ORIGIN",
           message: "Origin not allowed for this widget",
@@ -737,22 +740,26 @@ export class WidgetChatController {
         }
       }
 
-      // 5. Billing access check
-      const workspaceAccessService = new WorkspaceAccessService(prisma)
-      const accessResult = await workspaceAccessService.canProcessMessages(resolvedWorkspaceId, true)
-      if (!accessResult.canProcess) {
-        logger.warn("[WIDGET-REGISTER] 🚫 Workspace blocked by billing", {
-          workspaceId: resolvedWorkspaceId,
-          blockReason: accessResult.blockReason,
-        })
-        const isBillingBlock =
-          accessResult.blockReason === "PAUSED" ||
-          accessResult.blockReason === "PAYMENT_FAILED" ||
-          accessResult.blockReason === "CREDIT_EXHAUSTED"
-        return res.status(isBillingBlock ? 402 : 403).json({
-          error: accessResult.blockReason || "WORKSPACE_BLOCKED",
-          message: accessResult.message || "Workspace blocked",
-        })
+      // 5. Billing access check — skip for playground (admin testing, no credit deduction)
+      if (!isPlayground) {
+        const workspaceAccessService = new WorkspaceAccessService(prisma)
+        const accessResult = await workspaceAccessService.canProcessMessages(resolvedWorkspaceId, true)
+        if (!accessResult.canProcess) {
+          logger.warn("[WIDGET-REGISTER] 🚫 Workspace blocked by billing", {
+            workspaceId: resolvedWorkspaceId,
+            blockReason: accessResult.blockReason,
+          })
+          const isBillingBlock =
+            accessResult.blockReason === "PAUSED" ||
+            accessResult.blockReason === "PAYMENT_FAILED" ||
+            accessResult.blockReason === "CREDIT_EXHAUSTED"
+          return res.status(isBillingBlock ? 402 : 403).json({
+            error: accessResult.blockReason || "WORKSPACE_BLOCKED",
+            message: accessResult.message || "Workspace blocked",
+          })
+        }
+      } else {
+        logger.info("[WIDGET-REGISTER] 🧪 Playground mode - skipping billing check", { workspaceId: resolvedWorkspaceId })
       }
 
       // 6. Normalize language
@@ -1010,8 +1017,8 @@ export class WidgetChatController {
         },
       })
 
-      // 12. Billing: deduct widget message credit
-      if (workspace.ownerId) {
+      // 12. Billing: deduct widget message credit — skip for playground
+      if (workspace.ownerId && !isPlayground) {
         try {
           const billingService = new SubscriptionBillingService(prisma)
           await billingService.deductOwnerWidgetMessageCredit(
@@ -1074,7 +1081,7 @@ export class WidgetChatController {
         })
       }
 
-      const { visitorId, message, sessionId, language, phoneNumber, customerId } = validation.data
+      const { visitorId, message, sessionId, language, phoneNumber, customerId, isPlayground } = validation.data
       
       // 🌍 Language detection priority:
       // 1. Explicit language from widget body/API (if provided) - HIGHEST PRIORITY! ✅
@@ -1191,8 +1198,8 @@ export class WidgetChatController {
       }
 
       // 🚫 CRITICAL: Check if widget is enabled (from backoffice toggle)
-      // Only explicitly TRUE enables the widget (false/null/undefined = disabled)
-      if (workspace.enableWidget !== true) {
+      // 🧪 PLAYGROUND BYPASS: admin testing always allowed
+      if (workspace.enableWidget !== true && !isPlayground) {
         logger.warn("❌ Widget message blocked: Widget disabled in settings", {
           workspaceId,
           visitorId,
@@ -1204,7 +1211,8 @@ export class WidgetChatController {
       }
 
       // 🚫 channelStatus=false = total shutdown (no WIP)
-      if (workspace.channelStatus === false) {
+      // 🧪 PLAYGROUND BYPASS
+      if (workspace.channelStatus === false && !isPlayground) {
         logger.warn("❌ Widget message blocked: Channel disabled", {
           workspaceId,
           visitorId,
@@ -1236,7 +1244,8 @@ export class WidgetChatController {
       }
 
       // 🔒 Origin allow-list: only allow requests coming from the configured website domain
-      if (!isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
+      // 🧪 PLAYGROUND BYPASS: admin calls from dashboard bypass origin check
+      if (!isPlayground && !isOriginAllowed(req, workspace.websiteUrl, workspace.allowedExternalLinks as string[] | null)) {
         return res.status(403).json({
           error: "FORBIDDEN_ORIGIN",
           message: "Origin not allowed for this widget",
@@ -1244,49 +1253,54 @@ export class WidgetChatController {
       }
 
       // Execute 5-step security validation
-      let securityResults
-      try {
-        logger.info("🔍 Starting security validation...")
-        securityResults = await SecurityCheckService.validateMessage({
-          workspaceId,
-          visitorId,
-          message,
-          channel: "widget",
-        })
-        logger.info("✅ Security validation completed", { resultsCount: securityResults.length })
-      } catch (securityError) {
-        logger.error("❌ Security validation error", {
-          error: securityError instanceof Error ? securityError.message : String(securityError),
-          stack: securityError instanceof Error ? securityError.stack : undefined,
-        })
-        return res.status(500).json({
-          error: "SECURITY_CHECK_ERROR",
-          message: "Failed to validate message",
-        })
-      }
-
-      // Check if any security step failed
-      const failedStep = securityResults.find((result) => !result.passed)
-      if (failedStep) {
-        logger.warn("🚨 Security check failed", {
-          workspaceId,
-          visitorId,
-          step: failedStep.step,
-          reason: failedStep.reason,
-        })
-
-        return res.status(429).json({
-          error: failedStep.step,
-          message: failedStep.reason || "Security check failed",
-          retryAfter: failedStep.retryAfter,
+      // 🧪 PLAYGROUND BYPASS: skip security checks for admin testing
+      if (!isPlayground) {
+        let securityResults
+        try {
+          logger.info("🔍 Starting security validation...")
+          securityResults = await SecurityCheckService.validateMessage({
+            workspaceId,
+            visitorId,
+            message,
+            channel: "widget",
           })
+          logger.info("✅ Security validation completed", { resultsCount: securityResults.length })
+        } catch (securityError) {
+          logger.error("❌ Security validation error", {
+            error: securityError instanceof Error ? securityError.message : String(securityError),
+            stack: securityError instanceof Error ? securityError.stack : undefined,
+          })
+          return res.status(500).json({
+            error: "SECURITY_CHECK_ERROR",
+            message: "Failed to validate message",
+          })
+        }
+
+        // Check if any security step failed
+        const failedStep = securityResults.find((result: any) => !result.passed)
+        if (failedStep) {
+          logger.warn("🚨 Security check failed", {
+            workspaceId,
+            visitorId,
+            step: failedStep.step,
+            reason: failedStep.reason,
+          })
+
+          return res.status(429).json({
+            error: failedStep.step,
+            message: failedStep.reason || "Security check failed",
+            retryAfter: failedStep.retryAfter,
+            })
+        }
+      } else {
+        logger.info("[WIDGET-SEND] 🧪 Playground mode - skipping security validation", { workspaceId, visitorId })
       }
 
       logger.info("✅ Workspace validation passed")
 
-      // 💰 SUBSCRIPTION + CREDIT CHECK (skip for debugMode)
-      // RULE: Billing ONLY for widget/WhatsApp when debugMode=false
-      if (workspace.debugMode !== true) {
+      // 💰 SUBSCRIPTION + CREDIT CHECK (skip for debugMode or playground)
+      // RULE: Billing ONLY for widget/WhatsApp when debugMode=false and not playground
+      if (workspace.debugMode !== true && !isPlayground) {
         const workspaceAccessService = new WorkspaceAccessService(prisma)
         const accessResult = await workspaceAccessService.canProcessMessages(
           workspaceId,
@@ -1322,7 +1336,8 @@ export class WidgetChatController {
       }
 
       // 🛠️ DEBUG MODE (WIP) - after security checks, return WIP message
-      if (workspace.debugMode === true) {
+      // 🧪 PLAYGROUND BYPASS: isPlayground=true skips WIP so admin can test the full AI flow
+      if (workspace.debugMode === true && !isPlayground) {
         logger.info("🛠️ Widget WIP - debug mode", {
           workspaceId,
           visitorId,
@@ -1344,8 +1359,8 @@ export class WidgetChatController {
         })
       }
 
-      // 🚫 channelStatus=false → WIP message
-      if (!workspace.channelStatus) {
+      // 🚫 channelStatus=false → WIP message (skipped for playground)
+      if (!workspace.channelStatus && !isPlayground) {
         logger.info("🛠️ Widget WIP - channel disabled", {
           workspaceId,
           visitorId,
@@ -1677,8 +1692,8 @@ export class WidgetChatController {
       logger.debug("💾 [Widget] Messages already saved by ChatEngine - skipping duplicate save")
 
       // 💰 BILLING: Deduct widget message credit ($0.005) unless debug mode
-      if (workspace.debugMode) {
-        logger.info("[WIDGET-BILLING] 🧪 Debug mode - skipping widget message billing")
+      if (workspace.debugMode || isPlayground) {
+        logger.info("[WIDGET-BILLING] 🧪 Debug/playground mode - skipping widget message billing")
       } else {
         try {
           if (!workspace.ownerId) {

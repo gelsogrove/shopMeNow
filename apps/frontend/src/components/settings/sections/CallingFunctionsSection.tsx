@@ -1,5 +1,5 @@
 /**
- * CallingFunctionsSection - Gestione delle funzioni custom (External Tools)
+ * CallingFunctionsSection - Custom Tools management (External Tools / Internal / Delegate)
  */
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -12,20 +12,42 @@ import {
     Wrench,
     Plus,
     Trash2,
-    Settings2,
     Play,
     Loader2,
     Zap,
     Code,
     Edit2,
-    ExternalLink
+    Lock,
+    Globe,
+    Cpu,
+    Share2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
 import { callingFunctionsApi, CallingFunction } from "@/services/callingFunctionApi"
 import { toast } from "@/lib/toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
+// Execution type badge config
+const EXECUTION_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
+    WEBHOOK: {
+        label: "Webhook",
+        icon: <Globe className="h-3 w-3" />,
+        className: "bg-blue-50 text-blue-600 border border-blue-200",
+    },
+    INTERNAL: {
+        label: "Internal",
+        icon: <Cpu className="h-3 w-3" />,
+        className: "bg-purple-50 text-purple-600 border border-purple-200",
+    },
+    DELEGATE_TO_AGENT: {
+        label: "Agent",
+        icon: <Share2 className="h-3 w-3" />,
+        className: "bg-amber-50 text-amber-600 border border-amber-200",
+    },
+}
 
 interface CallingFunctionsSectionProps {
     workspaceId: string
@@ -44,6 +66,8 @@ export function CallingFunctionsSection({
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingFunction, setEditingFunction] = useState<Partial<CallingFunction> | null>(null)
     const [isSaving, setIsSaving] = useState(false)
+    // Delete confirmation dialog
+    const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; functionName: string | null }>({ open: false, functionName: null })
 
     useEffect(() => {
         if (workspaceId) {
@@ -145,11 +169,16 @@ export function CallingFunctionsSection({
         }
     }
 
-    const handleDeleteFunction = async (functionName: string) => {
-        if (!window.confirm("Are you sure you want to delete this tool?")) return
+    const handleDeleteFunction = (functionName: string) => {
+        setDeleteConfirm({ open: true, functionName })
+    }
 
+    const confirmDelete = async () => {
+        if (!deleteConfirm.functionName) return
+        const name = deleteConfirm.functionName
+        setDeleteConfirm({ open: false, functionName: null })
         try {
-            await callingFunctionsApi.delete(workspaceId, functionName)
+            await callingFunctionsApi.delete(workspaceId, name)
             toast.success("Tool deleted")
             loadFunctions()
         } catch (error) {
@@ -174,7 +203,7 @@ export function CallingFunctionsSection({
                     <Wrench className="h-6 w-6 text-blue-600" />
                     Custom Tools
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">Connect your AI to external services via Webhooks</p>
+                <p className="text-sm text-gray-500 mt-1">Connect your AI to external services (Webhooks), internal logic, or specialized sub-agents</p>
             </div>
 
             {/* Functions List Card */}
@@ -208,53 +237,70 @@ export function CallingFunctionsSection({
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {functions.map((fn) => (
-                                <div key={fn.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
-                                    <div className="flex items-start gap-3">
-                                        <div className={cn(
-                                            "mt-1 p-2 rounded-lg",
-                                            fn.isActive ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"
-                                        )}>
-                                            <Code className="h-4 w-4" />
-                                        </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-mono font-bold text-slate-800">{fn.functionName}</span>
-                                                {fn.isSystemFunction && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-500">SYSTEM</span>
-                                                )}
-                                                {!fn.isActive && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inactive</span>
-                                                )}
+                            {functions.map((fn) => {
+                                const typeConfig = EXECUTION_TYPE_CONFIG[fn.executionType] || EXECUTION_TYPE_CONFIG.WEBHOOK
+                                return (
+                                    <div key={fn.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
+                                        <div className="flex items-start gap-3">
+                                            <div className={cn(
+                                                "mt-1 p-2 rounded-lg",
+                                                fn.isActive ? "bg-green-100 text-green-600" : "bg-slate-100 text-slate-400"
+                                            )}>
+                                                <Code className="h-4 w-4" />
                                             </div>
-                                            <p className="text-sm text-slate-500 line-clamp-1">{fn.description}</p>
+                                            <div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-mono font-bold text-slate-800">{fn.functionName}</span>
+                                                    {/* Execution type badge */}
+                                                    <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold", typeConfig.className)}>
+                                                        {typeConfig.icon}
+                                                        {typeConfig.label}
+                                                    </span>
+                                                    {fn.isSystemFunction && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-500">SYSTEM</span>
+                                                    )}
+                                                    {!fn.isActive && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inactive</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-slate-500 line-clamp-1 mt-0.5">{fn.description}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {canEdit && !fn.isSystemFunction && (
+                                                <>
+                                                    <Switch
+                                                        checked={fn.isActive}
+                                                        onCheckedChange={() => toggleFunctionStatus(fn)}
+                                                        className="scale-75"
+                                                    />
+                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.functionName)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                            {fn.isSystemFunction && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
+                                                                <Lock className="h-4 w-4 text-slate-400" />
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="left">
+                                                            <p>System function — read only</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
                                         </div>
                                     </div>
-
-                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {canEdit && !fn.isSystemFunction && (
-                                            <>
-                                                <Switch
-                                                    checked={fn.isActive}
-                                                    onCheckedChange={() => toggleFunctionStatus(fn)}
-                                                    className="scale-75"
-                                                />
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
-                                                    <Edit2 className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.functionName)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </>
-                                        )}
-                                        {fn.isSystemFunction && (
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
-                                                <Settings2 className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     )}
                 </CardContent>
@@ -270,12 +316,12 @@ export function CallingFunctionsSection({
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="fnName">Function Name (snake_case)</Label>
+                                <Label htmlFor="fnName">Function Name <span className="text-slate-400 font-normal">(camelCase)</span></Label>
                                 <Input
                                     id="fnName"
                                     value={editingFunction?.functionName || ""}
                                     onChange={(e) => setEditingFunction(prev => ({ ...prev, functionName: e.target.value }))}
-                                    placeholder="get_order_status"
+                                    placeholder="getOrderStatus"
                                     disabled={editingFunction?.isSystemFunction}
                                 />
                             </div>
@@ -330,50 +376,89 @@ export function CallingFunctionsSection({
                             </div>
                         </div>
 
+                        {/* Webhook URL — only for WEBHOOK type */}
                         {editingFunction?.executionType === "WEBHOOK" && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label htmlFor="toolWebhookUrl">Webhook URL</Label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            id="toolWebhookUrl"
-                                            value={editingFunction?.webhookUrl || ""}
-                                            onChange={(e) => setEditingFunction(prev => ({ ...prev, webhookUrl: e.target.value }))}
-                                            placeholder="https://api.yourdomain.com/webhook"
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleTestToolWebhook}
-                                            disabled={testingToolWebhook || !editingFunction?.webhookUrl}
-                                            className="shrink-0"
-                                        >
-                                            {testingToolWebhook ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-                                            Test
-                                        </Button>
-                                    </div>
-                                    <p className="text-xs text-slate-500">Payload sent as JSON POST request when AI calls this tool.</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="responseInstructions">Response Instructions (Optional AI guidance)</Label>
-                                    <Textarea
-                                        id="responseInstructions"
-                                        value={editingFunction?.responseInstructions || ""}
-                                        onChange={(e) => setEditingFunction(prev => ({ ...prev, responseInstructions: e.target.value }))}
-                                        placeholder="Guide the AI on how to present the data received from the webhook"
-                                        rows={2}
+                            <div className="space-y-2">
+                                <Label htmlFor="toolWebhookUrl">Webhook URL</Label>
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="toolWebhookUrl"
+                                        value={editingFunction?.webhookUrl || ""}
+                                        onChange={(e) => setEditingFunction(prev => ({ ...prev, webhookUrl: e.target.value }))}
+                                        placeholder="https://api.yourdomain.com/webhook"
                                     />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={handleTestToolWebhook}
+                                        disabled={testingToolWebhook || !editingFunction?.webhookUrl}
+                                        className="shrink-0"
+                                    >
+                                        {testingToolWebhook ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                                        Test
+                                    </Button>
                                 </div>
-                            </>
+                                <p className="text-xs text-slate-500">Payload sent as JSON POST request when AI calls this tool.</p>
+                            </div>
                         )}
+
+                        {/* Response Instructions — visible for ALL execution types */}
+                        <div className="space-y-2">
+                            <Label htmlFor="responseInstructions">
+                                Response Instructions
+                                <span className="ml-1 text-slate-400 font-normal">(optional — guides the AI on how to present the result)</span>
+                            </Label>
+                            <Textarea
+                                id="responseInstructions"
+                                value={editingFunction?.responseInstructions || ""}
+                                onChange={(e) => setEditingFunction(prev => ({ ...prev, responseInstructions: e.target.value }))}
+                                placeholder={editingFunction?.executionType === "WEBHOOK"
+                                    ? "Guide the AI on how to present the webhook response"
+                                    : editingFunction?.executionType === "DELEGATE_TO_AGENT"
+                                    ? "Guide the AI on how to present the sub-agent result"
+                                    : "Guide the AI on how to present the function result"}
+                                rows={2}
+                                disabled={editingFunction?.isSystemFunction}
+                            />
+                        </div>
                     </div>
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSaveFunction} disabled={isSaving}>
-                            {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                            Save Tool
+                        {!editingFunction?.isSystemFunction && (
+                            <Button onClick={handleSaveFunction} disabled={isSaving}>
+                                {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                Save Tool
+                            </Button>
+                        )}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={deleteConfirm.open}
+                onOpenChange={(open) => !open && setDeleteConfirm({ open: false, functionName: null })}
+            >
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle>Delete Tool</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete{" "}
+                            <span className="font-mono font-bold">{deleteConfirm.functionName}</span>?{" "}
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirm({ open: false, functionName: null })}
+                        >
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
                         </Button>
                     </DialogFooter>
                 </DialogContent>

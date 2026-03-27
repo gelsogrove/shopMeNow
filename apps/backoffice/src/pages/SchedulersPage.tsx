@@ -87,6 +87,20 @@ const jobNames: Record<string, { name: string; description: string; schedule: st
     details: '📢 Identifies and processes all active campaigns (feedback, promotions, notifications) based on start date and status. Enqueues WhatsApp messages for each customer, respects maximum frequency limits per customer, verifies opt-in consent, and manages segmentation for targeted campaigns.',
     sortOrder: 2
   },
+  'push-campaigns': {
+    name: 'Push Campaigns',
+    schedule: 'Every minute',
+    description: 'Runs scheduled WhatsApp push campaigns and enqueues recipients',
+    details: '📣 Finds campaigns ready to run (sendAt/nextRunAt), builds recipient batches based on targeting, checks consent, applies credit limits, pre-bills messages, and queues each recipient for delivery. Updates campaign status, computes next run, and handles failures/pauses when credit is insufficient.',
+    sortOrder: 2
+  },
+  'campaign-credit-guard': {
+    name: 'Campaign Credit Guard',
+    schedule: 'Every minute',
+    description: 'Prevents campaigns from sending when credit is too low',
+    details: '🛡️ Monitors campaign/workspace credit before sending. Pauses campaigns that would go below minimum balance, avoids free sends, and records the pause reason for operators.',
+    sortOrder: 2
+  },
   'short-urls-cleanup': {
     name: 'Short URLs Cleanup',
     schedule: 'Daily at 23:00',
@@ -134,6 +148,13 @@ const jobNames: Record<string, { name: string; description: string; schedule: st
     schedule: 'Daily at 23:25',
     description: 'Deletes attachments from closed support tickets older than retention period',
     details: '📎 Scans all support ticket attachments and identifies files from tickets closed more than 90 days ago (configurable via SUPPORT_ATTACHMENTS_RETENTION_DAYS). Removes files from Cloudinary storage, deletes database records, frees cloud storage space, and logs cleanup statistics for audit purposes.',
+    sortOrder: 9
+  },
+  'wasender-qr-cleanup': {
+    name: 'Wasender Qr Cleanup',
+    schedule: 'Every 10 minutes',
+    description: 'Clears expired Wasender QR strings from workspaces',
+    details: '🧹 Removes stale Wasender QR strings after TTL so users always scan a fresh code. Skips already connected sessions and logs how many QR codes were cleared.',
     sortOrder: 9
   },
   'blocked-customers-cleanup': {

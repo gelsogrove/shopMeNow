@@ -10,11 +10,26 @@ export class OtpService {
     // Get user email for QR code label
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { email: true },
+      select: { email: true, twoFactorSecret: true },
     })
 
     if (!user) {
       throw new AppError(404, "User not found")
+    }
+
+    if (user.twoFactorSecret) {
+      const otpauthUrl = speakeasy.otpauthURL({
+        secret: user.twoFactorSecret,
+        label: `eChatbot:${user.email}`,
+        issuer: "eChatbot",
+        encoding: "base32",
+      })
+
+      if (!otpauthUrl) {
+        throw new AppError(500, "Failed to generate OTP auth URL")
+      }
+
+      return otpauthUrl
     }
 
     // Generate secret

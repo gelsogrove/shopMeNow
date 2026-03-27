@@ -316,6 +316,62 @@ describe("CallingFunctionsService", () => {
       expect(result.success).toBe(true)
       expect(result.timestamp).toBeDefined()
     })
+
+    it("BUG#1 FIX: should forward channel=whatsapp to contactOperator domain function", async () => {
+      // SCENARIO: WhatsApp customer triggers operator escalation
+      // BUG WAS: channel was not forwarded → domain function defaulted to 'widget'
+      //          so operator reply was routed to widget instead of WhatsApp
+      // RULE: channel must be passed through so contactOperator sets originChannel correctly
+      const { contactOperator: mockContactOp } = require("../../../src/domain/calling-functions/contactOperator")
+      mockContactOp.mockClear()
+
+      await service.contactOperator({
+        customerId: "customer-123",
+        workspaceId: "workspace-456",
+        phoneNumber: "+39123456789",
+        channel: "whatsapp",
+      })
+
+      expect(mockContactOp).toHaveBeenCalledWith(
+        expect.objectContaining({ channel: "whatsapp" })
+      )
+    })
+
+    it("BUG#1 FIX: should forward channel=widget to contactOperator domain function", async () => {
+      // SCENARIO: Widget customer triggers operator escalation
+      // RULE: widget channel must be forwarded — reply saved as ConversationMessage (polled by widget)
+      const { contactOperator: mockContactOp } = require("../../../src/domain/calling-functions/contactOperator")
+      mockContactOp.mockClear()
+
+      await service.contactOperator({
+        customerId: "customer-123",
+        workspaceId: "workspace-456",
+        phoneNumber: "+39123456789",
+        channel: "widget",
+      })
+
+      expect(mockContactOp).toHaveBeenCalledWith(
+        expect.objectContaining({ channel: "widget" })
+      )
+    })
+
+    it("BUG#1 FIX: should default channel to whatsapp (not widget) when channel not provided", async () => {
+      // SCENARIO: Old caller that doesn't pass channel (backward compat)
+      // RULE: Default must be whatsapp — most traffic is WhatsApp; widget is opt-in
+      const { contactOperator: mockContactOp } = require("../../../src/domain/calling-functions/contactOperator")
+      mockContactOp.mockClear()
+
+      await service.contactOperator({
+        customerId: "customer-123",
+        workspaceId: "workspace-456",
+        phoneNumber: "+39123456789",
+        // no channel
+      })
+
+      expect(mockContactOp).toHaveBeenCalledWith(
+        expect.objectContaining({ channel: "whatsapp" })
+      )
+    })
   })
 
   describe("Manage Notifications", () => {

@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "dotenv -e ../../.env -- tsx --watch src/index.ts",
-    "build": "tsc -p ./tsconfig.json",
+    "build": "rm -rf dist && tsc -p ./tsconfig.json",
     "start": "node dist/index.js",
     "test": "dotenv -e ../../.env -- jest --passWithNoTests"
   },

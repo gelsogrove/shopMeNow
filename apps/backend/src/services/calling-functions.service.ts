@@ -15,6 +15,8 @@ import logger from "../utils/logger"
 import { prisma } from "@echatbot/database"
 import axios from "axios"
 import * as cheerio from "cheerio"
+import { lookup } from "dns/promises"
+import { isIP } from "net"
 
 export interface GetAllProductsRequest {
   workspaceId: string
@@ -37,6 +39,41 @@ export class CallingFunctionsService {
     this.linkGeneratorService =
       linkGeneratorService || new LinkGeneratorService()
     this.baseUrl = "http://localhost:3001/api/internal"
+  }
+
+  private isPrivateIp(address: string): boolean {
+    const lower = address.toLowerCase()
+
+    if (lower === "::1" || lower === "0:0:0:0:0:0:0:1") return true
+    if (lower.startsWith("fc") || lower.startsWith("fd")) return true // fc00::/7
+    if (
+      lower.startsWith("fe8") ||
+      lower.startsWith("fe9") ||
+      lower.startsWith("fea") ||
+      lower.startsWith("feb")
+    ) {
+      return true // fe80::/10
+    }
+
+    const parts = address.split(".").map((p) => Number(p))
+    if (parts.length !== 4 || parts.some((p) => Number.isNaN(p))) return false
+    const [a, b] = parts
+    if (a === 10) return true
+    if (a === 127) return true
+    if (a === 0) return true
+    if (a === 169 && b === 254) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 192 && b === 168) return true
+    return false
+  }
+
+  private async isHostPrivate(hostname: string): Promise<boolean> {
+    if (isIP(hostname)) {
+      return this.isPrivateIp(hostname)
+    }
+
+    const records = await lookup(hostname, { all: true })
+    return records.some((record) => this.isPrivateIp(record.address))
   }
 
   private createErrorResponse(error: any, context: string): ErrorResponse {
@@ -82,7 +119,6 @@ export class CallingFunctionsService {
         orderBy: { name: "asc" },
       })
 
-      await prisma.$disconnect()
 
       if (!services || services.length === 0) {
         return {
@@ -137,7 +173,6 @@ export class CallingFunctionsService {
             },
           })
 
-          await prisma.$disconnect()
 
           if (!order) {
             logger.info("❌ Order not found in database:", request.orderCode)
@@ -242,6 +277,7 @@ export class CallingFunctionsService {
     phoneNumber?: string
     reason?: string
     urgency?: string
+    channel?: string // "widget" | "whatsapp" — routes operator reply to correct channel
   }): Promise<StandardResponse> {
     try {
       logger.info("🔧 Calling contactOperator with:", request)
@@ -265,7 +301,7 @@ export class CallingFunctionsService {
         phoneNumber: phoneNumber,
         workspaceId: request.workspaceId,
         customerId: request.customerId,
-        channel: (request as any).channel || "widget",
+        channel: request.channel || "whatsapp",
       })
 
       logger.info("✅ contactOperator result:", result)
@@ -781,7 +817,6 @@ export class CallingFunctionsService {
           2 // FR-13: Skip cart review step
         )
 
-        await prisma.$disconnect()
 
         // 🔧 IMPORTANTE: Non usare placeholder nel message - usa il cartUrl REALE
         // L'AI deve vedere il link diretto, non [LINK_CHECKOUT_WITH_TOKEN]
@@ -798,7 +833,6 @@ export class CallingFunctionsService {
         }
       } catch (error) {
         logger.error("❌ Error in addProductToCart database operations:", error)
-        await prisma.$disconnect()
         throw error
       }
     } catch (error) {
@@ -955,7 +989,6 @@ export class CallingFunctionsService {
           2 // Skip cart review step
         )
 
-        await prisma.$disconnect()
 
         return {
           success: true,
@@ -970,7 +1003,6 @@ export class CallingFunctionsService {
         }
       } catch (error) {
         logger.error("❌ Error in addServiceToCart database operations:", error)
-        await prisma.$disconnect()
         throw error
       }
     } catch (error) {
@@ -1365,7 +1397,6 @@ export class CallingFunctionsService {
           timestamp: new Date().toISOString(),
         }
       } finally {
-        await prisma.$disconnect()
       }
     } catch (error) {
       logger.error("❌ Error in getProductDetails:", error)
@@ -1488,7 +1519,6 @@ export class CallingFunctionsService {
           timestamp: new Date().toISOString(),
         }
       } finally {
-        await prisma.$disconnect()
       }
     } catch (error) {
       logger.error("❌ Error in getServiceDetails:", error)
@@ -1542,7 +1572,6 @@ export class CallingFunctionsService {
           timestamp: new Date().toISOString(),
         }
       } finally {
-        await prisma.$disconnect()
       }
     } catch (error) {
       logger.error("❌ Error saving product search statistics:", error)
@@ -1590,6 +1619,26 @@ export class CallingFunctionsService {
         workspaceId,
       })
 
+      // 🛡️ FIX: SSRF protection — block requests to private/internal IPs
+      // An LLM could be manipulated into fetching http://localhost/admin or AWS metadata
+      const SSRF_BLOCKED = [
+        /^https?:\/\/(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0)/i,
+        /^https?:\/\/(10\.\d+\.\d+\.\d+)/i,
+        /^https?:\/\/(172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)/i,
+        /^https?:\/\/(192\.168\.\d+\.\d+)/i,
+        /^https?:\/\/169\.254\./i,  // AWS metadata / link-local
+        /^https?:\/\/(::1|\[::1\])/i, // IPv6 loopback
+      ]
+      if (SSRF_BLOCKED.some(re => re.test(url))) {
+        logger.warn('🚫 SSRF blocked — internal URL requested by LLM', { url, workspaceId })
+        return {
+          success: false,
+          error: 'SSRF_BLOCKED',
+          message: 'URL not allowed.',
+          timestamp: new Date().toISOString(),
+        }
+      }
+
       // Validate URL format
       let fullUrl = url
       if (!url.startsWith("http://") && !url.startsWith("https://")) {
@@ -1612,6 +1661,28 @@ export class CallingFunctionsService {
         fullUrl = workspace.websiteUrl.endsWith("/")
           ? workspace.websiteUrl + url.replace(/^\//, "")
           : workspace.websiteUrl + (url.startsWith("/") ? url : "/" + url)
+      }
+
+      // DNS rebinding protection: resolve hostname and block private/internal IPs
+      try {
+        const { hostname } = new URL(fullUrl)
+        if (await this.isHostPrivate(hostname)) {
+          logger.warn('🚫 SSRF blocked — hostname resolves to private IP', { url: fullUrl, hostname })
+          return {
+            success: false,
+            error: 'SSRF_BLOCKED',
+            message: 'URL not allowed.',
+            timestamp: new Date().toISOString(),
+          }
+        }
+      } catch (error) {
+        logger.warn('🚫 Invalid URL or DNS lookup failed', { url: fullUrl, error })
+        return {
+          success: false,
+          error: 'INVALID_URL',
+          message: 'URL not allowed.',
+          timestamp: new Date().toISOString(),
+        }
       }
 
       // Fetch HTML with timeout

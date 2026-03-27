@@ -31,25 +31,45 @@ import logger from "../utils/logger"
  * Philosophy: Users can chat freely without registration.
  * Registration is required ONLY for personalized functions (cart, orders, profile).
  */
+/**
+ * Functions that require customer registration (isActive=true) at LAYER 1 (FunctionExecutor/Router level).
+ *
+ * ARCHITECTURE NOTE (3-layer system):
+ * - Layer 1 (Router → FunctionExecutor): guards here apply.
+ * - Layer 2 (Sub-Agents LLM): confirmOrder, showCheckout, repeatOrder, handlePushNotifications
+ *   are called INSIDE their respective sub-agents (OrderTrackingAgentLLM, ProfileManagementAgentLLM)
+ *   and are NOT dispatched through this FunctionExecutor — so they do NOT need to be listed here.
+ *
+ * ❌ DO NOT add sub-agent-internal functions here (confirmOrder, showCheckout, repeatOrder, etc.)
+ *    Those sub-agents handle registration checks within their own LLM prompt context.
+ */
 const FUNCTIONS_REQUIRING_REGISTRATION = [
-  // Cart Management (3)
+  // Cart Management — called directly by FunctionExecutor
   'addItemToCart',
   'addToCart',
   'viewCart',
   'clearCart',
 
-  // Order Tracking (5)
-  'getLinkOrderByCode',
-  'repeatOrder',
+  // Order — called directly by FunctionExecutor (not sub-agent internal tools)
   'repeatLastOrder',
+  'getOrderHistory',
+  'getLastOrders',
   'getOrderDetails',
-  'confirmOrder',
-  'showCheckout',
 
-  // Profile Management (2)
-  'handlePushNotifications',
+  // Profile Management — called directly by FunctionExecutor
   'getProfileLink',
 ]
+
+// Functions that should be blocked for unregistered users even on informational channels
+// Includes sub-agent internal tools that are not dispatched by FunctionExecutor
+const FUNCTIONS_PROTECTED_FOR_UNREGISTERED = new Set([
+  ...FUNCTIONS_REQUIRING_REGISTRATION,
+  'getLinkOrderByCode',
+  'repeatOrder',
+  'confirmOrder',
+  'showCheckout',
+  'handlePushNotifications',
+])
 
 export interface ExecutionContext {
   workspaceId: string
@@ -84,6 +104,7 @@ export class FunctionExecutor {
     this.productRepo = new ProductRepository()
     this.cartRepo = new CartRepository()
     this.orderRepo = new OrderRepository()
+    this.serviceRepo = new ServiceRepository()
     this.callingFunctionRepo = new WorkspaceCallingFunctionRepository(prisma)
     this.webhookDispatcher = new WebhookDispatchService()
 
@@ -123,7 +144,7 @@ export class FunctionExecutor {
       })
 
       // 🔐 REGISTRATION GUARD: Check if function requires registration
-      if (FUNCTIONS_REQUIRING_REGISTRATION.includes(functionName)) {
+      if (FUNCTIONS_PROTECTED_FOR_UNREGISTERED.has(functionName)) {
         if (!context.customerIsActive) {
           // 🛍️ Registration link only if workspace sells products/services
           if (context.sellsProductsAndServices) {
@@ -190,6 +211,7 @@ export class FunctionExecutor {
 
         result = await this.webhookDispatcher.dispatch({
           url: finalUrl,
+          secret: workspace.webhookSecret || undefined, // 🔐 FIX: pass HMAC secret so signing actually activates
           timeout: workspace.webhookTimeout || undefined,
           payload: {
             function: functionName,
@@ -350,14 +372,6 @@ export class FunctionExecutor {
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    // Validate required parameters
-    if (!args.productId) {
-      throw new Error("addToCart requires 'productId'")
-    }
-    if (!args.quantity || args.quantity <= 0) {
-      throw new Error("addToCart requires 'quantity' > 0")
-    }
-
     // Build cart context
     const cartContext = {
       workspaceId: context.workspaceId,
@@ -367,11 +381,44 @@ export class FunctionExecutor {
       customerDiscount: context.customerDiscount,
     }
 
-    // Execute via CartManagementAgent
+    // Batch add (items array)
+    if (Array.isArray(args.items) && args.items.length > 0 && !args.productId) {
+      const results = []
+      for (const item of args.items) {
+        if (!item?.productId) {
+          throw new Error("addToCart requires 'productId' for each item")
+        }
+        const quantity = item.quantity ?? 1
+        if (quantity <= 0) {
+          throw new Error("addToCart requires 'quantity' > 0")
+        }
+
+        const result = await this.cartManagementAgent.addToCart(cartContext, {
+          productId: item.productId,
+          quantity,
+          notes: item.notes,
+          type: item.type,
+        })
+        results.push(result)
+      }
+
+      const anyFailed = results.some((r: any) => r?.success === false)
+      return { success: !anyFailed, results }
+    }
+
+    // Single item add
+    if (!args.productId) {
+      throw new Error("addToCart requires 'productId'")
+    }
+    if (!args.quantity || args.quantity <= 0) {
+      throw new Error("addToCart requires 'quantity' > 0")
+    }
+
     const result = await this.cartManagementAgent.addToCart(cartContext, {
       productId: args.productId,
       quantity: args.quantity,
       notes: args.notes,
+      type: args.type,
     })
 
     return result
@@ -400,10 +447,7 @@ export class FunctionExecutor {
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    // Validate required parameters
-    if (!args.cartItemId) {
-      throw new Error("removeFromCart requires 'cartItemId'")
-    }
+    const cartItemId = await this.resolveCartItemId(args, context, "removeFromCart")
 
     const cartContext = {
       workspaceId: context.workspaceId,
@@ -415,7 +459,7 @@ export class FunctionExecutor {
 
     const result = await this.cartManagementAgent.removeFromCart(
       cartContext,
-      args.cartItemId
+      cartItemId
     )
 
     return result
@@ -428,13 +472,10 @@ export class FunctionExecutor {
     args: Record<string, any>,
     context: ExecutionContext
   ): Promise<any> {
-    // Validate required parameters
-    if (!args.cartItemId) {
-      throw new Error("updateCartQuantity requires 'cartItemId'")
-    }
     if (args.newQuantity === undefined || args.newQuantity < 0) {
       throw new Error("updateCartQuantity requires 'newQuantity' >= 0")
     }
+    const cartItemId = await this.resolveCartItemId(args, context, "updateCartQuantity")
 
     const cartContext = {
       workspaceId: context.workspaceId,
@@ -445,11 +486,60 @@ export class FunctionExecutor {
     }
 
     const result = await this.cartManagementAgent.updateQuantity(cartContext, {
-      cartItemId: args.cartItemId,
+      cartItemId,
       newQuantity: args.newQuantity,
     })
 
     return result
+  }
+
+  /**
+   * Resolve cartItemId from cartItemId, sku, or productName
+   */
+  private async resolveCartItemId(
+    args: Record<string, any>,
+    context: ExecutionContext,
+    actionName: string
+  ): Promise<string> {
+    if (args.cartItemId) {
+      return args.cartItemId
+    }
+
+    const cart = await this.cartRepo.getOrCreateCart(
+      context.workspaceId,
+      context.customerId
+    )
+
+    if (args.sku) {
+      const product = await this.productRepo.findBySku(
+        args.sku,
+        context.workspaceId
+      )
+      if (product) {
+        const item = cart.items.find((i) => i.productId === product.id)
+        if (item) return item.id
+      }
+
+      const service = await this.serviceRepo.findByServiceCode(
+        args.sku,
+        context.workspaceId
+      )
+      if (service) {
+        const item = cart.items.find((i) => i.serviceId === service.id)
+        if (item) return item.id
+      }
+    }
+
+    if (args.productName) {
+      const target = String(args.productName).toLowerCase()
+      const item = cart.items.find((i) => {
+        const name = i.product?.name || i.service?.name || ""
+        return name.toLowerCase() === target
+      })
+      if (item) return item.id
+    }
+
+    throw new Error(`${actionName} could not find item in cart`)
   }
 
   /**
@@ -734,7 +824,7 @@ export class FunctionExecutor {
         if (!args.cartItemId && !args.sku && !args.productName) {
           return {
             valid: false,
-            error: `removeFromCart requires 'sku' or 'productName'`,
+            error: `removeFromCart requires 'sku', 'productName', or 'cartItemId'`,
           }
         }
         break
@@ -790,8 +880,6 @@ export class FunctionExecutor {
       case "trackOrder":
         // Allow deprecated functions but log warning
         logger.warn(`⚠️ DEPRECATED FUNCTION: ${functionName}`)
-        break
-      case "getOrders":
         break
 
       // Delegation functions
@@ -942,6 +1030,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       reason: args.reason || "Customer requested support",
       urgency: args.urgency || "medium",
+      channel: context.channel, // 🐛 FIX: must forward channel so contactOperator routes reply to the correct channel (widget vs whatsapp)
     })
   }
 }

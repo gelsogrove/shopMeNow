@@ -1,30 +1,56 @@
 import { PageLayout } from "@/components/layout/PageLayout"
+import { DataTable } from "@/components/shared/DataTable"
+import { PageHeader } from "@/components/shared/PageHeader"
+import { useWorkspace } from "@/hooks/use-workspace"
+import { logger } from "@/lib/logger"
+import { toast } from "@/lib/toast"
+import { categoriesApi, type Category } from "@/services/categoriesApi"
 import { FolderTree } from "lucide-react"
-import { useEffect, useState } from "react"
-import { DataTable } from "../components/ui/data-table"
-import { PageHeader } from "../components/ui/page-header"
+import { useEffect, useMemo, useState } from "react"
 
 export function CategoriesPage() {
   // Stato per la ricerca
   const [searchValue, setSearchValue] = useState("")
   // Stato per le categorie
-  const [categories, setCategories] = useState<any[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(false)
   // Stato per il dialog di aggiunta
   const [showAddCategoryDialog, setShowAddCategoryDialog] = useState(false)
+  const { workspace } = useWorkspace()
 
-  // Definizione colonne (placeholder, da personalizzare)
-  const columns = [] // TODO: Definisci le colonne per DataTable
+  const loadCategories = async () => {
+    if (!workspace?.id) return
+    try {
+      setLoading(true)
+      const response = await categoriesApi.getAllForWorkspace(workspace.id)
+      setCategories(response || [])
+    } catch (error) {
+      logger.error("Error loading categories:", error)
+      toast.error("Failed to load categories")
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  // Effetto per caricare le categorie (placeholder fetch)
   useEffect(() => {
-    // TODO: Sostituisci con la fetch reale delle categorie
-    setCategories([])
-  }, [])
+    void loadCategories()
+  }, [workspace?.id])
 
   // Filtra le categorie in base alla ricerca
-  const filteredCategories = categories.filter((cat) =>
-    cat.name?.toLowerCase().includes(searchValue.toLowerCase())
-  )
+  const filteredCategories = useMemo(() => {
+    if (!searchValue.trim()) return categories
+    const term = searchValue.toLowerCase()
+    return categories.filter((cat) =>
+      `${cat.name} ${cat.description || ""}`.toLowerCase().includes(term)
+    )
+  }, [categories, searchValue])
+
+  const columns = [
+    { header: "Name", accessorKey: "name" as const },
+    { header: "Description", accessorKey: "description" as const },
+    { header: "Status", accessorKey: "isActive" as const },
+    { header: "Slug", accessorKey: "slug" as const },
+  ]
 
   return (
     <PageLayout>
@@ -47,6 +73,7 @@ export function CategoriesPage() {
                 columns={columns}
                 data={filteredCategories}
                 globalFilter={searchValue}
+                isLoading={loading}
               />
             </div>
           </div>

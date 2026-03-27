@@ -70,7 +70,6 @@ export async function confirmOrder(
 
     if (!customer) {
       logger.error("❌ Customer not found in ConfirmOrder")
-      await prisma.$disconnect()
       return {
         success: false,
         error: "Customer not found",
@@ -103,7 +102,6 @@ export async function confirmOrder(
 
     if (!cart || !cart.items || cart.items.length === 0) {
       logger.error("❌ Cart empty in ConfirmOrder")
-      await prisma.$disconnect()
       return {
         success: false,
         error: "Cart empty",
@@ -177,38 +175,61 @@ export async function confirmOrder(
     const discountAmount = originalTotal - totalAmount
     const discountPercent = customer.discount || 0
 
-    // 5. Generate order code
-    const orderCount = await prisma.orders.count({
-      where: { workspaceId: request.workspaceId },
-    })
-    const year = new Date().getFullYear()
-    const month = new Date().getMonth() + 1
-    const orderCode = `ORD-${String(orderCount + 1).padStart(3, "0")}-${year}-${month}`
+    // 5. Generate order code with collision-safe retry loop
+    // BUG#9 FIX: count() → generate → create is NOT atomic. Two concurrent orders
+    // can read the same count, derive the same orderCode, and hit the @unique constraint
+    // (Prisma P2002). We retry up to 5 times; on each retry a letter suffix (B, C, D…)
+    // is appended so the code remains human-readable (e.g. ORD-011-2026-3-B).
+    const MAX_CODE_ATTEMPTS = 5
+    let order: any | null = null
+    let orderCode = ""
 
-    // 6. Create the order
-    const order = await prisma.orders.create({
-      data: {
-        orderCode,
-        customerId: request.customerId,
-        workspaceId: request.workspaceId,
-        status: "PENDING",
-        paymentMethod: "PAYPAL",
-        totalAmount,
-        shippingAmount: 0,
-        taxAmount: 0,
-        discountAmount,
-        discountCode: discountPercent > 0 ? `SCONTO_${discountPercent}%` : null,
-        shippingAddress: customer.address || "",
-        billingAddress: customer.address || "",
-        notes: `Ordine creato via chatbot. Sconto cliente: ${discountPercent}%`,
-        items: {
-          create: orderItems,
-        },
-      },
-      include: {
-        items: true,
-      },
-    })
+    for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+      const orderCount = await prisma.orders.count({
+        where: { workspaceId: request.workspaceId },
+      })
+      const year = new Date().getFullYear()
+      const month = new Date().getMonth() + 1
+      const suffix = attempt > 0 ? `-${String.fromCharCode(65 + attempt)}` : "" // -B, -C, -D...
+      orderCode = `ORD-${String(orderCount + 1).padStart(3, "0")}-${year}-${month}${suffix}`
+
+      try {
+        order = await prisma.orders.create({
+          data: {
+            orderCode,
+            customerId: request.customerId,
+            workspaceId: request.workspaceId,
+            status: "PENDING",
+            paymentMethod: "PAYPAL",
+            totalAmount,
+            shippingAmount: 0,
+            taxAmount: 0,
+            discountAmount,
+            discountCode: discountPercent > 0 ? `SCONTO_${discountPercent}%` : null,
+            shippingAddress: customer.address || "",
+            billingAddress: customer.address || "",
+            notes: `Ordine creato via chatbot. Sconto cliente: ${discountPercent}%`,
+            items: {
+              create: orderItems,
+            },
+          },
+          include: {
+            items: true,
+          },
+        })
+        break // Created successfully — exit retry loop
+      } catch (createError: any) {
+        if (createError?.code === "P2002" && attempt < MAX_CODE_ATTEMPTS - 1) {
+          logger.warn(`⚠️ OrderCode collision on attempt ${attempt + 1}: ${orderCode}, retrying...`)
+          continue
+        }
+        throw createError // Re-throw on last attempt or non-collision errors
+      }
+    }
+
+    if (!order) {
+      throw new Error(`Failed to generate unique orderCode after ${MAX_CODE_ATTEMPTS} attempts`)
+    }
 
     logger.info("✅ Order created:", {
       orderCode: order.orderCode,
@@ -311,7 +332,6 @@ The customer is waiting for confirmation and payment details.
       logger.warn("⚠️ Failed to send new order notification:", notificationError)
     }
 
-    await prisma.$disconnect()
 
     // 9. Return success message (English - will be translated by Translation Agent)
     const contactMessage = workspace?.hasSalesAgents
@@ -361,7 +381,6 @@ The customer is waiting for confirmation and payment details.
     }
   } catch (error) {
     logger.error("❌ Error in ConfirmOrder:", error)
-    await prisma.$disconnect()
     return {
       success: false,
       error: error instanceof Error ? error.message : "Internal error",

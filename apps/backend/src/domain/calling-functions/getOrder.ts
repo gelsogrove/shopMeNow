@@ -143,6 +143,5 @@ export async function getOrder(
         "Errore nel recupero dell'ordine. Riprova più tardi o contatta l'assistenza.",
     }
   } finally {
-    await prisma.$disconnect()
   }
 }

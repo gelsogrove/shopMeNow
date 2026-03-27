@@ -2039,9 +2039,20 @@ export class LLMRouterService {
               delegationTarget,
               query: delegationQuery,
             })
-            // Return a simple text response instead of delegating
+            // 🌍 FIX: build a language-aware fallback instead of hardcoded Italian
+            // Covers the most common languages; TranslationAgent is not available here (no sub-agent loop)
+            const lang = (params.customerLanguage || "it").toLowerCase().slice(0, 2)
+            const profileFallbackMap: Record<string, string> = {
+              it: "Per gestire il tuo profilo, registrati prima attraverso il link di registrazione. Una volta registrato potrai accedere a tutte le funzionalità del profilo.",
+              en: "To manage your profile, please register first via the registration link. Once registered you can access all profile features.",
+              es: "Para gestionar tu perfil, regístrate primero a través del enlace de registro. Una vez registrado podrás acceder a todas las funciones del perfil.",
+              pt: "Para gerir o seu perfil, registe-se primeiro através do link de registo. Depois de registado poderá aceder a todas as funcionalidades do perfil.",
+              fr: "Pour gérer votre profil, inscrivez-vous d'abord via le lien d'inscription. Une fois inscrit vous pourrez accéder à toutes les fonctionnalités du profil.",
+              de: "Um Ihr Profil zu verwalten, registrieren Sie sich zuerst über den Registrierungslink. Nach der Registrierung können Sie alle Profilfunktionen nutzen.",
+            }
+            const profileFallback = profileFallbackMap[lang] ?? profileFallbackMap["en"]
             return {
-              response: "Per gestire il tuo profilo, registrati prima attraverso il link di registrazione. Una volta registrato potrai accedere a tutte le funzionalità del profilo.",
+              response: profileFallback,
               agentUsed: "ROUTER",
               confidence: 0.9,
               tokensUsed: totalTokens,

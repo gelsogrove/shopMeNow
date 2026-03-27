@@ -195,7 +195,17 @@ export class WhatsAppQueueService {
         }
 
         // Send WIP message automatically (no LLM, no extra cost)
-        const wipMessage = workspace.wipMessage || "We are in maintenance mode. Please try again later."
+        // wipMessage can be a JSON object with language keys { en: "...", it: "..." } or a plain string
+        const rawWip = workspace.wipMessage
+        const customerLang = ((message as any).customer?.language || "en").toLowerCase()
+        let wipMessage: string
+        if (rawWip && typeof rawWip === "object") {
+          wipMessage = (rawWip as any)[customerLang] || (rawWip as any).en || "Work in progress. Please contact us later."
+        } else if (typeof rawWip === "string" && rawWip.trim()) {
+          wipMessage = rawWip
+        } else {
+          wipMessage = "Work in progress. Please contact us later."
+        }
 
         try {
           // TODO: Replace with actual WhatsApp send when ready

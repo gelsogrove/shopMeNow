@@ -347,7 +347,6 @@ export async function repeatOrder(
 
       if (!cartLinkResult.success || !cartLinkResult.linkUrl) {
         logger.error("❌ Failed to generate cart link in RepeatOrder")
-        await prisma.$disconnect()
 
         return {
           success: false,
@@ -430,7 +429,6 @@ export async function repeatOrder(
         }
       }
 
-      await prisma.$disconnect()
 
       logger.info("✅ RepeatOrder success: added", productsAdded, "products")
 
@@ -480,7 +478,6 @@ ${priceSection}
       }
     } catch (error) {
       logger.error("❌ Error in RepeatOrder database operations:", error)
-      await prisma.$disconnect()
 
       return {
         success: false,

@@ -1,5 +1,4 @@
 import { prisma, Prisma } from '../config/database'
-import axios from 'axios'
 import logger from '../utils/logger'
 import { SecurityAgentService } from '../services/security-agent.service'
 import { BillingService } from '../services/billing.service'
@@ -520,6 +519,8 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                 queueId: message.id,
                 workspaceId: workspace.id,
               })
+              const blockReason = workspace.debugMode === true ? 'DEBUG_MODE' : 'CHANNEL_DISABLED'
+              await markQueue('blocked', blockReason)
               workspaceBlocked++
               continue
             }
@@ -547,13 +548,6 @@ export async function whatsappChannelQueueJob(): Promise<void> {
 
           // 🧪 TEST FAST-PATH: In test environment, bypass provider plumbing but still exercise status updates
           if (process.env.NODE_ENV === 'test') {
-            const phoneId =
-              workspace.metaPhoneNumberId ||
-              workspace.whatsappPhoneNumber ||
-              workspaceWhatsAppConfig?.phoneNumber ||
-              'test-number'
-            await axios.post(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {})
-
             await prisma.whatsAppQueue.update({
               where: { id: message.id },
               data: { status: 'sent', deliveredAt: new Date() },

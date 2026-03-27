@@ -49,6 +49,7 @@ export const WIDGET_MESSAGE_SCHEMA = z
     language: z.string().optional().describe("Optional visitor language"),
     sessionId: SESSION_ID_SCHEMA,
     customerId: z.string().uuid().optional().describe("Registered customer ID (from localStorage) - skip visitorId lookup"),
+    isPlayground: z.boolean().optional().describe("🧪 Playground mode: bypass WIP, origin, security and billing checks (admin testing only)"),
   })
   .strict() // Reject unknown properties
   .describe("Widget chat message")
@@ -79,6 +80,7 @@ export const WIDGET_REGISTER_SCHEMA = z
       .boolean()
       .optional()
       .describe("Customer consent to receive WhatsApp push notifications (mirrors T&C acceptance)"),
+    isPlayground: z.boolean().optional().describe("🧪 Playground mode: bypass WIP, origin and billing checks (admin testing only)"),
   })
   .strict()
   .describe("Widget visitor registration with first message")

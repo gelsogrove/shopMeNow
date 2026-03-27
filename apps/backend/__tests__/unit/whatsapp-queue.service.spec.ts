@@ -616,6 +616,7 @@ describe("WhatsAppQueueService - Unit Tests", () => {
           customer: {
             select: {
               id: true,
+              language: true,
               name: true,
               phone: true,
             },

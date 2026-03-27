@@ -34,6 +34,17 @@ export class WebhookDispatchService {
             'X-Echatbot-Timestamp': timestamp,
         }
 
+        // 🔐 FIX: Generate HMAC-SHA256 signature when secret is configured
+        // Format: HMAC-SHA256(timestamp + '.' + body, secret)
+        // Receiver verifies with: crypto.createHmac('sha256', secret).update(timestamp + '.' + body).digest('hex')
+        if (secret) {
+            const signature = crypto
+                .createHmac('sha256', secret)
+                .update(timestamp + '.' + body)
+                .digest('hex')
+            headers['X-Echatbot-Signature'] = `sha256=${signature}`
+        }
+
         try {
             logger.info(`🌐 Dispatching webhook to ${url}`, {
                 function: payload.function,

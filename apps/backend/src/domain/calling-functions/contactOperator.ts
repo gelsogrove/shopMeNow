@@ -78,7 +78,6 @@ export async function contactOperator(
           "⚠️ Customer not found for ContactOperator:",
           request.phoneNumber
         )
-        await prisma.$disconnect()
         return {
           success: true,
           message:
@@ -534,7 +533,6 @@ Rispondi direttamente su WhatsApp.
         activeChatbot: false,
       })
 
-      await prisma.$disconnect()
 
       // 📝 Build response message with variable replacement (Andrea's spec)
       // Use humanSupportInstructions (message to send) NOT frustrationEscalationInstructions (triggers)
@@ -609,7 +607,6 @@ Rispondi direttamente su WhatsApp.
       }
     } catch (dbError) {
       logger.error("❌ Database error in contactOperator:", dbError)
-      await prisma.$disconnect()
 
       // Still return success - escalation intent is recorded in logs
       return {

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -36,7 +35,6 @@ interface Channel {
 }
 
 export default function ChannelsPage() {
-  const navigate = useNavigate()
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null)
@@ -386,15 +384,9 @@ export default function ChannelsPage() {
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={() => handleLogoClick(channel, true)}
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
                     >
-                      Test Widget
-                    </button>
-                    <button
-                      onClick={() => navigate(`/workspaces/${workspaceId}/functions`)}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
-                    >
-                      Manage Functions
+                      🧪 Test Widget (Free)
                     </button>
                   </div>
                 </div>

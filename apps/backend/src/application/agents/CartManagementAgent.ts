@@ -408,11 +408,20 @@ export class CartManagementAgent {
         }
       }
 
+      // Services can only have quantity 1
+      if (item.serviceId && newQuantity > 1) {
+        return {
+          success: false,
+          error: "INVALID_QUANTITY",
+          message: "Service items can only have quantity 1",
+        }
+      }
+
       // Check stock if updating product
       if (item.productId) {
         const product = await this.productRepo.findById(
-          context.workspaceId,
-          item.productId
+          item.productId,
+          context.workspaceId
         )
 
         if (product && product.stock !== null && product.stock < newQuantity) {

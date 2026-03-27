@@ -84,6 +84,7 @@ export class WhatsAppQueueRepository {
               id: true,
               name: true,
               phone: true,
+              language: true,
             },
           },
         },

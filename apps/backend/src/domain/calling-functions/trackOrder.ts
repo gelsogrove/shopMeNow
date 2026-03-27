@@ -108,7 +108,6 @@ export async function trackOrder(
         "Errore nel tracking dell'ordine. Riprova più tardi o contatta l'assistenza.",
     }
   } finally {
-    await prisma.$disconnect()
   }
 }
 

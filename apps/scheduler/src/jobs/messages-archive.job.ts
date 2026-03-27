@@ -22,6 +22,9 @@ export async function messagesArchiveJob(): Promise<void> {
         createdAt: {
           lt: cutoffDate,
         },
+        chatSessionId: {
+          not: null,
+        },
       },
       include: {
         chatSession: {
@@ -43,6 +46,11 @@ export async function messagesArchiveJob(): Promise<void> {
     await prisma.$transaction(async (tx) => {
       // 1. Insert into archive (ALL fields for complete restore)
       for (const msg of oldMessages) {
+        if (!msg.chatSession) {
+          logger.warn(`[MESSAGES_ARCHIVE] Missing chatSession for message ${msg.id}. Deleting without archive.`)
+          await tx.message.delete({ where: { id: msg.id } })
+          continue
+        }
         await tx.messageArchive.create({
           data: {
             originalId: msg.id,

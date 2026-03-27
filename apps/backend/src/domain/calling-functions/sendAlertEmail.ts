@@ -139,7 +139,6 @@ export async function sendAlertEmail(
       message: "Errore nell'invio dell'alert. Il problema è stato registrato.",
     }
   } finally {
-    await prisma.$disconnect()
   }
 }
 

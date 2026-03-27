@@ -72,6 +72,13 @@ jest.mock("../../../src/application/agents/SafetyTranslationAgent", () => ({
   })),
 }))
 
+// Mock TranslationAgent to prevent @shared/translation-prompts module resolution failure
+jest.mock("../../../src/application/agents/TranslationAgent", () => ({
+  TranslationAgent: jest.fn().mockImplementation(() => ({
+    process: jest.fn().mockResolvedValue({ translatedText: "Test translated text" }),
+  })),
+}))
+
 jest.mock("../../../src/services/calling-functions.service", () => ({
   CallingFunctionsService: jest.fn().mockImplementation(() => ({
     addProductToCart: jest.fn().mockResolvedValue({

@@ -141,7 +141,6 @@ export async function manageNotifications(
         timestamp: new Date().toISOString(),
       }
     } finally {
-      await prisma.$disconnect()
     }
   } catch (error) {
     logger.error("❌ ManageNotifications error:", error)

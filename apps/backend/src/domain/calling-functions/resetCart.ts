@@ -117,7 +117,6 @@ export async function resetCart(
 
     if (!customer) {
       logger.error("❌ ResetCart - Customer not found or wrong workspace")
-      await prisma.$disconnect()
       return createErrorResponse(
         "Cliente non trovato",
         "Ops {{nameUser}}! 😅\n\n" +
@@ -146,7 +145,6 @@ export async function resetCart(
     if (!cart || cart.items.length === 0) {
       const status = !cart ? "no cart found" : "cart empty"
       logger.info(`ℹ️ ResetCart - ${status} for customer ${request.customerId}`)
-      await prisma.$disconnect()
 
       return {
         success: true,
@@ -165,7 +163,6 @@ export async function resetCart(
       },
     })
 
-    await prisma.$disconnect()
 
     logger.info(
       `✅ ResetCart success - Removed ${itemsRemoved} items from cart ${cart.id}`
@@ -179,7 +176,6 @@ export async function resetCart(
     }
   } catch (error) {
     logger.error("❌ ResetCart - Database error:", error)
-    await prisma.$disconnect()
 
     return createErrorResponse(
       error instanceof Error ? error.message : "Errore database",

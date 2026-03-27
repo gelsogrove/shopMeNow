@@ -43,6 +43,7 @@ export default function VerifyOtpPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const userId = searchParams.get("userId")
+  const [qrRefreshKey, setQrRefreshKey] = useState(0)
 
   const form = useForm<OtpForm>({
     resolver: zodResolver(otpSchema),
@@ -62,9 +63,9 @@ export default function VerifyOtpPage() {
       setIsLoading(true)
       setError("")
 
-      const response = await api.post("/auth/verify-otp", {
+      const response = await api.post("/auth/verify-2fa-setup", {
         userId,
-        otp: data.otp,
+        code: data.otp,
       })
 
       const { token } = response.data
@@ -125,7 +126,7 @@ export default function VerifyOtpPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <QRCodeDisplay userId={userId} />
+          <QRCodeDisplay key={`${userId}-${qrRefreshKey}`} userId={userId} />
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -180,14 +181,14 @@ export default function VerifyOtpPage() {
               variant="link"
               className="p-0 text-primary hover:underline"
               onClick={() => {
-                // TODO: Implement resend OTP
+                setQrRefreshKey((prev) => prev + 1)
                 toast({
-                  title: "New code sent!",
-                  description: "Please check your email for the new code.",
+                  title: "QR code refreshed",
+                  description: "Scan the new QR code with your authenticator app.",
                 })
               }}
             >
-              Resend
+              Refresh QR
             </Button>
           </p>
         </CardFooter>
