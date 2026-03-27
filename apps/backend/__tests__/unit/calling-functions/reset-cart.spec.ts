@@ -96,7 +96,8 @@ describe("ResetCart Calling Function", () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Cliente non trovato")
-      expect(mockDisconnect).toHaveBeenCalled()
+      // BUG#7 regression: must NOT disconnect shared Prisma instance
+      expect(mockDisconnect).not.toHaveBeenCalled()
     })
 
     it("should return error when customer exists in different workspace", async () => {
@@ -188,7 +189,10 @@ describe("ResetCart Calling Function", () => {
       expect(result.message).toContain("2 prodotto/i")
     })
 
-    it("should disconnect from prisma after successful operation", async () => {
+    it("should NOT call prisma.$disconnect() after successful operation (BUG#7 regression)", async () => {
+      // BUG WAS: resetCart called prisma.$disconnect() on the shared global instance.
+      // This would kill the DB connection pool for ALL concurrent requests.
+      // RULE: Domain functions must never disconnect the shared Prisma singleton.
       mockCustomerFindFirst.mockResolvedValue({ id: "customer-123" })
       mockCartFindFirst.mockResolvedValue({
         id: "cart-123",
@@ -201,7 +205,7 @@ describe("ResetCart Calling Function", () => {
         workspaceId: "workspace-456",
       })
 
-      expect(mockDisconnect).toHaveBeenCalled()
+      expect(mockDisconnect).not.toHaveBeenCalled()
     })
   })
 
@@ -218,7 +222,8 @@ describe("ResetCart Calling Function", () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toContain("Database connection failed")
-      expect(mockDisconnect).toHaveBeenCalled()
+      // BUG#7 regression: must NOT disconnect shared Prisma instance even on error
+      expect(mockDisconnect).not.toHaveBeenCalled()
     })
 
     it("should handle database error during cart deletion", async () => {
@@ -240,7 +245,10 @@ describe("ResetCart Calling Function", () => {
       expect(result.error).toContain("Delete operation failed")
     })
 
-    it("should always disconnect from prisma on error", async () => {
+    it("should NEVER call prisma.$disconnect() on error (BUG#7 regression)", async () => {
+      // BUG WAS: both happy-path and all error paths called prisma.$disconnect().
+      // RULE: $disconnect on a shared singleton must never be called — it tears down
+      // the connection pool for every concurrent request in the process.
       mockCustomerFindFirst.mockResolvedValue({ id: "customer-123" })
       mockCartFindFirst.mockRejectedValue(new Error("Query error"))
 
@@ -249,7 +257,7 @@ describe("ResetCart Calling Function", () => {
         workspaceId: "workspace-456",
       })
 
-      expect(mockDisconnect).toHaveBeenCalled()
+      expect(mockDisconnect).not.toHaveBeenCalled()
     })
   })
 

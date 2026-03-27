@@ -156,14 +156,17 @@ describe("SearchProduct Calling Function", () => {
       // NOTE: productSearch table removed - no DB writes for search tracking
     })
 
-    it("should disconnect from prisma after operation", async () => {
+    it("should NOT call prisma.$disconnect() (BUG#7 regression — shared instance must never disconnect)", async () => {
+      // BUG WAS: searchProduct called prisma.$disconnect() on the global shared instance,
+      // which killed the connection pool for ALL concurrent requests.
+      // RULE: Domain functions must never disconnect the shared Prisma singleton.
       await searchProduct({
         customerId: "customer-123",
         workspaceId: "workspace-456",
         productName: "Burrata",
       })
 
-      expect(mockDisconnect).toHaveBeenCalled()
+      expect(mockDisconnect).not.toHaveBeenCalled()
     })
   })
 
@@ -179,14 +182,15 @@ describe("SearchProduct Calling Function", () => {
       expect(result.error).toBe("Parametri richiesti mancanti")
     })
 
-    it("should disconnect on validation errors", async () => {
+    it("should NOT call prisma.$disconnect() on validation errors (BUG#7 regression)", async () => {
+      // RULE: Even on early return paths, the shared Prisma instance must not be disconnected.
       await searchProduct({
         customerId: "",
         workspaceId: "workspace-456",
         productName: "Mozzarella",
       })
 
-      expect(mockDisconnect).toHaveBeenCalled()
+      expect(mockDisconnect).not.toHaveBeenCalled()
     })
 
     it("should include timestamp in error response", async () => {
