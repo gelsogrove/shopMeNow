@@ -27,10 +27,10 @@ function applyStrikethrough(text: string): string {
 // Load environment variables
 dotenv.config()
 
-// BUG#12 FIX: Log only presence, never prefix/length -- even a partial key
-// reduces the credential search space and leaks data to log aggregators.
+// BUG#12 FIX: API key is loaded but NEVER logged at module level to avoid
+// leaking credential presence to log aggregators at startup.
+// Key status is only checked lazily inside isOpenAIConfigured().
 const apiKey = process.env.OPENAI_API_KEY || ""
-logger.debug(`OpenAI API key status: ${apiKey ? "Present" : "Missing"}`)
 
 // OpenAI client instance
 const openai = new OpenAI({

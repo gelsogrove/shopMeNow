@@ -16,7 +16,7 @@
 import { Request, Response } from 'express'
 import path from 'path'
 import fs from 'fs'
-import { FilesController } from '../../../../src/interfaces/http/controllers/files.controller'
+import { FilesController } from '../../../src/interfaces/http/controllers/files.controller'
 
 // Mock fs and path so we don't need real files on disk
 jest.mock('fs')
@@ -29,8 +29,6 @@ jest.mock('path', () => {
     extname: real.extname,
   }
 })
-
-const mockFs = fs as jest.Mocked<typeof fs>
 
 function makeReq(overrides: Partial<{ workspaceId: string; category: string; folder: string; filename: string }>): Partial<Request> {
   const { workspaceId = 'ws-abc', category = 'private', folder = 'ws-abc', filename = 'invoice.pdf' } = overrides
@@ -57,11 +55,13 @@ describe('FilesController - Workspace Isolation (BUG#13)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     controller = new FilesController()
-    // Default: file exists
-    mockFs.existsSync = jest.fn().mockReturnValue(true)
-    mockFs.statSync = jest.fn().mockReturnValue({ size: 1024 } as any)
-    mockFs.createReadStream = jest.fn().mockReturnValue({ pipe: jest.fn() } as any)
+    // Default: file exists — use spyOn to avoid TS2540 readonly errors
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true)
+    jest.spyOn(fs, 'statSync').mockReturnValue({ size: 1024 } as any)
+    jest.spyOn(fs, 'createReadStream').mockReturnValue({ pipe: jest.fn() } as any)
   })
+
+  afterEach(() => jest.restoreAllMocks())
 
   // ── servePrivateFile ──────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ describe('FilesController - Workspace Isolation (BUG#13)', () => {
 
       await controller.servePrivateFile(req as Request, res as Response)
 
-      expect(mockFs.createReadStream).not.toHaveBeenCalled()
+      expect(fs.createReadStream).not.toHaveBeenCalled()
     })
 
     it('should allow access when folder starts with the correct workspaceId', async () => {
@@ -95,14 +95,14 @@ describe('FilesController - Workspace Isolation (BUG#13)', () => {
       const req = makeReq({ workspaceId: 'ws-OWNER', folder: 'ws-OWNER', filename: 'my-invoice.pdf' })
       const res = makeRes()
 
-      mockFs.existsSync = jest.fn().mockReturnValue(true)
       const mockStream = { pipe: jest.fn() }
-      mockFs.createReadStream = jest.fn().mockReturnValue(mockStream as any)
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true)
+      jest.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any)
 
       await controller.servePrivateFile(req as Request, res as Response)
 
       // createReadStream called — file is being served
-      expect(mockFs.createReadStream).toHaveBeenCalled()
+      expect(fs.createReadStream).toHaveBeenCalled()
       expect(mockStream.pipe).toHaveBeenCalledWith(res)
     })
 
@@ -112,13 +112,13 @@ describe('FilesController - Workspace Isolation (BUG#13)', () => {
       const req = makeReq({ workspaceId: 'ws-OWNER', folder: 'ws-OWNER/invoices/2024' })
       const res = makeRes()
 
-      mockFs.existsSync = jest.fn().mockReturnValue(true)
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true)
       const mockStream = { pipe: jest.fn() }
-      mockFs.createReadStream = jest.fn().mockReturnValue(mockStream as any)
+      jest.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any)
 
       await controller.servePrivateFile(req as Request, res as Response)
 
-      expect(mockFs.createReadStream).toHaveBeenCalled()
+      expect(fs.createReadStream).toHaveBeenCalled()
     })
 
     it('should block access to category other than private', async () => {
@@ -151,8 +151,8 @@ describe('FilesController - Workspace Isolation (BUG#13)', () => {
       const req = makeReq({ workspaceId: 'ws-OWN', folder: 'ws-OWN', filename: 'doc.pdf' })
       const res = makeRes()
 
-      mockFs.existsSync = jest.fn().mockReturnValue(true)
-      mockFs.statSync = jest.fn().mockReturnValue({ size: 512 } as any)
+      jest.spyOn(fs, 'existsSync').mockReturnValue(true)
+      jest.spyOn(fs, 'statSync').mockReturnValue({ size: 512 } as any)
 
       await controller.checkPrivateFile(req as Request, res as Response)
 
