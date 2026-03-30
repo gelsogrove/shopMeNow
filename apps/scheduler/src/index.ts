@@ -11,6 +11,7 @@ import {
   softDeleteCleanupJob,
   supportAttachmentsCleanupJob,
   pushCampaignsJob,
+  wasenderQrCleanupJob,
 } from './jobs'
 import logger from './utils/logger'
 
@@ -19,13 +20,14 @@ import logger from './utils/logger'
 // Cron Jobs (ordered by execution time):
 // 1. WhatsApp Channel Queue    - every 5 SECONDS (parallel send, with lock)
 // 2. Push Campaigns Runner     - every minute
-// 3. Short URLs Cleanup        - daily at 23:00
-// 4. Storage Cleanup           - daily at 23:05 (unused images + temp + invoices)
-// 5. Messages Archive          - daily at 23:10 (archive messages older than 6 months)
-// 6. WhatsApp Queue Cleanup    - daily at 23:15 (delete errors/sent older than 7 days)
-// 7. Soft Delete Cleanup       - daily at 23:20 (hard-delete records after retention period)
-// 8. Support Attachments Cleanup- daily at 23:25
-// 9. Monthly Billing           - 1st of month at 23:30
+// 3. Wasender QR Cleanup       - every 10 minutes (clears expired QR codes)
+// 4. Short URLs Cleanup        - daily at 23:00
+// 5. Storage Cleanup           - daily at 23:05 (unused images + temp + invoices)
+// 6. Messages Archive          - daily at 23:10 (archive messages older than 6 months)
+// 7. WhatsApp Queue Cleanup    - daily at 23:15 (delete errors/sent older than 7 days)
+// 8. Soft Delete Cleanup       - daily at 23:20 (hard-delete records after retention period)
+// 9. Support Attachments Cleanup- daily at 23:25
+// 10. Monthly Billing          - 1st of month at 23:30
 //
 // HOW TO ENABLE/DISABLE JOBS:
 // - From Backoffice: /schedulers page → toggle isActive
@@ -49,6 +51,14 @@ async function main() {
   // Push Campaigns runner - every minute
   cron.schedule('0 * * * * *', async () => {
     await runJob('push-campaigns', pushCampaignsJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 2: Wasender QR Cleanup - every 10 minutes
+  // Clears expired Wasender QR codes (older than 5 minutes)
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('*/10 * * * *', async () => {
+    await runJob('wasender-qr-cleanup', wasenderQrCleanupJob)
   })
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -112,13 +122,14 @@ async function main() {
   logger.info('📋 Scheduled jobs:')
   logger.info('   1. WhatsApp Channel Queue       - every 5 SECONDS')
   logger.info('   2. Push Campaigns Runner        - every minute')
-  logger.info('   3. Short URLs Cleanup           - daily at 23:00')
-  logger.info('   4. Unused Images Cleanup        - daily at 23:05')
-  logger.info('   5. Messages Archive             - daily at 23:10')
-  logger.info('   6. WhatsApp Queue Cleanup       - daily at 23:15')
-  logger.info('   7. Soft Delete Cleanup          - daily at 23:20')
-  logger.info('   8. Support Attachments Cleanup  - daily at 23:25')
-  logger.info('   9. Monthly Billing             - 1st of month at 23:30')
+  logger.info('   3. Wasender QR Cleanup          - every 10 minutes')
+  logger.info('   4. Short URLs Cleanup           - daily at 23:00')
+  logger.info('   5. Unused Images Cleanup        - daily at 23:05')
+  logger.info('   6. Messages Archive             - daily at 23:10')
+  logger.info('   7. WhatsApp Queue Cleanup       - daily at 23:15')
+  logger.info('   8. Soft Delete Cleanup          - daily at 23:20')
+  logger.info('   9. Support Attachments Cleanup  - daily at 23:25')
+  logger.info('   10. Monthly Billing            - 1st of month at 23:30')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {
