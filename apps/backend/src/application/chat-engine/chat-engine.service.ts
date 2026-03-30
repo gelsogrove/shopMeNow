@@ -5386,12 +5386,25 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       logger.error("❌ [ChatEngine] Error processing message", {
         errorMessage: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack : undefined,
+        customerLanguage: input.customerLanguage,
       })
       const errorTimeMs = Date.now() - startTime
+      
+      // STEP: Get base error message in customer language
+      const baseErrorMessage = this.getErrorMessageByLanguage(input.customerLanguage)
+      
+      // 🌍 TRANSLATION LAYER for error messages (async, non-blocking)
+      // Even errors should be polished through translation, if customer language is not English
+      const finalErrorMessage = await this.translateErrorMessage(
+        baseErrorMessage,
+        input.workspaceId,
+        input.customerLanguage,
+        input.customerName
+      )
 
       return {
         // New fields
-        message: "Mi scusi, si è verificato un errore. Può riprovare?",
+        message: finalErrorMessage,
         agentType: AgentType.ROUTER,
         wasHandled: false,
         intent: "ERROR",
@@ -5406,9 +5419,10 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           totalTokens,
           totalCost: 0,
           executionTimeMs: errorTimeMs,
+          hasTranslation: finalErrorMessage !== baseErrorMessage, // Track if translation was applied
         },
         // Legacy fields
-        response: "Mi scusi, si è verificato un errore. Può riprovare?",
+        response: finalErrorMessage,
         agentUsed: AgentType.ROUTER,
         tokensUsed: 0,
         executionTimeMs: errorTimeMs,
@@ -6420,6 +6434,76 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     }
 
     return enrichmentOptions
+  }
+
+  /**
+   * Get error message in customer's language
+   * @param language - Customer's language code (en, it, es, pt, fr, de)
+   * @returns Error message in the appropriate language
+   */
+  private getErrorMessageByLanguage(language?: string): string {
+    const errorMessages: Record<string, string> = {
+      it: "Mi scusi, si è verificato un errore. Può riprovare?",
+      en: "Sorry, something went wrong. Please try again.",
+      es: "Lo siento, algo salió mal. Por favor, inténtelo de nuevo.",
+      pt: "Desculpe, algo deu errado. Por favor, tente novamente.",
+      fr: "Désolé, quelque chose s'est mal passé. Veuillez réessayer.",
+      de: "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut.",
+    }
+
+    return errorMessages[language?.toLowerCase() || "en"] || errorMessages.en
+  }
+
+  /**
+   * Translate error message through TranslationAgent (STEP: Error Translation)
+   * RULE: Even error messages must be polished through translation layer
+   * RULE: Fallback to original if translation fails
+   * 
+   * @param errorMessage - Base error message (English by default)
+   * @param workspaceId - Workspace ID for TranslationAgent context
+   * @param targetLanguage - Customer's language
+   * @param customerName - Optional customer name for personalization
+   * @returns Translated error message (or fallback)
+   */
+  private async translateErrorMessage(
+    errorMessage: string,
+    workspaceId: string,
+    targetLanguage: string = "en",
+    customerName?: string
+  ): Promise<string> {
+    try {
+      // Skip translation if already in the same language
+      if (!targetLanguage || targetLanguage.toLowerCase() === "en") {
+        return errorMessage
+      }
+
+      logger.info("[ChatEngine] 🌍 Translating error message", {
+        originalLength: errorMessage.length,
+        targetLanguage,
+      })
+
+      const translated = await this.translationAgent.process({
+        workspaceId,
+        message: errorMessage,
+        targetLanguage: targetLanguage || "en",
+        customerName,
+      })
+
+      if (translated && translated.message) {
+        logger.info("[ChatEngine] ✅ Error message translated successfully")
+        return translated.message
+      }
+
+      logger.warn("[ChatEngine] ⚠️ TranslationAgent returned null/empty, using fallback")
+      return errorMessage
+    } catch (translationError) {
+      // Non-blocking error: Fallback to original message if translation fails
+      logger.warn("[ChatEngine] ⚠️ Error message translation failed, using fallback", {
+        error: translationError instanceof Error ? translationError.message : String(translationError),
+        targetLanguage,
+      })
+      return errorMessage
+    }
   }
 
   // ================================================================================

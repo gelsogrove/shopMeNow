@@ -1570,6 +1570,38 @@ export class WidgetChatController {
       }
       logger.info("✅ Chat session ready", { sessionId: chatSession?.id, customerId: customer.id })
 
+      // VALIDATION: Ensure chat session exists before routing to LLM
+      // This prevents message loss from null conversationId in LLM processing
+      if (!chatSession || !chatSession.id) {
+        logger.error("[WIDGET] ❌ Chat session creation/retrieval failed - cannot route to LLM", {
+          customerId: customer.id,
+          visitorId,
+          chatSessionExists: !!chatSession,
+          chatSessionId: chatSession?.id,
+        })
+        return res.status(500).json({
+          error: "CHAT_SESSION_ERROR",
+          message: "Failed to establish chat session. Please refresh and try again.",
+          activeChatbot: false,
+          blocked: true,
+        })
+      }
+
+      // VALIDATION: Ensure chat session is valid before routing to LLM
+      // This prevents null conversationId which would cause silent message loss
+      if (!chatSession || !chatSession.id) {
+        logger.error("[WIDGET] ❌ Chat session creation/retrieval failed", {
+          customerId: customer.id,
+          visitorId,
+          sessionExists: !!chatSession,
+          hasId: !!chatSession?.id,
+        })
+        return res.status(500).json({
+          error: "CHAT_SESSION_ERROR",
+          message: "Failed to create chat session. Please refresh and try again.",
+        })
+      }
+
       // 👋 WELCOME MESSAGE: DISABLED for widget channel
       // Widget uses llmRouterService.routeMessage() which handles [LINK_REGISTRATION]
       // replacement correctly (with final catch-all link replacement pass).

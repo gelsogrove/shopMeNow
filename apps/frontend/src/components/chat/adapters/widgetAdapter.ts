@@ -187,17 +187,30 @@ export const sendWidgetMessage = async ({
 
   // RULE: operator handoff active — backend blocked the LLM intentionally.
   // Return activeChatbot:false so the widget switches to waiting mode silently.
+  // IMPORTANT: Empty response is INTENTIONAL in this handoff case, not a validation error
   if (data?.activeChatbot === false && data?.blocked === true) {
+    console.debug("[WidgetAdapter] 🚫 Operator handoff detected - returning empty response", {
+      customerId: data?.customerId,
+      sessionId: data?.sessionId,
+    })
     return {
       response: "",
       sessionId: undefined,
       messageId: undefined,
       suggestions: undefined,
       activeChatbot: false as boolean | undefined,
+      blocked: true, // 🆕 Preserve blocked flag for downstream handling
     }
   }
 
+  // RULE: For normal (non-handoff) responses, response must be present
   if (!data?.response) {
+    console.error("[WidgetAdapter] ❌ Response validation failed - empty response in normal flow", {
+      dataKeys: Object.keys(data || {}),
+      activeChatbot: data?.activeChatbot,
+      blocked: data?.blocked,
+      hasSessionId: !!data?.sessionId,
+    })
     throw new Error("Widget response missing")
   }
 
