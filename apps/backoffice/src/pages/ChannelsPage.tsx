@@ -7,6 +7,7 @@ import { Bug, CheckCircle2, AlertCircle, X, Phone } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { workspaceApi } from "@/services/workspaceApi"
 import ChatWidget from "@/components/ChatWidget"
+import { WhatsAppChatSimulator } from "@/components/WhatsAppChatSimulator"
 import { IMG_BASE_URL } from "@/config"
 
 interface Channel {
@@ -44,6 +45,7 @@ export default function ChannelsPage() {
   const [playgroundPhoneNumbers, setPlaygroundPhoneNumbers] = useState<Record<string, string>>({})
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<Record<string, string>>({})
   const [widgetAutoOpen, setWidgetAutoOpen] = useState(false)
+  const [testingMode, setTestingMode] = useState<"widget" | "whatsapp">("widget")
   const apiUrl = import.meta.env.VITE_API_URL || undefined
 
   /**
@@ -383,10 +385,26 @@ export default function ChannelsPage() {
 
                   <div className="flex gap-2 pt-2">
                     <button
-                      onClick={() => handleLogoClick(channel, true)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                      onClick={() => {
+                        setSelectedWorkspace(channel)
+                        setSelectedWorkspaceId(getWorkspaceId(channel))
+                        setTestingMode("widget")
+                        setWidgetAutoOpen(true)
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
                     >
-                      🧪 Test Widget (Free)
+                      🧪 Test Widget
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedWorkspace(channel)
+                        setSelectedWorkspaceId(getWorkspaceId(channel))
+                        setTestingMode("whatsapp")
+                        setWidgetAutoOpen(true)
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+                    >
+                      💬 Test WhatsApp
                     </button>
                   </div>
                 </div>
@@ -410,33 +428,52 @@ export default function ChannelsPage() {
           }}
         >
           <DialogContent className="max-w-[420px] p-0 overflow-hidden">
-            <div className="relative w-[380px] h-[620px]">
-              <ChatWidget
-                key={`${selectedWorkspaceId}-${widgetAutoOpen ? "open" : "closed"}`}
-                workspaceId={selectedWorkspaceId}
-                logoUrl={selectedWorkspace.logoUrl ?
-                  (selectedWorkspace.logoUrl.startsWith('http') ? selectedWorkspace.logoUrl : `${IMG_BASE_URL}${selectedWorkspace.logoUrl}`)
-                  : undefined
-                }
-                title={selectedWorkspace.name}
-                position="bottom-right"
-                phoneNumber={playgroundPhoneNumbers[selectedWorkspaceId] || selectedWorkspace.whatsappPhoneNumber || "+39 999 1234567"} // 📱 Use custom or default
-                language={widgetLanguages[selectedWorkspaceId] || "it"}
-                debugMode={selectedWorkspace.debugMode === true} // 🐛 Pass debug mode status
-                isPlayground={true} // 🧪 PLAYGROUND: Never deduct credits
-                autoOpen={widgetAutoOpen}
-                forceEmbedded={true}
-                apiUrl={apiUrl}
-                onOpenChange={(isOpen) => {
-                  if (!isOpen) {
+            {testingMode === "widget" && (
+              <div className="relative w-[380px] h-[620px]">
+                <ChatWidget
+                  key={`${selectedWorkspaceId}-${widgetAutoOpen ? "open" : "closed"}`}
+                  workspaceId={selectedWorkspaceId}
+                  logoUrl={selectedWorkspace.logoUrl ?
+                    (selectedWorkspace.logoUrl.startsWith('http') ? selectedWorkspace.logoUrl : `${IMG_BASE_URL}${selectedWorkspace.logoUrl}`)
+                    : undefined
+                  }
+                  title={selectedWorkspace.name}
+                  position="bottom-right"
+                  phoneNumber={playgroundPhoneNumbers[selectedWorkspaceId] || selectedWorkspace.whatsappPhoneNumber || "+39 999 1234567"} // 📱 Use custom or default
+                  language={widgetLanguages[selectedWorkspaceId] || "it"}
+                  debugMode={selectedWorkspace.debugMode === true} // 🐛 Pass debug mode status
+                  isPlayground={true} // 🧪 PLAYGROUND: Never deduct credits
+                  autoOpen={widgetAutoOpen}
+                  forceEmbedded={true}
+                  apiUrl={apiUrl}
+                  onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                      setWidgetOpen(false)
+                      setSelectedWorkspaceId(null)
+                      setSelectedWorkspace(null)
+                      setWidgetAutoOpen(false)
+                    }
+                  }}
+                />
+              </div>
+            )}
+
+            {testingMode === "whatsapp" && (
+              <div className="relative w-[380px] h-[620px]">
+                <WhatsAppChatSimulator
+                  workspaceId={selectedWorkspaceId}
+                  phoneNumber={playgroundPhoneNumbers[selectedWorkspaceId] || selectedWorkspace.whatsappPhoneNumber || "+39 999 1234567"}
+                  language={widgetLanguages[selectedWorkspaceId] || "it"}
+                  apiUrl={apiUrl}
+                  onClose={() => {
                     setWidgetOpen(false)
                     setSelectedWorkspaceId(null)
                     setSelectedWorkspace(null)
                     setWidgetAutoOpen(false)
-                  }
-                }}
-              />
-            </div>
+                  }}
+                />
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}

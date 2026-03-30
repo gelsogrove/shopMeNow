@@ -47,7 +47,16 @@ router.get("/:type", async (req: any, res: any) => {
     res.status(404).json({
       error: error instanceof Error ? error.message : "Document not found",
     })
-  }metadata of all legal documents for the eCHATBOT platform.
+  }
+})
+
+/**
+ * @swagger
+ * /api/legal-documents:
+ *   get:
+ *     summary: List all legal documents metadata (PUBLIC - eCHATBOT platform)
+ *     description: |
+ *       Returns metadata of all legal documents for the eCHATBOT platform.
  *       PUBLIC endpoint - no authentication required (static files).
  *     tags: [Legal Documents]
  *     responses:
@@ -71,16 +80,7 @@ router.get("/", async (req: any, res: any) => {
       error: "Failed to list legal documents",
     })
   }
-} *     tags: [Legal Documents]
- *     responses:
- *       200:
- *         description: List of all legal documents
- */
-router.get(
-  "/",
-  // 🔓 PUBLIC endpoint - no authentication required
-  (req: any, res: any) => legalDocumentController.getAllLegalDocuments(req, res)
-)
+})
 
 logger.info("✅ GLOBAL legal documents routes configured (PUBLIC GET - static file serving)")
 

@@ -400,6 +400,15 @@ export function ChatWidget({
     name?: string | null
   } | null>(null)
 
+  // 🐛 Debug Panel State
+  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false)
+  const [debugPhoneNumber, setDebugPhoneNumber] = useState("")
+  const [debugLanguage, setDebugLanguage] = useState<LangCode>("en")
+  const [debugMessages, setDebugMessages] = useState<Message[]>([])
+  const [debugInputValue, setDebugInputValue] = useState("")
+  const [debugIsLoading, setDebugIsLoading] = useState(false)
+  const debugMessagesEndRef = useRef<HTMLDivElement>(null)
+
   // Initialize visitor ID, customerId, and registration form state
   useEffect(() => {
     if (!resolvedWorkspaceId) {
@@ -1174,17 +1183,30 @@ export function ChatWidget({
                   </div>
                 )}
               </div>
-            <button
-              onClick={() => {
-                setIsOpen(false)
-                onOpenChange?.(false)
-              }}
-              className="hover:brightness-95 p-2 rounded-lg transition-colors"
-              style={{ backgroundColor: "transparent" }}
-              aria-label="Close chat"
-            >
-              <X className="w-6 h-6" />
-            </button>
+            <div className="flex items-center gap-2">
+              {workspaceConfig?.debugMode === true && (
+                <button
+                  onClick={() => setIsDebugPanelOpen(true)}
+                  className="hover:brightness-95 p-2 rounded-lg transition-colors"
+                  style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
+                  title="Debug Mode - Test AI engine"
+                  aria-label="Debug mode"
+                >
+                  <span className="text-xl">🐛</span>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setIsOpen(false)
+                  onOpenChange?.(false)
+                }}
+                className="hover:brightness-95 p-2 rounded-lg transition-colors"
+                style={{ backgroundColor: "transparent" }}
+                aria-label="Close chat"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
 
           {showRegistrationForm ? (
@@ -1516,8 +1538,216 @@ export function ChatWidget({
           )}
         </div>
       )}
+
+      {/* 🐛 DEBUG PANEL MODAL - Testare l'engine senza storia/costi */}
+      {isDebugPanelOpen && (
+        <div
+          className={cn(
+            isEmbedded ? "absolute" : "fixed",
+            "z-[2147483648] flex flex-col",
+            "bg-white",
+            "overflow-hidden overscroll-contain isolate",
+            embeddedPopupSizeClasses,
+            "animate-in slide-in-from-bottom-4 fade-in duration-300",
+            positionClasses[position]
+          )}
+          style={{ borderColor }}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div
+            className="text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3"
+            style={{ backgroundColor: resolvedPrimaryColor }}
+          >
+            <div className="flex flex-col leading-tight flex-1">
+              <h2 className="font-semibold text-lg">🐛 Debug Mode</h2>
+              <p className="text-xs text-white/80">Test the AI engine - No history/credits</p>
+            </div>
+            <button
+              onClick={() => setIsDebugPanelOpen(false)}
+              className="hover:brightness-95 p-2 rounded-lg transition-colors"
+              style={{ backgroundColor: "transparent" }}
+              aria-label="Close debug"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Debug Form - Configuration */}
+          <div className="border-b border-gray-200 p-4 bg-slate-50">
+            <div className="space-y-3">
+              {/* Phone Number */}
+              <div className="space-y-1">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                  <Phone className="w-3.5 h-3.5" /> Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={debugPhoneNumber}
+                  onChange={(e) => setDebugPhoneNumber(e.target.value)}
+                  placeholder="+39 312 345 6789"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1"
+                />
+              </div>
+
+              {/* Language */}
+              <div className="space-y-1">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                  <MessageCircle className="w-3.5 h-3.5" /> Language
+                </label>
+                <select
+                  value={debugLanguage}
+                  onChange={(e) => setDebugLanguage(e.target.value as LangCode)}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1"
+                >
+                  <option value="it">🇮🇹 Italiano</option>
+                  <option value="en">🇬🇧 English</option>
+                  <option value="es">🇪🇸 Español</option>
+                  <option value="pt">🇵🇹 Português</option>
+                  <option value="fr">🇫🇷 Français</option>
+                  <option value="de">🇩🇪 Deutsch</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Chat Messages */}
+          <ScrollArea className="flex-1 bg-slate-50 px-4 py-4">
+            <div className="space-y-3">
+              {debugMessages.length === 0 && (
+                <p className="text-sm text-slate-500 text-center py-8">
+                  Start a test conversation here<br/>
+                  <span className="text-xs">No credits deducted • Not saved in history</span>
+                </p>
+              )}
+              {debugMessages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={cn(
+                      "rounded-lg px-3 py-2 max-w-[80%] text-sm",
+                      msg.role === "user"
+                        ? "bg-blue-500 text-white rounded-br-none"
+                        : "bg-white border border-slate-200 text-slate-900 rounded-bl-none"
+                    )}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {debugIsLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-slate-200 px-3 py-2 rounded-lg rounded-bl-none">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: "0s"}}></div>
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: "0.2s"}}></div>
+                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: "0.4s"}}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={debugMessagesEndRef} />
+            </div>
+          </ScrollArea>
+
+          {/* Input Footer */}
+          <div className="border-t border-gray-200 p-3 sm:p-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={debugInputValue}
+                onChange={(e) => setDebugInputValue(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && !debugIsLoading && debugInputValue.trim()) {
+                    handleDebugSendMessage()
+                  }
+                }}
+                placeholder="Test message..."
+                disabled={debugIsLoading}
+                className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 disabled:bg-slate-100"
+              />
+              <button
+                onClick={handleDebugSendMessage}
+                disabled={debugIsLoading || !debugInputValue.trim()}
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white"
+                style={{ backgroundColor: resolvedPrimaryColor }}
+              >
+                {debugIsLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
+
+  // 🐛 Debug Handler Function
+  function handleDebugSendMessage() {
+    if (!debugInputValue.trim() || debugIsLoading) return
+
+    const userMsg: Message = {
+      role: "user",
+      content: debugInputValue,
+      timestamp: new Date().toISOString(),
+    }
+
+    setDebugMessages((prev) => [...prev, userMsg])
+    setDebugInputValue("")
+    setDebugIsLoading(true)
+
+    const startTime = Date.now()
+
+    // Send to API with isPlayground=true
+    fetch(`${resolvedApiUrl}/widget/chat/${resolvedWorkspaceId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        visitorId: `debug-${debugPhoneNumber || "test"}`,
+        message: debugInputValue,
+        phoneNumber: debugPhoneNumber || "+39 999 9999999",
+        language: debugLanguage,
+        isPlayground: true, // 🧪 No credits deducted!
+      }),
+    })
+      .then(async (resp) => {
+        // Ensure minimum 500ms loading time
+        const elapsedTime = Date.now() - startTime
+        const remainingTime = Math.max(0, 500 - elapsedTime)
+        if (remainingTime > 0) {
+          await new Promise((resolve) => setTimeout(resolve, remainingTime))
+        }
+
+        const data = await resp.json()
+        if (!resp.ok || !data?.response) {
+          throw new Error(data?.message || "Failed to get response")
+        }
+
+        const botMsg: Message = {
+          role: "bot",
+          content: data.response,
+          timestamp: new Date().toISOString(),
+        }
+
+        setDebugMessages((prev) => [...prev, botMsg])
+      })
+      .catch((error) => {
+        const errorMsg: Message = {
+          role: "bot",
+          content: `❌ Error: ${error instanceof Error ? error.message : "Failed to get response"}`,
+          timestamp: new Date().toISOString(),
+        }
+        setDebugMessages((prev) => [...prev, errorMsg])
+      })
+      .finally(() => {
+        setDebugIsLoading(false)
+      })
+  }
 }
 
 export default ChatWidget
