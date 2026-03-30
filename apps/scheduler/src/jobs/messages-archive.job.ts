@@ -22,9 +22,6 @@ export async function messagesArchiveJob(): Promise<void> {
         createdAt: {
           lt: cutoffDate,
         },
-        chatSessionId: {
-          not: null,
-        },
       },
       include: {
         chatSession: {

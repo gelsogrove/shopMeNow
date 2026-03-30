@@ -519,8 +519,6 @@ export async function whatsappChannelQueueJob(): Promise<void> {
                 queueId: message.id,
                 workspaceId: workspace.id,
               })
-              const blockReason = workspace.debugMode === true ? 'DEBUG_MODE' : 'CHANNEL_DISABLED'
-              await markQueue('blocked', blockReason)
               workspaceBlocked++
               continue
             }

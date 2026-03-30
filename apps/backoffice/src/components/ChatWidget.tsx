@@ -488,6 +488,11 @@ export function ChatWidget({
           >
             <div className="flex items-center gap-2">
               <h2 className="font-semibold text-base">{title}</h2>
+              {isPlayground && (
+                <span className="text-xs bg-white/30 px-2 py-1 rounded-full font-medium">
+                  🧪 PLAYGROUND
+                </span>
+              )}
             </div>
             <button
               onClick={() => {
@@ -503,6 +508,14 @@ export function ChatWidget({
           </div>
 
           {/* Messages Container */}
+          {isPlayground && (
+            <div className="bg-blue-50 border-b border-blue-200 px-4 py-2">
+              <p className="text-xs text-blue-800 font-medium flex items-center gap-2">
+                <span>💡</span>
+                <span>Testing Mode - No credits deducted</span>
+              </p>
+            </div>
+          )}
           <ScrollArea className="flex-1 bg-slate-50 px-4 py-3">
             <ChatSurface
               messages={messages}
