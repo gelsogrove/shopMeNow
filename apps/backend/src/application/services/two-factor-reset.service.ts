@@ -18,6 +18,7 @@
 
 import { PrismaClient, User, TwoFactorResetToken } from '@echatbot/database'
 import bcrypt from 'bcrypt'
+import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 import logger from '../../utils/logger'
@@ -61,6 +62,14 @@ export class TwoFactorResetService {
   constructor(prisma: PrismaClient) {
     this.prisma = prisma
     // Transporter will be created lazily on first use
+  }
+
+  /**
+   * BUG#17 FIX: Hash a reset token before DB storage/lookup.
+   * Raw token travels in the email URL only — DB stores SHA-256(token).
+   */
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex')
   }
 
   private getTransporter(): nodemailer.Transporter {
@@ -138,21 +147,20 @@ export class TwoFactorResetService {
 
     // SEC-1: Generate cryptographically secure token (UUID v4)
     const token = crypto.randomUUID()
-    
-    // SEC-2: 1 hour expiry
+
+    // BUG#17 FIX: store SHA-256(token) — the raw token is sent by email only
     const expiresAt = new Date(Date.now() + 3600000)
 
-    // Create token record
     const resetToken = await this.prisma.twoFactorResetToken.create({
       data: {
         userId,
-        token,
+        token: this.hashToken(token),
         expiresAt,
         createdByAdminId: adminId,
       },
     })
 
-    // SEC-12: Audit log
+    // SEC-12: Audit log (never log the full token — only first 8 chars of the RAW token)
     logger.info(`2FA reset initiated by admin ${adminEmail} for user ${user.email} (token: ${token.substring(0, 8)}...)`)
 
     // Send email with reset link
@@ -208,11 +216,11 @@ export class TwoFactorResetService {
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 3600000) // 1 hour
 
-    // Create token record
+    // BUG#17 FIX: store SHA-256(token)
     const enableToken = await this.prisma.twoFactorResetToken.create({
       data: {
         userId,
-        token,
+        token: this.hashToken(token),
         expiresAt,
         createdByAdminId: adminId,
       },
@@ -254,8 +262,9 @@ export class TwoFactorResetService {
       }
     }
 
+    // BUG#17 FIX: compare SHA-256(incoming token) against stored hash
     const resetToken = await this.prisma.twoFactorResetToken.findFirst({
-      where: { token },
+      where: { token: this.hashToken(token) },
       include: { user: true },
     })
 
@@ -289,8 +298,9 @@ export class TwoFactorResetService {
     email: string, 
     password: string
   ): Promise<VerifyPasswordResult> {
+    // BUG#17 FIX: compare SHA-256(incoming token) against stored hash
     const resetToken = await this.prisma.twoFactorResetToken.findFirst({
-      where: { token },
+      where: { token: this.hashToken(token) },
       include: { user: true },
     })
 

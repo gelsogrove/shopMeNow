@@ -28,7 +28,7 @@ jest.mock('@prisma/client', () => {
       user: mockUser,
       passwordReset: mockPasswordResetToken,
       $disconnect: jest.fn(),
-      $transaction: jest.fn((operations) => {
+      $transaction: jest.fn((operations: any) => {
         if (Array.isArray(operations)) {
           return Promise.all(operations)
         }
@@ -44,12 +44,18 @@ jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
 }))
 
-// Mock crypto
-jest.mock('crypto', () => ({
-  randomBytes: jest.fn(() => ({
-    toString: jest.fn(() => 'random-token-123'),
-  })),
-}))
+// Mock crypto — only stub randomBytes; let createHash pass through to the real
+// implementation so BUG#17 token hashing continues to work in tests.
+jest.mock('crypto', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const actual = jest.requireActual('crypto') as Record<string, unknown>
+  return {
+    ...actual,
+    randomBytes: jest.fn(() => ({
+      toString: jest.fn(() => 'random-token-123'),
+    })),
+  }
+})
 
 // Mock logger
 jest.mock('../../../src/utils/logger', () => ({

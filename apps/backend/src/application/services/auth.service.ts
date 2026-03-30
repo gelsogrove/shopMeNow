@@ -15,6 +15,7 @@
 
 import { PrismaClient, User, UserStatus } from '@echatbot/database'
 import bcrypt from 'bcryptjs'
+import { createHash, randomBytes } from 'crypto'
 import jwt from 'jsonwebtoken'
 import { AppError } from '../../interfaces/http/middlewares/error.middleware'
 import logger from '../../utils/logger'
@@ -224,10 +225,18 @@ export class AuthService {
    * Request password reset (generates token, sends email)
    * Returns token for email sending
    */
+  /**
+   * BUG#17 FIX: Hash a password-reset or 2FA-reset token before storing/comparing.
+   * Raw tokens are sent via email only — the DB stores SHA-256(token).
+   * If the DB is compromised, stored hashes cannot be replayed directly.
+   */
+  private hashResetToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex')
+  }
+
   async requestPasswordReset(email: string): Promise<string> {
     // Generate reset token
-    const crypto = await import('crypto')
-    const token = crypto.randomBytes(32).toString('hex')
+    const token = randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + 3600000) // 1 hour
 
     // Check if user exists (but don't reveal in response for security)
@@ -236,11 +245,11 @@ export class AuthService {
     })
 
     if (user) {
-      // Create reset token
+      // BUG#17 FIX: store SHA-256(token), not the raw token
       await this.prisma.passwordReset.create({
         data: {
           userId: user.id,
-          token,
+          token: this.hashResetToken(token),
           expiresAt,
         },
       })
@@ -257,10 +266,11 @@ export class AuthService {
    * Reset password using reset token
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    // Find valid token
+    // BUG#17 FIX: compare against SHA-256(token) stored in DB
+    const hashedToken = this.hashResetToken(token)
     const resetToken = await this.prisma.passwordReset.findFirst({
       where: {
-        token,
+        token: hashedToken,
         usedAt: null,
       },
     })

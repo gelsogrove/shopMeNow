@@ -168,6 +168,17 @@ export class UserRepository implements UserRepositoryInterface {
   async update(id: string, data: Partial<UserProps>): Promise<User | null> {
     logger.debug(`Updating user with ID ${id}`);
 
+    // BUG#16 FIX: Defense-in-depth — strip privilege-escalation fields even if
+    // the caller somehow bypasses the controller-level allowlist.
+    const BLOCKED_FIELDS = ['isPlatformAdmin', 'isDeveloperUser', 'passwordHash',
+      'isVerified', 'twoFactorEnabled', 'twoFactorSecret', 'deletedAt'] as const
+    for (const field of BLOCKED_FIELDS) {
+      if (field in data) {
+        logger.error(`🚨 SECURITY: Blocked attempt to set '${field}' via user.repository.update`)
+        delete (data as Record<string, unknown>)[field]
+      }
+    }
+
     try {
       const existingUser = await this.prisma.user.findUnique({
         where: { id },
@@ -178,7 +189,6 @@ export class UserRepository implements UserRepositoryInterface {
         return null;
       }
 
-      // @ts-ignore - Ignora errore di tipo per Partial<UserProps>
       const updatedUser = await this.prisma.user.update({
         where: { id },
         data,

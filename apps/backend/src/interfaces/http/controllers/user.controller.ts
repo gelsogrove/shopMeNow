@@ -169,10 +169,29 @@ export class UserController {
   updateUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params
-      const userData = req.body
-      
+
+      // BUG#16 FIX: Strict allowlist — never pass raw req.body to the DB.
+      // Fields like isPlatformAdmin / isDeveloperUser / passwordHash would allow
+      // any authenticated user to escalate their own or another user's privileges.
+      const SAFE_FIELDS = ['name', 'firstName', 'lastName', 'email', 'phoneNumber', 'language'] as const
+      const BLOCKED_FIELDS = ['isPlatformAdmin', 'isDeveloperUser', 'passwordHash', 'password',
+        'isVerified', 'twoFactorEnabled', 'twoFactorSecret', 'deletedAt', 'role']
+
+      const hasSensitiveField = BLOCKED_FIELDS.some(f => f in req.body)
+      if (hasSensitiveField) {
+        logger.warn(`🚨 Blocked privilege-escalation attempt on user ${id} by ${(req as any).user?.id}`)
+        return res.status(403).json({ message: 'Modifying privileged fields is not allowed' })
+      }
+
+      const userData: Record<string, unknown> = {}
+      for (const field of SAFE_FIELDS) {
+        if (req.body[field] !== undefined) {
+          userData[field] = req.body[field]
+        }
+      }
+
       logger.info(`Updating user with ID: ${id}`)
-      
+
       const user = await this.userService.update(id, userData)
       
       if (!user) {
@@ -211,6 +230,16 @@ export class UserController {
       
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" })
+      }
+
+      // BUG#16 FIX (gap): also block privilege-escalation fields on /profile route.
+      // The repository has defense-in-depth too, but we must return 403 early.
+      const PROFILE_BLOCKED_FIELDS = ['isPlatformAdmin', 'isDeveloperUser', 'passwordHash', 'password',
+        'isVerified', 'twoFactorEnabled', 'twoFactorSecret', 'deletedAt', 'role']
+      const hasSensitive = PROFILE_BLOCKED_FIELDS.some(f => f in userData)
+      if (hasSensitive) {
+        logger.warn(`🚨 Blocked privilege-escalation attempt on profile for user ${userId}`)
+        return res.status(403).json({ message: 'Modifying privileged fields is not allowed' })
       }
       
       logger.info(`Updating profile for user ID: ${userId}`)

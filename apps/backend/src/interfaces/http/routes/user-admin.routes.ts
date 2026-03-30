@@ -204,9 +204,39 @@ router.post(
 
     logger.info("💾 Admin backup download started", { filename })
 
-    const dump = spawn("pg_dump", ["--no-owner", "--no-privileges", "--dbname", dbUrl], {
-      env: process.env,
-    })
+    // BUG#18 FIX: NEVER pass DATABASE_URL as --dbname argument to pg_dump.
+    // Command-line arguments are visible to ALL users via `ps aux` / /proc/PID/cmdline.
+    // Use PGPASSWORD env variable + separate connection params instead.
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(dbUrl)
+    } catch {
+      return res.status(500).json({ error: "Invalid DATABASE_URL format" })
+    }
+    const pgPassword = decodeURIComponent(parsedUrl.password)
+    const pgUser    = decodeURIComponent(parsedUrl.username)
+    const pgHost    = parsedUrl.hostname
+    const pgPort    = parsedUrl.port || "5432"
+    const pgDb      = parsedUrl.pathname.replace(/^\//, "")
+
+    const dump = spawn(
+      "pg_dump",
+      [
+        "--no-owner",
+        "--no-privileges",
+        "--host",     pgHost,
+        "--port",     pgPort,
+        "--username", pgUser,
+        "--dbname",   pgDb,
+      ],
+      {
+        env: {
+          ...process.env,
+          PGPASSWORD: pgPassword, // password via env var — not visible in ps aux
+          DATABASE_URL: "", // scrub the full URL from child process env
+        },
+      }
+    )
 
     dump.stdout.pipe(res)
 

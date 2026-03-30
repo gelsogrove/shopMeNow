@@ -18,14 +18,17 @@
  */
 
 import { Router, Request, Response } from "express"
+import { createHash } from "crypto"
 import { prisma } from "@echatbot/database"
 import speakeasy from "speakeasy"
 import QRCode from "qrcode"
 import { TwoFactorResetService } from "../../../application/services/two-factor-reset.service"
 import logger from "../../../utils/logger"
 
+// BUG#17 FIX: hash token before DB lookup (DB stores SHA-256, not raw token)
+const hashToken = (t: string) => createHash('sha256').update(t).digest('hex')
+
 const router = Router()
-// prisma imported
 const twoFactorResetService = new TwoFactorResetService(prisma)
 
 /**
@@ -151,8 +154,9 @@ router.post(
       }
 
       // Get full email for QR code generation
+      // BUG#17 FIX: look up by SHA-256(token)
       const resetToken = await prisma.twoFactorResetToken.findFirst({
-        where: { token },
+        where: { token: hashToken(token) },
         include: { user: true },
       })
 
@@ -354,9 +358,9 @@ router.post(
         })
       }
 
-      // Validate token first
+      // BUG#17 FIX: look up by SHA-256(token)
       const resetToken = await prisma.twoFactorResetToken.findFirst({
-        where: { token },
+        where: { token: hashToken(token) },
         include: { user: true },
       })
 
