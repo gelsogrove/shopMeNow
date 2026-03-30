@@ -112,9 +112,13 @@ export class UltraMsgWebhookController {
         // Process message with lock held
         return await this._handleWebhookLocked(req, res)
       } finally {
-        // Always release lock
+        // Always release lock - MUST resolve promise BEFORE deleting from map
+        try {
+          releaseLock!()
+        } catch (releaseError) {
+          logger.error('[ULTRAMSG] Error releasing lock (continuing):', releaseError)
+        }
         customerMessageLocks.delete(lockKey)
-        releaseLock!()
         logger.info('[ULTRAMSG] 🔓 Released customer lock', { phone: phoneNumberForLock })
       }
     } else {

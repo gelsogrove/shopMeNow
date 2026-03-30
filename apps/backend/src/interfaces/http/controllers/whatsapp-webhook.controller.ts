@@ -162,9 +162,13 @@ export class WhatsAppWebhookController {
         // Process message with lock held
         await this._receiveMessageLocked(req, res)
       } finally {
-        // Always release lock
+        // Always release lock - MUST resolve promise BEFORE deleting from map
+        try {
+          releaseLock!()
+        } catch (releaseError) {
+          logger.error("[WEBHOOK] Error releasing lock (continuing):", releaseError)
+        }
         customerMessageLocks.delete(lockKey)
-        releaseLock!()
         logger.info("[WEBHOOK] 🔓 Released customer lock", { phone: phoneNumberForLock })
       }
     } else {

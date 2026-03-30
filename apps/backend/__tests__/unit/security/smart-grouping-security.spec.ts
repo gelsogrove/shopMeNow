@@ -44,9 +44,9 @@ describe('Smart Grouping - Security Tests', () => {
 
       await optionsMappingService.loadMapping(workspaceId, conversationId)
 
-      // Assert: should query by sessionId
+      // Assert: should query by sessionId AND workspaceId (BUG #10 fix)
       expect(mockPrisma.searchConversations.findUnique).toHaveBeenCalledWith({
-        where: { sessionId: conversationId }
+        where: { sessionId: conversationId, workspaceId }
       })
     })
 

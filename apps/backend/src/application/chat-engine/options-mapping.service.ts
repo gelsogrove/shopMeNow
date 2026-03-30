@@ -123,7 +123,7 @@ export class OptionsMappingService {
       })
       
       const searchConv = await this.prisma.searchConversations.findUnique({
-        where: { sessionId: conversationId },
+        where: { sessionId: conversationId, workspaceId },
       })
       
       logger.info("📋📥📥📥 [OptionsMapping] DB result", {
@@ -178,7 +178,7 @@ export class OptionsMappingService {
   ): Promise<OptionsMapping | null> {
     try {
       const searchConv = await this.prisma.searchConversations.findUnique({
-        where: { sessionId: conversationId },
+        where: { sessionId: conversationId, workspaceId },
       })
       const metadata = (searchConv?.metadata as any) || {}
       const menu: LastPresentedMenu | null = metadata.lastPresentedMenu || null
