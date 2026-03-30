@@ -1,0 +1,504 @@
+<h1>eChatbot Privacy Policy</h1>
+
+<p><strong>Last Updated:</strong> March 2025<br>
+<strong>Version:</strong> 3.0</p>
+
+<h2>1. Introduction</h2>
+
+<p>eChatbot SRL ("we", "our", "Platform", "Service") is a WhatsApp-based e-commerce chatbot platform that enables businesses to manage customer interactions and orders through WhatsApp. This Privacy Policy explains how we collect, use, disclose, and otherwise process personal data in connection with our Services.</p>
+
+<p><strong>Data Controller:</strong> eChatbot SRL<br>
+<strong>Legal Address:</strong> Via Roma 1, 20100 Milano, Italy<br>
+<strong>VAT:</strong> IT12345678901<br>
+<strong>Email:</strong> privacy@echatbot.ai</p>
+
+<h2>2. Scope & Parties</h2>
+
+<p>This Privacy Policy applies to:</p>
+
+<ul>
+<li><strong>Platform Users:</strong> Businesses (merchants, e-commerce owners) who create accounts and manage chatbots</li>
+<li><strong>End Customers:</strong> Individuals who interact with merchants' chatbots via WhatsApp</li>
+<li><strong>Data Processors:</strong> Third parties (WhatsApp, payment providers, LLM services)</li>
+</ul>
+
+<p>Each party has different data processing responsibilities outlined below.</p>
+
+<h2>3. Data We Collect</h2>
+
+<h3>3.1 From Platform Users (Merchants)</h3>
+
+<ul>
+<li><strong>Account Data:</strong> Name, email, phone number, company name, address, VAT/Tax ID, password hash</li>
+<li><strong>Configuration Data:</strong> Product information, pricing, promotional offers, customer service instructions, business hours, API keys for third-party services (WhatsApp, payment processors, LLM providers)</li>
+<li><strong>Operational Data:</strong> Chat transcripts, customer phone numbers, conversation logs, order history, payment records</li>
+<li><strong>Technical Data:</strong> IP address, browser type, device information, session cookies, access logs, API usage metrics</li>
+<li><strong>Billing Data:</strong> Billing information (NOT stored by us—handled securely by our payment processor PayPal)</li>
+</ul>
+
+<h3>3.2 From End Customers</h3>
+
+<ul>
+<li><strong>Identity Data:</strong> Phone number (WhatsApp identifier), customer name (if provided in chat)</li>
+<li><strong>Conversation Data:</strong> All messages sent/received through the chatbot, media files (images, documents), interaction timestamps</li>
+<li><strong>Transaction Data:</strong> Order history, product selections, addresses, payment method (handled by merchant's payment processor)</li>
+<li><strong>Technical Data:</strong> WhatsApp session identifiers, message delivery timestamps, device country (inferred from phone prefix)</li>
+</ul>
+
+<h3>3.3 Automatic Collection</h3>
+
+<ul>
+<li><strong>Cookies & Sessions:</strong> We use technical cookies for authentication and session management</li>
+<li><strong>Server Logs:</strong> IP addresses, request timestamps, error logs, API usage patterns</li>
+<li><strong>Analytics:</strong> Workspace usage metrics (e.g., number of conversations, customers, messages processed)</li>
+</ul>
+
+<h2>3A. Collection Methods</h2>
+
+<p>Personal data is collected from you through the following methods:</p>
+
+<h3>3A.1 Automatic Collection (via Cookies & Server Logs)</h3>
+
+<p>Data automatically collected when you visit the platform:</p>
+
+<ul>
+<li><strong>Cookies:</strong> Authentication tokens, session IDs, language preferences, theme settings</li>
+<li><strong>Server Logs:</strong> IP address, request timestamps, error traces, device information</li>
+<li><strong>Analytics:</strong> Workspace usage metrics (message count, conversation duration, features used)</li>
+</ul>
+
+<h3>3A.2 Voluntary Submission (via Forms & Registration)</h3>
+
+<p>Data you deliberately provide:</p>
+
+<ul>
+<li>Account registration (name, email, phone, company details)</li>
+<li>Configuration forms (product data, WhatsApp provider credentials, payment details)</li>
+<li>Contact requests (inquiry text, preferred contact method)</li>
+<li>Chat messages and conversation history</li>
+</ul>
+
+<h3>3A.3 During Service Usage</h3>
+
+<p>Data collected as you use the platform:</p>
+
+<ul>
+<li>Customer interactions (messages, media files, transaction history)</li>
+<li>Configuration changes and audit logs</li>
+<li>Payment and billing events</li>
+<li>WhatsApp message delivery metadata</li>
+</ul>
+
+<h2>4. Legal Basis for Processing</h2>
+
+<p>We process personal data based on:</p>
+
+<ul>
+<li><strong>Contractual Performance (Art. 6(1)(b) GDPR):</strong> Providing the chatbot platform and managing orders/payments</li>
+<li><strong>Legitimate Interest (Art. 6(1)(f) GDPR):</strong> Platform improvement, fraud prevention, legal compliance</li>
+<li><strong>Legal Obligation (Art. 6(1)(c) GDPR):</strong> Tax compliance, data retention for disputes, regulatory requirements</li>
+<li><strong>Consent (Art. 6(1)(a) GDPR):</strong> Optional features like marketing analytics, advanced LLM models</li>
+</ul>
+
+<h2>5. How We Use Your Data</h2>
+
+<h3>5.1 WhatsApp Message Delivery Providers</h3>
+
+<p>For WhatsApp channel integrations, Platform Users can choose from multiple third-party WhatsApp message providers. Each provider has different infrastructure, compliance certifications and geographic coverage. Users select which provider(s) to use during workspace configuration. Supported WhatsApp providers currently include:</p>
+
+<ul>
+<li><strong>Meta Platforms (WhatsApp Business API)</strong> — Direct integration with Meta's official API, messages routed through Meta's infrastructure (EU / US)</li>
+<li><strong>WAAPI</strong> — European WhatsApp intermediary provider, operates EU data centres (EU)</li>
+<li><strong>Additional partners</strong> — Other certified WhatsApp message delivery providers available in platform settings</li>
+</ul>
+
+<p><strong>Secret Keys &amp; API Credentials:</strong> For each selected WhatsApp provider, Platform Users must supply API keys, access tokens or authentication credentials. These secrets are:</p>
+
+<ul>
+<li><strong>Encrypted at rest</strong> — stored using AES-256 encryption in our database</li>
+<li><strong>Never logged or transmitted</strong> — credentials are never written to logs, error traces or external monitoring systems</li>
+<li><strong>Access-controlled</strong> — only the workspace admin who configured the provider can view or rotate the credentials</li>
+<li><strong>Rotated on demand</strong> — users can regenerate or replace provider credentials at any time via the platform dashboard</li>
+<li><strong>Used exclusively for provider communication</strong> — credentials are sent only to the chosen provider's servers and nowhere else</li>
+</ul>
+
+<h3>5.2 LLM Processing & AI Features</h3>
+
+<p><strong>LLM Provider:</strong> Unless explicitly configured otherwise, we use OpenRouter as our LLM provider. OpenRouter routes requests to various large language models (GPT-4, Claude, etc.) depending on availability and user configuration.</p>
+
+<p><strong>Data Sent to LLM:</strong> To generate intelligent chatbot responses, we send the following to the LLM service:</p>
+
+<ul>
+<li>Customer messages and conversation history (last N messages)</li>
+<li>Merchant's product catalog and pricing information</li>
+<li>Merchant's custom instructions and business rules</li>
+<li>Limited customer context (e.g., stated language preference, conversation intent)</li>
+</ul>
+
+<p><strong>LLM Data Retention:</strong> OpenRouter may retain inputs/outputs for model improvement and fraud prevention for up to 30 days. See OpenRouter's privacy policy for details. We do NOT have control over LLM data retention.</p>
+
+<p><strong>Your Right to Opt-Out:</strong> Merchants can disable AI features and use rule-based responses only, though this limits chatbot capabilities.</p>
+
+<h3>5.3 General Data Usage</h3>
+
+<ul>
+<li><strong>Service Delivery:</strong> Operating the chatbot platform, managing conversations, processing orders</li>
+<li><strong>Customer Support:</strong> Responding to inquiries, troubleshooting issues</li>
+<li><strong>Billing & Payments:</strong> Invoicing, subscription management, payment processing</li>
+<li><strong>Analytics &amp; Improvement:</strong> Aggregate usage metrics, feature optimization (anonymized)</li>
+<li><strong>Legal Compliance:</strong> Fraud detection, dispute resolution, regulatory obligations</li>
+<li><strong>Security:</strong> Detecting breaches, preventing abuse, protecting against malicious activity</li>
+</ul>
+
+<h2>6. Data Sharing & Third Parties</h2>
+
+<p>We share data with the following categories of recipients:</p>
+
+<h3>6.1 Data Recipients by Category</h3>
+
+<p><strong>eChatbot staff & contractors:</strong> Employees and contractors with need-to-know access to support operations, legal compliance, and security</p>
+
+<p><strong>Platform Users (Merchants):</strong> When you use the platform, we share your data with other workspace admins as configured in your account settings</p>
+
+<p><strong>Required Service Providers (Sub-processors):</strong></p>
+
+<ul>
+<li><strong>WhatsApp / Meta:</strong> We send customer phone numbers, message content, and metadata to process WhatsApp messages through your chosen provider. Essential for core functionality. Located: US (Standard Contractual Clauses apply)</li>
+<li><strong>Payment Processor (PayPal):</strong> We share billing information and subscription details to process payments. PayPal complies with PCI DSS and PSD2 standards. Located: US (Standard Contractual Clauses apply)</li>
+<li><strong>LLM Services (OpenRouter):</strong> We send conversation context, product data, and limited customer info to generate AI responses. OpenRouter may retain data for up to 30 days for model improvement. Located: US / Global (see OpenRouter privacy policy)</li>
+<li><strong>Email Providers (AWS SES):</strong> We route notification and marketing emails through AWS SES. Located: EU/US (encrypted in transit and at rest)</li>
+<li><strong>Cloud Hosting (AWS, Heroku):</strong> Platform infrastructure hosted on cloud providers with encrypted storage and access controls. Located: EU (Frankfurt region preferred)</li>
+</ul>
+
+<h3>6.2 Optional Integrations</h3>
+
+<ul>
+<li><strong>Analytics Platforms:</strong> Anonymized usage metrics (workspace message count, customer count) may be shared with analytics services. Optional and user can opt-out at any time.</li>
+<li><strong>Support Ticketing Systems:</strong> Support conversations may be shared with support platforms (e.g., Zendesk) for ticket management and resolution tracking.</li>
+</ul>
+
+<h3>6.3 Legal & Government Requests</h3>
+
+<p>We may disclose personal data if required by law, valid court order, or legitimate government request (e.g., law enforcement investigation). We will:</p>
+
+<ul>
+<li>Attempt to notify you of such requests unless legally prohibited</li>
+<li>Only disclose the minimum necessary data</li>
+<li>Challenge overly broad or improper requests</li>
+</ul>
+
+<h3>6.4 Business Transfers & Acquisition</h3>
+
+<p>In case of merger, acquisition, bankruptcy, or sale of substantially all assets, your personal data may be transferred as part of the business transaction. We will provide notice and obtain consent if required by law.</p>
+
+<h3>6.5 Data Transfers Outside EU</h3>
+
+<p>Some recipients (PayPal, Meta, OpenRouter) are located outside the EU. We ensure adequate safeguards:</p>
+
+<ul>
+<li><strong>Standard Contractual Clauses (SCCs):</strong> Approved data transfer mechanism under EU adequacy decision 2021/914</li>
+<li><strong>Binding Corporate Rules (BCRs):</strong> For internal company transfers (if applicable)</li>
+<li><strong>Adequacy Decisions:</strong> Where available (e.g., UK, Japan, South Korea)</li>
+</ul>
+
+<h2>7. Data Retention</h2>
+
+<p>Personal data is retained for the minimum period necessary to achieve the purposes listed in Section 5. Below are specific retention periods by data category:</p>
+
+<h3>7.1 Account & Registration Data</h3>
+<ul>
+<li><strong>During account lifecycle:</strong> Contract duration + 1 year after deletion (for dispute resolution and chargebacks)</li>
+<li><strong>Base:</strong> Contract performance and legal obligation (tax/accounting)</li>
+</ul>
+
+<h3>7.2 Chat Messages & Conversation History</h3>
+<ul>
+<li><strong>Active retention:</strong> Available for viewing during account active period</li>
+<li><strong>Soft delete:</strong> 90 days (data hidden from UI but recoverable)</li>
+<li><strong>Permanent deletion:</strong> After 90 days, automatically and irreversibly deleted</li>
+</ul>
+
+<h3>7.3 Order & Transaction Records</h3>
+<ul>
+<li><strong>Retention period:</strong> 10 years from transaction date</li>
+<li><strong>Base:</strong> Legal requirement (tax law, accounting standards, dispute resolution)</li>
+</ul>
+
+<h3>7.4 WhatsApp Provider Credentials</h3>
+<ul>
+<li><strong>Retention period:</strong> Contract duration + 12 months after termination</li>
+<li><strong>Base:</strong> Fraud prevention and platform security</li>
+</ul>
+
+<h3>7.5 Technical & Security Logs</h3>
+<ul>
+<li><strong>Server logs:</strong> 30 days (security, debugging, performance)</li>
+<li><strong>Login attempts & failed auth:</strong> 26 months after account deletion (fraud prevention)</li>
+<li><strong>Audit logs (admin actions):</strong> 1 year (accountability)</li>
+<li><strong>Backup data:</strong> 30 days (recovery purposes)</li>
+</ul>
+
+<h3>7.6 Cookies & Session Data</h3>
+<ul>
+<li><strong>Session cookies:</strong> Until logout or 30 days of inactivity</li>
+<li><strong>Preference cookies:</strong> 2 years</li>
+<li><strong>Analytics cookies:</strong> 12 months (optional, user can opt-out)</li>
+</ul>
+
+<h3>7.7 Marketing Communications Data</h3>
+<ul>
+<li><strong>Without profiling:</strong> 24 months from last purchase interaction</li>
+<li><strong>With profiling:</strong> 12 months from last purchase interaction</li>
+<li><strong>Opt-out honored immediately:</strong> User can unsubscribe anytime</li>
+</ul>
+
+<h3>7.8 Profiling Data</h3>
+<ul>
+<li><strong>Retention period:</strong> Contract duration + 12 months after account deletion</li>
+<li><strong>Base:</strong> Consent (revocable anytime)</li>
+</ul>
+
+<h3>7.9 Data Breach & Legal Defense</h3>
+<ul>
+<li><strong>Maximum retention:</strong> 10 years from collection date</li>
+<li><strong>Base:</strong> Legal obligation and legitimate interest in protecting platform and users</li>
+<li><strong>Extended retention:</strong> Longer periods apply if ongoing litigation or regulatory investigation</li>
+</ul>
+
+<h3>7.10 Data Archiving & Deletion Process</h3>
+
+<p><strong>Important:</strong> Data deletion follows a three-stage process to ensure data recovery, audit compliance, and security:</p>
+
+<p><strong>Stage 1 — User-Initiated Soft Delete (Immediately):</strong></p>
+<ul>
+<li>When you delete data (messages, account content), the data is marked as "deleted" in our database</li>
+<li>Data is <strong>hidden from your account interface</strong> and all queries</li>
+<li>Data is <strong>NOT physically removed</strong> from storage — only flagged as deleted</li>
+<li>You cannot recover or restore data after this point via the UI</li>
+<li>Duration: <strong>90 days</strong> (recoverable by eChatbot support team in disputes)</li>
+</ul>
+
+<p><strong>Stage 2 — Archival (Days 1-90):</strong></p>
+<ul>
+<li>Soft-deleted data remains in <strong>cold storage archive</strong> (separate database backup system)</li>
+<li>Archived data is <strong>no longer used for analytics, AI training, or feature functionality</strong></li>
+<li>Archived data is <strong>encrypted separately</strong> from active data</li>
+<li>Purpose: Dispute resolution, chargeback defense, regulatory compliance, technical recovery</li>
+<li>Timeline: <strong>Up to 90 days from soft-delete date</strong></li>
+</ul>
+
+<p><strong>Stage 3 — Hard Deletion (After 90 Days):</strong></p>
+<ul>
+<li>After 90 days, archived data is <strong>permanently and irreversibly deleted</strong></li>
+<li>Deletion includes: Database purge, backup purge, archive removal</li>
+<li>Deletion is <strong>automated and non-reversible</strong> — no manual recovery possible</li>
+<li>Cryptographic key material is destroyed, making recovery mathematically impossible</li>
+<li>Compliance: GDPR Article 17 (Right to Erasure) fully satisfied</li>
+</ul>
+
+<p><strong>Exception Retention Periods (Not Soft-Deleted):</strong></p>
+<ul>
+<li>Order/transaction records: <strong>10 years</strong> (legal hold, not qualified for soft-delete)</li>
+<li>Tax/accounting records: <strong>7-10 years</strong> per jurisdiction (legal obligation)</li>
+<li>Dispute/litigation records: <strong>Until case closes + 2 years</strong> (legal necessity)</li>
+</ul>
+
+<p><strong>How to Request Immediate Deletion:</strong> Email privacy@echatbot.ai with account details. We will:</p>
+<ol>
+<li>Verify your identity (within 72 hours)</li>
+<li>Initiate soft-delete of all qualifying personal data</li>
+<li>Confirm deletion date and 90-day archive period</li>
+<li>Provide archival receipt for compliance records</li>
+</ol>
+
+<p><strong>Automatic Deletion:</strong> After each retention period expires, data transitions through Stages 1-3 automatically. No manual intervention required from you — our deletion jobs run on schedule.</p>
+
+<p>These retention periods comply with GDPR (Articles 5, 17 & 24), Italian data protection law (GDPR implementation), and international e-commerce regulations.</p>
+
+<h2>8. International Data Transfers</h2>
+
+<p>Our servers are located in the EU (Heroku, AWS EU region). However, some data may be transferred to non-EU countries:</p>
+
+<ul>
+<li><strong>WhatsApp / Meta:</strong> US-based company (Standard Contractual Clauses apply)</li>
+<li><strong>OpenRouter / LLM Services:</strong> May route data to US or other countries (depends on provider)</li>
+<li><strong>Payment Processors:</strong> May operate globally but use Standard Contractual Clauses</li>
+</ul>
+
+<p>For transfers outside the EU, we ensure adequate safeguards (e.g., Standard Contractual Clauses, Binding Corporate Rules).</p>
+
+<h2>9. Security & Data Protection Measures</h2>
+
+<h3>9.1 Two-Factor Authentication (2FA — TOTP with QR Code)</h3>
+
+<p>We offer and strongly encourage Time-based One-Time Password (TOTP) 2FA for all platform accounts (compatible with Google Authenticator, Authy, Microsoft Authenticator, etc.). During 2FA setup, users scan a QR code containing their encrypted 2FA secret. The QR code is generated securely on-device and is never transmitted to our servers — only the hash of the secret is stored. TOTP codes are verified with a ±1 window to account for clock drift. QR codes are displayed once during setup and not cached or stored.</p>
+
+<h3>9.2 Encryption</h3>
+
+<ul>
+<li><strong>In Transit:</strong> All data transmitted over HTTPS/TLS 1.3 (minimum 256-bit encryption)</li>
+<li><strong>At Rest:</strong> Sensitive data (passwords, API keys, secrets) encrypted with AES-256</li>
+<li><strong>Database Encryption:</strong> PostgreSQL with encrypted columns for secrets</li>
+</ul>
+
+<h3>9.3 Access Control</h3>
+
+<ul>
+<li>Principle of least privilege — staff access only to necessary data</li>
+<li>Role-based access control (RBAC) — admin, manager, viewer roles</li>
+<li>Workspace isolation — users cannot access other workspaces' data</li>
+<li>Audit logs — all admin actions logged and reviewed</li>
+</ul>
+
+<h3>9.4 Rate Limiting & DDoS Protection</h3>
+
+<ul>
+<li>Login attempts: Max 5 failed attempts per 15 minutes → account lockout</li>
+<li>API requests: Rate limiting per workspace (e.g., 1000 req/min)</li>
+<li>WhatsApp webhook: Duplicate message prevention, rate enforcement</li>
+</ul>
+
+<h3>9.5 Regular Security Audits</h3>
+
+<ul>
+<li>Automated security scanning (SAST, DAST)</li>
+<li>Penetration testing (annual third-party assessments)</li>
+<li>Vulnerability patching (dependencies updated weekly)</li>
+<li>SOC 2 Type II certification (in progress)</li>
+</ul>
+
+<h3>9.6 Incident Response</h3>
+
+<p>In case of a data breach, we will:</p>
+
+<ul>
+<li>Notify affected users within 72 hours (GDPR requirement)</li>
+<li>Provide details of the breach and recommended actions</li>
+<li>Report to data protection authorities if required</li>
+<li>Document and investigate root cause</li>
+</ul>
+
+<h3>9.7 Staff Training</h3>
+
+<ul>
+<li>Data protection & privacy training for all employees</li>
+<li>Confidentiality agreements (NDAs) required</li>
+<li>Background checks for staff with data access</li>
+</ul>
+
+<h2>10. Your Rights Under GDPR & Local Law</h2>
+
+<p>You have the following rights regarding your personal data:</p>
+
+<h3>10.1 Right of Access (Art. 15 GDPR)</h3>
+
+<p>You can request a copy of all personal data we hold about you in a standard format. We will provide this within 30 days of your request.</p>
+
+<h3>10.2 Right to Rectification (Art. 16 GDPR)</h3>
+
+<p>You can correct inaccurate or incomplete data. You can update most information yourself via account settings; contact us for other data.</p>
+
+<h3>10.3 Right to Erasure (Art. 17 GDPR — "Right to Be Forgotten")</h3>
+
+<p>You can request deletion of your data, except where we have a legal obligation to retain it (e.g., tax records). Note: Chat messages are soft-deleted after 90 days anyway.</p>
+
+<h3>10.4 Right to Restrict Processing (Art. 18 GDPR)</h3>
+
+<p>You can ask us to stop processing your data while we verify its accuracy or legality.</p>
+
+<h3>10.5 Right to Data Portability (Art. 20 GDPR)</h3>
+
+<p>You can request your data in a machine-readable format (JSON/CSV) for transfer to another service.</p>
+
+<h3>10.6 Right to Object (Art. 21 GDPR)</h3>
+
+<p>You can object to processing based on legitimate interest (e.g., marketing analytics). We will cease processing unless we have overriding reasons.</p>
+
+<h3>10.7 Automated Decision-Making (Art. 22 GDPR)</h3>
+
+<p>We do NOT use fully automated decision-making that produces legal effects on you (e.g., account suspension without human review). We do use automated fraud detection, but humans review flagged cases.</p>
+
+<h2>11. Profiling & Automated Decision-Making</h2>
+
+<h3>11.1 What is Profiling?</h3>
+
+<p>Profiling is automated processing of personal data to analyze and evaluate aspects of your personality, interests, behavior, or preferences. eChatbot uses profiling only when you consent to receive personalized marketing communications.</p>
+
+<h3>11.2 How We Use Profiling</h3>
+
+<ul>
+<li><strong>Data analyzed:</strong> Geographic location (inferred from IP/phone number), service usage patterns, product interests, purchase history</li>
+<li><strong>Purpose:</strong> Send marketing communications aligned with your demonstrated interests in eChatbot Services</li>
+<li><strong>Consent:</strong> Based on your explicit opt-in checkbox during registration or settings</li>
+<li><strong>Logic:</strong> Statistical analysis of aggregated user behavior to create interest categories (e.g., "interested in E-commerce Chatbots", "high-volume users")</li>
+</ul>
+
+<h3>11.3 Safety Guarantees - What Profiling Does NOT Do</h3>
+
+<p><strong>eChatbot profiling does NOT:</strong></p>
+
+<ul>
+<li><strong>Produce automated legal/significant decisions:</strong> Profiling does NOT result in decisions that have legal or similarly significant effects on you (Article 22 GDPR). No account suspension, service termination, or special pricing based solely on profiling.</li>
+<li><strong>Affect your purchasing ability:</strong> You receive the same platform features and pricing regardless of profile category</li>
+<li><strong>Create permanent discrimination:</strong> Profiling data is periodically refreshed and can be individually corrected via account settings</li>
+<li><strong>Manipulate your behavior:</strong> Marketing communications are informational only; you always control your purchase decisions</li>
+</ul>
+
+<h3>11.4 Your Profiling Rights</h3>
+
+<ul>
+<li><strong>Opt-out anytime:</strong> Disable profiling in account settings → receive non-personalized marketing only</li>
+<li><strong>Access your profile:</strong> Request details of your profile category and reasoning (Section 10.1)</li>
+<li><strong>Contest decisions:</strong> If you believe profiling caused unfair treatment, file a complaint (Section 12)</li>
+</ul>
+
+<h2>12. Cookies & Tracking Technologies</h2>
+
+<p>We use the following cookies and similar technologies:</p>
+
+<ul>
+<li><strong>Essential Cookies:</strong> Authentication token, session ID (required for platform security and login)</li>
+<li><strong>Preference Cookies:</strong> Language, theme, UI preferences (2-year expiry)</li>
+<li><strong>Analytics Cookies:</strong> Workspace usage metrics for service improvement (12-month expiry, optional and can be disabled)</li>
+</ul>
+
+<p><strong>Cookie Management:</strong> You can configure cookie preferences in browser settings. However, disabling essential cookies will prevent login to your account.</p>
+
+<h2>13. Contact & Complaints</h2>
+
+<p><strong>Questions about this policy?</strong><br>
+Email: privacy@echatbot.ai<br>
+Address: Via Roma 1, 20100 Milano, Italy<br>
+Phone: +39 02 1234567</p>
+
+<p><strong>File a Complaint:</strong><br>
+If you believe we're mishandling your data, you have the right to lodge a complaint with your local data protection authority. In Italy, this is the Garante per la Protezione dei Dati Personali.</p>
+
+<h2>14. Changes to This Policy</h2>
+
+<p>We may update this Privacy Policy to reflect changes in our practices or legal requirements. We will notify you of material changes by email or platform notification. Your continued use of the Service constitutes acceptance of the updated policy.</p>
+
+<h2>15. Definitions</h2>
+
+<ul>
+<li><strong>Personal Data:</strong> Any information relating to an identified or identifiable natural person</li>
+<li><strong>Processing:</strong> Collection, use, storage, disclosure, or deletion of personal data</li>
+<li><strong>Data Subject:</strong> The individual to whom personal data relates</li>
+<li><strong>Workspace:</strong> A separate business account on our platform</li>
+<li><strong>End Customer:</strong> A person who interacts with a merchant's chatbot via WhatsApp</li>
+</ul>
+
+<hr>
+
+<p><strong>Version History:</strong><br>
+v3.0 (March 2025): Added QR Code security in 2FA (9.1), WhatsApp provider selection (5.1), secret keys management<br>
+v2.0 (2024): Initial GDPR compliance<br>
+v1.0 (2023): Launch</p>
+
+<hr>
+
+<p className="text-sm text-gray-500 mt-8">
+<strong>Related Legal Documents:</strong> 
+<a href="/terms">Terms of Service</a> | 
+<a href="/refund">Refund & Cancellation Policy</a>
+</p>

@@ -297,6 +297,16 @@ const supportUploadsPath = path.resolve(__dirname, "..", "uploads", "support-tic
 app.use("/uploads/support-tickets", express.static(supportUploadsPath))
 logger.info(`[SUPPORT] Serving support ticket attachments from: ${supportUploadsPath}`)
 
+// 📋 LEGAL DOCUMENTS: Serve privacy policy, GDPR, and other legal documents as static files
+// Public access - no authentication required
+const legalPath = path.resolve(__dirname, "..", "public", "legal")
+if (fs.existsSync(legalPath)) {
+  app.use("/legal", express.static(legalPath))
+  logger.info(`[LEGAL] Serving legal documents from: ${legalPath}`)
+} else {
+  logger.warn(`[LEGAL] Legal documents directory not found at: ${legalPath}`)
+}
+
 logger.info(`[SECURITY] Private files require authentication via /api/v1/files/:key`)
 
 // 🌐 PRODUCTION: Serve frontend static files (from Vite build)

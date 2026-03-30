@@ -23,6 +23,7 @@ interface Customer {
   phone: string
   company?: string
   isActive?: boolean
+  activeChatbot?: boolean
   isBlacklisted?: boolean
   push_notifications_consent?: boolean
   last_privacy_version_accepted?: string
@@ -83,8 +84,6 @@ export function CampaignSheet({
   const [targetCustomerIds, setTargetCustomerIds] = useState<string[]>([])
   const [tagId, setTagId] = useState<string | null>(null)
   const [sendAt, setSendAt] = useState<string>("")
-  const DEFAULT_THROTTLE_PER_SECOND = 1
-  const DEFAULT_BATCH_SIZE = 1
 
   // Additional state
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -153,22 +152,22 @@ export function CampaignSheet({
       setLoading(true)
       const { data } = await api.get(`/workspaces/${workspaceId}/customers`)
 
-      // Filter valid customers for PUSH campaigns:
+      // Filter valid customers for PUSH campaigns (align with backend rules):
       // - isBlacklisted = false (not blocked)
-      // - isActive = true (active)
+      // - activeChatbot = true (customer chatbot active)
       // - push_notifications_consent = true (have given push consent)
       const validCustomers = (data.data || []).filter((customer: Customer) => {
         const isBlocked = customer.isBlacklisted === true
-        const isActive = customer.isActive !== false
+        const chatbotActive = customer.activeChatbot !== false
         const hasPushConsent = customer.push_notifications_consent === true
 
-        const isValid = !isBlocked && isActive && hasPushConsent
+        const isValid = !isBlocked && chatbotActive && hasPushConsent
 
         // Debug log (only excluded customers)
         if (!isValid) {
           const reasons = []
           if (isBlocked) reasons.push("blocked")
-          if (!isActive) reasons.push("inactive")
+          if (!chatbotActive) reasons.push("chatbot inactive")
           if (!hasPushConsent) reasons.push("no push consent")
           logger.info(`Customer ${customer.name} excluded: ${reasons.join(", ")}`)
         }
@@ -237,8 +236,6 @@ export function CampaignSheet({
       targetCustomerIds,
       tagId,
       sendAt: sendAtDate,
-      throttlePerSecond: DEFAULT_THROTTLE_PER_SECOND,
-      batchSize: DEFAULT_BATCH_SIZE,
     }
 
     try {

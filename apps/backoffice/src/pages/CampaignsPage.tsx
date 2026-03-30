@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,8 @@ export default function CampaignsPage() {
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState<WizardStep>('info')
   const [name, setName] = useState('')
+  const [message, setMessage] = useState('')
+  const [frequency, setFrequency] = useState('ONCE')
   const [sendAt, setSendAt] = useState<string>('')
   const [customerIdsRaw, setCustomerIdsRaw] = useState('')
   const [creating, setCreating] = useState(false)
@@ -74,6 +77,8 @@ export default function CampaignsPage() {
 
   const resetWizard = () => {
     setName('')
+    setMessage('')
+    setFrequency('ONCE')
     setSendAt('')
     setCustomerIdsRaw('')
     setWizardStep('info')
@@ -89,16 +94,34 @@ export default function CampaignsPage() {
       setCreateError('Name is required')
       return
     }
+    if (!message.trim()) {
+      setCreateError('Message is required')
+      return
+    }
     if (recipientIds.length === 0) {
       setCreateError('At least one customer ID is required')
       return
     }
     setCreating(true)
     setCreateError(null)
+    let sendAtIso: string | undefined = undefined
+    if (sendAt) {
+      const parsed = new Date(sendAt)
+      if (Number.isNaN(parsed.getTime())) {
+        setCreateError('Invalid send date/time')
+        setCreating(false)
+        return
+      }
+      sendAtIso = parsed.toISOString()
+    }
     const payload = {
-      name,
-      sendAt: sendAt || undefined,
-      recipients: { customerIds: recipientIds },
+      name: name.trim(),
+      message: message.trim(),
+      frequency,
+      isActive: true,
+      targetingType: 'MANUAL',
+      targetCustomerIds: recipientIds,
+      sendAt: sendAtIso,
     }
     const res = await api.pushCampaigns.create(workspaceId, payload)
     setCreating(false)
@@ -258,12 +281,39 @@ export default function CampaignsPage() {
                 <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Spring Promo" />
               </div>
               <div>
+                <Label>Message</Label>
+                <Textarea
+                  rows={4}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Hello {{name}}! Check out our new offers..."
+                />
+              </div>
+              <div>
+                <Label>Frequency</Label>
+                <Select value={frequency} onValueChange={setFrequency}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ONCE">Once</SelectItem>
+                    <SelectItem value="WEEKLY">Weekly</SelectItem>
+                    <SelectItem value="MONTHLY">Monthly</SelectItem>
+                    <SelectItem value="QUARTERLY">Quarterly (3 Months)</SelectItem>
+                    <SelectItem value="SEMIANNUAL">Semiannual (6 Months)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Send at (optional)</Label>
                 <Input type="datetime-local" value={sendAt} onChange={(e) => setSendAt(e.target.value)} />
               </div>
               <DialogFooter className="justify-between">
                 <div />
-                <Button onClick={() => setWizardStep('recipients')} disabled={!name.trim()}>
+                <Button
+                  onClick={() => setWizardStep('recipients')}
+                  disabled={!name.trim() || !message.trim()}
+                >
                   Next
                 </Button>
               </DialogFooter>
@@ -298,6 +348,12 @@ export default function CampaignsPage() {
               <div className="text-sm text-gray-700 space-y-2">
                 <div>
                   <strong>Name:</strong> {name}
+                </div>
+                <div>
+                  <strong>Message:</strong> {message}
+                </div>
+                <div>
+                  <strong>Frequency:</strong> {frequency}
                 </div>
                 <div>
                   <strong>Send at:</strong> {sendAt || 'Immediate'}

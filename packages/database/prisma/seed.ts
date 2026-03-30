@@ -23,7 +23,6 @@ import { categories } from "./data/categories"
 import { defaultAgents } from "./data/defaultAgents"
 import { defaultFAQs } from "./data/defaultFAQs"
 import { faqs } from "./data/faqs"
-import { legalDocuments } from "./data/legalDocuments"
 import { offers } from "./data/offers"
 import { platformConfigData } from "./data/platformConfig"
 import { pricingConfigData } from "./data/pricingConfig"
@@ -1673,41 +1672,8 @@ Can I help with anything else?"`,
     `   - Limits: ${platformConfigData.filter((p) => p.type === "LIMIT").length}`
   )
 
-  // 6c. Create Legal Documents (GDPR, Privacy Policy, Terms, Refund Policy)
-  console.log("📋 Creating legal documents...")
-
-  for (const doc of legalDocuments) {
-    await prisma.legalDocument.upsert({
-      where: {
-        type: doc.type as any,
-      },
-      update: {
-        titleIt: doc.titleIt,
-        titleEn: doc.titleEn,
-        titleEs: doc.titleEs,
-        titlePt: doc.titlePt,
-        contentIt: doc.contentIt,
-        contentEn: doc.contentEn,
-        contentEs: doc.contentEs,
-        contentPt: doc.contentPt,
-        isActive: doc.isActive,
-      },
-      create: {
-        type: doc.type as any,
-        titleIt: doc.titleIt,
-        titleEn: doc.titleEn,
-        titleEs: doc.titleEs,
-        titlePt: doc.titlePt,
-        contentIt: doc.contentIt,
-        contentEn: doc.contentEn,
-        contentEs: doc.contentEs,
-        contentPt: doc.contentPt,
-        isActive: doc.isActive,
-      },
-    })
-  }
-
-  console.log(`✅ Created/Seeded ${legalDocuments.length} legal documents (GDPR, Privacy Policy, Terms of Service, Refund Policy)`)
+  // 6c. Legal documents now served as static files from frontend/public/legal/
+  // (no longer seeded from database)
 
   // 7. Create Categories
   console.log("📂 Creating categories...")
