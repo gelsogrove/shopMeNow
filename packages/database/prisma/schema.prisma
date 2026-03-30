@@ -1811,24 +1811,6 @@ model WorkspaceCallingFunction {
 }
 
 // 📜 LEGAL DOCUMENTS - Dynamic multilingual legal pages
-model LegalDocument {
-  id        String   @id @default(cuid())
-  type      String   @unique // "GDPR", "PRIVACY_POLICY", "TERMS_OF_SERVICE", "REFUND_POLICY"
-  titleIt   String // Italian title
-  titleEn   String // English title
-  titleEs   String // Spanish title
-  titlePt   String // Portuguese title
-  contentIt String   @db.Text // Italian HTML content
-  contentEn String   @db.Text // English HTML content
-  contentEs String   @db.Text // Spanish HTML content
-  contentPt String   @db.Text // Portuguese HTML content
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("legal_documents")
-}
-
 // 🎫 SUPPORT TICKETS - Customer support system (User-based, workspace optional)
 model SupportTicket {
   id          String              @id @default(cuid())

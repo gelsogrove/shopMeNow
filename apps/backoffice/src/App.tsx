@@ -12,7 +12,6 @@ import { ComingSoonPage } from '@/pages/ComingSoonPage'
 import { CollectionsPage } from '@/pages/CollectionsPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { QueuePage } from '@/pages/QueuePage'
-import { LawsDocumentsPage } from '@/pages/LawsDocumentsPage'
 import ChannelsPage from '@/pages/ChannelsPage'
 import CallingFunctionsPage from '@/pages/CallingFunctionsPage'
 import SupportTicketsAdminPage from '@/pages/SupportTicketsAdminPage'
@@ -67,7 +66,6 @@ function AppRoutes() {
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="pricing" element={<PricingPage />} />
         <Route path="clients" element={<ClientsPage />} />
-        <Route path="laws-documents" element={<LawsDocumentsPage />} />
         <Route path="support-tickets" element={<SupportTicketsAdminPage />} />
         <Route path="questionnaire" element={<QuestionnaireAdminPage />} />
         <Route path="backup" element={<BackupPage />} />
