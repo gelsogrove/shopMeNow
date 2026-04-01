@@ -41,7 +41,7 @@ export class CallingFunctionsController {
     async createFunction(req: Request, res: Response) {
         try {
             const workspaceId = (req as any).workspaceId
-            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl } = req.body
+            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl, credentialsMapping } = req.body
 
             if (!functionName || !description || !executionType) {
                 return res.status(400).json({ error: "Missing required fields" })
@@ -62,7 +62,8 @@ export class CallingFunctionsController {
                 executionType,
                 isActive: isActive !== undefined ? isActive : true,
                 isSystemFunction: false, // Custom functions are never system functions
-                webhookUrl: webhookUrl || null
+                webhookUrl: webhookUrl || null,
+                credentialsMapping: credentialsMapping || null
             })
 
             logger.info(`✅ Custom function created: ${functionName} for workspace ${workspaceId}`)

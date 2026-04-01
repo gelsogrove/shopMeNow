@@ -88,6 +88,7 @@ import { cartRouter } from "../interfaces/http/routes/cart.routes"
 import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
 import certificationRoutes from "../interfaces/http/routes/certification.routes"
 import { createCallingFunctionsRouter } from "../interfaces/http/routes/calling-functions.routes"
+import { createEnvironmentVariableRoutes } from "../interfaces/http/routes/environment-variable.routes"
 import creditNoteRoutes from "../interfaces/http/routes/credit-note.routes"
 import typeRoutes from "../interfaces/http/routes/type.routes"
 import { chatRouter } from "../interfaces/http/routes/chat.routes"
@@ -688,6 +689,10 @@ router.use(
   authMiddleware,
   workspaceValidationMiddleware,
   createCallingFunctionsRouter(prisma as any)
+)
+router.use(
+  "/api",
+  createEnvironmentVariableRoutes(prisma as any)
 )
 logger.info(
   "✅ Registered PROTECTED team management routes: /api/workspaces/:workspaceId/invitations, /api/workspaces/:workspaceId/members"

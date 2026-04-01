@@ -114,9 +114,10 @@ describe("BUG #6: Prompt Injection via Incomplete Input Sanitization", () => {
       // Vulnerable version still has breakout vector
       expect(wrappedVulnerable).toContain("[SYSTEM]") // ← Can escape and inject!
 
-      // Safe version escapes everything
-      expect(wrappedSafe).not.toContain("[SYSTEM]") // ← Safely contains as text
+      // Safe version escapes tags but [SYSTEM] text remains (safely contained)
+      // The attack is neutralized because </user_input> is escaped as &lt;/user_input&gt;
       expect(wrappedSafe).toContain("&lt;/user_input&gt;") // ← Escaped
+      expect(wrappedSafe).toContain("&lt;user_input&gt;") // ← Opening tag also escaped
     })
 
     it("ATTACK: Direct instruction via unescaped angle brackets", () => {
@@ -183,10 +184,18 @@ describe("BUG #6: Prompt Injection via Incomplete Input Sanitization", () => {
         const wrapped = wrapUserInputSafe(attack)
         const wrappedAsText = wrapped.replace(/<\/?user_input>/g, "").trim()
 
-        // All injections should be visible as plain text, not executable
-        expect(wrappedAsText).toBe(attack) // Preserved exactly as user typed it
+        // All injections should have XML chars escaped (not executable)
+        // Note: wrappedAsText contains HTML entities like &lt; instead of <
         expect(wrappedAsText).not.toContain("<") // No raw opening brackets
         expect(wrappedAsText).not.toContain(">") // No raw closing brackets
+        
+        // Verify specific escaping happened
+        if (attack.includes("<")) {
+          expect(wrappedAsText).toContain("&lt;") // < escaped to &lt;
+        }
+        if (attack.includes(">")) {
+          expect(wrappedAsText).toContain("&gt;") // > escaped to &gt;
+        }
       })
     })
 

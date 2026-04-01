@@ -310,6 +310,8 @@ export async function pushCampaignsJob(): Promise<void> {
               data: {
                 status: 'SENT',
                 messageId: queue.id,
+                sentAt: new Date(),
+                priceCharged: new Prisma.Decimal(costPerMessage),
               },
             })
           })
@@ -329,10 +331,19 @@ export async function pushCampaignsJob(): Promise<void> {
               where: { id: campaign.id },
               data: {
                 status: 'PAUSED',
+                billingStatus: 'FAILED',
                 lastError: `Billing error: ${billingResult.error}`,
               },
             })
             break
+          }
+
+          // Update billing status to PARTIAL after first successful charge
+          if (processed === 0) {
+            await prisma.pushCampaign.update({
+              where: { id: campaign.id },
+              data: { billingStatus: 'PARTIAL' },
+            })
           }
 
           // Update in-memory balance from actual DB value (billing service updates DB atomically)
@@ -411,6 +422,8 @@ export async function pushCampaignsJob(): Promise<void> {
           status: finalStatus,
           nextRunAt,
           actualSent: { increment: processed },
+          // Set billingStatus to BILLED when campaign completes
+          ...(finalStatus === 'COMPLETED' ? { billingStatus: 'BILLED' } : {}),
           ...(shouldDeactivate ? { isActive: false } : {}),
           // Persist warning for visibility in the UI when no eligible recipients were found
           ...(noEligibleRecipientsWarning ? { lastError: noEligibleRecipientsWarning } : {}),
@@ -561,14 +574,23 @@ function calculateNextRunAt(
     case CampaignFrequency.WEEKLY:
       next.setDate(next.getDate() + 7)
       break
+    case CampaignFrequency.BIWEEKLY:
+      next.setDate(next.getDate() + 14)
+      break
     case CampaignFrequency.MONTHLY:
       next.setMonth(next.getMonth() + 1)
+      break
+    case CampaignFrequency.BIMONTHLY:
+      next.setMonth(next.getMonth() + 2)
       break
     case CampaignFrequency.QUARTERLY:
       next.setMonth(next.getMonth() + 3)
       break
     case CampaignFrequency.SEMIANNUAL:
       next.setMonth(next.getMonth() + 6)
+      break
+    case CampaignFrequency.ANNUAL:
+      next.setFullYear(next.getFullYear() + 1)
       break
     default:
       return null

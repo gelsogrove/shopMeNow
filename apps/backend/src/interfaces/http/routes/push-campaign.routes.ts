@@ -1,5 +1,6 @@
 import { Router } from "express"
 import { authMiddleware } from "../middlewares/auth.middleware"
+import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 import { checkTrialValid } from "../middlewares/billing.middleware"
 import { PushCampaignController } from "../controllers/push-campaign.controller"
@@ -10,6 +11,7 @@ export const pushCampaignRoutes = () => {
 
   // Security: 3-layer middleware stack (Rule #5 from CLAUDE.md)
   router.use(authMiddleware)
+  router.use(sessionValidationMiddleware)
   router.use(workspaceValidationMiddleware)
 
   router.get("/", controller.list.bind(controller))

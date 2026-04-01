@@ -21,6 +21,9 @@ import {
     Globe,
     Cpu,
     Share2,
+    HelpCircle,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
@@ -29,6 +32,7 @@ import { toast } from "@/lib/toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Execution type badge config
 const EXECUTION_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
@@ -64,10 +68,13 @@ export function CallingFunctionsSection({
     const [loading, setLoading] = useState(true)
     const [testingToolWebhook, setTestingToolWebhook] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [editingFunction, setEditingFunction] = useState<Partial<CallingFunction> | null>(null)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [editingFunction, setEditingFunction] = useState<Record<string, any> | null>(null)
     const [isSaving, setIsSaving] = useState(false)
     // Delete confirmation dialog
     const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; functionName: string | null }>({ open: false, functionName: null })
+    // Help panel visibility
+    const [showHelp, setShowHelp] = useState(false)
 
     useEffect(() => {
         if (workspaceId) {
@@ -112,7 +119,12 @@ export function CallingFunctionsSection({
                 ...fn,
                 parameters: typeof fn.parameters === 'string'
                     ? fn.parameters
-                    : JSON.stringify(fn.parameters, null, 2)
+                    : JSON.stringify(fn.parameters, null, 2),
+                credentialsMapping: fn.credentialsMapping
+                    ? (typeof fn.credentialsMapping === 'string'
+                        ? fn.credentialsMapping
+                        : JSON.stringify(fn.credentialsMapping, null, 2))
+                    : ""
             })
         } else {
             setEditingFunction({
@@ -127,6 +139,7 @@ export function CallingFunctionsSection({
                 }, null, 2),
                 executionType: "WEBHOOK",
                 isActive: true,
+                credentialsMapping: "",
             })
         }
         setIsModalOpen(true)
@@ -150,7 +163,20 @@ export function CallingFunctionsSection({
                 }
             }
 
-            const payload = { ...editingFunction, parameters: parsedParams }
+            // Parse credentialsMapping if it's a non-empty string
+            let parsedCredentialsMapping = editingFunction.credentialsMapping || null
+            if (typeof parsedCredentialsMapping === 'string' && parsedCredentialsMapping.trim()) {
+                try {
+                    parsedCredentialsMapping = JSON.parse(parsedCredentialsMapping)
+                } catch (e) {
+                    toast.error("Invalid JSON in credentials mapping")
+                    return
+                }
+            } else if (typeof parsedCredentialsMapping === 'string' && !parsedCredentialsMapping.trim()) {
+                parsedCredentialsMapping = null
+            }
+
+            const payload = { ...editingFunction, parameters: parsedParams, credentialsMapping: parsedCredentialsMapping }
 
             if (editingFunction.id) {
                 await callingFunctionsApi.update(workspaceId, editingFunction.functionName!, payload)
@@ -306,6 +332,204 @@ export function CallingFunctionsSection({
                 </CardContent>
             </Card>
 
+            {/* Help & Documentation Panel */}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <CardHeader
+                    className="cursor-pointer select-none"
+                    onClick={() => setShowHelp(!showHelp)}
+                >
+                    <CardTitle className="flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                            <HelpCircle className="h-5 w-5 text-blue-600" />
+                            Custom Tools Guide
+                        </span>
+                        {showHelp ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
+                    </CardTitle>
+                    <CardDescription>Learn how to create and configure custom tools for your AI</CardDescription>
+                </CardHeader>
+
+                {showHelp && (
+                    <CardContent>
+                        <Tabs defaultValue="overview" className="w-full">
+                            <TabsList className="grid w-full grid-cols-4">
+                                <TabsTrigger value="overview">Overview</TabsTrigger>
+                                <TabsTrigger value="types">Tool Types</TabsTrigger>
+                                <TabsTrigger value="credentials">Credentials</TabsTrigger>
+                                <TabsTrigger value="examples">Examples</TabsTrigger>
+                            </TabsList>
+
+                            {/* TAB: OVERVIEW */}
+                            <TabsContent value="overview" className="space-y-4">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-semibold text-gray-900 mb-3">🛠️ What are Custom Tools?</h3>
+                                    <p className="text-sm text-gray-700 mb-3">
+                                        Custom tools extend your AI assistant's capabilities by connecting it to external services, internal logic, or specialized sub-agents. When the AI determines it needs to perform a specific action, it calls the appropriate tool.
+                                    </p>
+                                    <div className="space-y-3">
+                                        <div className="border-l-4 border-blue-500 pl-4">
+                                            <p className="font-semibold text-gray-900 text-sm mb-1">How It Works</p>
+                                            <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                                                <li>You define a tool with a name, description, and parameters</li>
+                                                <li>The AI reads the description to decide <strong>when</strong> to call it</li>
+                                                <li>When triggered, the system executes the tool (webhook call, internal logic, or sub-agent)</li>
+                                                <li>The result is returned to the AI, which formats it for the user</li>
+                                            </ol>
+                                        </div>
+                                        <div className="border-l-4 border-green-500 pl-4">
+                                            <p className="font-semibold text-gray-900 text-sm mb-1">Tool Components</p>
+                                            <ul className="text-sm text-gray-600 space-y-1">
+                                                <li>• <strong>Function Name:</strong> Unique camelCase identifier (e.g., <code className="bg-slate-100 px-1 rounded">getWeather</code>)</li>
+                                                <li>• <strong>Description:</strong> Tells the AI <em>when</em> to use this tool</li>
+                                                <li>• <strong>Parameters Schema:</strong> JSON Schema defining expected inputs</li>
+                                                <li>• <strong>Response Instructions:</strong> Guides how the AI presents the result</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </TabsContent>
+
+                            {/* TAB: TOOL TYPES */}
+                            <TabsContent value="types" className="space-y-4">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
+                                    <h3 className="font-semibold text-gray-900 mb-3">📋 Execution Types</h3>
+
+                                    <div className="border-l-4 border-blue-500 pl-4">
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">🌐 Webhook (External)</p>
+                                        <p className="text-sm text-gray-700">
+                                            Calls an external HTTP endpoint. Use for integrating with third-party APIs (Stripe, Mailchimp, CRMs, etc.). The AI sends a JSON POST with the parameters, and your server responds with data.
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">Best for: Payment processing, CRM lookups, email sending, inventory checks</p>
+                                    </div>
+
+                                    <div className="border-l-4 border-purple-500 pl-4">
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">⚙️ Internal Logic</p>
+                                        <p className="text-sm text-gray-700">
+                                            Executes built-in platform logic. Used by system functions for order management, cart operations, profile updates, etc.
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">Best for: Platform-native operations (orders, cart, profile)</p>
+                                    </div>
+
+                                    <div className="border-l-4 border-amber-500 pl-4">
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">🤖 Specialized Agent</p>
+                                        <p className="text-sm text-gray-700">
+                                            Delegates to a specialized AI sub-agent with its own prompt and expertise. Use for complex tasks requiring domain-specific knowledge.
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">Best for: Legal advice, technical support, product recommendations</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-sm text-amber-900">
+                                    <p className="font-semibold mb-1">🔒 System vs Custom Tools</p>
+                                    <p>
+                                        <strong>System tools</strong> (lock icon) are platform-managed and cannot be deleted or re-configured. They handle core operations like orders, cart, and profile management. <strong>Custom tools</strong> are user-created and fully editable.
+                                    </p>
+                                </div>
+                            </TabsContent>
+
+                            {/* TAB: CREDENTIALS */}
+                            <TabsContent value="credentials" className="space-y-4">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-semibold text-gray-900 mb-3">🔐 Credentials Mapping</h3>
+                                    <p className="text-sm text-gray-700 mb-3">
+                                        When your webhook requires authentication, use the <strong>Credentials Mapping</strong> to inject environment variables securely into the request — without exposing secrets in the tool configuration.
+                                    </p>
+
+                                    <div className="space-y-4">
+                                        <div className="border-l-4 border-blue-500 pl-4">
+                                            <p className="font-semibold text-gray-900 text-sm mb-1">Step 1: Add an Environment Variable</p>
+                                            <p className="text-sm text-gray-600">
+                                                Go to the <strong>Environment Variables</strong> section below and add your API key (e.g., <code className="bg-slate-100 px-1 rounded">STRIPE_API_KEY</code>). It will be encrypted at rest.
+                                            </p>
+                                        </div>
+
+                                        <div className="border-l-4 border-indigo-500 pl-4">
+                                            <p className="font-semibold text-gray-900 text-sm mb-1">Step 2: Configure Credentials Mapping</p>
+                                            <p className="text-sm text-gray-600 mb-2">In the tool's Credentials Mapping field, specify where to inject:</p>
+                                            <pre className="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto">{`{
+  "stripe_auth": {
+    "location": "header",
+    "paramName": "Authorization",
+    "format": "Bearer \${value}",
+    "variableName": "STRIPE_API_KEY"
+  }
+}`}</pre>
+                                        </div>
+
+                                        <div className="border-l-4 border-green-500 pl-4">
+                                            <p className="font-semibold text-gray-900 text-sm mb-1">Injection Locations</p>
+                                            <ul className="text-sm text-gray-600 space-y-1">
+                                                <li>• <strong>header</strong> — Adds as HTTP header (e.g., <code className="bg-slate-100 px-1 rounded">Authorization: Bearer ...</code>)</li>
+                                                <li>• <strong>querystring</strong> — Appends as URL parameter (e.g., <code className="bg-slate-100 px-1 rounded">?apikey=...</code>)</li>
+                                                <li>• <strong>body</strong> — Merges into JSON payload (e.g., <code className="bg-slate-100 px-1 rounded">{`{ "api_key": "..." }`}</code>)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-green-50 border border-green-200 p-3 rounded-lg text-sm text-green-900">
+                                    <p className="font-semibold mb-1">✅ Security Guarantee</p>
+                                    <p>
+                                        Credentials are encrypted with AES-256-GCM, decrypted only at dispatch time, and <strong>never logged or stored in plain text</strong>. Each workspace has isolated encryption.
+                                    </p>
+                                </div>
+                            </TabsContent>
+
+                            {/* TAB: EXAMPLES */}
+                            <TabsContent value="examples" className="space-y-4">
+                                <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
+                                    <h3 className="font-semibold text-gray-900 mb-3">💡 Example Tools</h3>
+
+                                    <div className="border-l-4 border-blue-500 pl-4">
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">Weather Lookup (Webhook)</p>
+                                        <pre className="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto">{`Function Name: getWeather
+Description: "Call when the user asks about weather conditions"
+Parameters: {
+  "type": "object",
+  "properties": {
+    "city": { "type": "string", "description": "City name" }
+  },
+  "required": ["city"]
+}
+Webhook URL: https://api.weather.com/v1/forecast
+Credentials Mapping: {
+  "api_auth": {
+    "location": "querystring",
+    "paramName": "appid",
+    "variableName": "WEATHER_API_KEY"
+  }
+}`}</pre>
+                                    </div>
+
+                                    <div className="border-l-4 border-purple-500 pl-4">
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">Send Email (Webhook)</p>
+                                        <pre className="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto">{`Function Name: sendEmail
+Description: "Send email when the user requests a quote"
+Parameters: {
+  "type": "object",
+  "properties": {
+    "to": { "type": "string" },
+    "subject": { "type": "string" },
+    "body": { "type": "string" }
+  },
+  "required": ["to", "subject", "body"]
+}
+Webhook URL: https://api.sendgrid.com/v3/mail/send
+Credentials Mapping: {
+  "sg_auth": {
+    "location": "header",
+    "paramName": "Authorization",
+    "format": "Bearer \${value}",
+    "variableName": "SENDGRID_API_KEY"
+  }
+}`}</pre>
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        </Tabs>
+                    </CardContent>
+                )}
+            </Card>
+
             {/* Edit Modal */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent className="max-w-2xl">
@@ -399,6 +623,42 @@ export function CallingFunctionsSection({
                                     </Button>
                                 </div>
                                 <p className="text-xs text-slate-500">Payload sent as JSON POST request when AI calls this tool.</p>
+                            </div>
+                        )}
+
+                        {/* Credentials Mapping — only for WEBHOOK type */}
+                        {editingFunction?.executionType === "WEBHOOK" && (
+                            <div className="space-y-2">
+                                <Label>
+                                    Credentials Mapping
+                                    <span className="ml-1 text-slate-400 font-normal">(optional — inject environment variables into the request)</span>
+                                </Label>
+                                <div className="border rounded-md overflow-hidden bg-white">
+                                    <Editor
+                                        height="140px"
+                                        defaultLanguage="json"
+                                        theme="vs-light"
+                                        value={typeof editingFunction?.credentialsMapping === 'string'
+                                            ? editingFunction.credentialsMapping
+                                            : editingFunction?.credentialsMapping
+                                                ? JSON.stringify(editingFunction.credentialsMapping, null, 2)
+                                                : ""}
+                                        onChange={(val) => setEditingFunction(prev => ({ ...prev, credentialsMapping: val }))}
+                                        options={{
+                                            minimap: { enabled: false },
+                                            fontSize: 12,
+                                            lineNumbers: "off",
+                                            scrollBeyondLastLine: false,
+                                            automaticLayout: true,
+                                            readOnly: editingFunction?.isSystemFunction,
+                                        }}
+                                    />
+                                </div>
+                                <p className="text-xs text-slate-500">
+                                    Maps environment variables to request locations. Format: <code className="bg-slate-100 px-1 rounded">
+                                    {`{ "VAR_NAME": { "location": "header|querystring|body", "paramName": "header-or-param-name" } }`}
+                                    </code>
+                                </p>
                             </div>
                         )}
 

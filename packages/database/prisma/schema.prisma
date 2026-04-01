@@ -154,6 +154,7 @@ model Workspace {
   billingTransactions    BillingTransaction[]
   softDeleteAuditLogs    SoftDeleteAuditLog[]
   callingFunctions       WorkspaceCallingFunction[] // ✅ Inverse relation
+  environmentVariables   WorkspaceEnvironmentVariable[] // 🔐 Secure credentials storage
   supportTickets         SupportTicket[] // 🎫 Support tickets for this workspace
   pushCampaigns          PushCampaign[]
   pushCampaignRecipients PushCampaignRecipient[]
@@ -1801,6 +1802,10 @@ model WorkspaceCallingFunction {
   executionType         String    @default("WEBHOOK")  // "DELEGATE_TO_AGENT" | "WEBHOOK" | "INTERNAL"
   webhookUrl            String?   // 🆕 Per-function webhook URL (overrides workspace default if set)
   
+  // 🔐 Credentials mapping - specifica dove e come injettare le credenziali
+  // Esempio: { "api_key": { "location": "querystring", "paramName": "apikey", "variableName": "MAILCHIMP_KEY" } }
+  credentialsMapping    Json?     // Maps env vars to header/querystring/body locations
+  
   isActive              Boolean   @default(true)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -1808,6 +1813,26 @@ model WorkspaceCallingFunction {
   @@unique([workspaceId, functionName]) // One record per function per workspace
   @@index([workspaceId, isActive])
   @@map("workspace_calling_functions")
+}
+
+// 🔐 ENVIRONMENT VARIABLES - Secure storage for API keys and credentials per workspace
+// Encrypted at rest, decrypted only when needed for webhook dispatch
+model WorkspaceEnvironmentVariable {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  variableName    String    // e.g., "STRIPE_API_KEY", "MAILCHIMP_TOKEN", "TWILIO_AUTH"
+  encryptedValue  String    @db.Text  // 🔒 Encrypted with workspace secret + AES-256-GCM
+  nonce           String    @db.Text  // 🔒 Random nonce for encryption (prevents pattern matching)
+  description     String?   @db.Text  // What this variable is for
+  createdBy       String?   // User ID who created it (for audit)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([workspaceId, variableName])  // One credential name per workspace
+  @@index([workspaceId])
+  @@index([createdAt])
+  @@map("workspace_environment_variables")
 }
 
 // 📜 LEGAL DOCUMENTS - Dynamic multilingual legal pages

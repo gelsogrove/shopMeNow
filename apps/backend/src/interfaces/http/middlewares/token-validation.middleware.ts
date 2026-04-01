@@ -93,25 +93,16 @@ export const tokenValidationMiddleware = async (
       }
     }
 
-    // 4. ULTIMATE FALLBACK: If no customerId, try to find customer by phone number
+    // 4. SECURITY: DO NOT fallback to phone number lookup
+    // IDOR RISK: If token doesn't contain customerId, reject it
+    // Allowing phone fallback enables attackers to impersonate any customer in workspace
+    // by crafting tokens with victim's phone number but no verified customerId claim
     if (!customerId && tokenData?.phoneNumber && workspaceId) {
-      logger.info(
-        "[TOKEN-VALIDATION-MIDDLEWARE] Attempting phone number fallback"
+      logger.warn(
+        "[TOKEN-VALIDATION-MIDDLEWARE] Token missing customerId, rejecting (IDOR protection)",
+        { phoneNumber: tokenData.phoneNumber }
       )
-
-      const customer = await prisma.customers.findFirst({
-        where: {
-          phone: tokenData.phoneNumber,
-          workspaceId: workspaceId,
-        },
-      })
-
-      if (customer) {
-        customerId = customer.id
-        logger.info(
-          `[TOKEN-VALIDATION-MIDDLEWARE] Found customer by phone: ${customerId}`
-        )
-      }
+      // Do NOT perform phone number lookup - this is an IDOR vulnerability
     }
 
     // 5. Verify we have all required information

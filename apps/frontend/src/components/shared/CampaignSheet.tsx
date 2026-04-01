@@ -268,7 +268,7 @@ export function CampaignSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-2xl overflow-y-auto">
+      <SheetContent className="sm:max-w-3xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
             {campaign
@@ -439,8 +439,15 @@ export function CampaignSheet({
                     </Button>
                   )}
                 </div>
-                <ScrollArea className="h-48 rounded-md border p-4 bg-slate-50">
-                  {customers.length === 0 ? (
+                <ScrollArea className="h-80 rounded-md border p-4 bg-slate-50">
+                  {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mx-auto mb-2" />
+                        <p className="text-sm text-slate-500">Loading customers...</p>
+                      </div>
+                    </div>
+                  ) : customers.length === 0 ? (
                     <p className="text-sm text-gray-500 italic">
                       No active customers with push consent found.
                     </p>
@@ -449,7 +456,7 @@ export function CampaignSheet({
                       {customers.map((customer) => (
                         <div
                           key={customer.id}
-                          className="flex items-center space-x-2"
+                          className="flex items-start space-x-2 p-2 rounded-lg hover:bg-slate-100 transition-colors"
                         >
                           <Checkbox
                             id={customer.id}
@@ -458,16 +465,35 @@ export function CampaignSheet({
                               toggleCustomerSelection(customer.id)
                             }
                             disabled={!isEditMode}
+                            className="mt-1"
                           />
                           <Label
                             htmlFor={customer.id}
-                            className="text-sm font-normal cursor-pointer truncate"
-                            title={`${customer.name} (${customer.phone})`}
+                            className="flex-1 text-sm font-normal cursor-pointer"
                           >
-                            {customer.name}
-                            <span className="text-gray-400 ml-1">
-                              ({customer.phone})
-                            </span>
+                            <div className="font-medium text-slate-900 truncate" title={customer.name}>
+                              {customer.name}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate" title={customer.phone}>
+                              {customer.phone}
+                            </div>
+                            {customer.tags && customer.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {customer.tags.slice(0, 3).map((tag, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                                {customer.tags.length > 3 && (
+                                  <span className="text-xs text-slate-500">
+                                    +{customer.tags.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </Label>
                         </div>
                       ))}

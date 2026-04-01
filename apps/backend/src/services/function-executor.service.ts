@@ -23,6 +23,7 @@ import { ServiceRepository } from "../repositories/service.repository"
 import { contactOperator } from "../domain/calling-functions/contactOperator"
 import { WorkspaceCallingFunctionRepository } from "../repositories/workspace-calling-function.repository"
 import { WebhookDispatchService } from "./webhook-dispatch.service"
+import { WorkspaceEnvironmentVariableService } from "../application/services/workspace-environment-variable.service"
 import logger from "../utils/logger"
 
 /**
@@ -86,6 +87,7 @@ export interface FunctionResult {
   success: boolean
   data?: any
   error?: string
+  message?: string  // User-friendly message for LLM to relay to customer
   executionTimeMs: number
 }
 
@@ -98,6 +100,7 @@ export class FunctionExecutor {
   private serviceRepo: ServiceRepository
   private callingFunctionRepo: WorkspaceCallingFunctionRepository
   private webhookDispatcher: WebhookDispatchService
+  private envVarService: WorkspaceEnvironmentVariableService
 
   constructor(private prisma: PrismaClient) {
     // Initialize repositories
@@ -107,6 +110,7 @@ export class FunctionExecutor {
     this.serviceRepo = new ServiceRepository()
     this.callingFunctionRepo = new WorkspaceCallingFunctionRepository(prisma)
     this.webhookDispatcher = new WebhookDispatchService()
+    this.envVarService = new WorkspaceEnvironmentVariableService(prisma)
 
     // Initialize agents
     // NOTE: ProductSearchAgent removed - no database search needed
@@ -209,6 +213,18 @@ export class FunctionExecutor {
           throw new Error(`Webhook URL not configured for function ${functionName} or workspace ${context.workspaceId}`)
         }
 
+        // 🔐 Load credentials if credentialsMapping is configured
+        let credentials: Map<string, string> | undefined
+        if (dbFunction.credentialsMapping && Object.keys(dbFunction.credentialsMapping).length > 0) {
+          try {
+            credentials = await this.envVarService.getAllCredentialsForDispatch(context.workspaceId)
+            logger.info(`🔓 Loaded ${credentials.size} credentials for webhook dispatch`)
+          } catch (error) {
+            logger.error(`❌ Failed to load credentials for ${functionName}:`, error)
+            throw new Error(`CREDENTIAL_LOAD_FAILED: Cannot dispatch webhook "${functionName}" without credentials`)
+          }
+        }
+
         result = await this.webhookDispatcher.dispatch({
           url: finalUrl,
           secret: workspace.webhookSecret || undefined, // 🔐 FIX: pass HMAC secret so signing actually activates
@@ -221,7 +237,9 @@ export class FunctionExecutor {
               customerId: context.customerId,
               customerLanguage: context.customerLanguage
             }
-          }
+          },
+          credentialsMapping: (dbFunction.credentialsMapping as any) || undefined,
+          credentials
         })
 
         logger.info(`✅ Webhook function ${functionName} executed successfully`)
@@ -349,15 +367,32 @@ export class FunctionExecutor {
       }
     } catch (error) {
       const executionTimeMs = Date.now() - startTime
+      const errorMessage = error instanceof Error ? error.message : String(error)
+
+      // 🆕 Convert technical error to user-friendly message for LLM
+      // This ensures customer gets a sensible response even when webhook fails
+      let userFriendlyMessage = "Non riesco a completare questa azione in questo momento. Riprova fra poco."
+
+      if (errorMessage === "WEBHOOK_TIMEOUT") {
+        userFriendlyMessage = "Il servizio esterno sta impiegando troppo tempo. Puoi riprovare tra alcuni minuti."
+      } else if (errorMessage.includes("CONNECTION_FAILED")) {
+        userFriendlyMessage = "Non riesco a contattare il servizio esterno. Verifica che sia disponibile e riprova."
+      } else if (errorMessage.includes("WEBHOOK_ERROR")) {
+        userFriendlyMessage = "Il servizio esterno ha riscontrato un problema. Riproviamo fra poco."
+      } else if (errorMessage.includes("not found") || errorMessage.includes("Webhook URL")) {
+        userFriendlyMessage = "La configurazione di questa funzione non è completa. Contatta l'amministratore."
+      }
 
       logger.error(`❌ Function execution failed: ${functionName}`, {
-        error,
+        technicalError: errorMessage,
+        userMessage: userFriendlyMessage,
         executionTimeMs,
       })
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,  // ← For debugging logs
+        message: userFriendlyMessage,  // ✅ NEW: For LLM to pass to customer
         executionTimeMs,
       }
     }

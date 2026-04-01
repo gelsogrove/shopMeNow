@@ -242,11 +242,10 @@ describe('Soft Delete Cleanup Job', () => {
   describe('Expiry Date Calculation', () => {
     it('should calculate correct expiry date (90 days ago)', () => {
       const retentionDays = 90
-      const expiryDate = new Date()
-      expiryDate.setDate(expiryDate.getDate() - retentionDays)
-      
       const now = new Date()
-      const diffInDays = Math.floor((now.getTime() - expiryDate.getTime()) / (1000 * 60 * 60 * 24))
+      const expiryDate = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000)
+      
+      const diffInDays = Math.round((now.getTime() - expiryDate.getTime()) / (1000 * 60 * 60 * 24))
       
       expect(diffInDays).toBe(90)
     })

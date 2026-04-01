@@ -11,6 +11,7 @@ export interface CallingFunction {
     isSystemFunction: boolean
     webhookUrl?: string | null
     responseInstructions?: string | null
+    credentialsMapping?: Record<string, any> | null
 }
 
 export const callingFunctionsApi = {

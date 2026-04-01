@@ -102,11 +102,12 @@ describe("WebhookDispatchService — HMAC Signing (BUG#3 fix)", () => {
     const signature = options.headers["X-Echatbot-Signature"]
 
     // Reproduce what the client would compute for verification
+    // sentBody is already stringified JSON, no need to stringify again
     const expectedSig =
       "sha256=" +
       crypto
         .createHmac("sha256", secret)
-        .update(timestamp + "." + JSON.stringify(sentBody))
+        .update(timestamp + "." + sentBody)
         .digest("hex")
 
     expect(signature).toBe(expectedSig)

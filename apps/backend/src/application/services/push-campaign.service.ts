@@ -185,14 +185,23 @@ export class PushCampaignService {
       case CampaignFrequency.WEEKLY:
         next.setDate(next.getDate() + 7)
         break
+      case CampaignFrequency.BIWEEKLY:
+        next.setDate(next.getDate() + 14)
+        break
       case CampaignFrequency.MONTHLY:
         next.setMonth(next.getMonth() + 1)
+        break
+      case CampaignFrequency.BIMONTHLY:
+        next.setMonth(next.getMonth() + 2)
         break
       case CampaignFrequency.QUARTERLY:
         next.setMonth(next.getMonth() + 3)
         break
       case CampaignFrequency.SEMIANNUAL:
         next.setMonth(next.getMonth() + 6)
+        break
+      case CampaignFrequency.ANNUAL:
+        next.setFullYear(next.getFullYear() + 1)
         break
       default:
         return null

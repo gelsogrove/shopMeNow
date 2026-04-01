@@ -209,8 +209,13 @@ export class PromptProcessorService {
 
   public static wrapUserInput(input: string): string {
     if (!input) return ""
-    // 🔒 SECURITY: Escape closing tag to prevent breakout
-    const sanitized = input.replace(/<\/user_input>/g, "<\\/user_input>")
+    // 🔒 SECURITY: Escape ALL XML-special characters to prevent injection
+    const sanitized = input
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;")
     return `<user_input>\n${sanitized}\n</user_input>`
   }
 

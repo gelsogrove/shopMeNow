@@ -81,6 +81,7 @@ export class WorkspaceCallingFunctionRepository {
         isSystemFunction?: boolean
         webhookUrl?: string | null
         responseInstructions?: string | null
+        credentialsMapping?: any | null
     }): Promise<WorkspaceCallingFunction> {
         try {
             return await this.prisma.workspaceCallingFunction.create({
@@ -88,7 +89,8 @@ export class WorkspaceCallingFunctionRepository {
                     ...data,
                     isActive: data.isActive !== undefined ? data.isActive : true,
                     isSystemFunction: data.isSystemFunction || false,
-                    webhookUrl: data.webhookUrl || null
+                    webhookUrl: data.webhookUrl || null,
+                    credentialsMapping: data.credentialsMapping || null
                 }
             })
         } catch (error) {

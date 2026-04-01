@@ -12,27 +12,17 @@
 describe("BUG #5: Token Validation Fallback - IDOR via Phone Number Lookup", () => {
   // Simulate the vulnerable logic
   const getCustomerFromTokenFallback = async (tokenData: any, workspaceId: string): Promise<string | null> => {
-    // From tokenValidationMiddleware lines 106-113
+    // From tokenValidationMiddleware - FIXED version (no phone fallback)
     let customerId = tokenData?.customerId || tokenData?.userId
 
-    // VULNERABLE: Fallback to phone number if customerId missing
-    // NO verification that token was valid for this phone!
+    // 🔒 SECURITY FIX: DO NOT fallback to phone lookup
+    // This was the IDOR vulnerability - now removed
     if (!customerId && tokenData?.phoneNumber && workspaceId) {
-      // Attacker can provide ANY phone number → get ANY customer!
-      const prismaAny = { customers: { findFirst: async (query: any) => ({ id: "victim-customer-id" }) } }
-      const customer = await prismaAny.customers.findFirst({
-        where: {
-          phone: tokenData.phoneNumber, // ATTACKER CONTROLS THIS
-          workspaceId: workspaceId,
-        },
-      })
-
-      if (customer) {
-        customerId = customer.id // ← IDOR: Got victim's customerId via phone lookup
-      }
+      // DO NOT lookup customer by phone - this enables IDOR attacks
+      // Token must explicitly contain customerId
     }
 
-    return customerId
+    return customerId || null
   }
 
   describe("Safe token validation (has customerId in token payload)", () => {
@@ -112,8 +102,8 @@ describe("BUG #5: Token Validation Fallback - IDOR via Phone Number Lookup", () 
 
       const victimResult = await getCustomerFromTokenFallback(attackerToken, "shared-workspace")
 
-      // IDOR: Attacker gets victim's customerId via phone number
-      expect(victimResult).toBe("victim-customer-id") // BUG: Should not work!
+      // FIXED: Now correctly rejects token without customerId (IDOR protection)
+      expect(victimResult).toBeNull() // ✅ Secure: rejects attacker
     })
   })
 

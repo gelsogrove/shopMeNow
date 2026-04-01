@@ -153,6 +153,7 @@ export type {
   PushCampaign,
   PushCampaignRecipient,
   WorkspaceCallingFunction, // 🆕 Dynamic calling functions from DB
+  WorkspaceEnvironmentVariable, // 🔐 Secure encrypted credentials per workspace
 } from './generated/prisma/index.js'
 
 // Export prisma as default
