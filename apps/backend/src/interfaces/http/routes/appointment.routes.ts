@@ -11,9 +11,9 @@ import { AppointmentController } from '../controllers/appointment.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { workspaceValidationMiddleware } from '../middlewares/workspace-validation.middleware';
 
-const router = Router();
-const prisma = new PrismaClient();
-const appointmentController = new AppointmentController(prisma);
+export const createAppointmentRoutes = (prisma: PrismaClient): Router => {
+  const router = Router();
+  const appointmentController = new AppointmentController(prisma);
 
 // ============================================
 // APPOINTMENT TYPES
@@ -669,4 +669,5 @@ router.patch(
   appointmentController.cancelAppointment.bind(appointmentController)
 );
 
-export default router;
+  return router;
+};
