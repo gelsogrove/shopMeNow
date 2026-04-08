@@ -428,8 +428,8 @@ ${request.reason ? `Motivo: ${request.reason}` : ""}
           let targetPhoneNumber: string | null = null
           let targetName = "Operatore"
 
-          if (customer.salesId && customer.sales?.phone) {
-            // ✅ Customer has assigned agent → send to agent
+          if (workspace.hasSalesAgents && customer.salesId && customer.sales?.phone) {
+            // ✅ Sales agent routing enabled AND customer has assigned agent → send to agent
             targetPhoneNumber = customer.sales.phone
             targetName = `${customer.sales.firstName} ${customer.sales.lastName}`.trim()
             logger.info("✅ [contactOperator] Sending WhatsApp to assigned agent:", {
@@ -437,10 +437,13 @@ ${request.reason ? `Motivo: ${request.reason}` : ""}
               agentPhone: targetPhoneNumber,
             })
           } else if (workspace.operatorWhatsappNumber) {
-            // ❌ No agent → send to generic operator
+            // ❌ No agent routing → send to generic operator
             targetPhoneNumber = workspace.operatorWhatsappNumber
             logger.info("✅ [contactOperator] Sending WhatsApp to generic operator:", {
               operatorPhone: targetPhoneNumber,
+              reason: workspace.hasSalesAgents
+                ? "No sales agent assigned to customer"
+                : "Sales agent routing disabled",
             })
           } else {
             logger.warn("⚠️ [contactOperator] WhatsApp method selected but no operator number configured")

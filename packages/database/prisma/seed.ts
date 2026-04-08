@@ -1948,6 +1948,187 @@ Can I help with anything else?"`,
 
   console.log(`✅ Created ${defaultFaqList.length} FAQs (5 categories)`)
 
+  // 📅 Create Calendar & Appointment Booking Test Data
+  console.log("📅 Creating appointment booking test data...")
+
+  // Update workspace with timezone and reminder settings
+  await prisma.workspace.update({
+    where: { id: workspace.id },
+    data: { 
+      timezone: "Europe/Rome", // IANA timezone for IT workspace
+      appointmentReminderMessage: `Ciao {{customerName}}! 📅
+
+Ti ricordiamo il tuo appuntamento:
+🗓️ {{appointmentType}}
+📆 {{appointmentDate}} alle {{appointmentTime}}
+📍 {{workspaceName}}
+
+Ci vediamo presto! 👋`,
+      appointmentReminderHours: [24, 1], // 24h before and 1h before
+      appointmentReminderChannel: "whatsapp" // Send via WhatsApp (€0.50/reminder)
+    }
+  })
+
+  // 1. Create AppointmentTypes
+  const appointmentTypes = [
+    {
+      name: "Consulenza Legale",
+      description: "Consulenza legale con avvocato specializzato (60 minuti)",
+      duration: 60,
+      bufferTime: 15, // 15 min cleanup between appointments
+      price: 150.00,
+      color: "#3b82f6" // Blue
+    },
+    {
+      name: "Fisioterapia",
+      description: "Sessione di fisioterapia e riabilitazione (45 minuti)",
+      duration: 45,
+      bufferTime: 10,
+      price: 80.00,
+      color: "#10b981" // Green
+    },
+    {
+      name: "Check-up Medico",
+      description: "Visita medica completa con analisi (90 minuti)",
+      duration: 90,
+      bufferTime: 20,
+      price: 200.00,
+      color: "#ef4444" // Red
+    }
+  ]
+
+  for (const type of appointmentTypes) {
+    await prisma.appointmentType.create({
+      data: {
+        workspaceId: workspace.id,
+        ...type
+      }
+    })
+  }
+
+  console.log(`   ✅ Created ${appointmentTypes.length} appointment types`)
+
+  // 2. Create WorkspaceBusinessHours (Monday-Friday 09:00-17:00, Saturday 09:00-13:00)
+  const businessHours = [
+    { dayOfWeek: 1, startTime: "09:00", endTime: "17:00" }, // Monday
+    { dayOfWeek: 2, startTime: "09:00", endTime: "17:00" }, // Tuesday
+    { dayOfWeek: 3, startTime: "09:00", endTime: "17:00" }, // Wednesday
+    { dayOfWeek: 4, startTime: "09:00", endTime: "17:00" }, // Thursday
+    { dayOfWeek: 5, startTime: "09:00", endTime: "17:00" }, // Friday
+    { dayOfWeek: 6, startTime: "09:00", endTime: "13:00" }  // Saturday (half day)
+  ]
+
+  for (const hours of businessHours) {
+    await prisma.workspaceBusinessHours.create({
+      data: {
+        workspaceId: workspace.id,
+        ...hours
+      }
+    })
+  }
+
+  console.log(`   ✅ Created ${businessHours.length} business hour records`)
+
+  // 3. Create BlackoutPeriod (Summer holidays: August 15-31, 2026)
+  const blackoutPeriod = {
+    startDate: new Date('2026-08-15T00:00:00Z'),
+    endDate: new Date('2026-08-31T23:59:59Z'),
+    reason: "Vacanze estive 2026"
+  }
+
+  await prisma.blackoutPeriod.create({
+    data: {
+      workspaceId: workspace.id,
+      ...blackoutPeriod
+    }
+  })
+
+  console.log(`   ✅ Created blackout period (${blackoutPeriod.reason})`)
+  console.log(`   📅 Appointment booking ready (3 types, Mon-Sat hours, 1 blackout)`)
+
+  // 9.5. Seed appointment calling functions for ALL workspaces
+  // (filtered at runtime by enableCalendarBooking flag)
+  const appointmentCallingFunctions = [
+    {
+      functionName: "listAvailableSlots",
+      description: "Show available slots for appointment booking. Use when customer wants to book an appointment, asks about availability.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentTypeId: { type: "string", description: "ID of appointment type (optional)" },
+          daysAhead: { type: "number", description: "How many days ahead to search (default 7, max 14)" }
+        },
+        required: []
+      },
+      isSystemFunction: true,
+      executionType: "INTERNAL",
+      isActive: true
+    },
+    {
+      functionName: "bookAppointment",
+      description: "Confirm an appointment booking. Use when customer has chosen a slot and confirms. Requires appointmentTypeId and startTime.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentTypeId: { type: "string", description: "ID of appointment type" },
+          startTime: { type: "string", description: "Start time in ISO 8601 format" },
+          customerNotes: { type: "string", description: "Optional customer notes" }
+        },
+        required: ["appointmentTypeId", "startTime"]
+      },
+      isSystemFunction: true,
+      executionType: "INTERNAL",
+      isActive: true
+    },
+    {
+      functionName: "cancelAppointment",
+      description: "Cancel an existing appointment. Use when customer wants to cancel a booked appointment.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string", description: "ID of appointment to cancel" },
+          reason: { type: "string", description: "Cancellation reason (optional)" }
+        },
+        required: ["appointmentId"]
+      },
+      isSystemFunction: true,
+      executionType: "INTERNAL",
+      isActive: true
+    },
+    {
+      functionName: "getCustomerAppointments",
+      description: "Show customer's upcoming appointments. Use when customer asks about their bookings.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      },
+      isSystemFunction: true,
+      executionType: "INTERNAL",
+      isActive: true
+    }
+  ]
+
+  for (const ws of [ecommerceWorkspace, infoWorkspace]) {
+    for (const fn of appointmentCallingFunctions) {
+      await prisma.workspaceCallingFunction.upsert({
+        where: {
+          workspaceId_functionName: {
+            workspaceId: ws.id,
+            functionName: fn.functionName
+          }
+        },
+        update: {},
+        create: {
+          workspaceId: ws.id,
+          ...fn
+        }
+      })
+    }
+  }
+
+  console.log(`   ✅ Seeded ${appointmentCallingFunctions.length} appointment functions for both workspaces`)
+
   // 10. Create Campaigns
   console.log("📢 Creating campaigns...")
 

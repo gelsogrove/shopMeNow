@@ -975,7 +975,7 @@ export class LLMRouterService {
       // 🛍️ Filter catalog data based on workspace type
       // E-commerce channels: Load products, categories, offers
       // Informational channels: Load only services and FAQs
-      const [categories, offers, products, services, faqs, lastOrder, directIntentIndex] =
+      const [categories, offers, products, services, faqs, lastOrder, directIntentIndex, appointmentTypesRaw, customerAppointmentsRaw] =
         await Promise.all([
           workspace.sellsProductsAndServices
             ? messageRepo.getActiveCategories(params.workspaceId)
@@ -1001,7 +1001,42 @@ export class LLMRouterService {
             select: { orderCode: true },
           }),
           directIntentIndexPromise,
+          // 📅 Calendar: Load appointment types if calendar is enabled
+          workspace.enableCalendarBooking
+            ? this.prisma.appointmentType.findMany({
+                where: { workspaceId: params.workspaceId, isActive: true },
+                select: { name: true, description: true, duration: true, price: true },
+                orderBy: { name: 'asc' },
+              })
+            : Promise.resolve([]),
+          // 📅 Calendar: Load customer's upcoming appointments
+          workspace.enableCalendarBooking
+            ? this.prisma.appointment.findMany({
+                where: {
+                  workspaceId: params.workspaceId,
+                  customerId: customer.id,
+                  status: 'confirmed',
+                  startTime: { gte: new Date() },
+                },
+                include: { appointmentType: true },
+                orderBy: { startTime: 'asc' },
+                take: 5,
+              })
+            : Promise.resolve([]),
         ])
+
+      // 📅 Format appointment data for prompt variables
+      const appointmentTypesForPrompt = appointmentTypesRaw.length > 0
+        ? appointmentTypesRaw.map(t =>
+            `- ${t.name}${t.description ? ` (${t.description})` : ''}: ${t.duration} min${t.price ? `, €${t.price}` : ''}`
+          ).join('\n')
+        : ''
+
+      const customerUpcomingAppointmentsForPrompt = customerAppointmentsRaw.length > 0
+        ? customerAppointmentsRaw.map(a =>
+            `- ${a.appointmentType?.name || 'Appointment'}: ${a.startTime.toLocaleDateString('it-IT')} ${a.startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${a.status})`
+          ).join('\n')
+        : ''
 
       logger.info("📦 Catalog data loaded", {
         productsCount: products.length,
@@ -1033,6 +1068,8 @@ export class LLMRouterService {
           services,
           offers,
           faqs,
+          appointmentTypes: appointmentTypesForPrompt,
+          customerUpcomingAppointments: customerUpcomingAppointmentsForPrompt,
         },
         {
           lastOrderCode: lastOrder?.orderCode || undefined,
@@ -1210,8 +1247,13 @@ export class LLMRouterService {
 
       // Filter out e-commerce functions if workspace is in informational mode
       const ecommerceFunctions = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
+      // Filter out appointment functions if calendar not enabled
+      const appointmentFunctions = ["listAvailableSlots", "bookAppointment", "cancelAppointment", "getCustomerAppointments"]
       const filteredDbFunctions = dbFunctions.filter(fn => {
         if (!workspace.sellsProductsAndServices && ecommerceFunctions.includes(fn.functionName)) {
+          return false
+        }
+        if (!workspace.enableCalendarBooking && appointmentFunctions.includes(fn.functionName)) {
           return false
         }
         return true

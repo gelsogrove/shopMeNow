@@ -59,6 +59,10 @@ import RegistrationSuccess from "./pages/registration-success"
 import { ResetPasswordPage } from "./pages/ResetPasswordPage"
 import SalesPage from "./pages/SalesPage"
 import { ServicesPage } from "./pages/ServicesPage"
+import { AppointmentTypesPage } from "./pages/AppointmentTypesPage"
+import { AppointmentsPage } from "./pages/AppointmentsPage"
+import { BusinessHoursPage } from "./pages/BusinessHoursPage"
+import { BlackoutPeriodsPage } from "./pages/BlackoutPeriodsPage"
 import { CategoriesPage as SettingsCategoriesPage } from "./pages/settings/CategoriesPage"
 import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
@@ -310,6 +314,21 @@ function AppWithProviders() {
                   <Route path="/services" element={<MinimalLayout />}>
                     <Route index element={<ServicesPage />} />
                   </Route>
+
+                  {/* Appointment Booking Routes */}
+                  <Route path="/appointment-types" element={<MinimalLayout />}>
+                    <Route index element={<AppointmentTypesPage />} />
+                  </Route>
+                  <Route path="/appointments" element={<MinimalLayout />}>
+                    <Route index element={<AppointmentsPage />} />
+                  </Route>
+                  <Route path="/business-hours" element={<MinimalLayout />}>
+                    <Route index element={<BusinessHoursPage />} />
+                  </Route>
+                  <Route path="/blackout-periods" element={<MinimalLayout />}>
+                    <Route index element={<BlackoutPeriodsPage />} />
+                  </Route>
+
                   <Route path="/faq" element={<MinimalLayout />}>
                     <Route index element={<FAQPage />} />
                   </Route>

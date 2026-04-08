@@ -1761,4 +1761,104 @@ export class CallingFunctionsService {
       }
     }
   }
+
+  // ============================================
+  // APPOINTMENT BOOKING FUNCTIONS
+  // ============================================
+
+  public async listAvailableSlots(request: {
+    workspaceId: string
+    customerId: string
+    appointmentTypeId?: string
+    daysAhead?: number
+  }) {
+    try {
+      logger.info("📅 Calling listAvailableSlots with:", request)
+      const {
+        listAvailableSlots,
+      } = require("../domain/calling-functions/listAvailableSlots")
+
+      return await listAvailableSlots(request)
+    } catch (error) {
+      logger.error("❌ Error in listAvailableSlots:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to retrieve available slots.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  public async bookAppointment(request: {
+    workspaceId: string
+    customerId: string
+    appointmentTypeId: string
+    startTime: string
+    customerNotes?: string
+    channel?: string
+  }) {
+    try {
+      logger.info("📅 Calling bookAppointment with:", request)
+      const {
+        bookAppointment,
+      } = require("../domain/calling-functions/bookAppointment")
+
+      return await bookAppointment(request)
+    } catch (error) {
+      logger.error("❌ Error in bookAppointment:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to book appointment.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  public async cancelAppointmentFn(request: {
+    workspaceId: string
+    customerId: string
+    appointmentId: string
+    reason?: string
+  }) {
+    try {
+      logger.info("📅 Calling cancelAppointment with:", request)
+      const {
+        cancelAppointment,
+      } = require("../domain/calling-functions/cancelAppointment")
+
+      return await cancelAppointment(request)
+    } catch (error) {
+      logger.error("❌ Error in cancelAppointment:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to cancel appointment.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
+
+  public async getCustomerAppointmentsFn(request: {
+    workspaceId: string
+    customerId: string
+  }) {
+    try {
+      logger.info("📅 Calling getCustomerAppointments with:", request)
+      const {
+        getCustomerAppointments,
+      } = require("../domain/calling-functions/getCustomerAppointments")
+
+      return await getCustomerAppointments(request)
+    } catch (error) {
+      logger.error("❌ Error in getCustomerAppointments:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to retrieve appointments.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
 }

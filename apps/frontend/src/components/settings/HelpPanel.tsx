@@ -473,6 +473,64 @@ export const HELP_CONTENT: Record<string, HelpPanelProps> = {
   },
 
   // ============================================
+  // CALENDAR & APPOINTMENTS SECTION
+  // ============================================
+  appointmentReminderMessage: {
+    title: "Appointment Reminder Message",
+    description:
+      "Template for automatic reminders sent before appointments. This global template " +
+      "applies to all appointment types (consultations, therapy sessions, medical check-ups, etc.). " +
+      "Customers receive this message at configured intervals (e.g., 24h and 1h before appointment).",
+    examples: [
+      "Ciao {{customerName}}! 📅 Ti ricordiamo il tuo appuntamento:\\n🗓️ {{appointmentType}}\\n📆 {{appointmentDate}} alle {{appointmentTime}}\\n📍 {{workspaceName}}",
+      "Hello {{customerName}}, your appointment for {{appointmentType}} is on {{appointmentDate}} at {{appointmentTime}}. See you soon!",
+    ],
+    showVariables: true,
+    tips: [
+      "WhatsApp reminders cost €0.50 each. Email is FREE.",
+      "Use variables: {{customerName}}, {{appointmentType}}, {{appointmentDate}}, {{appointmentTime}}, {{workspaceName}}",
+      "Keep it concise but informative",
+      "Include appointment type so customers know what to prepare",
+      "Reminder timing (24h, 1h) can be configured separately",
+    ],
+  },
+  appointmentReminderChannel: {
+    title: "Reminder Channel",
+    description:
+      "Choose how appointment reminders are delivered to customers. WhatsApp provides " +
+      "better engagement but has a cost, while email is free but may have lower open rates.",
+    examples: [
+      "WhatsApp: €0.50 per reminder (higher engagement)",
+      "Email: FREE (lower engagement but no cost)",
+      "Both: Send to WhatsApp AND Email (€0.50 per reminder)",
+    ],
+    tips: [
+      "💰 Cost: WhatsApp = €0.50/reminder, Email = FREE",
+      "WhatsApp reminders have ~95% open rate vs ~20% for email",
+      "Consider your budget and customer preferences",
+      "For high-value appointments (€150+ consultation), WhatsApp worth the cost",
+      "For free or low-cost services, email may be sufficient",
+    ],
+  },
+  timezone: {
+    title: "Workspace Timezone",
+    description:
+      "The timezone used for calculating appointment slots, business hours, and reminder timing. " +
+      "All appointments are stored in UTC internally but displayed to customers in this timezone.",
+    examples: [
+      "Europe/Rome - Italy Standard Time (UTC+1, UTC+2 in summer)",
+      "America/New_York - Eastern Time (UTC-5, UTC-4 in summer)",
+      "Asia/Tokyo - Japan Standard Time (UTC+9)",
+    ],
+    tips: [
+      "Use IANA timezone format (e.g., 'Europe/Rome', not 'GMT+1')",
+      "This affects when reminders are sent",
+      "Business hours are calculated in this timezone",
+      "Customers see appointment times in this timezone too",
+    ],
+  },
+
+  // ============================================
   // DEFAULT/FALLBACK
   // ============================================
   default: {

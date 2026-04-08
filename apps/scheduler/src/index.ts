@@ -12,6 +12,7 @@ import {
   supportAttachmentsCleanupJob,
   pushCampaignsJob,
   wasenderQrCleanupJob,
+  appointmentReminderJob,
 } from './jobs'
 import logger from './utils/logger'
 
@@ -118,6 +119,15 @@ async function main() {
     await runJob('monthly-billing', monthlyBillingJob)
   })
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 9: Appointment Reminders - every 15 minutes
+  // Sends 24h and 1h reminder notifications for confirmed appointments
+  // WhatsApp: €0.50/reminder | Email: free
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('*/15 * * * *', async () => {
+    await runJob('appointment-reminder', appointmentReminderJob)
+  })
+
   logger.info('✅ Scheduler started successfully!')
   logger.info('📋 Scheduled jobs:')
   logger.info('   1. WhatsApp Channel Queue       - every 5 SECONDS')
@@ -130,6 +140,7 @@ async function main() {
   logger.info('   8. Soft Delete Cleanup          - daily at 23:20')
   logger.info('   9. Support Attachments Cleanup  - daily at 23:25')
   logger.info('   10. Monthly Billing            - 1st of month at 23:30')
+  logger.info('   11. Appointment Reminders      - every 15 minutes')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {

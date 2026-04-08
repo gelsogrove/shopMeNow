@@ -44,9 +44,10 @@ import { WebsiteWidgetSection } from "@/components/settings/sections/WebsiteWidg
 import { SecuritySection } from "@/components/settings/sections/SecuritySection"
 import { WidgetSupportSection } from "@/components/settings/sections/WidgetSupportSection"
 import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
+import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 
 // Types
-type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions"
+type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar"
 
 // Section definitions for dropdown
 const SECTIONS: SettingsSection[] = [
@@ -55,6 +56,7 @@ const SECTIONS: SettingsSection[] = [
   { key: "whatsapp", label: "WhatsApp Channel", description: "WhatsApp Business API settings" },
   { key: "widget", label: "Website Widget", description: "Chat widget for your website" },
   { key: "widget-support", label: "Human Support", description: "Escalation to human operators" },
+  { key: "calendar", label: "📅 Appointments & Calendar", description: "Google Calendar, reminders (€0.50/WhatsApp)" },
   { key: "security", label: "Security", description: "Access control and domains" },
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
 ]
@@ -66,6 +68,7 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "whatsapp": "whatsappPhoneNumber",
   "widget": "widgetTitle",
   "widget-support": "humanSupportEnabled",
+  "calendar": "appointmentReminderMessage",
   "security": "allowedDomains",
   "functions": "webhookUrl",
 }
@@ -120,6 +123,7 @@ interface FormData {
   // Security
   allowedExternalLinks: string
   hasHumanSupport: boolean
+  hasSalesAgents: boolean
   operatorContactMethod: "email" | "whatsapp"
   operatorWhatsappNumber: string
   humanSupportInstructions: string
@@ -130,6 +134,12 @@ interface FormData {
   // Webhooks
   webhookUrl: string
   webhookTimeout: number
+  // Calendar & Appointments
+  enableCalendarBooking?: boolean
+  timezone?: string
+  appointmentReminderMessage?: string
+  appointmentReminderHours?: number[]
+  appointmentReminderChannel?: string
 }
 
 export function SettingsPage() {
@@ -215,6 +225,7 @@ export function SettingsPage() {
     wipMessage: defaultWipMessage,
     allowedExternalLinks: "",
     hasHumanSupport: true,
+    hasSalesAgents: false,
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
     humanSupportInstructions: "",
@@ -288,6 +299,7 @@ export function SettingsPage() {
           ? currentWorkspace.allowedExternalLinks.join(", ")
           : currentWorkspace.allowedExternalLinks || "",
         hasHumanSupport: currentWorkspace.hasHumanSupport ?? true,
+        hasSalesAgents: currentWorkspace.hasSalesAgents ?? false,
         operatorContactMethod:
           (currentWorkspace.operatorContactMethod as "email" | "whatsapp") || "email",
         operatorWhatsappNumber: currentWorkspace.operatorWhatsappNumber || "",
@@ -298,6 +310,12 @@ export function SettingsPage() {
         requireManualApproval: currentWorkspace.requireManualApproval || false,
         webhookUrl: currentWorkspace.webhookUrl || "",
         webhookTimeout: currentWorkspace.webhookTimeout || 10000,
+        // Calendar & Appointments
+        enableCalendarBooking: currentWorkspace.enableCalendarBooking || false,
+        timezone: currentWorkspace.timezone || "Europe/Rome",
+        appointmentReminderMessage: currentWorkspace.appointmentReminderMessage || undefined,
+        appointmentReminderHours: currentWorkspace.appointmentReminderHours || [24, 1],
+        appointmentReminderChannel: currentWorkspace.appointmentReminderChannel || "whatsapp",
       })
     }
   }, [currentWorkspace])
@@ -481,6 +499,11 @@ export function SettingsPage() {
         // hasHumanSupport
         if (updateData.hasHumanSupport === currentWorkspace.hasHumanSupport) {
           delete updateData.hasHumanSupport
+        }
+
+        // hasSalesAgents
+        if (updateData.hasSalesAgents === currentWorkspace.hasSalesAgents) {
+          delete updateData.hasSalesAgents
         }
 
         // requireManualApproval
@@ -759,6 +782,7 @@ export function SettingsPage() {
           <WidgetSupportSection
             formData={{
               hasHumanSupport: formData.hasHumanSupport,
+              hasSalesAgents: formData.hasSalesAgents,
               operatorContactMethod: formData.operatorContactMethod,
               operatorWhatsappNumber: formData.operatorWhatsappNumber,
               operatorEmail: formData.adminEmail, // Use business email as default
@@ -776,6 +800,20 @@ export function SettingsPage() {
           <CallingFunctionsSection
             workspaceId={currentWorkspace?.id || ""}
             canEdit={canEdit}
+          />
+        )
+      case "calendar":
+        return (
+          <CalendarSection
+            formData={{
+              enableCalendarBooking: formData.enableCalendarBooking,
+              timezone: formData.timezone,
+              appointmentReminderMessage: formData.appointmentReminderMessage,
+              appointmentReminderHours: formData.appointmentReminderHours,
+              appointmentReminderChannel: formData.appointmentReminderChannel,
+            }}
+            onChange={handleFieldChange}
+            onFocus={handleFieldFocus}
           />
         )
       default:

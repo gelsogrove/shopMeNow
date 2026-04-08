@@ -14,6 +14,7 @@ import {
   Brain,
   Clock,
   TrendingUp,
+  CalendarCheck,
 } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
@@ -77,6 +78,12 @@ const translations = {
           description: "Conformità totale GDPR, crittografia end-to-end, data retention policy personalizzabili e controllo completo sui dati dei tuoi clienti.",
           points: ["GDPR compliant", "Crittografia E2E", "Data ownership"],
         },
+        {
+          icon: "CalendarCheck",
+          title: "Prenotazione Appuntamenti",
+          description: "System di prenotazione appuntamenti integrato con il chatbot. I clienti possono prenotare, modificare e cancellare appuntamenti direttamente in chat.",
+          points: ["Slot disponibili in tempo reale", "Promemoria automatici WhatsApp", "Gestione orari e blackout"],
+        },
       ],
     },
     integration: {
@@ -110,6 +117,7 @@ const translations = {
         { icon: "ShoppingCart", title: "Integrated E-Commerce", description: "Sell products directly on WhatsApp. Product catalog, cart, payments and order tracking all in chat.", points: ["AI product catalog", "Secure payments", "Order management"] },
         { icon: "Globe", title: "Widget → WhatsApp", description: "A single chatbot for website and WhatsApp. Customers start on the widget and continue on WhatsApp without repeating information.", points: ["Unified session", "Data continuity", "Zero friction"] },
         { icon: "Lock", title: "GDPR Privacy & Security", description: "Full GDPR compliance, end-to-end encryption, customizable data retention policies and complete control over your customers' data.", points: ["GDPR compliant", "E2E encryption", "Data ownership"] },
+        { icon: "CalendarCheck", title: "Appointment Booking", description: "Integrated appointment booking system with the chatbot. Customers can book, modify and cancel appointments directly in chat.", points: ["Real-time available slots", "Automatic WhatsApp reminders", "Business hours & blackout management"] },
       ],
     },
     integration: {
@@ -143,6 +151,7 @@ const translations = {
         { icon: "ShoppingCart", title: "E-Commerce Integrado", description: "Vende productos directamente en WhatsApp. Catálogo de productos, carrito, pagos y seguimiento de pedidos todo en el chat.", points: ["Catálogo IA", "Pagos seguros", "Gestión de pedidos"] },
         { icon: "Globe", title: "Widget → WhatsApp", description: "Un único chatbot para sitio web y WhatsApp. Los clientes empiezan en el widget y continúan en WhatsApp sin repetir información.", points: ["Sesión unificada", "Continuidad de datos", "Sin fricción"] },
         { icon: "Lock", title: "Privacidad & Seguridad GDPR", description: "Cumplimiento total GDPR, cifrado de extremo a extremo, políticas de retención de datos personalizables y control completo sobre los datos de tus clientes.", points: ["Conforme GDPR", "Cifrado E2E", "Data ownership"] },
+        { icon: "CalendarCheck", title: "Reserva de Citas", description: "Sistema de reserva de citas integrado con el chatbot. Los clientes pueden reservar, modificar y cancelar citas directamente en el chat.", points: ["Slots disponibles en tiempo real", "Recordatorios automáticos WhatsApp", "Gestión de horarios y bloqueos"] },
       ],
     },
     integration: {
@@ -176,6 +185,7 @@ const translations = {
         { icon: "ShoppingCart", title: "E-Commerce Integrado", description: "Venda produtos diretamente no WhatsApp. Catálogo de produtos, carrinho, pagamentos e rastreamento de pedidos tudo no chat.", points: ["Catálogo IA", "Pagamentos seguros", "Gestão de pedidos"] },
         { icon: "Globe", title: "Widget → WhatsApp", description: "Um único chatbot para site e WhatsApp. Os clientes começam no widget e continuam no WhatsApp sem repetir informações.", points: ["Sessão unificada", "Continuidade de dados", "Zero fricção"] },
         { icon: "Lock", title: "Privacidade & Segurança GDPR", description: "Conformidade total GDPR, criptografia ponta a ponta, políticas de retenção de dados personalizáveis e controlo total sobre os dados dos seus clientes.", points: ["Conforme GDPR", "Criptografia E2E", "Data ownership"] },
+        { icon: "CalendarCheck", title: "Agendamento de Consultas", description: "Sistema de agendamento de consultas integrado com o chatbot. Os clientes podem agendar, modificar e cancelar consultas diretamente no chat.", points: ["Slots disponíveis em tempo real", "Lembretes automáticos WhatsApp", "Gestão de horários e bloqueios"] },
       ],
     },
     integration: {
@@ -202,6 +212,7 @@ export function FeaturesPage() {
     ShoppingCart: <ShoppingCart className="h-8 w-8" />,
     Globe: <Globe className="h-8 w-8" />,
     Lock: <Lock className="h-8 w-8" />,
+    CalendarCheck: <CalendarCheck className="h-8 w-8" />,
   }
 
   return (

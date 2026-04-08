@@ -205,6 +205,68 @@ For privacy inquiries, please contact our support team.`
       }
     );
 
+    // Appointment booking functions (always seeded, filtered at runtime by enableCalendarBooking)
+    functions.push(
+      {
+        functionName: "listAvailableSlots",
+        description: "Show available slots for appointment booking. Use when customer wants to book an appointment, asks about availability.",
+        parameters: {
+          type: "object",
+          properties: {
+            appointmentTypeId: { type: "string", description: "ID of appointment type (optional)" },
+            daysAhead: { type: "number", description: "How many days ahead to search (default 7, max 14)" }
+          },
+          required: []
+        },
+        isSystemFunction: true,
+        executionType: "INTERNAL",
+        isActive: true
+      },
+      {
+        functionName: "bookAppointment",
+        description: "Confirm an appointment booking. Use when customer has chosen a slot and confirms. Requires appointmentTypeId and startTime.",
+        parameters: {
+          type: "object",
+          properties: {
+            appointmentTypeId: { type: "string", description: "ID of appointment type" },
+            startTime: { type: "string", description: "Start time in ISO 8601 format" },
+            customerNotes: { type: "string", description: "Optional customer notes" }
+          },
+          required: ["appointmentTypeId", "startTime"]
+        },
+        isSystemFunction: true,
+        executionType: "INTERNAL",
+        isActive: true
+      },
+      {
+        functionName: "cancelAppointment",
+        description: "Cancel an existing appointment. Use when customer wants to cancel a booked appointment.",
+        parameters: {
+          type: "object",
+          properties: {
+            appointmentId: { type: "string", description: "ID of appointment to cancel" },
+            reason: { type: "string", description: "Cancellation reason (optional)" }
+          },
+          required: ["appointmentId"]
+        },
+        isSystemFunction: true,
+        executionType: "INTERNAL",
+        isActive: true
+      },
+      {
+        functionName: "getCustomerAppointments",
+        description: "Show customer's upcoming appointments. Use when customer asks about their bookings.",
+        parameters: {
+          type: "object",
+          properties: {},
+          required: []
+        },
+        isSystemFunction: true,
+        executionType: "INTERNAL",
+        isActive: true
+      }
+    );
+
     await tx.workspaceCallingFunction.createMany({
       data: functions.map(fn => ({ ...fn, workspaceId }))
     });

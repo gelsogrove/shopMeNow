@@ -16,6 +16,7 @@ import {
   CUSTOMER_SUPPORT_FUNCTIONS,
   SUMMARY_AGENT_FUNCTIONS,
   PROFILE_MANAGEMENT_FUNCTIONS,
+  APPOINTMENT_FUNCTIONS,
   getAgentFunctions,
   getAgentFunctionNames,
   getAllFunctions,
@@ -213,7 +214,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       expect(getAgentFunctions("PRODUCT_SEARCH")).toEqual(PRODUCT_SEARCH_FUNCTIONS)
       expect(getAgentFunctions("CART_MANAGEMENT")).toEqual(CART_MANAGEMENT_FUNCTIONS)
       expect(getAgentFunctions("ORDER_TRACKING")).toEqual(ORDER_TRACKING_FUNCTIONS)
-      expect(getAgentFunctions("CUSTOMER_SUPPORT")).toEqual(CUSTOMER_SUPPORT_FUNCTIONS)
+      expect(getAgentFunctions("CUSTOMER_SUPPORT")).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
       expect(getAgentFunctions("SUMMARY_AGENT")).toEqual(SUMMARY_AGENT_FUNCTIONS)
       expect(getAgentFunctions("PROFILE_MANAGEMENT")).toEqual(PROFILE_MANAGEMENT_FUNCTIONS)
     })
@@ -280,7 +281,8 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
         ORDER_TRACKING_FUNCTIONS.length +
         CUSTOMER_SUPPORT_FUNCTIONS.length +
         SUMMARY_AGENT_FUNCTIONS.length +
-        PROFILE_MANAGEMENT_FUNCTIONS.length
+        PROFILE_MANAGEMENT_FUNCTIONS.length +
+        APPOINTMENT_FUNCTIONS.length
 
       expect(allFunctions.length).toBe(expectedCount)
     })
@@ -316,9 +318,9 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       const allNames = allFunctions.map((fn) => fn.function.name)
       const uniqueNames = [...new Set(allNames)]
 
-      // We expect 18 unique names out of 19 total (contactOperator appears twice)
-      expect(uniqueNames.length).toBe(18)
-      expect(allNames.length).toBe(19)
+      // We expect 22 unique names out of 23 total (contactOperator appears twice)
+      expect(uniqueNames.length).toBe(22)
+      expect(allNames.length).toBe(23)
 
       // Verify contactOperator is the only duplicate
       const nameCounts: Record<string, number> = {}

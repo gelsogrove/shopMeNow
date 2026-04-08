@@ -1,0 +1,908 @@
+openapi: 3.0.0
+info:
+  title: Calendar & Appointment Booking API
+  description: WhatsApp e-commerce platform - appointment booking with Google Calendar integration
+  version: 1.0.0
+  contact:
+    name: eChatbot Support
+    url: https://github.com/shopmenow/shopME
+
+servers:
+  - url: http://localhost:3001/api
+    description: Development
+  - url: https://api.echatbot.ai/api
+    description: Production
+
+tags:
+  - name: AppointmentTypes
+    description: Manage appointment types (service configurations)
+  - name: GoogleOAuth
+    description: Google Calendar OAuth integration
+  - name: BusinessHours
+    description: Configure business hours
+  - name: BlackoutPeriods
+    description: Manage vacation/closure periods
+  - name: Appointments
+    description: Book, view, cancel appointments
+  - name: Admin
+    description: Admin operations (sync, analytics)
+
+paths:
+  /workspaces/{workspaceId}/appointment-types:
+    get:
+      operationId: listAppointmentTypes
+      tags:
+        - AppointmentTypes
+      summary: List all appointment types
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: List of appointment types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AppointmentType'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      operationId: createAppointmentType
+      tags:
+        - AppointmentTypes
+      summary: Create appointment type
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentTypeRequest'
+      responses:
+        201:
+          description: Appointment type created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentType'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /workspaces/{workspaceId}/appointment-types/{typeId}:
+    put:
+      operationId: updateAppointmentType
+      tags:
+        - AppointmentTypes
+      summary: Update appointment type
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: typeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentTypeRequest'
+      responses:
+        200:
+          description: Appointment type updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentType'
+        404:
+          $ref: '#/components/responses/NotFound'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      operationId: deleteAppointmentType
+      tags:
+        - AppointmentTypes
+      summary: Delete appointment type (soft delete)
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: typeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Appointment type deleted
+        404:
+          $ref: '#/components/responses/NotFound'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/google-oauth/connect/{workspaceId}:
+    get:
+      operationId: getGoogleOAuthUrl
+      tags:
+        - GoogleOAuth
+      summary: Get Google OAuth consent URL
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OAuth URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authUrl:
+                    type: string
+                    description: Google OAuth consent screen URL
+
+  /v1/google-oauth/callback:
+    get:
+      operationId: googleOAuthCallback
+      tags:
+        - GoogleOAuth
+      summary: OAuth callback handler
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        302:
+          description: Redirect to workspace settings after success
+        400:
+          $ref: '#/components/responses/BadRequest'
+
+  /v1/google-oauth/disconnect/{workspaceId}:
+    delete:
+      operationId: disconnectGoogleCalendar
+      tags:
+        - GoogleOAuth
+      summary: Disconnect Google Calendar
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Disconnected
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/google-oauth/status/{workspaceId}:
+    get:
+      operationId: getGoogleOAuthStatus
+      tags:
+        - GoogleOAuth
+      summary: Check Google Calendar connection status
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Connection status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isConnected:
+                    type: boolean
+                  googleEmail:
+                    type: string
+                  connectedAt:
+                    type: string
+                    format: date-time
+                  lastSyncAt:
+                    type: string
+                    format: date-time
+
+  /workspaces/{workspaceId}/business-hours:
+    get:
+      operationId: listBusinessHours
+      tags:
+        - BusinessHours
+      summary: Get business hours for all days
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Business hours for all days
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessHours'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createBusinessHours
+      tags:
+        - BusinessHours
+      summary: Create or update business hours for a day
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBusinessHoursRequest'
+      responses:
+        201:
+          description: Business hours created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessHours'
+        400:
+          $ref: '#/components/responses/BadRequest'
+
+  /workspaces/{workspaceId}/blackout-periods:
+    get:
+      operationId: listBlackoutPeriods
+      tags:
+        - BlackoutPeriods
+      summary: List blackout periods
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of blackout periods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BlackoutPeriod'
+
+    post:
+      operationId: createBlackoutPeriod
+      tags:
+        - BlackoutPeriods
+      summary: Create blackout period (vacation, training, etc.)
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBlackoutPeriodRequest'
+      responses:
+        201:
+          description: Blackout period created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlackoutPeriod'
+
+  /workspaces/{workspaceId}/blackout-periods/{id}:
+    delete:
+      operationId: deleteBlackoutPeriod
+      tags:
+        - BlackoutPeriods
+      summary: Delete blackout period
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Deleted
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /workspaces/{workspaceId}/appointments:
+    get:
+      operationId: listAppointments
+      tags:
+        - Appointments
+      summary: List appointments
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: customerId
+          in: query
+          schema:
+            type: string
+        - name: dateMin
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateMax
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appointment'
+
+    post:
+      operationId: createAppointment
+      tags:
+        - Appointments
+      summary: Create appointment (admin or chat)
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppointmentRequest'
+      responses:
+        201:
+          description: Appointment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        400:
+          $ref: '#/components/responses/BadRequest'
+
+  /workspaces/{workspaceId}/appointments/{eventId}:
+    get:
+      operationId: getAppointment
+      tags:
+        - Appointments
+      summary: Get appointment details
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: cancelAppointment
+      tags:
+        - Appointments
+      summary: Cancel appointment
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        204:
+          description: Appointment cancelled
+        404:
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      operationId: rescheduleAppointment
+      tags:
+        - Appointments
+      summary: Reschedule appointment to new date/time
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RescheduleAppointmentRequest'
+      responses:
+        200:
+          description: Appointment rescheduled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        400:
+          $ref: '#/components/responses/BadRequest'
+
+  /workspaces/{workspaceId}/appointments/available-slots:
+    get:
+      operationId: getAvailableSlots
+      tags:
+        - Appointments
+      summary: Get available slots for a date
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: appointmentTypeId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+            example: '2026-04-15'
+      responses:
+        200:
+          description: Available time slots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  slots:
+                    type: array
+                    items:
+                      type: string
+                      example: '10:00'
+        400:
+          $ref: '#/components/responses/BadRequest'
+
+  /workspaces/{workspaceId}/admin/appointments/sync-pending:
+    post:
+      operationId: syncPendingAppointments
+      tags:
+        - Admin
+      summary: Manually sync pending appointments to Google Calendar
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Sync completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced:
+                    type: integer
+                  failed:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /workspaces/{workspaceId}/admin/appointments/analytics:
+    get:
+      operationId: getAppointmentAnalytics
+      tags:
+        - Admin
+      summary: Get appointment analytics
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dateMin
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateMax
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalAppointments:
+                    type: integer
+                  confirmedAppointments:
+                    type: integer
+                  cancelledAppointments:
+                    type: integer
+                  lateCancellationPercentage:
+                    type: number
+                  topServiceTypes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        serviceType:
+                          type: string
+                        count:
+                          type: integer
+
+components:
+  schemas:
+    AppointmentType:
+      type: object
+      required:
+        - id
+        - workspaceId
+        - serviceType
+        - duration
+        - bufferMinutes
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        serviceType:
+          type: string
+          example: "Pulizia denti"
+        description:
+          type: string
+          nullable: true
+        duration:
+          type: integer
+          example: 30
+        bufferMinutes:
+          type: integer
+          example: 15
+        reminderMessage:
+          type: string
+          example: "Ciao {{customerName}}, domani hai {{serviceType}} alle {{time}}"
+        reminderHours:
+          type: integer
+          example: 24
+        isActive:
+          type: boolean
+        color:
+          type: string
+          example: "#3B82F6"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAppointmentTypeRequest:
+      type: object
+      required:
+        - serviceType
+        - duration
+      properties:
+        serviceType:
+          type: string
+          example: "Pulizia denti"
+        description:
+          type: string
+        duration:
+          type: integer
+          minimum: 15
+        bufferMinutes:
+          type: integer
+          minimum: 0
+        reminderMessage:
+          type: string
+        reminderHours:
+          type: integer
+          minimum: 1
+        isActive:
+          type: boolean
+        color:
+          type: string
+
+    BusinessHours:
+      type: object
+      required:
+        - id
+        - dayOfWeek
+        - isOpen
+      properties:
+        id:
+          type: string
+        dayOfWeek:
+          type: integer
+          example: 1
+          description: "0=Sunday, 1=Monday, ..., 6=Saturday"
+        isOpen:
+          type: boolean
+        openTime:
+          type: string
+          example: "09:00"
+        closeTime:
+          type: string
+          example: "18:00"
+        breakStart:
+          type: string
+          nullable: true
+          example: "13:00"
+        breakEnd:
+          type: string
+          nullable: true
+          example: "14:00"
+
+    CreateBusinessHoursRequest:
+      type: object
+      required:
+        - dayOfWeek
+        - isOpen
+      properties:
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        isOpen:
+          type: boolean
+        openTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        closeTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        breakStart:
+          type: string
+          nullable: true
+          pattern: '^\d{2}:\d{2}$'
+        breakEnd:
+          type: string
+          nullable: true
+          pattern: '^\d{2}:\d{2}$'
+
+    BlackoutPeriod:
+      type: object
+      required:
+        - id
+        - startDate
+        - endDate
+      properties:
+        id:
+          type: string
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+
+    CreateBlackoutPeriodRequest:
+      type: object
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        customerId:
+          type: string
+        appointmentTypeId:
+          type: string
+        summary:
+          type: string
+          example: "Pulizia denti - Mario Rossi"
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        googleEventId:
+          type: string
+        googleCalendarLink:
+          type: string
+
+    CreateAppointmentRequest:
+      type: object
+      required:
+        - customerId
+        - appointmentTypeId
+        - date
+        - time
+      properties:
+        customerId:
+          type: string
+        appointmentTypeId:
+          type: string
+        date:
+          type: string
+          format: date
+          example: '2026-04-15'
+        time:
+          type: string
+          example: '10:00'
+        notes:
+          type: string
+          nullable: true
+        confirmed:
+          type: boolean
+          description: "Set to true after customer confirms"
+
+    RescheduleAppointmentRequest:
+      type: object
+      required:
+        - date
+        - time
+      properties:
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+          example: '14:00'
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []

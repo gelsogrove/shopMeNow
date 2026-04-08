@@ -196,6 +196,24 @@ export interface PromptVariables {
    */
   sellsProductsAndServices: boolean
 
+  /** Prenotazione appuntamenti abilitata
+   * Template: {{hasCalendarEnabled}} (boolean for {{#if}})
+   * Source: workspace.enableCalendarBooking
+   */
+  hasCalendarEnabled: boolean
+
+  /** Tipi di appuntamento disponibili
+   * Template: {{appointmentTypes}}
+   * Source: AppointmentType[] from DB formatted as text
+   */
+  appointmentTypes: string
+
+  /** Appuntamenti futuri del cliente
+   * Template: {{customerUpcomingAppointments}}
+   * Source: Appointment[] for current customer
+   */
+  customerUpcomingAppointments: string
+
   /** Domini esterni autorizzati per link
    * Template: {{allowedExternalLinks}}
    * Source: workspace.allowedExternalLinks?.join('\n') || ''
@@ -443,6 +461,9 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   hasHumanSupport: true,
   hasSalesAgents: false,
   sellsProductsAndServices: true,
+  hasCalendarEnabled: false,
+  appointmentTypes: '',
+  customerUpcomingAppointments: '',
   channelName: 'Shop',
   chatbotName: 'Assistente',
   businessType: '',

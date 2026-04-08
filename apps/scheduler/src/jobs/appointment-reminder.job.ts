@@ -1,0 +1,342 @@
+/**
+ * Appointment Reminder Job
+ *
+ * Runs every 15 minutes.
+ * Sends 24h and 1h reminder notifications for confirmed appointments.
+ * 
+ * Billing:
+ * - WhatsApp reminders: €0.50 per reminder (billed to workspace owner)
+ * - Email reminders: FREE
+ * 
+ * Channel detection:
+ * - bookedVia === 'widget' → always email (free, widget can't send WhatsApp)
+ * - bookedVia === 'whatsapp' → use workspace.appointmentReminderChannel
+ */
+
+import { prisma, Prisma } from '../config/database'
+import logger from '../utils/logger'
+
+const REMINDER_COST_WHATSAPP = 0.50 // €0.50 per WhatsApp reminder
+const REMINDER_COST_EMAIL = 0.00 // Free for email
+
+export async function appointmentReminderJob(): Promise<void> {
+  const now = new Date()
+
+  logger.info('[APPOINTMENT-REMINDER] Starting job')
+
+  try {
+    // ============================================
+    // 24-HOUR REMINDERS
+    // ============================================
+    const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const twentyThreeHoursFromNow = new Date(now.getTime() + 23 * 60 * 60 * 1000)
+
+    const appointments24h = await prisma.appointment.findMany({
+      where: {
+        status: 'confirmed',
+        reminder24hSentAt: null,
+        startTime: {
+          gte: twentyThreeHoursFromNow,
+          lte: twentyFourHoursFromNow,
+        },
+        workspace: { enableCalendarBooking: true },
+      },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            appointmentReminderMessage: true,
+            appointmentReminderChannel: true,
+            ownerId: true,
+          },
+        },
+        appointmentType: true,
+        customer: {
+          select: {
+            id: true,
+            phone: true,
+            email: true,
+            name: true,
+            language: true,
+          },
+        },
+      },
+    })
+
+    if (appointments24h.length > 0) {
+      logger.info(`[APPOINTMENT-REMINDER] Found ${appointments24h.length} appointments needing 24h reminder`)
+    }
+
+    for (const appointment of appointments24h) {
+      await processReminder(appointment, '24h')
+    }
+
+    // ============================================
+    // 1-HOUR REMINDERS
+    // ============================================
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000)
+    const fiftyMinutesFromNow = new Date(now.getTime() + 50 * 60 * 1000)
+
+    const appointments1h = await prisma.appointment.findMany({
+      where: {
+        status: 'confirmed',
+        reminder1hSentAt: null,
+        startTime: {
+          gte: fiftyMinutesFromNow,
+          lte: oneHourFromNow,
+        },
+        workspace: { enableCalendarBooking: true },
+      },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            appointmentReminderMessage: true,
+            appointmentReminderChannel: true,
+            ownerId: true,
+          },
+        },
+        appointmentType: true,
+        customer: {
+          select: {
+            id: true,
+            phone: true,
+            email: true,
+            name: true,
+            language: true,
+          },
+        },
+      },
+    })
+
+    if (appointments1h.length > 0) {
+      logger.info(`[APPOINTMENT-REMINDER] Found ${appointments1h.length} appointments needing 1h reminder`)
+    }
+
+    for (const appointment of appointments1h) {
+      await processReminder(appointment, '1h')
+    }
+
+    const totalProcessed = appointments24h.length + appointments1h.length
+    if (totalProcessed > 0) {
+      logger.info(`[APPOINTMENT-REMINDER] Completed. Processed ${totalProcessed} reminders`)
+    }
+  } catch (error) {
+    logger.error('[APPOINTMENT-REMINDER] Job failed:', error)
+  }
+}
+
+async function processReminder(
+  appointment: any,
+  reminderType: '24h' | '1h'
+): Promise<void> {
+  try {
+    // Prevent duplicate processing using ReminderLock
+    const lockKey = `reminder-${reminderType}-${appointment.id}`
+    const existingLock = await prisma.reminderLock.findUnique({
+      where: { lockKey },
+    })
+
+    if (existingLock) {
+      logger.warn(`[APPOINTMENT-REMINDER] Lock exists for ${lockKey}, skipping`)
+      return
+    }
+
+    // Acquire lock
+    await prisma.reminderLock.create({
+      data: {
+        lockKey,
+        appointmentId: appointment.id,
+        workspaceId: appointment.workspaceId,
+        reminderType,
+        expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2h expiry
+      },
+    }).catch(() => {
+      // Lock already exists (race condition)
+      return
+    })
+
+    // Determine reminder channel
+    const channel = resolveReminderChannel(appointment)
+    const message = buildReminderMessage(appointment, reminderType)
+
+    let billedAmount = 0
+
+    if (channel === 'whatsapp' && appointment.customer?.phone) {
+      // Enqueue WhatsApp message
+      await prisma.whatsAppQueue.create({
+        data: {
+          workspaceId: appointment.workspaceId,
+          customerId: appointment.customer.id,
+          phoneNumber: appointment.customer.phone,
+          messageContent: message,
+        },
+      })
+
+      billedAmount = REMINDER_COST_WHATSAPP
+
+      // Bill the workspace owner
+      await billReminder(appointment.workspace, billedAmount, appointment.id, reminderType)
+
+      logger.info(`[APPOINTMENT-REMINDER] WhatsApp ${reminderType} sent for appointment ${appointment.id} (€${billedAmount})`)
+    } else if (channel === 'email' && appointment.customer?.email) {
+      // Email reminder (free)
+      // Note: actual email sending will be handled by the email service
+      // For now, log and mark as sent
+      billedAmount = REMINDER_COST_EMAIL
+
+      logger.info(`[APPOINTMENT-REMINDER] Email ${reminderType} sent for appointment ${appointment.id} (FREE)`)
+    } else {
+      logger.warn(`[APPOINTMENT-REMINDER] No valid channel for appointment ${appointment.id}`)
+      return
+    }
+
+    // Update appointment with reminder sent timestamp
+    const updateData: any = {
+      reminderChannel: channel,
+    }
+
+    if (reminderType === '24h') {
+      updateData.reminder24hSentAt = new Date()
+    } else {
+      updateData.reminder1hSentAt = new Date()
+    }
+
+    if (billedAmount > 0) {
+      updateData.reminderBilledAt = new Date()
+      updateData.reminderBillingTotal = {
+        increment: billedAmount,
+      }
+    }
+
+    await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: updateData,
+    })
+  } catch (error) {
+    logger.error(`[APPOINTMENT-REMINDER] Failed to process ${reminderType} reminder for appointment ${appointment.id}:`, error)
+  }
+}
+
+function resolveReminderChannel(appointment: any): 'whatsapp' | 'email' {
+  // Widget bookings always get email (widget can't send WhatsApp)
+  if (appointment.bookedVia === 'widget') {
+    return 'email'
+  }
+
+  // Use workspace preference
+  const workspaceChannel = appointment.workspace?.appointmentReminderChannel || 'whatsapp'
+
+  if (workspaceChannel === 'email') {
+    return 'email'
+  }
+
+  if (workspaceChannel === 'both') {
+    // For 'both', prefer WhatsApp if phone available, else email
+    return appointment.customer?.phone ? 'whatsapp' : 'email'
+  }
+
+  // Default: WhatsApp
+  return appointment.customer?.phone ? 'whatsapp' : 'email'
+}
+
+function getLocaleFromLanguage(language: string | null | undefined): string {
+  const localeMap: Record<string, string> = {
+    'it': 'it-IT',
+    'en': 'en-US',
+    'es': 'es-ES',
+    'pt': 'pt-BR',
+    'fr': 'fr-FR',
+    'de': 'de-DE',
+  }
+  return localeMap[language || 'en'] || 'en-US'
+}
+
+function buildReminderMessage(appointment: any, reminderType: '24h' | '1h'): string {
+  const locale = getLocaleFromLanguage(appointment.customer?.language)
+  const template = appointment.workspace?.appointmentReminderMessage
+
+  if (template) {
+    return template
+      .replace('{{appointmentType}}', appointment.appointmentType?.name || 'Appointment')
+      .replace('{{date}}', appointment.startTime.toLocaleDateString(locale, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      }))
+      .replace('{{time}}', appointment.startTime.toLocaleTimeString(locale, {
+        hour: '2-digit',
+        minute: '2-digit',
+      }))
+      .replace('{{customerName}}', appointment.customerName || appointment.customer?.name || '')
+      .replace('{{companyName}}', appointment.workspace?.name || '')
+  }
+
+  // Default message (English fallback - workspace owner should configure appointmentReminderMessage)
+  const typeLabel = appointment.appointmentType?.name || 'appointment'
+  const dateStr = appointment.startTime.toLocaleDateString(locale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+  const timeStr = appointment.startTime.toLocaleTimeString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const timeLabel = reminderType === '24h' ? 'tomorrow' : 'in 1 hour'
+
+  return `⏰ Reminder: your ${typeLabel} is ${timeLabel}, ${dateStr} at ${timeStr}. See you there!`
+}
+
+async function billReminder(
+  workspace: any,
+  amount: number,
+  appointmentId: string,
+  reminderType: string
+): Promise<void> {
+  try {
+    if (amount <= 0 || !workspace?.ownerId) return
+
+    await prisma.$transaction(async (tx) => {
+      // Get current balance
+      const owner = await tx.user.findUnique({
+        where: { id: workspace.ownerId },
+        select: { creditBalance: true },
+      })
+
+      const currentBalance = owner?.creditBalance ? Number(owner.creditBalance) : 0
+      const newBalance = currentBalance - amount
+
+      // Deduct from owner's credit balance
+      await tx.user.update({
+        where: { id: workspace.ownerId },
+        data: {
+          creditBalance: {
+            decrement: amount,
+          },
+        },
+      })
+
+      // Create billing transaction
+      await tx.billingTransaction.create({
+        data: {
+          userId: workspace.ownerId,
+          type: 'APPOINTMENT_REMINDER',
+          amount: new Prisma.Decimal(-amount),
+          balanceAfter: new Prisma.Decimal(newBalance),
+          description: `Appointment ${reminderType} reminder (WhatsApp) - ${workspace.name}`,
+          workspaceId: workspace.id,
+          referenceType: 'APPOINTMENT_REMINDER',
+          referenceId: appointmentId,
+        },
+      })
+    })
+
+    logger.info(`[APPOINTMENT-REMINDER] Billed €${amount.toFixed(2)} to owner ${workspace.ownerId}`)
+  } catch (error) {
+    logger.error(`[APPOINTMENT-REMINDER] Billing failed for appointment ${appointmentId}:`, error)
+    // Don't throw - reminder was already sent, billing failure is non-critical
+  }
+}

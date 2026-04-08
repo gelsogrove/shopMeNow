@@ -69,6 +69,7 @@ interface WorkspaceInput {
   notificationEmail?: string | null
   allowedExternalLinks?: string[] | null
   sellsProductsAndServices?: boolean | null
+  enableCalendarBooking?: boolean | null
   address?: string | null
   customAiRules?: string | null
   chatbotName?: string | null
@@ -90,6 +91,8 @@ interface DynamicContentInput {
   featuredProducts?: string
   productCharacteristics?: string
   productsByCategory?: string
+  appointmentTypes?: string
+  customerUpcomingAppointments?: string
 }
 
 /**
@@ -195,6 +198,9 @@ export class PromptVariableBuilder {
       frustrationEscalationInstructions: workspace?.frustrationEscalationInstructions || '', // 🆕 For custom escalation triggers
       hasSalesAgents: workspace?.hasSalesAgents ?? VARIABLE_DEFAULTS.hasSalesAgents!,
       sellsProductsAndServices: workspace?.sellsProductsAndServices ?? VARIABLE_DEFAULTS.sellsProductsAndServices!,
+      hasCalendarEnabled: workspace?.enableCalendarBooking ?? VARIABLE_DEFAULTS.hasCalendarEnabled!,
+      appointmentTypes: dynamicContent?.appointmentTypes || '',
+      customerUpcomingAppointments: dynamicContent?.customerUpcomingAppointments || '',
       allowedExternalLinks: workspace?.allowedExternalLinks?.join('\n') || '',
       chatbotName: workspace?.chatbotName || VARIABLE_DEFAULTS.chatbotName!,
       businessType: workspace?.businessType || VARIABLE_DEFAULTS.businessType!,
@@ -340,6 +346,7 @@ export class PromptVariableBuilder {
         notificationEmail: true,
         allowedExternalLinks: true,
         sellsProductsAndServices: true,
+        enableCalendarBooking: true,
         address: true,
         customAiRules: true,
         chatbotName: true,
@@ -355,10 +362,47 @@ export class PromptVariableBuilder {
       select: { orderCode: true },
     })
 
+    // Load appointment data if calendar is enabled
+    let appointmentTypes = ''
+    let customerUpcomingAppointments = ''
+
+    if (workspace?.enableCalendarBooking) {
+      const [types, upcoming] = await Promise.all([
+        prisma.appointmentType.findMany({
+          where: { workspaceId, isActive: true },
+          select: { name: true, description: true, duration: true, price: true },
+          orderBy: { name: 'asc' },
+        }),
+        prisma.appointment.findMany({
+          where: {
+            workspaceId,
+            customerId,
+            status: 'confirmed',
+            startTime: { gte: new Date() },
+          },
+          include: { appointmentType: true },
+          orderBy: { startTime: 'asc' },
+          take: 5,
+        }),
+      ])
+
+      if (types.length > 0) {
+        appointmentTypes = types.map(t =>
+          `- ${t.name}${t.description ? ` (${t.description})` : ''}: ${t.duration} min${t.price ? `, €${t.price}` : ''}`
+        ).join('\n')
+      }
+
+      if (upcoming.length > 0) {
+        customerUpcomingAppointments = upcoming.map(a =>
+          `- ${a.appointmentType?.name || 'Appointment'}: ${a.startTime.toLocaleDateString('it-IT')} ${a.startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${a.status})`
+        ).join('\n')
+      }
+    }
+
     return this.build(
       customer,
       workspace,
-      undefined, // Dynamic content loaded separately
+      { appointmentTypes, customerUpcomingAppointments },
       { lastOrderCode: lastOrder?.orderCode || undefined }
     )
   }

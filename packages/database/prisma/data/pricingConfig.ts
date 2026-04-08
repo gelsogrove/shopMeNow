@@ -80,6 +80,20 @@ export const pricingConfigData = [
     description: "Cost per push notification sent (promotional messages)",
     isActive: true,
   },
+  {
+    type: "USAGE" as const,
+    key: "APPOINTMENT_REMINDER_WHATSAPP",
+    value: 0.5,
+    description: "Cost per appointment reminder sent via WhatsApp (€0.50)",
+    isActive: true,
+  },
+  {
+    type: "USAGE" as const,
+    key: "APPOINTMENT_REMINDER_EMAIL",
+    value: 0,
+    description: "Cost per appointment reminder sent via Email (FREE)",
+    isActive: true,
+  },
 
   // ============================================================================
   // FREE TIER THRESHOLDS (Limits)

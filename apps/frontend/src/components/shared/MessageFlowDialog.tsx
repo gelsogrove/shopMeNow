@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   Copy,
+  Calendar,
   Database,
   FileText,
   GitBranch,
@@ -104,6 +105,7 @@ export default function MessageFlowDialog({
     if (agent?.includes("Customer Support")) return "#EC4899" // Pink
     if (agent?.includes("Summary")) return "#F472B6" // Light Pink (sub-agent of Customer Support)
     if (agent?.includes("Profile Management")) return "#64748B" // Slate (includes notifications)
+    if (agent?.includes("Calendar") || agent?.includes("Appointment")) return "#8B5CF6" // Violet (Calendar Booking)
 
     return "#3B82F6" // Blue for generic sub-agents
   }
@@ -148,6 +150,8 @@ export default function MessageFlowDialog({
     if (agent?.includes("Summary")) return <FileText className="w-5 h-5" /> // ✅ Summary Agent
     if (agent?.includes("Profile Management"))
       return <User className="w-5 h-5" /> // Profile + Notifications
+    if (agent?.includes("Calendar") || agent?.includes("Appointment"))
+      return <Calendar className="w-5 h-5" /> // Calendar Booking
 
     // Infrastructure steps
     if (agent?.includes("Save to History"))

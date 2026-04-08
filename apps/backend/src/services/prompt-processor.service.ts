@@ -64,6 +64,10 @@ export class PromptProcessorService {
         allowedExternalLinks: variables.allowedExternalLinks,
         faq: variables.faqs,
         faqs: variables.faqs,
+        // Calendar/Appointment conditionals
+        hasCalendarEnabled: variables.hasCalendarEnabled,
+        hasAppointmentTypes: !!variables.appointmentTypes,
+        hasCustomerUpcomingAppointments: !!variables.customerUpcomingAppointments,
       }
 
       result = this.templateEngine.process(result, conditionalVars)
@@ -144,6 +148,11 @@ export class PromptProcessorService {
       .replace(/\{\{offers\}\}/g, isEcommerceEnabled ? (vars.offers || '') : '')
       .replace(/\{\{faqs\}\}/g, vars.faqs || '{{faqs}}')
       .replace(/\{\{faq\}\}/g, vars.faqs || '{{faq}}')
+
+      // Calendar / Appointment variables
+      .replace(/\{\{hasCalendarEnabled\}\}/g, vars.hasCalendarEnabled ? 'true' : 'false')
+      .replace(/\{\{appointmentTypes\}\}/g, vars.appointmentTypes || '')
+      .replace(/\{\{customerUpcomingAppointments\}\}/g, vars.customerUpcomingAppointments || '')
   }
 
   private replaceLegacyAliases(text: string, vars: PromptVariables): string {

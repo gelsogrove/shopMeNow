@@ -36,6 +36,7 @@ import {
   AlertCircle,
   Sparkles,
   Download,
+  Calendar,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -269,6 +270,19 @@ const AGENT_METADATA: Record<string, {
     example: "Blocks malicious content before processing",
     isHardcoded: true,
     availableFunctions: ["sendAlertEmail"],
+  },
+  CALENDAR_BOOKING: {
+    name: "Calendar Booking",
+    icon: Calendar,
+    color: "violet",
+    gradientFrom: "from-violet-500",
+    gradientTo: "to-violet-600",
+    borderColor: "border-violet-400",
+    description: "Manages appointment scheduling",
+    details: "Handles appointment booking: shows available slots, books appointments, cancels appointments, and shows customer's upcoming appointments. Requires customer to be registered.",
+    whenUsed: "Customer wants to book, cancel, or view appointments",
+    example: '"I want to book an appointment" → Shows available slots and books',
+    availableFunctions: ["listAvailableSlots", "bookAppointment", "cancelAppointment", "getCustomerAppointments"],
   },
 }
 

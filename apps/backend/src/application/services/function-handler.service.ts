@@ -344,6 +344,31 @@ export class FunctionHandlerService {
             functionName,
           }
 
+        // 📅 APPOINTMENT BOOKING
+        case "listAvailableSlots":
+          return {
+            data: await this.handleListAvailableSlots(params, customer, workspaceId),
+            functionName,
+          }
+
+        case "bookAppointment":
+          return {
+            data: await this.handleBookAppointment(params, customer, workspaceId),
+            functionName,
+          }
+
+        case "cancelAppointment":
+          return {
+            data: await this.handleCancelAppointment(params, customer, workspaceId),
+            functionName,
+          }
+
+        case "getCustomerAppointments":
+          return {
+            data: await this.handleGetCustomerAppointments(params, customer, workspaceId),
+            functionName,
+          }
+
         // 🎯 DEFAULT CASE
         default:
           logger.warn(`⚠️ Funzione non riconosciuta: ${functionName}`)
@@ -363,6 +388,10 @@ export class FunctionHandlerService {
                 "addProduct",
                 "repeatOrder",
                 "searchProduct",
+                "listAvailableSlots",
+                "bookAppointment",
+                "cancelAppointment",
+                "getCustomerAppointments",
               ],
             },
             functionName,
@@ -1033,6 +1062,114 @@ export class FunctionHandlerService {
         success: false,
         error: error.message || "Error registering search",
         message: "Impossibile registrare la ricerca.",
+      }
+    }
+  }
+
+  // ============================================
+  // APPOINTMENT BOOKING HANDLERS
+  // ============================================
+
+  private async handleListAvailableSlots(
+    params: Record<string, any>,
+    customer: any,
+    workspaceId: string
+  ) {
+    try {
+      const {
+        listAvailableSlots,
+      } = require("../../domain/calling-functions/listAvailableSlots")
+
+      return await listAvailableSlots({
+        workspaceId,
+        customerId: customer.id,
+        appointmentTypeId: params.appointmentTypeId,
+        daysAhead: params.daysAhead,
+      })
+    } catch (error) {
+      logger.error("❌ Error in handleListAvailableSlots:", error)
+      return {
+        success: false,
+        error: error.message || "Error listing available slots",
+        message: "Impossibile recuperare gli slot disponibili.",
+      }
+    }
+  }
+
+  private async handleBookAppointment(
+    params: Record<string, any>,
+    customer: any,
+    workspaceId: string
+  ) {
+    try {
+      const {
+        bookAppointment,
+      } = require("../../domain/calling-functions/bookAppointment")
+
+      return await bookAppointment({
+        workspaceId,
+        customerId: customer.id,
+        appointmentTypeId: params.appointmentTypeId,
+        startTime: params.startTime,
+        customerNotes: params.customerNotes,
+        channel: params.channel,
+      })
+    } catch (error) {
+      logger.error("❌ Error in handleBookAppointment:", error)
+      return {
+        success: false,
+        error: error.message || "Error booking appointment",
+        message: "Impossibile prenotare l'appuntamento.",
+      }
+    }
+  }
+
+  private async handleCancelAppointment(
+    params: Record<string, any>,
+    customer: any,
+    workspaceId: string
+  ) {
+    try {
+      const {
+        cancelAppointment,
+      } = require("../../domain/calling-functions/cancelAppointment")
+
+      return await cancelAppointment({
+        workspaceId,
+        customerId: customer.id,
+        appointmentId: params.appointmentId,
+        reason: params.reason,
+      })
+    } catch (error) {
+      logger.error("❌ Error in handleCancelAppointment:", error)
+      return {
+        success: false,
+        error: error.message || "Error cancelling appointment",
+        message: "Impossibile annullare l'appuntamento.",
+      }
+    }
+  }
+
+  private async handleGetCustomerAppointments(
+    params: Record<string, any>,
+    customer: any,
+    workspaceId: string
+  ) {
+    try {
+      const {
+        getCustomerAppointments,
+      } = require("../../domain/calling-functions/getCustomerAppointments")
+
+      return await getCustomerAppointments({
+        workspaceId,
+        customerId: customer.id,
+      })
+    } catch (error) {
+      logger.error("❌ Error in handleGetCustomerAppointments:", error)
+      return {
+        success: false,
+        error: error.message || "Error getting appointments",
+        message: "Impossibile recuperare gli appuntamenti.",
       }
     }
   }

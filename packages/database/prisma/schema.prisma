@@ -58,6 +58,7 @@ model Workspace {
   enableWhatsapp                    Boolean     @default(true)
   enableWidget                      Boolean     @default(false)
   sellsProductsAndServices          Boolean     @default(true) // Does this channel sell products/services? (enables E-commerce menu)
+  enableCalendarBooking             Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
   hasSalesAgents                    Boolean     @default(false) // Has sales team for customer assignment?
   hasHumanSupport                   Boolean     @default(true) // Can customers request human support?
   humanSupportInstructions          String?     @db.Text // Instructions for human support requests
@@ -158,6 +159,23 @@ model Workspace {
   supportTickets         SupportTicket[] // 🎫 Support tickets for this workspace
   pushCampaigns          PushCampaign[]
   pushCampaignRecipients PushCampaignRecipient[]
+
+  // 📅 Calendar & Appointment Booking (Feature: Calendar Integration)
+  appointmentTypes         AppointmentType[]
+  appointments             Appointment[]
+  googleCalendarConnection GoogleCalendarConnection?
+  businessHours            WorkspaceBusinessHours[]
+  blackoutPeriods          BlackoutPeriod[]
+  pendingAppointments      PendingAppointment[]
+  reminderLocks            ReminderLock[]
+  lateCancellationAttempts LateCancellationAttempt[]
+  appointmentGdprLogs      AppointmentGdprLog[]
+  timezone                 String?  @default("Europe/Rome") // IANA timezone (e.g., "Europe/Rome", "America/New_York")
+  
+  // 🔔 Appointment Reminder Settings (Global template for all appointment types)
+  appointmentReminderMessage  String?  @db.Text @default("Ciao {{customerName}}! 📅\n\nTi ricordiamo il tuo appuntamento:\n🗓️ {{appointmentType}}\n📆 {{appointmentDate}} alle {{appointmentTime}}\n📍 {{workspaceName}}\n\nCi vediamo presto! 👋")
+  appointmentReminderHours    Int[]    @default([24, 1]) // When to send reminders (24h before, 1h before)
+  appointmentReminderChannel  String   @default("whatsapp") // "whatsapp" | "email" | "both"
 
   @@index([ownerId])
   @@index([planType])
@@ -439,6 +457,11 @@ model Customers {
   // productSearches               ProductSearch[] // ❌ REMOVED: table dropped
   whatsappQueue                 WhatsAppQueue[]
   pushCampaignRecipients        PushCampaignRecipient[] // Campaign recipients for this customer
+
+  // 📅 Calendar & Appointment Booking (Anti-spam)
+  maxActiveAppointments         Int?     @default(5)  // Max concurrent future appointments (prevents spam)
+  lastAppointmentDate           DateTime? // Last appointment booked (for analytics/spam)
+  appointments                  Appointment[] // Customer's confirmed appointments
 
   @@index([phone])
   @@index([deletedAt])
@@ -1336,6 +1359,7 @@ enum TransactionType {
   MESSAGE // -€0.10 per WhatsApp message
   NEW_ORDER // -€1.00 per order created
   PUSH_NOTIFICATION // -€1.00 per push notification
+  APPOINTMENT_REMINDER // -€0.50 per WhatsApp appointment reminder
   RECHARGE // +€X credit recharge
   MONTHLY_FEE // -€29/€59 monthly subscription fee
   UPGRADE_FEE // Pro-rata fee when upgrading plan
@@ -1911,6 +1935,221 @@ enum SupportTicketStatus {
 enum SupportSenderType {
   CUSTOMER
   ADMIN
+}
+
+// ============================================================
+// CALENDAR & APPOINTMENT BOOKING (Feature: Google Calendar)
+// ============================================================
+
+// Appointment Types: servizi offerti (consulenza, massaggio, etc.)
+model AppointmentType {
+  id                      String             @id @default(uuid())
+  workspaceId             String
+  name                    String             // "Consulenza Legale", "Fisioterapia", "Check-up Medico"
+  description             String?            @db.Text
+  duration                Int                // Minutes (15, 30, 60, 90, 120, etc.)
+  bufferTime              Int                @default(0) // Minutes before next slot (cleanup time)
+  price                   Decimal?           @db.Decimal(10, 2) // Optional fixed price (null = free)
+  color                   String             @default("#3b82f6") // Calendar color (hex)
+  isActive                Boolean            @default(true)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  workspace               Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appointments            Appointment[]
+  pendingAppointments     PendingAppointment[]
+  lateCancellationAttempts LateCancellationAttempt[]
+
+  @@index([workspaceId, isActive])
+  @@map("appointment_types")
+}
+
+// Confirmed Appointment: appuntamento confermato (fonte di verità per reminder/billing)
+// Google Calendar è fonte esterna, questo è la copia locale per scheduler/billing/history
+model Appointment {
+  id                   String    @id @default(uuid())
+  workspaceId          String
+  customerId           String    // Customers.id
+  appointmentTypeId    String
+
+  // Timing (UTC)
+  startTime            DateTime  // Inizio appuntamento (UTC)
+  endTime              DateTime  // Fine appuntamento (UTC) = startTime + duration + bufferTime
+  timezone             String    @default("Europe/Rome") // IANA timezone per display cliente
+
+  // Google Calendar sync
+  googleEventId        String?   // Google Calendar Event ID (null se non sincronizzato)
+  googleEventLink      String?   // Link diretto al Google Calendar event
+  googleCalendarId     String?   // Calendar ID usato (default "primary")
+
+  // Status
+  status               String    @default("confirmed") // "confirmed" | "cancelled" | "completed" | "no_show"
+  cancelledAt          DateTime? // When cancelled
+  cancellationReason   String?   @db.Text
+  cancelledBy          String?   // "customer" | "admin" | "system"
+
+  // Customer details (snapshot al momento prenotazione, non dipende da Customers record)
+  customerName         String?
+  customerPhone        String?
+  customerEmail        String?
+  customerNotes        String?   @db.Text
+  adminNotes           String?   @db.Text
+
+  // Channel that booked (determines reminder channel)
+  bookedVia            String    @default("whatsapp") // "whatsapp" | "widget" | "admin"
+
+  // Reminder tracking
+  reminder24hSentAt    DateTime? // When 24h reminder was sent (null = not sent yet)
+  reminder1hSentAt     DateTime? // When 1h reminder was sent (null = not sent yet)
+  reminderChannel      String?   // "whatsapp" | "email" — actual channel used for this appointment
+
+  // Billing
+  reminderBilledAt     DateTime? // When billing record was created for reminders
+  reminderBillingTotal Decimal?  @default(0) @db.Decimal(10, 2) // Total charged for reminders
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  workspace            Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appointmentType      AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  customer             Customers       @relation(fields: [customerId], references: [id])
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, startTime]) // Scheduler: finds upcoming appointments
+  @@index([customerId, status])
+  @@index([googleEventId]) // Deduplication check
+  @@index([startTime]) // Scheduler global scan
+  @@map("appointments")
+}
+
+// Google Calendar OAuth Connection (1 per workspace)
+model GoogleCalendarConnection {
+  id                   String    @id @default(uuid())
+  workspaceId          String    @unique // 1:1 relation
+  calendarId           String    @default("primary") // Google Calendar ID (default "primary")
+  accessToken          String    @db.Text // Encrypted OAuth access token
+  refreshToken         String    @db.Text // Encrypted OAuth refresh token
+  tokenExpiry          DateTime  // When access token expires
+  scope                String[]  @default(["https://www.googleapis.com/auth/calendar"]) // OAuth scopes granted
+  connectedAt          DateTime  @default(now())
+  lastSyncAt           DateTime? // Last successful cache sync
+  isActive             Boolean   @default(true)
+  errorMessage         String?   @db.Text // Last error (token revoked, quota exceeded)
+
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("google_calendar_connections")
+}
+
+// Business Hours: orari di lavoro settimanali
+model WorkspaceBusinessHours {
+  id                   String    @id @default(uuid())
+  workspaceId          String
+  dayOfWeek            Int       // 0=Sunday, 1=Monday, ..., 6=Saturday
+  startTime            String    // "09:00" (HH:mm format)
+  endTime              String    // "17:00" (HH:mm format)
+  isActive             Boolean   @default(true)
+
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, dayOfWeek]) // 1 orario per giorno (espandibile con multi-shift in futuro)
+  @@index([workspaceId, isActive])
+  @@map("workspace_business_hours")
+}
+
+// Blackout Periods: chiusure straordinarie (vacanze, manutenzione)
+model BlackoutPeriod {
+  id                   String    @id @default(uuid())
+  workspaceId          String
+  startDate            DateTime  // Inizio chiusura (UTC)
+  endDate              DateTime  // Fine chiusura (UTC)
+  reason               String?   @db.Text // "Vacanze estive 2024", "Manutenzione sistema"
+  createdAt            DateTime  @default(now())
+
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, startDate, endDate])
+  @@map("blackout_periods")
+}
+
+// Pending Appointments: fallback quando Google Calendar offline
+model PendingAppointment {
+  id                   String             @id @default(uuid())
+  workspaceId          String
+  customerId           String             // Chi ha prenotato (phone number da Customers)
+  appointmentTypeId    String
+  requestedStartTime   DateTime           // Slot richiesto (UTC)
+  requestedEndTime     DateTime           // Slot fine (UTC)
+  customerNotes        String?            @db.Text
+  adminNotes           String?            @db.Text // Note interne admin
+  status               String             @default("pending") // "pending" | "synced" | "rejected"
+  syncedEventId        String?            // Google Calendar Event ID se sincronizzato
+  syncedAt             DateTime?
+  rejectedAt           DateTime?
+  rejectionReason      String?            @db.Text
+  createdAt            DateTime           @default(now())
+
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appointmentType      AppointmentType    @relation(fields: [appointmentTypeId], references: [id])
+
+  @@index([workspaceId, status])
+  @@index([customerId])
+  @@map("pending_appointments")
+}
+
+// Reminder Lock: atomicità per evitare duplicati reminder
+model ReminderLock {
+  id                   String    @id @default(uuid())
+  workspaceId          String
+  appointmentId        String    // Appointment ID
+  googleEventId        String?   // Google Calendar Event ID (optional if not synced)
+  reminderType         String    // "1h" | "24h"
+  lockKey              String    @unique // "reminder-{type}-{appointmentId}" — dedup key
+  sentAt               DateTime  @default(now())
+  expiresAt            DateTime  // Cleanup automatico
+
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, reminderType]) // Previene duplicati
+  @@index([expiresAt]) // Cleanup job
+  @@map("reminder_locks")
+}
+
+// Late Cancellation Attempts: analytics tentativi cancellazione tardiva
+model LateCancellationAttempt {
+  id                   String             @id @default(uuid())
+  workspaceId          String
+  customerId           String             // Chi ha tentato cancellazione
+  appointmentTypeId    String
+  googleEventId        String?            // Google Calendar Event ID (optional until GCal integration)
+  scheduledStartTime   DateTime           // Quando era l'appuntamento (UTC)
+  attemptedAt          DateTime           @default(now())
+  tooLateThreshold     Int                // Ore di preavviso richiesto (24, 48, etc.)
+
+  workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  appointmentType      AppointmentType    @relation(fields: [appointmentTypeId], references: [id])
+
+  @@index([workspaceId, customerId])
+  @@index([attemptedAt])
+  @@map("late_cancellation_attempts")
+}
+
+// Appointment GDPR Log: traccia eliminazioni eventi Google Calendar
+model AppointmentGdprLog {
+  id                   String    @id @default(uuid())
+  workspaceId          String
+  customerId           String    // Who requested deletion
+  googleEventId        String?   // Google Calendar Event ID deleted (optional until GCal integration)
+  deletedAt            DateTime  @default(now())
+  deletedBy            String    @default("customer") // "customer" | "admin" | "gdpr_batch"
+  reason               String?   @db.Text // "GDPR request", "Customer cancel", etc.
+
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, customerId])
+  @@index([deletedAt])
+  @@map("appointment_gdpr_logs")
 }
 
 // ============================================================

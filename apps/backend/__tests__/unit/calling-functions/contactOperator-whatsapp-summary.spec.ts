@@ -123,6 +123,7 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
       operatorWhatsappNumber: "+34654728753",
       operatorEmail: null,
       hasHumanSupport: true,
+      hasSalesAgents: true, // Sales agent routing enabled for these tests
       humanSupportInstructions: "Hello {{nameUser}}, our team will contact you soon.",
       frustrationEscalationInstructions: null,
       whatsappSettings: { adminEmail: "admin@test.com" },

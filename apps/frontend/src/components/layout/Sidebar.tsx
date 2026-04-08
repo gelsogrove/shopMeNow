@@ -6,6 +6,8 @@ import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import {
   Bot,
   Building2,
+  Calendar,
+  Clock,
   HelpCircle,
   LifeBuoy,
   LucideIcon,
@@ -117,8 +119,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
           label: t('nav.offers'),
           icon: Percent,
         },
-        // Sales menu - visible if e-commerce is enabled (Andrea: "menu lo lasci aperto se è un utente di ecommerce")
-        ...(workspace?.sellsProductsAndServices === true ? [{
+        // Sales menu - only if hasSalesAgents is enabled
+        ...(workspace?.hasSalesAgents === true ? [{
           href: "/sales",
           label: t('nav.sales'),
           icon: UserCircle,
@@ -130,6 +132,34 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         },
       ],
     }] : []),
+    // Appointments menu - available for all workspaces
+    {
+      label: 'Appointments',
+      icon: Calendar,
+      key: "appointments",
+      children: [
+        {
+          href: "/appointments",
+          label: 'Booked Appointments',
+          icon: Calendar,
+        },
+        {
+          href: "/appointment-types",
+          label: 'Appointment Types',
+          icon: Package2,
+        },
+        {
+          href: "/business-hours",
+          label: 'Business Hours',
+          icon: Clock,
+        },
+        {
+          href: "/blackout-periods",
+          label: 'Blackout Periods',
+          icon: Calendar,
+        },
+      ],
+    },
     {
       href: "/campaigns",
       label: t('nav.campaigns'),

@@ -23,6 +23,7 @@ import { storage } from "@/lib/storage"
 import { Client } from "@/pages/ClientsPage"
 import { api } from "@/services/api"
 import { salesApi } from "@/services/salesApi"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../../lib/toast"
@@ -137,6 +138,8 @@ export function ClientSheet({
   mode,
   availableLanguages,
 }: ClientSheetProps) {
+  const { workspace } = useWorkspace()
+  const hasSalesAgents = workspace?.hasSalesAgents ?? false
   // Form state
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -621,35 +624,37 @@ export function ClientSheet({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="salesId" className="text-sm font-medium">
-                        Salesperson (Optional)
-                      </Label>
-                      <Select
-                        value={salesId || "none"}
-                        onValueChange={(value) =>
-                          setSalesId(value === "none" ? "" : value)
-                        }
-                      >
-                        <SelectTrigger id="salesId" name="salesId">
-                          <SelectValue placeholder="Select salesperson" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {salesList &&
-                            salesList.length > 0 &&
-                            salesList.map((sale) =>
-                              sale?.id && sale?.firstName && sale?.lastName ? (
-                                <SelectItem key={sale.id} value={sale.id}>
-                                  {`${sale.firstName} ${sale.lastName}`}
-                                </SelectItem>
-                              ) : null
-                            )}
-                        </SelectContent>
-                      </Select>
+                  {hasSalesAgents && (
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="salesId" className="text-sm font-medium">
+                          Salesperson (Optional)
+                        </Label>
+                        <Select
+                          value={salesId || "none"}
+                          onValueChange={(value) =>
+                            setSalesId(value === "none" ? "" : value)
+                          }
+                        >
+                          <SelectTrigger id="salesId" name="salesId">
+                            <SelectValue placeholder="Select salesperson" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {salesList &&
+                              salesList.length > 0 &&
+                              salesList.map((sale) =>
+                                sale?.id && sale?.firstName && sale?.lastName ? (
+                                  <SelectItem key={sale.id} value={sale.id}>
+                                    {`${sale.firstName} ${sale.lastName}`}
+                                  </SelectItem>
+                                ) : null
+                              )}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* ⚠️ SHIPPING ADDRESS - Only show for e-commerce channels */}

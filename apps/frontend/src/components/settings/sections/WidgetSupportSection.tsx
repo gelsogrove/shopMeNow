@@ -12,6 +12,7 @@ import { Headphones, Smartphone, Users, Mail } from "lucide-react"
 interface WidgetSupportSectionProps {
   formData: {
     hasHumanSupport: boolean
+    hasSalesAgents: boolean
     operatorContactMethod: "email" | "whatsapp"
     operatorWhatsappNumber: string
     operatorEmail?: string // From Business Config or custom
@@ -195,6 +196,23 @@ export function WidgetSupportSection({
                   disabled={!canEdit}
                   className="min-h-[100px]"
                 />
+              </div>
+
+              {/* Sales Agents Toggle */}
+              <div className="space-y-2 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Enable Sales Agent Routing</Label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      When enabled, support requests are routed to the customer's assigned sales agent. Enables the Sales Agents list in the navigation menu and the Salesperson field in customer profiles.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.hasSalesAgents}
+                    onCheckedChange={(checked) => onFieldChange("hasSalesAgents", checked)}
+                    disabled={!canEdit}
+                  />
+                </div>
               </div>
             </>
           )}

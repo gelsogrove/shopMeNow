@@ -346,6 +346,23 @@ export class FunctionExecutor {
             result = await this.contactOperator(args, context)
             break
 
+          // Appointment booking functions
+          case "listAvailableSlots":
+            result = await this.listAvailableSlotsFn(args, context)
+            break
+
+          case "bookAppointment":
+            result = await this.bookAppointmentFn(args, context)
+            break
+
+          case "cancelAppointment":
+            result = await this.cancelAppointmentFn(args, context)
+            break
+
+          case "getCustomerAppointments":
+            result = await this.getCustomerAppointmentsFn(args, context)
+            break
+
           default:
             if (executionType === "DELEGATE_TO_AGENT") {
               throw new Error(`Sub-agent handler for "${functionName}" not implemented`)
@@ -1066,6 +1083,74 @@ export class FunctionExecutor {
       reason: args.reason || "Customer requested support",
       urgency: args.urgency || "medium",
       channel: context.channel, // 🐛 FIX: must forward channel so contactOperator routes reply to the correct channel (widget vs whatsapp)
+    })
+  }
+
+  // ============================================
+  // APPOINTMENT BOOKING FUNCTIONS
+  // ============================================
+
+  private async listAvailableSlotsFn(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("📅 listAvailableSlots via FunctionExecutor", { args, context })
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.listAvailableSlots({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+      appointmentTypeId: args.appointmentTypeId,
+      daysAhead: args.daysAhead,
+    })
+  }
+
+  private async bookAppointmentFn(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("📅 bookAppointment via FunctionExecutor", { args, context })
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.bookAppointment({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+      appointmentTypeId: args.appointmentTypeId,
+      startTime: args.startTime,
+      customerNotes: args.customerNotes,
+      channel: context.channel,
+    })
+  }
+
+  private async cancelAppointmentFn(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("📅 cancelAppointment via FunctionExecutor", { args, context })
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.cancelAppointmentFn({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+      appointmentId: args.appointmentId,
+      reason: args.reason,
+    })
+  }
+
+  private async getCustomerAppointmentsFn(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("📅 getCustomerAppointments via FunctionExecutor", { args, context })
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.getCustomerAppointmentsFn({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
     })
   }
 }

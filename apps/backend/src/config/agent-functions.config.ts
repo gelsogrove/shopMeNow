@@ -384,6 +384,96 @@ export const SUMMARY_AGENT_FUNCTIONS: FunctionDefinition[] = [
 ]
 
 /**
+ * Appointment Booking Functions
+ * Used when workspace.enableCalendarBooking is true
+ */
+export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
+  {
+    type: "function",
+    function: {
+      name: "listAvailableSlots",
+      description:
+        "📅 Mostra slot disponibili per prenotazione appuntamento. QUANDO USARE: Cliente vuole prenotare un appuntamento, chiede disponibilità, vuole fissare un incontro. ESEMPI: 'voglio prenotare', 'quando posso venire?', 'hai disponibilità?', 'prenota appuntamento'. DOPO: mostra gli slot disponibili al cliente in formato leggibile.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentTypeId: {
+            type: "string",
+            description: "ID del tipo di appuntamento (opzionale, usa il primo disponibile se non specificato)",
+          },
+          daysAhead: {
+            type: "number",
+            description: "Quanti giorni in avanti cercare (default 7, max 14)",
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "bookAppointment",
+      description:
+        "✅ Conferma prenotazione di un appuntamento. QUANDO USARE: Cliente ha scelto uno slot dalla lista e conferma la prenotazione. DEVE avere appointmentTypeId e startTime. ESEMPI: 'sì, prenota alle 15:00', 'confermo giovedì alle 10'. DOPO: conferma con data, ora e tipo di appuntamento.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentTypeId: {
+            type: "string",
+            description: "ID del tipo di appuntamento",
+          },
+          startTime: {
+            type: "string",
+            description: "Data e ora di inizio in formato ISO 8601 (es: 2026-04-15T15:00:00.000Z)",
+          },
+          customerNotes: {
+            type: "string",
+            description: "Note aggiuntive del cliente (opzionale)",
+          },
+        },
+        required: ["appointmentTypeId", "startTime"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancelAppointment",
+      description:
+        "❌ Annulla un appuntamento esistente. QUANDO USARE: Cliente vuole cancellare un appuntamento già prenotato. ESEMPI: 'annulla appuntamento', 'disdici', 'non posso più venire'. PRIMA: mostra gli appuntamenti del cliente con getCustomerAppointments, poi chiedi quale annullare.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: {
+            type: "string",
+            description: "ID dell'appuntamento da annullare",
+          },
+          reason: {
+            type: "string",
+            description: "Motivo della cancellazione (opzionale)",
+          },
+        },
+        required: ["appointmentId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "getCustomerAppointments",
+      description:
+        "📋 Mostra gli appuntamenti futuri del cliente. QUANDO USARE: Cliente chiede i suoi appuntamenti, vuole vedere prenotazioni, prima di annullare. ESEMPI: 'i miei appuntamenti', 'quando ho l'appuntamento?', 'le mie prenotazioni'.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+]
+
+/**
  * Profile Management Agent Functions
  */
 export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
@@ -441,9 +531,9 @@ export function getAgentFunctions(
     case "ORDER_TRACKING":
       return ORDER_TRACKING_FUNCTIONS
     case "CUSTOMER_SUPPORT":
-      return CUSTOMER_SUPPORT_FUNCTIONS
+      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS]
     case "INFO_AGENT":
-      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...PROFILE_MANAGEMENT_FUNCTIONS]
+      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...PROFILE_MANAGEMENT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS]
     case "SUMMARY_AGENT":
       return SUMMARY_AGENT_FUNCTIONS
     case "PROFILE_MANAGEMENT":
@@ -470,6 +560,7 @@ export function getAllFunctions(): FunctionDefinition[] {
     ...CUSTOMER_SUPPORT_FUNCTIONS,
     ...SUMMARY_AGENT_FUNCTIONS,
     ...PROFILE_MANAGEMENT_FUNCTIONS,
+    ...APPOINTMENT_FUNCTIONS,
   ]
 }
 

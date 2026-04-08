@@ -115,6 +115,9 @@ import { whatsappQueueRoutes } from "../interfaces/http/routes/whatsapp-queue.ro
 // Services
 import { servicesRouter } from "../interfaces/http/routes/services.routes"
 
+// Appointments
+import appointmentRoutes from "../interfaces/http/routes/appointment.routes"
+
 // System & Config
 import { cartTokenLimiter } from "../config/rate-limiters"
 import analyticsRoutes from "../interfaces/http/routes/analytics.routes"
@@ -786,6 +789,13 @@ logger.info("✅ Registered workspace billing routes: /api/workspaces/:workspace
 
 router.use("/settings", createSettingsRouter())
 router.use("/languages", createLanguagesRouter())
+
+// Mount appointment booking routes (Feature: Calendar Booking System)
+router.use("/workspaces/:workspaceId/appointment-types", appointmentRoutes)
+router.use("/workspaces/:workspaceId/business-hours", appointmentRoutes)
+router.use("/workspaces/:workspaceId/blackout-periods", appointmentRoutes)
+router.use("/workspaces/:workspaceId/appointments", appointmentRoutes)
+logger.info("✅ Registered appointment booking routes: appointment-types, business-hours, blackout-periods")
 
 // Mount GDPR routes (with workspace context and without)
 router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)

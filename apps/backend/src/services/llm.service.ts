@@ -1520,6 +1520,43 @@ export class LLMService {
             productName: args.productName,
           })
 
+        // 📅 APPOINTMENT BOOKING FUNCTIONS
+        case "listAvailableSlots":
+          logger.info("📅 listAvailableSlots called:", args)
+          return await this.callingFunctionsService.listAvailableSlots({
+            workspaceId: workspace.id,
+            customerId: customer.id,
+            appointmentTypeId: args.appointmentTypeId,
+            daysAhead: args.daysAhead,
+          })
+
+        case "bookAppointment":
+          logger.info("📅 bookAppointment called:", args)
+          return await this.callingFunctionsService.bookAppointment({
+            workspaceId: workspace.id,
+            customerId: customer.id,
+            appointmentTypeId: args.appointmentTypeId,
+            startTime: args.startTime,
+            customerNotes: args.customerNotes,
+            channel: args.channel,
+          })
+
+        case "cancelAppointment":
+          logger.info("📅 cancelAppointment called:", args)
+          return await this.callingFunctionsService.cancelAppointmentFn({
+            workspaceId: workspace.id,
+            customerId: customer.id,
+            appointmentId: args.appointmentId,
+            reason: args.reason,
+          })
+
+        case "getCustomerAppointments":
+          logger.info("📅 getCustomerAppointments called:", args)
+          return await this.callingFunctionsService.getCustomerAppointmentsFn({
+            workspaceId: workspace.id,
+            customerId: customer.id,
+          })
+
         default:
           logger.error(`❌ Unknown function: ${functionName}`)
           return { error: "Funzione non riconosciuta" }

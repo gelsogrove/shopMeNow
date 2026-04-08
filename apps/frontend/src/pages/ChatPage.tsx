@@ -211,6 +211,7 @@ export function ChatPage() {
     chats,
     isLoading: isLoadingChats,
     updateActiveChatbot,
+    updateChat,
     refetch: refetchChats,
     enableFetching,
   } = useChatList()
@@ -1114,7 +1115,8 @@ export function ChatPage() {
       )
 
       if (response.status === 200) {
-        // Update the chat in the context and invalidate queries
+        // Update the chat in the context immediately (no waiting for refetch)
+        updateChat(selectedChat.id, { isBlacklisted: !isCurrentlyBlocked })
         queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
         if (!selectedChat) return
         setSelectedChat({ ...selectedChat, isBlacklisted: !isCurrentlyBlocked })

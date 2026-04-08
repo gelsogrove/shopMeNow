@@ -1,0 +1,144 @@
+/**
+ * listAvailableSlots - LLM-Callable Function
+ *
+ * Returns available time slots for a given appointment type.
+ * The LLM shows these slots to the customer so they can pick one.
+ *
+ * Called when: customer asks "when can I book?", "available times?", "prenota appuntamento"
+ * Guard: workspace.enableCalendarBooking must be true
+ */
+
+import { prisma } from "@echatbot/database"
+import logger from "../../utils/logger"
+import { AppointmentService } from "../../application/services/appointment.service"
+
+export interface ListAvailableSlotsRequest {
+  workspaceId: string
+  customerId: string
+  appointmentTypeId?: string // If not provided, use first active type
+  daysAhead?: number // Default 7
+}
+
+export interface ListAvailableSlotsResult {
+  success: boolean
+  message: string
+  appointmentTypeName?: string
+  duration?: number
+  price?: number
+  slots?: Array<{
+    startTime: string
+    endTime: string
+    displayDate: string
+    displayTime: string
+  }>
+  totalSlots?: number
+  error?: string
+  timestamp: string
+}
+
+export async function listAvailableSlots(
+  request: ListAvailableSlotsRequest
+): Promise<ListAvailableSlotsResult> {
+  try {
+    logger.info("📅 listAvailableSlots called:", {
+      workspaceId: request.workspaceId,
+      customerId: request.customerId,
+      appointmentTypeId: request.appointmentTypeId,
+    })
+
+    if (!request.workspaceId || !request.customerId) {
+      return {
+        success: false,
+        message: "Missing required parameters",
+        error: "workspaceId and customerId are required",
+        timestamp: new Date().toISOString(),
+      }
+    }
+
+    // Check workspace has calendar enabled
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: request.workspaceId },
+      select: { enableCalendarBooking: true },
+    })
+
+    if (!workspace?.enableCalendarBooking) {
+      return {
+        success: false,
+        message: "Calendar booking is not enabled for this workspace",
+        error: "CALENDAR_NOT_ENABLED",
+        timestamp: new Date().toISOString(),
+      }
+    }
+
+    const appointmentService = new AppointmentService(prisma)
+
+    // Resolve appointment type
+    let appointmentTypeId = request.appointmentTypeId
+    if (!appointmentTypeId) {
+      const types = await appointmentService.getAppointmentTypes(request.workspaceId)
+      if (types.length === 0) {
+        return {
+          success: false,
+          message: "No appointment types configured",
+          error: "NO_APPOINTMENT_TYPES",
+          timestamp: new Date().toISOString(),
+        }
+      }
+      appointmentTypeId = types[0].id
+    }
+
+    const appointmentType = await appointmentService.getAppointmentType(
+      request.workspaceId,
+      appointmentTypeId
+    )
+
+    // Calculate date range
+    const startDate = new Date()
+    const daysAhead = request.daysAhead || 7
+    const endDate = new Date(startDate.getTime() + daysAhead * 24 * 60 * 60 * 1000)
+
+    const slots = await appointmentService.getAvailableSlots(
+      request.workspaceId,
+      appointmentTypeId,
+      startDate,
+      endDate
+    )
+
+    if (slots.length === 0) {
+      return {
+        success: true,
+        message: "No available slots found in the next " + daysAhead + " days",
+        appointmentTypeName: appointmentType.name,
+        duration: appointmentType.duration,
+        price: appointmentType.price ? Number(appointmentType.price) : undefined,
+        slots: [],
+        totalSlots: 0,
+        timestamp: new Date().toISOString(),
+      }
+    }
+
+    return {
+      success: true,
+      message: `Found ${slots.length} available slots for "${appointmentType.name}"`,
+      appointmentTypeName: appointmentType.name,
+      duration: appointmentType.duration,
+      price: appointmentType.price ? Number(appointmentType.price) : undefined,
+      slots: slots.map(s => ({
+        startTime: s.startTime.toISOString(),
+        endTime: s.endTime.toISOString(),
+        displayDate: s.displayDate,
+        displayTime: s.displayTime,
+      })),
+      totalSlots: slots.length,
+      timestamp: new Date().toISOString(),
+    }
+  } catch (error) {
+    logger.error("❌ listAvailableSlots failed:", error)
+    return {
+      success: false,
+      message: "Failed to retrieve available slots",
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    }
+  }
+}
