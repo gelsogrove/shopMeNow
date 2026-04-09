@@ -995,7 +995,8 @@ export class ChatEngineService {
     }
     const reminder = REMINDER_BY_LANG[lang] ?? REMINDER_BY_LANG["en"]
 
-    if (message.includes("[LINK_REGISTRATION]")) {
+    // 🐛 FIX: Check if reminder already present (prevents double-append on race conditions)
+    if (message.includes("[LINK_REGISTRATION]") || message.includes("registrati") || message.includes("register")) {
       return message
     }
 
@@ -1541,22 +1542,54 @@ export class ChatEngineService {
     const startTime = Date.now()
     // 🔒 CONCURRENCY LOCK: Ensure sequential processing per customer
     const lockKey = `customer:${input.customerId}`
-    
-    // Wait for any existing lock to release
-    while (customerProcessingLocks.has(lockKey)) {
-      logger.info(`🔒 [ChatEngine] Waiting for lock: ${lockKey}`)
-      await customerProcessingLocks.get(lockKey)
+
+    let releaseLock: (() => void) | null = null
+
+    try {
+      // Wait for any existing lock to release
+      while (customerProcessingLocks.has(lockKey)) {
+        logger.info(`🔒 [ChatEngine] Waiting for lock: ${lockKey}`)
+        try {
+          await customerProcessingLocks.get(lockKey)
+        } catch (lockError) {
+          // 🐛 FIX: If previous lock promise rejected, remove stale lock
+          logger.warn(`⚠️ [ChatEngine] Lock promise rejected, cleaning up`, { lockKey, error: lockError })
+          customerProcessingLocks.delete(lockKey)
+        }
+      }
+
+      // Create and set our lock
+      const lockPromise = new Promise<void>((resolve) => {
+        releaseLock = resolve
+      })
+      customerProcessingLocks.set(lockKey, lockPromise)
+
+      logger.info(`🔒 [ChatEngine] Lock acquired: ${lockKey}`)
+    } catch (lockError) {
+      logger.error(`🚫 [ChatEngine] Failed to acquire lock`, { lockKey, error: lockError })
+      const processingTimeMs = Date.now() - startTime
+      return {
+        message: "System temporarily unavailable. Please try again.",
+        agentType: AgentType.ROUTER,
+        wasHandled: false,
+        intent: "ERROR",
+        confidence: "HIGH",
+        source: "PATTERN",
+        processingTimeMs,
+        debugInfo: {
+          steps: [],
+          blockReason: "LOCK_ACQUISITION_FAILED",
+          executionTimeMs: processingTimeMs,
+        },
+        response: "",
+        agentUsed: AgentType.ROUTER,
+        tokensUsed: 0,
+        executionTimeMs: processingTimeMs,
+        wasFAQ: false,
+        isBlocked: true,
+      }
     }
-    
-    // Create and set our lock
-    let releaseLock: () => void
-    const lockPromise = new Promise<void>((resolve) => {
-      releaseLock = resolve
-    })
-    customerProcessingLocks.set(lockKey, lockPromise)
-    
-    logger.info(`🔒 [ChatEngine] Lock acquired: ${lockKey}`)
-    
+
     try {
       const isBlockedCustomer = await this.isCustomerBlacklisted(
         input.customerId,
@@ -1651,37 +1684,49 @@ export class ChatEngineService {
       let translationTokens = 0
       let safetyTokens = 0
 
-      // STEP 2: Apply Translation Layer (ALWAYS)
-      logger.info("🌍 [ChatEngine] Before translation", {
-        originalMessage: result.message.substring(0, 100),
-        rawTargetLanguage,
-        normalizedLanguage,
-        customerLanguage: input.customerLanguage,
-        channel: input.channel,
-      })
-      
-      const translationResult = await this.applyTranslation(
-        finalMessage,
-        input.workspaceId,
-        normalizedLanguage, // Pass normalized code (pt, en, es, it)
-        debugSteps,
-        input.customerName
-      )
+      // STEP 2: Apply Translation Layer (SKIP for Italian to save tokens)
+      // 🚀 IMPROVEMENT: Skip translation if target language is Italian (base language)
+      const shouldSkipTranslation = normalizedLanguage === "it"
 
-      translationTokens = translationResult.tokensUsed || 0
-      finalMessage = translationResult.message
-      
-      logger.info("🌍 [ChatEngine] After translation", {
-        translatedMessage: finalMessage.substring(0, 100),
-        tokensUsed: translationTokens,
-      })
+      if (shouldSkipTranslation) {
+        logger.info("🌍 [ChatEngine] Skipping translation (Italian base language)", {
+          normalizedLanguage,
+          customerLanguage: input.customerLanguage,
+        })
+      } else {
+        logger.info("🌍 [ChatEngine] Before translation", {
+          originalMessage: result.message.substring(0, 100),
+          rawTargetLanguage,
+          normalizedLanguage,
+          customerLanguage: input.customerLanguage,
+          channel: input.channel,
+        })
+
+        const translationResult = await this.applyTranslation(
+          finalMessage,
+          input.workspaceId,
+          normalizedLanguage, // Pass normalized code (pt, en, es, it)
+          debugSteps,
+          input.customerName
+        )
+
+        translationTokens = translationResult.tokensUsed || 0
+        finalMessage = translationResult.message
+
+        logger.info("🌍 [ChatEngine] After translation", {
+          translatedMessage: finalMessage.substring(0, 100),
+          tokensUsed: translationTokens,
+        })
+      }
 
       // STEP 2.5: Security Layer (after translation)
       if (isWidgetChannel) {
+        // 🐛 FIX: Use constant for agent name to prevent string-match fragility
+        const WIDGET_SECURITY_AGENT_NAME = "Widget Security Layer"
         const hasWidgetSafetyStep = debugSteps.some(
           (step) =>
             step.type === "safety" &&
-            (step.agent || "").includes("Widget Security Layer")
+            step.agent === WIDGET_SECURITY_AGENT_NAME
         )
 
         if (!hasWidgetSafetyStep) {
@@ -1697,7 +1742,7 @@ export class ChatEngineService {
 
             debugSteps.push({
               type: "safety",
-              agent: "Widget Security Layer",
+              agent: WIDGET_SECURITY_AGENT_NAME,
               timestamp: new Date().toISOString(),
               input: {
                 textContent: finalMessage,
@@ -1784,8 +1829,11 @@ export class ChatEngineService {
       // STEP 3: Return translated result with updated metrics
       // Remove the internal _assistantMessageId before returning
       const { _assistantMessageId, ...cleanResult } = result as any
-    
-      const totalTokens = cleanResult.tokensUsed + translationTokens + safetyTokens
+
+      // 🐛 FIX: Use single source of truth for token counting
+      // debugInfo.totalTokens is authoritative (includes all processing)
+      const baseTokens = cleanResult.debugInfo?.totalTokens || cleanResult.tokensUsed || 0
+      const totalTokens = baseTokens + translationTokens + safetyTokens
 
       // 🐛 FIX: Strip trailing punctuation from URLs in final message
       // LLM/Translation layer sometimes adds "." or "," at the end of URLs
@@ -1804,10 +1852,7 @@ export class ChatEngineService {
           ? {
               ...cleanResult.debugInfo,
               steps: debugSteps,
-              totalTokens:
-                (cleanResult.debugInfo.totalTokens || 0) +
-                translationTokens +
-                safetyTokens,
+              totalTokens,
             }
           : undefined,
       }
@@ -1931,7 +1976,15 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 0.5: Preprocess short inputs (numbers, yes/no)
       // ========================================================================
-      const conversationId = input.conversationId || `temp-${input.customerId}`
+      // 🐛 FIX: Don't use customerId as fallback - generates context pollution
+      // Always require conversationId or use UUID
+      const conversationId = input.conversationId || (() => {
+        logger.warn("⚠️ [ChatEngine] conversationId not provided, generating UUID", {
+          customerId: input.customerId,
+          workspaceId: input.workspaceId,
+        })
+        return `conv_${Math.random().toString(36).substring(7)}_${Date.now()}`
+      })()
       
       logger.debug("🔍 [ChatEngine] Processing message", {
         conversationId,
@@ -2232,13 +2285,29 @@ export class ChatEngineService {
       if (preprocessResult.inputType === "normal") {
         const optionsMapping = await loadOptionsMapping()
         if (optionsMapping?.options?.length) {
-          const normalizedMessage = OptionsMappingService.cleanLabel(input.message).toLowerCase()
-          const matchedOption = optionsMapping.options.find((opt) => {
-            // 🔒 Safety check: opt.label might be undefined
+          // 🐛 FIX: Filter out options without labels upfront
+          const validOptions = optionsMapping.options.filter((opt) => {
             if (!opt.label) {
-              logger.warn("⚠️ [ChatEngine] Option has no label", { opt })
+              logger.error("🚫 [ChatEngine] Option stored without label - DATA CORRUPTION", {
+                opt,
+                workspaceId: input.workspaceId,
+                customerId: input.customerId,
+              })
               return false
             }
+            return true
+          })
+
+          if (!validOptions.length && optionsMapping.options.length > 0) {
+            logger.warn("⚠️ [ChatEngine] All options have no labels - clearing mapping", {
+              optionsCount: optionsMapping.options.length,
+              workspaceId: input.workspaceId,
+            })
+            await this.optionsMappingService.clearPendingAction(conversationId)
+          }
+
+          const normalizedMessage = OptionsMappingService.cleanLabel(input.message).toLowerCase()
+          const matchedOption = validOptions.find((opt) => {
             const normalizedLabel = OptionsMappingService.cleanLabel(opt.label).toLowerCase()
             return normalizedLabel === normalizedMessage
           })

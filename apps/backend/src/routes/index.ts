@@ -791,11 +791,22 @@ router.use("/settings", createSettingsRouter())
 router.use("/languages", createLanguagesRouter())
 
 // Mount appointment booking routes (Feature: Calendar Booking System)
-router.use("/workspaces/:workspaceId/appointment-types", createAppointmentRoutes(prisma))
-router.use("/workspaces/:workspaceId/business-hours", createAppointmentRoutes(prisma))
-router.use("/workspaces/:workspaceId/blackout-periods", createAppointmentRoutes(prisma))
-router.use("/workspaces/:workspaceId/appointments", createAppointmentRoutes(prisma))
-logger.info("✅ Registered appointment booking routes: appointment-types, business-hours, blackout-periods")
+const appointmentRouter = createAppointmentRoutes(prisma)
+router.use("/workspaces/:workspaceId/appointment-types", appointmentRouter)
+router.use("/workspaces/:workspaceId/business-hours", appointmentRouter)
+router.use("/workspaces/:workspaceId/blackout-periods", appointmentRouter)
+router.use("/workspaces/:workspaceId/appointments", appointmentRouter)
+router.use("/workspaces/:workspaceId/calendar-connection", appointmentRouter)
+logger.info("✅ Registered appointment booking routes: appointment-types, business-hours, blackout-periods, calendar-connection")
+
+// Google Calendar OAuth callback (public — workspaceId encoded in state param)
+import { AppointmentController as _AppointmentController } from "../interfaces/http/controllers/appointment.controller"
+const _calendarCallbackController = new _AppointmentController(prisma)
+router.get(
+  "/auth/google/calendar/callback",
+  (req, res) => _calendarCallbackController.handleGoogleCalendarCallback(req, res)
+)
+logger.info("✅ Registered Google Calendar OAuth callback: /api/auth/google/calendar/callback")
 
 // Mount GDPR routes (with workspace context and without)
 router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)

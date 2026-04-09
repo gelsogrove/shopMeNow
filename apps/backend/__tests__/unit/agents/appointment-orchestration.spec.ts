@@ -30,18 +30,19 @@ describe("Appointment Booking - LLM Orchestration", () => {
   // SCENARIO 1: APPOINTMENT_FUNCTIONS array integrity
   // ============================================
   describe("APPOINTMENT_FUNCTIONS definition", () => {
-    // RULE: Must have exactly 4 appointment functions
-    it("should have exactly 4 appointment functions", () => {
-      expect(APPOINTMENT_FUNCTIONS.length).toBe(4)
+    // RULE: Must have exactly 5 appointment functions (includes rescheduleAppointment)
+    it("should have exactly 5 appointment functions", () => {
+      expect(APPOINTMENT_FUNCTIONS.length).toBe(5)
     })
 
-    // RULE: All 4 required functions must be present
+    // RULE: All 5 required functions must be present
     it("should contain all required appointment function names", () => {
       const names = APPOINTMENT_FUNCTIONS.map((fn) => fn.function.name)
       expect(names).toContain("listAvailableSlots")
       expect(names).toContain("bookAppointment")
       expect(names).toContain("cancelAppointment")
       expect(names).toContain("getCustomerAppointments")
+      expect(names).toContain("rescheduleAppointment")
     })
 
     // RULE: Each function must have valid OpenAI function calling format
@@ -353,7 +354,7 @@ describe("Appointment Booking - LLM Orchestration", () => {
       expect(names.length).toBe(
         CUSTOMER_SUPPORT_FUNCTIONS.length + APPOINTMENT_FUNCTIONS.length
       )
-      expect(names.length).toBe(5)
+      expect(names.length).toBe(6)
     })
 
     // RULE: Base INFO_AGENT should have support + profile (no appointments)
@@ -377,7 +378,7 @@ describe("Appointment Booking - LLM Orchestration", () => {
         PROFILE_MANAGEMENT_FUNCTIONS.length +
         APPOINTMENT_FUNCTIONS.length
       )
-      expect(names.length).toBe(7)
+      expect(names.length).toBe(8)
     })
   })
 })

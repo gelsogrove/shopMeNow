@@ -1,14 +1,14 @@
 /**
  * CalendarSection - Appointment & Calendar Settings
- * 
+ *
  * Configures:
- * - Google Calendar connection
- * - Appointment reminder template (with €0.50 pricing info)
- * - Reminder timing (24h, 1h before)
+ * - Google Calendar connection (real OAuth flow)
+ * - Appointment reminder templates (24h, 1h, 30min)
  * - Reminder channel (WhatsApp/Email)
+ * - Workspace timezone
  */
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
@@ -21,11 +21,14 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Bell, DollarSign, Mail, MessageSquare, AlertCircle, ExternalLink } from "lucide-react"
+import { Calendar, Bell, DollarSign, Mail, MessageSquare, AlertCircle, ExternalLink, Loader2, CheckCircle, Unlink } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { calendarConnectionApi, CalendarConnectionStatus } from "@/services/appointmentApi"
+import { toast } from "@/lib/toast"
 
 interface CalendarSectionProps {
+  workspaceId: string
   formData: {
     enableCalendarBooking?: boolean
     timezone?: string
@@ -41,21 +44,82 @@ interface CalendarSectionProps {
   onFocus: (field: string) => void
 }
 
-export function CalendarSection({ formData, onChange, onFocus }: CalendarSectionProps) {
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false) // TODO: Fetch real status from API
+export function CalendarSection({ workspaceId, formData, onChange, onFocus }: CalendarSectionProps) {
+  const [connectionStatus, setConnectionStatus] = useState<CalendarConnectionStatus | null>(null)
+  const [loadingStatus, setLoadingStatus] = useState(true)
+  const [connectingOAuth, setConnectingOAuth] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
 
-  const handleGoogleConnect = () => {
-    // TODO: Trigger Google OAuth flow
-    console.log("Google OAuth flow...")
+  // Load real connection status from API
+  useEffect(() => {
+    if (!workspaceId) return
+    loadConnectionStatus()
+
+    // Handle OAuth redirect back: check URL params for ?connected=true or ?error=
+    const params = new URLSearchParams(window.location.search)
+    const connected = params.get("connected")
+    const error = params.get("error")
+
+    if (connected === "true") {
+      toast.success("Google Calendar connected successfully!")
+      // Remove query params from URL without page reload
+      window.history.replaceState({}, "", window.location.pathname + "?tab=calendar")
+    } else if (error) {
+      const messages: Record<string, string> = {
+        oauth_denied: "Google Calendar authorization was denied",
+        token_exchange_failed: "Failed to exchange authorization code",
+        missing_params: "Missing OAuth parameters",
+        invalid_state: "Invalid OAuth state",
+        server_error: "Server error during OAuth flow",
+      }
+      toast.error(messages[error] || "Failed to connect Google Calendar")
+      window.history.replaceState({}, "", window.location.pathname + "?tab=calendar")
+    }
+  }, [workspaceId])
+
+  const loadConnectionStatus = async () => {
+    try {
+      setLoadingStatus(true)
+      const status = await calendarConnectionApi.getStatus(workspaceId)
+      setConnectionStatus(status)
+    } catch {
+      // Silently fail — connection assumed not set up
+      setConnectionStatus({ connected: false, email: null, calendarId: null, lastSyncAt: null, connectedAt: null })
+    } finally {
+      setLoadingStatus(false)
+    }
+  }
+
+  const handleGoogleConnect = async () => {
+    try {
+      setConnectingOAuth(true)
+      const { url } = await calendarConnectionApi.getOAuthUrl(workspaceId)
+      // Redirect to Google OAuth (full page — Google requires it)
+      window.location.href = url
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to start Google OAuth flow")
+      setConnectingOAuth(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    try {
+      setDisconnecting(true)
+      await calendarConnectionApi.disconnect(workspaceId)
+      setConnectionStatus({ connected: false, email: null, calendarId: null, lastSyncAt: null, connectedAt: null })
+      toast.success("Google Calendar disconnected")
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to disconnect Google Calendar")
+    } finally {
+      setDisconnecting(false)
+    }
   }
 
   const handleOpenCalendar = () => {
-    // Open Google Calendar in large popup window
     const width = 1200
     const height = 800
     const left = (window.screen.width - width) / 2
     const top = (window.screen.height - height) / 2
-    
     window.open(
       "https://calendar.google.com",
       "GoogleCalendar",
@@ -65,7 +129,7 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
 
   return (
     <div className="space-y-6">
-      {/* 📅 Enable Calendar Booking */}
+      {/* Enable Calendar Booking */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -98,7 +162,7 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
         </CardContent>
       </Card>
 
-      {/* 📅 Google Calendar Connection */}
+      {/* Google Calendar Connection */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -106,40 +170,69 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
             Google Calendar Connection
           </CardTitle>
           <CardDescription>
-            Connect your Google Calendar to enable appointment booking
+            Connect your Google Calendar to sync appointments
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!isGoogleConnected ? (
+          {loadingStatus ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Checking connection status...</span>
+            </div>
+          ) : !connectionStatus?.connected ? (
             <div className="space-y-3">
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Not connected. Customers can't book appointments yet.
+                  Not connected. Appointments won't sync to Google Calendar.
                 </AlertDescription>
               </Alert>
-              <Button onClick={handleGoogleConnect} className="w-full">
-                <Calendar className="mr-2 h-4 w-4" />
-                Connect Google Calendar
+              <Button
+                onClick={handleGoogleConnect}
+                className="w-full"
+                disabled={connectingOAuth}
+              >
+                {connectingOAuth ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Calendar className="mr-2 h-4 w-4" />
+                )}
+                {connectingOAuth ? "Redirecting to Google..." : "Connect Google Calendar"}
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
                   <Badge variant="success">Connected</Badge>
                   <span className="text-sm text-muted-foreground">
-                    your-email@gmail.com
+                    {connectionStatus.email}
                   </span>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnect}
+                  disabled={disconnecting}
+                >
+                  {disconnecting ? (
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                  ) : (
+                    <Unlink className="mr-2 h-3 w-3" />
+                  )}
                   Disconnect
                 </Button>
               </div>
-              
-              {/* Open Google Calendar Button */}
-              <Button 
-                onClick={handleOpenCalendar} 
+
+              {connectionStatus.lastSyncAt && (
+                <p className="text-xs text-muted-foreground">
+                  Last sync: {new Date(connectionStatus.lastSyncAt).toLocaleString()}
+                </p>
+              )}
+
+              <Button
+                onClick={handleOpenCalendar}
                 variant="default"
                 className="w-full"
               >
@@ -151,7 +244,7 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
         </CardContent>
       </Card>
 
-      {/* 🔔 Reminder Settings */}
+      {/* Reminder Settings */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -332,7 +425,7 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
           </div>
 
           <div className="text-sm text-muted-foreground">
-            <strong>Available variables:</strong> <code>{"{{customerName}}"}</code>, <code>{"{{appointmentType}}"}</code>, 
+            <strong>Available variables:</strong> <code>{"{{customerName}}"}</code>, <code>{"{{appointmentType}}"}</code>,{" "}
             <code>{"{{appointmentDate}}"}</code>, <code>{"{{appointmentTime}}"}</code>
           </div>
 

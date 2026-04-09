@@ -669,5 +669,113 @@ router.patch(
   appointmentController.cancelAppointment.bind(appointmentController)
 );
 
+// ============================================
+// GOOGLE CALENDAR CONNECTION
+// ============================================
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/calendar-connection:
+ *   get:
+ *     summary: Get Google Calendar connection status
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Connection status
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connected:
+ *                   type: boolean
+ *                 email:
+ *                   type: string
+ *                   nullable: true
+ *                 lastSyncAt:
+ *                   type: string
+ *                   format: date-time
+ *                   nullable: true
+ */
+router.get(
+  '/workspaces/:workspaceId/calendar-connection',
+  authMiddleware,
+  workspaceValidationMiddleware,
+  appointmentController.getCalendarConnectionStatus.bind(appointmentController)
+);
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/calendar-connection/oauth-url:
+ *   get:
+ *     summary: Get Google OAuth URL for Calendar authorization
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: OAuth URL
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 url:
+ *                   type: string
+ */
+router.get(
+  '/workspaces/:workspaceId/calendar-connection/oauth-url',
+  authMiddleware,
+  workspaceValidationMiddleware,
+  appointmentController.getGoogleCalendarOAuthUrl.bind(appointmentController)
+);
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/calendar-connection:
+ *   delete:
+ *     summary: Disconnect Google Calendar
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Disconnected successfully
+ *       404:
+ *         description: No connection found
+ */
+router.delete(
+  '/workspaces/:workspaceId/calendar-connection',
+  authMiddleware,
+  workspaceValidationMiddleware,
+  appointmentController.disconnectGoogleCalendar.bind(appointmentController)
+);
+
+/**
+ * GET /api/auth/google/calendar/callback
+ * Public OAuth callback — registered globally in routes/index.ts
+ * Exchanges authorization code for tokens and stores Google Calendar connection
+ */
+
   return router;
 };

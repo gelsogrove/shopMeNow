@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+*.js.map
+*.d.ts.map
+
+# Logs
+logs/
+*.log
+**/logs/
+
+# Environment files (NEVER touch)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Database
+packages/database/prisma/migrations/
+**/prisma/backups/
+**/prisma/temp/*.pdf
+
+# Test coverage
+coverage/
+**/coverage/
+.nyc_output/
+
+# Cache
+.cache/
+**/.cache/
+.turbo/
+**/.turbo/
+.next/
+**/.next/
+
+# IDE & OS
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
+
+# PM2
+.pm2/
+
+# Large docs (PRD is huge - use only when needed)
+docs/memory-bank/PRD.md
+
+# Lock files (rarely useful for context)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

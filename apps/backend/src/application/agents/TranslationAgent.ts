@@ -21,6 +21,7 @@ import {
   DEFAULT_ALLOWED_DOMAINS,
 } from "@shared/translation-prompts"
 import logger from "../../utils/logger"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { PromptVariableBuilder } from "../services/prompt-variable-builder.service"
 

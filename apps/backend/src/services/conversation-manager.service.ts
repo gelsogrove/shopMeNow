@@ -4,9 +4,10 @@
  * Manages conversation history for LLM context.
  *
  * Strategy:
- * - Loads last 10 MINUTES of messages (not 20 messages)
+ * - Loads last 24 HOURS of messages (1440 minutes) for rich context
  * - Saves all message types: user, assistant, function, function_result
- * - Auto-cleanup messages older than 10 minutes
+ * - Token budget enforced by LLM services (context gets trimmed if too large)
+ * - 🚀 IMPROVEMENT: Changed from 5 minutes to 24 hours for better conversation continuity
  *
  * @architecture Clean Architecture - Uses ConversationMessageRepository
  */
@@ -43,22 +44,26 @@ export class ConversationManager {
 
   constructor(
     private prisma: PrismaClient,
-    historyWindowMinutes: number = 5
+    historyWindowMinutes: number = 1440 // 🚀 IMPROVEMENT: Changed from 5 minutes to 24 hours (1440 min)
   ) {
     this.conversationRepo = new ConversationMessageRepository(prisma)
     this.whatsappQueueService = new WhatsAppQueueService(prisma)
     this.historyWindowMinutes = historyWindowMinutes
 
+    const hours = Math.round(historyWindowMinutes / 60)
     logger.info(
-      `✅ ConversationManager initialized (history window: ${historyWindowMinutes} minutes)`
+      `✅ ConversationManager initialized (history window: ${historyWindowMinutes} minutes / ${hours} hours)`
     )
   }
 
   /**
    * Load conversation history for LLM context
    *
-   * Returns messages from last N minutes (default: 10)
+   * Returns messages from last N minutes (default: 1440 = 24 hours)
    * Formatted for OpenRouter API
+   *
+   * 🚀 IMPROVEMENT: Extended from 5 minutes to 24 hours for better context retention
+   * Token budget is enforced by LLM services (context trimmed if exceeds limits)
    *
    * @param workspaceId - Workspace ID
    * @param conversationId - Conversation ID
@@ -69,13 +74,13 @@ export class ConversationManager {
     conversationId: string
   ): Promise<Message[]> {
     try {
-      logger.info("📖 Loading conversation history", {
+      logger.info("📖 Loading conversation history (last 24 hours)", {
         workspaceId,
         conversationId,
         windowMinutes: this.historyWindowMinutes,
       })
 
-      // Calculate cutoff timestamp (10 minutes ago)
+      // Calculate cutoff timestamp (N minutes ago - default 1440 minutes = 24 hours)
       const cutoffTime = new Date()
       cutoffTime.setMinutes(cutoffTime.getMinutes() - this.historyWindowMinutes)
 

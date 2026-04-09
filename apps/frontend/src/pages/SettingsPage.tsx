@@ -857,6 +857,7 @@ export function SettingsPage() {
       case "calendar":
         return (
           <CalendarSection
+            workspaceId={currentWorkspace?.id || ""}
             formData={{
               enableCalendarBooking: formData.enableCalendarBooking,
               timezone: formData.timezone,

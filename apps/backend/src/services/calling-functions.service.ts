@@ -1861,4 +1861,29 @@ export class CallingFunctionsService {
       }
     }
   }
+
+  public async rescheduleAppointmentFn(request: {
+    workspaceId: string
+    customerId: string
+    appointmentId: string
+    newStartTime: string
+    reason?: string
+  }) {
+    try {
+      logger.info("📅 Calling rescheduleAppointment with:", request)
+      const {
+        rescheduleAppointment,
+      } = require("../domain/calling-functions/rescheduleAppointment")
+
+      return await rescheduleAppointment(request)
+    } catch (error) {
+      logger.error("❌ Error in rescheduleAppointment:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to reschedule appointment.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
 }

@@ -471,6 +471,32 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "rescheduleAppointment",
+      description:
+        "🔄 Sposta un appuntamento esistente a un nuovo orario. QUANDO USARE: Cliente vuole cambiare data/ora di un appuntamento già prenotato. ESEMPI: 'sposta appuntamento', 'cambia orario', 'posso venire giovedì invece?', 'reschedule'. PRIMA: mostra appuntamenti con getCustomerAppointments, poi mostra slot con listAvailableSlots, poi chiedi conferma. DOPO: conferma il nuovo orario.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: {
+            type: "string",
+            description: "ID dell'appuntamento esistente da spostare",
+          },
+          newStartTime: {
+            type: "string",
+            description: "Nuovo orario di inizio in formato ISO 8601 (es: 2026-04-15T15:00:00.000Z)",
+          },
+          reason: {
+            type: "string",
+            description: "Motivo del cambio (opzionale)",
+          },
+        },
+        required: ["appointmentId", "newStartTime"],
+      },
+    },
+  },
 ]
 
 /**

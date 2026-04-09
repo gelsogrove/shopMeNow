@@ -29,9 +29,96 @@
 
 import { prisma, Prisma } from '../config/database'
 import logger from '../utils/logger'
+import nodemailer from 'nodemailer'
 
-const REMINDER_COST_WHATSAPP = 0.50 // €0.50 per WhatsApp reminder
+const REMINDER_COST_WHATSAPP = 0.50 // $0.50 per WhatsApp reminder
 const REMINDER_COST_EMAIL = 0.00 // Free for email
+
+// Email transporter for appointment reminders
+const createEmailTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '465'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  })
+}
+
+async function sendAppointmentReminderEmail(
+  to: string,
+  customerName: string,
+  appointmentType: string,
+  appointmentDate: string,
+  appointmentTime: string,
+  reminderType: '24h' | '1h' | '30m',
+  message: string
+): Promise<boolean> {
+  try {
+    const transporter = createEmailTransporter()
+
+    const reminderLabel = reminderType === '24h' ? '24 Hours' : reminderType === '1h' ? '1 Hour' : '30 Minutes'
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; }
+        .container { background: #f9f9f9; padding: 20px; border-radius: 8px; }
+        .header { background: #3b82f6; color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
+        .content { background: white; padding: 20px; border-radius: 8px; }
+        .appointment-details { background: #f0f4ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 15px 0; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>⏰ Appointment Reminder</h2>
+        </div>
+        <div class="content">
+            <p>Hello ${customerName},</p>
+            <p>This is a reminder that your appointment is coming up:</p>
+
+            <div class="appointment-details">
+                <p><strong>Type:</strong> ${appointmentType}</p>
+                <p><strong>Date:</strong> ${appointmentDate}</p>
+                <p><strong>Time:</strong> ${appointmentTime}</p>
+            </div>
+
+            <p>${message}</p>
+
+            <p>If you need to reschedule or cancel, please let us know as soon as possible.</p>
+
+            <p>See you there!</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated reminder email. Please do not reply to this message.</p>
+        </div>
+    </div>
+</body>
+</html>
+    `
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@echatbot.ai',
+      to,
+      subject: `⏰ ${reminderLabel} Appointment Reminder - ${appointmentType}`,
+      html: htmlContent,
+      text: message,
+    })
+
+    logger.info(`[APPOINTMENT-REMINDER] Email ${reminderType} reminder sent to ${to} for appointment: ${appointmentType}`)
+    return true
+  } catch (error) {
+    logger.error(`[APPOINTMENT-REMINDER] Failed to send email reminder to ${to}:`, error)
+    return false
+  }
+}
 
 export async function appointmentReminderJob(): Promise<void> {
   const now = new Date()
@@ -251,14 +338,33 @@ async function processReminder(
       // Bill the workspace owner
       await billReminder(appointment.workspace, billedAmount, appointment.id, reminderType)
 
-      logger.info(`[APPOINTMENT-REMINDER] WhatsApp ${reminderType} sent for appointment ${appointment.id} (€${billedAmount})`)
+      logger.info(`[APPOINTMENT-REMINDER] WhatsApp ${reminderType} sent for appointment ${appointment.id} ($${billedAmount})`)
     } else if (channel === 'email' && appointment.customer?.email) {
       // Email reminder (free)
-      // Note: actual email sending will be handled by the email service
-      // For now, log and mark as sent
+      const emailSent = await sendAppointmentReminderEmail(
+        appointment.customer.email,
+        appointment.customer.name || 'Customer',
+        appointment.appointmentType?.name || 'Appointment',
+        appointment.startTime.toLocaleDateString(getLocaleFromLanguage(appointment.customer?.language), {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        }),
+        appointment.startTime.toLocaleTimeString(getLocaleFromLanguage(appointment.customer?.language), {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        reminderType,
+        message
+      )
+
       billedAmount = REMINDER_COST_EMAIL
 
-      logger.info(`[APPOINTMENT-REMINDER] Email ${reminderType} sent for appointment ${appointment.id} (FREE)`)
+      if (emailSent) {
+        logger.info(`[APPOINTMENT-REMINDER] Email ${reminderType} sent for appointment ${appointment.id} (FREE)`)
+      } else {
+        logger.warn(`[APPOINTMENT-REMINDER] Failed to send email ${reminderType} for appointment ${appointment.id}`)
+      }
     } else {
       logger.warn(`[APPOINTMENT-REMINDER] No valid channel for appointment ${appointment.id}`)
       return

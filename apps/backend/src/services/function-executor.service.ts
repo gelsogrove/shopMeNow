@@ -363,6 +363,10 @@ export class FunctionExecutor {
             result = await this.getCustomerAppointmentsFn(args, context)
             break
 
+          case "rescheduleAppointment":
+            result = await this.rescheduleAppointmentFn(args, context)
+            break
+
           default:
             if (executionType === "DELEGATE_TO_AGENT") {
               throw new Error(`Sub-agent handler for "${functionName}" not implemented`)
@@ -1151,6 +1155,23 @@ export class FunctionExecutor {
     return await callingFunctions.getCustomerAppointmentsFn({
       workspaceId: context.workspaceId,
       customerId: context.customerId,
+    })
+  }
+
+  private async rescheduleAppointmentFn(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("📅 rescheduleAppointment via FunctionExecutor", { args, context })
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.rescheduleAppointmentFn({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+      appointmentId: args.appointmentId,
+      newStartTime: args.newStartTime,
+      reason: args.reason,
     })
   }
 }

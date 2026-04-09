@@ -10,6 +10,11 @@ import { PrismaClient } from '@echatbot/database';
 import { AppointmentService } from '../../../application/services/appointment.service';
 import logger from '../../../utils/logger';
 
+const GOOGLE_CALENDAR_SCOPES = [
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/calendar.readonly',
+].join(' ');
+
 export class AppointmentController {
   private appointmentService: AppointmentService;
 
@@ -486,6 +491,255 @@ export class AppointmentController {
         error: 'Failed to cancel appointment',
         message: error.message,
       });
+    }
+  }
+
+  // ============================================
+  // GOOGLE CALENDAR CONNECTION
+  // ============================================
+
+  /**
+   * GET /api/workspaces/:workspaceId/calendar-connection
+   * Get Google Calendar connection status for workspace
+   */
+  async getCalendarConnectionStatus(req: Request, res: Response) {
+    try {
+      const workspaceId = (req as any).workspaceId;
+
+      const connection = await this.prisma.googleCalendarConnection.findUnique({
+        where: { workspaceId },
+        select: {
+          id: true,
+          calendarEmail: true,
+          calendarId: true,
+          lastSyncAt: true,
+          createdAt: true,
+        },
+      });
+
+      return res.json({
+        connected: !!connection,
+        email: connection?.calendarEmail || null,
+        calendarId: connection?.calendarId || null,
+        lastSyncAt: connection?.lastSyncAt || null,
+        connectedAt: connection?.createdAt || null,
+      });
+    } catch (error) {
+      logger.error('Failed to get calendar connection status:', error);
+      return res.status(500).json({
+        error: 'Failed to get calendar connection status',
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/workspaces/:workspaceId/calendar-connection/oauth-url
+   * Generate Google OAuth URL for Calendar authorization
+   */
+  async getGoogleCalendarOAuthUrl(req: Request, res: Response) {
+    try {
+      const workspaceId = (req as any).workspaceId;
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+
+      if (!clientId) {
+        return res.status(503).json({
+          error: 'Google Calendar integration not configured',
+          message: 'GOOGLE_CLIENT_ID is not set',
+        });
+      }
+
+      const isProduction = process.env.NODE_ENV === 'production';
+      const backendUrl = isProduction
+        ? (process.env.BACKEND_URL || 'https://api.echatbot.ai')
+        : `http://localhost:${process.env.PORT || 3001}`;
+
+      const redirectUri = `${backendUrl}/api/auth/google/calendar/callback`;
+
+      // Encode workspaceId in state for callback retrieval
+      const state = Buffer.from(JSON.stringify({ workspaceId })).toString('base64');
+
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: GOOGLE_CALENDAR_SCOPES,
+        access_type: 'offline',
+        prompt: 'consent',
+        state,
+      });
+
+      const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+      return res.json({ url: oauthUrl });
+    } catch (error) {
+      logger.error('Failed to generate Google Calendar OAuth URL:', error);
+      return res.status(500).json({
+        error: 'Failed to generate OAuth URL',
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/workspaces/:workspaceId/calendar-connection
+   * Disconnect Google Calendar for workspace
+   */
+  async disconnectGoogleCalendar(req: Request, res: Response) {
+    try {
+      const workspaceId = (req as any).workspaceId;
+
+      const existing = await this.prisma.googleCalendarConnection.findUnique({
+        where: { workspaceId },
+      });
+
+      if (!existing) {
+        return res.status(404).json({
+          error: 'No Google Calendar connection found',
+        });
+      }
+
+      await this.prisma.googleCalendarConnection.delete({
+        where: { workspaceId },
+      });
+
+      logger.info(`[CALENDAR] Disconnected Google Calendar for workspace ${workspaceId}`);
+      return res.json({ success: true, message: 'Google Calendar disconnected successfully' });
+    } catch (error) {
+      logger.error('Failed to disconnect Google Calendar:', error);
+      return res.status(500).json({
+        error: 'Failed to disconnect Google Calendar',
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/auth/google/calendar/callback
+   * Handles Google OAuth callback, exchanges code for tokens, stores connection
+   * This route is public (no workspace auth) — workspaceId comes from state param
+   */
+  async handleGoogleCalendarCallback(req: Request, res: Response) {
+    try {
+      const { code, state, error: oauthError } = req.query;
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+      if (oauthError) {
+        logger.warn(`[CALENDAR] Google OAuth error: ${oauthError}`);
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=oauth_denied`);
+      }
+
+      if (!code || !state) {
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=missing_params`);
+      }
+
+      // Decode state to retrieve workspaceId
+      let workspaceId: string;
+      try {
+        const decoded = JSON.parse(Buffer.from(state as string, 'base64').toString());
+        workspaceId = decoded.workspaceId;
+      } catch {
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=invalid_state`);
+      }
+
+      if (!workspaceId) {
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=invalid_state`);
+      }
+
+      const clientId = process.env.GOOGLE_CLIENT_ID!;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
+      const isProduction = process.env.NODE_ENV === 'production';
+      const backendUrl = isProduction
+        ? (process.env.BACKEND_URL || 'https://api.echatbot.ai')
+        : `http://localhost:${process.env.PORT || 3001}`;
+      const redirectUri = `${backendUrl}/api/auth/google/calendar/callback`;
+
+      // Exchange code for tokens
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code: code as string,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+        }).toString(),
+      });
+
+      if (!tokenResponse.ok) {
+        const tokenError = await tokenResponse.text();
+        logger.error('[CALENDAR] Token exchange failed:', tokenError);
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=token_exchange_failed`);
+      }
+
+      const tokens = await tokenResponse.json() as {
+        access_token: string;
+        refresh_token?: string;
+        expires_in: number;
+        scope: string;
+        token_type: string;
+      };
+
+      // Fetch user's calendar info (email + primary calendar ID)
+      const calendarListResponse = await fetch(
+        'https://www.googleapis.com/calendar/v3/calendarList?maxResults=1',
+        { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+      );
+
+      let calendarEmail: string | null = null;
+      let calendarId: string | null = null;
+
+      if (calendarListResponse.ok) {
+        const calendarList = await calendarListResponse.json() as { items?: Array<{ id: string; summary: string; primary?: boolean }> };
+        const primary = calendarList.items?.find(c => c.primary) || calendarList.items?.[0];
+        if (primary) {
+          calendarId = primary.id;
+          calendarEmail = primary.id; // Primary calendar ID is the email address
+        }
+      }
+
+      // Fetch user email from Google userinfo
+      const userinfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      if (userinfoResponse.ok) {
+        const userinfo = await userinfoResponse.json() as { email?: string };
+        if (userinfo.email) calendarEmail = userinfo.email;
+      }
+
+      const tokenExpiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
+
+      // Upsert the connection (one per workspace)
+      await this.prisma.googleCalendarConnection.upsert({
+        where: { workspaceId },
+        update: {
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || undefined,
+          tokenExpiresAt,
+          calendarEmail,
+          calendarId,
+          scope: tokens.scope,
+          lastSyncAt: new Date(),
+        },
+        create: {
+          workspaceId,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token || null,
+          tokenExpiresAt,
+          calendarEmail,
+          calendarId,
+          scope: tokens.scope,
+        },
+      });
+
+      logger.info(`[CALENDAR] Google Calendar connected for workspace ${workspaceId} (${calendarEmail})`);
+      return res.redirect(`${frontendUrl}/settings?tab=calendar&connected=true`);
+    } catch (error) {
+      logger.error('Failed to handle Google Calendar OAuth callback:', error);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      return res.redirect(`${frontendUrl}/settings?tab=calendar&error=server_error`);
     }
   }
 }

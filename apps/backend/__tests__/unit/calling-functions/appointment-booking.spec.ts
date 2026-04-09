@@ -33,6 +33,7 @@ const mockAppointmentService = {
   createAppointment: jest.fn(),
   cancelAppointment: jest.fn(),
   getCustomerAppointments: jest.fn(),
+  isSlotAvailable: jest.fn(),
 }
 
 jest.mock("../../../src/application/services/appointment.service", () => ({
@@ -49,10 +50,13 @@ const mockPrisma = {
   },
   appointment: {
     findFirst: jest.fn(),
+    update: jest.fn(),
+    create: jest.fn(),
   },
   lateCancellationAttempt: {
     create: jest.fn(),
   },
+  $transaction: jest.fn(),
 }
 
 jest.mock("@echatbot/database", () => ({
@@ -63,6 +67,7 @@ import { listAvailableSlots } from "../../../src/domain/calling-functions/listAv
 import { bookAppointment } from "../../../src/domain/calling-functions/bookAppointment"
 import { cancelAppointment } from "../../../src/domain/calling-functions/cancelAppointment"
 import { getCustomerAppointments } from "../../../src/domain/calling-functions/getCustomerAppointments"
+import { rescheduleAppointment } from "../../../src/domain/calling-functions/rescheduleAppointment"
 
 const WORKSPACE_ID = "ws-test-123"
 const CUSTOMER_ID = "cust-test-456"
@@ -492,6 +497,147 @@ describe("Appointment Calling Functions", () => {
       expect(result.appointments![1].appointmentTypeName).toBe("Visita")
       expect(result.appointments![0].displayDate).toBeDefined()
       expect(result.appointments![0].displayTime).toBeDefined()
+    })
+  })
+
+  // ============================================
+  // rescheduleAppointment
+  // ============================================
+
+  describe("rescheduleAppointment", () => {
+    const futureTime = new Date(Date.now() + 48 * 60 * 60 * 1000) // 48h from now
+    const newFutureTime = new Date(Date.now() + 72 * 60 * 60 * 1000) // 72h from now
+
+    const rescheduleRequest = {
+      workspaceId: WORKSPACE_ID,
+      customerId: CUSTOMER_ID,
+      appointmentId: "appt-1",
+      newStartTime: newFutureTime.toISOString(),
+      reason: "Better timing",
+    }
+
+    const mockExistingAppointment = {
+      id: "appt-1",
+      workspaceId: WORKSPACE_ID,
+      customerId: CUSTOMER_ID,
+      appointmentTypeId: "type-1",
+      startTime: futureTime,
+      endTime: new Date(futureTime.getTime() + 30 * 60 * 1000),
+      status: "confirmed",
+      customerName: "Mario Rossi",
+      customerPhone: "+39123456",
+      customerEmail: "mario@test.com",
+      customerNotes: "Note",
+      bookedVia: "whatsapp",
+      appointmentType: { id: "type-1", name: "Consulenza", duration: 30, bufferTime: 0 },
+    }
+
+    const mockNewAppointment = {
+      id: "appt-new",
+      workspaceId: WORKSPACE_ID,
+      customerId: CUSTOMER_ID,
+      appointmentTypeId: "type-1",
+      startTime: newFutureTime,
+      endTime: new Date(newFutureTime.getTime() + 30 * 60 * 1000),
+      status: "confirmed",
+      appointmentType: { id: "type-1", name: "Consulenza", duration: 30, bufferTime: 0 },
+    }
+
+    // RULE: Missing parameters should return error
+    it("should return error when appointmentId is missing", async () => {
+      const result = await rescheduleAppointment({
+        ...rescheduleRequest,
+        appointmentId: "",
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain("required")
+    })
+
+    it("should return error when newStartTime is missing", async () => {
+      const result = await rescheduleAppointment({
+        ...rescheduleRequest,
+        newStartTime: "",
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain("required")
+    })
+
+    // RULE: Calendar must be enabled
+    it("should return error when calendar not enabled", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: false })
+
+      const result = await rescheduleAppointment(rescheduleRequest)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("CALENDAR_NOT_ENABLED")
+    })
+
+    // RULE: Appointment must belong to the requesting customer (IDOR prevention)
+    it("should return APPOINTMENT_NOT_FOUND when appointment belongs to different customer", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.appointment.findFirst.mockResolvedValue(null)
+
+      const result = await rescheduleAppointment(rescheduleRequest)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("APPOINTMENT_NOT_FOUND")
+    })
+
+    // RULE: Cannot reschedule to the same time slot
+    it("should return SAME_SLOT when newStartTime equals current startTime", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.appointment.findFirst.mockResolvedValue({
+        ...mockExistingAppointment,
+        startTime: new Date(rescheduleRequest.newStartTime),
+      })
+
+      const result = await rescheduleAppointment(rescheduleRequest)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("SAME_SLOT")
+    })
+
+    // RULE: New slot must be available
+    it("should return SLOT_UNAVAILABLE when new slot is taken", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.appointment.findFirst.mockResolvedValue(mockExistingAppointment)
+      mockAppointmentService.isSlotAvailable = jest.fn().mockResolvedValue({
+        available: false,
+        reason: "Slot already booked",
+      })
+
+      const result = await rescheduleAppointment(rescheduleRequest)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("SLOT_UNAVAILABLE")
+    })
+
+    // SCENARIO: Successful reschedule — old cancelled, new created atomically
+    it("should reschedule successfully: cancel old and create new in transaction", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.appointment.findFirst.mockResolvedValue(mockExistingAppointment)
+      mockAppointmentService.isSlotAvailable = jest.fn().mockResolvedValue({ available: true })
+
+      // Mock $transaction to execute the callback
+      mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => any) => {
+        return await callback({
+          appointment: {
+            update: jest.fn().mockResolvedValue({ ...mockExistingAppointment, status: "cancelled" }),
+            create: jest.fn().mockResolvedValue(mockNewAppointment),
+          },
+        })
+      })
+
+      const result = await rescheduleAppointment(rescheduleRequest)
+
+      expect(result.success).toBe(true)
+      expect(result.oldAppointmentId).toBe("appt-1")
+      expect(result.appointmentTypeName).toBe("Consulenza")
+      expect(result.newDisplayDate).toBeDefined()
+      expect(result.newDisplayTime).toBeDefined()
+      expect(result.oldStartTime).toBe(futureTime.toISOString())
     })
   })
 })

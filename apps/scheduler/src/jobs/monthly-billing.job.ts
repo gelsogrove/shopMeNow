@@ -26,7 +26,7 @@ import logger from '../utils/logger'
  * │                                                                             │
  * │    B) CREDIT BALANCE (Pay-as-you-go)                                        │
  * │       • Prepaid credits for WhatsApp operations ONLY                        │
- * │       • Used for: Messages ($0.10), Orders ($1.50), Pushes ($1.00)         │
+ * │       • Used for: Messages ($0.10), Orders ($1.50), Pushes ($1.00)          │
  * │       • Recharged manually via "Ricarica" button ($10-$1000)                │
  * │       • ✅ STAYS UNCHANGED during monthly billing                           │
  * │                                                                             │
@@ -335,7 +335,7 @@ export async function monthlyBillingJob(): Promise<void> {
           const actualBillingMonth = billingMonth === 0 ? 12 : billingMonth // 1-indexed for display
 
           logger.info(
-            `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription €${subscriptionFee} + Debt €${creditDebt.toFixed(2)} = Total €${totalCharge.toFixed(2)}`
+            `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription $${subscriptionFee} + Debt $${creditDebt.toFixed(2)} = Total $${totalCharge.toFixed(2)}`
           )
 
           // ═══════════════════════════════════════════════════════════════════
@@ -368,7 +368,7 @@ export async function monthlyBillingJob(): Promise<void> {
           })
 
           logger.info(
-            `[BILLING] ✅ Invoice PENDING created for ${ownerName}: €${totalCharge.toFixed(2)} (Invoice: ${invoiceResult.invoiceId})`
+            `[BILLING] ✅ Invoice PENDING created for ${ownerName}: $${totalCharge.toFixed(2)} (Invoice: ${invoiceResult.invoiceId})`
           )
         })
 
