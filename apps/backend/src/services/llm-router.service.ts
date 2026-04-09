@@ -2457,6 +2457,7 @@ export class LLMRouterService {
                 conversationHistory: recentHistory, // ✅ Pass conversation context
                 selectedSku, // 🔧 Feature 123: Pass product code from search memory
                 customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
+                customerIsRegistered: customerIsActive, // 🔒 Registration gate
               })
               if (subAgentResponse?.optionMapping) {
                 explicitOptionMapping = subAgentResponse.optionMapping
@@ -2491,6 +2492,7 @@ export class LLMRouterService {
                 query: delegationQuery,
                 lastOrderCode: customerData.lastordercode, // ✅ Pass last order code
                 customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
+                customerIsRegistered: customerIsActive, // 🔒 Registration gate
               })
               if (subAgentResponse?.optionMapping) {
                 explicitOptionMapping = subAgentResponse.optionMapping

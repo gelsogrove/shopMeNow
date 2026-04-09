@@ -54,6 +54,8 @@ export interface OrderTrackingLLMContext {
   lastOrderCode?: string // ✅ Last order code (avoid extra query)
   /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
   customerData?: CustomerData
+  /** Registration gate: if false, block order tracking and return registration link */
+  customerIsRegistered?: boolean
 }
 
 export interface OrderTrackingLLMResponse {
@@ -120,6 +122,32 @@ export class OrderTrackingAgentLLM {
         customerId: context.customerId,
         query: context.query.substring(0, 100),
       })
+
+      // REGISTRATION GATE: Order tracking requires a registered customer
+      // If customerIsRegistered is not pre-loaded, fetch from DB
+      let customerIsRegistered = context.customerIsRegistered
+      if (customerIsRegistered === undefined) {
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: context.customerId },
+          select: { isActive: true },
+        })
+        customerIsRegistered = customer?.isActive ?? false
+      }
+
+      if (!customerIsRegistered) {
+        logger.info(`🔒 OrderTrackingAgentLLM: Blocked unregistered customer`, {
+          customerId: context.customerId,
+          workspaceId: context.workspaceId,
+        })
+        return {
+          success: true,
+          output:
+            "To view your orders, you need to register first. [LINK_REGISTRATION]",
+          tokensUsed: 0,
+          executionTimeMs: Date.now() - startTime,
+          functionCalls: [],
+        }
+      }
 
       // STEP 1: Load system prompt from template files
       let systemPromptRaw = await this.templateLoader.loadAndRenderTemplate(
