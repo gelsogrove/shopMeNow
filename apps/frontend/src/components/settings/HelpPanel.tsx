@@ -476,22 +476,68 @@ export const HELP_CONTENT: Record<string, HelpPanelProps> = {
   // CALENDAR & APPOINTMENTS SECTION
   // ============================================
   appointmentReminderMessage: {
-    title: "Appointment Reminder Message",
+    title: "Appointment Reminder Messages",
     description:
-      "Template for automatic reminders sent before appointments. This global template " +
-      "applies to all appointment types (consultations, therapy sessions, medical check-ups, etc.). " +
-      "Customers receive this message at configured intervals (e.g., 24h and 1h before appointment).",
+      "Templates for automatic reminders sent before appointments. You can configure up to 3 separate " +
+      "reminder intervals (24h, 1h, 30min) with custom messages for each. Each WhatsApp reminder costs €0.50, " +
+      "while email reminders are FREE.",
     examples: [
-      "Ciao {{customerName}}! 📅 Ti ricordiamo il tuo appuntamento:\\n🗓️ {{appointmentType}}\\n📆 {{appointmentDate}} alle {{appointmentTime}}\\n📍 {{workspaceName}}",
       "Hello {{customerName}}, your appointment for {{appointmentType}} is on {{appointmentDate}} at {{appointmentTime}}. See you soon!",
     ],
     showVariables: true,
     tips: [
-      "WhatsApp reminders cost €0.50 each. Email is FREE.",
-      "Use variables: {{customerName}}, {{appointmentType}}, {{appointmentDate}}, {{appointmentTime}}, {{workspaceName}}",
-      "Keep it concise but informative",
-      "Include appointment type so customers know what to prepare",
-      "Reminder timing (24h, 1h) can be configured separately",
+      "💰 Pricing: €0.50 per WhatsApp reminder, FREE for email",
+      "📊 Cost examples: 24h only = €0.50, 24h+1h = €1.00, All 3 intervals = €1.50",
+      "Available variables: {{customerName}}, {{appointmentType}}, {{appointmentDate}}, {{appointmentTime}}",
+      "Each interval can have its own custom message",
+      "30-minute reminder is disabled by default (enable if needed)",
+      "Keep messages concise but informative",
+    ],
+  },
+  appointmentReminder24hMessage: {
+    title: "24-Hour Reminder Message",
+    description:
+      "Message sent 1 day before the appointment. This is the most common reminder interval " +
+      "and gives customers enough time to prepare or reschedule if needed.",
+    examples: [
+      "Hello {{customerName}}, reminder: your {{appointmentType}} appointment is tomorrow at {{appointmentTime}}.",
+    ],
+    showVariables: true,
+    tips: [
+      "Cost: €0.50 per WhatsApp reminder (FREE for email)",
+      "Enabled by default for new workspaces",
+      "Good for customers who need to plan their day",
+    ],
+  },
+  appointmentReminder1hMessage: {
+    title: "1-Hour Reminder Message",
+    description:
+      "Message sent 1 hour before the appointment. Useful as a last-minute confirmation " +
+      "to reduce no-shows.",
+    examples: [
+      "Hello {{customerName}}, your {{appointmentType}} appointment starts in 1 hour at {{appointmentTime}}.",
+    ],
+    showVariables: true,
+    tips: [
+      "Cost: €0.50 per WhatsApp reminder (FREE for email)",
+      "Enabled by default for new workspaces",
+      "Reduces no-shows by ~30%",
+    ],
+  },
+  appointmentReminder30mMessage: {
+    title: "30-Minute Reminder Message",
+    description:
+      "Message sent 30 minutes before the appointment. Optional extra reminder for critical appointments " +
+      "or high-value services where no-shows are very costly.",
+    examples: [
+      "Hello {{customerName}}, your {{appointmentType}} appointment starts in 30 minutes at {{appointmentTime}}.",
+    ],
+    showVariables: true,
+    tips: [
+      "Cost: €0.50 per WhatsApp reminder (FREE for email)",
+      "Disabled by default (enable only if needed)",
+      "Total cost with all 3 reminders: €1.50 per appointment",
+      "Best for high-value appointments (€150+)",
     ],
   },
   appointmentReminderChannel: {

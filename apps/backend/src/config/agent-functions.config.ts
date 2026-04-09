@@ -517,6 +517,10 @@ export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
 
 /**
  * Get all available functions for a specific agent type
+ * 
+ * ⚠️ NOTE: This returns ALL functions. For runtime filtering based on workspace
+ * properties (enableCalendarBooking, sellsProductsAndServices, etc.), 
+ * use getAgentFunctionsForWorkspace() instead.
  */
 export function getAgentFunctions(
   agentType: string
@@ -531,9 +535,11 @@ export function getAgentFunctions(
     case "ORDER_TRACKING":
       return ORDER_TRACKING_FUNCTIONS
     case "CUSTOMER_SUPPORT":
-      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS]
+      // Don't hardcode APPOINTMENT_FUNCTIONS here - filtered dynamically at runtime
+      return CUSTOMER_SUPPORT_FUNCTIONS
     case "INFO_AGENT":
-      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...PROFILE_MANAGEMENT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS]
+      // Don't hardcode APPOINTMENT_FUNCTIONS here - filtered dynamically at runtime
+      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...PROFILE_MANAGEMENT_FUNCTIONS]
     case "SUMMARY_AGENT":
       return SUMMARY_AGENT_FUNCTIONS
     case "PROFILE_MANAGEMENT":
@@ -548,8 +554,61 @@ export function getAgentFunctions(
 }
 
 /**
+ * 🆕 Get functions for a specific agent type, filtered by workspace capabilities
+ * This is the CORRECT way to get functions at runtime - respects workspace properties.
+ * 
+ * Filtering rules:
+ * - enableCalendarBooking=false → exclude appointment functions
+ * - sellsProductsAndServices=false → exclude e-commerce functions (product, cart, order agents)
+ * - hasSalesAgents, hasHumanSupport, etc. → future filters can be added here
+ * 
+ * @param agentType - Type of agent (ROUTER, CUSTOMER_SUPPORT, etc.)
+ * @param workspace - Workspace object with feature flags
+ * @returns Filtered array of function definitions
+ */
+export function getAgentFunctionsForWorkspace(
+  agentType: string,
+  workspace: {
+    enableCalendarBooking?: boolean
+    sellsProductsAndServices?: boolean
+    hasSalesAgents?: boolean
+    hasHumanSupport?: boolean
+  }
+): FunctionDefinition[] | null {
+  // Get base functions for agent type
+  const baseFunctions = getAgentFunctions(agentType)
+  if (!baseFunctions) return null
+
+  let functions = [...baseFunctions]
+
+  // Add appointment functions if calendar is enabled
+  if (workspace.enableCalendarBooking) {
+    if (agentType === "CUSTOMER_SUPPORT" || agentType === "INFO_AGENT") {
+      functions = [...functions, ...APPOINTMENT_FUNCTIONS]
+    }
+  }
+
+  // Filter out e-commerce agents if workspace is informational
+  if (!workspace.sellsProductsAndServices) {
+    const ecommerceAgentNames = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
+    functions = functions.filter(
+      fn => !ecommerceAgentNames.includes(fn.function?.name || fn.name || "")
+    )
+  }
+
+  // 🔮 Future: Add filters for hasSalesAgents, hasHumanSupport, etc.
+  // if (workspace.hasSalesAgents) { ... }
+  // if (workspace.hasHumanSupport) { ... }
+
+  return functions
+}
+
+/**
  * Get ALL functions (for LLM - all agents combined)
- * Currently returns global functions (used by all agents)
+ * 
+ * ⚠️ NOTE: This returns ALL functions without filtering. 
+ * At runtime, use workspace-specific filtering via getAgentFunctionsForWorkspace()
+ * or filter dbFunctions in llm-router.service.ts based on workspace properties.
  */
 export function getAllFunctions(): FunctionDefinition[] {
   return [

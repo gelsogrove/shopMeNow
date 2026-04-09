@@ -1245,17 +1245,21 @@ export class LLMRouterService {
       // 🆕 Feature: Load all active functions from DB (System + Custom)
       const dbFunctions = await this.callingFunctionRepo.findActiveByWorkspace(params.workspaceId)
 
-      // Filter out e-commerce functions if workspace is in informational mode
+      // 🎯 RUNTIME FILTERING: Filter functions based on workspace capabilities
+      // This ensures LLM only sees functions relevant to the workspace's feature set
       const ecommerceFunctions = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
-      // Filter out appointment functions if calendar not enabled
       const appointmentFunctions = ["listAvailableSlots", "bookAppointment", "cancelAppointment", "getCustomerAppointments"]
+      
       const filteredDbFunctions = dbFunctions.filter(fn => {
+        // Rule 1: Exclude e-commerce functions if workspace is informational
         if (!workspace.sellsProductsAndServices && ecommerceFunctions.includes(fn.functionName)) {
           return false
         }
+        // Rule 2: Exclude appointment functions if calendar not enabled
         if (!workspace.enableCalendarBooking && appointmentFunctions.includes(fn.functionName)) {
           return false
         }
+        // 🔮 Future: Add filters for hasSalesAgents, hasHumanSupport, etc.
         return true
       })
 

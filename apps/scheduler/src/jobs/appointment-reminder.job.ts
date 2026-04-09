@@ -2,7 +2,8 @@
  * Appointment Reminder Job
  *
  * Runs every 15 minutes.
- * Sends 24h and 1h reminder notifications for confirmed appointments.
+ * Sends 24h, 1h, and 30min reminder notifications for confirmed appointments.
+ * Each reminder interval can be enabled/disabled independently in workspace settings.
  * 
  * Billing:
  * - WhatsApp reminders: €0.50 per reminder (billed to workspace owner)
@@ -11,6 +12,19 @@
  * Channel detection:
  * - bookedVia === 'widget' → always email (free, widget can't send WhatsApp)
  * - bookedVia === 'whatsapp' → use workspace.appointmentReminderChannel
+ * 
+ * 🤖 Customer Response Handling:
+ * When customer replies to reminder (e.g., "NO", "non posso venire", "sì confermo"):
+ * - LLM Router Agent automatically detects intent (NO hardcoded phrase detection)
+ * - If customer declines/cancels → LLM calls cancelAppointment() calling function
+ * - If customer confirms → LLM acknowledges confirmation
+ * - No explicit "confirmReminderResponse" function needed - Router handles it via intent
+ * 
+ * Template Variables (3 separate templates for each interval):
+ * - {{customerName}} - Customer's name
+ * - {{appointmentType}} - Type of appointment (e.g., "Pulizia denti")
+ * - {{appointmentDate}} - Formatted date (e.g., "lunedì 8 aprile")
+ * - {{appointmentTime}} - Formatted time (e.g., "10:30")
  */
 
 import { prisma, Prisma } from '../config/database'
@@ -25,6 +39,8 @@ export async function appointmentReminderJob(): Promise<void> {
   logger.info('[APPOINTMENT-REMINDER] Starting job')
 
   try {
+    let totalProcessed = 0
+
     // ============================================
     // 24-HOUR REMINDERS
     // ============================================
@@ -39,14 +55,17 @@ export async function appointmentReminderJob(): Promise<void> {
           gte: twentyThreeHoursFromNow,
           lte: twentyFourHoursFromNow,
         },
-        workspace: { enableCalendarBooking: true },
+        workspace: { 
+          enableCalendarBooking: true,
+          appointmentReminder24hEnabled: true // Only if 24h reminder is enabled
+        },
       },
       include: {
         workspace: {
           select: {
             id: true,
             name: true,
-            appointmentReminderMessage: true,
+            appointmentReminder24hMessage: true,
             appointmentReminderChannel: true,
             ownerId: true,
           },
@@ -66,10 +85,10 @@ export async function appointmentReminderJob(): Promise<void> {
 
     if (appointments24h.length > 0) {
       logger.info(`[APPOINTMENT-REMINDER] Found ${appointments24h.length} appointments needing 24h reminder`)
-    }
-
-    for (const appointment of appointments24h) {
-      await processReminder(appointment, '24h')
+      for (const appointment of appointments24h) {
+        await processReminder(appointment, '24h')
+      }
+      totalProcessed += appointments24h.length
     }
 
     // ============================================
@@ -86,14 +105,17 @@ export async function appointmentReminderJob(): Promise<void> {
           gte: fiftyMinutesFromNow,
           lte: oneHourFromNow,
         },
-        workspace: { enableCalendarBooking: true },
+        workspace: { 
+          enableCalendarBooking: true,
+          appointmentReminder1hEnabled: true // Only if 1h reminder is enabled
+        },
       },
       include: {
         workspace: {
           select: {
             id: true,
             name: true,
-            appointmentReminderMessage: true,
+            appointmentReminder1hMessage: true,
             appointmentReminderChannel: true,
             ownerId: true,
           },
@@ -113,13 +135,62 @@ export async function appointmentReminderJob(): Promise<void> {
 
     if (appointments1h.length > 0) {
       logger.info(`[APPOINTMENT-REMINDER] Found ${appointments1h.length} appointments needing 1h reminder`)
+      for (const appointment of appointments1h) {
+        await processReminder(appointment, '1h')
+      }
+      totalProcessed += appointments1h.length
     }
 
-    for (const appointment of appointments1h) {
-      await processReminder(appointment, '1h')
+    // ============================================
+    // 30-MINUTE REMINDERS
+    // ============================================
+    const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000)
+    const twentyFiveMinutesFromNow = new Date(now.getTime() + 25 * 60 * 1000)
+
+    const appointments30m = await prisma.appointment.findMany({
+      where: {
+        status: 'confirmed',
+        reminder30mSentAt: null,
+        startTime: {
+          gte: twentyFiveMinutesFromNow,
+          lte: thirtyMinutesFromNow,
+        },
+        workspace: { 
+          enableCalendarBooking: true,
+          appointmentReminder30mEnabled: true // Only if 30m reminder is enabled
+        },
+      },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            appointmentReminder30mMessage: true,
+            appointmentReminderChannel: true,
+            ownerId: true,
+          },
+        },
+        appointmentType: true,
+        customer: {
+          select: {
+            id: true,
+            phone: true,
+            email: true,
+            name: true,
+            language: true,
+          },
+        },
+      },
+    })
+
+    if (appointments30m.length > 0) {
+      logger.info(`[APPOINTMENT-REMINDER] Found ${appointments30m.length} appointments needing 30m reminder`)
+      for (const appointment of appointments30m) {
+        await processReminder(appointment, '30m')
+      }
+      totalProcessed += appointments30m.length
     }
 
-    const totalProcessed = appointments24h.length + appointments1h.length
     if (totalProcessed > 0) {
       logger.info(`[APPOINTMENT-REMINDER] Completed. Processed ${totalProcessed} reminders`)
     }
@@ -130,7 +201,7 @@ export async function appointmentReminderJob(): Promise<void> {
 
 async function processReminder(
   appointment: any,
-  reminderType: '24h' | '1h'
+  reminderType: '24h' | '1h' | '30m'
 ): Promise<void> {
   try {
     // Prevent duplicate processing using ReminderLock
@@ -200,8 +271,10 @@ async function processReminder(
 
     if (reminderType === '24h') {
       updateData.reminder24hSentAt = new Date()
-    } else {
+    } else if (reminderType === '1h') {
       updateData.reminder1hSentAt = new Date()
+    } else if (reminderType === '30m') {
+      updateData.reminder30mSentAt = new Date()
     }
 
     if (billedAmount > 0) {
@@ -254,27 +327,37 @@ function getLocaleFromLanguage(language: string | null | undefined): string {
   return localeMap[language || 'en'] || 'en-US'
 }
 
-function buildReminderMessage(appointment: any, reminderType: '24h' | '1h'): string {
+function buildReminderMessage(appointment: any, reminderType: '24h' | '1h' | '30m'): string {
   const locale = getLocaleFromLanguage(appointment.customer?.language)
-  const template = appointment.workspace?.appointmentReminderMessage
+  
+  // Select correct template based on reminder type
+  let template: string | null = null
+  if (reminderType === '24h') {
+    template = appointment.workspace?.appointmentReminder24hMessage
+  } else if (reminderType === '1h') {
+    template = appointment.workspace?.appointmentReminder1hMessage
+  } else if (reminderType === '30m') {
+    template = appointment.workspace?.appointmentReminder30mMessage
+  }
 
   if (template) {
+    // Variable replacement
+    // Available variables: {{customerName}}, {{appointmentType}}, {{appointmentDate}}, {{appointmentTime}}
     return template
-      .replace('{{appointmentType}}', appointment.appointmentType?.name || 'Appointment')
-      .replace('{{date}}', appointment.startTime.toLocaleDateString(locale, {
+      .replace(/\{\{customerName\}\}/g, appointment.customerName || appointment.customer?.name || '')
+      .replace(/\{\{appointmentType\}\}/g, appointment.appointmentType?.name || 'Appointment')
+      .replace(/\{\{appointmentDate\}\}/g, appointment.startTime.toLocaleDateString(locale, {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
       }))
-      .replace('{{time}}', appointment.startTime.toLocaleTimeString(locale, {
+      .replace(/\{\{appointmentTime\}\}/g, appointment.startTime.toLocaleTimeString(locale, {
         hour: '2-digit',
         minute: '2-digit',
       }))
-      .replace('{{customerName}}', appointment.customerName || appointment.customer?.name || '')
-      .replace('{{companyName}}', appointment.workspace?.name || '')
   }
 
-  // Default message (English fallback - workspace owner should configure appointmentReminderMessage)
+  // Default message (English fallback - workspace owner should configure reminder templates)
   const typeLabel = appointment.appointmentType?.name || 'appointment'
   const dateStr = appointment.startTime.toLocaleDateString(locale, {
     weekday: 'long',
@@ -285,7 +368,11 @@ function buildReminderMessage(appointment: any, reminderType: '24h' | '1h'): str
     hour: '2-digit',
     minute: '2-digit',
   })
-  const timeLabel = reminderType === '24h' ? 'tomorrow' : 'in 1 hour'
+  
+  let timeLabel = 'soon'
+  if (reminderType === '24h') timeLabel = 'tomorrow'
+  else if (reminderType === '1h') timeLabel = 'in 1 hour'
+  else if (reminderType === '30m') timeLabel = 'in 30 minutes'
 
   return `⏰ Reminder: your ${typeLabel} is ${timeLabel}, ${dateStr} at ${timeStr}. See you there!`
 }

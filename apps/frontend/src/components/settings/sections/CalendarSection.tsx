@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Bell, DollarSign, Mail, MessageSquare, AlertCircle } from "lucide-react"
+import { Calendar, Bell, DollarSign, Mail, MessageSquare, AlertCircle, ExternalLink } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
@@ -29,8 +29,12 @@ interface CalendarSectionProps {
   formData: {
     enableCalendarBooking?: boolean
     timezone?: string
-    appointmentReminderMessage?: string
-    appointmentReminderHours?: number[]
+    appointmentReminder24hEnabled?: boolean
+    appointmentReminder24hMessage?: string
+    appointmentReminder1hEnabled?: boolean
+    appointmentReminder1hMessage?: string
+    appointmentReminder30mEnabled?: boolean
+    appointmentReminder30mMessage?: string
     appointmentReminderChannel?: string
   }
   onChange: (field: string, value: any) => void
@@ -40,24 +44,23 @@ interface CalendarSectionProps {
 export function CalendarSection({ formData, onChange, onFocus }: CalendarSectionProps) {
   const [isGoogleConnected, setIsGoogleConnected] = useState(false) // TODO: Fetch real status from API
 
-  const reminderHours = formData.appointmentReminderHours || [24, 1]
-  const has24h = reminderHours.includes(24)
-  const has1h = reminderHours.includes(1)
-  const has30min = reminderHours.includes(0.5)
-
-  const toggleReminderHour = (hours: number, enabled: boolean) => {
-    let newHours = [...reminderHours]
-    if (enabled && !newHours.includes(hours)) {
-      newHours.push(hours)
-    } else if (!enabled) {
-      newHours = newHours.filter(h => h !== hours)
-    }
-    onChange("appointmentReminderHours", newHours.sort((a, b) => b - a))
-  }
-
   const handleGoogleConnect = () => {
     // TODO: Trigger Google OAuth flow
     console.log("Google OAuth flow...")
+  }
+
+  const handleOpenCalendar = () => {
+    // Open Google Calendar in large popup window
+    const width = 1200
+    const height = 800
+    const left = (window.screen.width - width) / 2
+    const top = (window.screen.height - height) / 2
+    
+    window.open(
+      "https://calendar.google.com",
+      "GoogleCalendar",
+      `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+    )
   }
 
   return (
@@ -133,6 +136,16 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
                   Disconnect
                 </Button>
               </div>
+              
+              {/* Open Google Calendar Button */}
+              <Button 
+                onClick={handleOpenCalendar} 
+                variant="default"
+                className="w-full"
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Open Google Calendar
+              </Button>
             </div>
           )}
         </CardContent>
@@ -154,7 +167,9 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
           <Alert className="border-yellow-200 bg-yellow-50">
             <DollarSign className="h-4 w-4 text-yellow-600" />
             <AlertDescription className="text-yellow-800">
-              <strong>Pricing:</strong> WhatsApp reminders cost <strong>€0.50</strong> each. Email reminders are <strong>FREE</strong>.
+              <strong>Pricing:</strong> Each WhatsApp reminder costs <strong>€0.50</strong>. Email reminders are <strong>FREE</strong>.
+              <br />
+              <span className="text-xs">If you enable all 3 intervals (24h + 1h + 30min), total cost is <strong>€1.50</strong> per appointment.</span>
             </AlertDescription>
           </Alert>
 
@@ -193,66 +208,132 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
             </Select>
           </div>
 
-          {/* Reminder Timing */}
-          <div className="space-y-3">
-            <Label>When to Send Reminders</Label>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="reminder-24h" className="font-normal">
-                  24 hours before appointment
+          {/* 24-Hour Reminder */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="reminder-24h" className="text-base font-semibold">
+                  24 hours before
                 </Label>
-                <Switch
-                  id="reminder-24h"
-                  checked={has24h}
-                  onCheckedChange={(checked) => toggleReminderHour(24, checked)}
-                />
+                <p className="text-sm text-muted-foreground">
+                  Send reminder 1 day before appointment
+                </p>
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="reminder-1h" className="font-normal">
-                  1 hour before appointment
-                </Label>
-                <Switch
-                  id="reminder-1h"
-                  checked={has1h}
-                  onCheckedChange={(checked) => toggleReminderHour(1, checked)}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="reminder-30min" className="font-normal">
-                  30 minutes before appointment
-                </Label>
-                <Switch
-                  id="reminder-30min"
-                  checked={has30min}
-                  onCheckedChange={(checked) => toggleReminderHour(0.5, checked)}
-                />
-              </div>
+              <Switch
+                id="reminder-24h"
+                checked={formData.appointmentReminder24hEnabled ?? true}
+                onCheckedChange={(checked) => {
+                  onChange("appointmentReminder24hEnabled", checked)
+                  onFocus("appointmentReminder24hEnabled")
+                }}
+              />
             </div>
+
+            {formData.appointmentReminder24hEnabled !== false && (
+              <div className="mt-3">
+                <Label htmlFor="reminder24hMessage" className="text-sm">
+                  Message Template (24h)
+                </Label>
+                <Textarea
+                  id="reminder24hMessage"
+                  value={formData.appointmentReminder24hMessage || ""}
+                  onChange={(e) => {
+                    onChange("appointmentReminder24hMessage", e.target.value)
+                    onFocus("appointmentReminder24hMessage")
+                  }}
+                  placeholder="Hello {{customerName}}, reminder: your {{appointmentType}} appointment is tomorrow at {{appointmentTime}}."
+                  rows={4}
+                  className="font-mono text-sm mt-2"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Reminder Message Template */}
-          <div className="space-y-2">
-            <Label htmlFor="reminderMessage">
-              Reminder Message Template
-              <span className="ml-2 text-sm text-muted-foreground font-normal">
-                (applies to all appointment types)
-              </span>
-            </Label>
-            <Textarea
-              id="reminderMessage"
-              value={formData.appointmentReminderMessage || ""}
-              onChange={(e) => {
-                onChange("appointmentReminderMessage", e.target.value)
-                onFocus("appointmentReminderMessage")
-              }}
-              placeholder="Ciao {{customerName}}! 📅 Ti ricordiamo..."
-              rows={6}
-              className="font-mono text-sm"
-            />
-            <p className="text-sm text-muted-foreground">
-              Available variables: <code>{"{{customerName}}"}</code>, <code>{"{{appointmentType}}"}</code>, 
-              <code>{"{{appointmentDate}}"}</code>, <code>{"{{appointmentTime}}"}</code>, <code>{"{{workspaceName}}"}</code>
-            </p>
+          {/* 1-Hour Reminder */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="reminder-1h" className="text-base font-semibold">
+                  1 hour before
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Send reminder 60 minutes before appointment
+                </p>
+              </div>
+              <Switch
+                id="reminder-1h"
+                checked={formData.appointmentReminder1hEnabled ?? true}
+                onCheckedChange={(checked) => {
+                  onChange("appointmentReminder1hEnabled", checked)
+                  onFocus("appointmentReminder1hEnabled")
+                }}
+              />
+            </div>
+
+            {formData.appointmentReminder1hEnabled !== false && (
+              <div className="mt-3">
+                <Label htmlFor="reminder1hMessage" className="text-sm">
+                  Message Template (1h)
+                </Label>
+                <Textarea
+                  id="reminder1hMessage"
+                  value={formData.appointmentReminder1hMessage || ""}
+                  onChange={(e) => {
+                    onChange("appointmentReminder1hMessage", e.target.value)
+                    onFocus("appointmentReminder1hMessage")
+                  }}
+                  placeholder="Hello {{customerName}}, your {{appointmentType}} appointment starts in 1 hour at {{appointmentTime}}."
+                  rows={4}
+                  className="font-mono text-sm mt-2"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 30-Minute Reminder */}
+          <div className="space-y-3 p-4 border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="reminder-30m" className="text-base font-semibold">
+                  30 minutes before
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Send reminder 30 minutes before appointment
+                </p>
+              </div>
+              <Switch
+                id="reminder-30m"
+                checked={formData.appointmentReminder30mEnabled ?? false}
+                onCheckedChange={(checked) => {
+                  onChange("appointmentReminder30mEnabled", checked)
+                  onFocus("appointmentReminder30mEnabled")
+                }}
+              />
+            </div>
+
+            {formData.appointmentReminder30mEnabled && (
+              <div className="mt-3">
+                <Label htmlFor="reminder30mMessage" className="text-sm">
+                  Message Template (30min)
+                </Label>
+                <Textarea
+                  id="reminder30mMessage"
+                  value={formData.appointmentReminder30mMessage || ""}
+                  onChange={(e) => {
+                    onChange("appointmentReminder30mMessage", e.target.value)
+                    onFocus("appointmentReminder30mMessage")
+                  }}
+                  placeholder="Hello {{customerName}}, your {{appointmentType}} appointment starts in 30 minutes at {{appointmentTime}}."
+                  rows={4}
+                  className="font-mono text-sm mt-2"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="text-sm text-muted-foreground">
+            <strong>Available variables:</strong> <code>{"{{customerName}}"}</code>, <code>{"{{appointmentType}}"}</code>, 
+            <code>{"{{appointmentDate}}"}</code>, <code>{"{{appointmentTime}}"}</code>
           </div>
 
           {/* Timezone */}

@@ -139,8 +139,12 @@ interface FormData {
   // Calendar & Appointments
   enableCalendarBooking?: boolean
   timezone?: string
-  appointmentReminderMessage?: string
-  appointmentReminderHours?: number[]
+  appointmentReminder24hEnabled?: boolean
+  appointmentReminder24hMessage?: string
+  appointmentReminder1hEnabled?: boolean
+  appointmentReminder1hMessage?: string
+  appointmentReminder30mEnabled?: boolean
+  appointmentReminder30mMessage?: string
   appointmentReminderChannel?: string
 }
 
@@ -320,8 +324,12 @@ export function SettingsPage() {
         // Calendar & Appointments
         enableCalendarBooking: currentWorkspace.enableCalendarBooking || false,
         timezone: currentWorkspace.timezone || "Europe/Rome",
-        appointmentReminderMessage: currentWorkspace.appointmentReminderMessage || undefined,
-        appointmentReminderHours: currentWorkspace.appointmentReminderHours || [24, 1],
+        appointmentReminder24hEnabled: currentWorkspace.appointmentReminder24hEnabled ?? true,
+        appointmentReminder24hMessage: currentWorkspace.appointmentReminder24hMessage || undefined,
+        appointmentReminder1hEnabled: currentWorkspace.appointmentReminder1hEnabled ?? true,
+        appointmentReminder1hMessage: currentWorkspace.appointmentReminder1hMessage || undefined,
+        appointmentReminder30mEnabled: currentWorkspace.appointmentReminder30mEnabled ?? false,
+        appointmentReminder30mMessage: currentWorkspace.appointmentReminder30mMessage || undefined,
         appointmentReminderChannel: currentWorkspace.appointmentReminderChannel || "whatsapp",
       })
     }
@@ -622,6 +630,11 @@ export function SettingsPage() {
         allFields: Object.keys(updatedWorkspace),
       })
 
+      // ✅ FIX: Reset dirty flags BEFORE updating workspace
+      // This allows the useEffect to properly sync formData with new workspace values
+      setIsDirty(false)
+      isDirtyRef.current = false
+
       setCurrentWorkspace({
         ...currentWorkspace!,
         ...updatedWorkspace,
@@ -632,7 +645,6 @@ export function SettingsPage() {
         ultraMsgInstanceId: { ...currentWorkspace!, ...updatedWorkspace }.ultraMsgInstanceId,
       })
 
-      setIsDirty(false)
       if (!options?.suppressToast) {
         toast.success("Settings saved successfully")
       }
@@ -848,8 +860,12 @@ export function SettingsPage() {
             formData={{
               enableCalendarBooking: formData.enableCalendarBooking,
               timezone: formData.timezone,
-              appointmentReminderMessage: formData.appointmentReminderMessage,
-              appointmentReminderHours: formData.appointmentReminderHours,
+              appointmentReminder24hEnabled: formData.appointmentReminder24hEnabled,
+              appointmentReminder24hMessage: formData.appointmentReminder24hMessage,
+              appointmentReminder1hEnabled: formData.appointmentReminder1hEnabled,
+              appointmentReminder1hMessage: formData.appointmentReminder1hMessage,
+              appointmentReminder30mEnabled: formData.appointmentReminder30mEnabled,
+              appointmentReminder30mMessage: formData.appointmentReminder30mMessage,
               appointmentReminderChannel: formData.appointmentReminderChannel,
             }}
             onChange={handleFieldChange}
