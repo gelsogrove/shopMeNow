@@ -274,6 +274,11 @@ export class WasenderWebhookController {
           // Notify frontend
           try {
             websocketService.notifyChatUpdated(workspaceId, { type: 'wasender:connected' })
+            websocketService.notifyChannelStatusChanged(workspaceId, {
+              channelStatus: true,
+              source: "wasender",
+              reason: "connected",
+            })
           } catch { /* optional */ }
           break
         }
@@ -291,6 +296,11 @@ export class WasenderWebhookController {
 
           try {
             websocketService.notifyChatUpdated(workspaceId, { type: 'wasender:disconnected' })
+            websocketService.notifyChannelStatusChanged(workspaceId, {
+              channelStatus: false,
+              source: "wasender",
+              reason: "disconnected",
+            })
           } catch { /* optional */ }
           break
 
@@ -304,6 +314,13 @@ export class WasenderWebhookController {
             },
           })
           logger.info('[WASENDER-Webhook] 📱 Session needs QR scan:', { workspaceId })
+          try {
+            websocketService.notifyChannelStatusChanged(workspaceId, {
+              channelStatus: false,
+              source: "wasender",
+              reason: "need_scan",
+            })
+          } catch { /* optional */ }
           break
 
         default:

@@ -104,6 +104,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       translateCategoryNames: data.translateCategoryNames ?? false,
       translateServiceNames: data.translateServiceNames ?? true,
       catalogBaseLanguage: data.catalogBaseLanguage ?? "it",
+      // 📅 Calendar & Appointment Settings
+      enableCalendarBooking: data.enableCalendarBooking ?? false,
+      timezone: data.timezone ?? "Europe/Rome",
+      appointmentReminderMessage: data.appointmentReminderMessage ?? null,
+      appointmentReminderHours: data.appointmentReminderHours ?? [24, 1],
+      appointmentReminderChannel: data.appointmentReminderChannel ?? "whatsapp",
     })
   }
 
@@ -192,6 +198,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       wasenderQrString: workspace.wasenderQrString ?? null,
       wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
       wasenderIsActive: workspace.wasenderIsActive ?? false,
+      // 📅 Calendar & Appointment Settings
+      enableCalendarBooking: workspace.enableCalendarBooking ?? false,
+      timezone: workspace.timezone ?? "Europe/Rome",
+      appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+      appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
+      appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
     }
   }
 

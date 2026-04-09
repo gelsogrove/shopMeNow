@@ -27,6 +27,8 @@ import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
+import { useWebSocket } from "@/hooks/useWebSocket"
+import { storage } from "@/lib/storage"
 import { updateWorkspace, deleteWorkspace, getWorkspaceById } from "@/services/workspaceApi"
 import { resetAgentPromptsToDefaults } from "@/services/agent-config-api"
 import { Switch } from "@/components/ui/switch"
@@ -56,7 +58,7 @@ const SECTIONS: SettingsSection[] = [
   { key: "whatsapp", label: "WhatsApp Channel", description: "WhatsApp Business API settings" },
   { key: "widget", label: "Website Widget", description: "Chat widget for your website" },
   { key: "widget-support", label: "Human Support", description: "Escalation to human operators" },
-  { key: "calendar", label: "📅 Appointments & Calendar", description: "Google Calendar, reminders (€0.50/WhatsApp)" },
+  { key: "calendar", label: "📅 Appointments & Calendar", description: "Google Calendar, reminders" },
   { key: "security", label: "Security", description: "Access control and domains" },
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
 ]
@@ -147,6 +149,11 @@ export function SettingsPage() {
   const { workspace, setCurrentWorkspace } = useWorkspace()
   const currentWorkspace = workspace
   const { isOwner, isSuperAdmin } = useWorkspaceRole(currentWorkspace?.id || "")
+  const currentUserId = storage.getUser<{ id?: string }>()?.id
+  const { socket } = useWebSocket({
+    workspaceId: currentWorkspace?.id || null,
+    userId: currentUserId,
+  })
   const canEdit = isOwner || isSuperAdmin
 
   // 🆕 Load last opened section from localStorage
@@ -319,6 +326,39 @@ export function SettingsPage() {
       })
     }
   }, [currentWorkspace])
+
+  useEffect(() => {
+    if (!socket || !currentWorkspace?.id) return
+
+    const handleChannelStatusChanged = (data: {
+      workspaceId: string
+      channelStatus: boolean
+      source?: string
+      reason?: string
+      timestamp?: string
+    }) => {
+      if (data.workspaceId !== currentWorkspace.id) return
+
+      setCurrentWorkspace((prev) => {
+        if (!prev) return prev
+        return { ...prev, channelStatus: data.channelStatus }
+      })
+
+      setFormData((prev) => {
+        const currentStatus = currentWorkspace.channelStatus ?? true
+        if (prev.channelStatus !== currentStatus) {
+          return prev
+        }
+        return { ...prev, channelStatus: data.channelStatus }
+      })
+    }
+
+    socket.on("channel-status-changed", handleChannelStatusChanged)
+
+    return () => {
+      socket.off("channel-status-changed", handleChannelStatusChanged)
+    }
+  }, [socket, currentWorkspace?.id, currentWorkspace?.channelStatus, setCurrentWorkspace])
 
   useEffect(() => {
     const workspaceId = currentWorkspace?.id
@@ -836,53 +876,61 @@ export function SettingsPage() {
           </div>
 
           {/* Right side: Channel Status + Debug Mode + Save */}
-          <div className="flex items-center gap-4">
-            {/* Debug Mode Toggle */}
-            {canEdit && (
-              <div
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.debugMode
-                    ? "bg-amber-50 border-amber-200"
-                    : "bg-gray-100 border-gray-200"
-                  }`}
-              >
-                <span className={`text-sm font-medium ${formData.debugMode ? "text-amber-700" : "text-gray-500"}`}>
-                  Debug
-                </span>
-                <Switch
-                  checked={formData.debugMode}
-                  onCheckedChange={handleToggleDebugMode}
-                  className="ml-1"
-                />
-              </div>
-            )}
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-4">
+              {/* Debug Mode Toggle */}
+              {canEdit && (
+                <div
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.debugMode
+                      ? "bg-amber-50 border-amber-200"
+                      : "bg-gray-100 border-gray-200"
+                    }`}
+                >
+                  <span className={`text-sm font-medium ${formData.debugMode ? "text-amber-700" : "text-gray-500"}`}>
+                    Debug
+                  </span>
+                  <Switch
+                    checked={formData.debugMode}
+                    onCheckedChange={handleToggleDebugMode}
+                    className="ml-1"
+                  />
+                </div>
+              )}
 
-            {/* Channel Status Toggle */}
-            {canEdit && (
-              <div
-                data-focus-key="channelStatus"
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.channelStatus
-                    ? "bg-green-50 border-green-200"
-                    : "bg-gray-100 border-gray-200"
-                  }`}
-              >
-                <Power className={`h-4 w-4 ${formData.channelStatus ? "text-green-600" : "text-gray-400"}`} />
-                <span className={`text-sm font-medium ${formData.channelStatus ? "text-green-700" : "text-gray-500"}`}>
-                  {formData.channelStatus ? "Active" : "Inactive"}
-                </span>
-                <Switch
-                  checked={formData.channelStatus}
-                  onCheckedChange={(checked) => handleFieldChange("channelStatus", checked)}
-                  className="ml-1"
-                />
-              </div>
-            )}
+              {/* Channel Status Toggle */}
+              {canEdit && (
+                <div
+                  data-focus-key="channelStatus"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.channelStatus
+                      ? "bg-green-50 border-green-200"
+                      : "bg-gray-100 border-gray-200"
+                    }`}
+                >
+                  <Power className={`h-4 w-4 ${formData.channelStatus ? "text-green-600" : "text-gray-400"}`} />
+                  <span className={`text-sm font-medium ${formData.channelStatus ? "text-green-700" : "text-gray-500"}`}>
+                    {formData.channelStatus ? "Active" : "Inactive"}
+                  </span>
+                  <Switch
+                    checked={formData.channelStatus}
+                    onCheckedChange={(checked) => handleFieldChange("channelStatus", checked)}
+                    className="ml-1"
+                  />
+                </div>
+              )}
 
-            {/* Save Button */}
+              {/* Save Button */}
+              {canEdit && (
+                <Button onClick={handleSave} disabled={!isDirty}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Changes
+                </Button>
+              )}
+            </div>
+
             {canEdit && (
-              <Button onClick={handleSave} disabled={!isDirty}>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </Button>
+              <div className="text-xs text-gray-500">
+                Se WhatsApp non è collegato o verificato, lo stato può tornare Inactive automaticamente.
+              </div>
             )}
           </div>
         </div>
@@ -1025,8 +1073,8 @@ export function SettingsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Chat Widget (sempre visibile) */}
-      {currentWorkspace && (
+      {/* Chat Widget */}
+      {currentWorkspace && formData.channelStatus && (
         <ChatWidget
           key={`${formData.widgetTitle}-${formData.widgetPrimaryColor}-${formData.widgetIcon}-${formData.widgetLanguage}-${formData.widgetUseChannelLogo}`}
           workspaceId={currentWorkspace.id}

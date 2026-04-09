@@ -93,6 +93,12 @@ export interface WorkspaceProps {
   translateCategoryNames?: boolean
   translateServiceNames?: boolean
   catalogBaseLanguage?: string
+  // 📅 Calendar & Appointment Settings
+  enableCalendarBooking?: boolean
+  timezone?: string | null
+  appointmentReminderMessage?: string | null
+  appointmentReminderHours?: number[]
+  appointmentReminderChannel?: string
 }
 
 export class Workspace extends Entity<WorkspaceProps> {
@@ -432,6 +438,27 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get catalogBaseLanguage(): string {
     return this.props.catalogBaseLanguage ?? "it"
+  }
+
+  // 📅 Calendar & Appointment Settings getters
+  get enableCalendarBooking(): boolean {
+    return this.props.enableCalendarBooking ?? false
+  }
+
+  get timezone(): string | null | undefined {
+    return this.props.timezone
+  }
+
+  get appointmentReminderMessage(): string | null | undefined {
+    return this.props.appointmentReminderMessage
+  }
+
+  get appointmentReminderHours(): number[] {
+    return this.props.appointmentReminderHours ?? [24, 1]
+  }
+
+  get appointmentReminderChannel(): string {
+    return this.props.appointmentReminderChannel ?? "whatsapp"
   }
 
   // Business methods

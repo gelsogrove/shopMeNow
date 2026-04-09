@@ -194,6 +194,37 @@ export class WebSocketService {
   }
 
   /**
+   * Broadcast channel status change to workspace
+   */
+  notifyChannelStatusChanged(
+    workspaceId: string,
+    data: {
+      channelStatus: boolean
+      source?: string
+      reason?: string
+      timestamp?: string
+    }
+  ): void {
+    if (!this.io) {
+      logger.warn("[WebSocket] Cannot notify, server not initialized")
+      return
+    }
+
+    const roomName = `workspace:${workspaceId}`
+    this.io.to(roomName).emit("channel-status-changed", {
+      workspaceId,
+      ...data,
+      timestamp: data.timestamp || new Date().toISOString(),
+    })
+
+    logger.info(`[WebSocket] Broadcasted channel-status-changed to ${roomName}`, {
+      channelStatus: data.channelStatus,
+      source: data.source,
+      reason: data.reason,
+    })
+  }
+
+  /**
    * Broadcast customer blocked/unblocked event to workspace
    */
   notifyUserBlocked(

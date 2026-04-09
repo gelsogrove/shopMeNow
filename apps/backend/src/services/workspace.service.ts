@@ -1,5 +1,6 @@
 import { prisma } from "@echatbot/database"
 import logger from "../utils/logger"
+import { websocketService } from "./websocket.service"
 import { randomBytes } from 'crypto'
 
 // prisma imported
@@ -548,6 +549,7 @@ export const workspaceService = {
         enableWhatsapp: true,
         enableWidget: true,
         deletedAt: true,
+        channelStatus: true,
       },
     })
 
@@ -727,6 +729,23 @@ export const workspaceService = {
     )
     logger.info("channelStatus AFTER UPDATE:", updatedWorkspace.channelStatus, "type:", typeof updatedWorkspace.channelStatus)
     logger.info("Updated workspace:", JSON.stringify(updatedWorkspace, null, 2))
+
+    // 🔔 WebSocket: notify channel status change if it was updated
+    const previousChannelStatus = existingWorkspace?.channelStatus ?? null
+    if (
+      previousChannelStatus !== null &&
+      updatedWorkspace.channelStatus !== undefined &&
+      previousChannelStatus !== updatedWorkspace.channelStatus
+    ) {
+      try {
+        websocketService.notifyChannelStatusChanged(updatedWorkspace.id, {
+          channelStatus: updatedWorkspace.channelStatus,
+          source: "settings",
+        })
+      } catch {
+        // WebSocket optional — ignore errors
+      }
+    }
 
     // Update adminEmail/appSecret in WhatsappSettings if provided
     // 🔧 AUTO-GENERATE webhookId if enabling WhatsApp and it doesn't exist
