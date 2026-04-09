@@ -18,6 +18,7 @@ import {
   PROFILE_MANAGEMENT_FUNCTIONS,
   APPOINTMENT_FUNCTIONS,
   getAgentFunctions,
+  getAgentFunctionsForWorkspace,
   getAgentFunctionNames,
   getAllFunctions,
 } from "../../../src/config/agent-functions.config"
@@ -209,12 +210,15 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
   })
 
   describe("getAgentFunctions() helper", () => {
-    it("should return correct functions for each agent type", () => {
+    it("should return correct base functions for each agent type (WITHOUT dynamic filtering)", () => {
       expect(getAgentFunctions("ROUTER")).toEqual(ROUTER_FUNCTIONS)
       expect(getAgentFunctions("PRODUCT_SEARCH")).toEqual(PRODUCT_SEARCH_FUNCTIONS)
       expect(getAgentFunctions("CART_MANAGEMENT")).toEqual(CART_MANAGEMENT_FUNCTIONS)
       expect(getAgentFunctions("ORDER_TRACKING")).toEqual(ORDER_TRACKING_FUNCTIONS)
-      expect(getAgentFunctions("CUSTOMER_SUPPORT")).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
+      
+      // CUSTOMER_SUPPORT now returns base functions only (no appointments hardcoded)
+      expect(getAgentFunctions("CUSTOMER_SUPPORT")).toEqual(CUSTOMER_SUPPORT_FUNCTIONS)
+      
       expect(getAgentFunctions("SUMMARY_AGENT")).toEqual(SUMMARY_AGENT_FUNCTIONS)
       expect(getAgentFunctions("PROFILE_MANAGEMENT")).toEqual(PROFILE_MANAGEMENT_FUNCTIONS)
     })
@@ -230,6 +234,80 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
     it("should return null for unknown agent type", () => {
       expect(getAgentFunctions("UNKNOWN_AGENT")).toBeNull()
       expect(getAgentFunctions("INVALID")).toBeNull()
+    })
+  })
+
+  describe("getAgentFunctionsForWorkspace() - dynamic filtering", () => {
+    it("should add APPOINTMENT_FUNCTIONS when enableCalendarBooking=true", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true }
+
+      const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
+      const infoAgentFunctions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)
+
+      // CUSTOMER_SUPPORT should include appointment functions
+      expect(customerSupportFunctions).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
+      
+      // INFO_AGENT should also include appointment functions
+      expect(infoAgentFunctions).toEqual([
+        ...CUSTOMER_SUPPORT_FUNCTIONS,
+        ...PROFILE_MANAGEMENT_FUNCTIONS,
+        ...APPOINTMENT_FUNCTIONS
+      ])
+    })
+
+    it("should NOT add APPOINTMENT_FUNCTIONS when enableCalendarBooking=false", () => {
+      const workspace = { enableCalendarBooking: false, sellsProductsAndServices: true }
+
+      const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
+      const infoAgentFunctions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)
+
+      // CUSTOMER_SUPPORT should NOT include appointment functions
+      expect(customerSupportFunctions).toEqual(CUSTOMER_SUPPORT_FUNCTIONS)
+      
+      // INFO_AGENT should NOT include appointment functions
+      expect(infoAgentFunctions).toEqual([
+        ...CUSTOMER_SUPPORT_FUNCTIONS,
+        ...PROFILE_MANAGEMENT_FUNCTIONS
+      ])
+    })
+
+    it("should filter out e-commerce agents when sellsProductsAndServices=false", () => {
+      const workspace = { enableCalendarBooking: false, sellsProductsAndServices: false }
+
+      const routerFunctions = getAgentFunctionsForWorkspace("ROUTER", workspace)
+
+      // Should not include productSearchAgent, cartManagementAgent, orderTrackingAgent
+      expect(routerFunctions).toBeDefined()
+      const functionNames = routerFunctions!.map(f => f.function?.name || f.name)
+      expect(functionNames).not.toContain("productSearchAgent")
+      expect(functionNames).not.toContain("cartManagementAgent")
+      expect(functionNames).not.toContain("orderTrackingAgent")
+      
+      // Should still include customerSupportAgent and profileManagementAgent
+      // Note: contactOperator is a direct function in CUSTOMER_SUPPORT, not a router sub-agent
+      expect(functionNames).toContain("customerSupportAgent")
+      expect(functionNames).toContain("profileManagementAgent")
+    })
+
+    it("should include both appointments AND ecommerce when both features enabled", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true }
+
+      const routerFunctions = getAgentFunctionsForWorkspace("ROUTER", workspace)
+      const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
+
+      // ROUTER should have all sub-agents
+      const routerNames = routerFunctions!.map(f => f.function?.name || f.name)
+      expect(routerNames).toContain("productSearchAgent")
+      expect(routerNames).toContain("cartManagementAgent")
+      expect(routerNames).toContain("orderTrackingAgent")
+
+      // CUSTOMER_SUPPORT should have appointments
+      expect(customerSupportFunctions).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
+    })
+
+    it("should return null for unknown agent type", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true }
+      expect(getAgentFunctionsForWorkspace("UNKNOWN", workspace)).toBeNull()
     })
   })
 

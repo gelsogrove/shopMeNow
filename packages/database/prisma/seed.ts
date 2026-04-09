@@ -1956,18 +1956,19 @@ Can I help with anything else?"`,
     where: { id: workspace.id },
     data: { 
       timezone: "Europe/Rome", // IANA timezone for IT workspace
-      appointmentReminderMessage: `Ciao {{customerName}}! 📅
+      // Three reminder templates for different timing intervals
+      appointmentReminder24hEnabled: true,
+      appointmentReminder24hMessage: `Ciao {{customerName}}, ti ricordo appuntamento di {{appointmentType}} il giorno: {{appointmentDate}} alle ore: {{appointmentTime}}
 
-Ti ricordiamo il tuo appuntamento:
-🗓️ {{appointmentType}}
-📆 {{appointmentDate}} alle {{appointmentTime}}
-📍 {{workspaceName}}
-
-Ci vediamo presto! 👋`,
-      appointmentReminderHours: [24, 1], // 24h before and 1h before
+Confermi la tua presenza?`,
+      appointmentReminder1hEnabled: true,
+      appointmentReminder1hMessage: `Ciao {{customerName}}, tra 1 ora inizia il tuo appuntamento di {{appointmentType}} alle {{appointmentTime}}. Ti aspettiamo!`,
+      appointmentReminder30mEnabled: false, // Disabled by default - owner can enable in settings
+      appointmentReminder30mMessage: `Ciao {{customerName}}, tra 30 minuti inizia il tuo appuntamento di {{appointmentType}} alle {{appointmentTime}}. Ci vediamo!`,
       appointmentReminderChannel: "whatsapp" // Send via WhatsApp (€0.50/reminder)
     }
   })
+
 
   // 1. Create AppointmentTypes
   const appointmentTypes = [
@@ -3269,6 +3270,7 @@ Ci vediamo presto! 👋`,
       messageCost: 0.10,
       orderCost: 1.00,
       pushCost: 1.00,
+      reminderCost: 0.50,
       lowBalanceThreshold: 5.00,
       trialDays: 14,
       initialCredit: 22.00,
@@ -3290,6 +3292,7 @@ Ci vediamo presto! 👋`,
       messageCost: 0.10,
       orderCost: 1.00,
       pushCost: 1.00,
+      reminderCost: 0.50,
       lowBalanceThreshold: 5.00,
       trialDays: 0,
       initialCredit: 0,
@@ -3311,6 +3314,7 @@ Ci vediamo presto! 👋`,
       messageCost: 0.10,
       orderCost: 1.00,
       pushCost: 1.00,
+      reminderCost: 0.50,
       lowBalanceThreshold: 5.00,
       trialDays: 0,
       initialCredit: 0,
@@ -3335,6 +3339,7 @@ Ci vediamo presto! 👋`,
       messageCost: 0.10,
       orderCost: 1.00,
       pushCost: 1.00,
+      reminderCost: 0.50,
       lowBalanceThreshold: 10.00,
       trialDays: 0,
       initialCredit: 0,

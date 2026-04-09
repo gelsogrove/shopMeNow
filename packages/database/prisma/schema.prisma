@@ -173,9 +173,17 @@ model Workspace {
   timezone                 String?  @default("Europe/Rome") // IANA timezone (e.g., "Europe/Rome", "America/New_York")
   
   // 🔔 Appointment Reminder Settings (Global template for all appointment types)
-  appointmentReminderMessage  String?  @db.Text @default("Ciao {{customerName}}! 📅\n\nTi ricordiamo il tuo appuntamento:\n🗓️ {{appointmentType}}\n📆 {{appointmentDate}} alle {{appointmentTime}}\n📍 {{workspaceName}}\n\nCi vediamo presto! 👋")
-  appointmentReminderHours    Int[]    @default([24, 1]) // When to send reminders (24h before, 1h before)
-  appointmentReminderChannel  String   @default("whatsapp") // "whatsapp" | "email" | "both"
+  // Three separate templates for different timing intervals
+  appointmentReminder24hEnabled Boolean  @default(true) // Enable 24h reminder
+  appointmentReminder24hMessage String?  @db.Text @default("Hi {{customerName}}, reminder: your {{appointmentType}} appointment is tomorrow {{appointmentDate}} at {{appointmentTime}}. Confirm your presence?")
+  
+  appointmentReminder1hEnabled  Boolean  @default(true) // Enable 1h reminder
+  appointmentReminder1hMessage  String?  @db.Text @default("Hi {{customerName}}, your {{appointmentType}} appointment starts in 1 hour at {{appointmentTime}}. See you soon!")
+  
+  appointmentReminder30mEnabled Boolean  @default(false) // Enable 30min reminder
+  appointmentReminder30mMessage String?  @db.Text @default("Hi {{customerName}}, your {{appointmentType}} appointment starts in 30 minutes at {{appointmentTime}}. We're waiting for you!")
+  
+  appointmentReminderChannel    String   @default("whatsapp") // "whatsapp" | "email" | "both"
 
   @@index([ownerId])
   @@index([planType])
@@ -1537,6 +1545,7 @@ model PlanConfiguration {
   messageCost         Decimal  @db.Decimal(10, 2) // €0.10
   orderCost           Decimal  @db.Decimal(10, 2) // €1.00
   pushCost            Decimal  @db.Decimal(10, 2) // €1.00
+  reminderCost        Decimal  @default(0.50) @db.Decimal(10, 2) // €0.50 - WhatsApp appointment reminder
   lowBalanceThreshold Decimal  @db.Decimal(10, 2) // €5.00
   trialDays           Int      @default(0) // 14 for FREE_TRIAL, 0 for others
   initialCredit       Decimal  @default(0) @db.Decimal(10, 2) // €19 for FREE_TRIAL
@@ -2001,6 +2010,7 @@ model Appointment {
   // Reminder tracking
   reminder24hSentAt    DateTime? // When 24h reminder was sent (null = not sent yet)
   reminder1hSentAt     DateTime? // When 1h reminder was sent (null = not sent yet)
+  reminder30mSentAt    DateTime? // When 30min reminder was sent (null = not sent yet)
   reminderChannel      String?   // "whatsapp" | "email" — actual channel used for this appointment
 
   // Billing

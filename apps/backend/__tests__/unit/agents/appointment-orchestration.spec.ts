@@ -22,6 +22,7 @@ import {
   PROFILE_MANAGEMENT_FUNCTIONS,
   getAgentFunctions,
   getAgentFunctionNames,
+  getAgentFunctionsForWorkspace,
 } from "../../../src/config/agent-functions.config"
 
 describe("Appointment Booking - LLM Orchestration", () => {
@@ -104,10 +105,25 @@ describe("Appointment Booking - LLM Orchestration", () => {
   // SCENARIO 2: Agent routing — which agents get appointment functions
   // ============================================
   describe("Agent routing for appointment functions", () => {
-    // RULE: CUSTOMER_SUPPORT agent MUST have appointment functions
-    // SCENARIO: Ecommerce workspace — customer support handles bookings
-    it("CUSTOMER_SUPPORT agent should include appointment functions", () => {
+    // RULE: Base CUSTOMER_SUPPORT agent should NOT have hardcoded appointments
+    // SCENARIO: Dynamic filtering via getAgentFunctionsForWorkspace adds them
+    it("CUSTOMER_SUPPORT base agent should NOT include appointment functions (dynamic filtering)", () => {
       const functions = getAgentFunctions("CUSTOMER_SUPPORT")!
+      const names = functions.map((fn) => fn.function.name)
+
+      // Base functions - no appointments
+      expect(names).toContain("contactOperator")
+      expect(names).not.toContain("listAvailableSlots")
+      expect(names).not.toContain("bookAppointment")
+      expect(names).not.toContain("cancelAppointment")
+      expect(names).not.toContain("getCustomerAppointments")
+    })
+
+    // RULE: CUSTOMER_SUPPORT with enableCalendarBooking=true MUST have appointment functions
+    // SCENARIO: Workspace with calendar enabled — functions added dynamically
+    it("CUSTOMER_SUPPORT agent should include appointment functions when calendar enabled", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true } as any
+      const functions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)!
       const names = functions.map((fn) => fn.function.name)
 
       expect(names).toContain("listAvailableSlots")
@@ -118,10 +134,23 @@ describe("Appointment Booking - LLM Orchestration", () => {
       expect(names).toContain("contactOperator")
     })
 
-    // RULE: INFO_AGENT MUST have appointment functions
-    // SCENARIO: Informational workspace — info agent handles bookings
-    it("INFO_AGENT should include appointment functions", () => {
+    // RULE: Base INFO_AGENT should NOT have hardcoded appointments
+    it("INFO_AGENT base agent should NOT include appointment functions (dynamic filtering)", () => {
       const functions = getAgentFunctions("INFO_AGENT")!
+      const names = functions.map((fn) => fn.function.name)
+
+      // Base functions - support + profile, no appointments
+      expect(names).toContain("contactOperator")
+      expect(names).toContain("getProfileLink")
+      expect(names).not.toContain("listAvailableSlots")
+      expect(names).not.toContain("bookAppointment")
+    })
+
+    // RULE: INFO_AGENT with enableCalendarBooking=true MUST have appointment functions
+    // SCENARIO: Informational workspace with calendar — info agent handles bookings
+    it("INFO_AGENT should include appointment functions when calendar enabled", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: false } as any
+      const functions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)!
       const names = functions.map((fn) => fn.function.name)
 
       expect(names).toContain("listAvailableSlots")
@@ -130,16 +159,17 @@ describe("Appointment Booking - LLM Orchestration", () => {
       expect(names).toContain("getCustomerAppointments")
     })
 
-    // RULE: INFO_AGENT should also have profile and support functions
-    it("INFO_AGENT should have combined functions (support + profile + appointments)", () => {
-      const functions = getAgentFunctions("INFO_AGENT")!
+    // RULE: INFO_AGENT should have combined functions when calendar enabled
+    it("INFO_AGENT should have combined functions (support + profile + appointments) when calendar enabled", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: false } as any
+      const functions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)!
       const names = functions.map((fn) => fn.function.name)
 
       // From CUSTOMER_SUPPORT_FUNCTIONS
       expect(names).toContain("contactOperator")
       // From PROFILE_MANAGEMENT_FUNCTIONS
       expect(names).toContain("getProfileLink")
-      // From APPOINTMENT_FUNCTIONS
+      // From APPOINTMENT_FUNCTIONS (added dynamically)
       expect(names).toContain("listAvailableSlots")
     })
 
@@ -305,24 +335,49 @@ describe("Appointment Booking - LLM Orchestration", () => {
   // SCENARIO 6: Function count consistency
   // ============================================
   describe("Function count consistency across system", () => {
-    // RULE: Total unique function count must match expectations
-    // WHY: Catches accidental addition/removal of functions
-    it("CUSTOMER_SUPPORT total should be support + appointment functions", () => {
+    // RULE: Base CUSTOMER_SUPPORT should have only support functions (no appointments)
+    it("CUSTOMER_SUPPORT base should have only support functions", () => {
       const csNames = getAgentFunctionNames("CUSTOMER_SUPPORT")!
-      // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) + APPOINTMENT_FUNCTIONS (4)
-      expect(csNames.length).toBe(
-        CUSTOMER_SUPPORT_FUNCTIONS.length + APPOINTMENT_FUNCTIONS.length
-      )
+      // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) — no hardcoded appointments
+      expect(csNames.length).toBe(CUSTOMER_SUPPORT_FUNCTIONS.length)
+      expect(csNames.length).toBe(1)
     })
 
-    it("INFO_AGENT total should be support + profile + appointment functions", () => {
+    // RULE: Workspace-filtered CUSTOMER_SUPPORT total should be support + appointment functions
+    // WHY: When enableCalendarBooking=true, appointments are added dynamically
+    it("CUSTOMER_SUPPORT with calendar enabled should be support + appointment functions", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true } as any
+      const functions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)!
+      const names = functions.map((fn) => fn.function.name)
+      // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) + APPOINTMENT_FUNCTIONS (4)
+      expect(names.length).toBe(
+        CUSTOMER_SUPPORT_FUNCTIONS.length + APPOINTMENT_FUNCTIONS.length
+      )
+      expect(names.length).toBe(5)
+    })
+
+    // RULE: Base INFO_AGENT should have support + profile (no appointments)
+    it("INFO_AGENT base should have support + profile functions only", () => {
       const infoNames = getAgentFunctionNames("INFO_AGENT")!
-      // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) + APPOINTMENT (4)
+      // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) — no hardcoded appointments
       expect(infoNames.length).toBe(
+        CUSTOMER_SUPPORT_FUNCTIONS.length + PROFILE_MANAGEMENT_FUNCTIONS.length
+      )
+      expect(infoNames.length).toBe(3)
+    })
+
+    // RULE: Workspace-filtered INFO_AGENT total should be support + profile + appointment functions
+    it("INFO_AGENT with calendar enabled should be support + profile + appointment functions", () => {
+      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: false } as any
+      const functions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)!
+      const names = functions.map((fn) => fn.function.name)
+      // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) + APPOINTMENT (4)
+      expect(names.length).toBe(
         CUSTOMER_SUPPORT_FUNCTIONS.length +
         PROFILE_MANAGEMENT_FUNCTIONS.length +
         APPOINTMENT_FUNCTIONS.length
       )
+      expect(names.length).toBe(7)
     })
   })
 })

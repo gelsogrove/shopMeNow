@@ -95,6 +95,13 @@ export const platformConfigData: PlatformConfigData[] = [
     description: "Cost per push notification sent (all types)",
     isActive: true,
   },
+  {
+    type: "PRICE" as const,
+    key: "APPOINTMENT_REMINDER_WHATSAPP",
+    value: "0.50",
+    description: "Cost per WhatsApp appointment reminder (24h, 1h, or 30min before appointment)",
+    isActive: true,
+  },
 
   // ============================================================================
   // 🚩 FEATURE FLAGS
