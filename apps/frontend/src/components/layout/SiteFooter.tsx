@@ -12,6 +12,7 @@ const translations = {
     pricing: "Prezzi",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Supporto Umano",
+    appointmentBooking: "Prenotazione Appuntamenti",
     resources: "Risorse",
     teamCollaboration: "Collaborazione Team",
     privacyDesign: "Privacy by Design",
@@ -34,6 +35,7 @@ const translations = {
     pricing: "Pricing",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Human Support",
+    appointmentBooking: "Appointment Booking",
     resources: "Resources",
     teamCollaboration: "Team Collaboration",
     privacyDesign: "Privacy by Design",
@@ -56,6 +58,7 @@ const translations = {
     pricing: "Precios",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Soporte Humano",
+    appointmentBooking: "Reserva de Citas",
     resources: "Recursos",
     teamCollaboration: "Colaboración en Equipo",
     privacyDesign: "Privacy by Design",
@@ -78,6 +81,7 @@ const translations = {
     pricing: "Preços",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Suporte Humano",
+    appointmentBooking: "Agendamento de Consultas",
     resources: "Recursos",
     teamCollaboration: "Colaboração em Equipe",
     privacyDesign: "Privacy by Design",
@@ -121,6 +125,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
               <li><Link to="/pricing" className="text-sm hover:text-green-500 transition-colors">{t.pricing}</Link></li>
               <li><Link to="/widget-to-whatsapp" className="text-sm hover:text-green-500 transition-colors">{t.widgetToWhatsApp}</Link></li>
               <li><Link to="/human-support" className="text-sm hover:text-green-500 transition-colors">{t.humanSupport}</Link></li>
+              <li><Link to="/appointment-booking" className="text-sm hover:text-green-500 transition-colors">{t.appointmentBooking}</Link></li>
             </ul>
           </div>
 

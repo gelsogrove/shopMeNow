@@ -321,3 +321,9 @@ Ti ricordiamo il tuo appuntamento:
 Ci vediamo presto! 👋';
 ALTER TABLE "Workspace" ADD COLUMN "appointmentReminderHours" INTEGER[] DEFAULT ARRAY[24, 1];
 ALTER TABLE "Workspace" ADD COLUMN "appointmentReminderChannel" TEXT NOT NULL DEFAULT 'whatsapp';
+
+-- ==============================================================
+-- 12. Add Customer-level appointment fields
+-- ==============================================================
+ALTER TABLE "customers" ADD COLUMN "maxActiveAppointments" INTEGER DEFAULT 5;
+ALTER TABLE "customers" ADD COLUMN "lastAppointmentDate" TIMESTAMP(3);

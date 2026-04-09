@@ -9,6 +9,7 @@ import { LegalDocumentPage } from "@/pages/LegalDocumentPage"
 import { FeaturesPage } from "@/pages/FeaturesPage"
 import { WidgetToWhatsAppPage } from "@/pages/WidgetToWhatsAppPage"
 import { HumanSupportPage } from "@/pages/HumanSupportPage"
+import { AppointmentBookingPage } from "@/pages/AppointmentBookingPage"
 import { CrmIntegrationPage } from "@/pages/CrmIntegrationPage"
 import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
@@ -239,6 +240,7 @@ function AppWithProviders() {
                 <Route path="/features" element={<FeaturesPage />} />
                 <Route path="/widget-to-whatsapp" element={<WidgetToWhatsAppPage />} />
                 <Route path="/human-support" element={<HumanSupportPage />} />
+                <Route path="/appointment-booking" element={<AppointmentBookingPage />} />
                 <Route path="/crm-integration" element={<CrmIntegrationPage />} />
                 <Route path="/team-collaboration" element={<TeamCollaborationPage />} />
                 <Route path="/privacy-by-design" element={<PrivacyByDesignPage />} />

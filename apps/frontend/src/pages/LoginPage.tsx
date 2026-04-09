@@ -2181,6 +2181,60 @@ export function LoginPage() {
         </div>
       </div>
 
+      {/* Appointment Booking Section */}
+      <div className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            className="group relative"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-violet-100 rounded-3xl rotate-0 sm:-rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:-rotate-2 transition-transform duration-500"></div>
+
+            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
+                <div className="space-y-6 text-center lg:text-left order-2 lg:order-1">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <span>📅</span>
+                      {t("appointment.badge")}
+                    </div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                      {t("appointment.title")}
+                    </h3>
+                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                      {t("appointment.subtitle")}
+                    </p>
+                  </div>
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <Link
+                      to="/appointment-booking"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-purple-700 hover:text-purple-900 hover:underline transition-colors"
+                    >
+                      {t("common.viewMore")}
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center lg:items-end gap-4 order-1 lg:order-2">
+                  <div className="relative">
+                    <div className="w-56 h-56 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300 bg-gradient-to-br from-purple-50 to-violet-50 flex items-center justify-center">
+                      <img
+                        src="/appointment.png"
+                        alt="Appointment Booking"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
       {/* Human-in-the-loop Section */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">

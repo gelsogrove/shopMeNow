@@ -92,6 +92,12 @@ const translations = {
     "news.6.desc":
       "La funzionalita human-in-the-loop e ora attiva: passa all'operatore quando serve e mantieni il contesto completo della conversazione.",
 
+    // Appointment Booking Section
+    "appointment.badge": "Prenotazioni",
+    "appointment.title": "Prenotazione appuntamenti con AI",
+    "appointment.subtitle":
+      "I tuoi clienti prenotano appuntamenti direttamente via WhatsApp o widget. L'AI gestisce disponibilità, conferme e promemoria automatici. Integrazione con Google Calendar per sincronizzare tutto.",
+
     // Human-in-the-loop Section
     "humanLoop.title": "Supporto human-in-the-loop",
     "humanLoop.subtitle":
@@ -666,6 +672,12 @@ const translations = {
     "news.6.category": "Support",
     "news.6.desc":
       "Human-in-the-loop support is now live. Escalate to a human when needed and keep the full conversation context.",
+
+    // Appointment Booking Section
+    "appointment.badge": "Bookings",
+    "appointment.title": "AI-powered appointment booking",
+    "appointment.subtitle":
+      "Your customers book appointments directly via WhatsApp or widget. AI manages availability, confirmations, and automatic reminders. Google Calendar integration to keep everything in sync.",
 
     // Human-in-the-loop Section
     "humanLoop.title": "Human-in-the-loop support",
@@ -1274,6 +1286,12 @@ const translations = {
     "news.6.desc":
       "La funcion human-in-the-loop ya esta activa. Escala a un humano cuando sea necesario y conserva todo el contexto de la conversacion.",
 
+    // Appointment Booking Section
+    "appointment.badge": "Reservas",
+    "appointment.title": "Reserva de citas con IA",
+    "appointment.subtitle":
+      "Tus clientes reservan citas directamente por WhatsApp o widget. La IA gestiona disponibilidad, confirmaciones y recordatorios automáticos. Integración con Google Calendar para sincronizar todo.",
+
     // Human-in-the-loop Section
     "humanLoop.title": "Soporte human-in-the-loop",
     "humanLoop.subtitle":
@@ -1745,6 +1763,12 @@ const translations = {
     "news.6.category": "Suporte",
     "news.6.desc":
       "A funcionalidade human-in-the-loop ja esta ativa. Escale para um humano quando necessario e mantenha todo o contexto da conversa.",
+
+    // Appointment Booking Section
+    "appointment.badge": "Agendamentos",
+    "appointment.title": "Agendamento de consultas com IA",
+    "appointment.subtitle":
+      "Seus clientes agendam consultas diretamente pelo WhatsApp ou widget. A IA gerencia disponibilidade, confirmações e lembretes automáticos. Integração com Google Calendar para sincronizar tudo.",
 
     // Human-in-the-loop Section
     "humanLoop.title": "Suporte human-in-the-loop",
