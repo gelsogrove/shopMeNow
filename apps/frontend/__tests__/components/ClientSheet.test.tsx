@@ -1,6 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { BrowserRouter } from "react-router-dom"
 import { ClientSheet } from "@/components/shared/ClientSheet"
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext"
 import { storage } from "@/lib/storage"
 import { api } from "@/services/api"
 
@@ -8,6 +11,7 @@ import { api } from "@/services/api"
 vi.mock("@/lib/storage", () => ({
   storage: {
     getWorkspace: vi.fn(),
+    setWorkspace: vi.fn(),
   },
 }))
 
@@ -35,6 +39,35 @@ vi.mock("@/lib/toast", () => ({
     error: vi.fn(),
   },
 }))
+
+// Helper to render with providers
+function renderWithProviders(
+  component: React.ReactElement,
+  workspace?: any
+) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+
+  const mockWorkspace = workspace || {
+    id: "workspace-1",
+    name: "Test Workspace",
+    sellsProductsAndServices: true,
+  }
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <WorkspaceProvider initialWorkspace={mockWorkspace}>
+          {component}
+        </WorkspaceProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  )
+}
 
 describe("ClientSheet - Shipping Address Visibility", () => {
   const mockClient = {
@@ -82,12 +115,13 @@ describe("ClientSheet - Shipping Address Visibility", () => {
 
   it("should show Shipping Address section for e-commerce channels (sellsProductsAndServices = true)", async () => {
     // Mock workspace as e-commerce channel
-    vi.mocked(storage.getWorkspace).mockReturnValue({
+    const workspace = {
       id: "workspace-1",
+      name: "Test Workspace",
       sellsProductsAndServices: true,
-    })
+    }
 
-    render(<ClientSheet {...defaultProps} />)
+    renderWithProviders(<ClientSheet {...defaultProps} />, workspace)
 
     // Shipping Address should be visible
     expect(await screen.findByRole("heading", { name: /shipping address/i })).toBeInTheDocument()
@@ -95,12 +129,13 @@ describe("ClientSheet - Shipping Address Visibility", () => {
 
   it("should NOT show Shipping Address section for info channels (sellsProductsAndServices = false)", async () => {
     // Mock workspace as info channel
-    vi.mocked(storage.getWorkspace).mockReturnValue({
+    const workspace = {
       id: "workspace-1",
+      name: "Test Workspace",
       sellsProductsAndServices: false,
-    })
+    }
 
-    render(<ClientSheet {...defaultProps} />)
+    renderWithProviders(<ClientSheet {...defaultProps} />, workspace)
 
     // Shipping Address should NOT be visible
     await waitFor(() => {
@@ -110,11 +145,13 @@ describe("ClientSheet - Shipping Address Visibility", () => {
 
   it("should NOT show Shipping Address when workspace has no sellsProductsAndServices property", async () => {
     // Mock workspace without sellsProductsAndServices (defaults to false)
-    vi.mocked(storage.getWorkspace).mockReturnValue({
+    const workspace = {
       id: "workspace-1",
-    })
+      name: "Test Workspace",
+      // sellsProductsAndServices property omitted - should default to false
+    }
 
-    render(<ClientSheet {...defaultProps} />)
+    renderWithProviders(<ClientSheet {...defaultProps} />, workspace)
 
     // Shipping Address should NOT be visible (defaults to false)
     await waitFor(() => {
@@ -124,23 +161,27 @@ describe("ClientSheet - Shipping Address Visibility", () => {
 
   it("should always show Invoice Address regardless of channel type", async () => {
     // Test with e-commerce channel
-    vi.mocked(storage.getWorkspace).mockReturnValue({
+    const workspaceEcommerce = {
       id: "workspace-1",
+      name: "Test Workspace",
       sellsProductsAndServices: true,
-    })
+    }
 
-    const { rerender } = render(<ClientSheet {...defaultProps} />)
+    const { unmount } = renderWithProviders(<ClientSheet {...defaultProps} />, workspaceEcommerce)
 
     // Invoice Address should be visible
     expect(await screen.findByRole("heading", { name: /invoice address/i })).toBeInTheDocument()
 
-    // Test with info channel
-    vi.mocked(storage.getWorkspace).mockReturnValue({
-      id: "workspace-1",
-      sellsProductsAndServices: false,
-    })
+    unmount()
 
-    rerender(<ClientSheet {...defaultProps} />)
+    // Test with info channel
+    const workspaceInfo = {
+      id: "workspace-1",
+      name: "Test Workspace",
+      sellsProductsAndServices: false,
+    }
+
+    renderWithProviders(<ClientSheet {...defaultProps} />, workspaceInfo)
 
     // Invoice Address should still be visible
     expect(await screen.findByRole("heading", { name: /invoice address/i })).toBeInTheDocument()
@@ -148,12 +189,13 @@ describe("ClientSheet - Shipping Address Visibility", () => {
 
   it("should show shipping fields (Street, City, ZIP, Country) only for e-commerce channels", async () => {
     // E-commerce channel
-    vi.mocked(storage.getWorkspace).mockReturnValue({
+    const workspaceEcommerce = {
       id: "workspace-1",
+      name: "Test Workspace",
       sellsProductsAndServices: true,
-    })
+    }
 
-    const { rerender } = render(<ClientSheet {...defaultProps} />)
+    const { unmount } = renderWithProviders(<ClientSheet {...defaultProps} />, workspaceEcommerce)
 
     // Shipping fields should be present
     expect(await screen.findByLabelText("Street Address")).toBeInTheDocument()
@@ -161,13 +203,16 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     expect(screen.getByLabelText("ZIP Code")).toBeInTheDocument()
     expect(screen.getByLabelText("Country", { selector: "input#country" })).toBeInTheDocument()
 
-    // Info channel
-    vi.mocked(storage.getWorkspace).mockReturnValue({
-      id: "workspace-1",
-      sellsProductsAndServices: false,
-    })
+    unmount()
 
-    rerender(<ClientSheet {...defaultProps} />)
+    // Info channel
+    const workspaceInfo = {
+      id: "workspace-1",
+      name: "Test Workspace",
+      sellsProductsAndServices: false,
+    }
+
+    renderWithProviders(<ClientSheet {...defaultProps} />, workspaceInfo)
 
     // Shipping fields should NOT be present
     await waitFor(() => {

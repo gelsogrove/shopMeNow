@@ -279,8 +279,16 @@ describe('SettingsPage - Toggle Behaviors', () => {
 
     await waitForLoaded()
 
-    // Channel Active switch is in the header, find it by the "Active" or "Inactive" label
-    const channelStatusContainer = screen.getByText(/Active|Inactive/i).closest('div')
+    // Find the channel status indicator by looking for the specific status span and its parent
+    // Use more specific query to avoid matching help text containing "Inactive"
+    const channelStatusElements = screen.getAllByText(/^(Active|Inactive)$/i)
+    // Find the actual status label (not the help text)
+    const statusLabel = channelStatusElements.find(el => 
+      el.tagName === 'SPAN' && el.className.includes('font-medium')
+    )
+    expect(statusLabel).toBeInTheDocument()
+    
+    const channelStatusContainer = statusLabel!.closest('div')
     expect(channelStatusContainer).toBeInTheDocument()
 
     const channelSwitch = within(channelStatusContainer!).getByRole('switch')
