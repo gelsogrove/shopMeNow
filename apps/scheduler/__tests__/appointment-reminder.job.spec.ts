@@ -6,7 +6,7 @@
  * 2. buildReminderMessage - template variable replacement, default message
  * 3. billReminder - transaction with credit decrement, billing transaction creation
  * 4. processReminder - dedup via ReminderLock, WhatsApp enqueue, email logic
- * 5. appointmentReminderJob - 24h and 1h window queries
+ * 5. appointmentReminderJob - 24h, 1h and 30m window queries
  *
  * @see apps/scheduler/src/jobs/appointment-reminder.job.ts
  */
@@ -81,8 +81,8 @@ describe('Appointment Reminder Job', () => {
     it('should handle empty appointment lists gracefully', async () => {
       await appointmentReminderJob()
 
-      // Should query for 24h AND 1h reminders
-      expect(mockAppointmentFindMany).toHaveBeenCalledTimes(2)
+      // Should query for 24h, 1h AND 30m reminders
+      expect(mockAppointmentFindMany).toHaveBeenCalledTimes(3)
     })
 
     // SCENARIO: 24h reminder for WhatsApp appointment
