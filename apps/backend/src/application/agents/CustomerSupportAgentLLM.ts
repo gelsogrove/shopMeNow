@@ -37,6 +37,7 @@
 import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { FAQRepository } from "../../repositories/faq.repository"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
@@ -472,7 +473,7 @@ export class CustomerSupportAgentLLM {
         function: fn,
       }))
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: options.model,
@@ -489,7 +490,7 @@ export class CustomerSupportAgentLLM {
             "X-Title": "eChatbot - Customer Support Agent",
           },
         }
-      )
+      ))
 
       const choice = response.data.choices?.[0]
       const message = choice?.message

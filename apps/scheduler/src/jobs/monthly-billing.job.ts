@@ -335,7 +335,7 @@ export async function monthlyBillingJob(): Promise<void> {
           const actualBillingMonth = billingMonth === 0 ? 12 : billingMonth // 1-indexed for display
 
           logger.info(
-            `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription $${subscriptionFee} + Debt $${creditDebt.toFixed(2)} = Total $${totalCharge.toFixed(2)}`
+            `[BILLING] 💰 Owner ${ownerName} (${workspaceCount} workspaces): Subscription €${subscriptionFee} + Debt €${creditDebt.toFixed(2)} = Total €${totalCharge.toFixed(2)}`
           )
 
           // ═══════════════════════════════════════════════════════════════════

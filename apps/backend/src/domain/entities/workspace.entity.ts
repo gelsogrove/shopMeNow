@@ -32,6 +32,7 @@ export interface WorkspaceProps {
   wasenderIsActive?: boolean | null
   notificationEmail?: string | null
   webhookUrl?: string | null
+  webhookTimeout?: number | null
   language: string
   defaultLanguage?: string | null // 🌍 ISO-2 language code for customer-facing default language
   createdAt: Date
@@ -43,6 +44,7 @@ export interface WorkspaceProps {
   messageLimit: number
   blocklist?: string | null
   url?: string | null
+  websiteUrl?: string | null
   assistantPhone?: string | null
   welcomeMessage?: any
   wipMessage?: any
@@ -186,6 +188,10 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.webhookUrl
   }
 
+  get webhookTimeout(): number | null | undefined {
+    return this.props.webhookTimeout
+  }
+
   get whatsappProvider(): string | null | undefined {
     return this.props.whatsappProvider
   }
@@ -268,6 +274,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get url(): string | null | undefined {
     return this.props.url
+  }
+
+  get websiteUrl(): string | null | undefined {
+    return this.props.websiteUrl
   }
 
   get welcomeMessage(): any {

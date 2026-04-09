@@ -37,6 +37,7 @@ import {
 } from "@shared/pricing"
 import axios from "axios"
 import { config } from "../../config"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { CartRepository } from "../../repositories/cart.repository"
 import { OrderRepository } from "../../repositories/order.repository"
 import { ProductRepository } from "../../repositories/product.repository"
@@ -572,7 +573,7 @@ export class CartManagementAgentLLM {
         function: fn,
       }))
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: options.model,
@@ -589,7 +590,7 @@ export class CartManagementAgentLLM {
             "X-Title": "eChatbot - Cart Management Agent",
           },
         }
-      )
+      ))
 
       const choice = response.data.choices?.[0]
       const message = choice?.message

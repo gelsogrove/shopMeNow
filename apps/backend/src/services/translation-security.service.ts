@@ -14,6 +14,7 @@ ANY http:// or https:// links that are NOT in the ALLOWED LINKS list above, .ru,
 
 import axios from "axios"
 import logger from "../utils/logger"
+import { withOpenRouterRetry } from "../utils/llm-retry"
 
 const ITALIAN_PROFANITY: string[] = [
   "cazzo",
@@ -427,7 +428,7 @@ Remember: Return ONLY the JSON object with translatedText, blocked, and reason f
         targetLanguage,
       })
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${baseURL}/chat/completions`,
         {
           model: model,
@@ -452,7 +453,7 @@ Remember: Return ONLY the JSON object with translatedText, blocked, and reason f
             "X-Title": "eChatbot Translation Security",
           },
         }
-      )
+      ))
 
       logger.info("✅ OpenRouter API response received", {
         status: response.status,

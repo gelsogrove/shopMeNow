@@ -18,6 +18,7 @@ import {
   TRANSLATION_LLM_SETTINGS,
 } from "@shared/translation-prompts"
 import logger from "../../utils/logger"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 
 export interface SafetyResult {
   safe: boolean
@@ -147,7 +148,7 @@ export class SafetyTranslationAgent {
         usingCustomPrompt: !!agentConfig?.systemPrompt,
       })
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model,
@@ -170,7 +171,7 @@ export class SafetyTranslationAgent {
           },
           timeout: 30000, // 30 second timeout
         }
-      )
+      ))
 
       const llmResponse = response.data.choices[0].message.content
       const tokensUsed = response.data.usage?.total_tokens || 0

@@ -10,6 +10,7 @@ import * as dotenv from "dotenv"
 import OpenAI from "openai"
 import { websocketService } from "../services/websocket.service"
 import logger from "../utils/logger"
+import { withOpenRouterRetry } from "../utils/llm-retry"
 import { getCurrencySymbol } from "../utils/currency"
 
 /**
@@ -2155,14 +2156,14 @@ export class MessageRepository {
 
       let response
       try {
-        response = await axios.post(openRouterUrl, requestPayload, {
+        response = await withOpenRouterRetry(() => axios.post(openRouterUrl, requestPayload, {
           headers: {
             Authorization: `Bearer ${openRouterApiKey}`,
             "Content-Type": "application/json",
             "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
             "X-Title": "eChatbot Function Router",
           },
-        })
+        }))
         logger.info("🔍 DEBUG - Axios call successful")
       } catch (axiosError) {
         logger.error("🔍 DEBUG - Axios error:", axiosError.message)

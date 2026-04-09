@@ -20,6 +20,7 @@
 
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import logger from "../../utils/logger"
 import type {
@@ -287,7 +288,7 @@ export class ConversationHistoryLayer {
     }
 
     try {
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model,
@@ -307,7 +308,7 @@ export class ConversationHistoryLayer {
           },
           timeout: 30000,
         }
-      )
+      ))
 
       const message = response.data.choices?.[0]?.message?.content || ""
       const tokensUsed = response.data.usage?.total_tokens || 0

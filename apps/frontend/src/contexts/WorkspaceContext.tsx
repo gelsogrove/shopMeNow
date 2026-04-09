@@ -33,6 +33,7 @@ export interface Workspace {
   ultraMsgApiUrl?: string
   adminEmail?: string
   url?: string
+  websiteUrl?: string
   debugMode?: boolean
   currency?: string
   language?: string
@@ -45,6 +46,7 @@ export interface Workspace {
   channelStatus?: boolean
   notificationEmail?: string
   webhookUrl?: string
+  webhookTimeout?: number
   planType?: string | null
   trialEndsAt?: string | null
   // Channel Configuration (Feature 199)
@@ -86,6 +88,10 @@ export interface Workspace {
   registrationPage?: string
   requireManualApproval?: boolean
   channelType?: 'WHATSAPP' | 'WIDGET' | null
+  // 📅 Calendar reminders (backend model)
+  appointmentReminderMessage?: string | null
+  appointmentReminderHours?: number[]
+  appointmentReminderChannel?: string
 }
 
 interface WorkspaceContextType {

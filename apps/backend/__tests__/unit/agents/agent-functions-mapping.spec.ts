@@ -396,9 +396,9 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       const allNames = allFunctions.map((fn) => fn.function.name)
       const uniqueNames = [...new Set(allNames)]
 
-      // We expect 22 unique names out of 23 total (contactOperator appears twice)
-      expect(uniqueNames.length).toBe(22)
-      expect(allNames.length).toBe(23)
+      // We expect 23 unique names out of 24 total (contactOperator appears twice)
+      expect(uniqueNames.length).toBe(23)
+      expect(allNames.length).toBe(24)
 
       // Verify contactOperator is the only duplicate
       const nameCounts: Record<string, number> = {}

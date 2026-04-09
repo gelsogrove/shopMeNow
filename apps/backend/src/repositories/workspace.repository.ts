@@ -47,6 +47,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       ultraMsgToken: data.ultraMsgToken ?? null,
       ultraMsgApiUrl: data.ultraMsgApiUrl ?? null,
       webhookUrl: data.webhookUrl,
+      webhookTimeout: data.webhookTimeout ?? null,
       notificationEmail: data.notificationEmail,
       language: data.language,
       defaultLanguage: data.defaultLanguage ?? null,
@@ -58,6 +59,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       channelStatus: data.channelStatus,
       deletedAt: data.deletedAt ?? null,
       url: data.url,
+      websiteUrl: data.websiteUrl ?? null,
       adminEmail: data.whatsappSettings?.adminEmail || null,
       debugMode: data.debugMode ?? true,
       createdAt: data.createdAt,
@@ -128,6 +130,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       whatsappVerifyToken: workspace.whatsappVerifyToken,
       whatsappWebhookUrl: workspace.whatsappWebhookUrl,
       webhookUrl: workspace.webhookUrl,
+      webhookTimeout: workspace.webhookTimeout ?? null,
       // 🆕 Multi-Provider WhatsApp Support
       whatsappProvider: workspace.whatsappProvider,
       metaPhoneNumberId:
@@ -150,6 +153,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       updatedAt: workspace.updatedAt,
       deletedAt: workspace.deletedAt ?? null,
       url: workspace.url,
+      websiteUrl: workspace.websiteUrl ?? null,
       debugMode: workspace.debugMode,
       allowedExternalLinks: workspace.allowedExternalLinks || [],
       // 🆕 Channel Configuration (Feature 199)

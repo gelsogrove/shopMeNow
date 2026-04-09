@@ -1,6 +1,7 @@
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { config } from "../../config"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
@@ -175,7 +176,7 @@ export class ProductContextAgentLLM {
         content: PromptProcessorService.wrapUserInput(input.question),
       })
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: "openai/gpt-4o-mini",
@@ -189,7 +190,7 @@ export class ProductContextAgentLLM {
           },
           timeout: 1000 * 20,
         }
-      )
+      ))
 
       let content = response.data?.choices?.[0]?.message?.content?.trim() || ""
       const usage = response.data?.usage

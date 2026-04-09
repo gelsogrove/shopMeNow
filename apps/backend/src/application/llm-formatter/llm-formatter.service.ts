@@ -15,6 +15,7 @@
 
 import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { config } from "../../config"
 import logger from "../../utils/logger"
 import {
@@ -321,7 +322,7 @@ export class LLMFormatterService {
     messages.push({ role: "user", content: userPrompt })
 
     try {
-      const llmResponse = await axios.post(
+      const llmResponse = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: this.model,
@@ -335,7 +336,7 @@ export class LLMFormatterService {
             "Content-Type": "application/json",
           },
         }
-      )
+      ))
 
       let text = llmResponse.data.choices[0]?.message?.content || ""
       const tokensUsed = llmResponse.data.usage?.total_tokens || 0

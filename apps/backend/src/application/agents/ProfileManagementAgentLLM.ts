@@ -14,6 +14,7 @@
 
 import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { PROFILE_MANAGEMENT_FUNCTIONS } from "../../config/agent-functions.config"
 import { PromptBuilderService } from "../../application/services/prompt-builder/prompt-builder.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
@@ -358,7 +359,7 @@ export class ProfileManagementAgentLLM {
       // No need to wrap them again - they already have { type: "function", function: {...} }
       const tools = options.functions
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: options.model,
@@ -374,7 +375,7 @@ export class ProfileManagementAgentLLM {
             "X-Title": "eChatbot - Profile Management Agent",
           },
         }
-      )
+      ))
 
       const choice = response.data.choices?.[0]
       const message = choice?.message

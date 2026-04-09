@@ -36,6 +36,7 @@ import { SearchConversationRepository } from "../../repositories/searchConversat
 import { TemplateLoaderService } from "../services/template-loader.service"
 import { getSystemContextService, SystemContextService, ListItem } from "../../services/system-context.service"
 import logger from "../../utils/logger"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 // NOTE: ProductSearchAgent removed - LLM uses {{PRODUCTS}} from prompt only
 
@@ -694,7 +695,7 @@ export class ProductSearchAgentLLM {
         function: fn,
       }))
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: options.model,
@@ -711,7 +712,7 @@ export class ProductSearchAgentLLM {
             "X-Title": "eChatbot - Product and Services Agent",
           },
         }
-      )
+      ))
 
       const choice = response.data.choices?.[0]
       const message = choice?.message

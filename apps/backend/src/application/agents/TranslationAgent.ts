@@ -219,14 +219,14 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
       })
 
       const callTranslationLLM = async (userContent: string) => {
-        const response = await axios.post(
+        const response = await withOpenRouterRetry(() => axios.post(
           `${this.openRouterBaseUrl}/chat/completions`,
           buildRequest(userContent),
           {
             headers,
             timeout: 30000,
           }
-        )
+        ))
         const llmResponse = response.data?.choices?.[0]?.message?.content || ""
         const tokensUsed = response.data?.usage?.total_tokens || 0
         return { llmResponse, tokensUsed }

@@ -38,6 +38,7 @@
 
 import { AgentType, PrismaClient } from "@echatbot/database"
 import axios from "axios"
+import { withOpenRouterRetry } from "../utils/llm-retry"
 import { CartManagementAgentLLM } from "../application/agents/CartManagementAgentLLM"
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
 import { OrderTrackingAgentLLM } from "../application/agents/OrderTrackingAgentLLM"
@@ -3072,7 +3073,7 @@ export class LLMRouterService {
     tokensUsed: number
   }> {
     try {
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: options.model,
@@ -3101,7 +3102,7 @@ export class LLMRouterService {
           },
           timeout: 60000, // Increased from 30s to 60s for complex queries like "prodotti DOP"
         }
-      )
+      ))
 
       const choice = response.data.choices[0]
       const tokensUsed = response.data.usage?.total_tokens || 0

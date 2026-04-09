@@ -16,6 +16,7 @@ import axios from "axios"
 import Handlebars from "handlebars"
 import { AgentConfigRepository } from "../../repositories/agent-config.repository"
 import logger from "../../utils/logger"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 
 export interface SecurityResult {
   safe: boolean
@@ -191,7 +192,7 @@ export class SecurityAgent {
         model: securityAgent.model,
       })
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: securityAgent.model,
@@ -218,7 +219,7 @@ export class SecurityAgent {
           },
           timeout: 30000, // 30 second timeout
         }
-      )
+      ))
 
       const llmResponse = response.data.choices[0].message.content
       const tokensUsed = response.data.usage?.total_tokens || 0

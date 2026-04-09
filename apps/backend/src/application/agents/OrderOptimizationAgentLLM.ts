@@ -31,6 +31,7 @@ import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { OrderOptimizationService, TransportAnalysis } from "../services/order-optimization.service"
 import logger from "../../utils/logger"
+import { withOpenRouterRetry } from "../../utils/llm-retry"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -196,7 +197,7 @@ export class OrderOptimizationAgentLLM {
       // Load system prompt from template
       const systemPrompt = this.loadSystemPrompt()
 
-      const response = await axios.post(
+      const response = await withOpenRouterRetry(() => axios.post(
         `${this.openRouterBaseUrl}/chat/completions`,
         {
           model: this.MODEL,
@@ -223,7 +224,7 @@ export class OrderOptimizationAgentLLM {
           },
           timeout: this.TIMEOUT_MS,
         }
-      )
+      ))
 
       const content = response.data.choices[0]?.message?.content
       const tokensUsed = response.data.usage?.total_tokens
