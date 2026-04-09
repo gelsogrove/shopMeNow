@@ -3,7 +3,7 @@ import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { usePlatformConfig } from "@/hooks/usePlatformConfig"
 import { PlanType } from "@/services/subscriptionBillingApi"
-import { Check, MessageSquare, X } from "lucide-react"
+import { Check, MessageSquare, X, Bell } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 
 interface PricingPlan {
@@ -70,8 +70,9 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
   const messagePrice = prices.MESSAGE
   const widgetPrice = prices.WIDGET_MESSAGE
   const pushPrice = prices.PUSH_CAMPAIGN
+  const reminderPrice = prices.APPOINTMENT_REMINDER_WHATSAPP
 
-  if (!freePrice || !basicPrice || !premiumPrice || !enterprisePrice || !messagePrice || !widgetPrice || !pushPrice) {
+  if (!freePrice || !basicPrice || !premiumPrice || !enterprisePrice || !messagePrice || !widgetPrice || !pushPrice || !reminderPrice) {
     return (
       <div className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
         <div className="max-w-7xl mx-auto px-4 text-center">
@@ -308,7 +309,7 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
           {t("pricing.usage.title")}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 max-w-5xl mx-auto">
           {/* Messages - dynamic from database */}
           <div className="relative group">
             {/* Decorative rotated background frame */}
@@ -379,6 +380,26 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
               </div>
               <p className="text-sm text-gray-600">
                 {t("pricing.usage.push.desc")}
+              </p>
+            </div>
+          </div>
+
+          {/* Appointment Reminder - dynamic from database */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+            
+            <div className="relative bg-white rounded-xl p-6 border border-gray-200 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Bell className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="text-3xl font-bold text-purple-600 mb-1">
+                ${reminderPrice.current.toFixed(2)}
+              </div>
+              <div className="text-base font-medium text-gray-900 mb-2">
+                {t("pricing.usage.reminder")}
+              </div>
+              <p className="text-sm text-gray-600">
+                {t("pricing.usage.reminder.desc")}
               </p>
             </div>
           </div>

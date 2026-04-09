@@ -126,6 +126,8 @@ const translations = {
     "pricing.usage.customer.desc": "Ogni nuova registrazione cliente",
     "pricing.usage.push": "per Messaggio Push WhatsApp",
     "pricing.usage.push.desc": "Sarà scalato dal tuo credito",
+    "pricing.usage.reminder": "per Promemoria Appuntamento WhatsApp",
+    "pricing.usage.reminder.desc": "Sarà scalato dal tuo credito",
     "pricing.usage.transparent": "💡 Ogni messaggio che invii detrarrà crediti dal tuo account. Il tuo saldo di credito diminuisce in base all'utilizzo effettivo.",
     
     // Login/Register Forms
@@ -701,6 +703,8 @@ const translations = {
     "pricing.usage.order.desc": "Each completed order",
     "pricing.usage.push": "per WhatsApp Push message",
     "pricing.usage.push.desc": "Will be deducted from your credit",
+    "pricing.usage.reminder": "per WhatsApp Appointment Reminder",
+    "pricing.usage.reminder.desc": "Will be deducted from your credit",
     "pricing.usage.transparent": "💡 Every message you send will deduct credits from your account. Your credit balance decreases based on actual usage.",
     
     // Login/Register Forms
@@ -1306,6 +1310,8 @@ const translations = {
     "pricing.usage.order.desc": "Cada pedido completado",
     "pricing.usage.push": "por Mensaje Push de WhatsApp",
     "pricing.usage.push.desc": "Será descontado de tu crédito",
+    "pricing.usage.reminder": "por Recordatorio de Cita WhatsApp",
+    "pricing.usage.reminder.desc": "Será descontado de tu crédito",
     "pricing.usage.info": "💡 Cada mensaje que envíes deducirá créditos de tu cuenta. Tu saldo de crédito disminuye según el uso real.",
     "pricing.usage.transparent": "💡 Cada mensaje que envíes deducirá créditos de tu cuenta. Tu saldo de crédito disminuye según el uso real.",
     // Login/Register Forms
@@ -1778,6 +1784,8 @@ const translations = {
     "pricing.usage.order.desc": "Cada pedido concluído",
     "pricing.usage.push": "por Mensagem Push de WhatsApp",
     "pricing.usage.push.desc": "Será descontada do seu crédito",
+    "pricing.usage.reminder": "por Lembrete de Agendamento WhatsApp",
+    "pricing.usage.reminder.desc": "Será descontado do seu crédito",
     "pricing.usage.info": "💡 Cada mensagem que você enviar deduzirá créditos da sua conta. Seu saldo de crédito diminui com base no uso real.",
     "pricing.usage.transparent": "💡 Todos os custos de uso são transparentes e faturados mensalmente com base no consumo real",
     

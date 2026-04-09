@@ -10,7 +10,6 @@
 
 import { useState } from "react"
 import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -44,6 +43,7 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
   const reminderHours = formData.appointmentReminderHours || [24, 1]
   const has24h = reminderHours.includes(24)
   const has1h = reminderHours.includes(1)
+  const has30min = reminderHours.includes(0.5)
 
   const toggleReminderHour = (hours: number, enabled: boolean) => {
     let newHours = [...reminderHours]
@@ -217,6 +217,16 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
                   onCheckedChange={(checked) => toggleReminderHour(1, checked)}
                 />
               </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="reminder-30min" className="font-normal">
+                  30 minutes before appointment
+                </Label>
+                <Switch
+                  id="reminder-30min"
+                  checked={has30min}
+                  onCheckedChange={(checked) => toggleReminderHour(0.5, checked)}
+                />
+              </div>
             </div>
           </div>
 
@@ -248,17 +258,51 @@ export function CalendarSection({ formData, onChange, onFocus }: CalendarSection
           {/* Timezone */}
           <div className="space-y-2">
             <Label htmlFor="timezone">Workspace Timezone</Label>
-            <Input
-              id="timezone"
+            <Select
               value={formData.timezone || "Europe/Rome"}
-              onChange={(e) => {
-                onChange("timezone", e.target.value)
+              onValueChange={(value) => {
+                onChange("timezone", value)
                 onFocus("timezone")
               }}
-              placeholder="Europe/Rome"
-            />
+            >
+              <SelectTrigger id="timezone">
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Europe/Rome">Europe/Rome (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/London">Europe/London (GMT/BST)</SelectItem>
+                <SelectItem value="Europe/Paris">Europe/Paris (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/Berlin">Europe/Berlin (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/Madrid">Europe/Madrid (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/Lisbon">Europe/Lisbon (WET/WEST)</SelectItem>
+                <SelectItem value="Europe/Amsterdam">Europe/Amsterdam (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/Brussels">Europe/Brussels (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/Zurich">Europe/Zurich (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/Vienna">Europe/Vienna (CET/CEST)</SelectItem>
+                <SelectItem value="Europe/Athens">Europe/Athens (EET/EEST)</SelectItem>
+                <SelectItem value="Europe/Istanbul">Europe/Istanbul (TRT)</SelectItem>
+                <SelectItem value="Europe/Moscow">Europe/Moscow (MSK)</SelectItem>
+                <SelectItem value="America/New_York">America/New York (EST/EDT)</SelectItem>
+                <SelectItem value="America/Chicago">America/Chicago (CST/CDT)</SelectItem>
+                <SelectItem value="America/Denver">America/Denver (MST/MDT)</SelectItem>
+                <SelectItem value="America/Los_Angeles">America/Los Angeles (PST/PDT)</SelectItem>
+                <SelectItem value="America/Sao_Paulo">America/São Paulo (BRT)</SelectItem>
+                <SelectItem value="America/Argentina/Buenos_Aires">America/Buenos Aires (ART)</SelectItem>
+                <SelectItem value="America/Mexico_City">America/Mexico City (CST/CDT)</SelectItem>
+                <SelectItem value="America/Bogota">America/Bogotá (COT)</SelectItem>
+                <SelectItem value="Asia/Dubai">Asia/Dubai (GST)</SelectItem>
+                <SelectItem value="Asia/Tokyo">Asia/Tokyo (JST)</SelectItem>
+                <SelectItem value="Asia/Shanghai">Asia/Shanghai (CST)</SelectItem>
+                <SelectItem value="Asia/Singapore">Asia/Singapore (SGT)</SelectItem>
+                <SelectItem value="Asia/Kolkata">Asia/Kolkata (IST)</SelectItem>
+                <SelectItem value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</SelectItem>
+                <SelectItem value="Pacific/Auckland">Pacific/Auckland (NZST/NZDT)</SelectItem>
+                <SelectItem value="Africa/Cairo">Africa/Cairo (EET)</SelectItem>
+                <SelectItem value="Africa/Johannesburg">Africa/Johannesburg (SAST)</SelectItem>
+              </SelectContent>
+            </Select>
             <p className="text-sm text-muted-foreground">
-              IANA timezone (e.g., "Europe/Rome", "America/New_York")
+              Timezone used for appointment scheduling and reminders
             </p>
           </div>
         </CardContent>

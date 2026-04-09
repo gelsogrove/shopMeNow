@@ -306,3 +306,18 @@ CREATE INDEX "appointment_gdpr_logs_workspaceId_customerId_idx"
 
 CREATE INDEX "appointment_gdpr_logs_deletedAt_idx"
     ON "appointment_gdpr_logs"("deletedAt");
+
+-- ==============================================================
+-- 11. Add Workspace-level calendar settings
+-- ==============================================================
+ALTER TABLE "Workspace" ADD COLUMN "timezone" TEXT DEFAULT 'Europe/Rome';
+ALTER TABLE "Workspace" ADD COLUMN "appointmentReminderMessage" TEXT DEFAULT 'Ciao {{customerName}}! 📅
+
+Ti ricordiamo il tuo appuntamento:
+🗓️ {{appointmentType}}
+📆 {{appointmentDate}} alle {{appointmentTime}}
+📍 {{workspaceName}}
+
+Ci vediamo presto! 👋';
+ALTER TABLE "Workspace" ADD COLUMN "appointmentReminderHours" INTEGER[] DEFAULT ARRAY[24, 1];
+ALTER TABLE "Workspace" ADD COLUMN "appointmentReminderChannel" TEXT NOT NULL DEFAULT 'whatsapp';

@@ -238,6 +238,12 @@ export class WorkspaceController {
           wasenderIsActive: workspace.wasenderIsActive ?? false,
           wasenderQrString: workspace.wasenderQrString ?? null,
           wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
+          // 📅 Calendar & Appointment Settings
+          enableCalendarBooking: workspace.enableCalendarBooking ?? false,
+          timezone: workspace.timezone ?? "Europe/Rome",
+          appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+          appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
+          appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
         }
 
         return res.json(serializedWorkspace)
@@ -492,6 +498,12 @@ export class WorkspaceController {
         wasenderIsActive: workspace.wasenderIsActive ?? false,
         wasenderQrString: workspace.wasenderQrString ?? null,
         wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
+        // 📅 Calendar & Appointment Settings
+        enableCalendarBooking: workspace.enableCalendarBooking ?? false,
+        timezone: workspace.timezone ?? "Europe/Rome",
+        appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+        appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
+        appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
       }
 
       return res.status(201).json(serializedWorkspace)
@@ -667,6 +679,12 @@ export class WorkspaceController {
         wasenderIsActive: workspace.wasenderIsActive ?? false,
         wasenderQrString: workspace.wasenderQrString ?? null,
         wasenderQrGeneratedAt: workspace.wasenderQrGeneratedAt ?? null,
+        // 📅 Calendar & Appointment Settings
+        enableCalendarBooking: workspace.enableCalendarBooking ?? false,
+        timezone: workspace.timezone ?? "Europe/Rome",
+        appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+        appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
+        appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
       }
 
       logger.info(
