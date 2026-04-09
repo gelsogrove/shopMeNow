@@ -618,7 +618,7 @@ export function getAgentFunctionsForWorkspace(
   if (!workspace.sellsProductsAndServices) {
     const ecommerceAgentNames = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
     functions = functions.filter(
-      fn => !ecommerceAgentNames.includes(fn.function?.name || fn.name || "")
+      fn => !ecommerceAgentNames.includes(fn.function?.name || "")
     )
   }
 

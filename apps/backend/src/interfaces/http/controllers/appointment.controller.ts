@@ -510,19 +510,18 @@ export class AppointmentController {
         where: { workspaceId },
         select: {
           id: true,
-          calendarEmail: true,
           calendarId: true,
           lastSyncAt: true,
-          createdAt: true,
+          connectedAt: true,
         },
       });
 
       return res.json({
         connected: !!connection,
-        email: connection?.calendarEmail || null,
+        email: connection?.calendarId || null,
         calendarId: connection?.calendarId || null,
         lastSyncAt: connection?.lastSyncAt || null,
-        connectedAt: connection?.createdAt || null,
+        connectedAt: connection?.connectedAt || null,
       });
     } catch (error) {
       logger.error('Failed to get calendar connection status:', error);
@@ -709,7 +708,7 @@ export class AppointmentController {
         if (userinfo.email) calendarEmail = userinfo.email;
       }
 
-      const tokenExpiresAt = new Date(Date.now() + (tokens.expires_in * 1000));
+      const tokenExpiry = new Date(Date.now() + (tokens.expires_in * 1000));
 
       // Upsert the connection (one per workspace)
       await this.prisma.googleCalendarConnection.upsert({
@@ -717,20 +716,18 @@ export class AppointmentController {
         update: {
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token || undefined,
-          tokenExpiresAt,
-          calendarEmail,
-          calendarId,
-          scope: tokens.scope,
+          tokenExpiry,
+          calendarId: calendarId || 'primary',
+          scope: tokens.scope ? [tokens.scope] : undefined,
           lastSyncAt: new Date(),
         },
         create: {
           workspaceId,
           accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || null,
-          tokenExpiresAt,
-          calendarEmail,
-          calendarId,
-          scope: tokens.scope,
+          refreshToken: tokens.refresh_token || '',
+          tokenExpiry,
+          calendarId: calendarId || 'primary',
+          scope: tokens.scope ? [tokens.scope] : [],
         },
       });
 
