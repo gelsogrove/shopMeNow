@@ -310,7 +310,27 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 max-w-5xl mx-auto">
-          {/* Messages - dynamic from database */}
+          {/* Widget messages - dynamic from database - $0.05 (LOWEST PRICE FIRST) */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+            
+            <div className="relative bg-white rounded-xl p-6 border border-gray-200 text-center shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <MessageSquare className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div className="text-3xl font-bold text-emerald-600 mb-1">
+                ${widgetPrice.current.toFixed(2)}
+              </div>
+              <div className="text-base font-medium text-gray-900 mb-2">
+                {t("pricing.usage.widget")}
+              </div>
+              <p className="text-sm text-gray-600">
+                {t("pricing.usage.widget.desc")}
+              </p>
+            </div>
+          </div>
+
+          {/* Messages - dynamic from database - $0.10 */}
           <div className="relative group">
             {/* Decorative rotated background frame */}
             <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
@@ -331,27 +351,27 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
             </div>
           </div>
 
-          {/* Widget messages - dynamic from database */}
+          {/* Appointment Reminder - dynamic from database - $0.50 */}
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
             
             <div className="relative bg-white rounded-xl p-6 border border-gray-200 text-center shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="bg-emerald-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                <MessageSquare className="w-6 h-6 text-emerald-600" />
+              <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Bell className="w-6 h-6 text-purple-600" />
               </div>
-              <div className="text-3xl font-bold text-emerald-600 mb-1">
-                ${widgetPrice.current.toFixed(2)}
+              <div className="text-3xl font-bold text-purple-600 mb-1">
+                ${reminderPrice.current.toFixed(2)}
               </div>
               <div className="text-base font-medium text-gray-900 mb-2">
-                {t("pricing.usage.widget")}
+                {t("pricing.usage.reminder")}
               </div>
               <p className="text-sm text-gray-600">
-                {t("pricing.usage.widget.desc")}
+                {t("pricing.usage.reminder.desc")}
               </p>
             </div>
           </div>
 
-          {/* Push Campaign - dynamic from database */}
+          {/* Push Campaign - dynamic from database - $1.00 (HIGHEST PRICE LAST) */}
           <div className="relative group">
             {/* Decorative rotated background frame */}
             <div className="absolute inset-0 bg-gradient-to-br from-orange-100 to-amber-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
@@ -380,26 +400,6 @@ export function PricingPlans({ onStartFreeTrial, currentPlan, onChangePlan, disa
               </div>
               <p className="text-sm text-gray-600">
                 {t("pricing.usage.push.desc")}
-              </p>
-            </div>
-          </div>
-
-          {/* Appointment Reminder - dynamic from database */}
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl rotate-2 scale-105 shadow-lg group-hover:rotate-3 transition-transform duration-500"></div>
-            
-            <div className="relative bg-white rounded-xl p-6 border border-gray-200 text-center shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Bell className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="text-3xl font-bold text-purple-600 mb-1">
-                ${reminderPrice.current.toFixed(2)}
-              </div>
-              <div className="text-base font-medium text-gray-900 mb-2">
-                {t("pricing.usage.reminder")}
-              </div>
-              <p className="text-sm text-gray-600">
-                {t("pricing.usage.reminder.desc")}
               </p>
             </div>
           </div>

@@ -294,17 +294,17 @@ export interface CalendarConnectionStatus {
 
 export const calendarConnectionApi = {
   async getStatus(workspaceId: string): Promise<CalendarConnectionStatus> {
-    const { data } = await api.get(`/api/workspaces/${workspaceId}/calendar-connection`);
+    const { data } = await api.get(`/workspaces/${workspaceId}/calendar-connection`);
     return data;
   },
 
   async getOAuthUrl(workspaceId: string): Promise<{ url: string }> {
-    const { data } = await api.get(`/api/workspaces/${workspaceId}/calendar-connection/oauth-url`);
+    const { data } = await api.get(`/workspaces/${workspaceId}/calendar-connection/oauth-url`);
     return data;
   },
 
   async disconnect(workspaceId: string): Promise<{ success: boolean; message: string }> {
-    const { data } = await api.delete(`/api/workspaces/${workspaceId}/calendar-connection`);
+    const { data } = await api.delete(`/workspaces/${workspaceId}/calendar-connection`);
     return data;
   },
 };

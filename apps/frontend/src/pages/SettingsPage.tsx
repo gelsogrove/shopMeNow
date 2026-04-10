@@ -58,7 +58,7 @@ const SECTIONS: SettingsSection[] = [
   { key: "whatsapp", label: "WhatsApp Channel", description: "WhatsApp Business API settings" },
   { key: "widget", label: "Website Widget", description: "Chat widget for your website" },
   { key: "widget-support", label: "Human Support", description: "Escalation to human operators" },
-  { key: "calendar", label: "📅 Appointments & Calendar", description: "Google Calendar, reminders" },
+  { key: "calendar", label: "Appointments & Calendar", description: "Google Calendar, reminders" },
   { key: "security", label: "Security", description: "Access control and domains" },
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
 ]

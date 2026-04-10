@@ -2,7 +2,7 @@
  * SettingsDropdown - Menu a tendina per navigare tra le sezioni
  * Stile coerente con il profile dropdown
  */
-import { ChevronDown, Check, Bot, Store, Shield, Headphones, Smartphone, Monitor, CreditCard, Wrench } from "lucide-react"
+import { ChevronDown, Check, Bot, Store, Shield, Headphones, Smartphone, Monitor, CreditCard, Wrench, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -25,14 +25,15 @@ interface SettingsDropdownProps {
 
 // Icon mapping for sections
 const SECTION_ICONS: Record<string, React.ReactNode> = {
-  "ai-personality": <Bot className="h-4 w-4 text-blue-500" />,
-  "business": <Store className="h-4 w-4 text-purple-500" />,
-  "whatsapp": <Smartphone className="h-4 w-4 text-emerald-500" />,
-  "widget": <Monitor className="h-4 w-4 text-indigo-500" />,
-  "widget-support": <Headphones className="h-4 w-4 text-purple-600" />,
-  "security": <Shield className="h-4 w-4 text-red-500" />,
-  "functions": <Wrench className="h-4 w-4 text-blue-600" />,
-  "subscription": <CreditCard className="h-4 w-4 text-amber-500" />,
+  "ai-personality": <Bot className="h-5 w-5 text-blue-500" />,
+  "business": <Store className="h-5 w-5 text-purple-500" />,
+  "whatsapp": <Smartphone className="h-5 w-5 text-emerald-500" />,
+  "widget": <Monitor className="h-5 w-5 text-indigo-500" />,
+  "widget-support": <Headphones className="h-5 w-5 text-purple-600" />,
+  "calendar": <Calendar className="h-5 w-5 text-slate-600" />,
+  "security": <Shield className="h-5 w-5 text-red-500" />,
+  "functions": <Wrench className="h-5 w-5 text-blue-600" />,
+  "subscription": <CreditCard className="h-5 w-5 text-amber-500" />,
 }
 
 export function SettingsDropdown({
@@ -45,25 +46,25 @@ export function SettingsDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="justify-between text-left font-normal gap-2">
+        <Button variant="outline" className="justify-between text-left font-normal gap-2 h-10 px-3">
           {SECTION_ICONS[currentSection]}
           <span>{currentLabel}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[280px]">
+      <DropdownMenuContent align="start" className="w-[300px] p-1">
         {sections.map((section) => (
           <DropdownMenuItem
             key={section.key}
             onClick={() => onSectionChange(section.key)}
-            className="flex items-center justify-between cursor-pointer p-3"
+            className={`flex items-center justify-between cursor-pointer rounded-lg px-3 py-2.5 data-[highlighted]:bg-slate-50 data-[highlighted]:text-slate-900 ${section.key === currentSection ? "bg-slate-50" : ""}`}
           >
             <div className="flex items-center gap-3">
               {SECTION_ICONS[section.key]}
               <div className="flex flex-col">
                 <span className="font-medium">{section.label}</span>
                 {section.description && (
-                  <span className="text-xs text-gray-500">{section.description}</span>
+                  <span className="text-xs text-gray-500 leading-snug">{section.description}</span>
                 )}
               </div>
             </div>
