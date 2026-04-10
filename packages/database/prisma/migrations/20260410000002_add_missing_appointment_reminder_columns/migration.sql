@@ -10,4 +10,5 @@ ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "appointmentReminder1hMessage" 
 ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "appointmentReminder30mEnabled" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "appointmentReminder30mMessage" TEXT DEFAULT 'Hi {{customerName}}, your {{appointmentType}} appointment starts in 30 minutes at {{appointmentTime}}. We''re waiting for you!';
 ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "appointmentReminderChannel" TEXT NOT NULL DEFAULT 'whatsapp';
+ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "appointmentReminderHours" INTEGER[] DEFAULT ARRAY[24, 1];
 ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "timezone" TEXT DEFAULT 'Europe/Rome';

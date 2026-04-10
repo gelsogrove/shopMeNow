@@ -816,6 +816,7 @@ logger.info("Registered GDPR routes (/api/workspaces/:workspaceId/gdpr, /api/gdp
 // 🆕 Mount Widget routes (v2) - PUBLIC API with unified queue
 // Security: Rate limited + 5-step validation (NO auth required)
 import widgetRoutes from "../interfaces/http/routes/widget.routes"
+import simulateRoutes from "../interfaces/http/routes/simulate.routes"
 router.use("/widget", widgetRoutes)
 logger.info("🔌 Registered PUBLIC widget routes v2: /api/v1/widget (unified queue, rate limited, CORS *)")
 
@@ -867,6 +868,10 @@ logger.info("Registered analytics routes for dashboard metrics")
 // Mount debug routes
 router.use("/workspaces/:workspaceId/debug", debugRoutes)
 logger.info("Registered debug routes for testing and analysis")
+
+// Mount simulate routes (MCP scenario testing)
+router.use("/workspaces/:workspaceId/simulate", simulateRoutes)
+logger.info("Registered simulate routes for MCP scenario testing")
 
 // Mount push notification routes
 router.use("/workspaces/:workspaceId/push", pushRoutes(pushController))

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "echatbot": {
+      "command": "node",
+      "args": ["/Users/gelso/workspace/shopME/packages/mcp-server/dist/index.js"],
+      "env": {
+        "ECHATBOT_TOKEN": "PASTE_TOKEN_HERE"
+      }
+    }
+  }
+}
