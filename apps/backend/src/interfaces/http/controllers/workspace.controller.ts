@@ -895,11 +895,12 @@ export class WorkspaceController {
                 activeChatbot: false,
               },
             }),
-            // Count blocked/blacklisted customers
+            // Count blocked/blacklisted customers (exclude soft-deleted)
             prisma.customers.count({
               where: {
                 workspaceId,
                 isBlacklisted: true,
+                deletedAt: null,
               },
             }),
             // Count new customers (unregistered - name is "New Customer")
