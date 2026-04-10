@@ -109,7 +109,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // 📅 Calendar & Appointment Settings
       enableCalendarBooking: data.enableCalendarBooking ?? false,
       timezone: data.timezone ?? "Europe/Rome",
-      appointmentReminderMessage: data.appointmentReminderMessage ?? null,
+      appointmentReminder24hEnabled: data.appointmentReminder24hEnabled ?? true,
+      appointmentReminder24hMessage: data.appointmentReminder24hMessage ?? null,
+      appointmentReminder1hEnabled: data.appointmentReminder1hEnabled ?? true,
+      appointmentReminder1hMessage: data.appointmentReminder1hMessage ?? null,
+      appointmentReminder30mEnabled: data.appointmentReminder30mEnabled ?? false,
+      appointmentReminder30mMessage: data.appointmentReminder30mMessage ?? null,
       appointmentReminderHours: data.appointmentReminderHours ?? [24, 1],
       appointmentReminderChannel: data.appointmentReminderChannel ?? "whatsapp",
     })
@@ -205,7 +210,12 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       // 📅 Calendar & Appointment Settings
       enableCalendarBooking: workspace.enableCalendarBooking ?? false,
       timezone: workspace.timezone ?? "Europe/Rome",
-      appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+      appointmentReminder24hEnabled: workspace.appointmentReminder24hEnabled ?? true,
+      appointmentReminder24hMessage: workspace.appointmentReminder24hMessage ?? null,
+      appointmentReminder1hEnabled: workspace.appointmentReminder1hEnabled ?? true,
+      appointmentReminder1hMessage: workspace.appointmentReminder1hMessage ?? null,
+      appointmentReminder30mEnabled: workspace.appointmentReminder30mEnabled ?? false,
+      appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
       appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
       appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
     }

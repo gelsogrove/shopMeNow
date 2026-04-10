@@ -98,7 +98,12 @@ export interface WorkspaceProps {
   // 📅 Calendar & Appointment Settings
   enableCalendarBooking?: boolean
   timezone?: string | null
-  appointmentReminderMessage?: string | null
+  appointmentReminder24hEnabled?: boolean
+  appointmentReminder24hMessage?: string | null
+  appointmentReminder1hEnabled?: boolean
+  appointmentReminder1hMessage?: string | null
+  appointmentReminder30mEnabled?: boolean
+  appointmentReminder30mMessage?: string | null
   appointmentReminderHours?: number[]
   appointmentReminderChannel?: string
 }
@@ -459,8 +464,23 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.timezone
   }
 
-  get appointmentReminderMessage(): string | null | undefined {
-    return this.props.appointmentReminderMessage
+  get appointmentReminder24hEnabled(): boolean {
+    return this.props.appointmentReminder24hEnabled ?? true
+  }
+  get appointmentReminder24hMessage(): string | null | undefined {
+    return this.props.appointmentReminder24hMessage
+  }
+  get appointmentReminder1hEnabled(): boolean {
+    return this.props.appointmentReminder1hEnabled ?? true
+  }
+  get appointmentReminder1hMessage(): string | null | undefined {
+    return this.props.appointmentReminder1hMessage
+  }
+  get appointmentReminder30mEnabled(): boolean {
+    return this.props.appointmentReminder30mEnabled ?? false
+  }
+  get appointmentReminder30mMessage(): string | null | undefined {
+    return this.props.appointmentReminder30mMessage
   }
 
   get appointmentReminderHours(): number[] {

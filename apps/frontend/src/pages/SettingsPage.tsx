@@ -70,7 +70,7 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "whatsapp": "whatsappPhoneNumber",
   "widget": "widgetTitle",
   "widget-support": "humanSupportEnabled",
-  "calendar": "appointmentReminderMessage",
+  "calendar": "appointmentReminder24hEnabled",
   "security": "allowedDomains",
   "functions": "webhookUrl",
 }
@@ -334,12 +334,12 @@ export function SettingsPage() {
         // Calendar & Appointments
         enableCalendarBooking: currentWorkspace.enableCalendarBooking || false,
         timezone: currentWorkspace.timezone || "Europe/Rome",
-        appointmentReminder24hEnabled: (currentWorkspace.appointmentReminderHours || [24, 1]).includes(24),
-        appointmentReminder24hMessage: currentWorkspace.appointmentReminderMessage || undefined,
-        appointmentReminder1hEnabled: (currentWorkspace.appointmentReminderHours || [24, 1]).includes(1),
-        appointmentReminder1hMessage: currentWorkspace.appointmentReminderMessage || undefined,
-        appointmentReminder30mEnabled: (currentWorkspace.appointmentReminderHours || []).includes(0.5),
-        appointmentReminder30mMessage: currentWorkspace.appointmentReminderMessage || undefined,
+        appointmentReminder24hEnabled: currentWorkspace.appointmentReminder24hEnabled ?? true,
+        appointmentReminder24hMessage: currentWorkspace.appointmentReminder24hMessage || undefined,
+        appointmentReminder1hEnabled: currentWorkspace.appointmentReminder1hEnabled ?? true,
+        appointmentReminder1hMessage: currentWorkspace.appointmentReminder1hMessage || undefined,
+        appointmentReminder30mEnabled: currentWorkspace.appointmentReminder30mEnabled ?? false,
+        appointmentReminder30mMessage: currentWorkspace.appointmentReminder30mMessage || undefined,
         appointmentReminderChannel: currentWorkspace.appointmentReminderChannel || "whatsapp",
       })
     }
@@ -533,30 +533,17 @@ export function SettingsPage() {
       const updateData: any = { ...dataToSave }
       delete updateData.logoUrl
 
-      // Map appointment reminder UI fields to backend model
+      // Map appointment reminder UI fields to backend - ONLY new specific fields
       const reminderHours: number[] = []
       if (dataToSave.appointmentReminder24hEnabled) reminderHours.push(24)
       if (dataToSave.appointmentReminder1hEnabled) reminderHours.push(1)
-      if (dataToSave.appointmentReminder30mEnabled) {
-        console.warn("30m reminders are not supported by backend (INTEGER hours). Ignoring.")
-      }
-
-      const reminderMessage =
-        dataToSave.appointmentReminder24hMessage?.trim() ||
-        dataToSave.appointmentReminder1hMessage?.trim() ||
-        dataToSave.appointmentReminder30mMessage?.trim() ||
-        ""
+      if (dataToSave.appointmentReminder30mEnabled) reminderHours.push(0.5)
 
       updateData.appointmentReminderHours = reminderHours
-      updateData.appointmentReminderMessage = reminderMessage || null
-      updateData.appointmentReminderChannel = dataToSave.appointmentReminderChannel
-
-      delete updateData.appointmentReminder24hEnabled
-      delete updateData.appointmentReminder24hMessage
-      delete updateData.appointmentReminder1hEnabled
-      delete updateData.appointmentReminder1hMessage
-      delete updateData.appointmentReminder30mEnabled
-      delete updateData.appointmentReminder30mMessage
+      // Keep the individual message fields - no aggregation
+      updateData.appointmentReminder24hMessage = dataToSave.appointmentReminder24hMessage || null
+      updateData.appointmentReminder1hMessage = dataToSave.appointmentReminder1hMessage || null
+      updateData.appointmentReminder30mMessage = dataToSave.appointmentReminder30mMessage || null
       
       // 🔒 PROTECTION: Only send boolean toggles if they actually changed
       // This prevents accidental state changes when user is just updating other settings

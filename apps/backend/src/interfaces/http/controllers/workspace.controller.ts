@@ -245,7 +245,12 @@ export class WorkspaceController {
           // 📅 Calendar & Appointment Settings
           enableCalendarBooking: workspace.enableCalendarBooking ?? false,
           timezone: workspace.timezone ?? "Europe/Rome",
-          appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+          appointmentReminder24hEnabled: workspace.appointmentReminder24hEnabled ?? true,
+          appointmentReminder24hMessage: workspace.appointmentReminder24hMessage ?? null,
+          appointmentReminder1hEnabled: workspace.appointmentReminder1hEnabled ?? true,
+          appointmentReminder1hMessage: workspace.appointmentReminder1hMessage ?? null,
+          appointmentReminder30mEnabled: workspace.appointmentReminder30mEnabled ?? false,
+          appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
           appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
           appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
         }
@@ -507,7 +512,12 @@ export class WorkspaceController {
         // 📅 Calendar & Appointment Settings
         enableCalendarBooking: workspace.enableCalendarBooking ?? false,
         timezone: workspace.timezone ?? "Europe/Rome",
-        appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+        appointmentReminder24hEnabled: workspace.appointmentReminder24hEnabled ?? true,
+        appointmentReminder24hMessage: workspace.appointmentReminder24hMessage ?? null,
+        appointmentReminder1hEnabled: workspace.appointmentReminder1hEnabled ?? true,
+        appointmentReminder1hMessage: workspace.appointmentReminder1hMessage ?? null,
+        appointmentReminder30mEnabled: workspace.appointmentReminder30mEnabled ?? false,
+        appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
         appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
         appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
       }
@@ -690,7 +700,12 @@ export class WorkspaceController {
         // 📅 Calendar & Appointment Settings
         enableCalendarBooking: workspace.enableCalendarBooking ?? false,
         timezone: workspace.timezone ?? "Europe/Rome",
-        appointmentReminderMessage: workspace.appointmentReminderMessage ?? null,
+        appointmentReminder24hEnabled: workspace.appointmentReminder24hEnabled ?? true,
+        appointmentReminder24hMessage: workspace.appointmentReminder24hMessage ?? null,
+        appointmentReminder1hEnabled: workspace.appointmentReminder1hEnabled ?? true,
+        appointmentReminder1hMessage: workspace.appointmentReminder1hMessage ?? null,
+        appointmentReminder30mEnabled: workspace.appointmentReminder30mEnabled ?? false,
+        appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
         appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
         appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
       }
