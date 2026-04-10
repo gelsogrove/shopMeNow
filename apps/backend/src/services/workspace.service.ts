@@ -700,11 +700,26 @@ export const workspaceService = {
         widgetPrimaryColor: true,
         widgetIcon: true,
         widgetUseChannelLogo: true,
+        widgetAutoSuggestionsEnabled: true,
+        widgetQuickReplies: true,
         // 🆕 Translation Settings
         translateProductNames: true,
         translateCategoryNames: true,
         translateServiceNames: true,
         catalogBaseLanguage: true,
+        // 📅 Calendar & Appointment fields
+        enableCalendarBooking: true,
+        timezone: true,
+        appointmentReminder24hEnabled: true,
+        appointmentReminder24hMessage: true,
+        appointmentReminder1hEnabled: true,
+        appointmentReminder1hMessage: true,
+        appointmentReminder30mEnabled: true,
+        appointmentReminder30mMessage: true,
+        appointmentReminderChannel: true,
+        appointmentReminderHours: true,
+        minBookingBufferHours: true,
+        frustrationEscalationInstructions: true,
         whatsappSettings: {
           select: {
             phoneNumber: true,
