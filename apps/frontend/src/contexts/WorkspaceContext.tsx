@@ -42,7 +42,7 @@ export interface Workspace {
   wipMessage?: string
   afterRegistrationMessages?: any
   messageLimit?: number
-  blocklist?: string
+  blocklist?: string | string[]
   channelStatus?: boolean
   notificationEmail?: string
   webhookUrl?: string
@@ -90,9 +90,26 @@ export interface Workspace {
   channelType?: 'WHATSAPP' | 'WIDGET' | null
   // 📅 Calendar & Appointment Booking
   enableCalendarBooking?: boolean
+  timezone?: string
+  appointmentReminder24hEnabled?: boolean
+  appointmentReminder24hMessage?: string | null
+  appointmentReminder1hEnabled?: boolean
+  appointmentReminder1hMessage?: string | null
+  appointmentReminder30mEnabled?: boolean
+  appointmentReminder30mMessage?: string | null
   appointmentReminderMessage?: string | null
   appointmentReminderHours?: number[]
   appointmentReminderChannel?: string
+  minBookingBufferHours?: number
+  // WasenderAPI fields
+  wasenderSessionId?: string | null
+  wasenderApiKey?: string | null
+  wasenderSessionStatus?: string | null
+  wasenderPhoneNumber?: string | null
+  wasenderIsActive?: boolean
+  wasenderQrString?: string | null
+  wasenderQrGeneratedAt?: string | null
+  operatorEmail?: string
 }
 
 interface WorkspaceContextType {

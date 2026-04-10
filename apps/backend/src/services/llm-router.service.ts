@@ -848,9 +848,9 @@ export class LLMRouterService {
         params.conversationId
       )
 
-      // 🛑 Session Rate Limit: Prevent infinite loops or abuse (max 30 calls in history window)
+      // 🛑 Session Rate Limit: Prevent infinite loops or abuse (max 100 calls in 24h history window)
       const recentFunctionCallsCount = conversationHistoryRaw.filter(msg => msg.role === "function").length
-      if (recentFunctionCallsCount > 30) {
+      if (recentFunctionCallsCount > 100) {
         logger.warn(`🛑 Session function rate limit reached: ${params.conversationId} (${recentFunctionCallsCount} calls)`)
         const limitMessage = workspace.language === "it"
           ? "Spiacenti, hai raggiunto il limite massimo di operazioni per questa sessione. Riprova tra qualche minuto."

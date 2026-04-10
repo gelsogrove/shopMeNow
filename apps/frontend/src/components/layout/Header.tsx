@@ -278,6 +278,28 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+            {/* Services standalone - for informational workspaces with calendar booking */}
+            {workspace?.sellsProductsAndServices !== true && workspace?.enableCalendarBooking === true && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/services")}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                {t('nav.services')}
+              </Button>
+            )}
+            {/* Sales Agents standalone - for informational workspaces with sales agents */}
+            {workspace?.sellsProductsAndServices !== true && workspace?.hasSalesAgents === true && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/sales")}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                {t('nav.sales')}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"

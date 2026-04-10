@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
-import { Bot, Briefcase, Smile, Award, Coffee, ShoppingCart, Sparkles, Settings, ArrowRight } from "lucide-react"
+import { Bot, Briefcase, Smile, Award, Coffee, ShoppingCart } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Link } from "react-router-dom"
 import Editor from "@monaco-editor/react"
 
 interface AIPersonalitySectionProps {
@@ -208,16 +207,20 @@ export function AIPersonalitySection({
             </div>
           </div>
 
-          {/* Custom AI Rules */}
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("agentSystemPrompt")}>
-            <Label htmlFor="customAiRules">Custom AI Rules</Label>
+          {/* Maintenance Message */}
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("maintenanceMessage")}
+            data-focus-key="maintenanceMessage"
+          >
+            <Label htmlFor="wipMessage">Maintenance Message</Label>
             <div className="border rounded-md overflow-hidden">
               <Editor
                 height="200px"
                 defaultLanguage="markdown"
                 theme="vs-light"
-                value={formData.customAiRules}
-                onChange={(value) => onFieldChange("customAiRules", value || "")}
+                value={formData.wipMessage}
+                onChange={(value) => onFieldChange("wipMessage", value || "")}
                 options={{
                   minimap: { enabled: false },
                   fontSize: 13,
@@ -235,42 +238,16 @@ export function AIPersonalitySection({
             </div>
           </div>
 
-          {/* Advanced Agent Configuration Link */}
-          <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Sparkles className="h-5 w-5 text-purple-600" />
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">Advanced Agent Configuration</h4>
-                  <p className="text-xs text-gray-600">
-                    Configure individual agent prompts, temperatures, and view the multi-agent flow
-                  </p>
-                </div>
-              </div>
-              <Link to="/agents">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  {formData.sellsProductsAndServices ? "Configure Agents" : "Configure Info Agent"}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Maintenance Message */}
-          <div
-            className="space-y-2"
-            onFocus={() => onFieldFocus?.("maintenanceMessage")}
-            data-focus-key="maintenanceMessage"
-          >
-            <Label htmlFor="wipMessage">Maintenance Message</Label>
+          {/* Override Rules (formerly Custom AI Rules) */}
+          <div className="space-y-2" onFocus={() => onFieldFocus?.("agentSystemPrompt")}>
+            <Label htmlFor="customAiRules">Override Rules</Label>
             <div className="border rounded-md overflow-hidden">
               <Editor
                 height="200px"
                 defaultLanguage="markdown"
                 theme="vs-light"
-                value={formData.wipMessage}
-                onChange={(value) => onFieldChange("wipMessage", value || "")}
+                value={formData.customAiRules}
+                onChange={(value) => onFieldChange("customAiRules", value || "")}
                 options={{
                   minimap: { enabled: false },
                   fontSize: 13,

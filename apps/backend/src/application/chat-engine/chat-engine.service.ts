@@ -1002,7 +1002,9 @@ export class ChatEngineService {
     const reminder = REMINDER_BY_LANG[lang] ?? REMINDER_BY_LANG["en"]
 
     // 🐛 FIX: Check if reminder already present (prevents double-append on race conditions)
-    if (message.includes("[LINK_REGISTRATION]") || message.includes("registrati") || message.includes("register")) {
+    // Only check for the specific placeholder — generic words like "registrati"/"register"
+    // cause false positives when LLM naturally mentions registration in responses
+    if (message.includes("[LINK_REGISTRATION]")) {
       return message
     }
 

@@ -307,7 +307,7 @@ export const HELP_CONTENT: Record<string, HelpPanelProps> = {
   // AI CONFIG SECTION
   // ============================================
   agentSystemPrompt: {
-    title: "Custom AI Rules",
+    title: "Override Rules",
     description:
       "Advanced instructions that define how your AI should behave. These rules " +
       "override default behavior and let you customize responses for your specific needs.",

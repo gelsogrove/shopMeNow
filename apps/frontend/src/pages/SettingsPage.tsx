@@ -649,17 +649,17 @@ export function SettingsPage() {
         }
       }
 
-      const updatedWorkspace = await updateWorkspace(currentWorkspace!.id, updateData)
+      await updateWorkspace(currentWorkspace!.id, updateData)
+
+      // Fetch fresh workspace data from server to ensure all fields are in sync
+      const freshWorkspace = await getWorkspaceById(currentWorkspace!.id)
 
       // Reset dirty flags BEFORE updating workspace
       // This allows the useEffect to properly sync formData with new workspace values
       setIsDirty(false)
       isDirtyRef.current = false
 
-      setCurrentWorkspace({
-        ...currentWorkspace!,
-        ...updatedWorkspace,
-      })
+      setCurrentWorkspace(freshWorkspace)
 
       if (!options?.suppressToast) {
         toast.success("Settings saved successfully")

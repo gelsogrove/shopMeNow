@@ -78,7 +78,39 @@ export interface Workspace {
   widgetUseChannelLogo?: boolean
   widgetLogoUrl?: string
   widgetLogoKey?: string
+  widgetAutoSuggestionsEnabled?: boolean
+  widgetQuickReplies?: string[]
   channelType?: 'WHATSAPP' | 'WIDGET' | null
+  // 📅 Calendar & Appointment Settings
+  enableCalendarBooking?: boolean
+  timezone?: string
+  appointmentReminder24hEnabled?: boolean
+  appointmentReminder24hMessage?: string | null
+  appointmentReminder1hEnabled?: boolean
+  appointmentReminder1hMessage?: string | null
+  appointmentReminder30mEnabled?: boolean
+  appointmentReminder30mMessage?: string | null
+  appointmentReminderHours?: number[]
+  appointmentReminderChannel?: string
+  minBookingBufferHours?: number
+  // WasenderAPI fields
+  wasenderSessionId?: string | null
+  wasenderApiKey?: string | null
+  wasenderSessionStatus?: string | null
+  wasenderPhoneNumber?: string | null
+  wasenderIsActive?: boolean
+  wasenderQrString?: string | null
+  wasenderQrGeneratedAt?: string | null
+  // Other
+  websiteUrl?: string | null
+  operatorEmail?: string
+  notificationEmail?: string
+  language?: string
+  messageLimit?: number
+  blocklist?: string[]
+  webhookUrl?: string
+  webhookTimeout?: number
+  afterRegistrationMessages?: string
 }
 
 export interface ChecklistAction {

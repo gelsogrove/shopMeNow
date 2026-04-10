@@ -139,6 +139,18 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         },
       ],
     }] : []),
+    // Services standalone - for informational workspaces with calendar booking
+    ...(workspace?.sellsProductsAndServices !== true && workspace?.enableCalendarBooking === true ? [{
+      href: "/services",
+      label: t('nav.services'),
+      icon: Wrench,
+    }] : []),
+    // Sales Agents standalone - for informational workspaces with sales agents
+    ...(workspace?.sellsProductsAndServices !== true && workspace?.hasSalesAgents === true ? [{
+      href: "/sales",
+      label: t('nav.sales'),
+      icon: UserCircle,
+    }] : []),
     // Appointments menu - only if enableCalendarBooking is true
     ...(workspace?.enableCalendarBooking === true ? [{
       label: 'Appointments',

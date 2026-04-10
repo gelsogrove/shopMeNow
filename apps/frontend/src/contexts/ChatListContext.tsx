@@ -67,7 +67,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
         }
 
         // Make API request with explicit header
-        const response = await api.get("/chat/recent", {
+        const response = await api.get("/chat/recent?limit=200", {
           headers: {
             "x-workspace-id": workspaceId,
           },

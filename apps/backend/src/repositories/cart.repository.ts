@@ -93,42 +93,67 @@ export class CartRepository {
         }
       })
 
-      // If no cart exists, create one
+      // If no cart exists, create one (with retry on unique constraint violation)
       if (!cart) {
-        cart = await this.prisma.carts.create({
-          data: {
-            workspaceId,
-            customerId,
-            items: {
-              create: []
-            }
-          },
-          include: {
-            items: {
-              include: {
-                product: {
-                  select: {
-                    id: true,
-                    name: true,
-                    price: true,
-                    stock: true,
-                    isActive: true
-                  }
-                },
-                service: {
-                  select: {
-                    id: true,
-                    name: true,
-                    price: true,
-                    isActive: true
+        try {
+          cart = await this.prisma.carts.create({
+            data: {
+              workspaceId,
+              customerId,
+              items: {
+                create: []
+              }
+            },
+            include: {
+              items: {
+                include: {
+                  product: {
+                    select: {
+                      id: true,
+                      name: true,
+                      price: true,
+                      stock: true,
+                      isActive: true
+                    }
+                  },
+                  service: {
+                    select: {
+                      id: true,
+                      name: true,
+                      price: true,
+                      isActive: true
+                    }
                   }
                 }
               }
             }
-          }
-        })
+          })
 
-        logger.info('Created new cart:', { workspaceId, customerId, cartId: cart.id })
+          logger.info('Created new cart:', { workspaceId, customerId, cartId: cart.id })
+        } catch (createError: any) {
+          // P2002 = Unique constraint violation (race condition: another request created the cart)
+          if (createError.code === 'P2002') {
+            logger.warn('Cart creation race condition, fetching existing cart:', { customerId })
+            cart = await this.prisma.carts.findUnique({
+              where: { customerId },
+              include: {
+                items: {
+                  include: {
+                    product: {
+                      select: { id: true, name: true, price: true, stock: true, isActive: true }
+                    },
+                    service: {
+                      select: { id: true, name: true, price: true, isActive: true }
+                    }
+                  }
+                }
+              }
+            })
+            if (!cart) throw createError
+          } else {
+            throw createError
+          }
+        }
       }
 
       return cart as CartWithItems
