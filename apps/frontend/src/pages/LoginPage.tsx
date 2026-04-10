@@ -2221,8 +2221,8 @@ export function LoginPage() {
                   <div className="relative">
                     <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300 bg-gradient-to-br from-purple-50 to-violet-50 flex items-center justify-center">
                       <img
-                        src="/appointment.png"
-                        alt="Appointment Booking"
+                        src="/booking.png"
+                        alt="Appointment booking"
                         className="w-full h-full object-cover"
                       />
                     </div>

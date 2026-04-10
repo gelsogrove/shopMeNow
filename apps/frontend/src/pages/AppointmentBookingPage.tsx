@@ -217,8 +217,8 @@ export function AppointmentBookingPage() {
               <div className="relative order-2 lg:order-1">
                 <div className="absolute -inset-4 bg-gradient-to-br from-purple-100 to-violet-100 rounded-3xl blur-xl opacity-40" />
                 <img
-                  src="/appointment.png"
-                  alt="AI Appointment Booking on WhatsApp"
+                  src="/booking.png"
+                  alt="AI appointment booking on WhatsApp"
                   className="relative w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/60 object-cover"
                 />
               </div>
@@ -307,7 +307,7 @@ export function AppointmentBookingPage() {
                   {/* Dashboard image */}
                   <div className="relative order-2 lg:order-1">
                     <div className="absolute -inset-4 bg-gradient-to-br from-purple-100 to-violet-100 rounded-2xl blur-xl opacity-40" />
-                    <img src="/appointment.png" alt="Appointments Dashboard" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
+                    <img src="/booking.png" alt="Appointments dashboard" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
                   </div>
                   <div className="space-y-6 order-1 lg:order-2">
                     <h2 className="text-3xl lg:text-4xl font-bold text-slate-900">{t.featuresTitle}</h2>

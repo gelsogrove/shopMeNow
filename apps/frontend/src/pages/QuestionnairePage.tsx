@@ -604,7 +604,7 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       titleKey: "goal_title",
       questionKey: "goal_q",
       type: "multi",
-      image: "/survey-agent.png",
+      image: "/booking.png",
       options: [
         { value: "support", label: T.goal_opt1, emoji: "💬" },
         { value: "leads", label: T.goal_opt2, emoji: "🎯" },
