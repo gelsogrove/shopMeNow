@@ -400,6 +400,11 @@ export class FunctionExecutor {
             result = await this.rescheduleAppointmentFn(args, context)
             break
 
+          // Language management
+          case "changeLanguage":
+            result = await this.changeLanguageFn(args, context)
+            break
+
           default:
             if (executionType === "DELEGATE_TO_AGENT") {
               throw new Error(`Sub-agent handler for "${functionName}" not implemented`)
@@ -1206,6 +1211,25 @@ export class FunctionExecutor {
       appointmentId: args.appointmentId,
       newStartTime: args.newStartTime,
       reason: args.reason,
+    })
+  }
+
+  // ============================================
+  // LANGUAGE MANAGEMENT FUNCTIONS
+  // ============================================
+
+  private async changeLanguageFn(
+    args: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<any> {
+    logger.info("🌍 changeLanguage via FunctionExecutor", { args, context })
+    const { CallingFunctionsService } = require("./calling-functions.service")
+    const callingFunctions = new CallingFunctionsService()
+
+    return await callingFunctions.changeLanguageFn({
+      workspaceId: context.workspaceId,
+      customerId: context.customerId,
+      language: args.language,
     })
   }
 }

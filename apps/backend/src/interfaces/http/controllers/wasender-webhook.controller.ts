@@ -289,7 +289,8 @@ export class WasenderWebhookController {
             data: {
               wasenderSessionStatus: 'disconnected',
               wasenderIsActive: false,
-              channelStatus: false, // Disable message queue
+              // 🚀 NEW LOGIC: Channel stays ACTIVE because Widget still works!
+              // Only WhatsApp provider is disabled, not the channel itself.
             },
           })
           logger.warn('[WASENDER-Webhook] ⚠️ Session disconnected:', { workspaceId })
@@ -297,7 +298,7 @@ export class WasenderWebhookController {
           try {
             websocketService.notifyChatUpdated(workspaceId, { type: 'wasender:disconnected' })
             websocketService.notifyChannelStatusChanged(workspaceId, {
-              channelStatus: false,
+              channelStatus: true, // Channel stays active for Widget
               source: "wasender",
               reason: "disconnected",
             })
@@ -310,13 +311,13 @@ export class WasenderWebhookController {
             data: {
               wasenderSessionStatus: 'need_scan',
               wasenderIsActive: false,
-              channelStatus: false,
+              // 🚀 NEW LOGIC: Channel stays ACTIVE because Widget still works!
             },
           })
           logger.info('[WASENDER-Webhook] 📱 Session needs QR scan:', { workspaceId })
           try {
             websocketService.notifyChannelStatusChanged(workspaceId, {
-              channelStatus: false,
+              channelStatus: true, // Channel stays active for Widget
               source: "wasender",
               reason: "need_scan",
             })

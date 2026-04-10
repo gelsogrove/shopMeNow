@@ -137,9 +137,6 @@ export function WhatsAppChannelSection({
               <Smartphone className="h-12 w-12 mx-auto mb-3 text-gray-300" />
               <p className="font-medium">WhatsApp Channel is disabled</p>
               <p className="text-sm">Enable the toggle above to configure WhatsApp settings</p>
-              <p className="text-xs text-amber-600 mt-3">
-                If WhatsApp is not connected or verified, the status can automatically return to Inactive.
-              </p>
             </div>
           ) : (
             <>

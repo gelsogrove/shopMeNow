@@ -790,13 +790,11 @@ router.use("/settings", createSettingsRouter())
 router.use("/languages", createLanguagesRouter())
 
 // Mount appointment booking routes (Feature: Calendar Booking System)
+// NOTE: appointmentRouter uses full paths (e.g. /workspaces/:workspaceId/calendar-connection)
+// so we mount at root to avoid Express stripping the prefix before the sub-routes match.
 const appointmentRouter = createAppointmentRoutes(prisma)
-router.use("/workspaces/:workspaceId/appointment-types", appointmentRouter)
-router.use("/workspaces/:workspaceId/business-hours", appointmentRouter)
-router.use("/workspaces/:workspaceId/blackout-periods", appointmentRouter)
-router.use("/workspaces/:workspaceId/appointments", appointmentRouter)
-router.use("/workspaces/:workspaceId/calendar-connection", appointmentRouter)
-logger.info("✅ Registered appointment booking routes: appointment-types, business-hours, blackout-periods, calendar-connection")
+router.use(appointmentRouter)
+logger.info("✅ Registered appointment booking routes: appointment-types, business-hours, blackout-periods, appointments, calendar-connection")
 
 // Google Calendar OAuth callback (public — workspaceId encoded in state param)
 import { AppointmentController as _AppointmentController } from "../interfaces/http/controllers/appointment.controller"

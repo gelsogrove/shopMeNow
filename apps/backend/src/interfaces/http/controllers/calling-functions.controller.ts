@@ -18,13 +18,39 @@ export class CallingFunctionsController {
     }
 
     /**
-     * List all functions for a workspace
+     * List all functions for a workspace.
+     * Also ensures always-available system functions (changeLanguage, etc.) exist — lazy migration pattern.
      */
     async getFunctions(req: Request, res: Response) {
         try {
             const workspaceId = (req as any).workspaceId
             if (!workspaceId) {
                 return res.status(400).json({ error: "Workspace ID required" })
+            }
+
+            // Lazy migration: ensure changeLanguage exists for all workspaces (added 2026)
+            try {
+                await this.prisma.workspaceCallingFunction.upsert({
+                    where: { workspaceId_functionName: { workspaceId, functionName: "changeLanguage" } },
+                    update: {},
+                    create: {
+                        workspaceId,
+                        functionName: "changeLanguage",
+                        description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                language: { type: "string", enum: ["it", "en", "es", "pt"], description: "ISO 639-1 language code" }
+                            },
+                            required: ["language"]
+                        },
+                        isSystemFunction: true,
+                        executionType: "INTERNAL",
+                        isActive: true
+                    }
+                })
+            } catch (syncError) {
+                logger.warn("⚠️ Failed to ensure changeLanguage for workspace (non-fatal):", syncError)
             }
 
             const functions = await this.repository.findAllByWorkspace(workspaceId)

@@ -303,6 +303,47 @@ For privacy inquiries, please contact our support team.`
   private async syncSystemCallingFunctions(workspaceId: string, isEcommerce: boolean): Promise<void> {
     const ECOMMERCE_ONLY_FUNCTIONS = ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent']
 
+    // Always-available functions that must exist for EVERY workspace (ecommerce and info)
+    const ALWAYS_AVAILABLE_FUNCTIONS: Record<string, { description: string; parameters: object; executionType: string }> = {
+      changeLanguage: {
+        description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
+        parameters: {
+          type: "object",
+          properties: {
+            language: {
+              type: "string",
+              enum: ["it", "en", "es", "pt"],
+              description: "ISO 639-1 language code"
+            }
+          },
+          required: ["language"]
+        },
+        executionType: "INTERNAL"
+      }
+    }
+
+    // Ensure always-available system functions exist for this workspace
+    for (const [functionName, def] of Object.entries(ALWAYS_AVAILABLE_FUNCTIONS)) {
+      try {
+        await this.prisma.workspaceCallingFunction.upsert({
+          where: { workspaceId_functionName: { workspaceId, functionName } },
+          update: { isActive: true },
+          create: {
+            workspaceId,
+            functionName,
+            description: def.description,
+            parameters: def.parameters,
+            isSystemFunction: true,
+            executionType: def.executionType,
+            isActive: true
+          }
+        })
+        logger.info(`✅ Ensured always-available system function ${functionName} for workspace ${workspaceId}`)
+      } catch (error) {
+        logger.warn(`⚠️ Failed to ensure always-available function ${functionName}:`, error)
+      }
+    }
+
     if (isEcommerce) {
       // Enable or create the ecommerce-only system functions
       const definitions: Record<string, { description: string; parameters: object }> = {

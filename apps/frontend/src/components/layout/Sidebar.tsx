@@ -63,13 +63,20 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
     setIsImpersonating(impersonating)
   }, [])
   
-  // Controlla se siamo in una pagina che fa parte del sottomenu E-commerce
+  // Controlla se siamo in una pagina che fa parte del sottomenu E-commerce o Appointments
   useEffect(() => {
     const ecommercePages = ["/products", "/services", "/offers", "/sales", "/admin/orders"]
+    const appointmentPages = ["/appointments", "/appointment-types", "/business-hours", "/blackout-periods"]
     if (ecommercePages.some((page) => location.pathname.startsWith(page))) {
       setExpandedItems((prev) => ({
         ...prev,
         ecommerce: true,
+      }))
+    }
+    if (appointmentPages.some((page) => location.pathname.startsWith(page))) {
+      setExpandedItems((prev) => ({
+        ...prev,
+        appointments: true,
       }))
     }
   }, [location.pathname])
@@ -132,8 +139,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         },
       ],
     }] : []),
-    // Appointments menu - available for all workspaces
-    {
+    // Appointments menu - only if enableCalendarBooking is true
+    ...(workspace?.enableCalendarBooking === true ? [{
       label: 'Appointments',
       icon: Calendar,
       key: "appointments",
@@ -159,7 +166,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
           icon: Calendar,
         },
       ],
-    },
+    }] : []),
     {
       href: "/campaigns",
       label: t('nav.campaigns'),
