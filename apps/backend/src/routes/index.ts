@@ -647,6 +647,16 @@ logger.info(
 router.use(contactRoutes())
 logger.info("✅ Registered contact route: /api/contact (public)")
 
+// 🔓 Google Calendar OAuth callback (public — workspaceId encoded in state param)
+// IMPORTANT: Must be mounted BEFORE customersRouter which adds authMiddleware to ALL routes
+import { AppointmentController as _AppointmentController } from "../interfaces/http/controllers/appointment.controller"
+const _calendarCallbackController = new _AppointmentController(prisma)
+router.get(
+  "/auth/google/calendar/callback",
+  (req, res) => _calendarCallbackController.handleGoogleCalendarCallback(req, res)
+)
+logger.info("✅ Registered Google Calendar OAuth callback (public): /api/auth/google/calendar/callback")
+
 // 🔓 PUBLIC QUESTIONNAIRE ROUTE (NO AUTH REQUIRED)
 router.use(questionnairePublicRouter)
 logger.info("✅ Registered public questionnaire route: POST /api/questionnaire")
@@ -797,14 +807,7 @@ const appointmentRouter = createAppointmentRoutes(prisma)
 router.use(appointmentRouter)
 logger.info("✅ Registered appointment booking routes: appointment-types, business-hours, blackout-periods, appointments, calendar-connection")
 
-// Google Calendar OAuth callback (public — workspaceId encoded in state param)
-import { AppointmentController as _AppointmentController } from "../interfaces/http/controllers/appointment.controller"
-const _calendarCallbackController = new _AppointmentController(prisma)
-router.get(
-  "/auth/google/calendar/callback",
-  (req, res) => _calendarCallbackController.handleGoogleCalendarCallback(req, res)
-)
-logger.info("✅ Registered Google Calendar OAuth callback: /api/auth/google/calendar/callback")
+// NOTE: Google Calendar OAuth callback is registered earlier (before customersRouter) to avoid authMiddleware blocking it
 
 // Mount GDPR routes (with workspace context and without)
 router.use("/workspaces/:workspaceId/gdpr", gdprRoutes)
