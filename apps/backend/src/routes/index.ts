@@ -432,6 +432,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/operator-dashboard", // 📊 PUBLIC operator dashboard routes (token-authenticated)
   "/questionnaire", // 📋 PUBLIC onboarding questionnaire (no auth)
   "/legal-documents", // 📜 PUBLIC legal pages (terms, privacy, refund, GDPR)
+  "/auth/google/calendar/callback", // 📅 PUBLIC Google Calendar OAuth callback (workspaceId in state param)
 ]
 
 router.use((req: Request, res: Response, next: NextFunction) => {
