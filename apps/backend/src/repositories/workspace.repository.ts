@@ -117,6 +117,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       appointmentReminder30mMessage: data.appointmentReminder30mMessage ?? null,
       appointmentReminderHours: data.appointmentReminderHours ?? [24, 1],
       appointmentReminderChannel: data.appointmentReminderChannel ?? "whatsapp",
+      minBookingBufferHours: data.minBookingBufferHours ?? 12,
     })
   }
 
@@ -218,6 +219,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
       appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
       appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
+      minBookingBufferHours: workspace.minBookingBufferHours ?? 12,
     }
   }
 

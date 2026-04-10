@@ -106,6 +106,7 @@ export interface WorkspaceProps {
   appointmentReminder30mMessage?: string | null
   appointmentReminderHours?: number[]
   appointmentReminderChannel?: string
+  minBookingBufferHours?: number | null
 }
 
 export class Workspace extends Entity<WorkspaceProps> {
@@ -489,6 +490,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get appointmentReminderChannel(): string {
     return this.props.appointmentReminderChannel ?? "whatsapp"
+  }
+
+  get minBookingBufferHours(): number {
+    return this.props.minBookingBufferHours ?? 12
   }
 
   // Business methods
