@@ -184,6 +184,7 @@ model Workspace {
   appointmentReminder30mMessage String?  @db.Text @default("Hi {{customerName}}, your {{appointmentType}} appointment starts in 30 minutes at {{appointmentTime}}. We're waiting for you!")
   
   appointmentReminderChannel    String   @default("whatsapp") // "whatsapp" | "email" | "both"
+  appointmentReminderHours      Int[]    @default([24, 1]) // Hours when reminders are sent (e.g., [24, 1, 0.5] for 24h, 1h, and 30min before)
 
   @@index([ownerId])
   @@index([planType])
