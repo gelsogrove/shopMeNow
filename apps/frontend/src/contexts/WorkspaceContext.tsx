@@ -88,7 +88,8 @@ export interface Workspace {
   registrationPage?: string
   requireManualApproval?: boolean
   channelType?: 'WHATSAPP' | 'WIDGET' | null
-  // 📅 Calendar reminders (backend model)
+  // 📅 Calendar & Appointment Booking
+  enableCalendarBooking?: boolean
   appointmentReminderMessage?: string | null
   appointmentReminderHours?: number[]
   appointmentReminderChannel?: string

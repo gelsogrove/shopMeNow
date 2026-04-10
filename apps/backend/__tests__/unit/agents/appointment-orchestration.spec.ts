@@ -20,6 +20,7 @@ import {
   ORDER_TRACKING_FUNCTIONS,
   CUSTOMER_SUPPORT_FUNCTIONS,
   PROFILE_MANAGEMENT_FUNCTIONS,
+  LANGUAGE_FUNCTIONS,
   getAgentFunctions,
   getAgentFunctionNames,
   getAgentFunctionsForWorkspace,
@@ -341,48 +342,49 @@ describe("Appointment Booking - LLM Orchestration", () => {
   // ============================================
   describe("Function count consistency across system", () => {
     // RULE: Base CUSTOMER_SUPPORT should have only support functions (no appointments)
-    it("CUSTOMER_SUPPORT base should have only support functions", () => {
+    it("CUSTOMER_SUPPORT base should have only support + language functions", () => {
       const csNames = getAgentFunctionNames("CUSTOMER_SUPPORT")!
-      // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) — no hardcoded appointments
-      expect(csNames.length).toBe(CUSTOMER_SUPPORT_FUNCTIONS.length)
-      expect(csNames.length).toBe(1)
+      // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) + LANGUAGE_FUNCTIONS (1: changeLanguage)
+      expect(csNames.length).toBe(CUSTOMER_SUPPORT_FUNCTIONS.length + LANGUAGE_FUNCTIONS.length)
+      expect(csNames.length).toBe(2)
     })
 
     // RULE: Workspace-filtered CUSTOMER_SUPPORT total should be support + appointment functions
     // WHY: When enableCalendarBooking=true, appointments are added dynamically
-    it("CUSTOMER_SUPPORT with calendar enabled should be support + appointment functions", () => {
+    it("CUSTOMER_SUPPORT with calendar enabled should be support + language + appointment functions", () => {
       const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true } as any
       const functions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)!
       const names = functions.map((fn) => fn.function.name)
-      // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) + APPOINTMENT_FUNCTIONS (4)
+      // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) + LANGUAGE_FUNCTIONS (1: changeLanguage) + APPOINTMENT_FUNCTIONS (5)
       expect(names.length).toBe(
-        CUSTOMER_SUPPORT_FUNCTIONS.length + APPOINTMENT_FUNCTIONS.length
+        CUSTOMER_SUPPORT_FUNCTIONS.length + LANGUAGE_FUNCTIONS.length + APPOINTMENT_FUNCTIONS.length
       )
-      expect(names.length).toBe(6)
+      expect(names.length).toBe(7)
     })
 
     // RULE: Base INFO_AGENT should have support + profile (no appointments)
-    it("INFO_AGENT base should have support + profile functions only", () => {
+    it("INFO_AGENT base should have support + profile + language functions only", () => {
       const infoNames = getAgentFunctionNames("INFO_AGENT")!
-      // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) — no hardcoded appointments
+      // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) + LANGUAGE (1) — no hardcoded appointments
       expect(infoNames.length).toBe(
-        CUSTOMER_SUPPORT_FUNCTIONS.length + PROFILE_MANAGEMENT_FUNCTIONS.length
+        CUSTOMER_SUPPORT_FUNCTIONS.length + PROFILE_MANAGEMENT_FUNCTIONS.length + LANGUAGE_FUNCTIONS.length
       )
-      expect(infoNames.length).toBe(3)
+      expect(infoNames.length).toBe(4)
     })
 
     // RULE: Workspace-filtered INFO_AGENT total should be support + profile + appointment functions
-    it("INFO_AGENT with calendar enabled should be support + profile + appointment functions", () => {
+    it("INFO_AGENT with calendar enabled should be support + profile + language + appointment functions", () => {
       const workspace = { enableCalendarBooking: true, sellsProductsAndServices: false } as any
       const functions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)!
       const names = functions.map((fn) => fn.function.name)
-      // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) + APPOINTMENT (4)
+      // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) + LANGUAGE (1) + APPOINTMENT (5)
       expect(names.length).toBe(
         CUSTOMER_SUPPORT_FUNCTIONS.length +
         PROFILE_MANAGEMENT_FUNCTIONS.length +
+        LANGUAGE_FUNCTIONS.length +
         APPOINTMENT_FUNCTIONS.length
       )
-      expect(names.length).toBe(8)
+      expect(names.length).toBe(9)
     })
   })
 })

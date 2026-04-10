@@ -1889,4 +1889,31 @@ export class CallingFunctionsService {
       }
     }
   }
+
+  // ============================================
+  // LANGUAGE MANAGEMENT
+  // ============================================
+
+  public async changeLanguageFn(request: {
+    workspaceId: string
+    customerId: string
+    language: string
+  }) {
+    try {
+      logger.info("🌍 Calling changeLanguage with:", request)
+      const {
+        changeLanguage,
+      } = require("../domain/calling-functions/changeLanguage")
+
+      return await changeLanguage(request)
+    } catch (error) {
+      logger.error("❌ Error in changeLanguage:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to change language.",
+        timestamp: new Date().toISOString(),
+      }
+    }
+  }
 }

@@ -16,6 +16,7 @@ import {
   CUSTOMER_SUPPORT_FUNCTIONS,
   SUMMARY_AGENT_FUNCTIONS,
   PROFILE_MANAGEMENT_FUNCTIONS,
+  LANGUAGE_FUNCTIONS,
   APPOINTMENT_FUNCTIONS,
   getAgentFunctions,
   getAgentFunctionsForWorkspace,
@@ -216,8 +217,8 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       expect(getAgentFunctions("CART_MANAGEMENT")).toEqual(CART_MANAGEMENT_FUNCTIONS)
       expect(getAgentFunctions("ORDER_TRACKING")).toEqual(ORDER_TRACKING_FUNCTIONS)
       
-      // CUSTOMER_SUPPORT now returns base functions only (no appointments hardcoded)
-      expect(getAgentFunctions("CUSTOMER_SUPPORT")).toEqual(CUSTOMER_SUPPORT_FUNCTIONS)
+      // CUSTOMER_SUPPORT now returns base support + language functions (no appointments hardcoded)
+      expect(getAgentFunctions("CUSTOMER_SUPPORT")).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...LANGUAGE_FUNCTIONS])
       
       expect(getAgentFunctions("SUMMARY_AGENT")).toEqual(SUMMARY_AGENT_FUNCTIONS)
       expect(getAgentFunctions("PROFILE_MANAGEMENT")).toEqual(PROFILE_MANAGEMENT_FUNCTIONS)
@@ -244,13 +245,14 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
       const infoAgentFunctions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)
 
-      // CUSTOMER_SUPPORT should include appointment functions
-      expect(customerSupportFunctions).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
+      // CUSTOMER_SUPPORT should include language + appointment functions
+      expect(customerSupportFunctions).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...LANGUAGE_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
       
-      // INFO_AGENT should also include appointment functions
+      // INFO_AGENT should also include language + appointment functions
       expect(infoAgentFunctions).toEqual([
         ...CUSTOMER_SUPPORT_FUNCTIONS,
         ...PROFILE_MANAGEMENT_FUNCTIONS,
+        ...LANGUAGE_FUNCTIONS,
         ...APPOINTMENT_FUNCTIONS
       ])
     })
@@ -261,13 +263,14 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
       const infoAgentFunctions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)
 
-      // CUSTOMER_SUPPORT should NOT include appointment functions
-      expect(customerSupportFunctions).toEqual(CUSTOMER_SUPPORT_FUNCTIONS)
+      // CUSTOMER_SUPPORT should NOT include appointment functions (but still has language)
+      expect(customerSupportFunctions).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...LANGUAGE_FUNCTIONS])
       
-      // INFO_AGENT should NOT include appointment functions
+      // INFO_AGENT should NOT include appointment functions (but still has language)
       expect(infoAgentFunctions).toEqual([
         ...CUSTOMER_SUPPORT_FUNCTIONS,
-        ...PROFILE_MANAGEMENT_FUNCTIONS
+        ...PROFILE_MANAGEMENT_FUNCTIONS,
+        ...LANGUAGE_FUNCTIONS
       ])
     })
 
@@ -301,8 +304,8 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       expect(routerNames).toContain("cartManagementAgent")
       expect(routerNames).toContain("orderTrackingAgent")
 
-      // CUSTOMER_SUPPORT should have appointments
-      expect(customerSupportFunctions).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
+      // CUSTOMER_SUPPORT should have language + appointments
+      expect(customerSupportFunctions).toEqual([...CUSTOMER_SUPPORT_FUNCTIONS, ...LANGUAGE_FUNCTIONS, ...APPOINTMENT_FUNCTIONS])
     })
 
     it("should return null for unknown agent type", () => {
@@ -360,6 +363,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
         CUSTOMER_SUPPORT_FUNCTIONS.length +
         SUMMARY_AGENT_FUNCTIONS.length +
         PROFILE_MANAGEMENT_FUNCTIONS.length +
+        LANGUAGE_FUNCTIONS.length +
         APPOINTMENT_FUNCTIONS.length
 
       expect(allFunctions.length).toBe(expectedCount)
@@ -396,9 +400,9 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       const allNames = allFunctions.map((fn) => fn.function.name)
       const uniqueNames = [...new Set(allNames)]
 
-      // We expect 23 unique names out of 24 total (contactOperator appears twice)
-      expect(uniqueNames.length).toBe(23)
-      expect(allNames.length).toBe(24)
+      // We expect 24 unique names out of 25 total (contactOperator appears twice)
+      expect(uniqueNames.length).toBe(24)
+      expect(allNames.length).toBe(25)
 
       // Verify contactOperator is the only duplicate
       const nameCounts: Record<string, number> = {}

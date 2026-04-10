@@ -1568,6 +1568,15 @@ export class LLMService {
             customerId: customer.id,
           })
 
+        // 🌍 LANGUAGE MANAGEMENT
+        case "changeLanguage":
+          logger.info("🌍 changeLanguage called:", args)
+          return await this.callingFunctionsService.changeLanguageFn({
+            workspaceId: workspace.id,
+            customerId: customer.id,
+            language: args.language,
+          })
+
         default:
           logger.error(`❌ Unknown function: ${functionName}`)
           return { error: "Funzione non riconosciuta" }

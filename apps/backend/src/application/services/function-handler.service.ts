@@ -375,7 +375,14 @@ export class FunctionHandlerService {
             functionName,
           }
 
-        // 🎯 DEFAULT CASE
+        // � LANGUAGE MANAGEMENT
+        case "changeLanguage":
+          return {
+            data: await this.handleChangeLanguage(params, customer, workspaceId),
+            functionName,
+          }
+
+        // �🎯 DEFAULT CASE
         default:
           logger.warn(`⚠️ Funzione non riconosciuta: ${functionName}`)
           return {
@@ -399,6 +406,7 @@ export class FunctionHandlerService {
                 "cancelAppointment",
                 "rescheduleAppointment",
                 "getCustomerAppointments",
+                "changeLanguage",
               ],
             },
             functionName,
@@ -1205,6 +1213,35 @@ export class FunctionHandlerService {
         success: false,
         error: error.message || "Error rescheduling appointment",
         message: "Failed to reschedule appointment.",
+      }
+    }
+  }
+
+  // ============================================
+  // LANGUAGE MANAGEMENT
+  // ============================================
+
+  private async handleChangeLanguage(
+    params: Record<string, any>,
+    customer: any,
+    workspaceId: string
+  ) {
+    try {
+      const {
+        changeLanguage,
+      } = require("../../domain/calling-functions/changeLanguage")
+
+      return await changeLanguage({
+        workspaceId,
+        customerId: customer.id,
+        language: params.language,
+      })
+    } catch (error) {
+      logger.error("❌ Error in handleChangeLanguage:", error)
+      return {
+        success: false,
+        error: error.message || "Error changing language",
+        message: "Failed to change language.",
       }
     }
   }

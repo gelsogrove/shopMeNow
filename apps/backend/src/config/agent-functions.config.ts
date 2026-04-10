@@ -504,6 +504,32 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
 ]
 
 /**
+ * Language Management Functions
+ * Used for changing customer's preferred language
+ */
+export const LANGUAGE_FUNCTIONS: FunctionDefinition[] = [
+  {
+    type: "function",
+    function: {
+      name: "changeLanguage",
+      description:
+        "🌍 Change the customer's preferred language. WHEN TO USE: Customer explicitly asks to switch language: 'I want to speak in English', 'voglio parlare in inglese', 'quiero hablar en español', 'quero falar em português'. SUPPORTED LANGUAGES: Italian (it), English (en), Spanish (es), Portuguese (pt). AFTER: confirm language change and respond in the new language.",
+      parameters: {
+        type: "object",
+        properties: {
+          language: {
+            type: "string",
+            enum: ["it", "en", "es", "pt"],
+            description: "ISO 639-1 language code: it=Italian, en=English, es=Spanish, pt=Portuguese",
+          },
+        },
+        required: ["language"],
+      },
+    },
+  },
+]
+
+/**
  * Profile Management Agent Functions
  */
 export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
@@ -566,10 +592,10 @@ export function getAgentFunctions(
       return ORDER_TRACKING_FUNCTIONS
     case "CUSTOMER_SUPPORT":
       // Don't hardcode APPOINTMENT_FUNCTIONS here - filtered dynamically at runtime
-      return CUSTOMER_SUPPORT_FUNCTIONS
+      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...LANGUAGE_FUNCTIONS]
     case "INFO_AGENT":
       // Don't hardcode APPOINTMENT_FUNCTIONS here - filtered dynamically at runtime
-      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...PROFILE_MANAGEMENT_FUNCTIONS]
+      return [...CUSTOMER_SUPPORT_FUNCTIONS, ...PROFILE_MANAGEMENT_FUNCTIONS, ...LANGUAGE_FUNCTIONS]
     case "SUMMARY_AGENT":
       return SUMMARY_AGENT_FUNCTIONS
     case "PROFILE_MANAGEMENT":
@@ -649,6 +675,7 @@ export function getAllFunctions(): FunctionDefinition[] {
     ...CUSTOMER_SUPPORT_FUNCTIONS,
     ...SUMMARY_AGENT_FUNCTIONS,
     ...PROFILE_MANAGEMENT_FUNCTIONS,
+    ...LANGUAGE_FUNCTIONS,
     ...APPOINTMENT_FUNCTIONS,
   ]
 }

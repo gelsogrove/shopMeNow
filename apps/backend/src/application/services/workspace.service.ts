@@ -202,6 +202,24 @@ For privacy inquiries, please contact our support team.`
         isSystemFunction: true,
         executionType: "INTERNAL",
         isActive: true
+      },
+      {
+        functionName: "changeLanguage",
+        description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
+        parameters: {
+          type: "object",
+          properties: {
+            language: {
+              type: "string",
+              enum: ["it", "en", "es", "pt"],
+              description: "ISO 639-1 language code"
+            }
+          },
+          required: ["language"]
+        },
+        isSystemFunction: true,
+        executionType: "INTERNAL",
+        isActive: true
       }
     );
 
