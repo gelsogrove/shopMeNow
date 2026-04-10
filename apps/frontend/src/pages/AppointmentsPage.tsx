@@ -218,13 +218,13 @@ export function AppointmentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {appointment.appointmentType?.color && (
+                        {appointment.service?.color && (
                           <div
                             className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: appointment.appointmentType.color }}
+                            style={{ backgroundColor: appointment.service.color }}
                           />
                         )}
-                        <span>{appointment.appointmentType?.name || 'Unknown'}</span>
+                        <span>{appointment.service?.name || 'Unknown'}</span>
                       </div>
                     </TableCell>
                     <TableCell>

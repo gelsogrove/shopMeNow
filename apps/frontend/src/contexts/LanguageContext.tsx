@@ -713,7 +713,7 @@ const translations = {
     "pricing.usage.customer.desc": "Each new customer registration",
     "pricing.usage.order": "per New Order",
     "pricing.usage.order.desc": "Each completed order",
-    "pricing.usage.push": "per WhatsApp Push message",
+    "pricing.usage.push": "per WhatsApp advertising message",
     "pricing.usage.push.desc": "Will be deducted from your credit",
     "pricing.usage.reminder": "per WhatsApp Appointment Reminder",
     "pricing.usage.reminder.desc": "Will be deducted from your credit",

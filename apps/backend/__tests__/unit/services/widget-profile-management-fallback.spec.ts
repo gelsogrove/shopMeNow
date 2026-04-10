@@ -7,7 +7,8 @@
  * Italian response regardless of customerLanguage. Non-Italian customers
  * received Italian text.
  *
- * FIX: A language-aware fallback map (it/en/es/pt/fr/de) is used.
+ * FIX: A language-aware fallback map (it/en/es/pt/fr/de) is used,
+ * and must NOT mention registration for widget profile requests.
  * Unknown languages fall back to English.
  *
  * RULE: Widget channel does not support PROFILE_MANAGEMENT because widget
@@ -21,12 +22,12 @@
 // Tests are the specification: if the map changes, tests must change too.
 
 const PROFILE_FALLBACK_MAP: Record<string, string> = {
-  it: "Per gestire il tuo profilo, registrati prima attraverso il link di registrazione. Una volta registrato potrai accedere a tutte le funzionalità del profilo.",
-  en: "To manage your profile, please register first via the registration link. Once registered you can access all profile features.",
-  es: "Para gestionar tu perfil, regístrate primero a través del enlace de registro. Una vez registrado podrás acceder a todas las funciones del perfil.",
-  pt: "Para gerir o seu perfil, registe-se primeiro através do link de registo. Depois de registado poderá aceder a todas as funcionalidades do perfil.",
-  fr: "Pour gérer votre profil, inscrivez-vous d'abord via le lien d'inscription. Une fois inscrit vous pourrez accéder à toutes les fonctionnalités du profil.",
-  de: "Um Ihr Profil zu verwalten, registrieren Sie sich zuerst über den Registrierungslink. Nach der Registrierung können Sie alle Profilfunktionen nutzen.",
+  it: "Per motivi di privacy, nel widget non posso mostrare o modificare i dati del profilo personale. Posso aiutarti qui con informazioni generali oppure metterti in contatto con un operatore.",
+  en: "For privacy reasons, profile data cannot be viewed or edited inside the widget chat. I can help with general information here, or connect you with a human operator.",
+  es: "Por privacidad, en el widget no puedo mostrar ni modificar los datos del perfil personal. Aquí puedo ayudarte con información general o ponerte en contacto con un operador.",
+  pt: "Por privacidade, no widget não posso mostrar nem alterar dados do perfil pessoal. Posso ajudar aqui com informações gerais ou ligar você a um operador.",
+  fr: "Pour des raisons de confidentialité, je ne peux pas afficher ni modifier les données de profil personnel dans le widget. Je peux vous aider ici avec des informations générales ou vous mettre en relation avec un opérateur.",
+  de: "Aus Datenschutzgründen kann ich Profildaten im Widget-Chat nicht anzeigen oder bearbeiten. Ich kann hier mit allgemeinen Informationen helfen oder Sie mit einem Mitarbeiter verbinden.",
 }
 
 // This is the exact logic from the bugfix
@@ -38,12 +39,12 @@ function getProfileFallback(customerLanguage?: string): string {
 describe("Widget PROFILE_MANAGEMENT Language Fallback (BUG#6 fix)", () => {
   describe("Mapped languages return localized responses", () => {
     const cases: Array<[string, string, string]> = [
-      ["it", "it", "registrati prima"],
-      ["en", "en", "register first"],
-      ["es", "es", "regístrate primero"],
-      ["pt", "pt", "registe-se primeiro"],
-      ["fr", "fr", "inscrivez-vous"],
-      ["de", "de", "registrieren Sie sich"],
+      ["it", "it", "motivi di privacy"],
+      ["en", "en", "privacy reasons"],
+      ["es", "es", "privacidad"],
+      ["pt", "pt", "privacidade"],
+      ["fr", "fr", "confidentialité"],
+      ["de", "de", "Datenschutzgründen"],
     ]
 
     cases.forEach(([lang, code, expectedSnippet]) => {
@@ -108,18 +109,36 @@ describe("Widget PROFILE_MANAGEMENT Language Fallback (BUG#6 fix)", () => {
     it("English customer must NOT receive Italian response", () => {
       // REGRESSION TEST: Prior to fix, 'en' customers received Italian
       const response = getProfileFallback("en")
-      expect(response).not.toContain("registrati prima")
-      expect(response).not.toContain("accedere a tutte le funzionalità")
+      expect(response).not.toContain("motivi di privacy")
+      expect(response).not.toContain("profilo personale")
     })
 
     it("Spanish customer must NOT receive Italian response", () => {
       const response = getProfileFallback("es")
-      expect(response).not.toContain("registrati prima")
+      expect(response).not.toContain("motivi di privacy")
     })
 
     it("French customer must NOT receive Italian response", () => {
       const response = getProfileFallback("fr")
-      expect(response).not.toContain("registrati prima")
+      expect(response).not.toContain("motivi di privacy")
+    })
+  })
+
+  describe("Widget profile fallback must not mention registration", () => {
+    it("should not contain registration wording in any language", () => {
+      const registrationWords = [
+        "registr",
+        "registration",
+        "inscri",
+        "registo",
+      ]
+
+      Object.values(PROFILE_FALLBACK_MAP).forEach((text) => {
+        const lower = text.toLowerCase()
+        registrationWords.forEach((word) => {
+          expect(lower.includes(word)).toBe(false)
+        })
+      })
     })
   })
 })

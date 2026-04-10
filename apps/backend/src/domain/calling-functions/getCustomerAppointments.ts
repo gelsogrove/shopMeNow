@@ -22,7 +22,7 @@ export interface GetCustomerAppointmentsResult {
   message: string
   appointments?: Array<{
     id: string
-    appointmentTypeName: string
+    serviceName: string
     startTime: string
     endTime: string
     displayDate: string
@@ -91,7 +91,7 @@ export async function getCustomerAppointments(
         const end = new Date(appt.endTime)
         return {
           id: appt.id,
-          appointmentTypeName: appt.appointmentType?.name || 'Unknown',
+          serviceName: appt.service?.name || 'Unknown',
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           displayDate: start.toISOString().split('T')[0], // YYYY-MM-DD — LLM formats in customer's language

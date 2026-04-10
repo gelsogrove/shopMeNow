@@ -215,41 +215,6 @@ export function CrmIntegrationPage() {
           </div>
         </section>
 
-        {/* Integrations Grid */}
-        <section className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.howTitle}</h2>
-              <p className="text-xl text-slate-600">{t.howSub}</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {t.integrations.map((int, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-white rounded-2xl p-6 shadow-lg border border-blue-50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-3xl">{int.icon}</span>
-                    <h3 className="text-xl font-bold text-slate-900">{int.category}</h3>
-                  </div>
-                  <ul className="space-y-2">
-                    {int.items.map((item, j) => (
-                      <li key={j} className="flex items-center gap-2 text-slate-600 text-sm">
-                        <CheckCircle className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Benefits */}
         <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">

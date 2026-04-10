@@ -1002,10 +1002,10 @@ export class LLMRouterService {
             select: { orderCode: true },
           }),
           directIntentIndexPromise,
-          // 📅 Calendar: Load appointment types if calendar is enabled
+          // 📅 Calendar: Load bookable services if calendar is enabled
           workspace.enableCalendarBooking
-            ? this.prisma.appointmentType.findMany({
-                where: { workspaceId: params.workspaceId, isActive: true },
+            ? this.prisma.services.findMany({
+                where: { workspaceId: params.workspaceId, isActive: true, enableForBooking: true },
                 select: { name: true, description: true, duration: true, price: true },
                 orderBy: { name: 'asc' },
               })
@@ -1019,7 +1019,7 @@ export class LLMRouterService {
                   status: 'confirmed',
                   startTime: { gte: new Date() },
                 },
-                include: { appointmentType: true },
+                include: { service: true },
                 orderBy: { startTime: 'asc' },
                 take: 5,
               })
@@ -1035,7 +1035,7 @@ export class LLMRouterService {
 
       const customerUpcomingAppointmentsForPrompt = customerAppointmentsRaw.length > 0
         ? customerAppointmentsRaw.map(a =>
-            `- ${a.appointmentType?.name || 'Appointment'}: ${a.startTime.toLocaleDateString('it-IT')} ${a.startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${a.status})`
+            `- ${a.service?.name || 'Appointment'}: ${a.startTime.toLocaleDateString('it-IT')} ${a.startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${a.status})`
           ).join('\n')
         : ''
 
@@ -1258,6 +1258,15 @@ export class LLMRouterService {
         }
         // Rule 2: Exclude appointment functions if calendar not enabled
         if (!workspace.enableCalendarBooking && appointmentFunctions.includes(fn.functionName)) {
+          return false
+        }
+        // Rule 3: Widget channel must not expose profile/personal-data tools
+        const widgetBlockedFunctions = [
+          "profileManagementAgent",
+          "getProfileLink",
+          "handlePushNotifications",
+        ]
+        if (params.channel === "widget" && widgetBlockedFunctions.includes(fn.functionName)) {
           return false
         }
         // 🔮 Future: Add filters for hasSalesAgents, hasHumanSupport, etc.
@@ -1607,9 +1616,11 @@ export class LLMRouterService {
         finalCleanResponse = widgetSecurityResult.message || securityInput
       }
 
-      // 📢 REGISTRATION REMINDER: Every 6 messages, add registration call-to-action
+      // 📢 REGISTRATION REMINDER: Every 6 messages, add registration call-to-action (WhatsApp only)
+      // Widget channel skips this: the FunctionExecutor guard already injects [LINK_REGISTRATION]
+      // when the user attempts a protected action (orders, cart, appointments).
       try {
-        if (!customerData.isActive && !(params.registrationPromptLevel && params.registrationPromptLevel > 0)) {
+        if (params.channel !== "widget" && !customerData.isActive && !(params.registrationPromptLevel && params.registrationPromptLevel > 0)) {
           const messageCount = await this.prisma.conversationMessage.count({
             where: {
               workspaceId: params.workspaceId,
@@ -1925,6 +1936,7 @@ export class LLMRouterService {
         temperature: routerAgent.temperature,
         maxTokens: routerAgent.maxTokens,
         sellsProductsAndServices, // 🆕 Dynamic function routing
+        channel: params.channel,
         tools, // 🆕 Pass dynamic tools
       })
       routerCallDuration = Date.now() - routerCallStart
@@ -2086,16 +2098,16 @@ export class LLMRouterService {
               delegationTarget,
               query: delegationQuery,
             })
-            // 🌍 FIX: build a language-aware fallback instead of hardcoded Italian
+            // 🌍 Channel-aware fallback: widget does not support profile data operations
             // Covers the most common languages; TranslationAgent is not available here (no sub-agent loop)
             const lang = (params.customerLanguage || "it").toLowerCase().slice(0, 2)
             const profileFallbackMap: Record<string, string> = {
-              it: "Per gestire il tuo profilo, registrati prima attraverso il link di registrazione. Una volta registrato potrai accedere a tutte le funzionalità del profilo.",
-              en: "To manage your profile, please register first via the registration link. Once registered you can access all profile features.",
-              es: "Para gestionar tu perfil, regístrate primero a través del enlace de registro. Una vez registrado podrás acceder a todas las funciones del perfil.",
-              pt: "Para gerir o seu perfil, registe-se primeiro através do link de registo. Depois de registado poderá aceder a todas as funcionalidades do perfil.",
-              fr: "Pour gérer votre profil, inscrivez-vous d'abord via le lien d'inscription. Une fois inscrit vous pourrez accéder à toutes les fonctionnalités du profil.",
-              de: "Um Ihr Profil zu verwalten, registrieren Sie sich zuerst über den Registrierungslink. Nach der Registrierung können Sie alle Profilfunktionen nutzen.",
+              it: "Per motivi di privacy, nel widget non posso mostrare o modificare i dati del profilo personale. Posso aiutarti qui con informazioni generali oppure metterti in contatto con un operatore.",
+              en: "For privacy reasons, profile data cannot be viewed or edited inside the widget chat. I can help with general information here, or connect you with a human operator.",
+              es: "Por privacidad, en el widget no puedo mostrar ni modificar los datos del perfil personal. Aquí puedo ayudarte con información general o ponerte en contacto con un operador.",
+              pt: "Por privacidade, no widget não posso mostrar nem alterar dados do perfil pessoal. Posso ajudar aqui com informações gerais ou ligar você a um operador.",
+              fr: "Pour des raisons de confidentialité, je ne peux pas afficher ni modifier les données de profil personnel dans le widget. Je peux vous aider ici avec des informations générales ou vous mettre en relation avec un opérateur.",
+              de: "Aus Datenschutzgründen kann ich Profildaten im Widget-Chat nicht anzeigen oder bearbeiten. Ich kann hier mit allgemeinen Informationen helfen oder Sie mit einem Mitarbeiter verbinden.",
             }
             const profileFallback = profileFallbackMap[lang] ?? profileFallbackMap["en"]
             return {
@@ -2526,6 +2538,7 @@ export class LLMRouterService {
                 customerId: params.customerId,
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
+                channel: params.channel,
                 query: delegationQuery,
                 customerData, // 🔧 OPTIMIZATION: Pass pre-loaded data to avoid duplicate DB queries
               })
@@ -3068,6 +3081,7 @@ export class LLMRouterService {
     temperature: number
     maxTokens: number
     sellsProductsAndServices?: boolean // 🆕 Dynamic function routing
+    channel?: string // Optional channel for fallback tool filtering
     tools?: any[] // 🆕 Dynamic tools from DB
   }): Promise<{
     content?: string
@@ -3091,7 +3105,8 @@ export class LLMRouterService {
           // 🆕 Use provided tools (from DB) or fallback to hardcoded ones
           // ⚠️ FIX: empty array [] is truthy in JS → must check .length > 0 to use fallback correctly
           tools: (options.tools && options.tools.length > 0) ? options.tools : getFunctionsForRouter({
-            sellsProductsAndServices: options.sellsProductsAndServices ?? true
+            sellsProductsAndServices: options.sellsProductsAndServices ?? true,
+            channel: options.channel,
           }),
           tool_choice: "auto", // 🆕 Allow direct text response (greetings/identity) or delegation for ALL modes
         },

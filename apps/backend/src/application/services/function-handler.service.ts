@@ -1090,7 +1090,7 @@ export class FunctionHandlerService {
       return await listAvailableSlots({
         workspaceId,
         customerId: customer.id,
-        appointmentTypeId: params.appointmentTypeId,
+        serviceId: params.serviceId || params.appointmentTypeId,
         daysAhead: params.daysAhead,
         targetDate: params.targetDate,
       })
@@ -1117,7 +1117,7 @@ export class FunctionHandlerService {
       return await bookAppointment({
         workspaceId,
         customerId: customer.id,
-        appointmentTypeId: params.appointmentTypeId,
+        serviceId: params.serviceId || params.appointmentTypeId,
         startTime: params.startTime,
         customerNotes: params.customerNotes,
         channel: params.channel,

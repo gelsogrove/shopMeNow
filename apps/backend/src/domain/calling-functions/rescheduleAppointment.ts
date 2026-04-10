@@ -28,7 +28,7 @@ export interface RescheduleAppointmentResult {
   message: string
   oldAppointmentId?: string
   newAppointmentId?: string
-  appointmentTypeName?: string
+  serviceName?: string
   oldStartTime?: string
   newStartTime?: string
   newDisplayDate?: string
@@ -80,7 +80,7 @@ export async function rescheduleAppointment(
         customerId: request.customerId,
         status: "confirmed",
       },
-      include: { appointmentType: true },
+      include: { service: true },
     })
 
     if (!existingAppointment) {
@@ -110,7 +110,7 @@ export async function rescheduleAppointment(
     const availability = await appointmentService.isSlotAvailable(
       request.workspaceId,
       newStartDt,
-      existingAppointment.appointmentType!.duration,
+      existingAppointment.service!.duration,
       request.appointmentId // exclude current appointment from conflict check
     )
 
@@ -137,8 +137,8 @@ export async function rescheduleAppointment(
       })
 
       // Calculate new end time
-      const durationMs = (existingAppointment.appointmentType!.duration +
-        (existingAppointment.appointmentType!.bufferTime || 0)) * 60 * 1000
+      const durationMs = (existingAppointment.service!.duration +
+        (existingAppointment.service!.bufferTime || 0)) * 60 * 1000
       const newEndTime = new Date(newStartDt.getTime() + durationMs)
 
       // Create new appointment (copy customer snapshot + same type)
@@ -146,7 +146,7 @@ export async function rescheduleAppointment(
         data: {
           workspaceId: request.workspaceId,
           customerId: request.customerId,
-          appointmentTypeId: existingAppointment.appointmentTypeId,
+          serviceId: existingAppointment.serviceId,
           startTime: newStartDt,
           endTime: newEndTime,
           status: "confirmed",
@@ -156,7 +156,7 @@ export async function rescheduleAppointment(
           customerNotes: existingAppointment.customerNotes,
           bookedVia: existingAppointment.bookedVia,
         },
-        include: { appointmentType: true },
+        include: { service: true },
       })
 
       return [cancelled, created]
@@ -174,7 +174,7 @@ export async function rescheduleAppointment(
 
     const gcalResult = await googleCalendarService.createEvent({
       workspaceId: request.workspaceId,
-      summary: `${existingAppointment.appointmentType?.name || 'Appointment'} - ${existingAppointment.customerName || 'Customer'}`,
+      summary: `${existingAppointment.service?.name || 'Appointment'} - ${existingAppointment.customerName || 'Customer'}`,
       startTime: newStartDt,
       endTime: endDt,
       timezone: workspace?.timezone || 'Europe/Rome',
@@ -200,7 +200,7 @@ export async function rescheduleAppointment(
       message: `Appointment rescheduled to ${displayDate} at ${displayTime}`,
       oldAppointmentId: request.appointmentId,
       newAppointmentId: newAppointment.id,
-      appointmentTypeName: existingAppointment.appointmentType?.name,
+      serviceName: existingAppointment.service?.name,
       oldStartTime: existingAppointment.startTime.toISOString(),
       newStartTime: newStartDt.toISOString(),
       newDisplayDate: displayDate,

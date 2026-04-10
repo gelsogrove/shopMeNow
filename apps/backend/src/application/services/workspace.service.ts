@@ -213,7 +213,7 @@ For privacy inquiries, please contact our support team.`
         parameters: {
           type: "object",
           properties: {
-            appointmentTypeId: { type: "string", description: "ID of appointment type (optional)" },
+            serviceId: { type: "string", description: "ID of bookable service (optional)" },
             daysAhead: { type: "number", description: "How many days ahead to search (default 7, max 14)" }
           },
           required: []
@@ -224,15 +224,15 @@ For privacy inquiries, please contact our support team.`
       },
       {
         functionName: "bookAppointment",
-        description: "Confirm an appointment booking. Use when customer has chosen a slot and confirms. Requires appointmentTypeId and startTime.",
+        description: "Confirm an appointment booking. Use when customer has chosen a slot and confirms. Requires serviceId and startTime.",
         parameters: {
           type: "object",
           properties: {
-            appointmentTypeId: { type: "string", description: "ID of appointment type" },
+            serviceId: { type: "string", description: "ID of bookable service" },
             startTime: { type: "string", description: "Start time in ISO 8601 format" },
             customerNotes: { type: "string", description: "Optional customer notes" }
           },
-          required: ["appointmentTypeId", "startTime"]
+          required: ["serviceId", "startTime"]
         },
         isSystemFunction: true,
         executionType: "INTERNAL",

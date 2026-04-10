@@ -10,20 +10,6 @@ import { api } from './api';
 // TYPES
 // ============================================
 
-export interface AppointmentType {
-  id: string;
-  workspaceId: string;
-  name: string;
-  description?: string;
-  duration: number; // minutes
-  bufferTime?: number; // minutes
-  price?: number; // euros
-  color?: string; // hex color
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface BusinessHours {
   id: string;
   workspaceId: string;
@@ -45,24 +31,9 @@ export interface BlackoutPeriod {
   updatedAt: string;
 }
 
-export interface CreateAppointmentTypeDto {
-  name: string;
-  description?: string;
-  duration: number;
-  bufferTime?: number;
-  price?: number;
-  color?: string;
-}
-
-export interface UpdateAppointmentTypeDto {
-  name?: string;
-  description?: string;
-  duration?: number;
-  bufferTime?: number;
-  price?: number;
-  color?: string;
-  isActive?: boolean;
-}
+// ============================================
+// BUSINESS HOURS API (AppointmentType CRUD removed — use Services with enableForBooking)
+// ============================================
 
 export interface UpdateBusinessHoursDto {
   hours: Array<{
@@ -84,71 +55,6 @@ export interface UpdateBlackoutPeriodDto {
   endDate?: string;
   reason?: string;
 }
-
-// ============================================
-// APPOINTMENT TYPES API
-// ============================================
-
-export const appointmentApi = {
-  /**
-   * Get all appointment types
-   */
-  async getAppointmentTypes(workspaceId: string, includeInactive = false): Promise<AppointmentType[]> {
-    const { data } = await api.get(
-      `/api/workspaces/${workspaceId}/appointment-types`,
-      { params: { includeInactive } }
-    );
-    return data;
-  },
-
-  /**
-   * Get single appointment type
-   */
-  async getAppointmentType(workspaceId: string, id: string): Promise<AppointmentType> {
-    const { data } = await api.get(
-      `/api/workspaces/${workspaceId}/appointment-types/${id}`
-    );
-    return data;
-  },
-
-  /**
-   * Create appointment type
-   */
-  async createAppointmentType(
-    workspaceId: string,
-    dto: CreateAppointmentTypeDto
-  ): Promise<AppointmentType> {
-    const { data } = await api.post(
-      `/api/workspaces/${workspaceId}/appointment-types`,
-      dto
-    );
-    return data;
-  },
-
-  /**
-   * Update appointment type
-   */
-  async updateAppointmentType(
-    workspaceId: string,
-    id: string,
-    dto: UpdateAppointmentTypeDto
-  ): Promise<AppointmentType> {
-    const { data } = await api.patch(
-      `/api/workspaces/${workspaceId}/appointment-types/${id}`,
-      dto
-    );
-    return data;
-  },
-
-  /**
-   * Delete (deactivate) appointment type
-   */
-  async deleteAppointmentType(workspaceId: string, id: string): Promise<void> {
-    await api.delete(
-      `/api/workspaces/${workspaceId}/appointment-types/${id}`
-    );
-  },
-};
 
 // ============================================
 // BUSINESS HOURS API
@@ -243,7 +149,7 @@ export interface Appointment {
   id: string;
   workspaceId: string;
   customerId: string;
-  appointmentTypeId: string;
+  serviceId: string;
   startTime: string;
   endTime: string;
   status: string;
@@ -254,7 +160,15 @@ export interface Appointment {
   bookedVia: string;
   createdAt: string;
   updatedAt: string;
-  appointmentType?: AppointmentType;
+  service?: {
+    id: string;
+    name: string;
+    description?: string;
+    duration: number;
+    bufferTime?: number;
+    price?: number;
+    color?: string;
+  };
 }
 
 export const appointmentsApi = {

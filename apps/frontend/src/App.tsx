@@ -60,7 +60,6 @@ import RegistrationSuccess from "./pages/registration-success"
 import { ResetPasswordPage } from "./pages/ResetPasswordPage"
 import SalesPage from "./pages/SalesPage"
 import { ServicesPage } from "./pages/ServicesPage"
-import { AppointmentTypesPage } from "./pages/AppointmentTypesPage"
 import { AppointmentsPage } from "./pages/AppointmentsPage"
 import { BusinessHoursPage } from "./pages/BusinessHoursPage"
 import { BlackoutPeriodsPage } from "./pages/BlackoutPeriodsPage"
@@ -318,9 +317,6 @@ function AppWithProviders() {
                   </Route>
 
                   {/* Appointment Booking Routes */}
-                  <Route path="/appointment-types" element={<MinimalLayout />}>
-                    <Route index element={<AppointmentTypesPage />} />
-                  </Route>
                   <Route path="/appointments" element={<MinimalLayout />}>
                     <Route index element={<AppointmentsPage />} />
                   </Route>

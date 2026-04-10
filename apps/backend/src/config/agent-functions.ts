@@ -555,9 +555,11 @@ export function getFunctionsForAPI() {
  * Includes: delegation functions (sub-agents) + direct utility functions
  * 
  * @param options.sellsProductsAndServices - If false, exclude e-commerce agents (product, cart, order)
+ * @param options.channel - Optional channel ("widget" | "whatsapp")
  */
-export function getFunctionsForRouter(options?: { sellsProductsAndServices?: boolean }) {
+export function getFunctionsForRouter(options?: { sellsProductsAndServices?: boolean; channel?: string }) {
   const sellsProducts = options?.sellsProductsAndServices ?? true
+  const channel = (options?.channel || "whatsapp").toLowerCase()
 
   // Router Agent can call:
   // 1. Delegation functions (productSearchAgent, cartManagementAgent, orderTrackingAgent, customerSupportAgent)
@@ -572,6 +574,10 @@ export function getFunctionsForRouter(options?: { sellsProductsAndServices?: boo
 
     if (!sellsProducts && ecommerceAgents.includes(fn.name)) {
       return false // Exclude e-commerce agents for vetrina mode
+    }
+    // Widget channel does not support profile management flows
+    if (channel === "widget" && fn.name === "profileManagementAgent") {
+      return false
     }
 
     return (

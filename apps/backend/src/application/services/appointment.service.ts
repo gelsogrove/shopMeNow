@@ -2,121 +2,47 @@
  * Appointment Service
  * 
  * Business logic for appointment booking system.
+ * Uses Services with enableForBooking=true as bookable appointment types.
  * Orchestrates repositories and enforces business rules.
  */
 
 import { PrismaClient } from '@echatbot/database';
-import { AppointmentTypeRepository } from '../../repositories/appointment-type.repository';
 import { BusinessHoursRepository } from '../../repositories/business-hours.repository';
 import { BlackoutPeriodRepository } from '../../repositories/blackout-period.repository';
 import logger from '../../utils/logger';
 
 export class AppointmentService {
-  private appointmentTypeRepo: AppointmentTypeRepository;
   private businessHoursRepo: BusinessHoursRepository;
   private blackoutPeriodRepo: BlackoutPeriodRepository;
 
   constructor(private prisma: PrismaClient) {
-    this.appointmentTypeRepo = new AppointmentTypeRepository(prisma);
     this.businessHoursRepo = new BusinessHoursRepository(prisma);
     this.blackoutPeriodRepo = new BlackoutPeriodRepository(prisma);
   }
 
   // ============================================
-  // APPOINTMENT TYPES
+  // BOOKABLE SERVICES (replaces AppointmentType CRUD)
   // ============================================
 
-  async getAppointmentTypes(workspaceId: string, includeInactive = false) {
-    return await this.appointmentTypeRepo.findByWorkspace(workspaceId, includeInactive);
-  }
-
-  async getAppointmentType(workspaceId: string, id: string) {
-    const appointmentType = await this.appointmentTypeRepo.findById(workspaceId, id);
-    if (!appointmentType) {
-      throw new Error('Appointment type not found');
-    }
-    return appointmentType;
-  }
-
-  async createAppointmentType(workspaceId: string, data: {
-    name: string;
-    description?: string;
-    duration: number;
-    bufferTime?: number;
-    price?: number;
-    color?: string;
-  }) {
-    // Validate duration
-    if (data.duration < 15 || data.duration > 480) {
-      throw new Error('Duration must be between 15 and 480 minutes');
-    }
-
-    // Validate buffer time
-    if (data.bufferTime && (data.bufferTime < 0 || data.bufferTime > 120)) {
-      throw new Error('Buffer time must be between 0 and 120 minutes');
-    }
-
-    // Validate price
-    if (data.price && data.price < 0) {
-      throw new Error('Price cannot be negative');
-    }
-
-    return await this.appointmentTypeRepo.create(workspaceId, data);
-  }
-
-  async updateAppointmentType(workspaceId: string, id: string, data: {
-    name?: string;
-    description?: string;
-    duration?: number;
-    bufferTime?: number;
-    price?: number;
-    color?: string;
-    isActive?: boolean;
-  }) {
-    // Verify appointment type exists
-    await this.getAppointmentType(workspaceId, id);
-
-    // Validate if provided
-    if (data.duration !== undefined && (data.duration < 15 || data.duration > 480)) {
-      throw new Error('Duration must be between 15 and 480 minutes');
-    }
-
-    if (data.bufferTime !== undefined && (data.bufferTime < 0 || data.bufferTime > 120)) {
-      throw new Error('Buffer time must be between 0 and 120 minutes');
-    }
-
-    if (data.price !== undefined && data.price < 0) {
-      throw new Error('Price cannot be negative');
-    }
-
-    const result = await this.appointmentTypeRepo.update(workspaceId, id, data);
-    
-    if (result.count === 0) {
-      throw new Error('Appointment type not found');
-    }
-
-    return await this.getAppointmentType(workspaceId, id);
-  }
-
-  async deleteAppointmentType(workspaceId: string, id: string) {
-    // Verify appointment type exists
-    await this.getAppointmentType(workspaceId, id);
-
-    // Check if there are pending appointments referencing this type
-    const pendingCount = await this.prisma.pendingAppointment.count({
+  async getBookableServices(workspaceId: string, includeInactive = false) {
+    return await this.prisma.services.findMany({
       where: {
         workspaceId,
-        appointmentTypeId: id,
-        status: 'pending'
-      }
+        enableForBooking: true,
+        ...(includeInactive ? {} : { isActive: true })
+      },
+      orderBy: { name: 'asc' }
     });
+  }
 
-    if (pendingCount > 0) {
-      throw new Error(`Cannot delete appointment type: ${pendingCount} pending appointments exist. Deactivate it instead.`);
+  async getBookableService(workspaceId: string, id: string) {
+    const service = await this.prisma.services.findFirst({
+      where: { id, workspaceId, enableForBooking: true }
+    });
+    if (!service) {
+      throw new Error('Bookable service not found');
     }
-
-    // Soft delete (deactivate)
-    return await this.appointmentTypeRepo.deactivate(workspaceId, id);
+    return service;
   }
 
   // ============================================
@@ -287,18 +213,18 @@ export class AppointmentService {
   }
 
   /**
-   * Generate all available slots for a given appointment type and date range.
+   * Generate all available slots for a given bookable service and date range.
    * Used by LLM calling function to show customer available options.
    * 
    * @param workspaceId 
-   * @param appointmentTypeId 
+   * @param serviceId - ID of the bookable service
    * @param startDate - beginning of search range
-   * @param endDate - end of search range (max 7 days from startDate enforced)
+   * @param endDate - end of search range (max 14 days from startDate enforced)
    * @returns Array of { startTime, endTime, displayTime } available slots
    */
   async getAvailableSlots(
     workspaceId: string,
-    appointmentTypeId: string,
+    serviceId: string,
     startDate: Date,
     endDate: Date
   ): Promise<Array<{
@@ -311,13 +237,15 @@ export class AppointmentService {
     const maxEnd = new Date(startDate.getTime() + 14 * 24 * 60 * 60 * 1000);
     const effectiveEnd = endDate > maxEnd ? maxEnd : endDate;
 
-    // Get appointment type for duration and buffer
-    const appointmentType = await this.appointmentTypeRepo.findById(workspaceId, appointmentTypeId);
-    if (!appointmentType || !appointmentType.isActive) {
-      throw new Error('Appointment type not found or inactive');
+    // Get bookable service for duration and buffer
+    const service = await this.prisma.services.findFirst({
+      where: { id: serviceId, workspaceId, enableForBooking: true }
+    });
+    if (!service || !service.isActive) {
+      throw new Error('Bookable service not found or inactive');
     }
 
-    const totalSlotMinutes = appointmentType.duration + (appointmentType.bufferTime || 0);
+    const totalSlotMinutes = service.duration + (service.bufferTime || 0);
 
     // Get workspace booking buffer (configurable, default 12h)
     const workspace = await this.prisma.workspace.findUnique({ where: { id: workspaceId }, select: { minBookingBufferHours: true } });
@@ -438,7 +366,7 @@ export class AppointmentService {
    */
   async createAppointment(workspaceId: string, data: {
     customerId: string;
-    appointmentTypeId: string;
+    serviceId: string;
     startTime: Date;
     customerNotes?: string;
     customerName?: string;
@@ -448,16 +376,18 @@ export class AppointmentService {
     googleEventId?: string;
     googleEventLink?: string;
   }) {
-    const appointmentType = await this.appointmentTypeRepo.findById(workspaceId, data.appointmentTypeId);
-    if (!appointmentType || !appointmentType.isActive) {
-      throw new Error('Appointment type not found or inactive');
+    const service = await this.prisma.services.findFirst({
+      where: { id: data.serviceId, workspaceId, enableForBooking: true }
+    });
+    if (!service || !service.isActive) {
+      throw new Error('Bookable service not found or inactive');
     }
 
-    const totalMinutes = appointmentType.duration + (appointmentType.bufferTime || 0);
+    const totalMinutes = service.duration + (service.bufferTime || 0);
     const endTime = new Date(data.startTime.getTime() + totalMinutes * 60 * 1000);
 
     // Validate slot is still available
-    const availability = await this.isSlotAvailable(workspaceId, data.startTime, appointmentType.duration);
+    const availability = await this.isSlotAvailable(workspaceId, data.startTime, service.duration);
     if (!availability.available) {
       throw new Error(`Slot no longer available: ${availability.reason}`);
     }
@@ -467,7 +397,7 @@ export class AppointmentService {
       data: {
         workspaceId,
         customerId: data.customerId,
-        appointmentTypeId: data.appointmentTypeId,
+        serviceId: data.serviceId,
         startTime: data.startTime,
         endTime,
         customerNotes: data.customerNotes,
@@ -479,7 +409,7 @@ export class AppointmentService {
         googleEventLink: data.googleEventLink,
         status: 'confirmed',
       },
-      include: { appointmentType: true },
+      include: { service: true },
     });
 
     // Update customer's lastAppointmentDate
@@ -516,7 +446,7 @@ export class AppointmentService {
         cancellationReason: reason,
         cancelledBy,
       },
-      include: { appointmentType: true },
+      include: { service: true },
     });
   }
 
@@ -531,7 +461,7 @@ export class AppointmentService {
         status: 'confirmed',
         startTime: { gte: new Date() },
       },
-      include: { appointmentType: true },
+      include: { service: true },
       orderBy: { startTime: 'asc' },
       take: limit,
     });
@@ -555,7 +485,7 @@ export class AppointmentService {
           lte: options?.to || undefined,
         },
       },
-      include: { appointmentType: true },
+      include: { service: true },
       orderBy: { startTime: 'asc' },
       take: options?.limit || 100,
     });

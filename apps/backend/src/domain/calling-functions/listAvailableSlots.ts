@@ -15,7 +15,7 @@ import { AppointmentService } from "../../application/services/appointment.servi
 export interface ListAvailableSlotsRequest {
   workspaceId: string
   customerId: string
-  appointmentTypeId?: string // If not provided, use first active type
+  serviceId?: string // If not provided, use first active bookable service
   daysAhead?: number // Default 7
   targetDate?: string // ISO date "YYYY-MM-DD" — filter to this specific day only (e.g., customer says "show me Tuesday")
 }
@@ -23,7 +23,7 @@ export interface ListAvailableSlotsRequest {
 export interface ListAvailableSlotsResult {
   success: boolean
   message: string
-  appointmentTypeName?: string
+  serviceName?: string
   duration?: number
   price?: number
   slots?: Array<{
@@ -44,7 +44,7 @@ export async function listAvailableSlots(
     logger.info("📅 listAvailableSlots called:", {
       workspaceId: request.workspaceId,
       customerId: request.customerId,
-      appointmentTypeId: request.appointmentTypeId,
+      serviceId: request.serviceId,
     })
 
     if (!request.workspaceId || !request.customerId) {
@@ -73,24 +73,24 @@ export async function listAvailableSlots(
 
     const appointmentService = new AppointmentService(prisma)
 
-    // Resolve appointment type
-    let appointmentTypeId = request.appointmentTypeId
-    if (!appointmentTypeId) {
-      const types = await appointmentService.getAppointmentTypes(request.workspaceId)
-      if (types.length === 0) {
+    // Resolve bookable service
+    let serviceId = request.serviceId
+    if (!serviceId) {
+      const services = await appointmentService.getBookableServices(request.workspaceId)
+      if (services.length === 0) {
         return {
           success: false,
-          message: "No appointment types configured",
-          error: "NO_APPOINTMENT_TYPES",
+          message: "No bookable services configured",
+          error: "NO_BOOKABLE_SERVICES",
           timestamp: new Date().toISOString(),
         }
       }
-      appointmentTypeId = types[0].id
+      serviceId = services[0].id
     }
 
-    const appointmentType = await appointmentService.getAppointmentType(
+    const service = await appointmentService.getBookableService(
       request.workspaceId,
-      appointmentTypeId
+      serviceId
     )
 
     // Calculate date range — if targetDate provided, search only that day
@@ -109,7 +109,7 @@ export async function listAvailableSlots(
 
     const slots = await appointmentService.getAvailableSlots(
       request.workspaceId,
-      appointmentTypeId,
+      serviceId,
       startDate,
       endDate
     )
@@ -118,9 +118,9 @@ export async function listAvailableSlots(
       return {
         success: true,
         message: "No available slots found in the next " + daysAhead + " days",
-        appointmentTypeName: appointmentType.name,
-        duration: appointmentType.duration,
-        price: appointmentType.price ? Number(appointmentType.price) : undefined,
+        serviceName: service.name,
+        duration: service.duration,
+        price: service.price ? Number(service.price) : undefined,
         slots: [],
         totalSlots: 0,
         timestamp: new Date().toISOString(),
@@ -129,10 +129,10 @@ export async function listAvailableSlots(
 
     return {
       success: true,
-      message: `Found ${slots.length} available slots for "${appointmentType.name}"`,
-      appointmentTypeName: appointmentType.name,
-      duration: appointmentType.duration,
-      price: appointmentType.price ? Number(appointmentType.price) : undefined,
+      message: `Found ${slots.length} available slots for "${service.name}"`,
+      serviceName: service.name,
+      duration: service.duration,
+      price: service.price ? Number(service.price) : undefined,
       slots: slots.map(s => ({
         startTime: s.startTime.toISOString(),
         endTime: s.endTime.toISOString(),

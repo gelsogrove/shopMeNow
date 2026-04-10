@@ -26,10 +26,12 @@ jest.mock("../../../src/utils/logger", () => ({
 }))
 
 // Mock AppointmentService
+// NOTE: getBookableServices/getAppointmentType renamed to getBookableServices/getBookableService
+// after AppointmentType model was merged into Services (migration 20260411000000)
 const mockAppointmentService = {
   getAvailableSlots: jest.fn(),
-  getAppointmentTypes: jest.fn(),
-  getAppointmentType: jest.fn(),
+  getBookableServices: jest.fn(),
+  getBookableService: jest.fn(),
   createAppointment: jest.fn(),
   cancelAppointment: jest.fn(),
   getCustomerAppointments: jest.fn(),
@@ -126,10 +128,11 @@ describe("Appointment Calling Functions", () => {
       expect(result.error).toBe("CALENDAR_NOT_ENABLED")
     })
 
-    // SCENARIO: No appointment types configured
-    it("should return error when no appointment types exist", async () => {
+    // SCENARIO: No bookable services configured
+    // NOTE: error code renamed from NO_APPOINTMENT_TYPES → NO_BOOKABLE_SERVICES after model merge
+    it("should return error when no bookable services exist", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
-      mockAppointmentService.getAppointmentTypes.mockResolvedValue([])
+      mockAppointmentService.getBookableServices.mockResolvedValue([])
 
       const result = await listAvailableSlots({
         workspaceId: WORKSPACE_ID,
@@ -137,16 +140,16 @@ describe("Appointment Calling Functions", () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe("NO_APPOINTMENT_TYPES")
+      expect(result.error).toBe("NO_BOOKABLE_SERVICES")
     })
 
     // SCENARIO: Zero available slots in date range
     it("should return success with empty slots when none available", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
-      mockAppointmentService.getAppointmentTypes.mockResolvedValue([
+      mockAppointmentService.getBookableServices.mockResolvedValue([
         { id: "type-1", name: "Test", duration: 30, price: 50 },
       ])
-      mockAppointmentService.getAppointmentType.mockResolvedValue({
+      mockAppointmentService.getBookableService.mockResolvedValue({
         id: "type-1",
         name: "Consulenza",
         duration: 30,
@@ -167,10 +170,10 @@ describe("Appointment Calling Functions", () => {
     // SCENARIO: Slots found - returns formatted list
     it("should return available slots with display formatting", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
-      mockAppointmentService.getAppointmentTypes.mockResolvedValue([
+      mockAppointmentService.getBookableServices.mockResolvedValue([
         { id: "type-1", name: "Consulenza", duration: 60, price: 50 },
       ])
-      mockAppointmentService.getAppointmentType.mockResolvedValue({
+      mockAppointmentService.getBookableService.mockResolvedValue({
         id: "type-1",
         name: "Consulenza",
         duration: 60,
@@ -200,7 +203,7 @@ describe("Appointment Calling Functions", () => {
 
       expect(result.success).toBe(true)
       expect(result.totalSlots).toBe(2)
-      expect(result.appointmentTypeName).toBe("Consulenza")
+      expect(result.serviceName).toBe("Consulenza")
       expect(result.price).toBe(50)
     })
 
@@ -208,10 +211,10 @@ describe("Appointment Calling Functions", () => {
     // RULE: When customer says "show me Tuesday", LLM passes targetDate=YYYY-MM-DD
     it("should pass targetDate to getAvailableSlots when provided", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
-      mockAppointmentService.getAppointmentTypes.mockResolvedValue([
+      mockAppointmentService.getBookableServices.mockResolvedValue([
         { id: "type-1", name: "Consulenza", duration: 60, price: 50 },
       ])
-      mockAppointmentService.getAppointmentType.mockResolvedValue({
+      mockAppointmentService.getBookableService.mockResolvedValue({
         id: "type-1",
         name: "Consulenza",
         duration: 60,
@@ -225,10 +228,10 @@ describe("Appointment Calling Functions", () => {
         targetDate: "2026-04-15",
       })
 
-      // Verify getAvailableSlots was called (date range covers the target day)
+      // Verify getAvailableSlots was called with the resolved serviceId
       expect(mockAppointmentService.getAvailableSlots).toHaveBeenCalledWith(
         WORKSPACE_ID,
-        "type-1",
+        expect.any(String),
         expect.any(Date),
         expect.any(Date)
       )
@@ -249,16 +252,16 @@ describe("Appointment Calling Functions", () => {
     const bookRequest = {
       workspaceId: WORKSPACE_ID,
       customerId: CUSTOMER_ID,
-      appointmentTypeId: "type-1",
+      serviceId: "type-1",
       startTime: "2026-04-15T10:00:00.000Z",
       channel: "whatsapp",
     }
 
     // RULE: All required parameters must be provided
-    it("should return error when appointmentTypeId is missing", async () => {
+    it("should return error when serviceId is missing", async () => {
       const result = await bookAppointment({
         ...bookRequest,
-        appointmentTypeId: "",
+        serviceId: "",
       })
 
       expect(result.success).toBe(false)
@@ -326,7 +329,7 @@ describe("Appointment Calling Functions", () => {
         startTime: new Date("2026-04-15T10:00:00"),
         endTime: new Date("2026-04-15T11:00:00"),
         status: "confirmed",
-        appointmentType: { name: "Consulenza" },
+        service: { name: "Consulenza" },
       }
       mockAppointmentService.createAppointment.mockResolvedValue(mockAppointment)
 
@@ -334,7 +337,7 @@ describe("Appointment Calling Functions", () => {
 
       expect(result.success).toBe(true)
       expect(result.appointmentId).toBe("appt-new")
-      expect(result.appointmentTypeName).toBe("Consulenza")
+      expect(result.serviceName).toBe("Consulenza")
       expect(result.displayDate).toBeDefined()
       expect(result.displayTime).toBeDefined()
     })
@@ -354,7 +357,7 @@ describe("Appointment Calling Functions", () => {
         startTime: new Date("2026-04-15T10:00:00"),
         endTime: new Date("2026-04-15T11:00:00"),
         status: "confirmed",
-        appointmentType: { name: "Consulenza" },
+        service: { name: "Consulenza" },
       }
       mockAppointmentService.createAppointment.mockResolvedValue(mockAppointment)
       mockGoogleCalendarService.createEvent.mockResolvedValue({
@@ -455,20 +458,20 @@ describe("Appointment Calling Functions", () => {
         customerId: CUSTOMER_ID,
         status: "confirmed",
         startTime: futureDate,
-        appointmentTypeId: "type-1",
-        appointmentType: { name: "Consulenza" },
+        serviceId: "type-1",
+        service: { name: "Consulenza" },
       })
 
       mockAppointmentService.cancelAppointment.mockResolvedValue({
         id: "appt-1",
         status: "cancelled",
-        appointmentType: { name: "Consulenza" },
+        service: { name: "Consulenza" },
       })
 
       const result = await cancelAppointment(cancelRequest)
 
       expect(result.success).toBe(true)
-      expect(result.appointmentTypeName).toBe("Consulenza")
+      expect(result.serviceName).toBe("Consulenza")
       // No late cancellation logged
       expect(mockPrisma.lateCancellationAttempt.create).not.toHaveBeenCalled()
     })
@@ -483,14 +486,14 @@ describe("Appointment Calling Functions", () => {
         customerId: CUSTOMER_ID,
         status: "confirmed",
         startTime: futureDate,
-        appointmentTypeId: "type-1",
-        appointmentType: { name: "Consulenza" },
+        serviceId: "type-1",
+        service: { name: "Consulenza" },
         googleEventId: "gcal-event-456",
       })
       mockAppointmentService.cancelAppointment.mockResolvedValue({
         id: "appt-gcal",
         status: "cancelled",
-        appointmentType: { name: "Consulenza" },
+        service: { name: "Consulenza" },
       })
 
       const result = await cancelAppointment({
@@ -514,27 +517,28 @@ describe("Appointment Calling Functions", () => {
         customerId: CUSTOMER_ID,
         status: "confirmed",
         startTime: soonDate,
-        appointmentTypeId: "type-1",
-        appointmentType: { name: "Consulenza" },
+        serviceId: "type-1",
+        service: { name: "Consulenza" },
       })
       mockPrisma.lateCancellationAttempt.create.mockResolvedValue({})
 
       mockAppointmentService.cancelAppointment.mockResolvedValue({
         id: "appt-1",
         status: "cancelled",
-        appointmentType: { name: "Consulenza" },
+        service: { name: "Consulenza" },
       })
 
       const result = await cancelAppointment(cancelRequest)
 
       expect(result.success).toBe(true)
       // Late cancellation WAS logged
+      // NOTE: field renamed from appointmentTypeId → serviceId after model merge
       expect(mockPrisma.lateCancellationAttempt.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             workspaceId: WORKSPACE_ID,
             customerId: CUSTOMER_ID,
-            appointmentTypeId: "type-1",
+            serviceId: "type-1",
           }),
         })
       )
@@ -589,20 +593,21 @@ describe("Appointment Calling Functions", () => {
     it("should return formatted appointment list", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
 
+      // NOTE: appointment relation renamed from appointmentType → service after model merge
       const appointments = [
         {
           id: "appt-1",
           startTime: new Date("2026-04-20T10:00:00"),
           endTime: new Date("2026-04-20T11:00:00"),
           status: "confirmed",
-          appointmentType: { name: "Consulenza" },
+          service: { name: "Consulenza" },
         },
         {
           id: "appt-2",
           startTime: new Date("2026-04-22T14:00:00"),
           endTime: new Date("2026-04-22T15:00:00"),
           status: "confirmed",
-          appointmentType: { name: "Visita" },
+          service: { name: "Visita" },
         },
       ]
       mockAppointmentService.getCustomerAppointments.mockResolvedValue(appointments)
@@ -614,8 +619,8 @@ describe("Appointment Calling Functions", () => {
 
       expect(result.success).toBe(true)
       expect(result.totalCount).toBe(2)
-      expect(result.appointments![0].appointmentTypeName).toBe("Consulenza")
-      expect(result.appointments![1].appointmentTypeName).toBe("Visita")
+      expect(result.appointments![0].serviceName).toBe("Consulenza")
+      expect(result.appointments![1].serviceName).toBe("Visita")
       expect(result.appointments![0].displayDate).toBeDefined()
       expect(result.appointments![0].displayTime).toBeDefined()
     })
@@ -637,11 +642,12 @@ describe("Appointment Calling Functions", () => {
       reason: "Better timing",
     }
 
+    // NOTE: appointmentTypeId → serviceId, appointmentType → service after model merge
     const mockExistingAppointment = {
       id: "appt-1",
       workspaceId: WORKSPACE_ID,
       customerId: CUSTOMER_ID,
-      appointmentTypeId: "type-1",
+      serviceId: "type-1",
       startTime: futureTime,
       endTime: new Date(futureTime.getTime() + 30 * 60 * 1000),
       status: "confirmed",
@@ -650,18 +656,18 @@ describe("Appointment Calling Functions", () => {
       customerEmail: "mario@test.com",
       customerNotes: "Note",
       bookedVia: "whatsapp",
-      appointmentType: { id: "type-1", name: "Consulenza", duration: 30, bufferTime: 0 },
+      service: { id: "type-1", name: "Consulenza", duration: 30, bufferTime: 0 },
     }
 
     const mockNewAppointment = {
       id: "appt-new",
       workspaceId: WORKSPACE_ID,
       customerId: CUSTOMER_ID,
-      appointmentTypeId: "type-1",
+      serviceId: "type-1",
       startTime: newFutureTime,
       endTime: new Date(newFutureTime.getTime() + 30 * 60 * 1000),
       status: "confirmed",
-      appointmentType: { id: "type-1", name: "Consulenza", duration: 30, bufferTime: 0 },
+      service: { id: "type-1", name: "Consulenza", duration: 30, bufferTime: 0 },
     }
 
     // RULE: Missing parameters should return error
@@ -755,7 +761,7 @@ describe("Appointment Calling Functions", () => {
 
       expect(result.success).toBe(true)
       expect(result.oldAppointmentId).toBe("appt-1")
-      expect(result.appointmentTypeName).toBe("Consulenza")
+      expect(result.serviceName).toBe("Consulenza")
       expect(result.newDisplayDate).toBeDefined()
       expect(result.newDisplayTime).toBeDefined()
       expect(result.oldStartTime).toBe(futureTime.toISOString())

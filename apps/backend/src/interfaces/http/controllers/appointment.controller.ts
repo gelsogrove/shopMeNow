@@ -2,7 +2,8 @@
  * Appointment Controller
  * 
  * HTTP handlers for appointment booking endpoints.
- * Handles: AppointmentTypes, BusinessHours, BlackoutPeriods
+ * Handles: BusinessHours, BlackoutPeriods, Available Slots, Appointments
+ * Note: AppointmentType CRUD is removed — services with enableForBooking=true are used instead.
  */
 
 import { Request, Response } from 'express';
@@ -20,147 +21,6 @@ export class AppointmentController {
 
   constructor(private prisma: PrismaClient) {
     this.appointmentService = new AppointmentService(prisma);
-  }
-
-  // ============================================
-  // APPOINTMENT TYPES
-  // ============================================
-
-  /**
-   * GET /api/workspaces/:workspaceId/appointment-types
-   * Get all appointment types for workspace
-   */
-  async getAppointmentTypes(req: Request, res: Response) {
-    try {
-      const workspaceId = (req as any).workspaceId; // Set by middleware
-      const includeInactive = req.query.includeInactive === 'true';
-
-      const types = await this.appointmentService.getAppointmentTypes(
-        workspaceId,
-        includeInactive
-      );
-
-      return res.json(types);
-    } catch (error) {
-      logger.error('Failed to get appointment types:', error);
-      return res.status(500).json({
-        error: 'Failed to get appointment types',
-        message: error.message
-      });
-    }
-  }
-
-  /**
-   * GET /api/workspaces/:workspaceId/appointment-types/:id
-   * Get single appointment type
-   */
-  async getAppointmentType(req: Request, res: Response) {
-    try {
-      const workspaceId = (req as any).workspaceId;
-      const { id } = req.params;
-
-      const type = await this.appointmentService.getAppointmentType(workspaceId, id);
-
-      return res.json(type);
-    } catch (error) {
-      logger.error('Failed to get appointment type:', error);
-      const statusCode = error.message === 'Appointment type not found' ? 404 : 500;
-      return res.status(statusCode).json({
-        error: 'Failed to get appointment type',
-        message: error.message
-      });
-    }
-  }
-
-  /**
-   * POST /api/workspaces/:workspaceId/appointment-types
-   * Create new appointment type
-   */
-  async createAppointmentType(req: Request, res: Response) {
-    try {
-      const workspaceId = (req as any).workspaceId;
-      const { name, description, duration, bufferTime, price, color } = req.body;
-
-      if (!name || !duration) {
-        return res.status(400).json({
-          error: 'Validation error',
-          message: 'name and duration are required'
-        });
-      }
-
-      const type = await this.appointmentService.createAppointmentType(workspaceId, {
-        name,
-        description,
-        duration: parseInt(duration),
-        bufferTime: bufferTime ? parseInt(bufferTime) : undefined,
-        price: price ? parseFloat(price) : undefined,
-        color
-      });
-
-      return res.status(201).json(type);
-    } catch (error) {
-      logger.error('Failed to create appointment type:', error);
-      const statusCode = error.message.includes('must be') ? 400 : 500;
-      return res.status(statusCode).json({
-        error: 'Failed to create appointment type',
-        message: error.message
-      });
-    }
-  }
-
-  /**
-   * PATCH /api/workspaces/:workspaceId/appointment-types/:id
-   * Update appointment type
-   */
-  async updateAppointmentType(req: Request, res: Response) {
-    try {
-      const workspaceId = (req as any).workspaceId;
-      const { id } = req.params;
-      const { name, description, duration, bufferTime, price, color, isActive } = req.body;
-
-      const type = await this.appointmentService.updateAppointmentType(workspaceId, id, {
-        name,
-        description,
-        duration: duration ? parseInt(duration) : undefined,
-        bufferTime: bufferTime !== undefined ? parseInt(bufferTime) : undefined,
-        price: price !== undefined ? parseFloat(price) : undefined,
-        color,
-        isActive
-      });
-
-      return res.json(type);
-    } catch (error) {
-      logger.error('Failed to update appointment type:', error);
-      const statusCode = error.message === 'Appointment type not found' ? 404 
-        : error.message.includes('must be') ? 400 : 500;
-      return res.status(statusCode).json({
-        error: 'Failed to update appointment type',
-        message: error.message
-      });
-    }
-  }
-
-  /**
-   * DELETE /api/workspaces/:workspaceId/appointment-types/:id
-   * Delete (deactivate) appointment type
-   */
-  async deleteAppointmentType(req: Request, res: Response) {
-    try {
-      const workspaceId = (req as any).workspaceId;
-      const { id } = req.params;
-
-      await this.appointmentService.deleteAppointmentType(workspaceId, id);
-
-      return res.status(204).send();
-    } catch (error) {
-      logger.error('Failed to delete appointment type:', error);
-      const statusCode = error.message === 'Appointment type not found' ? 404 
-        : error.message.includes('pending appointments') ? 400 : 500;
-      return res.status(statusCode).json({
-        error: 'Failed to delete appointment type',
-        message: error.message
-      });
-    }
   }
 
   // ============================================
@@ -339,17 +199,17 @@ export class AppointmentController {
   /**
    * GET /api/workspaces/:workspaceId/appointments/slots
    * Get available time slots for booking.
-   * Query params: appointmentTypeId, startDate (ISO), endDate (ISO)
+   * Query params: serviceId, startDate (ISO), endDate (ISO)
    */
   async getAvailableSlots(req: Request, res: Response) {
     try {
       const workspaceId = (req as any).workspaceId;
-      const { appointmentTypeId, startDate, endDate } = req.query;
+      const { serviceId, startDate, endDate } = req.query;
 
-      if (!appointmentTypeId || !startDate || !endDate) {
+      if (!serviceId || !startDate || !endDate) {
         return res.status(400).json({
           error: 'Validation error',
-          message: 'appointmentTypeId, startDate, and endDate are required query parameters',
+          message: 'serviceId, startDate, and endDate are required query parameters',
         });
       }
 
@@ -372,13 +232,13 @@ export class AppointmentController {
 
       const slots = await this.appointmentService.getAvailableSlots(
         workspaceId,
-        appointmentTypeId as string,
+        serviceId as string,
         start,
         end
       );
 
       return res.json({
-        appointmentTypeId,
+        serviceId,
         startDate: start.toISOString(),
         endDate: end.toISOString(),
         totalSlots: slots.length,
@@ -431,18 +291,18 @@ export class AppointmentController {
   async createAppointment(req: Request, res: Response) {
     try {
       const workspaceId = (req as any).workspaceId;
-      const { customerId, appointmentTypeId, startTime, customerNotes, customerName, customerPhone, customerEmail, bookedVia } = req.body;
+      const { customerId, serviceId, startTime, customerNotes, customerName, customerPhone, customerEmail, bookedVia } = req.body;
 
-      if (!customerId || !appointmentTypeId || !startTime) {
+      if (!customerId || !serviceId || !startTime) {
         return res.status(400).json({
           error: 'Validation error',
-          message: 'customerId, appointmentTypeId, and startTime are required',
+          message: 'customerId, serviceId, and startTime are required',
         });
       }
 
       const appointment = await this.appointmentService.createAppointment(workspaceId, {
         customerId,
-        appointmentTypeId,
+        serviceId,
         startTime: new Date(startTime),
         customerNotes,
         customerName,

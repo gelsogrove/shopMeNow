@@ -29,14 +29,8 @@ jest.mock("../../../src/utils/logger", () => ({
 
 import { AppointmentService } from "../../../src/application/services/appointment.service"
 
-// Build mock Prisma with all needed models
-const mockAppointmentTypeRepo = {
-  findByWorkspace: jest.fn(),
-  findById: jest.fn(),
-  create: jest.fn(),
-  update: jest.fn(),
-  deactivate: jest.fn(),
-}
+// NOTE: AppointmentTypeRepository was deleted — AppointmentService now queries
+// prisma.services with enableForBooking=true directly (migration 20260411000000)
 
 const mockBusinessHoursRepo = {
   findByWorkspace: jest.fn(),
@@ -61,8 +55,9 @@ const mockPrisma = {
     update: jest.fn(),
     count: jest.fn(),
   },
-  pendingAppointment: {
-    count: jest.fn(),
+  services: {
+    findMany: jest.fn(),
+    findFirst: jest.fn(),
   },
   customers: {
     update: jest.fn(),
@@ -71,11 +66,6 @@ const mockPrisma = {
     findUnique: jest.fn(),
   },
 } as any
-
-// We need to mock the repositories that AppointmentService creates internally
-jest.mock("../../../src/repositories/appointment-type.repository", () => ({
-  AppointmentTypeRepository: jest.fn().mockImplementation(() => mockAppointmentTypeRepo),
-}))
 
 jest.mock("../../../src/repositories/business-hours.repository", () => ({
   BusinessHoursRepository: jest.fn().mockImplementation(() => mockBusinessHoursRepo),
@@ -98,130 +88,70 @@ describe("AppointmentService", () => {
   })
 
   // ============================================
-  // APPOINTMENT TYPES
+  // BOOKABLE SERVICES (replaces Appointment Types)
+  // NOTE: AppointmentType model was merged into Services (migration 20260411000000).
+  //       Services with enableForBooking=true are now the "appointment types".
   // ============================================
 
-  describe("Appointment Types", () => {
-    const mockType = {
-      id: "type-1",
+  describe("Bookable Services", () => {
+    const mockService = {
+      id: "svc-1",
       workspaceId: WORKSPACE_ID,
       name: "Consulenza 30min",
       duration: 30,
       bufferTime: 10,
       price: 50,
       isActive: true,
+      enableForBooking: true,
     }
 
-    describe("getAppointmentTypes", () => {
-      // SCENARIO: Admin loads appointment types list page
-      it("should return all active appointment types for workspace", async () => {
-        mockAppointmentTypeRepo.findByWorkspace.mockResolvedValue([mockType])
+    describe("getBookableServices", () => {
+      // SCENARIO: LLM needs to list available service types before booking
+      it("should return active bookable services for workspace", async () => {
+        mockPrisma.services.findMany.mockResolvedValue([mockService])
 
-        const result = await service.getAppointmentTypes(WORKSPACE_ID)
+        const result = await service.getBookableServices(WORKSPACE_ID)
 
-        expect(result).toEqual([mockType])
-        expect(mockAppointmentTypeRepo.findByWorkspace).toHaveBeenCalledWith(WORKSPACE_ID, false)
-      })
-
-      // SCENARIO: Admin wants to see inactive types too
-      it("should include inactive types when flag is true", async () => {
-        mockAppointmentTypeRepo.findByWorkspace.mockResolvedValue([mockType])
-
-        await service.getAppointmentTypes(WORKSPACE_ID, true)
-
-        expect(mockAppointmentTypeRepo.findByWorkspace).toHaveBeenCalledWith(WORKSPACE_ID, true)
-      })
-    })
-
-    describe("getAppointmentType", () => {
-      // SCENARIO: Fetching a single appointment type by ID
-      it("should return appointment type when found", async () => {
-        mockAppointmentTypeRepo.findById.mockResolvedValue(mockType)
-
-        const result = await service.getAppointmentType(WORKSPACE_ID, "type-1")
-
-        expect(result).toEqual(mockType)
-      })
-
-      // RULE: Non-existent types must throw
-      it("should throw when appointment type not found", async () => {
-        mockAppointmentTypeRepo.findById.mockResolvedValue(null)
-
-        await expect(service.getAppointmentType(WORKSPACE_ID, "non-existent")).rejects.toThrow(
-          "Appointment type not found"
+        expect(result).toEqual([mockService])
+        expect(mockPrisma.services.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              workspaceId: WORKSPACE_ID,
+              enableForBooking: true,
+              isActive: true,
+            }),
+          })
         )
       })
-    })
 
-    describe("createAppointmentType", () => {
-      // SCENARIO: Admin creates a new appointment type
-      it("should create appointment type with valid data", async () => {
-        mockAppointmentTypeRepo.create.mockResolvedValue(mockType)
+      // SCENARIO: Admin panel wants to see inactive bookable services too
+      it("should include inactive when includeInactive=true", async () => {
+        mockPrisma.services.findMany.mockResolvedValue([mockService])
 
-        const result = await service.createAppointmentType(WORKSPACE_ID, {
-          name: "Consulenza 30min",
-          duration: 30,
-          bufferTime: 10,
-          price: 50,
-        })
+        await service.getBookableServices(WORKSPACE_ID, true)
 
-        expect(result).toEqual(mockType)
-        expect(mockAppointmentTypeRepo.create).toHaveBeenCalledWith(WORKSPACE_ID, {
-          name: "Consulenza 30min",
-          duration: 30,
-          bufferTime: 10,
-          price: 50,
-        })
-      })
-
-      // RULE: Duration must be between 15 and 480 minutes
-      it("should reject duration under 15 minutes", async () => {
-        await expect(
-          service.createAppointmentType(WORKSPACE_ID, { name: "Quick", duration: 10 })
-        ).rejects.toThrow("Duration must be between 15 and 480 minutes")
-      })
-
-      it("should reject duration over 480 minutes", async () => {
-        await expect(
-          service.createAppointmentType(WORKSPACE_ID, { name: "Long", duration: 500 })
-        ).rejects.toThrow("Duration must be between 15 and 480 minutes")
-      })
-
-      // RULE: Buffer time must be between 0 and 120 minutes
-      it("should reject buffer time over 120 minutes", async () => {
-        await expect(
-          service.createAppointmentType(WORKSPACE_ID, { name: "Test", duration: 30, bufferTime: 150 })
-        ).rejects.toThrow("Buffer time must be between 0 and 120 minutes")
-      })
-
-      // RULE: Price cannot be negative
-      it("should reject negative price", async () => {
-        await expect(
-          service.createAppointmentType(WORKSPACE_ID, { name: "Test", duration: 30, price: -10 })
-        ).rejects.toThrow("Price cannot be negative")
+        const call = mockPrisma.services.findMany.mock.calls[0][0]
+        expect(call.where).not.toHaveProperty("isActive")
       })
     })
 
-    describe("deleteAppointmentType", () => {
-      // RULE: Cannot delete if pending appointments reference this type
-      it("should block deletion when pending appointments exist", async () => {
-        mockAppointmentTypeRepo.findById.mockResolvedValue(mockType)
-        mockPrisma.pendingAppointment.count.mockResolvedValue(3)
+    describe("getBookableService", () => {
+      // SCENARIO: LLM resolves serviceId before booking
+      it("should return bookable service when found", async () => {
+        mockPrisma.services.findFirst.mockResolvedValue(mockService)
 
-        await expect(
-          service.deleteAppointmentType(WORKSPACE_ID, "type-1")
-        ).rejects.toThrow("Cannot delete appointment type: 3 pending appointments exist")
+        const result = await service.getBookableService(WORKSPACE_ID, "svc-1")
+
+        expect(result).toEqual(mockService)
       })
 
-      // SCENARIO: No pending appointments, safe to soft-delete
-      it("should deactivate type when no pending appointments", async () => {
-        mockAppointmentTypeRepo.findById.mockResolvedValue(mockType)
-        mockPrisma.pendingAppointment.count.mockResolvedValue(0)
-        mockAppointmentTypeRepo.deactivate.mockResolvedValue({ count: 1 })
+      // RULE: Non-existent or non-bookable service must throw
+      it("should throw when bookable service not found", async () => {
+        mockPrisma.services.findFirst.mockResolvedValue(null)
 
-        await service.deleteAppointmentType(WORKSPACE_ID, "type-1")
-
-        expect(mockAppointmentTypeRepo.deactivate).toHaveBeenCalledWith(WORKSPACE_ID, "type-1")
+        await expect(service.getBookableService(WORKSPACE_ID, "non-existent")).rejects.toThrow(
+          "Bookable service not found"
+        )
       })
     })
   })
@@ -448,17 +378,19 @@ describe("AppointmentService", () => {
   // ============================================
 
   describe("createAppointment", () => {
-    const mockType = {
-      id: "type-1",
+    // NOTE: parameter renamed from appointmentTypeId → serviceId after model merge
+    const mockService = {
+      id: "svc-1",
       name: "Consulenza",
       duration: 60,
       bufferTime: 15,
       isActive: true,
+      enableForBooking: true,
     }
 
     const appointmentData = {
       customerId: "cust-1",
-      appointmentTypeId: "type-1",
+      serviceId: "svc-1",
       startTime: new Date("2026-04-15T10:00:00"),
       customerName: "Mario Rossi",
       customerPhone: "+393331234567",
@@ -467,8 +399,8 @@ describe("AppointmentService", () => {
 
     // SCENARIO: Customer books a valid appointment
     it("should create confirmed appointment when slot is available", async () => {
-      // Mock appointment type lookup
-      mockAppointmentTypeRepo.findById.mockResolvedValue(mockType)
+      // Mock bookable service lookup (service uses prisma.services.findFirst)
+      mockPrisma.services.findFirst.mockResolvedValue(mockService)
 
       // Mock isSlotAvailable logic (blackout=no, hours=open, no conflict)
       mockBlackoutPeriodRepo.isDateBlocked.mockResolvedValue(false)
@@ -485,7 +417,7 @@ describe("AppointmentService", () => {
         ...appointmentData,
         status: "confirmed",
         endTime: new Date("2026-04-15T11:15:00"), // 60min + 15min buffer
-        appointmentType: mockType,
+        service: mockService,
       }
       mockPrisma.appointment.create.mockResolvedValue(createdAppointment)
       mockPrisma.customers.update.mockResolvedValue({})
@@ -506,18 +438,18 @@ describe("AppointmentService", () => {
       )
     })
 
-    // RULE: Throw when appointment type is inactive
-    it("should throw when appointment type not found or inactive", async () => {
-      mockAppointmentTypeRepo.findById.mockResolvedValue(null)
+    // RULE: Throw when bookable service is not found or inactive
+    it("should throw when bookable service not found or inactive", async () => {
+      mockPrisma.services.findFirst.mockResolvedValue(null)
 
       await expect(
         service.createAppointment(WORKSPACE_ID, appointmentData)
-      ).rejects.toThrow("Appointment type not found or inactive")
+      ).rejects.toThrow("Bookable service not found or inactive")
     })
 
     // RULE: Double-check slot availability before creating
     it("should throw when slot is no longer available", async () => {
-      mockAppointmentTypeRepo.findById.mockResolvedValue(mockType)
+      mockPrisma.services.findFirst.mockResolvedValue(mockService)
 
       // Slot is booked by someone else in the meantime
       mockBlackoutPeriodRepo.isDateBlocked.mockResolvedValue(false)
@@ -555,7 +487,7 @@ describe("AppointmentService", () => {
         status: "cancelled",
         cancelledAt: expect.any(Date),
         cancelledBy: "customer",
-        appointmentType: { name: "Test" },
+        service: { name: "Test" },
       }
 
       mockPrisma.appointment.findFirst.mockResolvedValue(existingAppt)
@@ -610,7 +542,7 @@ describe("AppointmentService", () => {
           customerId: "cust-1",
           status: "confirmed",
           startTime: new Date("2026-04-20T10:00:00"),
-          appointmentType: { name: "Consulenza" },
+          service: { name: "Consulenza" },
         },
       ]
       mockPrisma.appointment.findMany.mockResolvedValue(mockAppointments)

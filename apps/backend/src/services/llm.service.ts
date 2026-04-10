@@ -1526,7 +1526,7 @@ export class LLMService {
           return await this.callingFunctionsService.listAvailableSlots({
             workspaceId: workspace.id,
             customerId: customer.id,
-            appointmentTypeId: args.appointmentTypeId,
+            serviceId: args.serviceId || args.appointmentTypeId,
             daysAhead: args.daysAhead,
             targetDate: args.targetDate,
           })
@@ -1536,7 +1536,7 @@ export class LLMService {
           return await this.callingFunctionsService.bookAppointment({
             workspaceId: workspace.id,
             customerId: customer.id,
-            appointmentTypeId: args.appointmentTypeId,
+            serviceId: args.serviceId || args.appointmentTypeId,
             startTime: args.startTime,
             customerNotes: args.customerNotes,
             channel: args.channel,

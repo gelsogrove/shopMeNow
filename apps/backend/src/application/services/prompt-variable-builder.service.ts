@@ -368,8 +368,8 @@ export class PromptVariableBuilder {
 
     if (workspace?.enableCalendarBooking) {
       const [types, upcoming] = await Promise.all([
-        prisma.appointmentType.findMany({
-          where: { workspaceId, isActive: true },
+        prisma.services.findMany({
+          where: { workspaceId, isActive: true, enableForBooking: true },
           select: { name: true, description: true, duration: true, price: true },
           orderBy: { name: 'asc' },
         }),
@@ -380,7 +380,7 @@ export class PromptVariableBuilder {
             status: 'confirmed',
             startTime: { gte: new Date() },
           },
-          include: { appointmentType: true },
+          include: { service: true },
           orderBy: { startTime: 'asc' },
           take: 5,
         }),
@@ -394,7 +394,7 @@ export class PromptVariableBuilder {
 
       if (upcoming.length > 0) {
         customerUpcomingAppointments = upcoming.map(a =>
-          `- ${a.appointmentType?.name || 'Appointment'}: ${a.startTime.toLocaleDateString('it-IT')} ${a.startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${a.status})`
+          `- ${a.service?.name || 'Appointment'}: ${a.startTime.toLocaleDateString('it-IT')} ${a.startTime.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} (${a.status})`
         ).join('\n')
       }
     }

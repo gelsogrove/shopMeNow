@@ -202,9 +202,9 @@ export interface PromptVariables {
    */
   hasCalendarEnabled: boolean
 
-  /** Tipi di appuntamento disponibili
+  /** Tipi di appuntamento disponibili (servizi con enableForBooking=true)
    * Template: {{appointmentTypes}}
-   * Source: AppointmentType[] from DB formatted as text
+   * Source: Services[] from DB where enableForBooking=true, formatted as text
    */
   appointmentTypes: string
 

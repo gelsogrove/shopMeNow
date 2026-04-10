@@ -22,7 +22,7 @@
  * 
  * Template Variables (3 separate templates for each interval):
  * - {{customerName}} - Customer's name
- * - {{appointmentType}} - Type of appointment (e.g., "Pulizia denti")
+ * - {{appointmentType}} - Type of appointment (from service name, e.g., "Pulizia denti")
  * - {{appointmentDate}} - Formatted date (e.g., "lunedì 8 aprile")
  * - {{appointmentTime}} - Formatted time (e.g., "10:30")
  */
@@ -157,7 +157,7 @@ export async function appointmentReminderJob(): Promise<void> {
             ownerId: true,
           },
         },
-        appointmentType: true,
+        service: true,
         customer: {
           select: {
             id: true,
@@ -207,7 +207,7 @@ export async function appointmentReminderJob(): Promise<void> {
             ownerId: true,
           },
         },
-        appointmentType: true,
+        service: true,
         customer: {
           select: {
             id: true,
@@ -257,7 +257,7 @@ export async function appointmentReminderJob(): Promise<void> {
             ownerId: true,
           },
         },
-        appointmentType: true,
+        service: true,
         customer: {
           select: {
             id: true,
@@ -344,7 +344,7 @@ async function processReminder(
       const emailSent = await sendAppointmentReminderEmail(
         appointment.customer.email,
         appointment.customer.name || 'Customer',
-        appointment.appointmentType?.name || 'Appointment',
+        appointment.service?.name || 'Appointment',
         appointment.startTime.toLocaleDateString(getLocaleFromLanguage(appointment.customer?.language), {
           weekday: 'long',
           day: 'numeric',
@@ -451,7 +451,7 @@ function buildReminderMessage(appointment: any, reminderType: '24h' | '1h' | '30
     // Available variables: {{customerName}}, {{appointmentType}}, {{appointmentDate}}, {{appointmentTime}}
     return template
       .replace(/\{\{customerName\}\}/g, appointment.customerName || appointment.customer?.name || '')
-      .replace(/\{\{appointmentType\}\}/g, appointment.appointmentType?.name || 'Appointment')
+      .replace(/\{\{appointmentType\}\}/g, appointment.service?.name || 'Appointment')
       .replace(/\{\{appointmentDate\}\}/g, appointment.startTime.toLocaleDateString(locale, {
         weekday: 'long',
         day: 'numeric',
@@ -464,7 +464,7 @@ function buildReminderMessage(appointment: any, reminderType: '24h' | '1h' | '30
   }
 
   // Default message (English fallback - workspace owner should configure reminder templates)
-  const typeLabel = appointment.appointmentType?.name || 'appointment'
+  const typeLabel = appointment.service?.name || 'appointment'
   const dateStr = appointment.startTime.toLocaleDateString(locale, {
     weekday: 'long',
     day: 'numeric',

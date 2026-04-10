@@ -16,7 +16,7 @@ import { googleCalendarService } from "../../services/google-calendar.service"
 export interface BookAppointmentRequest {
   workspaceId: string
   customerId: string
-  appointmentTypeId: string
+  serviceId: string
   startTime: string // ISO 8601 from LLM
   customerNotes?: string
   channel?: string // "whatsapp" | "widget"
@@ -26,7 +26,7 @@ export interface BookAppointmentResult {
   success: boolean
   message: string
   appointmentId?: string
-  appointmentTypeName?: string
+  serviceName?: string
   startTime?: string
   endTime?: string
   displayDate?: string
@@ -42,15 +42,15 @@ export async function bookAppointment(
     logger.info("📅 bookAppointment called:", {
       workspaceId: request.workspaceId,
       customerId: request.customerId,
-      appointmentTypeId: request.appointmentTypeId,
+      serviceId: request.serviceId,
       startTime: request.startTime,
     })
 
-    if (!request.workspaceId || !request.customerId || !request.appointmentTypeId || !request.startTime) {
+    if (!request.workspaceId || !request.customerId || !request.serviceId || !request.startTime) {
       return {
         success: false,
         message: "Missing required parameters",
-        error: "workspaceId, customerId, appointmentTypeId, and startTime are required",
+        error: "workspaceId, customerId, serviceId, and startTime are required",
         timestamp: new Date().toISOString(),
       }
     }
@@ -91,7 +91,7 @@ export async function bookAppointment(
 
     const appointment = await appointmentService.createAppointment(request.workspaceId, {
       customerId: request.customerId,
-      appointmentTypeId: request.appointmentTypeId,
+      serviceId: request.serviceId,
       startTime: new Date(request.startTime),
       customerNotes: request.customerNotes,
       customerName: customer?.name || undefined,
@@ -109,7 +109,7 @@ export async function bookAppointment(
     // Sync to Google Calendar (non-blocking: booking succeeds even if GCal fails)
     const gcalResult = await googleCalendarService.createEvent({
       workspaceId: request.workspaceId,
-      summary: `${appointment.appointmentType?.name || 'Appointment'} - ${customer.name || 'Customer'}`,
+      summary: `${appointment.service?.name || 'Appointment'} - ${customer.name || 'Customer'}`,
       startTime: startDt,
       endTime: endDt,
       timezone: workspace?.timezone || 'Europe/Rome',
@@ -134,7 +134,7 @@ export async function bookAppointment(
       success: true,
       message: `Appointment booked for ${displayDate} at ${displayTime}`,
       appointmentId: appointment.id,
-      appointmentTypeName: appointment.appointmentType?.name,
+      serviceName: appointment.service?.name,
       startTime: startDt.toISOString(),
       endTime: endDt.toISOString(),
       displayDate,

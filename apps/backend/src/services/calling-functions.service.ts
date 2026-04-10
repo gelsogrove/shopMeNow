@@ -1769,7 +1769,8 @@ export class CallingFunctionsService {
   public async listAvailableSlots(request: {
     workspaceId: string
     customerId: string
-    appointmentTypeId?: string
+    appointmentTypeId?: string // backward compat, prefer serviceId
+    serviceId?: string
     daysAhead?: number
     targetDate?: string
   }) {
@@ -1794,7 +1795,8 @@ export class CallingFunctionsService {
   public async bookAppointment(request: {
     workspaceId: string
     customerId: string
-    appointmentTypeId: string
+    appointmentTypeId?: string // backward compat, prefer serviceId
+    serviceId?: string
     startTime: string
     customerNotes?: string
     channel?: string

@@ -59,6 +59,13 @@ const FUNCTIONS_REQUIRING_REGISTRATION = [
 
   // Profile Management — called directly by FunctionExecutor
   'getProfileLink',
+
+  // Appointment Management — booking requires a registered customer
+  // Note: listAvailableSlots is intentionally excluded (anyone can browse slots)
+  'bookAppointment',
+  'cancelAppointment',
+  'rescheduleAppointment',
+  'getCustomerAppointments',
 ]
 
 // Functions that should be blocked for unregistered users even on informational channels
@@ -69,6 +76,13 @@ const FUNCTIONS_PROTECTED_FOR_UNREGISTERED = new Set([
   'repeatOrder',
   'confirmOrder',
   'showCheckout',
+  'handlePushNotifications',
+])
+
+// Widget chat must not expose profile/personal-data operations.
+const FUNCTIONS_BLOCKED_ON_WIDGET = new Set([
+  'profileManagementAgent',
+  'getProfileLink',
   'handlePushNotifications',
 ])
 
@@ -145,7 +159,26 @@ export class FunctionExecutor {
         customerId: context.customerId,
         args,
         customerIsActive: context.customerIsActive,
+        channel: context.channel,
       })
+
+      // 🚫 CHANNEL GUARD: widget does not allow profile/personal-data flows
+      if (context.channel === "widget" && FUNCTIONS_BLOCKED_ON_WIDGET.has(functionName)) {
+        logger.warn(`🚫 Widget profile function blocked: ${functionName}`, {
+          workspaceId: context.workspaceId,
+          customerId: context.customerId,
+        })
+        return {
+          success: false,
+          error: "WIDGET_PROFILE_UNAVAILABLE",
+          data: {
+            message: "Profile and personal-data actions are not available in widget chat.",
+            functionName,
+            channel: context.channel,
+          },
+          executionTimeMs: Date.now() - startTime,
+        }
+      }
 
       // 🔐 REGISTRATION GUARD: Check if function requires registration
       if (FUNCTIONS_PROTECTED_FOR_UNREGISTERED.has(functionName)) {
@@ -1105,7 +1138,7 @@ export class FunctionExecutor {
     return await callingFunctions.listAvailableSlots({
       workspaceId: context.workspaceId,
       customerId: context.customerId,
-      appointmentTypeId: args.appointmentTypeId,
+      serviceId: args.serviceId || args.appointmentTypeId,
       daysAhead: args.daysAhead,
       targetDate: args.targetDate,
     })
@@ -1122,7 +1155,7 @@ export class FunctionExecutor {
     return await callingFunctions.bookAppointment({
       workspaceId: context.workspaceId,
       customerId: context.customerId,
-      appointmentTypeId: args.appointmentTypeId,
+      serviceId: args.serviceId || args.appointmentTypeId,
       startTime: args.startTime,
       customerNotes: args.customerNotes,
       channel: context.channel,

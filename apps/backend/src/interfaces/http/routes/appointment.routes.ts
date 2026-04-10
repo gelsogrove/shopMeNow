@@ -16,221 +16,7 @@ export const createAppointmentRoutes = (prisma: PrismaClient): Router => {
   const appointmentController = new AppointmentController(prisma);
 
 // ============================================
-// APPOINTMENT TYPES
-// ============================================
-
-/**
- * @swagger
- * /api/workspaces/{workspaceId}/appointment-types:
- *   get:
- *     summary: Get all appointment types
- *     tags: [Appointments]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: includeInactive
- *         schema:
- *           type: boolean
- *           default: false
- *     responses:
- *       200:
- *         description: List of appointment types
- *       401:
- *         description: Unauthorized
- */
-router.get(
-  '/workspaces/:workspaceId/appointment-types',
-  authMiddleware,
-  workspaceValidationMiddleware,
-  appointmentController.getAppointmentTypes.bind(appointmentController)
-);
-
-/**
- * @swagger
- * /api/workspaces/{workspaceId}/appointment-types/{id}:
- *   get:
- *     summary: Get appointment type by ID
- *     tags: [Appointments]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Appointment type details
- *       404:
- *         description: Not found
- */
-router.get(
-  '/workspaces/:workspaceId/appointment-types/:id',
-  authMiddleware,
-  workspaceValidationMiddleware,
-  appointmentController.getAppointmentType.bind(appointmentController)
-);
-
-/**
- * @swagger
- * /api/workspaces/{workspaceId}/appointment-types:
- *   post:
- *     summary: Create new appointment type
- *     tags: [Appointments]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - duration
- *             properties:
- *               name:
- *                 type: string
- *                 example: "Consulenza Legale"
- *               description:
- *                 type: string
- *                 example: "Consulenza legale con avvocato (60 minuti)"
- *               duration:
- *                 type: integer
- *                 minimum: 15
- *                 maximum: 480
- *                 example: 60
- *               bufferTime:
- *                 type: integer
- *                 minimum: 0
- *                 maximum: 120
- *                 example: 15
- *               price:
- *                 type: number
- *                 format: float
- *                 example: 150.00
- *               color:
- *                 type: string
- *                 example: "#3b82f6"
- *     responses:
- *       201:
- *         description: Appointment type created
- *       400:
- *         description: Validation error
- */
-router.post(
-  '/workspaces/:workspaceId/appointment-types',
-  authMiddleware,
-  workspaceValidationMiddleware,
-  appointmentController.createAppointmentType.bind(appointmentController)
-);
-
-/**
- * @swagger
- * /api/workspaces/{workspaceId}/appointment-types/{id}:
- *   patch:
- *     summary: Update appointment type
- *     tags: [Appointments]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
- *               duration:
- *                 type: integer
- *               bufferTime:
- *                 type: integer
- *               price:
- *                 type: number
- *               color:
- *                 type: string
- *               isActive:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Appointment type updated
- *       404:
- *         description: Not found
- */
-router.patch(
-  '/workspaces/:workspaceId/appointment-types/:id',
-  authMiddleware,
-  workspaceValidationMiddleware,
-  appointmentController.updateAppointmentType.bind(appointmentController)
-);
-
-/**
- * @swagger
- * /api/workspaces/{workspaceId}/appointment-types/{id}:
- *   delete:
- *     summary: Delete (deactivate) appointment type
- *     tags: [Appointments]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: workspaceId
- *         required: true
- *         schema:
- *           type: string
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       204:
- *         description: Appointment type deleted
- *       400:
- *         description: Cannot delete (pending appointments exist)
- *       404:
- *         description: Not found
- */
-router.delete(
-  '/workspaces/:workspaceId/appointment-types/:id',
-  authMiddleware,
-  workspaceValidationMiddleware,
-  appointmentController.deleteAppointmentType.bind(appointmentController)
-);
-
-// ============================================
-// BUSINESS HOURS
+// BUSINESS HOURS (AppointmentType CRUD removed — use Services with enableForBooking)
 // ============================================
 
 /**
@@ -496,7 +282,7 @@ router.delete(
  *         schema:
  *           type: string
  *       - in: query
- *         name: appointmentTypeId
+ *         name: serviceId
  *         required: true
  *         schema:
  *           type: string
@@ -596,12 +382,12 @@ router.get(
  *             type: object
  *             required:
  *               - customerId
- *               - appointmentTypeId
+ *               - serviceId
  *               - startTime
  *             properties:
  *               customerId:
  *                 type: string
- *               appointmentTypeId:
+ *               serviceId:
  *                 type: string
  *               startTime:
  *                 type: string

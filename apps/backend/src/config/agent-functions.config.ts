@@ -397,9 +397,9 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
       parameters: {
         type: "object",
         properties: {
-          appointmentTypeId: {
+          serviceId: {
             type: "string",
-            description: "ID del tipo di appuntamento (opzionale, usa il primo disponibile se non specificato)",
+            description: "ID del servizio prenotabile (opzionale, usa il primo disponibile se non specificato)",
           },
           daysAhead: {
             type: "number",
@@ -419,13 +419,13 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "bookAppointment",
       description:
-        "✅ Conferma prenotazione di un appuntamento. QUANDO USARE: Cliente ha scelto uno slot dalla lista e conferma la prenotazione. DEVE avere appointmentTypeId e startTime. ESEMPI: 'sì, prenota alle 15:00', 'confermo giovedì alle 10'. DOPO: conferma con data, ora e tipo di appuntamento.",
+        "\u2705 Conferma prenotazione di un appuntamento. QUANDO USARE: Cliente ha scelto uno slot dalla lista e conferma la prenotazione. DEVE avere serviceId e startTime. ESEMPI: 's\u00ec, prenota alle 15:00', 'confermo gioved\u00ec alle 10'. DOPO: conferma con data, ora e tipo di servizio.",
       parameters: {
         type: "object",
         properties: {
-          appointmentTypeId: {
+          serviceId: {
             type: "string",
-            description: "ID del tipo di appuntamento",
+            description: "ID del servizio prenotabile",
           },
           startTime: {
             type: "string",
@@ -436,7 +436,7 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
             description: "Note aggiuntive del cliente (opzionale)",
           },
         },
-        required: ["appointmentTypeId", "startTime"],
+        required: ["serviceId", "startTime"],
       },
     },
   },

@@ -267,4 +267,37 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
       }
     })
   })
+
+  describe("Widget channel profile guard", () => {
+    it("should block getProfileLink on widget even for registered users", async () => {
+      const context: ExecutionContext = {
+        workspaceId: "ws-ecommerce",
+        customerId: "cust-registered",
+        customerIsActive: true,
+        sellsProductsAndServices: true,
+        channel: "widget",
+      }
+
+      const result = await executor.execute("getProfileLink", {}, context)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("WIDGET_PROFILE_UNAVAILABLE")
+      expect(result.data.message).toContain("not available in widget chat")
+    })
+
+    it("should block profileManagementAgent delegation on widget", async () => {
+      const context: ExecutionContext = {
+        workspaceId: "ws-ecommerce",
+        customerId: "cust-registered",
+        customerIsActive: true,
+        sellsProductsAndServices: true,
+        channel: "widget",
+      }
+
+      const result = await executor.execute("profileManagementAgent", { query: "I want to edit my profile" }, context)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("WIDGET_PROFILE_UNAVAILABLE")
+    })
+  })
 })

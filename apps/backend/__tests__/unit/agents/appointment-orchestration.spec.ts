@@ -64,13 +64,15 @@ describe("Appointment Booking - LLM Orchestration", () => {
       })
     })
 
-    // RULE: bookAppointment must require appointmentTypeId and startTime
-    it("bookAppointment should require appointmentTypeId and startTime for LLM", () => {
+    // RULE: bookAppointment must require serviceId and startTime
+    // NOTE: Parameter renamed from appointmentTypeId → serviceId after AppointmentType
+    //       was merged into Services model (migration 20260411000000)
+    it("bookAppointment should require serviceId and startTime for LLM", () => {
       const bookFn = APPOINTMENT_FUNCTIONS.find(
         (fn) => fn.function.name === "bookAppointment"
       )
       expect(bookFn).toBeDefined()
-      expect(bookFn!.function.parameters.required).toContain("appointmentTypeId")
+      expect(bookFn!.function.parameters.required).toContain("serviceId")
       expect(bookFn!.function.parameters.required).toContain("startTime")
     })
 
@@ -92,13 +94,15 @@ describe("Appointment Booking - LLM Orchestration", () => {
       expect(getFn!.function.parameters.required).toEqual([])
     })
 
-    // RULE: listAvailableSlots should have optional appointmentTypeId
-    it("listAvailableSlots should have optional appointmentTypeId for filtering", () => {
+    // RULE: listAvailableSlots should have optional serviceId for filtering
+    // NOTE: Parameter renamed from appointmentTypeId → serviceId after AppointmentType
+    //       was merged into Services model (migration 20260411000000)
+    it("listAvailableSlots should have optional serviceId for filtering", () => {
       const listFn = APPOINTMENT_FUNCTIONS.find(
         (fn) => fn.function.name === "listAvailableSlots"
       )
       expect(listFn).toBeDefined()
-      expect(listFn!.function.parameters.properties.appointmentTypeId).toBeDefined()
+      expect(listFn!.function.parameters.properties.serviceId).toBeDefined()
     })
   })
 

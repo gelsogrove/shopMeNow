@@ -1640,26 +1640,6 @@ export class WidgetChatController {
         promptLevel: registrationPromptLevel,
       })
 
-      // ⛔ BLOCK: If user sent 15+ messages without registering
-      if (registrationPromptService.shouldBlockUser(widgetMessageCount, customer.isActive)) {
-        logger.warn("[WIDGET] ⛔ Blocking unregistered user (15+ messages)", {
-          customerId: customer.id,
-          widgetMessageCount,
-        })
-
-        await prisma.customers.update({
-          where: { id: customer.id },
-          data: {
-            isBlacklisted: true,
-          },
-        })
-
-        return res.status(403).json({
-          error: "MAX_MESSAGES_UNREGISTERED",
-          message: "Account blocked. Please register to continue chatting.",
-        })
-      }
-
       // 🌍 LANGUAGE PRIORITY for this message:
       // 1) requestedLanguage (explicit/browser/phone) if present
       // 2) customer.language stored in DB

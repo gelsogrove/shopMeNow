@@ -51,6 +51,7 @@ export interface CustomerSupportLLMContext {
   customerId: string
   customerName?: string
   customerLanguage?: string
+  channel?: string
   query: string
   /** Pre-loaded customer data from Router (avoids duplicate DB queries) */
   customerData?: CustomerData
@@ -288,8 +289,9 @@ export class CustomerSupportAgentLLM {
 
       // STEP 3: Define function calls for customer support
       const isInformational = workspace?.sellsProductsAndServices === false
+      const isWidgetChannel = (context.channel || "").toLowerCase() === "widget"
       const functions = this.getCustomerSupportFunctions({
-        includeProfileFunctions: isInformational,
+        includeProfileFunctions: isInformational && !isWidgetChannel,
         includeContactOperator: workspace?.hasHumanSupport !== false,
       })
 

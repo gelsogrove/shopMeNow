@@ -24,7 +24,7 @@ export interface CancelAppointmentResult {
   success: boolean
   message: string
   appointmentId?: string
-  appointmentTypeName?: string
+  serviceName?: string
   wasStartTime?: string
   error?: string
   timestamp: string
@@ -72,7 +72,7 @@ export async function cancelAppointment(
         customerId: request.customerId,
         status: 'confirmed',
       },
-      include: { appointmentType: true },
+      include: { service: true },
     })
 
     if (!appointment) {
@@ -91,7 +91,7 @@ export async function cancelAppointment(
         data: {
           workspaceId: request.workspaceId,
           customerId: request.customerId,
-          appointmentTypeId: appointment.appointmentTypeId,
+          serviceId: appointment.serviceId,
           scheduledStartTime: appointment.startTime,
           tooLateThreshold: 24,
         },
@@ -116,9 +116,9 @@ export async function cancelAppointment(
 
     return {
       success: true,
-      message: `Appointment "${cancelled.appointmentType?.name}" cancelled successfully`,
+      message: `Appointment "${cancelled.service?.name}" cancelled successfully`,
       appointmentId: cancelled.id,
-      appointmentTypeName: cancelled.appointmentType?.name,
+      serviceName: cancelled.service?.name,
       wasStartTime: appointment.startTime.toISOString(),
       timestamp: new Date().toISOString(),
     }
