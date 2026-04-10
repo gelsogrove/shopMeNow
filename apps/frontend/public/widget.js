@@ -73,6 +73,7 @@
     SESSION_ID: "echatbot-session-id",
     MESSAGES: "echatbot-messages",
     LAST_WORKSPACE: "echatbot-last-workspace-id",
+    CUSTOMER_PROFILE: "echatbot-customer-profile",
   }
 
   const getStorageKey = (key, workspaceId) => `${key}:${workspaceId}`
@@ -378,6 +379,43 @@
 
     .echatbot-widget-close:hover {
       background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .echatbot-widget-profile-badge {
+      position: absolute;
+      right: 48px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      border: 2px solid rgba(255,255,255,0.6);
+      color: #ffffff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+      padding: 0;
+    }
+
+    .echatbot-widget-profile-badge:hover {
+      background: rgba(255,255,255,0.4);
+    }
+
+    .echatbot-widget-profile-popover {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      min-width: 180px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      z-index: 9999;
+      color: #1a1a1a;
     }
 
     .echatbot-widget-messages {
@@ -1186,19 +1224,40 @@
       // Header - use custom title if provided, otherwise translated default
       const header = document.createElement("div")
       header.className = "echatbot-widget-header"
-      
+
       const headerTitle = document.createElement("span")
       headerTitle.textContent = this.config.title || t.headerTitle
       header.appendChild(headerTitle)
-      
+
+      // 👤 Profile badge — shown when customer is registered
+      this.profileBadge = document.createElement("button")
+      this.profileBadge.className = "echatbot-widget-profile-badge"
+      this.profileBadge.title = "Your profile"
+      this.profileBadge.style.display = "none" // hidden until profile loaded
+      this.profileBadge.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>`
+      this.profileBadge.onclick = (e) => {
+        e.stopPropagation()
+        this.toggleProfilePopover()
+      }
+      header.appendChild(this.profileBadge)
+
+      // Profile popover
+      this.profilePopover = document.createElement("div")
+      this.profilePopover.className = "echatbot-widget-profile-popover"
+      this.profilePopover.style.display = "none"
+      header.appendChild(this.profilePopover)
+
       // Close button
       const closeButton = document.createElement("button")
       closeButton.className = "echatbot-widget-close"
       closeButton.innerHTML = "×"
       closeButton.onclick = () => this.togglePopup()
       header.appendChild(closeButton)
-      
+
       this.popup.appendChild(header)
+
+      // Load saved profile and render badge
+      this.loadAndRenderProfile()
 
       // Messages container
       this.messagesContainer = document.createElement("div")
@@ -1401,6 +1460,11 @@
             )
           }
 
+          // 👤 Update profile badge if backend returned customer data
+          if (response.customerProfile) {
+            this.saveProfile(response.customerProfile)
+          }
+
           // Display bot response
           this.displayMessage({ role: "bot", content: response.response })
           this.messages.push({ role: "bot", content: response.response })
@@ -1480,6 +1544,74 @@
       messageEl.appendChild(bubble)
       this.messagesContainer.appendChild(messageEl)
       this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight
+    }
+
+    /**
+     * Load customer profile from localStorage and render the badge
+     */
+    loadAndRenderProfile() {
+      const raw = localStorage.getItem(getStorageKey(STORAGE_KEYS.CUSTOMER_PROFILE, this.storageWorkspaceId))
+      if (!raw) return
+      try {
+        const profile = JSON.parse(raw)
+        this.renderProfileBadge(profile)
+      } catch (e) {}
+    }
+
+    /**
+     * Save customer profile to localStorage and update badge
+     */
+    saveProfile(profile) {
+      if (!profile || !profile.name) return
+      localStorage.setItem(
+        getStorageKey(STORAGE_KEYS.CUSTOMER_PROFILE, this.storageWorkspaceId),
+        JSON.stringify(profile)
+      )
+      this.renderProfileBadge(profile)
+    }
+
+    /**
+     * Render profile badge in header with customer initials
+     */
+    renderProfileBadge(profile) {
+      if (!this.profileBadge || !profile || !profile.name) return
+      const initials = profile.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
+      this.profileBadge.innerHTML = `<span style="font-size:11px;font-weight:700;letter-spacing:0.5px;">${initials}</span>`
+      this.profileBadge.style.display = "flex"
+      this.profileBadge.title = profile.name
+
+      // Build popover content
+      if (this.profilePopover) {
+        const emailLine = profile.email ? `<div style="font-size:11px;color:#888;margin-top:2px;">${profile.email}</div>` : ""
+        const phoneLine = profile.phone ? `<div style="font-size:11px;color:#888;">${profile.phone}</div>` : ""
+        const statusBadge = profile.isActive
+          ? `<span style="font-size:10px;background:#dcfce7;color:#16a34a;padding:1px 6px;border-radius:10px;font-weight:600;">✓ Registered</span>`
+          : `<span style="font-size:10px;background:#fef9c3;color:#b45309;padding:1px 6px;border-radius:10px;font-weight:600;">Guest</span>`
+        this.profilePopover.innerHTML = `
+          <div style="font-weight:600;font-size:13px;">${profile.name}</div>
+          ${emailLine}${phoneLine}
+          <div style="margin-top:6px;">${statusBadge}</div>
+        `
+      }
+    }
+
+    /**
+     * Toggle profile popover visibility
+     */
+    toggleProfilePopover() {
+      if (!this.profilePopover) return
+      const isVisible = this.profilePopover.style.display !== "none"
+      this.profilePopover.style.display = isVisible ? "none" : "block"
+      // Close on outside click
+      if (!isVisible) {
+        const closeHandler = (e) => {
+          if (!this.profilePopover.contains(e.target) && e.target !== this.profileBadge) {
+            this.profilePopover.style.display = "none"
+            document.removeEventListener("click", closeHandler)
+          }
+        }
+        setTimeout(() => document.addEventListener("click", closeHandler), 0)
+      }
     }
 
     /**

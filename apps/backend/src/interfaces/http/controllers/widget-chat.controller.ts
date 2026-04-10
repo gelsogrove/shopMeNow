@@ -1039,6 +1039,13 @@ export class WidgetChatController {
         response: llmResult.response || "Welcome! How can I help you?",
         isNewCustomer,
         suggestions,
+        // 👤 Profile data — widget saves this in localStorage to show profile badge in header
+        customerProfile: {
+          name: customer.name,
+          email: customer.email?.endsWith("@visitor.local") ? null : customer.email,
+          phone: customer.phone,
+          isActive: customer.isActive,
+        },
       })
     } catch (error) {
       logger.error("[WIDGET-REGISTER] ❌ Registration error", {
@@ -1752,6 +1759,13 @@ export class WidgetChatController {
         suggestions,
         // Tell widget immediately if operator handoff was triggered (no separate poll needed)
         ...(operatorHandoffTriggered && { activeChatbot: false }),
+        // 👤 Profile data — widget keeps localStorage in sync after each message
+        customerProfile: {
+          name: customer.name,
+          email: customer.email?.endsWith("@visitor.local") ? null : customer.email,
+          phone: customer.phone,
+          isActive: customer.isActive,
+        },
       })
     } catch (error) {
       logger.error("❌ Error sending widget message", {
