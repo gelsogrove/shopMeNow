@@ -2107,6 +2107,22 @@ Confermi la tua presenza?`,
       isSystemFunction: true,
       executionType: "INTERNAL",
       isActive: true
+    },
+    {
+      functionName: "rescheduleAppointment",
+      description: "Reschedule an existing appointment to a new time. Use when customer wants to move their appointment to a different slot.",
+      parameters: {
+        type: "object",
+        properties: {
+          appointmentId: { type: "string", description: "ID of appointment to reschedule" },
+          newStartTime: { type: "string", description: "New start time in ISO 8601 format" },
+          reason: { type: "string", description: "Reason for rescheduling (optional)" }
+        },
+        required: ["appointmentId", "newStartTime"]
+      },
+      isSystemFunction: true,
+      executionType: "INTERNAL",
+      isActive: true
     }
   ]
 

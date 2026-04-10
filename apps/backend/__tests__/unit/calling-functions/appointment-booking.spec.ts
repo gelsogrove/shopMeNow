@@ -63,6 +63,16 @@ jest.mock("@echatbot/database", () => ({
   prisma: mockPrisma,
 }))
 
+// Mock GoogleCalendarService (non-blocking GCal sync)
+const mockGoogleCalendarService = {
+  createEvent: jest.fn().mockResolvedValue(null),
+  deleteEvent: jest.fn().mockResolvedValue(false),
+  updateEvent: jest.fn().mockResolvedValue(null),
+}
+jest.mock("../../../src/services/google-calendar.service", () => ({
+  googleCalendarService: mockGoogleCalendarService,
+}))
+
 import { listAvailableSlots } from "../../../src/domain/calling-functions/listAvailableSlots"
 import { bookAppointment } from "../../../src/domain/calling-functions/bookAppointment"
 import { cancelAppointment } from "../../../src/domain/calling-functions/cancelAppointment"
@@ -118,7 +128,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: No appointment types configured
     it("should return error when no appointment types exist", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockAppointmentService.getAppointmentTypes.mockResolvedValue([])
 
       const result = await listAvailableSlots({
@@ -132,7 +142,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Zero available slots in date range
     it("should return success with empty slots when none available", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockAppointmentService.getAppointmentTypes.mockResolvedValue([
         { id: "type-1", name: "Test", duration: 30, price: 50 },
       ])
@@ -156,7 +166,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Slots found - returns formatted list
     it("should return available slots with display formatting", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockAppointmentService.getAppointmentTypes.mockResolvedValue([
         { id: "type-1", name: "Consulenza", duration: 60, price: 50 },
       ])
@@ -192,6 +202,42 @@ describe("Appointment Calling Functions", () => {
       expect(result.totalSlots).toBe(2)
       expect(result.appointmentTypeName).toBe("Consulenza")
       expect(result.price).toBe(50)
+    })
+
+    // SCENARIO: targetDate narrows search to a specific day
+    // RULE: When customer says "show me Tuesday", LLM passes targetDate=YYYY-MM-DD
+    it("should pass targetDate to getAvailableSlots when provided", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
+      mockAppointmentService.getAppointmentTypes.mockResolvedValue([
+        { id: "type-1", name: "Consulenza", duration: 60, price: 50 },
+      ])
+      mockAppointmentService.getAppointmentType.mockResolvedValue({
+        id: "type-1",
+        name: "Consulenza",
+        duration: 60,
+        price: 50,
+      })
+      mockAppointmentService.getAvailableSlots.mockResolvedValue([])
+
+      await listAvailableSlots({
+        workspaceId: WORKSPACE_ID,
+        customerId: CUSTOMER_ID,
+        targetDate: "2026-04-15",
+      })
+
+      // Verify getAvailableSlots was called (date range covers the target day)
+      expect(mockAppointmentService.getAvailableSlots).toHaveBeenCalledWith(
+        WORKSPACE_ID,
+        "type-1",
+        expect.any(Date),
+        expect.any(Date)
+      )
+      // The range should be a single day (start and end within ~24h)
+      const callArgs = mockAppointmentService.getAvailableSlots.mock.calls[0]
+      const startDate = callArgs[2] as Date
+      const endDate = callArgs[3] as Date
+      const diffHours = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60)
+      expect(diffHours).toBeLessThanOrEqual(24)
     })
   })
 
@@ -242,7 +288,7 @@ describe("Appointment Calling Functions", () => {
     // RULE: Customer must be registered (ACTIVE) to book appointments
     // Without registration we don't have name/email for the calendar entry
     it("should return CUSTOMER_NOT_REGISTERED when customer is not active", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.customers.findFirst.mockResolvedValue({
         name: "Visitor",
         registrationStatus: "NEW",
@@ -256,7 +302,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Customer not found at all
     it("should return CUSTOMER_NOT_REGISTERED when customer not found", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.customers.findFirst.mockResolvedValue(null)
 
       const result = await bookAppointment(bookRequest)
@@ -267,7 +313,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Successful booking
     it("should create appointment and return formatted response", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.customers.findFirst.mockResolvedValue({
         name: "Mario Rossi",
         phone: "+393331234567",
@@ -293,9 +339,54 @@ describe("Appointment Calling Functions", () => {
       expect(result.displayTime).toBeDefined()
     })
 
+    // SCENARIO: Google Calendar event is created after successful booking
+    // RULE: GCal sync is non-blocking — booking succeeds even if GCal fails
+    it("should call googleCalendarService.createEvent after booking", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        name: "Mario Rossi",
+        phone: "+393331234567",
+        email: "mario@example.com",
+        registrationStatus: "ACTIVE",
+      })
+      const mockAppointment = {
+        id: "appt-gcal",
+        startTime: new Date("2026-04-15T10:00:00"),
+        endTime: new Date("2026-04-15T11:00:00"),
+        status: "confirmed",
+        appointmentType: { name: "Consulenza" },
+      }
+      mockAppointmentService.createAppointment.mockResolvedValue(mockAppointment)
+      mockGoogleCalendarService.createEvent.mockResolvedValue({
+        googleEventId: "gcal-event-123",
+        googleEventLink: "https://calendar.google.com/event/123",
+        googleCalendarId: "primary",
+      })
+
+      const result = await bookAppointment(bookRequest)
+
+      expect(result.success).toBe(true)
+      expect(mockGoogleCalendarService.createEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: bookRequest.workspaceId,
+          summary: expect.stringContaining("Consulenza"),
+          timezone: "Europe/Rome",
+        })
+      )
+      // Appointment should be updated with GCal event ID
+      expect(mockPrisma.appointment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "appt-gcal" },
+          data: expect.objectContaining({
+            googleEventId: "gcal-event-123",
+          }),
+        })
+      )
+    })
+
     // SCENARIO: Slot was taken between listing and booking (race condition)
     it("should return SLOT_UNAVAILABLE when slot is taken", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.customers.findFirst.mockResolvedValue({ name: "Mario", registrationStatus: "ACTIVE" })
       mockAppointmentService.createAppointment.mockRejectedValue(
         new Error("Slot no longer available: Slot already booked")
@@ -343,7 +434,7 @@ describe("Appointment Calling Functions", () => {
 
     // RULE: Appointment must belong to the requesting customer (IDOR prevention)
     it("should return APPOINTMENT_NOT_FOUND when appointment doesn't belong to customer", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       // findFirst returns null because customerId doesn't match
       mockPrisma.appointment.findFirst.mockResolvedValue(null)
 
@@ -355,7 +446,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Successful cancellation of appointment > 24h away
     it("should cancel appointment successfully", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
 
       // Appointment is 48 hours away (no late cancellation)
       const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000)
@@ -382,9 +473,39 @@ describe("Appointment Calling Functions", () => {
       expect(mockPrisma.lateCancellationAttempt.create).not.toHaveBeenCalled()
     })
 
+    // SCENARIO: Google Calendar event is deleted on cancellation
+    // RULE: If appointment has a googleEventId, deleteEvent must be called
+    it("should call googleCalendarService.deleteEvent when appointment has googleEventId", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
+      const futureDate = new Date(Date.now() + 48 * 60 * 60 * 1000)
+      mockPrisma.appointment.findFirst.mockResolvedValue({
+        id: "appt-gcal",
+        customerId: CUSTOMER_ID,
+        status: "confirmed",
+        startTime: futureDate,
+        appointmentTypeId: "type-1",
+        appointmentType: { name: "Consulenza" },
+        googleEventId: "gcal-event-456",
+      })
+      mockAppointmentService.cancelAppointment.mockResolvedValue({
+        id: "appt-gcal",
+        status: "cancelled",
+        appointmentType: { name: "Consulenza" },
+      })
+
+      const result = await cancelAppointment({
+        workspaceId: WORKSPACE_ID,
+        customerId: CUSTOMER_ID,
+        appointmentId: "appt-gcal",
+      })
+
+      expect(result.success).toBe(true)
+      expect(mockGoogleCalendarService.deleteEvent).toHaveBeenCalledWith(WORKSPACE_ID, "gcal-event-456")
+    })
+
     // SCENARIO: Late cancellation (< 24h before appointment) should be tracked
     it("should log late cancellation when < 24h before appointment", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
 
       // Appointment is 12 hours away
       const soonDate = new Date(Date.now() + 12 * 60 * 60 * 1000)
@@ -451,7 +572,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Customer has no upcoming appointments
     it("should return empty list when no appointments", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockAppointmentService.getCustomerAppointments.mockResolvedValue([])
 
       const result = await getCustomerAppointments({
@@ -466,7 +587,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Customer has upcoming appointments
     it("should return formatted appointment list", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
 
       const appointments = [
         {
@@ -576,7 +697,7 @@ describe("Appointment Calling Functions", () => {
 
     // RULE: Appointment must belong to the requesting customer (IDOR prevention)
     it("should return APPOINTMENT_NOT_FOUND when appointment belongs to different customer", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.appointment.findFirst.mockResolvedValue(null)
 
       const result = await rescheduleAppointment(rescheduleRequest)
@@ -587,7 +708,7 @@ describe("Appointment Calling Functions", () => {
 
     // RULE: Cannot reschedule to the same time slot
     it("should return SAME_SLOT when newStartTime equals current startTime", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.appointment.findFirst.mockResolvedValue({
         ...mockExistingAppointment,
         startTime: new Date(rescheduleRequest.newStartTime),
@@ -601,7 +722,7 @@ describe("Appointment Calling Functions", () => {
 
     // RULE: New slot must be available
     it("should return SLOT_UNAVAILABLE when new slot is taken", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.appointment.findFirst.mockResolvedValue(mockExistingAppointment)
       mockAppointmentService.isSlotAvailable = jest.fn().mockResolvedValue({
         available: false,
@@ -616,7 +737,7 @@ describe("Appointment Calling Functions", () => {
 
     // SCENARIO: Successful reschedule — old cancelled, new created atomically
     it("should reschedule successfully: cancel old and create new in transaction", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
       mockPrisma.appointment.findFirst.mockResolvedValue(mockExistingAppointment)
       mockAppointmentService.isSlotAvailable = jest.fn().mockResolvedValue({ available: true })
 

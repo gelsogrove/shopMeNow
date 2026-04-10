@@ -1,6 +1,5 @@
 import { Router } from "express"
 import { authMiddleware } from "../middlewares/auth.middleware"
-import { sessionValidationMiddleware } from "../middlewares/session-validation.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 import { simulateController } from "../controllers/simulate.controller"
 
@@ -8,13 +7,14 @@ const router = Router({ mergeParams: true })
 
 /**
  * Simulate routes - for MCP-based automated scenario testing
- * All routes require full 3-layer auth (JWT + session + workspace)
+ * Routes require authMiddleware + workspaceValidationMiddleware
+ * Note: sessionValidationMiddleware is NOT used here since first message (__init__)
+ * doesn't have a sessionId yet. The simulateController handles session creation internally.
  */
 
 router.post(
   "/",
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   (req, res) => simulateController.simulateTurn(req, res)
 )
@@ -22,7 +22,6 @@ router.post(
 router.delete(
   "/customers/phone/:phone",
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   (req, res) => simulateController.deleteTestCustomer(req, res)
 )

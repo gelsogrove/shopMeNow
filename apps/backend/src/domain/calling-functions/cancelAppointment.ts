@@ -11,6 +11,7 @@
 import { prisma } from "@echatbot/database"
 import logger from "../../utils/logger"
 import { AppointmentService } from "../../application/services/appointment.service"
+import { googleCalendarService } from "../../services/google-calendar.service"
 
 export interface CancelAppointmentRequest {
   workspaceId: string
@@ -104,6 +105,12 @@ export async function cancelAppointment(
       request.reason,
       'customer'
     )
+
+    // Delete Google Calendar event if linked (non-blocking)
+    if (appointment.googleEventId) {
+      await googleCalendarService.deleteEvent(request.workspaceId, appointment.googleEventId)
+      logger.info(`[GCAL] Deleted event ${appointment.googleEventId} for cancelled appointment ${request.appointmentId}`)
+    }
 
     logger.info(`✅ Appointment cancelled: ${request.appointmentId}`)
 

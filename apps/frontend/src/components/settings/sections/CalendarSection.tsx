@@ -39,6 +39,7 @@ interface CalendarSectionProps {
     appointmentReminder30mEnabled?: boolean
     appointmentReminder30mMessage?: string
     appointmentReminderChannel?: string
+    minBookingBufferHours?: number
   }
   onChange: (field: string, value: any) => void
   onFocus: (field: string) => void
@@ -477,6 +478,35 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
             </Select>
             <p className="text-sm text-muted-foreground">
               Timezone used for appointment scheduling and reminders
+            </p>
+          </div>
+
+          {/* Minimum Booking Buffer */}
+          <div className="space-y-2">
+            <Label htmlFor="minBookingBufferHours">Minimum Booking Buffer (hours)</Label>
+            <Select
+              value={String(formData.minBookingBufferHours ?? 12)}
+              onValueChange={(value) => {
+                onChange("minBookingBufferHours", parseInt(value, 10))
+                onFocus("minBookingBufferHours")
+              }}
+            >
+              <SelectTrigger id="minBookingBufferHours">
+                <SelectValue placeholder="Select minimum hours" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 hour</SelectItem>
+                <SelectItem value="2">2 hours</SelectItem>
+                <SelectItem value="4">4 hours</SelectItem>
+                <SelectItem value="6">6 hours</SelectItem>
+                <SelectItem value="8">8 hours</SelectItem>
+                <SelectItem value="12">12 hours (default)</SelectItem>
+                <SelectItem value="24">24 hours</SelectItem>
+                <SelectItem value="48">48 hours</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Customers can only book slots at least this many hours in advance
             </p>
           </div>
         </CardContent>

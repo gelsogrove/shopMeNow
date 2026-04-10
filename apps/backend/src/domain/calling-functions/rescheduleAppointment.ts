@@ -13,6 +13,7 @@
 import { prisma } from "@echatbot/database"
 import logger from "../../utils/logger"
 import { AppointmentService } from "../../application/services/appointment.service"
+import { googleCalendarService } from "../../services/google-calendar.service"
 
 export interface RescheduleAppointmentRequest {
   workspaceId: string
@@ -59,7 +60,7 @@ export async function rescheduleAppointment(
     // Check workspace has calendar enabled
     const workspace = await prisma.workspace.findUnique({
       where: { id: request.workspaceId },
-      select: { enableCalendarBooking: true },
+      select: { enableCalendarBooking: true, timezone: true },
     })
 
     if (!workspace?.enableCalendarBooking) {
@@ -164,6 +165,33 @@ export async function rescheduleAppointment(
     const displayDate = newStartDt.toISOString().split("T")[0]
     const endDt = newAppointment.endTime
     const displayTime = `${String(newStartDt.getHours()).padStart(2, "0")}:${String(newStartDt.getMinutes()).padStart(2, "0")} - ${String(endDt.getHours()).padStart(2, "0")}:${String(endDt.getMinutes()).padStart(2, "0")}`
+
+    // Google Calendar sync: delete old event + create new one (non-blocking)
+    if (existingAppointment.googleEventId) {
+      await googleCalendarService.deleteEvent(request.workspaceId, existingAppointment.googleEventId)
+      logger.info(`[GCAL] Deleted old event ${existingAppointment.googleEventId} for reschedule`)
+    }
+
+    const gcalResult = await googleCalendarService.createEvent({
+      workspaceId: request.workspaceId,
+      summary: `${existingAppointment.appointmentType?.name || 'Appointment'} - ${existingAppointment.customerName || 'Customer'}`,
+      startTime: newStartDt,
+      endTime: endDt,
+      timezone: workspace?.timezone || 'Europe/Rome',
+      attendeeEmail: existingAppointment.customerEmail || undefined,
+    })
+
+    if (gcalResult) {
+      await prisma.appointment.update({
+        where: { id: newAppointment.id },
+        data: {
+          googleEventId: gcalResult.googleEventId,
+          googleEventLink: gcalResult.googleEventLink,
+          googleCalendarId: gcalResult.googleCalendarId,
+        },
+      })
+      logger.info(`[GCAL] Linked new event ${gcalResult.googleEventId} to rescheduled appointment ${newAppointment.id}`)
+    }
 
     logger.info(`✅ Appointment rescheduled: ${request.appointmentId} → ${newAppointment.id}`)
 

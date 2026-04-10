@@ -1528,6 +1528,7 @@ export class LLMService {
             customerId: customer.id,
             appointmentTypeId: args.appointmentTypeId,
             daysAhead: args.daysAhead,
+            targetDate: args.targetDate,
           })
 
         case "bookAppointment":
@@ -1547,6 +1548,16 @@ export class LLMService {
             workspaceId: workspace.id,
             customerId: customer.id,
             appointmentId: args.appointmentId,
+            reason: args.reason,
+          })
+
+        case "rescheduleAppointment":
+          logger.info("📅 rescheduleAppointment called:", args)
+          return await this.callingFunctionsService.rescheduleAppointmentFn({
+            workspaceId: workspace.id,
+            customerId: customer.id,
+            appointmentId: args.appointmentId,
+            newStartTime: args.newStartTime,
             reason: args.reason,
           })
 

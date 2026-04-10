@@ -1249,7 +1249,7 @@ export class LLMRouterService {
       // 🎯 RUNTIME FILTERING: Filter functions based on workspace capabilities
       // This ensures LLM only sees functions relevant to the workspace's feature set
       const ecommerceFunctions = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
-      const appointmentFunctions = ["listAvailableSlots", "bookAppointment", "cancelAppointment", "getCustomerAppointments"]
+      const appointmentFunctions = ["listAvailableSlots", "bookAppointment", "cancelAppointment", "rescheduleAppointment", "getCustomerAppointments"]
       
       const filteredDbFunctions = dbFunctions.filter(fn => {
         // Rule 1: Exclude e-commerce functions if workspace is informational

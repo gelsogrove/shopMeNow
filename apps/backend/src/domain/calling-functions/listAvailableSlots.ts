@@ -17,6 +17,7 @@ export interface ListAvailableSlotsRequest {
   customerId: string
   appointmentTypeId?: string // If not provided, use first active type
   daysAhead?: number // Default 7
+  targetDate?: string // ISO date "YYYY-MM-DD" — filter to this specific day only (e.g., customer says "show me Tuesday")
 }
 
 export interface ListAvailableSlotsResult {
@@ -92,10 +93,19 @@ export async function listAvailableSlots(
       appointmentTypeId
     )
 
-    // Calculate date range
-    const startDate = new Date()
+    // Calculate date range — if targetDate provided, search only that day
+    let startDate: Date
+    let endDate: Date
     const daysAhead = request.daysAhead || 7
-    const endDate = new Date(startDate.getTime() + daysAhead * 24 * 60 * 60 * 1000)
+
+    if (request.targetDate) {
+      // targetDate is "YYYY-MM-DD" — search from start of that day to end of that day
+      startDate = new Date(request.targetDate + "T00:00:00")
+      endDate = new Date(request.targetDate + "T23:59:59")
+    } else {
+      startDate = new Date()
+      endDate = new Date(startDate.getTime() + daysAhead * 24 * 60 * 60 * 1000)
+    }
 
     const slots = await appointmentService.getAvailableSlots(
       request.workspaceId,

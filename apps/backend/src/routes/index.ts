@@ -747,7 +747,6 @@ router.get("/workspaces/:workspaceId/test", authMiddleware, (req, res) => {
 const productsRouterInstance = productsRouter()
 router.use("/workspaces/:workspaceId/products", productsRouterInstance)
 logger.info("Registered products router with workspace routes")
-
 // Mount categories routes
 const categoriesRouterInstance = categoriesRouter()
 router.use("/workspaces/:workspaceId/categories", categoriesRouterInstance)

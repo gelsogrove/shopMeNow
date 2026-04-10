@@ -1107,6 +1107,7 @@ export class FunctionExecutor {
       customerId: context.customerId,
       appointmentTypeId: args.appointmentTypeId,
       daysAhead: args.daysAhead,
+      targetDate: args.targetDate,
     })
   }
 

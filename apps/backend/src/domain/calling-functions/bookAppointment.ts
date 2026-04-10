@@ -11,6 +11,7 @@
 import { prisma } from "@echatbot/database"
 import logger from "../../utils/logger"
 import { AppointmentService } from "../../application/services/appointment.service"
+import { googleCalendarService } from "../../services/google-calendar.service"
 
 export interface BookAppointmentRequest {
   workspaceId: string
@@ -57,7 +58,7 @@ export async function bookAppointment(
     // Check workspace has calendar enabled
     const workspace = await prisma.workspace.findUnique({
       where: { id: request.workspaceId },
-      select: { enableCalendarBooking: true },
+      select: { enableCalendarBooking: true, timezone: true },
     })
 
     if (!workspace?.enableCalendarBooking) {
@@ -104,6 +105,28 @@ export async function bookAppointment(
     const endDt = appointment.endTime
     const displayDate = startDt.toISOString().split('T')[0] // YYYY-MM-DD
     const displayTime = `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')} - ${String(endDt.getHours()).padStart(2, '0')}:${String(endDt.getMinutes()).padStart(2, '0')}`
+
+    // Sync to Google Calendar (non-blocking: booking succeeds even if GCal fails)
+    const gcalResult = await googleCalendarService.createEvent({
+      workspaceId: request.workspaceId,
+      summary: `${appointment.appointmentType?.name || 'Appointment'} - ${customer.name || 'Customer'}`,
+      startTime: startDt,
+      endTime: endDt,
+      timezone: workspace?.timezone || 'Europe/Rome',
+      attendeeEmail: customer.email || undefined,
+    })
+
+    if (gcalResult) {
+      await prisma.appointment.update({
+        where: { id: appointment.id },
+        data: {
+          googleEventId: gcalResult.googleEventId,
+          googleEventLink: gcalResult.googleEventLink,
+          googleCalendarId: gcalResult.googleCalendarId,
+        },
+      })
+      logger.info(`[GCAL] Linked event ${gcalResult.googleEventId} to appointment ${appointment.id}`)
+    }
 
     logger.info(`✅ Appointment booked: ${appointment.id} for ${request.customerId}`)
 

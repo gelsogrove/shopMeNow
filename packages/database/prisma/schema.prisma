@@ -185,6 +185,7 @@ model Workspace {
   
   appointmentReminderChannel    String   @default("whatsapp") // "whatsapp" | "email" | "both"
   appointmentReminderHours      Int[]    @default([24, 1]) // Hours when reminders are sent (e.g., [24, 1, 0.5] for 24h, 1h, and 30min before)
+  minBookingBufferHours         Int      @default(12) // Minimum hours in advance a slot can be booked (e.g., 12 = slots must be at least 12h from now)
 
   @@index([ownerId])
   @@index([planType])

@@ -67,6 +67,9 @@ const mockPrisma = {
   customers: {
     update: jest.fn(),
   },
+  workspace: {
+    findUnique: jest.fn(),
+  },
 } as any
 
 // We need to mock the repositories that AppointmentService creates internally
@@ -89,6 +92,8 @@ describe("AppointmentService", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    // Default: workspace has 12h booking buffer (configurable)
+    mockPrisma.workspace.findUnique.mockResolvedValue({ minBookingBufferHours: 12 })
     service = new AppointmentService(mockPrisma)
   })
 
@@ -323,6 +328,36 @@ describe("AppointmentService", () => {
 
   describe("isSlotAvailable", () => {
     const futureDate = new Date("2026-04-15T10:00:00")
+
+    // SCENARIO: Slot is within the configurable booking buffer window
+    // RULE: minBookingBufferHours is configurable per workspace (default 12h)
+    it("should return unavailable when slot is within booking buffer window", async () => {
+      // Set buffer to 24h and check a slot that's only 2h from now
+      mockPrisma.workspace.findUnique.mockResolvedValue({ minBookingBufferHours: 24 })
+      const twoHoursFromNow = new Date(Date.now() + 2 * 60 * 60 * 1000)
+
+      const result = await service.isSlotAvailable(WORKSPACE_ID, twoHoursFromNow, 30)
+
+      expect(result.available).toBe(false)
+      expect(result.reason).toContain("at least 24 hours in the future")
+    })
+
+    // SCENARIO: Slot is beyond the booking buffer — should pass buffer check
+    it("should pass buffer check when slot is beyond configurable buffer", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ minBookingBufferHours: 1 })
+      mockBlackoutPeriodRepo.isDateBlocked.mockResolvedValue(false)
+      mockBusinessHoursRepo.findByDay.mockResolvedValue({
+        dayOfWeek: futureDate.getDay(),
+        startTime: "09:00",
+        endTime: "18:00",
+        isActive: true,
+      })
+      mockPrisma.appointment.findFirst.mockResolvedValue(null)
+
+      const result = await service.isSlotAvailable(WORKSPACE_ID, futureDate, 30)
+
+      expect(result).toEqual({ available: true })
+    })
 
     // SCENARIO: Date falls in a blackout period
     it("should return unavailable when date is in blackout", async () => {

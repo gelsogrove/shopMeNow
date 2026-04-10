@@ -363,6 +363,12 @@ export class FunctionHandlerService {
             functionName,
           }
 
+        case "rescheduleAppointment":
+          return {
+            data: await this.handleRescheduleAppointment(params, customer, workspaceId),
+            functionName,
+          }
+
         case "getCustomerAppointments":
           return {
             data: await this.handleGetCustomerAppointments(params, customer, workspaceId),
@@ -391,6 +397,7 @@ export class FunctionHandlerService {
                 "listAvailableSlots",
                 "bookAppointment",
                 "cancelAppointment",
+                "rescheduleAppointment",
                 "getCustomerAppointments",
               ],
             },
@@ -1085,6 +1092,7 @@ export class FunctionHandlerService {
         customerId: customer.id,
         appointmentTypeId: params.appointmentTypeId,
         daysAhead: params.daysAhead,
+        targetDate: params.targetDate,
       })
     } catch (error) {
       logger.error("❌ Error in handleListAvailableSlots:", error)
@@ -1170,6 +1178,33 @@ export class FunctionHandlerService {
         success: false,
         error: error.message || "Error getting appointments",
         message: "Impossibile recuperare gli appuntamenti.",
+      }
+    }
+  }
+
+  private async handleRescheduleAppointment(
+    params: Record<string, any>,
+    customer: any,
+    workspaceId: string
+  ) {
+    try {
+      const {
+        rescheduleAppointment,
+      } = require("../../domain/calling-functions/rescheduleAppointment")
+
+      return await rescheduleAppointment({
+        workspaceId,
+        customerId: customer.id,
+        appointmentId: params.appointmentId,
+        newStartTime: params.newStartTime,
+        reason: params.reason,
+      })
+    } catch (error) {
+      logger.error("❌ Error in handleRescheduleAppointment:", error)
+      return {
+        success: false,
+        error: error.message || "Error rescheduling appointment",
+        message: "Failed to reschedule appointment.",
       }
     }
   }

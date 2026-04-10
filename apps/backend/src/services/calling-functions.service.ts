@@ -1771,6 +1771,7 @@ export class CallingFunctionsService {
     customerId: string
     appointmentTypeId?: string
     daysAhead?: number
+    targetDate?: string
   }) {
     try {
       logger.info("📅 Calling listAvailableSlots with:", request)

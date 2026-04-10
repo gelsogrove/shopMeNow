@@ -238,6 +238,14 @@ export class AppointmentService {
   }> {
     const slotEndTime = new Date(date.getTime() + durationMinutes * 60 * 1000);
 
+    // 0. Minimum booking buffer check (configurable per workspace, default 12h)
+    const workspace = await this.prisma.workspace.findUnique({ where: { id: workspaceId }, select: { minBookingBufferHours: true } });
+    const bufferHours = workspace?.minBookingBufferHours ?? 12;
+    const minBookingTime = new Date(Date.now() + bufferHours * 60 * 60 * 1000);
+    if (date < minBookingTime) {
+      return { available: false, reason: `Slot must be at least ${bufferHours} hours in the future` };
+    }
+
     // 1. Blackout period check
     const isBlocked = await this.blackoutPeriodRepo.isDateBlocked(workspaceId, date);
     if (isBlocked) {
@@ -310,7 +318,12 @@ export class AppointmentService {
     }
 
     const totalSlotMinutes = appointmentType.duration + (appointmentType.bufferTime || 0);
-    
+
+    // Get workspace booking buffer (configurable, default 12h)
+    const workspace = await this.prisma.workspace.findUnique({ where: { id: workspaceId }, select: { minBookingBufferHours: true } });
+    const bufferHours = workspace?.minBookingBufferHours ?? 12;
+    const minBookingBuffer = new Date(Date.now() + bufferHours * 60 * 60 * 1000);
+
     // Get business hours for all days
     const allBusinessHours = await this.businessHoursRepo.findByWorkspace(workspaceId, false);
     const hoursByDay = new Map(allBusinessHours.map(bh => [bh.dayOfWeek, bh]));
@@ -373,9 +386,7 @@ export class AppointmentService {
           
           if (slotEnd > dayEnd) break;
 
-          // Skip past slots (must be at least 1h in the future)
-          const now = new Date();
-          const minBookingBuffer = new Date(now.getTime() + 60 * 60 * 1000); // 1h ahead
+          // Skip past slots — must be at least minBookingBufferHours in the future
           if (slotStart < minBookingBuffer) {
             slotStart = new Date(slotStart.getTime() + slotIntervalMinutes * 60 * 1000);
             continue;

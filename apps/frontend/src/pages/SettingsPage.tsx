@@ -146,6 +146,7 @@ interface FormData {
   appointmentReminder30mEnabled?: boolean
   appointmentReminder30mMessage?: string
   appointmentReminderChannel?: string
+  minBookingBufferHours?: number
 }
 
 export function SettingsPage() {
@@ -256,6 +257,7 @@ export function SettingsPage() {
     appointmentReminder30mEnabled: false,
     appointmentReminder30mMessage: undefined,
     appointmentReminderChannel: "whatsapp",
+    minBookingBufferHours: 12,
   })
 
   // Load workspace data
@@ -341,6 +343,7 @@ export function SettingsPage() {
         appointmentReminder30mEnabled: currentWorkspace.appointmentReminder30mEnabled ?? false,
         appointmentReminder30mMessage: currentWorkspace.appointmentReminder30mMessage || undefined,
         appointmentReminderChannel: currentWorkspace.appointmentReminderChannel || "whatsapp",
+        minBookingBufferHours: currentWorkspace.minBookingBufferHours ?? 12,
       })
     }
   }, [currentWorkspace])
@@ -540,20 +543,22 @@ export function SettingsPage() {
       if (dataToSave.appointmentReminder30mEnabled) reminderHours.push(0.5)
 
       updateData.appointmentReminderHours = reminderHours
-      // Keep the individual message fields - no aggregation
+      // ✅ CRITICAL: Always send the enabled flags AND individual message fields
+      updateData.appointmentReminder24hEnabled = dataToSave.appointmentReminder24hEnabled ?? true
       updateData.appointmentReminder24hMessage = dataToSave.appointmentReminder24hMessage || null
+      updateData.appointmentReminder1hEnabled = dataToSave.appointmentReminder1hEnabled ?? true
       updateData.appointmentReminder1hMessage = dataToSave.appointmentReminder1hMessage || null
+      updateData.appointmentReminder30mEnabled = dataToSave.appointmentReminder30mEnabled ?? false
       updateData.appointmentReminder30mMessage = dataToSave.appointmentReminder30mMessage || null
+      updateData.minBookingBufferHours = dataToSave.minBookingBufferHours ?? 12
       
       // 🔒 PROTECTION: Only send boolean toggles if they actually changed
       // This prevents accidental state changes when user is just updating other settings
+      // ✅ CRITICAL: Appointment fields MUST ALWAYS be sent - never delete them!
       if (currentWorkspace) {
         // channelStatus
         if (updateData.channelStatus === currentWorkspace.channelStatus) {
           delete updateData.channelStatus
-          console.log('🛡️ channelStatus unchanged, not sending in update')
-        } else {
-          console.log(`📝 channelStatus changed: ${currentWorkspace.channelStatus} → ${updateData.channelStatus}`)
         }
 
         // widgetUseChannelLogo
@@ -585,6 +590,14 @@ export function SettingsPage() {
         if (updateData.debugMode === currentWorkspace.debugMode) {
           delete updateData.debugMode
         }
+
+        // 🆕 enableCalendarBooking - protect if unchanged
+        if (updateData.enableCalendarBooking === currentWorkspace.enableCalendarBooking) {
+          delete updateData.enableCalendarBooking
+        }
+
+        // Appointment reminder fields MUST ALWAYS be sent (never delete!)
+        // They are explicitly set above and should always be persisted
       }
 
       // Trim and cap quick replies
@@ -638,21 +651,7 @@ export function SettingsPage() {
 
       const updatedWorkspace = await updateWorkspace(currentWorkspace!.id, updateData)
 
-      console.log("🐞 [SettingsPage] BEFORE UPDATE:", {
-        provider: currentWorkspace!.whatsappProvider,
-        ultraMsgInstanceId: currentWorkspace!.ultraMsgInstanceId,
-      })
-      console.log("🐞 [SettingsPage] UPDATE DATA SENT:", {
-        provider: updateData.whatsappProvider,
-        ultraMsgInstanceId: updateData.ultraMsgInstanceId,
-      })
-      console.log("🐞 [SettingsPage] RESPONSE RECEIVED:", {
-        provider: updatedWorkspace.whatsappProvider,
-        ultraMsgInstanceId: updatedWorkspace.ultraMsgInstanceId,
-        allFields: Object.keys(updatedWorkspace),
-      })
-
-      // ✅ FIX: Reset dirty flags BEFORE updating workspace
+      // Reset dirty flags BEFORE updating workspace
       // This allows the useEffect to properly sync formData with new workspace values
       setIsDirty(false)
       isDirtyRef.current = false
@@ -660,11 +659,6 @@ export function SettingsPage() {
       setCurrentWorkspace({
         ...currentWorkspace!,
         ...updatedWorkspace,
-      })
-
-      console.log("🐞 [SettingsPage] AFTER MERGE:", {
-        provider: { ...currentWorkspace!, ...updatedWorkspace }.whatsappProvider,
-        ultraMsgInstanceId: { ...currentWorkspace!, ...updatedWorkspace }.ultraMsgInstanceId,
       })
 
       if (!options?.suppressToast) {

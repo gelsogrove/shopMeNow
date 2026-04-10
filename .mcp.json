@@ -4,7 +4,7 @@
       "command": "node",
       "args": ["/Users/gelso/workspace/shopME/packages/mcp-server/dist/index.js"],
       "env": {
-        "ECHATBOT_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzNjRiZGNmLWIwMDgtNDc0NC05MzEwLTM0ZDhhYWMxODExNCIsImVtYWlsIjoiZ2Vsc29ncm92ZUBnbWFpbC5jb20iLCJyb2xlIjoiQURNSU4iLCJpc1BsYXRmb3JtQWRtaW4iOnRydWUsImlzRGV2ZWxvcGVyVXNlciI6dHJ1ZSwidHdvRmFjdG9yRW5hYmxlZCI6ZmFsc2UsImlhdCI6MTc3NTgwNzI3OCwiZXhwIjoxNzc1ODkzNjc4fQ.N42X4DdDxEv9YoeFl4kM2Pl3vGSjEtl18DyHrpDYtr8"
+        "ECHATBOT_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjUzNjRiZGNmLWIwMDgtNDc0NC05MzEwLTM0ZDhhYWMxODExNCIsImVtYWlsIjoiZ2Vsc29ncm92ZUBnbWFpbC5jb20iLCJyb2xlIjoiQURNSU4iLCJpc1BsYXRmb3JtQWRtaW4iOnRydWUsImlzRGV2ZWxvcGVyVXNlciI6dHJ1ZSwidHdvRmFjdG9yRW5hYmxlZCI6ZmFsc2UsImlhdCI6MTc3NTgxMjMyMiwiZXhwIjoxNzc1ODk4NzIyfQ.IbBCoU1y9QcK7pIXtOimpycQeD11pzV57Ephl-HVLWw"
       }
     }
   }
