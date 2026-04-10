@@ -408,10 +408,12 @@ export class AppointmentController {
         });
       }
 
-      // Use BACKEND_URL if explicitly set (works in both dev and prod),
-      // otherwise fall back to localhost (safe default for local dev).
-      const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`;
-      const redirectUri = `${backendUrl}/api/auth/google/calendar/callback`;
+      // GOOGLE_CALENDAR_REDIRECT_URI takes priority (set it explicitly in .env for local dev).
+      // Fallback: BACKEND_URL-based URL (used in production where BACKEND_URL is set correctly).
+      const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI
+        || `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`}/api/auth/google/calendar/callback`;
+
+      logger.info('[OAuth] Google Calendar redirect URI:', { redirectUri });
 
       // Encode workspaceId in state for callback retrieval
       const state = Buffer.from(JSON.stringify({ workspaceId })).toString('base64');
@@ -506,8 +508,9 @@ export class AppointmentController {
 
       const clientId = process.env.GOOGLE_CLIENT_ID!;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
-      const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`;
-      const redirectUri = `${backendUrl}/api/auth/google/calendar/callback`;
+      // Must match EXACTLY the URI used when generating the OAuth URL
+      const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI
+        || `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`}/api/auth/google/calendar/callback`;
 
       // Exchange code for tokens
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {

@@ -820,6 +820,8 @@ export function SettingsPage() {
               widgetLanguage: formData.widgetLanguage,
               widgetIcon: formData.widgetIcon,
               widgetUseChannelLogo: formData.widgetUseChannelLogo,
+              widgetAutoSuggestionsEnabled: formData.widgetAutoSuggestionsEnabled,
+              widgetQuickReplies: formData.widgetQuickReplies,
               logoUrl: resolveLogoUrl(formData.logoUrl),
             }}
             workspaceId={currentWorkspace?.id || ""}
