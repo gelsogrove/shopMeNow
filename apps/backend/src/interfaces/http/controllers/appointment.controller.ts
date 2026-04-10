@@ -408,11 +408,9 @@ export class AppointmentController {
         });
       }
 
-      const isProduction = process.env.NODE_ENV === 'production';
-      const backendUrl = isProduction
-        ? (process.env.BACKEND_URL || 'https://api.echatbot.ai')
-        : `http://localhost:${process.env.PORT || 3001}`;
-
+      // Use BACKEND_URL if explicitly set (works in both dev and prod),
+      // otherwise fall back to localhost (safe default for local dev).
+      const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`;
       const redirectUri = `${backendUrl}/api/auth/google/calendar/callback`;
 
       // Encode workspaceId in state for callback retrieval
@@ -508,10 +506,7 @@ export class AppointmentController {
 
       const clientId = process.env.GOOGLE_CLIENT_ID!;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
-      const isProduction = process.env.NODE_ENV === 'production';
-      const backendUrl = isProduction
-        ? (process.env.BACKEND_URL || 'https://api.echatbot.ai')
-        : `http://localhost:${process.env.PORT || 3001}`;
+      const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`;
       const redirectUri = `${backendUrl}/api/auth/google/calendar/callback`;
 
       // Exchange code for tokens

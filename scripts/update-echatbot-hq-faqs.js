@@ -814,6 +814,1038 @@ Non sei sicuro se eChatbot fa al caso tuo? Compila il nostro breve sondaggio (2 
 Puoi anche scriverci direttamente a: **support@echatbot.ai**`,
     keywords: 'italiano,italiano supporto,supporto italiano,lingua,italiano help',
   },
+
+  // ─── PREZZI E PIANI (IT) ─────────────────────────────────────────────────
+  {
+    order: 1230,
+    category: 'Prezzi e Piani',
+    question: 'Quanto costa eChatbot? Quali sono i piani disponibili?',
+    answer: `eChatbot offre tre piani:
+
+- **Starter** — ideale per piccole imprese che vogliono iniziare
+- **Premium** — per aziende in crescita con volumi più elevati
+- **Enterprise** — SLA personalizzati, onboarding dedicato, supporto prioritario
+
+Il prezzo è **basato sull'utilizzo**: una fee mensile fissa + crediti consumati per messaggi e conversazioni.
+
+👉 Vedi tutti i prezzi aggiornati: <a href="https://www.echatbot.ai/pricing" target="_blank">www.echatbot.ai/pricing</a>
+
+Hai dubbi su quale piano fa al caso tuo? Rispondi al nostro sondaggio (2 minuti): <a href="https://www.echatbot.ai/survey" target="_blank">www.echatbot.ai/survey</a>`,
+    keywords: 'prezzi,costi,piani,abbonamento,starter,premium,enterprise,quanto costa',
+  },
+  {
+    order: 1240,
+    category: 'Prezzi e Piani',
+    question: 'Cosa include il piano Starter?',
+    answer: `Il piano **Starter** è pensato per le piccole imprese che vogliono iniziare ad automatizzare WhatsApp con semplicità.
+
+Include:
+- Chatbot AI su WhatsApp e widget web
+- Catalogo prodotti/servizi (fino a 500 voci)
+- Gestione ordini base
+- FAQ knowledge base
+- Campagne broadcast
+- Supporto email entro 24h
+
+Per i dettagli aggiornati e i limiti esatti del piano: <a href="https://www.echatbot.ai/pricing" target="_blank">www.echatbot.ai/pricing</a>`,
+    keywords: 'starter,piano base,piano starter,incluso,funzionalità starter',
+  },
+  {
+    order: 1250,
+    category: 'Prezzi e Piani',
+    question: 'Cosa include il piano Premium?',
+    answer: `Il piano **Premium** è per le aziende in crescita che hanno volumi di conversazioni più elevati e necessitano di funzionalità avanzate.
+
+Include tutto lo Starter, più:
+- Catalogo prodotti esteso (fino a 5.000 voci)
+- Booking appuntamenti con promemoria automatici
+- Integrazione Google Calendar
+- Supporto live chat con risposta entro 4h
+- Analytics avanzate
+
+Per i dettagli aggiornati e i prezzi esatti: <a href="https://www.echatbot.ai/pricing" target="_blank">www.echatbot.ai/pricing</a>`,
+    keywords: 'premium,piano premium,funzionalità premium,incluso premium',
+  },
+  {
+    order: 1260,
+    category: 'Prezzi e Piani',
+    question: 'Cosa include il piano Enterprise?',
+    answer: `Il piano **Enterprise** è dedicato alle grandi organizzazioni che necessitano di personalizzazione, SLA garantiti e supporto dedicato.
+
+Include tutto il Premium, più:
+- Catalogo illimitato con ricerca avanzata
+- SLA personalizzati
+- Onboarding dedicato (2 settimane di implementazione)
+- Account manager dedicato
+- Canale Slack dedicato con risposta entro 1h
+- Supporto telefonico durante gli orari d'ufficio
+- Fatturazione con termini 30 giorni
+
+Contattaci per un preventivo personalizzato: <a href="https://www.echatbot.ai/survey" target="_blank">www.echatbot.ai/survey</a>`,
+    keywords: 'enterprise,piano enterprise,grande azienda,sla,account manager,personalizzato',
+  },
+  {
+    order: 1270,
+    category: 'Prezzi e Piani',
+    question: 'Come funzionano i crediti? Come vengono scalati?',
+    answer: `I **crediti** sono la valuta interna di eChatbot. Vengono scalati ogni volta che il chatbot invia o riceve un messaggio.
+
+Come funziona:
+- Ogni piano include una quota mensile di crediti
+- Se esaurisci i crediti, puoi ricaricare dal menu **Billing**
+- I crediti vengono scalati per messaggi WhatsApp inviati, messaggi widget, e invii di campagne push
+- Il tasso di consumo dipende dal tuo piano — vedi i dettagli in <a href="https://www.echatbot.ai/pricing" target="_blank">www.echatbot.ai/pricing</a>
+
+⚠️ Ricevi un'email di avviso automatico quando il saldo è in esaurimento.`,
+    keywords: 'crediti,come funzionano,scalati,consumo,ricarica,saldo,costo per messaggio',
+  },
+
+  // ─── WHATSAPP PROVIDERS (IT + EN) ────────────────────────────────────────
+  {
+    order: 1300,
+    category: 'WhatsApp Providers',
+    question: 'What is the difference between Meta API, UltraMsg, and Wasender?',
+    answer: `eChatbot supports three WhatsApp providers:
+
+**1. Meta Official API** (recommended for production)
+- Direct connection to Meta's infrastructure
+- Highest reliability and message throughput
+- Requires Meta Business verification (24–48h approval)
+- Supports WhatsApp templates for outbound campaigns
+- Best for businesses sending >500 messages/day
+
+**2. UltraMsg**
+- Third-party gateway — connects your SIM-based WhatsApp number
+- No Meta approval needed — works in minutes
+- Requires a phone/SIM to remain connected and online
+- Lower throughput — suitable for smaller volumes
+
+**3. Wasender**
+- Similar to UltraMsg — SIM-based gateway
+- Quick setup, good for testing and low-volume use
+
+**Which to choose?**
+- Just starting out → UltraMsg (fast setup)
+- Scaling up / production → Meta official API`,
+    keywords: 'meta,ultramsg,wasender,provider,whatsapp api,difference,which provider,comparison',
+  },
+  {
+    order: 1310,
+    category: 'WhatsApp Providers',
+    question: 'How do I get approved for Meta WhatsApp Business API?',
+    answer: `To use the **Meta official WhatsApp Business API** you need:
+
+1. A **Meta Business Account** — create one at business.facebook.com
+2. A **verified phone number** (dedicated, not already used on WhatsApp)
+3. A **Facebook App** with WhatsApp product enabled
+
+Steps:
+1. Go to <a href="https://developers.facebook.com" target="_blank">developers.facebook.com</a>
+2. Create an app → Business → Add WhatsApp product
+3. Register your phone number and verify it via SMS/voice call
+4. Submit for business verification (takes 24–48h)
+5. Once approved, copy your **Phone Number ID**, **Business Account ID**, and **Access Token**
+6. Paste these into eChatbot: **Settings > WhatsApp Channel > Meta provider**
+
+💡 Most businesses get approved within 24–48 hours.`,
+    keywords: 'meta api,approval,meta business,verification,facebook app,phone number id,access token,setup meta',
+  },
+  {
+    order: 1320,
+    category: 'WhatsApp Providers',
+    question: 'How do I set up UltraMsg as my WhatsApp provider?',
+    answer: `**UltraMsg** lets you connect a regular WhatsApp number (SIM-based) without Meta API approval.
+
+Steps:
+1. Go to <a href="https://ultramsg.com" target="_blank">ultramsg.com</a> and create an account
+2. Create an **Instance** and scan the QR code with your WhatsApp
+3. Copy your **Instance ID** and **Token** from the UltraMsg dashboard
+4. In eChatbot go to **Settings > WhatsApp Channel**
+5. Select **UltraMsg** as provider
+6. Paste the Instance ID, Token, and your phone number
+7. Copy the **Webhook URL** from eChatbot and paste it in UltraMsg → Instance → Webhooks
+
+⚠️ Your phone/device with WhatsApp must remain **online and connected** for UltraMsg to work.`,
+    keywords: 'ultramsg,setup,qr code,instance id,token,connect,ultramsg setup',
+  },
+  {
+    order: 1330,
+    category: 'WhatsApp Providers',
+    question: 'Il mio chatbot WhatsApp ha smesso di rispondere. Cosa faccio?',
+    answer: `Ecco i controlli da fare in ordine:
+
+**1. Verifica che il canale sia attivo**
+Vai in **Impostazioni > Canale WhatsApp** e controlla che il toggle **Canale Attivo** sia ON.
+
+**2. Controlla il provider**
+- Se usi **UltraMsg/Wasender**: il telefono con WhatsApp collegato deve essere acceso e connesso a internet. Controlla che la sessione WhatsApp non sia scaduta (riapri il QR code se necessario).
+- Se usi **Meta API**: verifica che il tuo **Access Token** non sia scaduto. Rigenera il token da Meta Developer Console.
+
+**3. Controlla il webhook**
+Il webhook URL configurato nel tuo provider deve corrispondere esattamente a quello mostrato in eChatbot (Settings > WhatsApp Channel).
+
+**4. Saldo crediti**
+Vai in **Billing** e verifica di avere crediti sufficienti.
+
+Se il problema persiste, scrivici a **support@echatbot.ai**.`,
+    keywords: 'chatbot non risponde,non funziona,smesso,problemi whatsapp,risoluzione problemi,troubleshooting',
+  },
+
+  // ─── WEBSITE WIDGET (expanded) ───────────────────────────────────────────
+  {
+    order: 1400,
+    category: 'Website Widget',
+    question: 'Il widget del sito non appare. Come lo risolvo?',
+    answer: `Se il widget non compare sul tuo sito, controlla questi punti:
+
+1. **Il codice snippet è installato correttamente?**
+   Deve essere incollato **prima del tag </body>** su ogni pagina. Se usi WordPress, puoi usare un plugin "Insert Headers and Footers" o modificare il tema direttamente.
+
+2. **Il canale widget è attivo?**
+   Vai in **Impostazioni > Widget Sito Web** e verifica che il toggle **Canale Attivo** sia ON.
+
+3. **Cache del browser**
+   Prova a svuotare la cache o aprire la pagina in modalità incognito.
+
+4. **Conflitti JavaScript**
+   Verifica nella console del browser (F12 → Console) se ci sono errori JavaScript che bloccano il caricamento del widget.
+
+Se il problema persiste, condividi l'URL del sito con il nostro supporto: **support@echatbot.ai**`,
+    keywords: 'widget non appare,non funziona,problemi widget,installazione,snippet,code',
+  },
+  {
+    order: 1410,
+    category: 'Website Widget',
+    question: 'Can the widget work at the same time as WhatsApp?',
+    answer: `Yes! The widget and WhatsApp channel are fully **independent channels** that work simultaneously.
+
+- Both connect to the **same AI chatbot** and knowledge base (FAQs, products, etc.)
+- Both connect to the **same customer database** — if a customer contacts you via both channels, their profiles are managed separately but linked to the same workspace
+- You can enable/disable each channel independently from its settings page
+
+This means a customer on your website uses the widget, while a customer on their phone uses WhatsApp — and your AI handles both automatically at the same time.`,
+    keywords: 'widget and whatsapp,both channels,simultaneous,same time,multichannel',
+  },
+  {
+    order: 1420,
+    category: 'Website Widget',
+    question: 'Can I embed the widget on multiple websites?',
+    answer: `Yes. The same JavaScript snippet can be installed on multiple websites, subdomains, or landing pages.
+
+Each workspace has **one widget** with a single configuration (title, colors, position). All conversations from all your websites with that snippet flow into the same workspace.
+
+If you need **different widgets with different configurations** (e.g. different languages or different brands), you would need separate workspaces.`,
+    keywords: 'multiple websites,several sites,widget multiple,domains,subdomains',
+  },
+
+  // ─── AI PERSONALITY (expanded) ───────────────────────────────────────────
+  {
+    order: 1500,
+    category: 'AI Personality',
+    question: 'Come scrivo un buon messaggio di benvenuto?',
+    answer: `Il **messaggio di benvenuto** è il primo messaggio che il chatbot invia a ogni nuovo cliente. È fondamentale per fare una buona prima impressione.
+
+**Consigli pratici:**
+
+✅ Presentati chiaramente: "Ciao! Sono Sofia, l'assistente virtuale di [Nome Azienda] 👋"
+✅ Dì subito cosa puoi fare: "Posso aiutarti a scoprire i nostri prodotti, prenotare un appuntamento o rispondere alle tue domande."
+✅ Invita all'azione: "Come posso aiutarti oggi?"
+✅ Tienilo breve: idealmente 2–3 frasi
+
+❌ Evita messaggi troppo lunghi o generici
+❌ Non iniziare con "Come assistente AI..."
+
+Il messaggio di benvenuto si configura in **Menu > Impostazioni > Personalità AI**.`,
+    keywords: 'benvenuto,welcome message,primo messaggio,messaggio iniziale,configurare',
+  },
+  {
+    order: 1510,
+    category: 'AI Personality',
+    question: 'What is the "Identity Response" field and what should I write there?',
+    answer: `The **Identity Response** is what the AI says when a customer asks "Who are you?", "Are you a bot?", or "Am I talking to a human?".
+
+**What to write:**
+- Be honest but brand it: "I'm Sofia, the virtual assistant of [Your Company]. I'm an AI, but I'm here to help you 24/7 just like a human would!"
+- You can include your company's mission: "I'm the digital assistant of Mario's Bakery — I can show you our products, take orders, and answer any question about our store."
+- Avoid denying being an AI — this violates WhatsApp policies and erodes customer trust
+
+The identity response is configured in **Settings > AI Personality > Identity Response**.`,
+    keywords: 'identity response,chi sei,who are you,sono un bot,are you a bot,identity,identity field',
+  },
+  {
+    order: 1520,
+    category: 'AI Personality',
+    question: 'Come faccio a far rispondere il chatbot solo in italiano?',
+    answer: `Il chatbot di eChatbot **auto-rileva la lingua** del cliente e risponde di conseguenza. Se vuoi limitarlo solo all'italiano:
+
+Aggiungi questa regola in **Impostazioni > Personalità AI > Regole AI personalizzate**:
+
+*"Rispondi sempre e solo in italiano, indipendentemente dalla lingua usata dal cliente."*
+
+⚠️ Nota: questa regola disabilita il supporto multilingua. Considera se il tuo pubblico include clienti stranieri prima di applicarla.
+
+Se vuoi invece rispondere in italiano per default ma supportare altre lingue quando necessario, non aggiungere nessuna regola — il comportamento automatico è già ottimale.`,
+    keywords: 'solo italiano,lingua,rispondere italiano,forzare italiano,lingua risposta',
+  },
+  {
+    order: 1530,
+    category: 'AI Personality',
+    question: 'Posso dare istruzioni specifiche al chatbot per la mia categoria di business?',
+    answer: `Sì! Il campo **Regole AI personalizzate** in **Impostazioni > Personalità AI** ti permette di dare qualsiasi istruzione al chatbot.
+
+Esempi per settore:
+
+**Ristorante/Food:**
+"Ricorda sempre di chiedere le preferenze alimentari (vegano, senza glutine, allergie) prima di suggerire piatti."
+
+**Studio medico/Estetica:**
+"Non fornire mai consigli medici. Per qualsiasi domanda clinica, invita il cliente a contattare direttamente il medico."
+
+**E-commerce abbigliamento:**
+"Se il cliente non conosce la taglia, suggerisci sempre di consultare la guida taglie a questo link: [URL]"
+
+**Immobiliare:**
+"Prima di mostrare annunci, chiedi sempre il budget e il comune di interesse."
+
+**SaaS/Tech:**
+"Per problemi tecnici complessi, raccogli sempre nome, email e descrizione del problema, poi offri di aprire un ticket."`,
+    keywords: 'regole,istruzioni,personalizzare,settore,business specific,regole ai,custom instructions',
+  },
+
+  // ─── ECOMMERCE (expanded) ────────────────────────────────────────────────
+  {
+    order: 1600,
+    category: 'E-commerce',
+    question: 'Come faccio a caricare i prodotti in modo massivo (CSV import)?',
+    answer: `Puoi aggiungere prodotti uno alla volta dalla dashboard oppure importarli in massa.
+
+Per l'**importazione CSV**:
+1. Vai in **Menu > Prodotti**
+2. Cerca il pulsante **Importa CSV** (o "Import")
+3. Scarica il template CSV di esempio per vedere il formato richiesto
+4. Compila il file con i tuoi prodotti (nome, descrizione, prezzo, categoria, SKU, etc.)
+5. Carica il file CSV
+6. Revisiona l'anteprima e conferma
+
+**Campi supportati nel CSV**: name, description, price, category, sku, stock, imageUrl, isActive
+
+⚠️ Se hai molti prodotti (500+) considera di suddividere il CSV in batch da 200 per evitare timeout.`,
+    keywords: 'importare,csv import,caricamento massivo,bulk,importazione prodotti,tanti prodotti',
+  },
+  {
+    order: 1610,
+    category: 'E-commerce',
+    question: 'Come il chatbot mostra e vende i prodotti in chat?',
+    answer: `Quando un cliente chiede di vedere prodotti, il chatbot:
+
+1. **Interpreta l'intento** — capisce cosa cerca (es. "voglio una scarpa rossa taglia 40")
+2. **Cerca nel catalogo** — filtra per nome, categoria, descrizione, prezzo
+3. **Presenta i risultati** — invia una lista con nome, prezzo, e descrizione
+4. **Gestisce le domande** — risponde a domande su materiali, disponibilità, taglie
+5. **Aggiunge al carrello** — quando il cliente dice "lo voglio" o sceglie un numero dalla lista
+6. **Gestisce il checkout** — raccoglie indirizzo, conferma l'ordine, invia il link di pagamento
+
+Tutto questo avviene automaticamente senza configurazione aggiuntiva — basta avere i prodotti nel catalogo con descrizioni accurate.`,
+    keywords: 'come funziona vendita,mostra prodotti,carrello,checkout,acquisto,comprare,vendere',
+  },
+  {
+    order: 1620,
+    category: 'E-commerce',
+    question: 'Come integro un sistema di pagamento?',
+    answer: `Il chatbot crea il carrello e invia un **link di pagamento sicuro** al cliente. Il cliente clicca il link e completa il pagamento sul tuo gateway preferito.
+
+**Gateway supportati:**
+- **Stripe** — il più diffuso, accetta carte di credito internazionali
+- **PayPal** — pagamenti via conto PayPal o carta
+- **Gateway personalizzato** — puoi configurare il tuo endpoint di pagamento
+
+Per configurare:
+1. Vai in **Impostazioni > Pagamenti** (sezione E-commerce)
+2. Scegli il provider
+3. Inserisci le credenziali API del tuo account
+4. Testa con un ordine di prova
+
+⚠️ WhatsApp Pay non è ancora disponibile in tutti i Paesi. Il link di pagamento funziona universalmente.`,
+    keywords: 'pagamento,stripe,paypal,gateway,checkout,link pagamento,pagare,integrazione pagamento',
+  },
+  {
+    order: 1630,
+    category: 'E-commerce',
+    question: 'Come faccio ad aggiornare lo stato di un ordine?',
+    answer: `Vai in **Menu > E-commerce > Ordini**.
+
+1. Trova l'ordine (puoi cercare per nome cliente o numero ordine)
+2. Clicca sull'ordine per aprire il dettaglio
+3. Cambia lo **stato** dal menu a tendina:
+   - **In attesa** → **Confermato** → **Spedito** → **Completato**
+   - Oppure **Annullato** se necessario
+4. Clicca **Salva**
+
+Il cliente **non riceve automaticamente** una notifica al cambio di stato (a meno che tu non abbia configurato una campagna di notifica stato ordine). Puoi contattarlo manualmente dalla sezione Chat.`,
+    keywords: 'stato ordine,aggiornare ordine,ordine spedito,ordine completato,gestione ordini',
+  },
+  {
+    order: 1640,
+    category: 'E-commerce',
+    question: 'What workspace type should I choose: E-commerce or Informational?',
+    answer: `When creating your workspace you choose between two types:
+
+**E-commerce**
+Choose this if your business sells physical or digital products, and you want the chatbot to:
+- Show product catalog and pricing
+- Add items to a cart
+- Process orders and send payment links
+- Manage order status
+
+**Informational**
+Choose this if your business provides services, information, or appointments without a product checkout flow. Examples: clinics, law firms, gyms, consultants, restaurants that just want to answer FAQs and take bookings.
+
+The Informational type still supports appointment booking, FAQ answers, human support escalation, and campaigns — just without the e-commerce catalog and cart features.
+
+You can change your workspace type anytime from **Settings > Business Config**.`,
+    keywords: 'workspace type,ecommerce,informational,tipo workspace,scegliere,qual è la differenza',
+  },
+
+  // ─── CHAT & CONVERSAZIONI ─────────────────────────────────────────────────
+  {
+    order: 1700,
+    category: 'Chat e Conversazioni',
+    question: 'Come funziona la sezione Chat? Dove vedo le conversazioni?',
+    answer: `Vai in **Menu > Chat (Chat History)**.
+
+Qui trovi tutte le conversazioni dei tuoi clienti, ordinate per data. Puoi:
+
+- **Cercare** per nome cliente, numero di telefono, o testo del messaggio
+- **Filtrare** per lingua, data, stato (attiva, chiusa, in attesa operatore)
+- **Cliccare** su una conversazione per leggerla integralmente
+- Vedere in tempo reale i messaggi in arrivo (con aggiornamento automatico)
+- Nel pannello di destra: dettagli cliente, tag, note operative
+
+I messaggi del chatbot AI sono distinguibili dai messaggi dell'operatore umano con un'apposita etichetta.`,
+    keywords: 'chat,conversazioni,storico chat,messaggi,dove vedo,chat history,conversazione',
+  },
+  {
+    order: 1710,
+    category: 'Chat e Conversazioni',
+    question: 'Posso scrivere manualmente a un cliente dal pannello?',
+    answer: `Sì. Puoi inviare messaggi ai tuoi clienti direttamente dalla dashboard.
+
+Come fare:
+1. Vai in **Menu > Chat**
+2. Apri la conversazione del cliente
+3. Scrivi il tuo messaggio nel campo di testo in basso
+4. Premi Invio o clicca **Invia**
+
+Il messaggio viene recapitato al cliente via WhatsApp (o widget) esattamente come se arrivasse dall'AI.
+
+⚠️ Attenzione: WhatsApp permette di inviare messaggi liberi solo entro la **finestra di 24 ore** dall'ultimo messaggio del cliente. Fuori da questa finestra devi usare un **template approvato** (solo Meta API).`,
+    keywords: 'scrivere manualmente,messaggio manuale,rispondere,inviare messaggio,operatore scrive',
+  },
+  {
+    order: 1720,
+    category: 'Chat e Conversazioni',
+    question: 'Come faccio a chiudere o archiviare una conversazione?',
+    answer: `Le conversazioni rimangono visibili nella lista Chat finché non le archivi manualmente.
+
+Per chiudere/archiviare:
+1. Apri la conversazione in **Menu > Chat**
+2. Clicca il pulsante **Chiudi** o **Archivia** (di solito nell'angolo in alto a destra del pannello chat)
+
+Le conversazioni archiviate rimangono visibili nei filtri ma non appariranno nella lista principale attiva.
+
+Nelle conversazioni di **supporto umano escalate**, usa il pulsante **Risolto** in **Menu > Support** per chiuderle formalmente e notificare il cliente.`,
+    keywords: 'chiudere,archiviare,chiudi chat,archivia conversazione,risolvere',
+  },
+  {
+    order: 1730,
+    category: 'Chat e Conversazioni',
+    question: 'Il cliente può cancellare la sua conversazione o i suoi dati?',
+    answer: `Il cliente non ha un accesso diretto alla dashboard per cancellare i dati.
+
+Tuttavia, per rispettare il **GDPR (diritto alla cancellazione)**:
+1. Il cliente ti contatta e richiede la cancellazione dei propri dati
+2. Vai in **Menu > Clienti**, trova il profilo del cliente
+3. Puoi **eliminare il profilo** del cliente — questo cancella nome, telefono, e metadati
+4. Lo storico messaggi può essere eliminato separatamente (contatta il nostro supporto se hai bisogno di cancellazioni massive)
+
+⚠️ Una volta eliminato, il profilo non è recuperabile. L'eliminazione è permanente.`,
+    keywords: 'cancellare dati,gdpr,diritto cancellazione,eliminare cliente,privacy,delete data',
+  },
+
+  // ─── HUMAN IN THE LOOP ───────────────────────────────────────────────────
+  {
+    order: 1800,
+    category: 'Human in the Loop',
+    question: 'Come funziona il passaggio a un operatore umano?',
+    answer: `Il sistema di **human in the loop** permette al chatbot di passare la conversazione a un operatore reale quando necessario.
+
+**Quando avviene l'escalation:**
+- Il cliente chiede esplicitamente di parlare con un umano ("voglio parlare con una persona")
+- L'AI non riesce a gestire la richiesta e la scala automaticamente
+- L'operatore può prendere in carico proattivamente qualsiasi chat
+
+**Flusso:**
+1. Il cliente richiede un operatore
+2. Il chatbot risponde con il messaggio di escalation configurato (es. "Ti sto connettendo con uno dei nostri operatori. Riceverai risposta a breve.")
+3. La conversazione appare in **Menu > Support** con stato "In attesa"
+4. L'operatore riceve una notifica (email o WhatsApp) e prende in carico la chat
+5. L'operatore risponde dalla dashboard
+6. Quando il problema è risolto, segna la conversazione come **Risolta**`,
+    keywords: 'operatore umano,human in the loop,escalation,passaggio,live agent,human handoff',
+  },
+  {
+    order: 1810,
+    category: 'Human in the Loop',
+    question: 'Come ricevo la notifica quando un cliente chiede un operatore?',
+    answer: `Vai in **Impostazioni > Supporto Umano** per configurare le notifiche.
+
+Puoi scegliere il metodo di notifica:
+- **Email** — ricevi un'email all'indirizzo configurato ogni volta che un cliente richiede un operatore
+- **WhatsApp** — ricevi un messaggio WhatsApp di notifica all'operatore designato
+
+Il messaggio di notifica include:
+- Nome/numero del cliente
+- Un riassunto AI della conversazione (in 1 frase)
+- Link diretto per aprire la chat dalla dashboard
+
+Assicurati di configurare correttamente l'**email operatore** o il **numero WhatsApp operatore** nelle impostazioni.`,
+    keywords: 'notifica operatore,alert,avviso,ricevere notifica,email operatore,supporto notifiche',
+  },
+  {
+    order: 1820,
+    category: 'Human in the Loop',
+    question: 'The AI keeps escalating to human even for simple questions. How do I fix this?',
+    answer: `If the AI escalates too frequently, it usually means:
+
+1. **FAQ knowledge gaps** — the AI can't find an answer and defaults to escalation
+   → Fix: Add more relevant FAQs in **Menu > FAQ**
+
+2. **Escalation rules too broad** — the custom escalation rules in Settings > Human Support are triggering too easily
+   → Fix: Review and tighten the escalation rules. Be specific about WHEN to escalate (e.g. "Escalate only when the customer mentions a formal complaint or requests a refund")
+
+3. **Custom AI rules conflict** — a rule you wrote is causing the AI to give up too quickly
+   → Fix: Review **Settings > AI Personality > Custom AI Rules**
+
+4. **Products/Services not in catalog** — customers ask about things the AI doesn't know
+   → Fix: Update your product/service catalog and FAQ with the missing information`,
+    keywords: 'too many escalations,escalates too often,ai escalation,fix escalation,human support too much',
+  },
+  {
+    order: 1830,
+    category: 'Human in the Loop',
+    question: 'Posso avere più operatori che gestiscono le chat di supporto?',
+    answer: `Sì. Puoi invitare tutti gli operatori che vuoi nella tua workspace.
+
+1. Vai in **Menu > Team** (dalla barra di navigazione)
+2. Invita i tuoi operatori con email e ruolo **MEMBER** o **ADMIN**
+3. Una volta che accettano l'invito, possono accedere a **Menu > Support** e prendere in carico le chat
+
+**Visibilità**: tutti gli operatori con accesso alla workspace vedono le stesse conversazioni in coda. Puoi riassegnare manualmente una chat a un operatore specifico dalla vista Support.
+
+**Consiglio**: definisci chi è responsabile per le chat in un certo orario, per evitare che nessuno risponda o che rispondano tutti contemporaneamente.`,
+    keywords: 'più operatori,team operatori,gestire chat,assegnare chat,operatori multipli',
+  },
+
+  // ─── CAMPAGNE PUSH ────────────────────────────────────────────────────────
+  {
+    order: 1900,
+    category: 'Campagne Push',
+    question: 'Cosa sono le campagne push e a cosa servono?',
+    answer: `Le **campagne push** ti permettono di inviare messaggi broadcast di marketing in **uscita** a tutti (o parte) dei tuoi clienti WhatsApp.
+
+Casi d'uso tipici:
+- Annunciare una **promozione** o un'offerta a tempo
+- Inviare un **reminder** (es. "Il tuo appuntamento è domani")
+- Comunicare una **novità** (nuovo prodotto, apertura domenicale, cambio orari)
+- Fidelizzazione: auguri di compleanno, messaggi di ringraziamento
+- Re-engagement: ricontattare clienti inattivi
+
+Vai in **Menu > Campagne** per creare e gestire le tue campagne.
+
+⚠️ Le campagne WhatsApp funzionano solo con clienti che hanno già avviato una conversazione con te nelle ultime 24 ore, oppure tramite template approvati Meta (per Meta API).`,
+    keywords: 'campagne push,broadcast,marketing,promozione,inviare a tutti,notifiche push,messaggi uscita',
+  },
+  {
+    order: 1910,
+    category: 'Campagne Push',
+    question: 'Posso pianificare l\'invio di una campagna per una data futura?',
+    answer: `Sì! Quando crei una campagna puoi scegliere se inviarla **subito** o **programmarla**.
+
+Come programmare:
+1. Vai in **Menu > Campagne > Nuova Campagna**
+2. Scrivi il messaggio
+3. Scegli il pubblico target
+4. Alla sezione data/ora, seleziona **Programma** invece di **Invia ora**
+5. Imposta data e ora di invio
+6. Clicca **Programma**
+
+La campagna verrà inviata automaticamente alla data e ora impostata — non devi essere online.
+
+Puoi vedere e annullare le campagne programmate dall'elenco campagne (stato: "Schedulata").`,
+    keywords: 'programmare campagna,schedulare,data futura,invio automatico,schedule,timing',
+  },
+  {
+    order: 1920,
+    category: 'Campagne Push',
+    question: 'Come personalizzo il messaggio di una campagna con il nome del cliente?',
+    answer: `Puoi usare **variabili di personalizzazione** nel testo della campagna.
+
+Variabili disponibili:
+- \`{{nomeCliente}}\` — nome del cliente (se disponibile nel profilo)
+- \`{{nomeAzienda}}\` — nome della tua workspace
+
+Esempio:
+*"Ciao {{nomeCliente}}! 👋 Abbiamo una promozione speciale per te: 20% di sconto su tutti i prodotti questo weekend. Non perdertela!"*
+
+Se il nome del cliente non è disponibile, la variabile viene sostituita con una stringa vuota o con un valore di fallback — per sicurezza, scrivi i messaggi in modo che abbiano senso anche senza il nome.`,
+    keywords: 'personalizzare campagna,nome cliente,variabili,personalizzazione,nome utente in campagna',
+  },
+  {
+    order: 1930,
+    category: 'Campagne Push',
+    question: 'Perché alcuni clienti non ricevono la mia campagna?',
+    answer: `Ci sono diverse ragioni per cui un cliente potrebbe non ricevere una campagna:
+
+1. **Finestra 24h WhatsApp** — WhatsApp permette messaggi liberi solo a clienti che hanno scritto nelle ultime 24h. Fuori da questa finestra, il messaggio non viene consegnato (solo con Meta API + template approvato è possibile raggiungerli).
+
+2. **Cliente bloccato** — se il cliente ha bloccato il tuo numero WhatsApp, il messaggio non verrà consegnato.
+
+3. **Filtri pubblico** — se hai usato un filtro (per tag o lingua), solo i clienti che corrispondono ai criteri ricevono la campagna.
+
+4. **Numero non raggiungibile** — il numero del cliente era spento o fuori servizio al momento dell'invio.
+
+Controlla le statistiche della campagna (tasso di consegna) nel dettaglio della campagna dopo l'invio.`,
+    keywords: 'campagna non ricevuta,non consegnata,deliverability,perché non arriva,finestra 24h',
+  },
+
+  // ─── BOOKING APPUNTAMENTI (expanded) ────────────────────────────────────
+  {
+    order: 2000,
+    category: 'Booking Appuntamenti',
+    question: 'Come il cliente prenota un appuntamento via WhatsApp?',
+    answer: `Il cliente **non deve fare nulla di speciale** — basta che scriva un messaggio come:
+
+- "Vorrei prenotare un appuntamento"
+- "Sono disponibile lunedì pomeriggio per un taglio"
+- "Puoi fissarmi una consulenza per martedì?"
+
+Il chatbot gestisce automaticamente il flusso:
+1. Chiede il **tipo di servizio** desiderato (se ce ne sono più di uno)
+2. Mostra le **date e fasce orarie disponibili** basandosi sui tuoi orari apertura e gli appuntamenti già prenotati
+3. Il cliente **sceglie** data e ora
+4. Raccoglie la **conferma** e salva la prenotazione
+5. Invia un **messaggio di conferma** con i dettagli
+
+Il cliente riceverà automaticamente **promemoria WhatsApp** prima dell'appuntamento.`,
+    keywords: 'come prenota,flusso prenotazione,cliente prenota,booking flow,come funziona prenotazione',
+  },
+  {
+    order: 2010,
+    category: 'Booking Appuntamenti',
+    question: 'Il cliente può cancellare o modificare un appuntamento via chat?',
+    answer: `Sì. Il chatbot gestisce anche le modifiche e le cancellazioni.
+
+Il cliente può scrivere:
+- "Voglio cancellare il mio appuntamento"
+- "Posso spostare l'appuntamento di domani a giovedì?"
+
+Il chatbot:
+1. Trova l'appuntamento esistente del cliente
+2. Lo cancella o propone nuove date disponibili per la modifica
+3. Conferma la variazione e aggiorna il calendario
+
+Come admin, puoi anche cancellare o modificare appuntamenti manualmente da **Menu > Appuntamenti > Appuntamenti Prenotati**.`,
+    keywords: 'cancellare appuntamento,modificare appuntamento,spostare,disdire,cambio appuntamento',
+  },
+  {
+    order: 2020,
+    category: 'Booking Appuntamenti',
+    question: 'Come configuro i promemoria automatici per gli appuntamenti?',
+    answer: `I promemoria sono **automatici** — non devi configurare nulla di speciale dopo aver abilitato il booking.
+
+Il sistema invia promemoria WhatsApp:
+- **24 ore prima** dell'appuntamento
+- **1–2 ore prima** dell'appuntamento (dipende dalla configurazione)
+
+Il messaggio di promemoria include:
+- Data e ora dell'appuntamento
+- Tipo di servizio prenotato
+- Opzione per confermare o cancellare
+
+I promemoria vengono gestiti dal **scheduler di background** che gira 24/7 automaticamente.
+
+Se i promemoria non vengono inviati, verifica che il canale WhatsApp sia attivo e che ci siano crediti sufficienti.`,
+    keywords: 'promemoria,reminders,automatici,notifiche appuntamento,configurare reminder',
+  },
+  {
+    order: 2030,
+    category: 'Booking Appuntamenti',
+    question: 'Posso avere più tipi di servizi prenotabili con durate diverse?',
+    answer: `Sì, assolutamente. Puoi creare un numero illimitato di servizi prenotabili, ognuno con la propria durata.
+
+Esempi:
+- "Taglio capelli" — 30 minuti
+- "Colorazione" — 90 minuti
+- "Consulenza base" — 30 minuti, "Consulenza completa" — 60 minuti
+
+Per configurarli:
+1. Vai in **Menu > E-commerce > Servizi**
+2. Per ogni servizio, abilita **Abilita per Prenotazione**
+3. Imposta la **Durata** in minuti
+4. Imposta il **Buffer time** (pausa tra un appuntamento e l'altro)
+
+Il sistema gestisce automaticamente la disponibilità in base alla durata di ogni servizio — un slot da 30 minuti non sará proposto per un servizio da 60 minuti.`,
+    keywords: 'più servizi,servizi diversi,durate diverse,multiple service types,multiple appointment types',
+  },
+
+  // ─── FATTURE E BILLING ────────────────────────────────────────────────────
+  {
+    order: 2100,
+    category: 'Fatturazione',
+    question: 'Come scarico le mie fatture mensili?',
+    answer: `Vai in **Menu > Billing**.
+
+Nella sezione **Fatture** (o "Invoices") trovi l'elenco di tutte le fatture mensili. Per ogni fattura puoi:
+- Vedere il **periodo di riferimento**, l'importo, e lo stato (Pagata/In attesa)
+- Cliccare **Scarica PDF** per scaricare la fattura in formato PDF
+- Inviare la fattura via email al tuo indirizzo aziendale
+
+Le fatture vengono generate automaticamente alla fine di ogni periodo di fatturazione.
+
+Se hai bisogno di una fattura con dati specifici (P.IVA, ragione sociale, etc.), assicurati di aver compilato i dati di fatturazione in **Impostazioni > Configurazione Business**.`,
+    keywords: 'fatture,invoice,scaricare fattura,fatturazione mensile,pdf fattura,billing',
+  },
+  {
+    order: 2110,
+    category: 'Fatturazione',
+    question: 'Come aggiorno i dati di fatturazione (P.IVA, ragione sociale)?',
+    answer: `Vai in **Menu > Impostazioni > Configurazione Business**.
+
+Qui puoi compilare/aggiornare:
+- **Ragione sociale** / Nome azienda
+- **P.IVA** o Codice Fiscale
+- **Indirizzo di fatturazione**
+- **Email** per la ricezione fatture
+- **PEC** (se applicabile)
+
+I dati inseriti appariranno nelle fatture successive. Per le fatture già emesse, contatta il supporto: **support@echatbot.ai**`,
+    keywords: 'dati fatturazione,p.iva,ragione sociale,indirizzo fatturazione,fatturazione dati,aggiornare fatturazione',
+  },
+  {
+    order: 2120,
+    category: 'Fatturazione',
+    question: 'Il mio credito è esaurito e il chatbot si è fermato. Cosa devo fare?',
+    answer: `Se il credito si esaurisce, il chatbot smette di inviare risposte automaticamente.
+
+Per ripristinarlo immediatamente:
+1. Vai in **Menu > Billing**
+2. Clicca **Aggiungi Crediti**
+3. Scegli l'importo e procedi con il pagamento (carta di credito o PayPal)
+4. I crediti vengono aggiunti **immediatamente** dopo il pagamento
+5. Il chatbot riprende a rispondere dalla prossima conversazione
+
+⚠️ **Prevenzione**: puoi impostare un avviso email automatico (configurato di default) che ti notifica quando il saldo scende sotto una soglia. Assicurati di avere un metodo di pagamento valido salvato per ricaricare rapidamente.`,
+    keywords: 'credito esaurito,saldo zero,chatbot fermo,ricarica crediti,ripristinare',
+  },
+  {
+    order: 2130,
+    category: 'Fatturazione',
+    question: 'Posso impostare il rinnovo automatico dei crediti?',
+    answer: `Sì. Puoi configurare una **soglia di ricarica automatica** in **Menu > Billing > Impostazioni pagamento automatico**.
+
+Come funziona:
+- Imposti una **soglia minima** (es. quando il credito scende sotto €10)
+- Imposti un **importo di ricarica** automatica (es. ricarica sempre €50)
+- Il sistema addebita automaticamente il metodo di pagamento salvato quando la soglia viene raggiunta
+
+In questo modo non rischi mai di avere il chatbot fermo per mancanza di crediti.
+
+Devi avere un **metodo di pagamento salvato** (carta di credito o PayPal) per attivare la ricarica automatica.`,
+    keywords: 'ricarica automatica,auto topup,rinnovo automatico,pagamento automatico,soglia ricarica',
+  },
+
+  // ─── SICUREZZA ───────────────────────────────────────────────────────────
+  {
+    order: 2200,
+    category: 'Sicurezza',
+    question: 'Come attivo l\'autenticazione a due fattori (2FA)?',
+    answer: `Vai in **Menu > Impostazioni Account** (clicca sull'icona del tuo profilo in alto a destra → Impostazioni Account).
+
+Per abilitare il **2FA (Two-Factor Authentication)**:
+1. Cerca la sezione **Sicurezza** o **Autenticazione a due fattori**
+2. Clicca **Abilita 2FA**
+3. Scansiona il QR code con un'app autenticatore (Google Authenticator, Authy, Microsoft Authenticator)
+4. Inserisci il codice di 6 cifre per confermare
+5. Salva i **codici di recupero** in un posto sicuro — servono se perdi l'accesso all'app
+
+Con il 2FA attivato, ad ogni login ti verrà chiesto il codice dall'app autenticatore oltre alla password.`,
+    keywords: 'two factor,2fa,autenticazione due fattori,sicurezza account,google authenticator',
+  },
+  {
+    order: 2210,
+    category: 'Sicurezza',
+    question: 'How do I reset my password?',
+    answer: `If you forgot your password:
+
+1. Go to <a href="https://app.echatbot.io/login" target="_blank">app.echatbot.io/login</a>
+2. Click **"Forgot password?"**
+3. Enter your email address
+4. Check your email for a reset link (valid for 1 hour)
+5. Click the link and set a new password
+
+If you don't receive the email within a few minutes, check your spam/junk folder.
+
+If you still can't access your account, contact us at **support@echatbot.ai** with your registered email address and we'll help you regain access.`,
+    keywords: 'reset password,forgot password,lost access,change password,recover account',
+  },
+  {
+    order: 2220,
+    category: 'Sicurezza',
+    question: 'The chatbot answered something wrong or harmful. What should I do?',
+    answer: `If the AI provided incorrect or inappropriate information:
+
+**Immediate fix:**
+1. Go to **Menu > FAQ** and add a specific FAQ with the correct answer for that topic
+2. Update **Settings > AI Personality > Custom AI Rules** to explicitly prevent the wrong type of response
+3. If it's a product/price error, update your catalog in **Menu > Products/Services**
+
+**Investigation:**
+- Find the conversation in **Menu > Chat** and review what question triggered the wrong answer
+- Use this insight to improve your FAQ knowledge base
+
+**Prevention:**
+- Write detailed, accurate FAQ entries for your most common questions
+- Use Custom AI Rules to set explicit guardrails (e.g. "Never quote prices that are not in the catalog")
+- Regularly review chat logs to spot recurring misunderstandings
+
+If the issue is a platform AI bug, report it to: **support@echatbot.ai** with the conversation details.`,
+    keywords: 'wrong answer,incorrect response,harmful,ai mistake,fix chatbot,error AI',
+  },
+  {
+    order: 2230,
+    category: 'Sicurezza',
+    question: 'I miei dati clienti sono al sicuro? Cosa succede se cambiamo provider?',
+    answer: `Sì, i tuoi dati sono completamente al sicuro.
+
+**Sicurezza dati:**
+- Tutti i dati sono cifrati sia a riposo che in transito (TLS 1.2+)
+- I server sono in **Unione Europea** (GDPR compliant)
+- Multi-tenant isolation garantisce che nessun'altra azienda possa vedere i tuoi dati
+- Backup automatici giornalieri con ripristino garantito
+
+**Se cambi provider WhatsApp** (es. da UltraMsg a Meta):
+- I dati dei clienti, le conversazioni, i prodotti, e tutte le configurazioni **rimangono invariati**
+- Cambia solo il canale di comunicazione WhatsApp
+- La cronologia dei messaggi precedenti rimane visibile nella dashboard
+
+**Se cancelli il workspace:**
+- I dati vengono conservati per 30 giorni
+- Puoi richiedere un'esportazione completa a **support@echatbot.ai** prima della cancellazione`,
+    keywords: 'sicurezza dati,protezione,cambio provider,backup,european hosting,gdpr,dati clienti',
+  },
+
+  // ─── ACCOUNT E WORKSPACE ─────────────────────────────────────────────────
+  {
+    order: 2300,
+    category: 'Account e Workspace',
+    question: 'Posso avere più workspace con lo stesso account?',
+    answer: `Sì! Con un singolo account eChatbot puoi creare e gestire **più workspace**.
+
+Ogni workspace è completamente indipendente:
+- Canale WhatsApp, widget, e DNS dedicati
+- Catalogo prodotti/servizi separato
+- Clienti, conversazioni, e FAQ separate
+- Piano di fatturazione indipendente
+
+**Casi d'uso tipici:**
+- Un'agenzia con più clienti: un workspace per cliente
+- Un'azienda con più brand o punti vendita
+- Ambienti separati: uno per la produzione, uno per il testing
+
+Per creare un nuovo workspace, clicca sul **nome del workspace** in alto a sinistra nella dashboard → **Crea nuovo workspace**.`,
+    keywords: 'più workspace,multiple workspace,tanti workspace,agenzia,multi business,creare workspace',
+  },
+  {
+    order: 2310,
+    category: 'Account e Workspace',
+    question: 'Come passo da un workspace all\'altro?',
+    answer: `Se hai più workspace associati al tuo account:
+
+1. Clicca sul **nome del workspace** visibile in alto nella dashboard (o sull'icona del workspace)
+2. Si aprirà un menu a tendina con tutti i tuoi workspace
+3. Clicca sul workspace che vuoi selezionare
+4. La dashboard si aggiornerà automaticamente mostrando i dati del workspace selezionato
+
+Ogni workspace mantiene le proprie impostazioni, clienti e configurazioni separate.`,
+    keywords: 'cambiare workspace,switch workspace,passare tra workspace,selezionare workspace',
+  },
+  {
+    order: 2320,
+    category: 'Account e Workspace',
+    question: 'Come elimino un workspace?',
+    answer: `Per eliminare un workspace:
+1. Vai in **Impostazioni > Configurazione Business** del workspace che vuoi eliminare
+2. Scorri fino in fondo alla pagina
+3. Trova la sezione **Zona Pericolosa** (Danger Zone)
+4. Clicca **Elimina Workspace** e conferma
+
+⚠️ **Attenzione**: l'eliminazione è irreversibile. Tutti i dati (clienti, conversazioni, prodotti, ordini) vengono eliminati definitivamente dopo 30 giorni.
+
+Prima di eliminare, considera di **esportare i dati** importanti. Contatta il supporto a **support@echatbot.ai** se hai bisogno di un backup.`,
+    keywords: 'eliminare workspace,cancellare,delete workspace,danger zone,chiudere account',
+  },
+
+  // ─── ANALYTICS (expanded) ────────────────────────────────────────────────
+  {
+    order: 2400,
+    category: 'Analytics',
+    question: 'Come misuro l\'efficacia del mio chatbot?',
+    answer: `Le metriche chiave da monitorare in **Menu > Analytics**:
+
+- **Tasso di risoluzione AI** — % di conversazioni gestite completamente dall'AI senza escalation all'operatore. Più alto è meglio (obiettivo: 70%+)
+- **Top FAQ usate** — le domande più frequenti dei clienti. Usale per migliorare il tuo catalogo e FAQ
+- **Tasso di escalation** — % di conversazioni passate a un operatore. Se è troppo alto, aggiungi più FAQ
+- **Conversioni** (per i workspace e-commerce) — numero di ordini generati dal chatbot
+- **Lingua dei clienti** — capisci in che lingue parlano i tuoi clienti
+
+Consulta questi dati settimanalmente e usa le informazioni per migliorare continuamente le FAQ e le regole AI.`,
+    keywords: 'metriche,kpi,efficacia chatbot,misurare,analytics,performance,tasso risoluzione',
+  },
+
+  // ─── TROUBLESHOOTING ─────────────────────────────────────────────────────
+  {
+    order: 2500,
+    category: 'Troubleshooting',
+    question: 'Non riesco ad accedere alla dashboard. Cosa faccio?',
+    answer: `Ecco i passaggi per risolvere i problemi di accesso:
+
+1. **Password dimenticata** → clicca "Password dimenticata?" nella pagina di login
+2. **Account bloccato** → controlla la tua email per messaggi di sicurezza da eChatbot
+3. **2FA non funziona** → usa un codice di recupero che hai salvato all'attivazione del 2FA
+4. **Email non riconosciuta** → verifica di usare l'email con cui ti sei registrato
+5. **Problema tecnico** → prova a svuotare cache e cookie del browser, o usa un browser diverso
+
+Se nessuna di queste soluzioni funziona, contattaci:
+📧 **support@echatbot.ai** — indica la tua email registrata e descrivi il problema`,
+    keywords: 'non accedo,login non funziona,problemi accesso,password,account bloccato',
+  },
+  {
+    order: 2510,
+    category: 'Troubleshooting',
+    question: 'La dashboard è lenta o non carica. Come risolvo?',
+    answer: `Se la dashboard è lenta o non carica correttamente:
+
+1. **Svuota la cache del browser** (Ctrl+Shift+Delete / Cmd+Shift+Delete) e ricarica
+2. **Disabilita le estensioni** del browser — alcune estensioni (ad-blocker, VPN) possono interferire
+3. **Prova un altro browser** (Chrome, Firefox, Edge)
+4. **Verifica la connessione internet** — la dashboard richiede una connessione stabile
+5. **Prova in modalità incognito** — esclude problemi legati a cache o estensioni
+
+Se il problema persiste o riguarda una funzionalità specifica (es. la pagina Analytics non carica), contattaci a **support@echatbot.ai** specificando browser e sistema operativo.`,
+    keywords: 'lenta,non carica,problemi dashboard,bug,lentezza,errore caricamento',
+  },
+  {
+    order: 2520,
+    category: 'Troubleshooting',
+    question: 'Sto ricevendo messaggi duplicati dai clienti. Come risolvo?',
+    answer: `I messaggi duplicati di solito indicano un problema di configurazione del webhook.
+
+**Cause comuni:**
+1. **Webhook configurato due volte** — hai incollato lo stesso webhook URL in due provider diversi o in due punti del provider
+2. **Provider riconfigura il webhook** — UltraMsg/Wasender a volte reimpostano il webhook dopo un aggiornamento
+
+**Come risolvere:**
+1. Vai in **Impostazioni > Canale WhatsApp** e copia il webhook URL corretto
+2. Accedi al pannello del tuo provider (UltraMsg/Wasender/Meta)
+3. Verifica che ci sia **un solo webhook URL** configurato
+4. Rimuovi eventuali webhook duplicati
+
+Se il problema persiste, contatta il supporto con un esempio dei messaggi duplicati.`,
+    keywords: 'messaggi duplicati,double messages,webhook duplicato,messaggi ripetuti',
+  },
+
+  // ─── GENERALE / ALTRO ────────────────────────────────────────────────────
+  {
+    order: 2600,
+    category: 'Generale',
+    question: 'eChatbot funziona anche per i ristoranti, parrucchieri, studi medici?',
+    answer: `Sì! eChatbot è progettato per qualsiasi tipo di business, non solo per l'e-commerce.
+
+**Esempi di utilizzo per settore:**
+
+🍕 **Ristorante**: prendi prenotazioni tavoli, invia il menu, gestisci ordini da asporto, rispondi a domande sugli allergeni
+
+✂️ **Parrucchiere/Estetica**: prenota appuntamenti, mostra listino prezzi, invia promemoria automatici
+
+🏥 **Studio medico/Dental**: gestisci le prenotazioni visite, invia informazioni pre-visita, risponi a FAQ sulla clinica. ⚠️ Nota: il chatbot non può dare consigli medici.
+
+🏋️ **Palestra/Centro benessere**: iscrizioni, orari corsi, prenotazione lezioni private
+
+🏠 **Agente immobiliare**: raccolta info clienti, mostra annunci, prenota visite
+
+📱 **SaaS/Tech**: supporto tecnico di primo livello, documentazione, apertura ticket
+
+In tutti i casi, eChatbot può gestire l'80%+ delle richieste comuni, liberando il tuo team per i casi più complessi.`,
+    keywords: 'ristorante,parrucchiere,medico,studio,palestra,settore,che business,funziona per',
+  },
+  {
+    order: 2610,
+    category: 'Generale',
+    question: 'Quanto è difficile da usare e devo sapere programmare?',
+    answer: `**No, non devi saper programmare.** eChatbot è progettato per essere usato da chiunque, senza competenze tecniche.
+
+Tutto si fa dalla dashboard grafica:
+- ✅ Aggiungere prodotti e FAQ — semplice come compilare un form
+- ✅ Configurare la personalità AI — campi di testo
+- ✅ Collegare WhatsApp — copia-incolla di token e URL
+- ✅ Creare campagne — editor visuale
+- ✅ Leggere le analytics — grafici intuitivi
+
+L'unica parte leggermente tecnica è la configurazione iniziale del canale WhatsApp, ma abbiamo guide passo-passo e il nostro team è disponibile per supportarti.
+
+Se hai un piano Premium o Enterprise, offriamo anche **onboarding assistito** direttamente con un consulente.`,
+    keywords: 'difficile,programmare,tecnico,semplice,facile,no code,senza tecnico,configurare',
+  },
+  {
+    order: 2620,
+    category: 'Generale',
+    question: 'Posso fare una demo prima di acquistare?',
+    answer: `Sì, hai due opzioni:
+
+**1. Trial gratuito** (consigliato)
+Crea un account gratuita su <a href="https://app.echatbot.io" target="_blank">app.echatbot.io</a> e hai 14 giorni di accesso completo senza carta di credito. È la demo migliore perché configuri il tuo chatbot reale.
+
+**2. Demo con il nostro team**
+Vuoi vedere eChatbot in azione per il tuo settore specifico o hai domande prima di iniziare? Compila il sondaggio (2 minuti) e ti contatteremo per una demo personalizzata: <a href="https://www.echatbot.ai/survey" target="_blank">www.echatbot.ai/survey</a>
+
+Il nostro team parla italiano e può risponderti via email, WhatsApp, o videochiamata.`,
+    keywords: 'demo,prova,vedere,prima di comprare,trial,sondaggio,consulenza',
+  },
+  {
+    order: 2630,
+    category: 'Generale',
+    question: 'È possibile migrare da un altro chatbot provider a eChatbot?',
+    answer: `Sì, le migrazioni sono possibili e relativamente semplici.
+
+**Cosa si può migrare:**
+- ✅ Catalogo prodotti/servizi (via CSV import)
+- ✅ Database clienti (via import contatti)
+- ✅ FAQ e knowledge base (manuale o assistita)
+
+**Cosa non si può migrare:**
+- ❌ Storico conversazioni (rimane nel vecchio sistema)
+- ❌ Configurazioni AI-specifiche del vecchio provider (devono essere riscritte)
+
+**Come procedere:**
+1. Crea un workspace di test su eChatbot
+2. Importa il catalogo tramite CSV
+3. Trascrivi le FAQ più importanti
+4. Testa con conversazioni reali prima del go-live
+5. Sposta il numero WhatsApp al nuovo sistema
+
+Per migrazioni complesse o **Enterprise**, contattaci per un'assistenza dedicata: <a href="https://www.echatbot.ai/survey" target="_blank">www.echatbot.ai/survey</a>`,
+    keywords: 'migrazione,migrare,cambiare provider,switch,altro chatbot,import,portare dati',
+  },
 ];
 
 async function main() {

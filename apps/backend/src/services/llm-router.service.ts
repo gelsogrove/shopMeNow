@@ -1637,7 +1637,8 @@ export class LLMRouterService {
           })
 
           if ((messageCount + 1) % 6 === 0) {
-            finalCleanResponse += "\n\n[LINK_REGISTRATION]"
+            // Append a soft, non-intrusive invite rather than a bare link
+            finalCleanResponse += "\n\n💡 Register to unlock orders, cart, and more: [LINK_REGISTRATION]"
             const reminderLinkResult = await this.linkReplacementService.replaceTokens(
               { response: finalCleanResponse },
               params.customerId,

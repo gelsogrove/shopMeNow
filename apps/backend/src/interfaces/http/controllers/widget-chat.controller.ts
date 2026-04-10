@@ -1628,16 +1628,17 @@ export class WidgetChatController {
         },
       })
 
-      const registrationPromptLevel = registrationPromptService.getPromptLevel(
-        widgetMessageCount,
-        customer.isActive // isActive = registered in DB schema
-      )
+      // Widget channel: registrationPromptLevel is always 0.
+      // Registration is optional on widget — the FunctionExecutor guard injects [LINK_REGISTRATION]
+      // only when the user tries a restricted action (book, cart, orders).
+      // Passing a level > 0 here would pollute every FAQ response with registration notes.
+      const registrationPromptLevel = 0
 
       logger.info("[WIDGET] 📊 Registration prompt level", {
         customerId: customer.id,
         widgetMessageCount,
         isRegistered: customer.isActive,
-        promptLevel: registrationPromptLevel,
+        promptLevel: registrationPromptLevel, // always 0 on widget
       })
 
       // 🌍 LANGUAGE PRIORITY for this message:

@@ -274,7 +274,7 @@ export function SettingsPage() {
 
       lastWorkspaceIdRef.current = workspaceId
 
-      if (isDirtyRef.current && !workspaceChanged) {
+      if (isDirty && !workspaceChanged) {
         return
       }
 
@@ -346,7 +346,7 @@ export function SettingsPage() {
         minBookingBufferHours: currentWorkspace.minBookingBufferHours ?? 12,
       })
     }
-  }, [currentWorkspace])
+  }, [currentWorkspace, isDirty])
 
   useEffect(() => {
     if (!socket || !currentWorkspace?.id) return
