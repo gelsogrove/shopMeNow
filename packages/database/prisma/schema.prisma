@@ -161,7 +161,6 @@ model Workspace {
   pushCampaignRecipients PushCampaignRecipient[]
 
   // 📅 Calendar & Appointment Booking (Feature: Calendar Integration)
-  appointmentTypes         AppointmentType[]
   appointments             Appointment[]
   googleCalendarConnection GoogleCalendarConnection?
   businessHours            WorkspaceBusinessHours[]
@@ -979,24 +978,31 @@ model SecureToken {
 // model ProductSearch { ... }
 
 model Services {
-  id          String       @id @default(cuid())
-  code        String       @unique
-  name        String
-  description String
-  price       Float
-  currency    String       @default("EUR")
-  isActive    Boolean      @default(true)
-  workspaceId String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  duration    Int          @default(60)
-  imageUrl    String[]     @default([])
-  imageKey    String? // 💾 Storage key for cleanup
-  cartItems   CartItems[]
-  orderItems  OrderItems[]
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id])
+  id              String       @id @default(cuid())
+  code            String       @unique
+  name            String
+  description     String
+  price           Float
+  currency        String       @default("EUR")
+  isActive        Boolean      @default(true)
+  workspaceId     String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  duration        Int          @default(60)
+  imageUrl        String[]     @default([])
+  imageKey        String? // 💾 Storage key for cleanup
+  enableForBooking Boolean     @default(false) // When true, this service is available as appointment type
+  bufferTime      Int          @default(0)     // Minutes before next slot (cleanup time)
+  color           String       @default("#3b82f6") // Calendar color (hex)
+  cartItems       CartItems[]
+  orderItems      OrderItems[]
+  appointments    Appointment[]
+  pendingAppointments PendingAppointment[]
+  lateCancellationAttempts LateCancellationAttempt[]
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id])
 
   @@index([imageKey])
+  @@index([workspaceId, enableForBooking])
   @@map("services")
 }
 
@@ -1953,35 +1959,13 @@ enum SupportSenderType {
 // ============================================================
 
 // Appointment Types: servizi offerti (consulenza, massaggio, etc.)
-model AppointmentType {
-  id                      String             @id @default(uuid())
-  workspaceId             String
-  name                    String             // "Consulenza Legale", "Fisioterapia", "Check-up Medico"
-  description             String?            @db.Text
-  duration                Int                // Minutes (15, 30, 60, 90, 120, etc.)
-  bufferTime              Int                @default(0) // Minutes before next slot (cleanup time)
-  price                   Decimal?           @db.Decimal(10, 2) // Optional fixed price (null = free)
-  color                   String             @default("#3b82f6") // Calendar color (hex)
-  isActive                Boolean            @default(true)
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-
-  workspace               Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  appointments            Appointment[]
-  pendingAppointments     PendingAppointment[]
-  lateCancellationAttempts LateCancellationAttempt[]
-
-  @@index([workspaceId, isActive])
-  @@map("appointment_types")
-}
-
 // Confirmed Appointment: appuntamento confermato (fonte di verità per reminder/billing)
 // Google Calendar è fonte esterna, questo è la copia locale per scheduler/billing/history
 model Appointment {
   id                   String    @id @default(uuid())
   workspaceId          String
   customerId           String    // Customers.id
-  appointmentTypeId    String
+  serviceId            String    // Services.id (booking service type)
 
   // Timing (UTC)
   startTime            DateTime  // Inizio appuntamento (UTC)
@@ -2023,7 +2007,7 @@ model Appointment {
   updatedAt            DateTime  @updatedAt
 
   workspace            Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  appointmentType      AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  service              Services        @relation(fields: [serviceId], references: [id])
   customer             Customers       @relation(fields: [customerId], references: [id])
 
   @@index([workspaceId, status])
@@ -2090,7 +2074,7 @@ model PendingAppointment {
   id                   String             @id @default(uuid())
   workspaceId          String
   customerId           String             // Chi ha prenotato (phone number da Customers)
-  appointmentTypeId    String
+  serviceId            String             // Services.id (booking service type)
   requestedStartTime   DateTime           // Slot richiesto (UTC)
   requestedEndTime     DateTime           // Slot fine (UTC)
   customerNotes        String?            @db.Text
@@ -2103,7 +2087,7 @@ model PendingAppointment {
   createdAt            DateTime           @default(now())
 
   workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  appointmentType      AppointmentType    @relation(fields: [appointmentTypeId], references: [id])
+  service              Services           @relation(fields: [serviceId], references: [id])
 
   @@index([workspaceId, status])
   @@index([customerId])
@@ -2133,14 +2117,14 @@ model LateCancellationAttempt {
   id                   String             @id @default(uuid())
   workspaceId          String
   customerId           String             // Chi ha tentato cancellazione
-  appointmentTypeId    String
+  serviceId            String             // Services.id (booking service type)
   googleEventId        String?            // Google Calendar Event ID (optional until GCal integration)
   scheduledStartTime   DateTime           // Quando era l'appuntamento (UTC)
   attemptedAt          DateTime           @default(now())
   tooLateThreshold     Int                // Ore di preavviso richiesto (24, 48, etc.)
 
   workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  appointmentType      AppointmentType    @relation(fields: [appointmentTypeId], references: [id])
+  service              Services           @relation(fields: [serviceId], references: [id])
 
   @@index([workspaceId, customerId])
   @@index([attemptedAt])
