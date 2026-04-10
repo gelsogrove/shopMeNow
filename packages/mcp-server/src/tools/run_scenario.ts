@@ -1,125 +1,116 @@
 import { getAuthToken, makeApiClient } from "../auth"
 
-const SANDBOX_WORKSPACE_ID = "echatbot-hq-support"
+const DEFAULT_WORKSPACE_ID = "echatbot-hq-support"
 
-export interface ScenarioConfig {
+export interface StartSessionConfig {
   customerName: string
   customerPhone: string
   isRegistered?: boolean
-  messages: string[]
   workspaceId?: string
-  overrides?: {
-    reminderEnabled?: boolean
-    humanSupportEnabled?: boolean
-    hasSalesAgents?: boolean
-    sellsProductsAndServices?: boolean
-    toneOfVoice?: "casual" | "formal" | "professional"
-    channelStatus?: boolean
-    debugMode?: boolean
+  overrides?: Record<string, unknown>
+}
+
+export interface StartSessionResult {
+  sessionId: string
+  customerId: string
+  workspaceId: string
+  customerName: string
+  customerPhone: string
+  isRegistered: boolean
+}
+
+export interface SendMessageResult {
+  response: string
+  agentUsed?: string
+  intent?: string
+  tokensUsed?: number
+}
+
+/**
+ * Start a new interactive simulation session.
+ * Creates test customer + chat session on Heroku.
+ * Returns sessionId and customerId to use with sendMessage.
+ */
+export async function startSession(config: StartSessionConfig): Promise<StartSessionResult> {
+  const token = getAuthToken()
+  const api = makeApiClient(token)
+  const workspaceId = config.workspaceId || DEFAULT_WORKSPACE_ID
+
+  // Apply workspace overrides if provided
+  if (config.overrides && Object.keys(config.overrides).length > 0) {
+    await api.patch(`/workspaces/${workspaceId}`, config.overrides)
+  }
+
+  // Send a silent "init" to create the customer + session
+  // We use an empty init call via the simulate endpoint
+  const response = await api.post(`/workspaces/${workspaceId}/simulate`, {
+    customerPhone: config.customerPhone,
+    customerName: config.customerName,
+    isRegistered: config.isRegistered ?? false,
+    message: "__init__",
+    sessionId: null,
+  })
+
+  const data = response.data as Record<string, unknown>
+
+  return {
+    sessionId: data.sessionId as string,
+    customerId: data.customerId as string,
+    workspaceId,
+    customerName: config.customerName,
+    customerPhone: config.customerPhone,
+    isRegistered: config.isRegistered ?? false,
   }
 }
 
-export interface TurnResult {
-  userMessage: string
-  botResponse: string
-  agentUsed?: string
-  error?: string
-}
-
-export interface ScenarioResult {
-  scenarioId: string
+/**
+ * Send a single message in an active session.
+ * Returns the bot response immediately.
+ */
+export async function sendMessage(params: {
+  sessionId: string
+  customerId: string
   workspaceId: string
-  customerPhone: string
-  conversation: TurnResult[]
-  summary: string
-}
-
-export async function runScenario(config: ScenarioConfig): Promise<ScenarioResult> {
+  message: string
+}): Promise<SendMessageResult> {
   const token = getAuthToken()
   const api = makeApiClient(token)
-  const workspaceId = config.workspaceId || SANDBOX_WORKSPACE_ID
-  const scenarioId = `scenario_${Date.now()}`
 
-  let originalSettings: Record<string, unknown> | null = null
+  const response = await api.post(`/workspaces/${params.workspaceId}/simulate`, {
+    customerPhone: null,
+    customerName: null,
+    isRegistered: false,
+    message: params.message,
+    sessionId: params.sessionId,
+    customerId: params.customerId,
+  })
+
+  const data = response.data as Record<string, unknown>
+
+  return {
+    response: (data.response as string) || (data.message as string) || "",
+    agentUsed: data.agentUsed as string | undefined,
+    intent: data.intent as string | undefined,
+    tokensUsed: data.tokensUsed as number | undefined,
+  }
+}
+
+/**
+ * End a session and clean up the test customer.
+ */
+export async function endSession(params: {
+  customerId: string
+  customerPhone: string
+  workspaceId: string
+}): Promise<void> {
+  const token = getAuthToken()
+  const api = makeApiClient(token)
 
   try {
-    // 1. Apply workspace overrides if provided
-    if (config.overrides && Object.keys(config.overrides).length > 0) {
-      const wsResponse = await api.get(`/workspaces/${workspaceId}`)
-      originalSettings = wsResponse.data as Record<string, unknown>
-      await api.patch(`/workspaces/${workspaceId}`, config.overrides)
-    }
-
-    // 2. Run conversation turn by turn
-    const conversation: TurnResult[] = []
-    let sessionId: string | null = null
-
-    for (const message of config.messages) {
-      try {
-        const response = await api.post(`/workspaces/${workspaceId}/simulate`, {
-          customerPhone: config.customerPhone,
-          customerName: config.customerName,
-          isRegistered: config.isRegistered ?? false,
-          message,
-          sessionId,
-        })
-
-        const data = response.data as Record<string, unknown>
-        sessionId = (data.sessionId as string) || sessionId
-
-        conversation.push({
-          userMessage: message,
-          botResponse: (data.response as string) || (data.message as string) || JSON.stringify(data),
-          agentUsed: data.agentUsed as string | undefined,
-        })
-
-        // Small delay to avoid race conditions
-        await new Promise((r) => setTimeout(r, 500))
-      } catch (err: unknown) {
-        const axiosErr = err as { response?: { data?: { message?: string } }; message?: string }
-        conversation.push({
-          userMessage: message,
-          botResponse: "",
-          error: axiosErr.response?.data?.message || axiosErr.message || "Unknown error",
-        })
-      }
-    }
-
-    // 3. Build summary
-    const errors = conversation.filter((t) => t.error).length
-    const summary = [
-      `Scenario: ${scenarioId}`,
-      `Workspace: ${workspaceId}`,
-      `Customer: ${config.customerName} (${config.customerPhone})`,
-      `Registered: ${config.isRegistered ?? false}`,
-      `Messages: ${conversation.length} | Errors: ${errors}`,
-      `Overrides: ${JSON.stringify(config.overrides || {})}`,
-    ].join("\n")
-
-    return { scenarioId, workspaceId, customerPhone: config.customerPhone, conversation, summary }
-  } finally {
-    // 4. Restore original workspace settings
-    if (originalSettings && config.overrides) {
-      try {
-        const fieldsToRestore: Record<string, unknown> = {}
-        for (const key of Object.keys(config.overrides)) {
-          if (originalSettings[key] !== undefined) {
-            fieldsToRestore[key] = originalSettings[key]
-          }
-        }
-        await api.patch(`/workspaces/${workspaceId}`, fieldsToRestore)
-      } catch {
-        // best-effort restore
-      }
-    }
-
-    // 5. Cleanup test customer
-    try {
-      await api.delete(
-        `/workspaces/${workspaceId}/customers/phone/${encodeURIComponent(config.customerPhone)}`
-      )
-    } catch {
-      // best-effort cleanup
-    }
+    await api.delete(
+      `/workspaces/${params.workspaceId}/customers/phone/${encodeURIComponent(params.customerPhone)}`
+    )
+  } catch {
+    // best-effort cleanup
   }
 }

@@ -9,7 +9,7 @@ import { z } from "zod"
 import { runTests } from "./tools/run_tests"
 import { checkTypes } from "./tools/check_types"
 import { readLogs } from "./tools/read_logs"
-import { runScenario } from "./tools/run_scenario"
+import { startSession, sendMessage, endSession } from "./tools/run_scenario"
 
 const server = new Server(
   { name: "echatbot-mcp", version: "1.0.0" },
@@ -59,16 +59,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
-      name: "run_scenario",
-      description: `Run a multi-turn conversation scenario against the eChatbot HQ Sandbox on Heroku.
-Use this to test specific customer behaviors without touching real data.
-Workspace settings are temporarily overridden and restored after the test.
-Test customer is created and deleted automatically.
-
-Example: Test a new unregistered customer with reminder=true and casual tone.`,
+      name: "start_session",
+      description: `Start a new interactive simulation session against eChatbot HQ Sandbox on Heroku.
+Creates a test customer and chat session. Returns a sessionId to use with send_message.
+Use this before starting a conversation with Andrea where he controls the user replies.`,
       inputSchema: {
         type: "object",
-        required: ["customerName", "customerPhone", "messages"],
+        required: ["customerName", "customerPhone"],
         properties: {
           customerName: {
             type: "string",
@@ -82,20 +79,14 @@ Example: Test a new unregistered customer with reminder=true and casual tone.`,
             type: "boolean",
             description: "Whether the customer is registered (default: false)",
           },
-          messages: {
-            type: "array",
-            items: { type: "string" },
-            description: "Ordered list of user messages to send in the conversation",
-          },
           workspaceId: {
             type: "string",
-            description: "Workspace to use (default: echatbot-hq-support sandbox)",
+            description: "Workspace to use (default: echatbot-hq-support)",
           },
           overrides: {
             type: "object",
             description: "Workspace settings to temporarily override for this scenario",
             properties: {
-              reminderEnabled: { type: "boolean" },
               humanSupportEnabled: { type: "boolean" },
               hasSalesAgents: { type: "boolean" },
               sellsProductsAndServices: { type: "boolean" },
@@ -104,6 +95,34 @@ Example: Test a new unregistered customer with reminder=true and casual tone.`,
               debugMode: { type: "boolean" },
             },
           },
+        },
+      },
+    },
+    {
+      name: "send_message",
+      description: `Send a single message in an active simulation session and get the bot response.
+Use sessionId returned by start_session. Show the bot response to Andrea and wait for his next message.`,
+      inputSchema: {
+        type: "object",
+        required: ["sessionId", "customerId", "workspaceId", "message"],
+        properties: {
+          sessionId: { type: "string", description: "Session ID from start_session" },
+          customerId: { type: "string", description: "Customer ID from start_session" },
+          workspaceId: { type: "string", description: "Workspace ID" },
+          message: { type: "string", description: "The user message to send" },
+        },
+      },
+    },
+    {
+      name: "end_session",
+      description: "End a simulation session and clean up the test customer.",
+      inputSchema: {
+        type: "object",
+        required: ["customerId", "customerPhone", "workspaceId"],
+        properties: {
+          customerId: { type: "string" },
+          customerPhone: { type: "string" },
+          workspaceId: { type: "string" },
         },
       },
     },
@@ -134,36 +153,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: output }] }
       }
 
-      case "run_scenario": {
-        const config = args as any
-        const result = await runScenario(config)
+      case "start_session": {
+        const result = await startSession(args as any)
+        const text = [
+          `✅ Session started`,
+          `sessionId:  ${result.sessionId}`,
+          `customerId: ${result.customerId}`,
+          `workspace:  ${result.workspaceId}`,
+          `customer:   ${result.customerName} (${result.customerPhone})`,
+          `registered: ${result.isRegistered}`,
+          ``,
+          `Ready. Send the first message with send_message.`,
+        ].join("\n")
+        return { content: [{ type: "text", text }] }
+      }
 
-        // Format output as readable conversation log
-        const lines: string[] = [
-          "═══════════════════════════════════════",
-          result.summary,
-          "═══════════════════════════════════════",
-          "",
-          "CONVERSATION LOG:",
-          "",
-        ]
+      case "send_message": {
+        const { sessionId, customerId, workspaceId, message } = args as any
+        const result = await sendMessage({ sessionId, customerId, workspaceId, message })
+        const text = [
+          `👤 User: ${message}`,
+          ``,
+          `🤖 Bot: ${result.response}`,
+          ``,
+          `📎 Agent: ${result.agentUsed || "unknown"} | Intent: ${result.intent || "-"}`,
+        ].join("\n")
+        return { content: [{ type: "text", text }] }
+      }
 
-        for (let i = 0; i < result.conversation.length; i++) {
-          const turn = result.conversation[i]
-          lines.push(`[Turn ${i + 1}]`)
-          lines.push(`  👤 User:    ${turn.userMessage}`)
-          if (turn.error) {
-            lines.push(`  ❌ Error:   ${turn.error}`)
-          } else {
-            lines.push(`  🤖 Bot:     ${turn.botResponse}`)
-            if (turn.agentUsed) {
-              lines.push(`  📎 Agent:   ${turn.agentUsed}`)
-            }
-          }
-          lines.push("")
-        }
-
-        return { content: [{ type: "text", text: lines.join("\n") }] }
+      case "end_session": {
+        const { customerId, customerPhone, workspaceId } = args as any
+        await endSession({ customerId, customerPhone, workspaceId })
+        return { content: [{ type: "text", text: `✅ Session ended. Test customer deleted.` }] }
       }
 
       default:

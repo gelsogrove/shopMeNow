@@ -25,46 +25,63 @@ export class SimulateController {
    */
   async simulateTurn(req: Request, res: Response): Promise<void> {
     const { workspaceId } = req.params
-    const { customerPhone, customerName, isRegistered, message, sessionId } = req.body
+    const { customerPhone, customerName, isRegistered, message, sessionId, customerId } = req.body
 
-    if (!customerPhone || !message) {
-      res.status(400).json({ error: "customerPhone and message are required" })
+    if (!message) {
+      res.status(400).json({ error: "message is required" })
       return
     }
 
-    // Safety: only allow test_ prefix customers to prevent abuse
-    const safeName = customerName || "test_unknown"
-    if (!safeName.startsWith("test_")) {
-      res.status(400).json({ error: "customerName must start with 'test_'" })
-      return
-    }
+    const isInit = message === "__init__"
 
     try {
-      // 1. Find or create the test customer
-      const phoneVariants = buildPhoneVariants(customerPhone)
-      let customer = await prisma.customers.findFirst({
-        where: {
-          workspaceId,
-          OR: phoneVariants.map((v) => ({ phone: v })),
-        },
-      })
+      let customer: { id: string; name: string; language: string | null; discount: number | null } | null = null
 
-      if (!customer) {
-        customer = await prisma.customers.create({
-          data: {
-            workspaceId,
-            phone: customerPhone,
-            name: safeName,
-            email: `${safeName}@test.simulate`,
-            isActive: isRegistered ?? false,
-            registrationStatus: isRegistered ? "ACTIVE" : "NEW",
-            language: detectLanguageFromPhonePrefix(customerPhone) || "it",
-          },
+      // If customerId is provided directly, use it (subsequent messages in session)
+      if (customerId) {
+        customer = await prisma.customers.findUnique({
+          where: { id: customerId },
+          select: { id: true, name: true, language: true, discount: true },
         })
-        logger.info("[SIMULATE] ✅ Created test customer", { customerId: customer.id, phone: customerPhone })
       }
 
-      // 2. Find or create chat session
+      // Otherwise find/create by phone (first message / init)
+      if (!customer && customerPhone) {
+        const safeName = customerName || "test_unknown"
+        if (!safeName.startsWith("test_")) {
+          res.status(400).json({ error: "customerName must start with 'test_'" })
+          return
+        }
+
+        const phoneVariants = buildPhoneVariants(customerPhone)
+        customer = await prisma.customers.findFirst({
+          where: { workspaceId, OR: phoneVariants.map((v) => ({ phone: v })) },
+          select: { id: true, name: true, language: true, discount: true },
+        })
+
+        if (!customer) {
+          customer = await prisma.customers.create({
+            data: {
+              workspaceId,
+              phone: customerPhone,
+              name: safeName,
+              email: `${safeName}@test.simulate`,
+              isActive: isRegistered ?? false,
+              registrationStatus: isRegistered ? "ACTIVE" : "NEW",
+              language: detectLanguageFromPhonePrefix(customerPhone) || "it",
+            },
+            select: { id: true, name: true, language: true, discount: true },
+          })
+          logger.info("[SIMULATE] ✅ Created test customer", { customerId: customer.id })
+        }
+      }
+
+      if (!customer) {
+        res.status(400).json({ error: "customerPhone or customerId required" })
+        return
+      }
+
+      // Find or create chat session
       let chatSession = sessionId
         ? await prisma.chatSession.findUnique({ where: { id: sessionId } })
         : null
@@ -77,16 +94,17 @@ export class SimulateController {
 
       if (!chatSession) {
         chatSession = await prisma.chatSession.create({
-          data: {
-            workspaceId,
-            customerId: customer.id,
-            status: "active",
-          },
+          data: { workspaceId, customerId: customer.id, status: "active" },
         })
-        logger.info("[SIMULATE] ✅ Created chat session", { sessionId: chatSession.id })
       }
 
-      // 3. Run through ChatEngine (full real pipeline)
+      // __init__ just creates customer+session, no LLM call
+      if (isInit) {
+        res.json({ sessionId: chatSession.id, customerId: customer.id, response: "", agentUsed: null })
+        return
+      }
+
+      // Run through ChatEngine (full real pipeline)
       const chatEngine = getChatEngine(prisma)
       const result = await chatEngine.routeMessage({
         workspaceId,
@@ -96,7 +114,7 @@ export class SimulateController {
         customerLanguage: customer.language || "it",
         customerName: customer.name,
         customerDiscount: customer.discount || 0,
-        isPlayground: true, // 🧪 Skip billing in simulate mode
+        isPlayground: true,
         channel: "whatsapp",
         registrationPromptLevel: 0,
       })
