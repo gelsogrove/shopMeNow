@@ -27,6 +27,7 @@ export interface ProfileManagementContext {
   customerName?: string
   customerLanguage?: string
   query: string
+  channel?: string // "whatsapp" | "widget" | "telegram"
   conversationHistory?: Array<{ role: string; content: string }> // ✅ Add conversation history for confirmation flows
 }
 
@@ -41,6 +42,12 @@ export interface ProfileManagementResponse {
   }>
   systemPrompt?: string
   debugInfo?: any
+  // Widget-specific action: when channel is "widget", return modal action instead of link
+  action?: {
+    type: "open_profile_modal" | "open_link"
+    customerId?: string
+    link?: string
+  }
 }
 
 export class ProfileManagementAgentLLM {
@@ -113,6 +120,7 @@ export class ProfileManagementAgentLLM {
       const maxIterations = 3
       let finalResponse = ""
       let getProfileLinkCalled = false // Track if getProfileLink was executed
+      let profileLinkData: any = null // Store profile link data for widget modal action
 
       // Resolve model/temperature from AgentConfig or fall back to previous defaults
       const agentConfig =
@@ -174,6 +182,11 @@ export class ProfileManagementAgentLLM {
             context
           )
 
+          // Store profile link data for later use (widget modal action)
+          if (functionName === "getProfileLink" && functionResult.profileLink) {
+            profileLinkData = functionResult
+          }
+
           logger.info(`✅ Function ${functionName} executed`, {
             result: functionResult,
           })
@@ -191,12 +204,21 @@ export class ProfileManagementAgentLLM {
             content: JSON.stringify(functionResult),
           } as any)
 
-          // 🔧 FIX: Add explicit instruction to include function result in response
+          // 🔧 FIX: Add explicit instruction based on channel
           if (functionName === "getProfileLink") {
-            messages.push({
-              role: "system" as const,
-              content: "CRITICAL: You MUST include the [LINK_PROFILE_WITH_TOKEN] placeholder in your response to the user. This is required for the link replacement system to work correctly.",
-            } as any)
+            if (context.channel === "widget") {
+              // Widget: Don't include link, just tell user to click the modal action button
+              messages.push({
+                role: "system" as const,
+                content: "The user is on a widget. Do NOT include the [LINK_PROFILE_WITH_TOKEN] placeholder in your response. Instead, tell the user to click the profile button/link that will open their profile in a modal within the chat. Keep it brief and friendly.",
+              } as any)
+            } else {
+              // WhatsApp/default: Include the link placeholder
+              messages.push({
+                role: "system" as const,
+                content: "CRITICAL: You MUST include the [LINK_PROFILE_WITH_TOKEN] placeholder in your response to the user. This is required for the link replacement system to work correctly.",
+              } as any)
+            }
           }
 
           // Continue loop to get final response
@@ -237,12 +259,24 @@ export class ProfileManagementAgentLLM {
 
       const executionTimeMs = Date.now() - startTime
 
+      // 🎯 WIDGET SPECIAL HANDLING: Return modal action instead of link
+      const widgetAction =
+        context.channel === "widget" &&
+        getProfileLinkCalled &&
+        profileLinkData
+          ? {
+              type: "open_profile_modal" as const,
+              customerId: context.customerId,
+            }
+          : undefined
+
       logger.info(`✅ Profile Management Agent completed`, {
         iterations,
         functionCallsCount: functionCalls.length,
         tokensUsed: totalTokens,
         executionTimeMs,
         responsePreview: finalResponse.substring(0, 100),
+        widgetAction: widgetAction ? "open_profile_modal" : "none",
       })
 
       return {
@@ -252,6 +286,7 @@ export class ProfileManagementAgentLLM {
         executionTimeMs,
         functionCalls,
         systemPrompt: processedPrompt,
+        action: widgetAction, // Include widget action if applicable
       }
     } catch (error: any) {
       logger.error("❌ Profile Management Agent error:", error)

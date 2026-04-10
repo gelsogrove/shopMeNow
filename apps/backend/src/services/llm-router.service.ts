@@ -104,6 +104,12 @@ export interface RouteMessageResponse {
     name: string
     itemType: string
   } | null
+  // Widget-specific actions (e.g., open profile modal)
+  action?: {
+    type: "open_profile_modal" | "open_link"
+    customerId?: string
+    link?: string
+  }
 }
 
 // 🔧 NEW: Debug Info Structure for Message Flow
@@ -2652,6 +2658,7 @@ export class LLMRouterService {
                 customerName: params.customerName,
                 customerLanguage: params.customerLanguage,
                 query: delegationQuery,
+                channel: params.channel, // ✅ Pass channel for widget modal action
                 conversationHistory: recentHistory, // ✅ Pass conversation context
               })
               if (subAgentResponse?.optionMapping) {
@@ -2933,7 +2940,8 @@ export class LLMRouterService {
             confidence: 0.9,
             debugSteps, // Contains: Router → SubAgent
             selectedProduct: selectedProductFromAgent, // 🆕 For pendingAction ADD_TO_CART
-          }
+            action: subAgentResponse.action, // 🎯 Widget modal action (if applicable)
+          } as any
         }
 
         // 🔧 OLD PATH: Direct function execution (DEPRECATED - should use delegation instead)

@@ -209,6 +209,12 @@ export interface ChatEngineOutput {
     step?: string
     [key: string]: any
   }
+  // Widget-specific actions (e.g., open profile modal)
+  action?: {
+    type: "open_profile_modal" | "open_link"
+    customerId?: string
+    link?: string
+  }
   // Legacy fields for webhook compatibility
   response?: string  // Same as message (optional)
   agentUsed?: string // String version of agentType (optional)
@@ -1891,6 +1897,7 @@ export class ChatEngineService {
     const startTime = Date.now()
     const debugSteps: DebugStep[] = []
     let totalTokens = 0
+    let responseAction: ChatEngineOutput["action"] | undefined = undefined // 🎯 Widget modal action
 
     logger.info("🚀 [ChatEngine] Processing message", {
       customerId: input.customerId,
@@ -3220,7 +3227,12 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 messageId: `${conversationId}-context-${Date.now()}`,
                 registrationPromptLevel: input.registrationPromptLevel, // 🆕 Progressive registration invitation
               })
-              
+
+              // 🎯 Extract widget action if present
+              if (llmResponse.action) {
+                responseAction = llmResponse.action
+              }
+
               debugSteps.push({
                 type: "router",
                 agent: "UnifiedChatRouter",
@@ -5450,6 +5462,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         isBlocked: false,
         // 🆕 Store assistant message ID for translation layer
         _assistantMessageId: assistantMessageId,
+        // 🎯 Widget-specific action (e.g., open profile modal)
+        action: responseAction,
       } as any
     } catch (error) {
       logger.error("❌ [ChatEngine] Error processing message", {
