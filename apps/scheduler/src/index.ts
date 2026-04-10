@@ -13,6 +13,11 @@ import {
   pushCampaignsJob,
   wasenderQrCleanupJob,
   appointmentReminderJob,
+  conversationMessagesCleanupJob,
+  agentLogsCleanupJob,
+  webhookEventsCleanupJob,
+  authAttemptsCleanupJob,
+  reminderLocksCleanupJob,
 } from './jobs'
 import logger from './utils/logger'
 
@@ -128,6 +133,46 @@ async function main() {
     await runJob('appointment-reminder', appointmentReminderJob)
   })
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 10: Conversation Messages Cleanup - daily at 23:32
+  // Deletes LLM context messages older than 90 days (batch)
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('32 23 * * *', async () => {
+    await runJob('conversation-messages-cleanup', conversationMessagesCleanupJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 11: Agent Conversation Logs Cleanup - daily at 23:35
+  // Deletes agent audit trail older than 180 days (batch)
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('35 23 * * *', async () => {
+    await runJob('agent-logs-cleanup', agentLogsCleanupJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 12: Webhook Events Cleanup - daily at 23:40
+  // Deletes WhatsApp webhook dedup events older than 30 days (batch)
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('40 23 * * *', async () => {
+    await runJob('webhook-events-cleanup', webhookEventsCleanupJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 13: Auth Attempts Cleanup - daily at 23:42
+  // Deletes login/2FA attempt logs older than 90 days (batch)
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('42 23 * * *', async () => {
+    await runJob('auth-attempts-cleanup', authAttemptsCleanupJob)
+  })
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Job 14: Reminder Locks Cleanup - daily at 23:44
+  // Deletes expired appointment reminder dedup locks
+  // ═══════════════════════════════════════════════════════════════════════════
+  cron.schedule('44 23 * * *', async () => {
+    await runJob('reminder-locks-cleanup', reminderLocksCleanupJob)
+  })
+
   logger.info('✅ Scheduler started successfully!')
   logger.info('📋 Scheduled jobs:')
   logger.info('   1. WhatsApp Channel Queue       - every 5 SECONDS')
@@ -141,6 +186,11 @@ async function main() {
   logger.info('   9. Support Attachments Cleanup  - daily at 23:25')
   logger.info('   10. Monthly Billing            - 1st of month at 23:30')
   logger.info('   11. Appointment Reminders      - every 15 minutes')
+  logger.info('   12. Conversation Msgs Cleanup  - daily at 23:32 (90d retention)')
+  logger.info('   13. Agent Logs Cleanup         - daily at 23:35 (180d retention)')
+  logger.info('   14. Webhook Events Cleanup     - daily at 23:40 (30d retention)')
+  logger.info('   15. Auth Attempts Cleanup      - daily at 23:42 (90d retention)')
+  logger.info('   16. Reminder Locks Cleanup     - daily at 23:44 (expired locks)')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {
