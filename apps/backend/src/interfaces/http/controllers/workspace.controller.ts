@@ -253,6 +253,7 @@ export class WorkspaceController {
           appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
           appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
           appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
+          minBookingBufferHours: workspace.minBookingBufferHours ?? 12,
         }
 
         return res.json(serializedWorkspace)
@@ -520,6 +521,7 @@ export class WorkspaceController {
         appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
         appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
         appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
+        minBookingBufferHours: workspace.minBookingBufferHours ?? 12,
       }
 
       return res.status(201).json(serializedWorkspace)
@@ -708,6 +710,7 @@ export class WorkspaceController {
         appointmentReminder30mMessage: workspace.appointmentReminder30mMessage ?? null,
         appointmentReminderHours: workspace.appointmentReminderHours ?? [24, 1],
         appointmentReminderChannel: workspace.appointmentReminderChannel ?? "whatsapp",
+        minBookingBufferHours: workspace.minBookingBufferHours ?? 12,
       }
 
       logger.info(
