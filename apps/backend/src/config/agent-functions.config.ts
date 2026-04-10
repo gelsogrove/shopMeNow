@@ -393,7 +393,7 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "listAvailableSlots",
       description:
-        "📅 Mostra slot disponibili per prenotazione appuntamento. QUANDO USARE: Cliente vuole prenotare un appuntamento, chiede disponibilità, vuole fissare un incontro. ESEMPI: 'voglio prenotare', 'quando posso venire?', 'hai disponibilità?', 'prenota appuntamento', 'guardami martedì'. Se il cliente chiede un giorno specifico usa targetDate. DOPO: mostra gli slot al cliente come lista NUMERATA (1, 2, 3...) con data e ora. Aggiungi sempre un'opzione extra 'Vuoi altri slot?' alla fine.",
+        "📅 Mostra slot disponibili per prenotazione appuntamento. QUANDO USARE: Cliente vuole prenotare un appuntamento, chiede disponibilità, vuole fissare un incontro. ESEMPI: 'voglio prenotare', 'quando posso venire?', 'hai disponibilità?', 'prenota appuntamento', 'guardami martedì'. Se il cliente chiede un giorno specifico usa targetDate. DOPO: mostra ESATTAMENTE 3 slot al cliente come lista NUMERATA (1, 2, 3) con data e ora. Aggiungi SEMPRE come opzione 4: '4. Guarda il giorno successivo'. Se il cliente sceglie l'opzione 4, chiama di nuovo listAvailableSlots con targetDate = giorno successivo. FORMATO OBBLIGATORIO:\n1. [data] alle [ora]\n2. [data] alle [ora]\n3. [data] alle [ora]\n4. Guarda il giorno successivo",
       parameters: {
         type: "object",
         properties: {

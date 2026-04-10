@@ -95,8 +95,44 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
     try {
       setConnectingOAuth(true)
       const { url } = await calendarConnectionApi.getOAuthUrl(workspaceId)
-      // Redirect to Google OAuth (full page — Google requires it)
-      window.location.href = url
+
+      // Open OAuth in a popup window
+      const width = 600
+      const height = 700
+      const left = (window.screen.width - width) / 2
+      const top = (window.screen.height - height) / 2
+      const popup = window.open(
+        url,
+        "GoogleCalendarOAuth",
+        `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+      )
+
+      // Listen for postMessage from the OAuth popup callback page
+      const onMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'GOOGLE_CALENDAR_CONNECTED') {
+          toast.success("Google Calendar connected successfully!")
+          setConnectingOAuth(false)
+          loadConnectionStatus()
+          window.removeEventListener('message', onMessage)
+          clearInterval(pollTimer)
+        } else if (event.data?.type === 'GOOGLE_CALENDAR_ERROR') {
+          toast.error("Failed to connect Google Calendar")
+          setConnectingOAuth(false)
+          window.removeEventListener('message', onMessage)
+          clearInterval(pollTimer)
+        }
+      }
+      window.addEventListener('message', onMessage)
+
+      // Fallback: poll until popup closes
+      const pollTimer = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(pollTimer)
+          window.removeEventListener('message', onMessage)
+          setConnectingOAuth(false)
+          loadConnectionStatus()
+        }
+      }, 500)
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to start Google OAuth flow")
       setConnectingOAuth(false)

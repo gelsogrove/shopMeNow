@@ -459,6 +459,23 @@ app.get(
 )
 logger.info("✅ Registered PUBLIC services endpoint at /api/services/public")
 
+// 🔓 PUBLIC Google Calendar OAuth callback - MUST be BEFORE /api/v1 to bypass all auth middlewares
+// Google redirects here after OAuth consent — no JWT token available
+app.get("/api/v1/auth/google/calendar/callback", async (req, res) => {
+  try {
+    const { PrismaClient } = await import("@echatbot/database")
+    const { AppointmentController } = await import("./interfaces/http/controllers/appointment.controller")
+    const prismaInstance = new PrismaClient()
+    const controller = new AppointmentController(prismaInstance)
+    return controller.handleGoogleCalendarCallback(req, res)
+  } catch (error) {
+    logger.error("[CALENDAR] Fatal error in Google OAuth callback:", error)
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
+    return res.redirect(`${frontendUrl}/settings?tab=calendar&error=server_error`)
+  }
+})
+logger.info("✅ Registered PUBLIC Google Calendar OAuth callback at /api/v1/auth/google/calendar/callback (direct, no auth)")
+
 // 🔓 PUBLIC PayPal callback routes - MUST be BEFORE /api/v1 to bypass auth middlewares
 // These routes are called by PayPal servers, not by authenticated users
 app.get("/api/paypal/subscription/callback", async (req, res) => {

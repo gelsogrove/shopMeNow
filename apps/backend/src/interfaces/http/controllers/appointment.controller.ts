@@ -590,11 +590,40 @@ export class AppointmentController {
       });
 
       logger.info(`[CALENDAR] Google Calendar connected for workspace ${workspaceId} (${calendarEmail})`);
-      return res.redirect(`${frontendUrl}/settings?tab=calendar&connected=true`);
+      // Return a self-closing HTML page that works both in popup and full-page redirect
+      return res.send(`<!DOCTYPE html>
+<html>
+<head><title>Google Calendar Connected</title></head>
+<body>
+<script>
+  if (window.opener) {
+    window.opener.postMessage({ type: 'GOOGLE_CALENDAR_CONNECTED' }, '*');
+    window.close();
+  } else {
+    window.location.href = '${frontendUrl}/settings?tab=calendar&connected=true';
+  }
+</script>
+<p>Google Calendar connected! You can close this window.</p>
+</body>
+</html>`);
     } catch (error) {
       logger.error('Failed to handle Google Calendar OAuth callback:', error);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      return res.redirect(`${frontendUrl}/settings?tab=calendar&error=server_error`);
+      return res.send(`<!DOCTYPE html>
+<html>
+<head><title>Connection Failed</title></head>
+<body>
+<script>
+  if (window.opener) {
+    window.opener.postMessage({ type: 'GOOGLE_CALENDAR_ERROR', error: 'server_error' }, '*');
+    window.close();
+  } else {
+    window.location.href = '${frontendUrl}/settings?tab=calendar&error=server_error';
+  }
+</script>
+<p>Connection failed. You can close this window.</p>
+</body>
+</html>`);
     }
   }
 }

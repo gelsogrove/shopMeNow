@@ -33,6 +33,7 @@ export interface ListAvailableSlotsResult {
     displayTime: string
   }>
   totalSlots?: number
+  hasMore?: boolean // true when more than 3 slots exist — LLM always shows option 4 "next day"
   error?: string
   timestamp: string
 }
@@ -127,19 +128,23 @@ export async function listAvailableSlots(
       }
     }
 
+    // Return max 3 slots — LLM will show them as options 1/2/3 plus option 4 "next day"
+    const displaySlots = slots.slice(0, 3)
+
     return {
       success: true,
-      message: `Found ${slots.length} available slots for "${service.name}"`,
+      message: `Found ${slots.length} available slots for "${service.name}" (showing first 3)`,
       serviceName: service.name,
       duration: service.duration,
       price: service.price ? Number(service.price) : undefined,
-      slots: slots.map(s => ({
+      slots: displaySlots.map(s => ({
         startTime: s.startTime.toISOString(),
         endTime: s.endTime.toISOString(),
         displayDate: s.displayDate,
         displayTime: s.displayTime,
       })),
       totalSlots: slots.length,
+      hasMore: slots.length > 3, // hint to LLM that option 4 (next day) is always shown
       timestamp: new Date().toISOString(),
     }
   } catch (error) {

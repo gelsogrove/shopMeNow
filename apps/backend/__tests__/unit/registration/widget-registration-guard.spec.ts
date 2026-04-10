@@ -130,14 +130,15 @@ describe("FunctionExecutor — Registration Guard for Appointments", () => {
   ]
 
   appointmentProtected.forEach(({ name, args }) => {
-    it(`should block '${name}' for unregistered users`, async () => {
-      // SCENARIO: Widget visitor (isActive=false) tries to book/cancel/view appointments
-      // RULE: Appointments require registration → return REGISTRATION_REQUIRED with link
+    it(`should block '${name}' for unregistered WhatsApp users`, async () => {
+      // SCENARIO: WhatsApp visitor (isActive=false) tries to book/cancel/view appointments
+      // RULE: Appointments require registration on WhatsApp → return REGISTRATION_REQUIRED with link
       const context = {
         workspaceId: "ws-test",
         customerId: "cust-anon",
         customerIsActive: false,
         sellsProductsAndServices: true,
+        channel: "whatsapp", // WhatsApp: registration guard applies
       }
 
       const result = await executor.execute(name, args, context)
@@ -146,6 +147,22 @@ describe("FunctionExecutor — Registration Guard for Appointments", () => {
       expect(result.error).toBe("REGISTRATION_REQUIRED")
       expect(result.data.message).toContain("[LINK_REGISTRATION]")
       expect(result.data.requiresRegistration).toBe(true)
+    })
+
+    it(`should allow '${name}' for widget users (no registration required on widget)`, async () => {
+      // SCENARIO: Widget visitor tries to book — widget users are always treated as registered
+      // RULE: Widget channel bypasses the registration guard entirely
+      const context = {
+        workspaceId: "ws-test",
+        customerId: "cust-widget",
+        customerIsActive: false, // not "registered" in DB but widget doesn't care
+        sellsProductsAndServices: true,
+        channel: "widget", // Widget: registration guard SKIPPED
+      }
+
+      const result = await executor.execute(name, args, context)
+
+      expect(result.error).not.toBe("REGISTRATION_REQUIRED")
     })
   })
 

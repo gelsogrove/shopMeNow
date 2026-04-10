@@ -181,7 +181,8 @@ export class FunctionExecutor {
       }
 
       // 🔐 REGISTRATION GUARD: Check if function requires registration
-      if (FUNCTIONS_PROTECTED_FOR_UNREGISTERED.has(functionName)) {
+      // Widget channel skips this guard entirely — widget users are always treated as registered.
+      if (FUNCTIONS_PROTECTED_FOR_UNREGISTERED.has(functionName) && context.channel !== "widget") {
         if (!context.customerIsActive) {
           // 🛍️ Registration link only if workspace sells products/services
           if (context.sellsProductsAndServices) {
