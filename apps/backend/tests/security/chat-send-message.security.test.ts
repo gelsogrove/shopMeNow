@@ -90,8 +90,18 @@ describe("ChatController - Security Tests", () => {
 
       jest.spyOn(prisma.conversationMessage, "create").mockResolvedValue({} as any)
       jest.spyOn(prisma.conversationMessage, "updateMany").mockResolvedValue({ count: 1 } as any)
+      // debugMode=true → skips billing/usage tracking
       jest.spyOn(prisma.workspace, "findUnique").mockResolvedValue({ debugMode: true } as any)
       jest.spyOn(prisma.customers, "findUnique").mockResolvedValue({ phone: "+1234567890" } as any)
+      // WhatsApp queue: findFirst (dedup check) + create (enqueue)
+      jest.spyOn(prisma.whatsAppQueue, "findFirst").mockResolvedValue(null)
+      jest.spyOn(prisma.whatsAppQueue, "create").mockResolvedValue({ id: "queue-id" } as any)
+      // Customer lookup used in queue flow
+      jest.spyOn(prisma.customers, "findFirst").mockResolvedValue({ phone: "+1234567890", id: "customer-id" } as any)
+      // Update conversationMessage after WhatsApp delivery status is known
+      jest.spyOn(prisma.conversationMessage, "update").mockResolvedValue({} as any)
+      // Debug/audit log — non-critical, controller wraps in try/catch
+      jest.spyOn(prisma.agentConversationLog, "create").mockResolvedValue({} as any)
 
       await chatController.sendMessage(
         mockRequest as Request,

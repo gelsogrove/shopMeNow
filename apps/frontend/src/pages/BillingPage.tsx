@@ -55,10 +55,12 @@ export function BillingPage() {
         setCurrentInvoice(null)
       }
 
-      // Load past invoices with pagination
+      // Load past invoices with pagination (show PAID, PENDING and FAILED)
       const result = await getOwnerInvoices(currentPage, ITEMS_PER_PAGE)
-      const paid = result.invoices.filter((inv: Invoice) => inv.status === "PAID")
-      setPastInvoices(paid)
+      const closedInvoices = result.invoices.filter((inv: Invoice) =>
+        ["PAID", "PENDING", "FAILED"].includes(inv.status)
+      )
+      setPastInvoices(closedInvoices)
       setTotalPages(Math.ceil(result.total / ITEMS_PER_PAGE) || 1)
     } catch (err) {
       console.error("Failed to load invoices:", err)

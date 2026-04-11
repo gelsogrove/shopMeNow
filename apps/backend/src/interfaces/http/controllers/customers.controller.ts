@@ -442,6 +442,16 @@ export class CustomersController {
         )
 
         logger.info("Customer blocked successfully")
+
+        // 🔔 Notify WebSocket clients of user blocked event
+        websocketService.notifyUserBlocked(workspaceId, {
+          customerId: id,
+          customerName: customer.name || "Unknown",
+          customerPhone: customer.phone || "",
+          isBlacklisted: true,
+          timestamp: new Date().toISOString(),
+        })
+
         return res.status(200).json({
           message: "Customer blocked successfully",
           customer,
@@ -485,6 +495,16 @@ export class CustomersController {
         // not when admin unblocks, since new users are no longer blocked by default
 
         logger.info("Customer unblocked successfully")
+
+        // 🔔 Notify WebSocket clients of user unblocked event
+        websocketService.notifyUserBlocked(workspaceId, {
+          customerId: id,
+          customerName: customer.name || "Unknown",
+          customerPhone: customer.phone || "",
+          isBlacklisted: false,
+          timestamp: new Date().toISOString(),
+        })
+
         return res.status(200).json({
           message: "Customer unblocked successfully",
           customer,

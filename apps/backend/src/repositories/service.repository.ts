@@ -19,7 +19,7 @@ export class ServiceRepository implements IServiceRepository {
         },
       })
 
-      return services ? services.map((service) => new Service(service)) : []
+      return services ? services.map((service) => this.mapToEntity(service)) : []
     } catch (error) {
       logger.error("Error finding services:", error)
       return []
@@ -38,7 +38,7 @@ export class ServiceRepository implements IServiceRepository {
         },
       })
 
-      return service ? new Service(service) : null
+      return service ? this.mapToEntity(service) : null
     } catch (error) {
       logger.error(`Error finding service ${id}:`, error)
       return null
@@ -59,7 +59,7 @@ export class ServiceRepository implements IServiceRepository {
         },
       })
 
-      return services ? services.map((service) => new Service(service)) : []
+      return services ? services.map((service) => this.mapToEntity(service)) : []
     } catch (error) {
       logger.error(`Error finding services by ids:`, error)
       return []
@@ -89,7 +89,7 @@ export class ServiceRepository implements IServiceRepository {
         serviceCode: service?.code 
       })
 
-      return service ? new Service(service) : null
+      return service ? this.mapToEntity(service) : null
     } catch (error) {
       logger.error(`Error finding service by code ${code}:`, error)
       return null
@@ -105,7 +105,7 @@ export class ServiceRepository implements IServiceRepository {
         data: data as any,
       })
 
-      return new Service(service)
+      return this.mapToEntity(service)
     } catch (error) {
       logger.error("Error creating service:", error)
       throw error
@@ -135,6 +135,10 @@ export class ServiceRepository implements IServiceRepository {
       logger.error(`Error updating service ${id}:`, error)
       return null
     }
+  }
+
+  private mapToEntity(data: any): Service {
+    return new Service({ ...data, price: Number(data.price) })
   }
 
   /**

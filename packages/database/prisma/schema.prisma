@@ -105,23 +105,6 @@ model Workspace {
   ownerId String?
   owner   User?   @relation("OwnedWorkspaces", fields: [ownerId], references: [id])
 
-  // ⚠️ DEPRECATED: Billing fields - moving to User model (Feature 198)
-  // These fields will be removed after data migration is complete
-  // Use User.planType, User.creditBalance, etc. instead
-  planType                 PlanType           @default(FREE_TRIAL)
-  creditBalance            Decimal            @default(19.00) @db.Decimal(10, 2)
-  trialEndsAt              DateTime?
-  planStartedAt            DateTime           @default(now())
-  nextBillingDate          DateTime?
-  lowBalanceNotifiedAt     DateTime? // Last time low balance notification was sent
-  subscriptionStatus       SubscriptionStatus @default(ACTIVE)
-  pausedAt                 DateTime? // When subscription was paused
-  pauseRequestedAt         DateTime? // When user requested pause (effective next month)
-  pendingPlanType          PlanType? // Plan to switch to on next billing
-  pendingPlanEffectiveDate DateTime? // When pending plan becomes active
-  lastPaymentFailedAt      DateTime? // Last payment failure timestamp
-  paymentFailureCount      Int                @default(0) // Consecutive failed payments
-
   users                  UserWorkspace[]
   invitations            WorkspaceInvitation[]
   agentConfigs           AgentConfig[]
@@ -147,7 +130,6 @@ model Workspace {
   usage                  Usage[]
   whatsappSettings       WhatsappSettings?
   adminSessions          AdminSession[]
-  // productSearches        ProductSearch[] // ❌ REMOVED: table dropped
   searchConversations    SearchConversations[]
   certifications         Certification[]
   types                  Type[]
@@ -187,7 +169,6 @@ model Workspace {
   minBookingBufferHours         Int      @default(12) // Minimum hours in advance a slot can be booked (e.g., 12 = slots must be at least 12h from now)
 
   @@index([ownerId])
-  @@index([planType])
   @@index([deletedAt])
   @@index([wasenderApiKey])
 }
@@ -203,7 +184,6 @@ model Categories {
   slug              String
   workspace         Workspace         @relation(fields: [workspaceId], references: [id])
   offers            Offers[]          @relation("OfferCategory")
-  products          Products[] // DEPRECATED: Use productCategories relation instead
   offerCategories   Offers[]          @relation("OfferCategories")
   productCategories ProductCategory[]
 
@@ -247,14 +227,13 @@ model Products {
   sku                   String?
   description           String?
   formato               String?
-  price                 Float
+  price                 Decimal                @db.Decimal(10, 2)
   stock                 Int                    @default(0)
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   isActive              Boolean                @default(true)
   workspaceId           String
-  categoryId            String? // DEPRECATED: Use productCategories relation instead
-  slug                  String                 @unique
+  slug                  String
   link                  String?                @db.VarChar(120) // Optional product external link (max 120 chars)
   status                ProductStatus          @default(ACTIVE)
   imageUrl              String[]               @default([])
@@ -262,19 +241,18 @@ model Products {
   type                  String                 @default("Temperatura ambiente")
   region                String?
   allergens             String[]               @default([])
-  certifications        String[]               @default([]) // DEPRECATED: Use ProductCertification relation instead
   cartItems             CartItems[]
   orderItems            OrderItems[]
   productCertifications ProductCertification[]
   productTypes          ProductType[]
   productCategories     ProductCategory[]
   characteristics       ProductCharacteristic[]
-  category              Categories?            @relation(fields: [categoryId], references: [id]) // DEPRECATED
   workspace             Workspace              @relation(fields: [workspaceId], references: [id])
 
+  @@unique([slug, workspaceId])
   @@index([workspaceId])
+  @@index([workspaceId, status])
   @@index([allergens])
-  @@index([certifications])
   @@index([imageKey])
   @@map("products")
 }
@@ -318,7 +296,6 @@ model Type {
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
-  @@index([name])
   @@index([isActive])
   @@map("Type")
 }
@@ -463,7 +440,6 @@ model Customers {
   billings                      Billing[]
   agentConversationLogs         AgentConversationLog[]
   conversationMessages          ConversationMessage[]
-  // productSearches               ProductSearch[] // ❌ REMOVED: table dropped
   whatsappQueue                 WhatsAppQueue[]
   pushCampaignRecipients        PushCampaignRecipient[] // Campaign recipients for this customer
 
@@ -472,6 +448,7 @@ model Customers {
   lastAppointmentDate           DateTime? // Last appointment booked (for analytics/spam)
   appointments                  Appointment[] // Customer's confirmed appointments
 
+  @@index([workspaceId])
   @@index([phone])
   @@index([deletedAt])
   @@index([workspaceId, deletedAt])
@@ -506,14 +483,14 @@ model Orders {
   status          OrderStatus    @default(PENDING)
   paymentMethod   PaymentMethod?
   paymentStatus   PaymentStatus? @default(PENDING)
-  totalAmount     Float
-  shippingAmount  Float?         @default(0)
-  taxAmount       Float?         @default(0)
+  totalAmount     Decimal        @db.Decimal(10, 2)
+  shippingAmount  Decimal?       @default(0) @db.Decimal(10, 2)
+  taxAmount       Decimal?       @default(0) @db.Decimal(10, 2)
   shippingAddress Json?
   billingAddress  Json?
   notes           String?
   discountCode    String?
-  discountAmount  Float?         @default(0)
+  discountAmount  Decimal?       @default(0) @db.Decimal(10, 2)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
@@ -534,6 +511,8 @@ model Orders {
   paymentDetails PaymentDetails?
 
   @@index([customerId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
   @@index([deletedAt])
   @@index([workspaceId, deletedAt])
   @@index([invoiceKey])
@@ -546,7 +525,7 @@ model CreditNote {
   creditNoteCode String   @unique // Format: NC-{orderCode} e.g., NC-ORD-2025-001
   orderId        String
   order          Orders   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  amount         Float // Importo della nota di credito (positivo)
+  amount         Decimal @db.Decimal(10, 2) // Importo della nota di credito (positivo)
   reason         String   @db.Text // Motivo della nota di credito
   createdAt      DateTime @default(now())
   createdById    String? // User ID who created the credit note
@@ -559,8 +538,8 @@ model OrderItems {
   id             String    @id @default(uuid())
   itemType       ItemType  @default(PRODUCT)
   quantity       Int       @default(1)
-  unitPrice      Float
-  totalPrice     Float
+  unitPrice      Decimal   @db.Decimal(10, 2)
+  totalPrice     Decimal   @db.Decimal(10, 2)
   productVariant Json?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -568,10 +547,12 @@ model OrderItems {
   orderId        String
   productId      String?
   serviceId      String?
-  order          Orders    @relation(fields: [orderId], references: [id])
+  order          Orders    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product        Products? @relation(fields: [productId], references: [id])
-  service        Services? @relation(fields: [serviceId], references: [id])
+  service        Services? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
 
+  @@index([orderId])
+  @@index([orderId, deletedAt])
   @@index([deletedAt])
   @@map("order_items")
 }
@@ -603,6 +584,7 @@ model CartItems {
   product   Products? @relation(fields: [productId], references: [id])
   service   Services? @relation(fields: [serviceId], references: [id])
 
+  @@index([cartId])
   @@map("cart_items")
 }
 
@@ -794,7 +776,7 @@ model PaymentDetails {
   id               String   @id @default(uuid())
   provider         String
   status           String   @default("PENDING")
-  amount           Float
+  amount           Decimal  @db.Decimal(10, 2)
   currency         String   @default("EUR")
   providerResponse Json?    @default("{}")
   createdAt        DateTime @default(now())
@@ -973,16 +955,12 @@ model SecureToken {
   @@map("secure_tokens")
 }
 
-// ❌ REMOVED: ProductSearch model (table dropped - was filling DB with 40k+ duplicate logs)
-// Analytics now handled in-memory via ProductAnalyticsService
-// model ProductSearch { ... }
-
 model Services {
   id              String       @id @default(cuid())
-  code            String       @unique
+  code            String
   name            String
   description     String
-  price           Float
+  price           Decimal  @db.Decimal(10, 2)
   currency        String       @default("EUR")
   isActive        Boolean      @default(true)
   workspaceId     String
@@ -1001,6 +979,8 @@ model Services {
   lateCancellationAttempts LateCancellationAttempt[]
   workspace       Workspace    @relation(fields: [workspaceId], references: [id])
 
+  @@unique([code, workspaceId])
+  @@index([workspaceId])
   @@index([imageKey])
   @@index([workspaceId, enableForBooking])
   @@map("services")
@@ -1107,7 +1087,7 @@ model Usage {
   id          String    @id @default(uuid())
   workspaceId String
   clientId    String
-  price       Float     @default(0.005)
+  price       Decimal   @default(0.005) @db.Decimal(10, 4)
   createdAt   DateTime  @default(now())
   customer    Customers @relation(fields: [clientId], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
@@ -1279,13 +1259,13 @@ model Billing {
   id            String      @id @default(cuid())
   workspaceId   String
   customerId    String?
-  amount        Float // Current charge amount (e.g., €0.15 or €1.50)
+  amount        Decimal     @db.Decimal(10, 2) // Current charge amount (e.g., €0.15 or €1.50)
   type          BillingType
   description   String
   userQuery     String? // User's original question/message
-  previousTotal Float       @default(0) // Total before this charge
-  currentCharge Float       @default(0) // Same as amount (for clarity in formula)
-  newTotal      Float       @default(0) // previousTotal + currentCharge = newTotal
+  previousTotal Decimal     @default(0) @db.Decimal(10, 2) // Total before this charge
+  currentCharge Decimal     @default(0) @db.Decimal(10, 2) // Same as amount (for clarity in formula)
+  newTotal      Decimal     @default(0) @db.Decimal(10, 2) // previousTotal + currentCharge = newTotal
   createdAt     DateTime    @default(now())
   workspace     Workspace   @relation(fields: [workspaceId], references: [id])
   customer      Customers?  @relation(fields: [customerId], references: [id])
@@ -1369,6 +1349,7 @@ enum SubscriptionStatus {
   PAUSE_PENDING // User requested pause - effective next month
   PAUSED // Subscription paused - no billing, no chatbot
   PAYMENT_FAILED // Payment failed - chatbot blocked until payment
+  CANCELLED // Admin/user cancelled - no billing, access blocked
 }
 
 enum TransactionType {
@@ -1669,6 +1650,7 @@ model PushCampaign {
   @@index([status])
   @@index([sendAt])
   @@index([nextRunAt])
+  @@map("push_campaigns")
 }
 
 model PushCampaignRecipient {
@@ -1698,6 +1680,7 @@ model PushCampaignRecipient {
   @@index([campaignId])
   @@index([workspaceId])
   @@index([status])
+  @@map("push_campaign_recipients")
 }
 
 model AdminSession {
@@ -1760,6 +1743,7 @@ enum ConfigType {
   PRICE // Monetary values (€19, €0.10, etc.)
   FLAG // Boolean feature flags (canLogin, canRegister)
   LIMIT // Numeric limits (maxProducts, maxMessages)
+  TEXT // Free-text settings (company name, address, etc.)
 }
 
 enum PricingType {
@@ -2007,7 +1991,7 @@ model Appointment {
   updatedAt            DateTime  @updatedAt
 
   workspace            Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  service              Services        @relation(fields: [serviceId], references: [id])
+  service              Services        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   customer             Customers       @relation(fields: [customerId], references: [id])
 
   @@index([workspaceId, status])
@@ -2087,7 +2071,7 @@ model PendingAppointment {
   createdAt            DateTime           @default(now())
 
   workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  service              Services           @relation(fields: [serviceId], references: [id])
+  service              Services           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId, status])
   @@index([customerId])
@@ -2124,7 +2108,7 @@ model LateCancellationAttempt {
   tooLateThreshold     Int                // Ore di preavviso richiesto (24, 48, etc.)
 
   workspace            Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  service              Services           @relation(fields: [serviceId], references: [id])
+  service              Services           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
   @@index([workspaceId, customerId])
   @@index([attemptedAt])

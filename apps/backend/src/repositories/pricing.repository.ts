@@ -2,13 +2,14 @@
  * Pricing Repository
  *
  * Single Source of Truth for all pricing configuration.
+ * Reads from PlatformConfig (PRICE/LIMIT types) — PricingConfig was removed.
  * All BE/FE pricing queries go through this repository.
  */
 
-import { PricingType, PrismaClient } from "@echatbot/database"
+import { PrismaClient } from "@echatbot/database"
 
 export interface PricingConfigDTO {
-  type: PricingType
+  type: string
   key: string
   value: number
   description: string | null
@@ -21,22 +22,43 @@ export interface GroupedPricing {
   thresholds: Record<string, number>
 }
 
+// Keys that map to "plans" in the grouped response (monthly subscription prices)
+const PLAN_KEYS = new Set([
+  "FREE_MONTHLY",
+  "BASIC_MONTHLY",
+  "PREMIUM_MONTHLY",
+  "ENTERPRISE_MONTHLY",
+])
+
 export class PricingRepository {
   constructor(private prisma: PrismaClient) {}
 
   /**
-   * Get all active pricing configurations
+   * Get all active pricing configurations (PRICE + LIMIT types from PlatformConfig)
    */
   async getAll(): Promise<PricingConfigDTO[]> {
-    return this.prisma.pricingConfig.findMany({
-      where: { isActive: true },
+    const configs = await this.prisma.platformConfig.findMany({
+      where: {
+        isActive: true,
+        type: { in: ["PRICE", "LIMIT"] },
+      },
       orderBy: [{ type: "asc" }, { key: "asc" }],
     })
+
+    return configs.map((c) => ({
+      type: c.type,
+      key: c.key,
+      value: parseFloat(c.value),
+      description: c.description ?? null,
+      isActive: c.isActive,
+    }))
   }
 
   /**
-   * Get all pricing configurations grouped by type
-   * Returns: { plans: {...}, usage: {...}, thresholds: {...} }
+   * Get all pricing configurations grouped by type:
+   *   plans     → PRICE with plan keys (FREE_MONTHLY, BASIC_MONTHLY, ...)
+   *   usage     → PRICE with cost keys (MESSAGE, PUSH_CAMPAIGN, ...)
+   *   thresholds → LIMIT keys
    */
   async getAllGrouped(): Promise<GroupedPricing> {
     const all = await this.getAll()
@@ -48,11 +70,13 @@ export class PricingRepository {
     }
 
     for (const config of all) {
-      if (config.type === "PLAN") {
-        grouped.plans[config.key] = config.value
-      } else if (config.type === "USAGE") {
-        grouped.usage[config.key] = config.value
-      } else if (config.type === "THRESHOLD") {
+      if (config.type === "PRICE") {
+        if (PLAN_KEYS.has(config.key)) {
+          grouped.plans[config.key] = config.value
+        } else {
+          grouped.usage[config.key] = config.value
+        }
+      } else if (config.type === "LIMIT") {
         grouped.thresholds[config.key] = config.value
       }
     }
@@ -61,27 +85,26 @@ export class PricingRepository {
   }
 
   /**
-   * Get pricing configurations by type
-   */
-  async getByType(type: PricingType): Promise<PricingConfigDTO[]> {
-    return this.prisma.pricingConfig.findMany({
-      where: { type, isActive: true },
-      orderBy: { key: "asc" },
-    })
-  }
-
-  /**
    * Get a single pricing configuration by key
    */
   async getByKey(key: string): Promise<PricingConfigDTO | null> {
-    return this.prisma.pricingConfig.findUnique({
+    const config = await this.prisma.platformConfig.findUnique({
       where: { key },
     })
+
+    if (!config) return null
+
+    return {
+      type: config.type,
+      key: config.key,
+      value: parseFloat(config.value),
+      description: config.description ?? null,
+      isActive: config.isActive,
+    }
   }
 
   /**
    * Get pricing value by key (convenience method)
-   * Returns the value or null if not found
    */
   async getValue(key: string): Promise<number | null> {
     const config = await this.getByKey(key)
@@ -90,16 +113,23 @@ export class PricingRepository {
 
   /**
    * Update pricing value by key
-   * Note: This updates the current price. Historical billing records are unchanged.
    */
   async updateValue(key: string, newValue: number): Promise<PricingConfigDTO> {
-    return this.prisma.pricingConfig.update({
+    const updated = await this.prisma.platformConfig.update({
       where: { key },
       data: {
-        value: newValue,
+        value: String(newValue),
         updatedAt: new Date(),
       },
     })
+
+    return {
+      type: updated.type,
+      key: updated.key,
+      value: parseFloat(updated.value),
+      description: updated.description ?? null,
+      isActive: updated.isActive,
+    }
   }
 
   /**
@@ -109,38 +139,17 @@ export class PricingRepository {
     key: string,
     isActive: boolean
   ): Promise<PricingConfigDTO> {
-    return this.prisma.pricingConfig.update({
+    const updated = await this.prisma.platformConfig.update({
       where: { key },
       data: { isActive },
     })
-  }
 
-  /**
-   * Create a new pricing configuration
-   */
-  async create(data: {
-    type: PricingType
-    key: string
-    value: number
-    description?: string
-  }): Promise<PricingConfigDTO> {
-    return this.prisma.pricingConfig.create({
-      data: {
-        type: data.type,
-        key: data.key,
-        value: data.value,
-        description: data.description,
-        isActive: true,
-      },
-    })
-  }
-
-  /**
-   * Delete a pricing configuration
-   */
-  async delete(key: string): Promise<void> {
-    await this.prisma.pricingConfig.delete({
-      where: { key },
-    })
+    return {
+      type: updated.type,
+      key: updated.key,
+      value: parseFloat(updated.value),
+      description: updated.description ?? null,
+      isActive: updated.isActive,
+    }
   }
 }

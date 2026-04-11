@@ -71,15 +71,30 @@ interface InvoiceData {
 export class InvoiceService {
   private readonly TAX_RATE = 0.22
 
-  private formatInvoiceNumber(issuedAt: Date, sequence: number): string {
-    const datePart = issuedAt.toISOString().slice(0, 10).replace(/-/g, '')
-    return `${datePart}-${String(sequence).padStart(4, '0')}`
+  // Format: YYYY-NNNN (e.g. 2026-0001). Sequence resets to 1 each year.
+  private formatInvoiceNumber(year: number, sequence: number): string {
+    return `${year}-${String(sequence).padStart(4, '0')}`
   }
 
-  private async nextInvoiceSequence(tx: typeof prisma): Promise<number> {
-    const result = await tx.$queryRaw<{ value: bigint }[]>`SELECT nextval('invoice_number_seq') AS value`
-    const value = result?.[0]?.value ?? 0
-    return Number(value)
+  /**
+   * Atomically increment and return the next invoice sequence for a given year.
+   * Uses SELECT FOR UPDATE on invoice_year_sequences to prevent duplicate numbers
+   * under concurrent load.
+   */
+  private async nextInvoiceSequence(tx: typeof prisma, year: number): Promise<number> {
+    // Upsert the row for this year, then lock it and increment
+    await tx.$executeRaw`
+      INSERT INTO invoice_year_sequences (year, last_value)
+      VALUES (${year}, 0)
+      ON CONFLICT (year) DO NOTHING
+    `
+    const result = await tx.$queryRaw<{ last_value: number }[]>`
+      UPDATE invoice_year_sequences
+      SET last_value = last_value + 1
+      WHERE year = ${year}
+      RETURNING last_value
+    `
+    return result[0].last_value
   }
 
   async ensureInvoiceNumber(invoiceId: string, issuedAt: Date): Promise<string> {
@@ -97,8 +112,9 @@ export class InvoiceService {
         return invoice.invoiceNumber
       }
 
-      const sequence = await this.nextInvoiceSequence(tx as typeof prisma)
-      const invoiceNumber = this.formatInvoiceNumber(issuedAt, sequence)
+      const year = issuedAt.getFullYear()
+      const sequence = await this.nextInvoiceSequence(tx as typeof prisma, year)
+      const invoiceNumber = this.formatInvoiceNumber(year, sequence)
 
       const updated = await tx.monthlyInvoice.update({
         where: { id: invoiceId },
@@ -712,6 +728,34 @@ export class InvoiceService {
     })
   }
 
+  /**
+   * Load issuer company data from PlatformConfig (TEXT type).
+   * Keys: ISSUER_NAME, ISSUER_ADDRESS, ISSUER_VAT, ISSUER_EMAIL, ISSUER_PHONE.
+   * Update these in the backoffice before going live — no redeploy needed.
+   */
+  private async getIssuerConfig(): Promise<{
+    name: string
+    address: string
+    vat: string
+    email: string
+    phone: string
+  }> {
+    const keys = ['ISSUER_NAME', 'ISSUER_ADDRESS', 'ISSUER_VAT', 'ISSUER_EMAIL', 'ISSUER_PHONE']
+    const rows = await prisma.platformConfig.findMany({
+      where: { key: { in: keys }, isActive: true },
+      select: { key: true, value: true },
+    })
+    const map = new Map(rows.map((r) => [r.key, r.value]))
+
+    return {
+      name:    map.get('ISSUER_NAME')    ?? 'eChatbot S.r.l.',
+      address: map.get('ISSUER_ADDRESS') ?? '',
+      vat:     map.get('ISSUER_VAT')     ?? '',
+      email:   map.get('ISSUER_EMAIL')   ?? '',
+      phone:   map.get('ISSUER_PHONE')   ?? '',
+    }
+  }
+
   async generateInvoicePdf(invoiceId: string): Promise<Buffer> {
     await this.recalculateInvoiceTotals(invoiceId)
 
@@ -752,7 +796,8 @@ export class InvoiceService {
     })
     const planName = planConfig?.displayName || invoice.planType
     const logoPath = this.resolveLogoPath()
-    
+    const issuer = await this.getIssuerConfig()
+
     // Pre-calculate recharge total before entering Promise constructor
     const rechargesTotal = await this.getRechargeTotal(
       invoice.userId,
@@ -771,14 +816,11 @@ export class InvoiceService {
       const pageWidth = doc.page.width
       const margin = 50
       const contentWidth = pageWidth - margin * 2
-      const issuer = {
-        name: 'eChatbot S.r.l.',
-        address: 'Via Roma 123, 00100 Roma, Italia',
-        vat: 'IT12345678901',
-        email: 'hello@echatbot.ai',
-        phone: '+39 06 1234567',
-      }
+
       const formatDate = (value: Date) => value.toLocaleDateString('it-IT')
+      const formatEur = (amount: number, isCredit = false) =>
+        `${isCredit ? '-' : ''}€${amount.toFixed(2)}`
+
       const invoiceNumber = invoice.invoiceNumber || 'UNASSIGNED'
       const periodLabel = `${String(invoice.periodMonth).padStart(2, '0')}/${invoice.periodYear}`
       const periodRange = `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
@@ -795,15 +837,9 @@ export class InvoiceService {
       const rightX = pageWidth - margin - 220
       doc.fontSize(18).font('Helvetica-Bold').text('Invoice', rightX, yPos, { width: 220, align: 'right' })
       yPos += 24
-      doc.fontSize(10).font('Helvetica').text(`Invoice No: ${invoiceNumber}`, rightX, yPos, {
-        width: 220,
-        align: 'right',
-      })
+      doc.fontSize(10).font('Helvetica').text(`Invoice No: ${invoiceNumber}`, rightX, yPos, { width: 220, align: 'right' })
       yPos += 14
-      doc.text(`Issued: ${formatDate(invoice.paidAt ?? invoice.createdAt)}`, rightX, yPos, {
-        width: 220,
-        align: 'right',
-      })
+      doc.text(`Issued: ${formatDate(invoice.paidAt ?? invoice.createdAt)}`, rightX, yPos, { width: 220, align: 'right' })
       yPos += 14
       doc.text(`Period: ${periodLabel}`, rightX, yPos, { width: 220, align: 'right' })
       yPos += 14
@@ -815,9 +851,6 @@ export class InvoiceService {
         `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim() ||
         invoice.user?.email ||
         'Customer'
-      const customerAddress = invoice.user?.billingAddress || 'Via Roma 123, 00100 Roma, Italia'
-      const customerVat = invoice.user?.vatNumber || 'IT00000000000'
-      const customerPhone = invoice.user?.billingPhone || '+39 06 0000000'
 
       const columnGap = 20
       const columnWidth = (contentWidth - columnGap) / 2
@@ -827,16 +860,19 @@ export class InvoiceService {
       const blockY = yPos
       doc.fillColor('#111827').fontSize(10).font('Helvetica-Bold').text('FROM', leftX, blockY)
       doc.fontSize(10).font('Helvetica').text(issuer.name, leftX, blockY + 14)
-      doc.text(issuer.address, leftX, blockY + 28)
-      doc.text(`VAT: ${issuer.vat}`, leftX, blockY + 42)
-      doc.text(`Email: ${issuer.email}`, leftX, blockY + 56)
-      doc.text(`Phone: ${issuer.phone}`, leftX, blockY + 70)
+      if (issuer.address) doc.text(issuer.address, leftX, blockY + 28)
+      if (issuer.vat)     doc.text(`VAT: ${issuer.vat}`, leftX, blockY + 42)
+      if (issuer.email)   doc.text(`Email: ${issuer.email}`, leftX, blockY + 56)
+      if (issuer.phone)   doc.text(`Phone: ${issuer.phone}`, leftX, blockY + 70)
 
       doc.fontSize(10).font('Helvetica-Bold').text('BILL TO', rightColX, blockY)
       doc.fontSize(10).font('Helvetica').text(customerName, rightColX, blockY + 14)
-      doc.text(customerAddress, rightColX, blockY + 28, { width: columnWidth })
-      doc.text(`VAT: ${customerVat}`, rightColX, blockY + 42)
-      doc.text(`Phone: ${customerPhone}`, rightColX, blockY + 56)
+      if (invoice.user?.billingAddress)
+        doc.text(invoice.user.billingAddress, rightColX, blockY + 28, { width: columnWidth })
+      if (invoice.user?.vatNumber)
+        doc.text(`VAT: ${invoice.user.vatNumber}`, rightColX, blockY + 42)
+      if (invoice.user?.billingPhone)
+        doc.text(`Phone: ${invoice.user.billingPhone}`, rightColX, blockY + 56)
 
       yPos = blockY + 100
       doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
@@ -847,8 +883,7 @@ export class InvoiceService {
       const lineGap = 18
       const addLine = (label: string, amount: number, isCredit = false) => {
         doc.fontSize(10).font('Helvetica').text(label, margin, yPos, { width: 340 })
-        const formatted = `${isCredit ? '-' : ''}$${amount.toFixed(2)}`
-        doc.font('Helvetica').text(formatted, pageWidth - margin - 100, yPos, {
+        doc.font('Helvetica').text(formatEur(amount, isCredit), pageWidth - margin - 100, yPos, {
           width: 100,
           align: 'right',
         })
@@ -869,11 +904,11 @@ export class InvoiceService {
       doc.moveTo(margin, yPos).lineTo(pageWidth - margin, yPos).stroke('#e5e7eb')
       yPos += 12
       addLine('Subtotal', Number(invoice.subtotalAmount))
-      addLine(`Tax (${(Number(invoice.taxRate) * 100).toFixed(0)}%)`, Number(invoice.taxAmount))
+      addLine(`Tax (${(Number(invoice.taxRate) * 100).toFixed(0)}% IVA)`, Number(invoice.taxAmount))
       yPos += 6
       doc.fontSize(12).font('Helvetica-Bold')
       doc.text('Total', margin, yPos)
-      doc.text(`$${Number(invoice.totalAmount).toFixed(2)}`, pageWidth - margin - 100, yPos, {
+      doc.text(formatEur(Number(invoice.totalAmount)), pageWidth - margin - 100, yPos, {
         width: 100,
         align: 'right',
       })
@@ -912,6 +947,8 @@ export class InvoiceService {
     }
 
     const invoice = note.invoice
+    const issuer = await this.getIssuerConfig()
+    const logoPath = this.resolveLogoPath()
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 })
@@ -921,14 +958,6 @@ export class InvoiceService {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
-      const logoPath = this.resolveLogoPath()
-      const issuer = {
-        name: 'eChatbot S.r.l.',
-        address: 'Via Roma 123, 00100 Roma, Italia',
-        vat: 'IT12345678901',
-        email: 'hello@echatbot.ai',
-        phone: '+39 06 1234567',
-      }
       const formatDate = (value: Date) => value.toLocaleDateString('it-IT')
       const pageWidth = doc.page.width
       const margin = 50
@@ -938,67 +967,56 @@ export class InvoiceService {
       }
 
       const headerRightX = pageWidth - margin - 220
-      doc.fontSize(18).font('Helvetica-Bold').text('Credit note', headerRightX, 50, {
-        width: 220,
-        align: 'right',
-      })
-      doc.fontSize(10).font('Helvetica').text(`Note ID: ${note.id}`, headerRightX, 74, {
-        width: 220,
-        align: 'right',
-      })
-      doc.text(`Issued: ${formatDate(note.createdAt)}`, headerRightX, 88, {
-        width: 220,
-        align: 'right',
-      })
+      doc.fontSize(18).font('Helvetica-Bold').text('Credit note', headerRightX, 50, { width: 220, align: 'right' })
+      doc.fontSize(10).font('Helvetica').text(`Note ID: ${note.id}`, headerRightX, 74, { width: 220, align: 'right' })
+      doc.text(`Issued: ${formatDate(note.createdAt)}`, headerRightX, 88, { width: 220, align: 'right' })
 
       let yPos = 130
 
+      const customerName =
+        invoice.user?.companyName ||
+        `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim() ||
+        invoice.user?.email ||
+        'Customer'
+
       doc.fontSize(11).font('Helvetica-Bold').text('BILL TO', margin, yPos)
       yPos += 16
-      doc.fontSize(10).font('Helvetica').text(
-        invoice.user?.companyName ||
-          `${invoice.user?.firstName || ''} ${invoice.user?.lastName || ''}`.trim() ||
-          invoice.user?.email ||
-          'Customer',
-        margin,
-        yPos
-      )
+      doc.fontSize(10).font('Helvetica').text(customerName, margin, yPos)
       yPos += 14
-      const customerAddress = invoice.user?.billingAddress || 'Via Roma 123, 00100 Roma, Italia'
-      const customerVat = invoice.user?.vatNumber || 'IT00000000000'
-      const customerPhone = invoice.user?.billingPhone || '+39 06 0000000'
-      doc.text(customerAddress, margin, yPos)
-      yPos += 14
-      doc.text(`VAT: ${customerVat}`, margin, yPos)
-      yPos += 14
-      doc.text(`Phone: ${customerPhone}`, margin, yPos)
-      yPos += 20
+      if (invoice.user?.billingAddress) {
+        doc.text(invoice.user.billingAddress, margin, yPos)
+        yPos += 14
+      }
+      if (invoice.user?.vatNumber) {
+        doc.text(`VAT: ${invoice.user.vatNumber}`, margin, yPos)
+        yPos += 14
+      }
+      if (invoice.user?.billingPhone) {
+        doc.text(`Phone: ${invoice.user.billingPhone}`, margin, yPos)
+        yPos += 14
+      }
+      yPos += 6
 
       const issuerX = pageWidth - margin - 220
       doc.fontSize(11).font('Helvetica-Bold').text('ISSUER', issuerX, 130, { width: 220, align: 'right' })
       doc.fontSize(10).font('Helvetica').text(issuer.name, issuerX, 146, { width: 220, align: 'right' })
-      doc.text(issuer.address, issuerX, 160, { width: 220, align: 'right' })
-      doc.text(`VAT: ${issuer.vat}`, issuerX, 174, { width: 220, align: 'right' })
-      doc.text(`Email: ${issuer.email}`, issuerX, 188, { width: 220, align: 'right' })
-      doc.text(`Phone: ${issuer.phone}`, issuerX, 202, { width: 220, align: 'right' })
+      if (issuer.address) doc.text(issuer.address, issuerX, 160, { width: 220, align: 'right' })
+      if (issuer.vat)     doc.text(`VAT: ${issuer.vat}`, issuerX, 174, { width: 220, align: 'right' })
+      if (issuer.email)   doc.text(`Email: ${issuer.email}`, issuerX, 188, { width: 220, align: 'right' })
+      if (issuer.phone)   doc.text(`Phone: ${issuer.phone}`, issuerX, 202, { width: 220, align: 'right' })
 
       yPos += 10
       doc.fontSize(11).font('Helvetica-Bold').text('DETAILS', margin, yPos)
       yPos += 18
 
       const relatedInvoiceNumber = invoice.invoiceNumber || `${invoice.periodMonth}/${invoice.periodYear}`
-      doc.fontSize(10).font('Helvetica').text(
-        `Related invoice: ${relatedInvoiceNumber}`,
-        margin,
-        yPos
-      )
+      doc.fontSize(10).font('Helvetica').text(`Related invoice: ${relatedInvoiceNumber}`, margin, yPos)
       yPos += 16
       doc.text(`Reason: ${note.reason || 'Adjustment'}`, margin, yPos)
       yPos += 24
 
-      const formatted = `-$${Number(note.amount).toFixed(2)}`
       doc.fontSize(12).font('Helvetica-Bold').text('Total credit', margin, yPos)
-      doc.text(formatted, pageWidth - margin - 100, yPos, { width: 100, align: 'right' })
+      doc.text(`-€${Number(note.amount).toFixed(2)}`, pageWidth - margin - 100, yPos, { width: 100, align: 'right' })
 
       doc.end()
     })

@@ -8,6 +8,7 @@ import { encryptSecret } from "../../../utils/encryption"
 import {
   loadPayPalConfigForEnv,
   resolvePayPalEnvironment,
+  getPayPalAccessToken,
   PayPalEnvironment,
 } from "../../../utils/paypal-config"
 import { Prisma } from "@echatbot/database"
@@ -70,32 +71,6 @@ const getWebhookId = (environment: PayPalEnvironment) => {
     : process.env.PAYPAL_WEBHOOK_ID_SANDBOX
 }
 
-const getAppAccessToken = async (
-  paypalConfig: ReturnType<typeof loadPayPalConfigForEnv>
-): Promise<string> => {
-  const response = await fetch(
-    `${paypalConfig.apiBaseUrl}/v1/oauth2/token`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(
-          `${paypalConfig.clientId}:${paypalConfig.clientSecret}`
-        ).toString("base64")}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ grant_type: "client_credentials" }).toString(),
-    }
-  )
-
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(`PayPal token error: ${text}`)
-  }
-
-  const data = await response.json()
-  return data.access_token as string
-}
-
 const inMemoryPlanCache = new Map<PayPalEnvironment, string>()
 
 const ensurePlanId = async (
@@ -105,7 +80,7 @@ const ensurePlanId = async (
   const cached = inMemoryPlanCache.get(paypalConfig.environment)
   if (cached) return cached
 
-  const appToken = await getAppAccessToken(paypalConfig)
+  const appToken = await getPayPalAccessToken(paypalConfig)
 
   // Create a minimal product
   const productResponse = await fetch(
@@ -193,7 +168,7 @@ const createSubscription = async ({
   planId: string
   approveLink: string | null
 }> => {
-  const appToken = await getAppAccessToken(paypalConfig)
+  const appToken = await getPayPalAccessToken(paypalConfig)
   const planId = await ensurePlanId(paypalConfig)
 
   const body: any = {
@@ -259,7 +234,7 @@ const captureOutstandingBalance = async ({
   amount: number
   note?: string
 }): Promise<{ success: boolean; transactionId?: string; status?: string }> => {
-  const appToken = await getAppAccessToken(paypalConfig)
+  const appToken = await getPayPalAccessToken(paypalConfig)
   const captureResponse = await fetch(
     `${paypalConfig.apiBaseUrl}/v1/billing/subscriptions/${subscriptionId}/capture`,
     {
@@ -318,7 +293,7 @@ const verifyWebhookSignature = async (
   }
 
   try {
-    const accessToken = await getAppAccessToken(paypalConfig)
+    const accessToken = await getPayPalAccessToken(paypalConfig)
     const verifyResponse = await fetch(
       `${paypalConfig.apiBaseUrl}/v1/notifications/verify-webhook-signature`,
       {
@@ -789,7 +764,7 @@ paypalRoutes.get("/subscription/callback", async (req: Request, res: Response) =
     }
 
     const paypalConfig = loadPayPalConfigForEnv(user.paypalEnvironment as PayPalEnvironment)
-    const appToken = await getAppAccessToken(paypalConfig)
+    const appToken = await getPayPalAccessToken(paypalConfig)
 
     // Fetch subscription details from PayPal
     const subResponse = await fetch(
@@ -874,6 +849,15 @@ paypalRoutes.post(
           paypalRefreshTokenEncrypted: null,
           paypalTokenExpiresAt: null,
           paypalTokenScope: null,
+          // Clear subscription data on disconnect to avoid stale references
+          paypalSubscriptionId: null,
+          paypalPlanId: null,
+          paypalSubscriptionStatus: null,
+          paypalSubscriptionApprovedAt: null,
+          paypalNextBillingTime: null,
+          paypalOutstandingBalance: null,
+          paypalFailedPaymentsCount: 0,
+          paypalCyclesCompleted: 0,
         },
       })
 

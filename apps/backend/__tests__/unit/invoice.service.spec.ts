@@ -25,6 +25,7 @@ jest.mock('../../src/utils/logger', () => ({
 const mockPrisma = {
   $transaction: jest.fn(),
   $queryRaw: jest.fn(),
+  $executeRaw: jest.fn(),
   monthlyInvoice: {
     findUnique: jest.fn(),
     findFirst: jest.fn(),
@@ -44,6 +45,9 @@ const mockPrisma = {
   },
   invoiceCreditNote: {
     aggregate: jest.fn(),
+    findMany: jest.fn(),
+  },
+  platformConfig: {
     findMany: jest.fn(),
   },
 }
@@ -126,7 +130,11 @@ describe('InvoiceService - Feature 197 Monthly Invoice Management', () => {
     mockPrisma.invoiceCreditNote.aggregate.mockResolvedValue({ _sum: { amount: 0 } })
     mockPrisma.invoiceCreditNote.findMany.mockResolvedValue([])
     mockPrisma.$transaction.mockImplementation(async (cb: any) => cb(mockPrisma))
-    mockPrisma.$queryRaw.mockResolvedValue([{ value: BigInt(1) }])
+    // Mock for nextInvoiceSequence: $executeRaw (INSERT ON CONFLICT) + $queryRaw (UPDATE RETURNING last_value)
+    mockPrisma.$executeRaw.mockResolvedValue(1)
+    mockPrisma.$queryRaw.mockResolvedValue([{ last_value: 1 }])
+    // Mock issuer config (getIssuerConfig reads from platformConfig)
+    mockPrisma.platformConfig.findMany.mockResolvedValue([])
   })
 
   describe('getOrCreateCurrentInvoice', () => {

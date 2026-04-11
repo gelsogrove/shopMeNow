@@ -61,7 +61,7 @@ export class ProductRepository implements IProductRepository {
 
       // Aggiungiamo il filtro per categoria, se presente
       if (filters?.categoryId) {
-        where.categoryId = filters.categoryId
+        where.productCategories = { some: { categoryId: filters.categoryId } }
       }
 
       // Gestiamo lo status in maniera semplificata
@@ -215,7 +215,7 @@ export class ProductRepository implements IProductRepository {
     try {
       const products = await this.prisma.products.findMany({
         where: {
-          categoryId,
+          productCategories: { some: { categoryId } },
           workspaceId,
         },
         include: this.getIncludeWithCertifications(),
@@ -244,12 +244,9 @@ export class ProductRepository implements IProductRepository {
           status: product.status as ProductStatus,
           isActive: product.isActive,
           slug: product.slug,
-          categoryId: product.categoryId,
           workspaceId: product.workspaceId,
         },
-        include: {
-          category: true,
-        },
+        include: this.getIncludeWithCertifications(),
       })
 
       return this.mapToDomainEntity(createdProduct)
@@ -275,9 +272,7 @@ export class ProductRepository implements IProductRepository {
         status: product.status as ProductStatus,
         isActive: product.isActive,
         slug: product.slug,
-        categoryId: product.categoryId,
         supplierId: product.supplierId,
-        certifications: product.certifications, // ✅ Use certifications array instead of boolean fields
         type: product.type,
         region: product.region,
       }
@@ -478,7 +473,7 @@ export class ProductRepository implements IProductRepository {
       // Category filter (single or multiple)
       // 🎯 Primary filter when user asks "formaggi?" - matches category, not product name
       if (filters.categoryId) {
-        where.categoryId = filters.categoryId
+        where.productCategories = { some: { categoryId: filters.categoryId } }
       }
 
       // Regions filter (array of Italian region names)
@@ -723,7 +718,7 @@ export class ProductRepository implements IProductRepository {
     const certificationNames =
       data.productCertifications?.map(
         (pc: any) => pc.certification.name
-      ) || data.certifications || []
+      ) || []
 
     // Extract transport type names from productTypes relation
     const typeNames =
@@ -735,7 +730,7 @@ export class ProductRepository implements IProductRepository {
     const categoryIds =
       data.productCategories?.map(
         (pc: any) => pc.categoryId
-      ) || (data.categoryId ? [data.categoryId] : [])
+      ) || []
 
     const product = new Product({
       id: data.id,
@@ -743,12 +738,12 @@ export class ProductRepository implements IProductRepository {
       sku: data.sku,
       description: data.description,
       formato: data.formato,
-      price: data.price,
+      price: Number(data.price),
       stock: data.stock,
       status: data.status,
       isActive: data.isActive,
       slug: data.slug,
-      categoryId: data.categoryId, // DEPRECATED: keep for backward compatibility
+      categoryId: categoryIds[0] || null,
       supplierId: data.supplierId,
       workspaceId: data.workspaceId,
       imageUrl: data.imageUrl || [],
@@ -758,7 +753,6 @@ export class ProductRepository implements IProductRepository {
       region: data.region,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
-      category: data.category, // DEPRECATED: keep for backward compatibility
     })
 
     // Add productCertifications relation to the product object (for frontend use)

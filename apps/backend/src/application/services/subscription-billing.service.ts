@@ -27,6 +27,9 @@ import {
 import logger from "../../utils/logger"
 import { CREDIT_MIN_THRESHOLD } from "./workspace-access.service"
 import { platformConfigService } from "../../services/platform-config.service"
+import { EmailService } from "./email.service"
+
+const emailService = new EmailService()
 
 export interface CreditCheckResult {
   hasSufficientCredit: boolean
@@ -1286,8 +1289,19 @@ export class SubscriptionBillingService {
           `[BILLING] ⚠️ Low balance alert: €${currentBalance.toFixed(2)} (threshold: €${threshold.toFixed(2)}, user: ${userId})`
         )
 
-        // TODO: Send email notification
-        // await emailService.sendLowBalanceAlert(userId, currentBalance)
+        // Send email notification — fire-and-forget (don't block credit deduction)
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true, firstName: true },
+        })
+        if (user?.email) {
+          emailService.sendLowBalanceAlert({
+            to: user.email,
+            firstName: user.firstName || 'there',
+            currentBalance,
+            threshold,
+          }).catch((err) => logger.error('[BILLING] Failed to send low balance alert:', err))
+        }
       }
     }
   }

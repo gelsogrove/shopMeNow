@@ -270,6 +270,7 @@ export async function monthlyBillingJob(): Promise<void> {
             where: { id: owner.id },
             data: {
               subscriptionStatus: 'PAUSED', // Trial expired = paused until upgrade
+              pausedAt: new Date(),          // Record when trial pause began
             },
           })
         } else {

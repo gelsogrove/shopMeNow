@@ -65,8 +65,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       afterRegistrationMessages: data.afterRegistrationMessages,
-      planType: data.owner?.planType ?? data.planType ?? null,
-      trialEndsAt: data.owner?.trialEndsAt ?? data.trialEndsAt ?? null,
+      planType: data.owner?.planType ?? null,
+      trialEndsAt: data.owner?.trialEndsAt ?? null,
       allowedExternalLinks: data.allowedExternalLinks || [],
       // 🆕 Channel Configuration (Feature 199)
       channelType: data.channelType ?? "WHATSAPP",

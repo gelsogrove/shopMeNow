@@ -5,7 +5,7 @@ module.exports = {
   testMatch: ['**/*.security.test.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@shared/(.*)$': '<rootDir>/src/shared/$1',
+    '^@shared/(.*)$': '<rootDir>/../../shared/$1',
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {

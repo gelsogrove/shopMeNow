@@ -1263,4 +1263,79 @@ startxref
       return false
     }
   }
+
+  async sendLowBalanceAlert(data: {
+    to: string
+    firstName: string
+    currentBalance: number
+    threshold: number
+  }): Promise<boolean> {
+    try {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+      const balance = data.currentBalance.toFixed(2)
+      const threshold = data.threshold.toFixed(2)
+
+      const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f4f4f4;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;">
+    <tr>
+      <td align="center" style="padding:40px 0;">
+        <table role="presentation" style="width:600px;max-width:95%;border-collapse:collapse;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:36px 32px 24px;background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);border-radius:12px 12px 0 0;text-align:center;">
+              <p style="margin:0 0 8px;font-size:32px;">⚠️</p>
+              <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">Low credit balance</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">Hi <strong>${data.firstName}</strong>,</p>
+              <p style="margin:0 0 16px;font-size:16px;color:#374151;">
+                Your eChatbot credit balance has dropped to <strong>€${balance}</strong>, which is below the alert threshold of €${threshold}.
+              </p>
+              <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:16px;margin:20px 0;">
+                <p style="margin:0;font-size:14px;color:#92400e;">
+                  When the balance reaches <strong>-€10.00</strong> your chatbot will stop responding to customers.
+                  Recharge now to avoid interruptions.
+                </p>
+              </div>
+              <div style="text-align:center;margin-top:28px;">
+                <a href="${frontendUrl}/billing" style="display:inline-block;padding:14px 36px;background:#f59e0b;color:#fff;text-decoration:none;border-radius:8px;font-weight:700;font-size:16px;">
+                  Recharge credits
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;text-align:center;color:#9ca3af;font-size:12px;border-top:1px solid #f3f4f6;">
+              © eChatbot — All rights reserved
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+
+      await this.getTransporter().sendMail({
+        from: `"eChatbot" <${process.env.SMTP_FROM || 'noreply@echatbot.ai'}>`,
+        to: data.to,
+        subject: `⚠️ Low credit balance: €${balance} remaining`,
+        html: htmlContent,
+      })
+
+      logger.info(`Low balance alert sent to ${data.to} (balance: €${balance})`)
+      return true
+    } catch (error) {
+      logger.error('Failed to send low balance alert:', error)
+      return false
+    }
+  }
 }

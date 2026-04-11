@@ -383,7 +383,7 @@ export class CartRepository {
       if (!cart) return 0
 
       return cart.items.reduce((total, item) => {
-        const price = item.product?.price || item.service?.price || 0
+        const price = Number(item.product?.price || item.service?.price || 0)
         return total + (price * item.quantity)
       }, 0)
     } catch (error) {

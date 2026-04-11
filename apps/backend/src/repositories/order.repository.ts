@@ -506,7 +506,7 @@ export class OrderRepository implements IOrderRepository {
         },
       })
 
-      return result._sum.totalAmount || 0
+      return Number(result._sum.totalAmount) || 0
     } catch (error) {
       logger.error("Error calculating total revenue:", error)
       return 0
@@ -522,14 +522,14 @@ export class OrderRepository implements IOrderRepository {
       status: data.status,
       // Payment status removed
       paymentMethod: data.paymentMethod,
-      totalAmount: data.totalAmount,
-      shippingAmount: data.shippingAmount,
-      taxAmount: data.taxAmount,
+      totalAmount: Number(data.totalAmount),
+      shippingAmount: Number(data.shippingAmount ?? 0),
+      taxAmount: Number(data.taxAmount ?? 0),
       shippingAddress: data.shippingAddress,
       billingAddress: data.billingAddress,
       notes: data.notes,
       discountCode: data.discountCode,
-      discountAmount: data.discountAmount,
+      discountAmount: Number(data.discountAmount ?? 0),
       trackingNumber: data.trackingNumber,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
@@ -542,8 +542,8 @@ export class OrderRepository implements IOrderRepository {
           productId: item.productId,
           serviceId: item.serviceId, // ✅ AGGIUNTO
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
+          unitPrice: Number(item.unitPrice),
+          totalPrice: Number(item.totalPrice),
           productVariant: item.productVariant,
           product: item.product,
           service: item.service, // ✅ AGGIUNTO
