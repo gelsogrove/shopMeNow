@@ -106,9 +106,35 @@ export class ShortUrlController {
       } else {
         // For non-PDF URLs, do direct HTTP 302 redirect (most reliable)
         // This ensures the redirect works on FIRST click without any SPA/JS issues
-        logger.info(`📎 HTTP 302 redirect to: ${result.originalUrl}`)
-        
         const targetUrl = result.originalUrl!
+
+        // 🔐 SECURITY: Prevent open redirect — only allow URLs from known trusted domains
+        const allowedOrigins = [
+          config.frontendUrl,
+          config.apiUrl,
+          process.env.BACKEND_URL,
+          process.env.WIDGET_URL,
+        ].filter(Boolean).map((u) => {
+          try { return new URL(u!).origin } catch { return null }
+        }).filter(Boolean)
+
+        let targetOrigin: string | null = null
+        try {
+          // Relative URLs (starting with /) are always safe — they stay on the same server
+          targetOrigin = targetUrl.startsWith("/") ? "relative" : new URL(targetUrl).origin
+        } catch {
+          logger.warn(`📎 Invalid URL in short redirect: ${targetUrl}`)
+          res.status(400).json({ success: false, error: "Invalid redirect URL" })
+          return
+        }
+
+        if (targetOrigin !== "relative" && !allowedOrigins.includes(targetOrigin)) {
+          logger.warn(`📎 Open redirect blocked: ${targetUrl} (origin: ${targetOrigin})`)
+          res.status(403).json({ success: false, error: "Redirect to external domain not allowed" })
+          return
+        }
+
+        logger.info(`📎 HTTP 302 redirect to: ${result.originalUrl}`)
         res.redirect(302, targetUrl)
       }
     } catch (error) {

@@ -962,11 +962,6 @@ export function SettingsPage() {
               )}
             </div>
 
-            {canEdit && (
-              <div className="text-xs text-gray-500">
-                Se WhatsApp non è collegato o verificato, lo stato può tornare Inactive automaticamente.
-              </div>
-            )}
           </div>
         </div>
 

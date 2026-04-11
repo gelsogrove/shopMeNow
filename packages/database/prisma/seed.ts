@@ -2146,6 +2146,35 @@ Confermi la tua presenza?`,
 
   console.log(`   ✅ Seeded ${appointmentCallingFunctions.length} appointment functions for both workspaces`)
 
+  // 9b. Seed changeLanguage system function for all workspaces
+  for (const ws of [ecommerceWorkspace, infoWorkspace]) {
+    await prisma.workspaceCallingFunction.upsert({
+      where: {
+        workspaceId_functionName: {
+          workspaceId: ws.id,
+          functionName: "changeLanguage"
+        }
+      },
+      update: {},
+      create: {
+        workspaceId: ws.id,
+        functionName: "changeLanguage",
+        description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
+        parameters: {
+          type: "object",
+          properties: {
+            language: { type: "string", enum: ["it", "en", "es", "pt"], description: "ISO 639-1 language code" }
+          },
+          required: ["language"]
+        },
+        isSystemFunction: true,
+        executionType: "INTERNAL",
+        isActive: true
+      }
+    })
+  }
+  console.log("   ✅ Seeded changeLanguage function for both workspaces")
+
   // 10. Create Campaigns
   console.log("📢 Creating campaigns...")
 

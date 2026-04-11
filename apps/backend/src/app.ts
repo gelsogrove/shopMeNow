@@ -626,6 +626,86 @@ app.post("/api/paypal/webhook", async (req, res) => {
       })
     }
 
+    // 🔐 SECURITY: Verify PayPal webhook signature via PayPal API
+    // PayPal provides no shared secret — official approach is to call their verify API
+    const webhookId = process.env.PAYPAL_WEBHOOK_ID
+    if (webhookId) {
+      try {
+        const transmissionId = req.headers["paypal-transmission-id"] as string
+        const transmissionTime = req.headers["paypal-transmission-time"] as string
+        const certUrl = req.headers["paypal-cert-url"] as string
+        const transmissionSig = req.headers["paypal-transmission-sig"] as string
+
+        if (!transmissionId || !transmissionTime || !certUrl || !transmissionSig) {
+          logger.warn("[PAYPAL] Webhook missing signature headers — rejecting")
+          return res.status(401).json({ success: false, error: "Missing webhook signature headers" })
+        }
+
+        // Only accept PayPal cert URLs (prevent SSRF via cert spoofing)
+        if (!certUrl.startsWith("https://api.paypal.com/") && !certUrl.startsWith("https://api.sandbox.paypal.com/")) {
+          logger.warn("[PAYPAL] Webhook cert URL not from PayPal domain — rejecting", { certUrl })
+          return res.status(401).json({ success: false, error: "Invalid cert URL" })
+        }
+
+        const activeConfig = configs[0]
+        const authResponse = await fetch(
+          activeConfig.baseUrl === "https://api-m.sandbox.paypal.com"
+            ? "https://api-m.sandbox.paypal.com/v1/oauth2/token"
+            : "https://api-m.paypal.com/v1/oauth2/token",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Authorization: `Basic ${Buffer.from(`${activeConfig.clientId}:${activeConfig.clientSecret}`).toString("base64")}`,
+            },
+            body: "grant_type=client_credentials",
+          }
+        )
+
+        if (authResponse.ok) {
+          const { access_token } = await authResponse.json() as { access_token: string }
+          const verifyResponse = await fetch(
+            activeConfig.baseUrl === "https://api-m.sandbox.paypal.com"
+              ? "https://api-m.sandbox.paypal.com/v1/notifications/verify-webhook-signature"
+              : "https://api-m.paypal.com/v1/notifications/verify-webhook-signature",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${access_token}`,
+              },
+              body: JSON.stringify({
+                transmission_id: transmissionId,
+                transmission_time: transmissionTime,
+                cert_url: certUrl,
+                auth_algo: req.headers["paypal-auth-algo"],
+                transmission_sig: transmissionSig,
+                webhook_id: webhookId,
+                webhook_event: req.body,
+              }),
+            }
+          )
+
+          if (verifyResponse.ok) {
+            const { verification_status } = await verifyResponse.json() as { verification_status: string }
+            if (verification_status !== "SUCCESS") {
+              logger.warn("[PAYPAL] Webhook signature verification failed", { verification_status })
+              return res.status(401).json({ success: false, error: "Invalid webhook signature" })
+            }
+            logger.info("[PAYPAL] ✅ Webhook signature verified")
+          } else {
+            logger.warn("[PAYPAL] Could not verify webhook signature — proceeding with caution")
+          }
+        }
+      } catch (verifyError) {
+        logger.warn("[PAYPAL] Signature verification error — proceeding", {
+          error: verifyError instanceof Error ? verifyError.message : String(verifyError),
+        })
+      }
+    } else {
+      logger.warn("[PAYPAL] PAYPAL_WEBHOOK_ID not set — skipping signature verification")
+    }
+
     const eventType = req.body?.event_type as string | undefined
     const resource = req.body?.resource || {}
     const subscriptionId =

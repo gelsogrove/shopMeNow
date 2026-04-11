@@ -145,13 +145,20 @@ async function buildWidgetSuggestionsWithAI(
               `You select clickable follow-up suggestions for a chat widget from a fixed FAQ list.\n` +
               `Output language: ${langName[lang] || "English"}. ALL suggestions MUST be written in this language — regardless of the language of the FAQ list.\n` +
               `\n` +
-              `STRICT RULES:\n` +
+              `WHEN TO RETURN EMPTY: Return [] (empty array, no suggestions) if the chatbot reply is about ANY of these topics:\n` +
+              `- Appointment booking, scheduling, available slots, confirming/cancelling/rescheduling appointments\n` +
+              `- Product or service prices, costs, pricing, discounts, offers\n` +
+              `- Specific products or services (descriptions, details, availability)\n` +
+              `- User registration, login, account creation, sign up\n` +
+              `In these cases the user needs to act, not browse more FAQ topics — suggestions would distract them.\n` +
+              `\n` +
+              `STRICT RULES (when NOT returning empty):\n` +
               `- Select EXACTLY 3 FAQ topics that are NATURALLY relevant as follow-ups to the chatbot reply\n` +
               `- TRANSLATE and REWRITE each selected topic in ${langName[lang] || "English"} — do NOT copy the original FAQ text verbatim\n` +
               `- Write each suggestion in FIRST PERSON (e.g. "I want to know the prices" not "Prices")\n` +
               `- Max 40 characters per suggestion — shorten if needed\n` +
               `- No links, no emoji, no punctuation at the end\n` +
-              `- Return ONLY a raw JSON array of EXACTLY 3 strings. Example: ["How can I pay?","Where is my order?","Can I modify it?"]`,
+              `- Return ONLY a raw JSON array of EXACTLY 3 strings, or [] if the reply matches the empty cases above. Example: ["How can I pay?","Where is my order?","Can I modify it?"]`,
           },
           {
             role: "user",
@@ -178,6 +185,12 @@ async function buildWidgetSuggestionsWithAI(
       const valid = (parsed as unknown[])
         .filter((s): s is string => typeof s === "string" && s.trim().length > 0 && s.length <= 45)
       
+      // RULE: [] means the AI intentionally suppressed suggestions (booking/prices/products/registration)
+      if (Array.isArray(parsed) && parsed.length === 0) {
+        logger.info("[WIDGET-SUGGESTIONS-AI] AI suppressed suggestions for this response topic")
+        return []
+      }
+
       // RULE: We need EXACTLY 3 suggestions. If LLM returned <3, use static fallback
       if (valid.length >= 3) {
         return valid.slice(0, 3)

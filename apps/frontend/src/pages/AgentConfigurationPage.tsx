@@ -45,6 +45,7 @@ import {
   Bell,
   Bot,
   Brain,
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
   Download,
@@ -62,7 +63,6 @@ import {
   Settings,
   Shield,
   ShoppingCart,
-  TriangleAlert,
   User,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -417,7 +417,7 @@ export function AgentConfigurationPage() {
 
         {/* ⚠️ Warning banner */}
         <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-          <TriangleAlert className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+          <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-amber-800">Sensitive area — system administrator only</p>
             <p className="text-xs text-amber-700 mt-0.5">

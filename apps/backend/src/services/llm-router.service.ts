@@ -206,6 +206,7 @@ export interface DebugStep {
 }
 
 export class LLMRouterService {
+  private static verifiedChangeLanguageWorkspaces = new Set<string>()
   private agentConfigRepo: AgentConfigRepository
   private faqRepo: FAQRepository
   private loggerService: AgentLoggerService
@@ -1251,6 +1252,39 @@ export class LLMRouterService {
       logger.info("Step 3: Starting Function Calling loop")
       // 🆕 Feature: Load all active functions from DB (System + Custom)
       const dbFunctions = await this.callingFunctionRepo.findActiveByWorkspace(params.workspaceId)
+
+      // Lazy migration: ensure changeLanguage exists for workspaces created before this feature
+      if (!LLMRouterService.verifiedChangeLanguageWorkspaces.has(params.workspaceId)) {
+        const hasChangeLanguage = dbFunctions.some(fn => fn.functionName === "changeLanguage")
+        if (!hasChangeLanguage) {
+          try {
+            const created = await this.prisma.workspaceCallingFunction.upsert({
+              where: { workspaceId_functionName: { workspaceId: params.workspaceId, functionName: "changeLanguage" } },
+              update: { isActive: true },
+              create: {
+                workspaceId: params.workspaceId,
+                functionName: "changeLanguage",
+                description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    language: { type: "string", enum: ["it", "en", "es", "pt"], description: "ISO 639-1 language code" }
+                  },
+                  required: ["language"]
+                },
+                isSystemFunction: true,
+                executionType: "INTERNAL",
+                isActive: true
+              }
+            })
+            dbFunctions.push(created)
+            logger.info(`✅ Lazy-migrated changeLanguage for workspace ${params.workspaceId}`)
+          } catch (error) {
+            logger.warn(`⚠️ Failed to lazy-migrate changeLanguage (non-fatal):`, error)
+          }
+        }
+        LLMRouterService.verifiedChangeLanguageWorkspaces.add(params.workspaceId)
+      }
 
       // 🎯 RUNTIME FILTERING: Filter functions based on workspace capabilities
       // This ensures LLM only sees functions relevant to the workspace's feature set
