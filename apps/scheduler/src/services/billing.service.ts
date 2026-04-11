@@ -42,7 +42,6 @@ export class BillingService {
           id: true,
           name: true,
           ownerId: true,
-          planType: true,
           owner: {
             select: {
               id: true,
