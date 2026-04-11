@@ -3011,35 +3011,7 @@ Confermi la tua presenza?`,
 
   // 9. Monthly channel billing - skipped in seed
   console.log("\n💳 Skipping monthly channel billing (workspaces start at €0.00)...")
-
-  const monthlyChannelCost =
-    pricingConfigData.find((p) => p.key === "MONTHLY_CHANNEL_COST")?.value ?? 49
-  let channelBillingCount = 0
-
-  // Generate for same months as messages (April-October 2025)
-  const billingMonths = [
-    { month: 4, year: 2025 },
-    { month: 5, year: 2025 },
-    { month: 6, year: 2025 },
-    { month: 7, year: 2025 },
-    { month: 8, year: 2025 },
-    { month: 9, year: 2025 },
-    { month: 10, year: 2025 },
-  ]
-
-  for (const monthData of billingMonths) {
-    // 💰 BILLING: Removed from seed - workspaces start at €0.00
-    // Create MONTHLY_CHANNEL billing on the 1st day of each month
-    const channelDate = new Date(monthData.year, monthData.month - 1, 1)
-
-    // await prisma.billing.create(...)
-
-    channelBillingCount++
-  }
-
-  console.log(`⚠️  Monthly channel billing SKIPPED (workspaces start at €0.00)`)
-  console.log(`   - Would create: ${channelBillingCount} records over ${channelBillingCount} months`)
-  console.log(`   - Would cost: €${(monthlyChannelCost * channelBillingCount).toFixed(2)} total`)
+  console.log(`⚠️  Channel billing removed (included in subscription plans)`)
   console.log(`   - Real billing starts when workspace is activated`)
 
   // 10. Create PUSH_CAMPAIGN billing (€1.00) for advertising push notifications
@@ -3199,7 +3171,6 @@ Confermi la tua presenza?`,
   console.log(`   - Product Searches: 855 searches (Top 10 products)`)
   console.log(`   - 💰 Billing: SKIPPED (workspaces start at €0.00)`)
   console.log(`       • Would track: ${messageBillingRecords} message records (€${(messageCost * totalMessages).toFixed(2)})`)
-  console.log(`       • Would track: ${channelBillingCount} channel months (€${(monthlyChannelCost * channelBillingCount).toFixed(2)})`)
   console.log(`       • Would track: ${pushCampaignCount} push campaigns (€${(pushCampaignCost * pushCampaignCount).toFixed(2)})`)
   console.log(`       • Real billing starts when workspace is used in production`)
 
@@ -3351,7 +3322,7 @@ Confermi la tua presenza?`,
     {
       planType: "PREMIUM" as const,
       displayName: "Premium",
-      monthlyFee: 39.00,
+      monthlyFee: 45.00,
       maxChannels: 2,
       maxProducts: 9999,
       maxCustomers: 100,
@@ -3376,7 +3347,7 @@ Confermi la tua presenza?`,
     {
       planType: "ENTERPRISE" as const,
       displayName: "Enterprise",
-      monthlyFee: 129.00, // Base price, actual is custom
+      monthlyFee: 160.00,
       maxChannels: 999, // Unlimited
       maxProducts: 9999, // Unlimited
       maxCustomers: 9999, // Unlimited

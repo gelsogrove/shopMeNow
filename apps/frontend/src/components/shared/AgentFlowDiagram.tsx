@@ -37,6 +37,7 @@ import {
   Sparkles,
   Download,
   Calendar,
+  Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -102,6 +103,88 @@ interface AgentFlowDiagramProps {
   isLoading?: boolean
   className?: string
 }
+
+// Available LLM Models with cost and performance ratings
+const AVAILABLE_MODELS = [
+  {
+    id: "google/gemma-2-9b-it",
+    label: "Gemma 2 9B",
+    costStars: 1,
+    performanceStars: 2,
+  },
+  {
+    id: "deepseek/deepseek-chat",
+    label: "DeepSeek Chat",
+    costStars: 1,
+    performanceStars: 3,
+  },
+  {
+    id: "openai/gpt-4o-mini",
+    label: "GPT-4o Mini",
+    costStars: 1,
+    performanceStars: 3,
+  },
+  {
+    id: "qwen/qwen-72b-chat",
+    label: "Qwen 72B Chat",
+    costStars: 2,
+    performanceStars: 3,
+  },
+  {
+    id: "meta-llama/llama-3.1-70b-instruct",
+    label: "Llama 3.1 70B",
+    costStars: 2,
+    performanceStars: 3,
+  },
+  {
+    id: "mistral/mistral-large",
+    label: "Mistral Large",
+    costStars: 2,
+    performanceStars: 4,
+  },
+  {
+    id: "xai/grok-beta",
+    label: "Grok Beta",
+    costStars: 3,
+    performanceStars: 4,
+  },
+  {
+    id: "openai/gpt-4-turbo",
+    label: "GPT-4 Turbo",
+    costStars: 4,
+    performanceStars: 4,
+  },
+  {
+    id: "google/gemini-2.0-flash",
+    label: "Gemini 2.0 Flash",
+    costStars: 4,
+    performanceStars: 4,
+  },
+  {
+    id: "anthropic/claude-3-opus",
+    label: "Claude 3 Opus",
+    costStars: 4,
+    performanceStars: 5,
+  },
+  {
+    id: "anthropic/claude-3-5-sonnet",
+    label: "Claude 3.5 Sonnet",
+    costStars: 5,
+    performanceStars: 5,
+  },
+]
+
+// Helper component to render star ratings
+const StarRating = ({ stars, maxStars = 5 }: { stars: number; maxStars?: number }) => (
+  <div className="flex gap-0.5">
+    {Array.from({ length: maxStars }).map((_, i) => (
+      <Star
+        key={i}
+        className={`h-3 w-3 ${i < stars ? "fill-amber-400 text-amber-400" : "text-gray-300"}`}
+      />
+    ))}
+  </div>
+)
 
 // Agent metadata with descriptions
 const AGENT_METADATA: Record<string, {
@@ -434,6 +517,7 @@ export function AgentFlowDiagram({
   const [editedPrompt, setEditedPrompt] = useState("")
   const [editedTemperature, setEditedTemperature] = useState(0.7)
   const [editedMaxTokens, setEditedMaxTokens] = useState(1000)
+  const [editedModel, setEditedModel] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [helpAgent, setHelpAgent] = useState<string | null>(null)
@@ -520,18 +604,20 @@ export function AgentFlowDiagram({
     setEditedPrompt(agent.systemPrompt || "")
     setEditedTemperature(agent.temperature || 0.7)
     setEditedMaxTokens(agent.maxTokens || 1000)
+    setEditedModel(agent.model || "mistral/mistral-large")
   }
 
   // Handle save
   const handleSave = async () => {
     if (!selectedAgent) return
-    
+
     try {
       setIsSaving(true)
       await onSaveAgent(selectedAgent.id, {
         systemPrompt: editedPrompt,
         temperature: editedTemperature,
         maxTokens: editedMaxTokens,
+        model: editedModel,
       })
       setSelectedAgent(null)
     } catch (error) {
@@ -867,21 +953,40 @@ export function AgentFlowDiagram({
               </SheetHeader>
               
               <div className="mt-6 space-y-6">
-                {/* Model (read-only) - FIRST */}
-                <div className="space-y-2">
+                {/* Model Selection with Cost & Performance Ratings */}
+                <div className="space-y-3">
                   <Label htmlFor="model" className="flex items-center gap-2">
-                    Model
-                    <Lock className="h-3 w-3 text-gray-400" />
+                    Model (OpenRouter)
                   </Label>
-                  <Input
-                    id="model"
-                    value={selectedAgent.model || "openai/gpt-4o-mini"}
-                    disabled
-                    className="bg-gray-50 text-gray-600 cursor-not-allowed"
-                  />
-                  <p className="text-xs text-amber-600 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3" />
-                    To change model, upgrade to Enterprise plan
+                  <div className="border rounded-lg bg-white divide-y">
+                    {AVAILABLE_MODELS.map((model) => (
+                      <button
+                        key={model.id}
+                        onClick={() => setEditedModel(model.id)}
+                        className={cn(
+                          "w-full text-left px-3 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between",
+                          editedModel === model.id && "bg-blue-50 border-l-2 border-blue-500"
+                        )}
+                      >
+                        <div>
+                          <div className="font-medium text-sm text-gray-900">{model.label}</div>
+                          <div className="text-xs text-gray-500 font-mono mt-1">{model.id}</div>
+                        </div>
+                        <div className="flex flex-col gap-2 ml-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-600 whitespace-nowrap">Cost:</span>
+                            <StarRating stars={model.costStars} />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-600 whitespace-nowrap">Performance:</span>
+                            <StarRating stars={model.performanceStars} />
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Click to select a model. Cost: ⭐ = cheaper, Performance: ⭐ = faster/smarter
                   </p>
                 </div>
                 

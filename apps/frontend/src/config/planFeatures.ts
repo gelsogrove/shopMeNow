@@ -241,8 +241,8 @@ export const PLAN_CONFIGS_FALLBACK: Record<string, PlanConfig> = {
   },
   ENTERPRISE: {
     name: "Enterprise",
-    price: 140,
-    priceLabel: "$140",
+    price: 160,
+    priceLabel: "$160",
     priceSuffix: "/month",
     description: "For large-scale operations",
     descriptionKey: "pricing.enterprise.desc",

@@ -62,14 +62,6 @@ export const platformConfigData: PlatformConfigData[] = [
       "Enterprise plan - $140/month for large scale operations (was $175)",
     isActive: true,
   },
-  {
-    type: "PRICE" as const,
-    key: "MONTHLY_CHANNEL_COST",
-    value: "45",
-    description: "Monthly WhatsApp channel cost (included in all paid plans)",
-    isActive: true,
-  },
-
   // ============================================================================
   // 📱 USAGE COSTS - Only 2 types!
   // ============================================================================

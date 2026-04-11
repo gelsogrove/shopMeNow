@@ -12,7 +12,7 @@ import logger from "../../../utils/logger"
 import { getCurrencySymbol } from "../../../utils/currency"
 
 export interface PromptVariables {
-  // Workspace Config (16 variables)
+  // Workspace Config
   workspaceName: string
   workspaceUrl: string
   toneOfVoice: string
@@ -25,7 +25,7 @@ export interface PromptVariables {
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   humanSupportInstructions: string
-  frustrationEscalationInstructions: string // 🆕 Feature 203: Custom escalation triggers
+  frustrationEscalationInstructions: string
   operatorContactMethod: string
   operatorWhatsappNumber: string
   allowedExternalLinks: string
@@ -36,32 +36,40 @@ export interface PromptVariables {
   businessType: string
   websiteUrl: string
   supportEmail: string
+  registrationPage: string
+  requireManualApproval: boolean
+  enableCalendarBooking: boolean
+  defaultLanguage: string
+  catalogBaseLanguage: string
+  translateProductNames: boolean
+  translateCategoryNames: boolean
+  translateServiceNames: boolean
 
-  // Customer Context (7 variables)
+  // Customer Context
   customerName: string
   customerEmail: string
   customerPhone: string
   customerDiscount: number
-  customerIsActive?: boolean // 🔒 Feature 174: Registration status
+  customerIsActive?: boolean
   pushNotificationsConsent: boolean
   languageUser: string
   lastOrderCode: string
 
-  // Sales Agent (3 variables)
+  // Sales Agent
   agentName: string
   agentPhone: string
   agentEmail: string
 
-  // Dynamic Data (7 variables)
+  // Dynamic Data
   products: string
   services: string
   categories: string
   offers: string
-  faq: string // 🆕 FAQ content for Router
+  faq: string
   lastOrder: string
   conversationHistory: string
 
-  // Counters (3 variables)
+  // Counters
   faqCount: number
   productsCount: number
   offersActive: boolean
@@ -123,6 +131,7 @@ export class VariableResolverService {
         websiteUrl: true,
         language: true,
         currency: true,
+        defaultLanguage: true,
         toneOfVoice: true,
         botIdentityResponse: true,
         welcomeMessage: true,
@@ -130,8 +139,9 @@ export class VariableResolverService {
         sellsProductsAndServices: true,
         hasHumanSupport: true,
         hasSalesAgents: true,
+        enableCalendarBooking: true,
         humanSupportInstructions: true,
-        frustrationEscalationInstructions: true, // 🆕 Feature 203
+        frustrationEscalationInstructions: true,
         operatorContactMethod: true,
         operatorWhatsappNumber: true,
         allowedExternalLinks: true,
@@ -140,6 +150,12 @@ export class VariableResolverService {
         address: true,
         chatbotName: true,
         businessType: true,
+        registrationPage: true,
+        requireManualApproval: true,
+        catalogBaseLanguage: true,
+        translateProductNames: true,
+        translateCategoryNames: true,
+        translateServiceNames: true,
       },
     })
 
@@ -184,6 +200,14 @@ export class VariableResolverService {
     variables.businessType = workspace.businessType || "other"
     variables.websiteUrl = workspace.websiteUrl || workspace.url || ""
     variables.supportEmail = workspace.notificationEmail || ""
+    variables.registrationPage = workspace.registrationPage || ""
+    variables.requireManualApproval = workspace.requireManualApproval ?? false
+    variables.enableCalendarBooking = workspace.enableCalendarBooking ?? false
+    variables.defaultLanguage = workspace.defaultLanguage || "en"
+    variables.catalogBaseLanguage = workspace.catalogBaseLanguage || "it"
+    variables.translateProductNames = workspace.translateProductNames ?? false
+    variables.translateCategoryNames = workspace.translateCategoryNames ?? false
+    variables.translateServiceNames = workspace.translateServiceNames ?? true
 
     // 🔧 Aliases for template compatibility (templates use old variable names)
     ;(variables as any).companyName = variables.workspaceName

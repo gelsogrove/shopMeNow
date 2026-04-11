@@ -124,7 +124,7 @@ const translations = {
     "pricing.enterprise.desc": "Per operazioni su larga scala",
     "pricing.usage.title":
       "Le seguenti tariffe a consumo sono aggiuntive e si applicano a tutti i piani",
-    "pricing.usage.message": "per Messaggio WhatsApp",
+    "pricing.usage.message": "per Message",
     "pricing.usage.message.desc": "Sarà scalato dal tuo credito",
     "pricing.usage.widget": "per Messaggio Widget",
     "pricing.usage.widget.desc": "Sarà scalato dal tuo credito",

@@ -19,7 +19,7 @@ import logger from '../utils/logger'
  * │                                                                             │
  * │ 2. TWO SEPARATE BILLING SYSTEMS (CRITICAL)                                  │
  * │    A) SUBSCRIPTION FEE (Monthly Payment)                                    │
- * │       • Fixed monthly cost: $22 Basic, $45 Premium, $140 Enterprise         │
+ * │       • Fixed monthly cost: $22 Basic, $45 Premium, $160 Enterprise         │
  * │       • Paid EXTERNALLY via PayPal/Stripe on 1st of month                   │
  * │       • Covers platform access, features, and limits                        │
  * │       • ❌ DOES NOT TOUCH user.creditBalance field                          │

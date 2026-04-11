@@ -43,7 +43,6 @@ export class PricingController {
    *                     BASIC_MONTHLY: 22
    *                     PREMIUM_MONTHLY: 45
    *                     ENTERPRISE_MONTHLY: 140
-   *                     MONTHLY_CHANNEL_COST: 45
    *                 usage:
    *                   type: object
    *                   description: Pay-per-use pricing

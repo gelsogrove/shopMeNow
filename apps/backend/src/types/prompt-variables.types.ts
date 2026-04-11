@@ -256,6 +256,54 @@ export interface PromptVariables {
    */
   supportEmail: string
 
+  /** Pagina registrazione custom
+   * Template: {{registrationPage}}
+   * Source: workspace.registrationPage || ''
+   */
+  registrationPage: string
+
+  /** Approvazione manuale registrazione
+   * Template: {{requireManualApproval}} (boolean for {{#if}})
+   * Source: workspace.requireManualApproval
+   */
+  requireManualApproval: boolean
+
+  /** Prenotazione calendario abilitata
+   * Template: {{enableCalendarBooking}} (boolean for {{#if}})
+   * Source: workspace.enableCalendarBooking
+   */
+  enableCalendarBooking: boolean
+
+  /** Lingua default workspace
+   * Template: {{defaultLanguage}}
+   * Source: workspace.defaultLanguage || 'en'
+   */
+  defaultLanguage: string
+
+  /** Lingua base catalogo
+   * Template: {{catalogBaseLanguage}}
+   * Source: workspace.catalogBaseLanguage || 'it'
+   */
+  catalogBaseLanguage: string
+
+  /** Traduzione nomi prodotti abilitata
+   * Template: {{translateProductNames}} (boolean for {{#if}})
+   * Source: workspace.translateProductNames
+   */
+  translateProductNames: boolean
+
+  /** Traduzione nomi categorie abilitata
+   * Template: {{translateCategoryNames}} (boolean for {{#if}})
+   * Source: workspace.translateCategoryNames
+   */
+  translateCategoryNames: boolean
+
+  /** Traduzione nomi servizi abilitata
+   * Template: {{translateServiceNames}} (boolean for {{#if}})
+   * Source: workspace.translateServiceNames
+   */
+  translateServiceNames: boolean
+
   // ══════════════════════════════════════════════════════════════
   // DYNAMIC CONTENT (loaded separately, not from single DB query)
   // E-COMMERCE ONLY: These variables are filtered when sellsProductsAndServices=false

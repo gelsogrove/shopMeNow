@@ -34,7 +34,7 @@ export const defaultAgents = (
     description:
       "Pure orchestration: intent classification, context interpretation for short responses (with CONFERMA keyword), and FAQ handling",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0, // ✅ Zero temperature = fully deterministic routing (no creativity needed)
     maxTokens: 500, // ✅ JSON response only
     order: 0,
@@ -53,7 +53,7 @@ export const defaultAgents = (
     description:
       "Human operator manual message bypass (no LLM processing, direct to customer)",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0,
     maxTokens: 100,
     order: 0.5,
@@ -72,7 +72,7 @@ export const defaultAgents = (
     description:
       "Specialist in product search with progressive filtering strategy (Regola 11): guides customers from categories to specific products",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.2, // ✅ Low temperature for consistent product responses
     maxTokens: 2048,
     order: 1,
@@ -91,7 +91,7 @@ export const defaultAgents = (
     description:
       "Specialist in cart operations: add/remove products, repeat orders, manage quantities",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.2, // ✅ Low temperature for consistent cart operations
     maxTokens: 2048,
     order: 2,
@@ -110,7 +110,7 @@ export const defaultAgents = (
     description:
       "Specialist in order tracking, history, invoices, and delivery status",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.2, // ✅ Low temperature for consistent order responses
     maxTokens: 2048,
     order: 3,
@@ -129,7 +129,7 @@ export const defaultAgents = (
     description:
       "Specialist in customer support, human escalation, complaints, and urgent issues",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.2, // ✅ Low temperature for empathetic but consistent support
     maxTokens: 2048,
     order: 4,
@@ -148,7 +148,7 @@ export const defaultAgents = (
     description:
       "Specialist in creating concise conversation summaries for support team email notifications",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.2, // Low temperature for consistent, factual summaries
     maxTokens: 500,   // 250 words ≈ 350-500 tokens
     order: 5,
@@ -167,7 +167,7 @@ export const defaultAgents = (
     description:
       "Specialist in managing customer profile information and notification preferences (enable/disable push notifications)",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.2, // ✅ Low temperature for consistent profile operations
     maxTokens: 500,
     order: 6,
@@ -186,7 +186,7 @@ export const defaultAgents = (
     description:
       "Specialist in push notification campaigns, announcements, and broadcast messages",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.3, // Low-medium temperature for consistent but friendly notifications
     maxTokens: 1000,
     order: 7,
@@ -205,7 +205,7 @@ export const defaultAgents = (
     description:
       "Final layer: translates response to customer's language (IT/EN/ES/PT), blocks profanity and spam, validates external links",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.3, // Low temperature for consistent translations
     maxTokens: 1000,
     order: 8,
@@ -224,7 +224,7 @@ export const defaultAgents = (
     description:
       "Humanization layer: transforms technical responses into natural, contextual messages with greetings, offers suggestions, and personality",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0.7, // Higher for creativity and natural language
     maxTokens: 500,
     order: 9, // After Translation (8)
@@ -243,7 +243,7 @@ export const defaultAgents = (
     description:
       "Security validation: detects dangerous content, SQL injection, XSS, offensive language. Blocks unsafe messages completely (no send, shows 🚫 icon)",
 
-    model: "openai/gpt-4o-mini",
+    model: "mistral/mistral-large",
     temperature: 0, // Zero temperature = deterministic security checks
     maxTokens: 500, // Security checks don't need long responses
     order: 98, // Before TRANSLATION - final security check before sending

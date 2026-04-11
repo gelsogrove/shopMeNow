@@ -827,6 +827,9 @@ export class SubscriptionBillingService {
       if (usage.productsCount > targetPlanConfig.maxProducts) {
         violations.push(`Too many products: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
       }
+      if (targetPlanConfig.maxTeamMembers !== null && usage.teamMembersCount > targetPlanConfig.maxTeamMembers) {
+        violations.push(`Too many team members: ${usage.teamMembersCount}/${targetPlanConfig.maxTeamMembers}`)
+      }
 
       if (violations.length > 0) {
         throw new Error(
@@ -933,6 +936,9 @@ export class SubscriptionBillingService {
     }
     if (usage.productsCount > targetPlanConfig.maxProducts) {
       violations.push(`Prodotti: ${usage.productsCount}/${targetPlanConfig.maxProducts}`)
+    }
+    if (targetPlanConfig.maxTeamMembers !== null && usage.teamMembersCount > targetPlanConfig.maxTeamMembers) {
+      violations.push(`Membri del team: ${usage.teamMembersCount}/${targetPlanConfig.maxTeamMembers}`)
     }
 
     if (violations.length > 0) {

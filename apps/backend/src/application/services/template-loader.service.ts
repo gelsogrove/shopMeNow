@@ -41,12 +41,17 @@ interface WorkspaceSettings {
   sellsProductsAndServices: boolean
   hasHumanSupport: boolean
   hasSalesAgents: boolean
-  address: string // 🆕 Physical address for {{#if address}} conditional
+  enableCalendarBooking: boolean
+  enableWidget: boolean
+  enableWhatsapp: boolean
+  requireManualApproval: boolean
+  address: string
   hasAddress: boolean
   botIdentityResponse: string
-  chatbotName: string // 🆕 Bot name for {{#if chatbotName}} in IDENTITY
-  companyName: string // 🆕 Company name for {{companyName}}
-  toneOfVoice: string // 🆕 Tone of voice for {{toneOfVoice}}
+  chatbotName: string
+  companyName: string
+  toneOfVoice: string
+  businessType: string
   customAiRules: string
   allowedExternalLinks: string
   humanSupportInstructions: string
@@ -55,6 +60,12 @@ interface WorkspaceSettings {
   operatorWhatsappNumber: string
   supportEmail: string
   websiteUrl: string
+  registrationPage: string
+  defaultLanguage: string
+  catalogBaseLanguage: string
+  translateProductNames: boolean
+  translateCategoryNames: boolean
+  translateServiceNames: boolean
 }
 
 export class TemplateLoaderService {
@@ -104,30 +115,41 @@ export class TemplateLoaderService {
       // 🔒 CRITICAL: Only pass boolean flags for {{#if}} conditionals
       // Do NOT pass string values like companyName, chatbotName - these must remain as {{variables}}
       const conditionalFlags = {
-        // Boolean flags for conditionals
+        // Direct boolean flags
         sellsProductsAndServices: settings.sellsProductsAndServices,
         hasHumanSupport: settings.hasHumanSupport,
         hasSalesAgents: settings.hasSalesAgents,
         hasAddress: settings.hasAddress,
-        // These determine if section should be included (truthy check for {{#if}})
-        // but the actual values are NOT replaced - they stay as {{variable}}
+        enableCalendarBooking: settings.enableCalendarBooking,
+        enableWidget: settings.enableWidget,
+        enableWhatsapp: settings.enableWhatsapp,
+        requireManualApproval: settings.requireManualApproval,
+        translateProductNames: settings.translateProductNames,
+        translateCategoryNames: settings.translateCategoryNames,
+        translateServiceNames: settings.translateServiceNames,
+        // Truthy string flags (has* aliases kept for backward compatibility)
         hasCustomAiRules: !!settings.customAiRules,
         hasBotIdentityResponse: !!settings.botIdentityResponse,
         hasChatbotName: !!settings.chatbotName,
         hasAllowedExternalLinks: !!settings.allowedExternalLinks,
         hasHumanSupportInstructions: !!settings.humanSupportInstructions,
         hasFrustrationEscalationInstructions: !!settings.frustrationEscalationInstructions,
-        // 🆕 NEW: For template conditionals that use the variable name directly
-        customAiRules: !!settings.customAiRules, // truthy for {{#if customAiRules}}
-        botIdentityResponse: !!settings.botIdentityResponse, // truthy for {{#if botIdentityResponse}}
-        chatbotName: !!settings.chatbotName, // truthy for {{#if chatbotName}}
-        address: !!settings.address, // truthy for {{#if address}}
-        allowedExternalLinks: !!settings.allowedExternalLinks, // truthy for {{#if allowedExternalLinks}}
+        // Direct name conditionals (truthy check for {{#if variableName}})
+        customAiRules: !!settings.customAiRules,
+        botIdentityResponse: !!settings.botIdentityResponse,
+        chatbotName: !!settings.chatbotName,
+        address: !!settings.address,
+        allowedExternalLinks: !!settings.allowedExternalLinks,
         humanSupportInstructions: !!settings.humanSupportInstructions,
         frustrationEscalationInstructions: !!settings.frustrationEscalationInstructions,
         operatorContactMethod: !!settings.operatorContactMethod,
         operatorWhatsappNumber: !!settings.operatorWhatsappNumber,
-        toneOfVoice: !!settings.toneOfVoice, // truthy for {{#if toneOfVoice}}
+        toneOfVoice: !!settings.toneOfVoice,
+        businessType: !!settings.businessType,
+        registrationPage: !!settings.registrationPage,
+        defaultLanguage: !!settings.defaultLanguage,
+        catalogBaseLanguage: !!settings.catalogBaseLanguage,
+        websiteUrl: !!settings.websiteUrl,
         ...extraConditionals,
       }
 
@@ -216,9 +238,14 @@ export class TemplateLoaderService {
         sellsProductsAndServices: true,
         hasHumanSupport: true,
         hasSalesAgents: true,
-        address: true, // 🆕 For {{#if address}} conditional in templates
+        enableCalendarBooking: true,
+        enableWidget: true,
+        enableWhatsapp: true,
+        requireManualApproval: true,
+        address: true,
         botIdentityResponse: true,
-        chatbotName: true, // 🆕 For {{#if chatbotName}} in IDENTITY section
+        chatbotName: true,
+        businessType: true,
         customAiRules: true,
         allowedExternalLinks: true,
         humanSupportInstructions: true,
@@ -228,8 +255,14 @@ export class TemplateLoaderService {
         notificationEmail: true,
         websiteUrl: true,
         url: true,
-        name: true, // 🆕 For {{companyName}}
-        toneOfVoice: true, // 🆕 For {{toneOfVoice}}
+        name: true,
+        toneOfVoice: true,
+        registrationPage: true,
+        defaultLanguage: true,
+        catalogBaseLanguage: true,
+        translateProductNames: true,
+        translateCategoryNames: true,
+        translateServiceNames: true,
       },
     })
 
@@ -245,12 +278,17 @@ export class TemplateLoaderService {
       sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
+      enableCalendarBooking: workspace.enableCalendarBooking ?? false,
+      enableWidget: workspace.enableWidget ?? false,
+      enableWhatsapp: workspace.enableWhatsapp ?? true,
+      requireManualApproval: workspace.requireManualApproval ?? false,
       address,
       hasAddress: !!address,
       botIdentityResponse: workspace.botIdentityResponse || "",
-      chatbotName: workspace.chatbotName || "", // 🆕 Bot name for IDENTITY
-      companyName: workspace.name || "", // 🆕 Company name
-      toneOfVoice: workspace.toneOfVoice || "friendly", // 🆕 Tone of voice
+      chatbotName: workspace.chatbotName || "",
+      companyName: workspace.name || "",
+      toneOfVoice: workspace.toneOfVoice || "friendly",
+      businessType: workspace.businessType || "other",
       customAiRules: workspace.customAiRules || "",
       allowedExternalLinks: allowedLinks,
       humanSupportInstructions: workspace.humanSupportInstructions || "",
@@ -259,6 +297,12 @@ export class TemplateLoaderService {
       operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",
       supportEmail: workspace.notificationEmail || "",
       websiteUrl: workspace.websiteUrl || workspace.url || "",
+      registrationPage: workspace.registrationPage || "",
+      defaultLanguage: workspace.defaultLanguage || "en",
+      catalogBaseLanguage: workspace.catalogBaseLanguage || "it",
+      translateProductNames: workspace.translateProductNames ?? false,
+      translateCategoryNames: workspace.translateCategoryNames ?? false,
+      translateServiceNames: workspace.translateServiceNames ?? true,
     }
 
     workspaceCache.set(workspaceId, { settings, timestamp: now })
