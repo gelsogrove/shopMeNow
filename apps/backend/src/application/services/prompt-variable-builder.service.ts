@@ -62,7 +62,7 @@ interface WorkspaceInput {
   botIdentityResponse?: string | null
   hasHumanSupport?: boolean | null
   humanSupportInstructions?: string | null
-  frustrationEscalationInstructions?: string | null // 🆕 For {{frustrationEscalationInstructions}}
+  frustrationEscalationInstructions?: string | null
   operatorContactMethod?: string | null
   operatorWhatsappNumber?: string | null
   hasSalesAgents?: boolean | null
@@ -75,6 +75,13 @@ interface WorkspaceInput {
   chatbotName?: string | null
   businessType?: string | null
   websiteUrl?: string | null
+  registrationPage?: string | null
+  requireManualApproval?: boolean | null
+  defaultLanguage?: string | null
+  catalogBaseLanguage?: string | null
+  translateProductNames?: boolean | null
+  translateCategoryNames?: boolean | null
+  translateServiceNames?: boolean | null
 }
 
 /**
@@ -208,6 +215,14 @@ export class PromptVariableBuilder {
       operatorWhatsappNumber: workspace?.operatorWhatsappNumber || VARIABLE_DEFAULTS.operatorWhatsappNumber!,
       websiteUrl: workspace?.websiteUrl || workspace?.url || VARIABLE_DEFAULTS.websiteUrl!,
       supportEmail: workspace?.notificationEmail || VARIABLE_DEFAULTS.supportEmail!,
+      registrationPage: workspace?.registrationPage || '',
+      requireManualApproval: workspace?.requireManualApproval ?? false,
+      enableCalendarBooking: workspace?.enableCalendarBooking ?? false,
+      defaultLanguage: workspace?.defaultLanguage || 'en',
+      catalogBaseLanguage: workspace?.catalogBaseLanguage || 'it',
+      translateProductNames: workspace?.translateProductNames ?? false,
+      translateCategoryNames: workspace?.translateCategoryNames ?? false,
+      translateServiceNames: workspace?.translateServiceNames ?? true,
 
       // Context variables
       lastOrderCode: context?.lastOrderCode,

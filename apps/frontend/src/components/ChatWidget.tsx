@@ -1006,7 +1006,7 @@ export function ChatWidget({
 
   const embeddedPopupSizeClasses = isEmbedded
     ? "w-full h-full rounded-[24px] shadow-none border-2"
-    : "w-[92vw] sm:w-[410px] h-[85vh] sm:h-[680px] max-h-[800px] rounded-3xl sm:rounded-3xl shadow-2xl border-2"
+    : "w-screen h-screen sm:w-[410px] sm:h-[680px] max-h-[800px] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
     
   // Generate light version of primary color for border
   const getBorderColor = (color: string) => {

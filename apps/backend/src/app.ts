@@ -649,7 +649,7 @@ app.post("/api/paypal/webhook", async (req, res) => {
 
         const activeConfig = configs[0]
         const authResponse = await fetch(
-          activeConfig.baseUrl === "https://api-m.sandbox.paypal.com"
+          activeConfig.apiBaseUrl === "https://api-m.sandbox.paypal.com"
             ? "https://api-m.sandbox.paypal.com/v1/oauth2/token"
             : "https://api-m.paypal.com/v1/oauth2/token",
           {
@@ -665,7 +665,7 @@ app.post("/api/paypal/webhook", async (req, res) => {
         if (authResponse.ok) {
           const { access_token } = await authResponse.json() as { access_token: string }
           const verifyResponse = await fetch(
-            activeConfig.baseUrl === "https://api-m.sandbox.paypal.com"
+            activeConfig.apiBaseUrl === "https://api-m.sandbox.paypal.com"
               ? "https://api-m.sandbox.paypal.com/v1/notifications/verify-webhook-signature"
               : "https://api-m.paypal.com/v1/notifications/verify-webhook-signature",
             {

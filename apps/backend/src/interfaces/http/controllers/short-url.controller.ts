@@ -111,7 +111,7 @@ export class ShortUrlController {
         // 🔐 SECURITY: Prevent open redirect — only allow URLs from known trusted domains
         const allowedOrigins = [
           config.frontendUrl,
-          config.apiUrl,
+          config.appUrl,
           process.env.BACKEND_URL,
           process.env.WIDGET_URL,
         ].filter(Boolean).map((u) => {

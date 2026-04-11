@@ -1029,7 +1029,7 @@ export function LoginPage() {
               </a>
               <span className="text-slate-900 text-xs font-semibold">|</span>
               <a
-                href="#contact"
+                href="/contact"
                 className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
               >
                 {t("nav.contact")}

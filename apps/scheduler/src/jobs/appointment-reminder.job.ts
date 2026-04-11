@@ -31,7 +31,6 @@ import { prisma, Prisma } from '../config/database'
 import logger from '../utils/logger'
 import nodemailer from 'nodemailer'
 
-const REMINDER_COST_WHATSAPP = 0.50 // $0.50 per WhatsApp reminder
 const REMINDER_COST_EMAIL = 0.00 // Free for email
 
 // Email transporter for appointment reminders
@@ -124,6 +123,13 @@ export async function appointmentReminderJob(): Promise<void> {
   const now = new Date()
 
   logger.info('[APPOINTMENT-REMINDER] Starting job')
+
+  // 💰 Read reminder cost dynamically from database
+  const platformConfig = await prisma.platformConfig.findUnique({
+    where: { key: "APPOINTMENT_REMINDER_WHATSAPP" }
+  })
+  const REMINDER_COST_WHATSAPP = platformConfig?.value ? parseFloat(platformConfig.value) : 0.50
+  logger.info(`[APPOINTMENT-REMINDER] Using WhatsApp reminder cost: €${REMINDER_COST_WHATSAPP}`)
 
   try {
     let totalProcessed = 0
