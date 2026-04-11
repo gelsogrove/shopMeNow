@@ -161,7 +161,7 @@ export class ProductRepository implements IProductRepository {
           workspaceId,
         },
         include: {
-          category: true,
+          productCategories: { include: { category: true } },
           characteristics: true,
         },
       })
@@ -190,7 +190,7 @@ export class ProductRepository implements IProductRepository {
           isActive: true, // Only active products can be added to cart
         },
         include: {
-          category: true,
+          productCategories: { include: { category: true } },
         },
       })
 
@@ -301,7 +301,7 @@ export class ProductRepository implements IProductRepository {
         },
         data: updateData,
         include: {
-          category: true,
+          productCategories: { include: { category: true } },
         },
       })
 
@@ -349,7 +349,7 @@ export class ProductRepository implements IProductRepository {
           stock: Math.max(0, stock), // Ensure stock isn't negative
         },
         include: {
-          category: true,
+          productCategories: { include: { category: true } },
         },
       })
 
@@ -375,7 +375,7 @@ export class ProductRepository implements IProductRepository {
           status,
         },
         include: {
-          category: true,
+          productCategories: { include: { category: true } },
         },
       })
 
@@ -562,7 +562,7 @@ export class ProductRepository implements IProductRepository {
       const products = await this.prisma.products.findMany({
         where,
         include: {
-          category: true, // Include category for name/translations
+          productCategories: { include: { category: true } }, // Include category for name/translations
           productCertifications: {
             include: {
               certification: true,
@@ -595,7 +595,6 @@ export class ProductRepository implements IProductRepository {
    */
   private getIncludeWithCertifications() {
     return {
-      category: true, // DEPRECATED: keep for backward compatibility
       productCertifications: {
         include: {
           certification: true,

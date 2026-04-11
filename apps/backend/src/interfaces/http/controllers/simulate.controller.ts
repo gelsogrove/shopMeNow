@@ -39,8 +39,8 @@ export class SimulateController {
 
       // If customerId is provided directly, use it (subsequent messages in session)
       if (customerId) {
-        customer = await prisma.customers.findUnique({
-          where: { id: customerId },
+        customer = await prisma.customers.findFirst({
+          where: { id: customerId, workspaceId },
           select: { id: true, name: true, language: true, discount: true },
         })
       }
@@ -81,9 +81,9 @@ export class SimulateController {
         return
       }
 
-      // Find or create chat session
+      // Find or create chat session (with workspace isolation)
       let chatSession = sessionId
-        ? await prisma.chatSession.findUnique({ where: { id: sessionId } })
+        ? await prisma.chatSession.findFirst({ where: { id: sessionId, workspaceId } })
         : null
 
       if (!chatSession) {
@@ -166,13 +166,13 @@ export class SimulateController {
         return
       }
 
-      // Cascade delete related data
-      const sessions = await prisma.chatSession.findMany({ where: { customerId: customer.id }, select: { id: true } })
+      // Cascade delete related data (with workspace isolation)
+      const sessions = await prisma.chatSession.findMany({ where: { customerId: customer.id, workspaceId }, select: { id: true } })
       const sessionIds = sessions.map((s) => s.id)
-      await prisma.conversationMessage.deleteMany({ where: { customerId: customer.id } })
+      await prisma.conversationMessage.deleteMany({ where: { customerId: customer.id, workspaceId } })
       await prisma.message.deleteMany({ where: { chatSessionId: { in: sessionIds } } })
-      await prisma.chatSession.deleteMany({ where: { customerId: customer.id } })
-      await prisma.customers.delete({ where: { id: customer.id } })
+      await prisma.chatSession.deleteMany({ where: { customerId: customer.id, workspaceId } })
+      await prisma.customers.delete({ where: { id: customer.id, workspaceId } })
 
       logger.info("[SIMULATE] 🗑️ Test customer deleted", { customerId: customer.id, phone: decodedPhone })
       res.json({ deleted: true, customerId: customer.id })

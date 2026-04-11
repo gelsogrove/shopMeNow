@@ -156,7 +156,7 @@ export class CartRepository {
         }
       }
 
-      return cart as CartWithItems
+      return cart as unknown as CartWithItems
     } catch (error) {
       logger.error('CartRepository.getOrCreateCart error:', error)
       throw error

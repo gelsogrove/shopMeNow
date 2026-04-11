@@ -11,9 +11,7 @@ export interface ProductWithPrice {
   id: string
   name: string
   price: number
-  categoryId?: string | null
   formato?: string | null
-  Sku?: string | null
   description?: string | null
   stock?: number
   sku?: string | null
@@ -116,7 +114,7 @@ export class PriceCalculationService {
         }
 
         // Calculate final price
-        const originalPrice = product.price
+        const originalPrice = Number(product.price)
         let finalPrice =
           appliedDiscount > 0
             ? originalPrice * (1 - appliedDiscount / 100)
@@ -128,6 +126,7 @@ export class PriceCalculationService {
 
         return {
           ...product,
+          price: Number(product.price),
           originalPrice,
           finalPrice,
           appliedDiscount,
@@ -198,12 +197,10 @@ export class PriceCalculationService {
         id: true,
         name: true,
         price: true,
-        categoryId: true,
         formato: true,
         sku: true,
         description: true,
         stock: true,
-        // sku: true // REMOVED: field no longer exists
       },
     })
   }

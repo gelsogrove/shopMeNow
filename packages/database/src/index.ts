@@ -73,7 +73,6 @@ export {
   TransactionType,
   BillingType,
   ConfigType,
-  PricingType,
   AgentType,
   SearchConversationState,
   SubscriptionStatus, // Feature 197: Subscription status enum

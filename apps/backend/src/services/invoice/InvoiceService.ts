@@ -50,9 +50,9 @@ export class InvoiceService {
     }
 
     // 2. Calculate totals from items
-    const subtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const tax = order.taxAmount || 0;
-    const total = order.totalAmount;
+    const subtotal = order.items.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+    const tax = Number(order.taxAmount) || 0;
+    const total = Number(order.totalAmount);
 
     // 3. Prepara dati fattura
     const invoiceData: InvoiceData = {
@@ -69,8 +69,8 @@ export class InvoiceService {
       items: order.items.map(item => ({
         name: item.product?.name || item.service?.name || 'Item',
         quantity: item.quantity,
-        price: item.unitPrice,
-        total: item.totalPrice
+        price: Number(item.unitPrice),
+        total: Number(item.totalPrice)
       })),
       subtotal,
       tax,

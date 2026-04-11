@@ -110,14 +110,14 @@ export class AnalyticsService {
       const totalCustomers = customers.length
       const totalMessages = messages.length
       const totalRevenue = orders.reduce(
-        (sum, order) => sum + (order.totalAmount || 0),
+        (sum, order) => sum + Number(order.totalAmount || 0),
         0
       )
       const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
 
       // 💰 NEW: Calculate from Billing table with progressive totals
       const usageCost = billingRecords.reduce(
-        (sum, record) => sum + (record.amount || 0),
+        (sum, record) => sum + Number(record.amount || 0),
         0
       )
 
@@ -703,7 +703,7 @@ export class AnalyticsService {
     let runningTotal = 0
     const withProgressiveTotals = sortedForCalculation.map((record) => {
       const previousWorkspaceTotal = runningTotal
-      runningTotal += record.amount
+      runningTotal += Number(record.amount)
 
       return {
         id: record.id,
@@ -714,7 +714,7 @@ export class AnalyticsService {
         customerEmail: record.customer?.email || null,
         description: record.description,
         userQuery: record.userQuery,
-        amount: record.amount,
+        amount: Number(record.amount),
         previousTotal: previousWorkspaceTotal, // WORKSPACE total, not customer total
         newTotal: runningTotal, // WORKSPACE cumulative total
         timestamp: record.createdAt,

@@ -1722,23 +1722,6 @@ model PlatformConfig {
   @@map("platform_config")
 }
 
-// Keep PricingConfig for backwards compatibility during migration
-model PricingConfig {
-  id          String      @id @default(cuid())
-  type        PricingType // PLAN, USAGE, or THRESHOLD
-  key         String      @unique // e.g., "BASIC_MONTHLY", "MESSAGE", "FREE_MESSAGES"
-  value       Float // The actual price or threshold value
-  description String?     @db.Text // Human-readable description
-  isActive    Boolean     @default(true) // Can be toggled without deleting
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@index([type])
-  @@index([key])
-  @@index([isActive])
-  @@map("pricing_config")
-}
-
 enum ConfigType {
   PRICE // Monetary values (€19, €0.10, etc.)
   FLAG // Boolean feature flags (canLogin, canRegister)
@@ -1746,11 +1729,6 @@ enum ConfigType {
   TEXT // Free-text settings (company name, address, etc.)
 }
 
-enum PricingType {
-  PLAN // Monthly subscription plans (€0, €29, €59, €199)
-  USAGE // Per-action costs (€0.15/message, €1.50/customer, etc.)
-  THRESHOLD // Free tier limits (200 messages, 50 products, etc.)
-}
 
 enum AgentType {
   ROUTER // order: 0 - Intent classification + FAQ

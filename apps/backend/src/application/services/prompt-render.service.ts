@@ -234,7 +234,6 @@ export class PromptRenderService {
       // Get Products (use isActive filter - no soft delete on Products)
       const products = await this.prisma.products.findMany({
         where: { workspaceId, isActive: true },
-        include: { category: true },
         orderBy: { name: "asc" },
       })
       const productsText = products.length > 0

@@ -396,7 +396,6 @@ export class ProductService {
         discountPercent: product.appliedDiscount || 0,
         discountSource: product.discountSource || undefined,
         discountName: product.discountName || undefined,
-        categoryId: product.categoryId,
       }))
     } catch (error) {
       logger.error("Error in getProductsWithOffersApplied service:", error)

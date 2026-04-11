@@ -136,7 +136,7 @@ export class BillingController {
       let runningTotal = 0
       const history = records.reverse().map((record) => {
         const previousTotal = runningTotal
-        const newCharge = record.amount
+        const newCharge = Number(record.amount)
         runningTotal += newCharge
 
         return {

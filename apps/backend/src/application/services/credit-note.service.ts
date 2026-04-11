@@ -33,6 +33,16 @@ export interface CreditNoteWithOrder {
 }
 
 export class CreditNoteService {
+  private mapCreditNote(cn: any): CreditNoteWithOrder {
+    return {
+      ...cn,
+      amount: Number(cn.amount),
+      order: cn.order
+        ? { ...cn.order, totalAmount: Number(cn.order.totalAmount) }
+        : cn.order,
+    }
+  }
+
   /**
    * Create a credit note for a delivered order (partial refund)
    * Business Rules:
@@ -78,12 +88,12 @@ export class CreditNoteService {
 
       // 4. Calculate total existing credit notes for this order
       const existingCreditNotesTotal = order.creditNotes.reduce(
-        (sum, cn) => sum + cn.amount,
+        (sum, cn) => sum + Number(cn.amount),
         0
       )
 
       // 5. Validate new credit note doesn't exceed remaining amount
-      const remainingAmount = order.totalAmount - existingCreditNotesTotal
+      const remainingAmount = Number(order.totalAmount) - existingCreditNotesTotal
       if (data.amount > remainingAmount) {
         throw new Error(
           `L'importo supera il valore residuo dell'ordine. Massimo consentito: €${remainingAmount.toFixed(2)}`
@@ -135,7 +145,7 @@ export class CreditNoteService {
         reason: data.reason,
       })
 
-      return creditNote
+      return this.mapCreditNote(creditNote)
     } catch (error) {
       logger.error("Error creating credit note:", error)
       throw error
@@ -188,7 +198,7 @@ export class CreditNoteService {
         },
       })
 
-      return creditNotes
+      return creditNotes.map((cn) => this.mapCreditNote(cn))
     } catch (error) {
       logger.error("Error fetching credit notes:", error)
       throw error
@@ -229,7 +239,7 @@ export class CreditNoteService {
         },
       })
 
-      return creditNote
+      return creditNote ? this.mapCreditNote(creditNote) : null
     } catch (error) {
       logger.error("Error fetching credit note:", error)
       throw error
@@ -292,7 +302,7 @@ export class CreditNoteService {
         },
       })
 
-      return creditNotes
+      return creditNotes.map((cn) => this.mapCreditNote(cn))
     } catch (error) {
       logger.error("Error fetching all credit notes:", error)
       throw error
@@ -307,7 +317,7 @@ export class CreditNoteService {
       where: { orderId },
       _sum: { amount: true },
     })
-    return result._sum.amount || 0
+    return Number(result._sum.amount) || 0
   }
 
   /**

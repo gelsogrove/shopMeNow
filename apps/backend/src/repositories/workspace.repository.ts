@@ -862,7 +862,6 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           wasenderQrGeneratedAt: true,
           wasenderIsActive: true,
           ownerId: true,
-          creditBalance: true,
           whatsappSettings: {
             select: {
               id: true,

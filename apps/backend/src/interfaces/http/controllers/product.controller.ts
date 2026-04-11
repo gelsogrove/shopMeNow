@@ -813,7 +813,7 @@ export class ProductController {
           workspaceId
         },
         include: {
-          category: { select: { name: true } },
+          productCategories: { include: { category: { select: { name: true } } } },
         },
         orderBy: { name: "asc" },
       })
@@ -860,11 +860,11 @@ export class ProductController {
           product.status || "ACTIVE",
           product.isActive ? "true" : "false",
           "",  // supplierName - deprecated
-          escapeCsv(product.category?.name),
+          escapeCsv(product.productCategories?.[0]?.category?.name),
           escapeCsv(product.type),
           escapeCsv(product.region),
           escapeCsv(product.allergens?.join("|")),
-          escapeCsv(product.certifications?.join("|")),
+          "",  // certifications - deprecated (use productCertifications relation)
         ]
         csvRows.push(row.join(","))
       }
@@ -1041,11 +1041,9 @@ export class ProductController {
                 stock: parseInt(rowData.stock) || 0,
                 status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
                 isActive: rowData.isactive?.toLowerCase() !== "false",
-                categoryId: categoryId || existingProduct.categoryId,
                 type: rowData.type || existingProduct.type,
                 region: rowData.region || existingProduct.region,
                 allergens,
-                certifications,
                 updatedAt: new Date(),
               },
             })
@@ -1062,11 +1060,9 @@ export class ProductController {
                 stock: parseInt(rowData.stock) || 0,
                 status: (rowData.status?.toUpperCase() as ProductStatus) || "ACTIVE",
                 isActive: rowData.isactive?.toLowerCase() !== "false",
-                categoryId,
                 type: rowData.type || "Temperatura ambiente",
                 region: rowData.region || null,
                 allergens,
-                certifications,
                 slug,
                 workspaceId,
               },

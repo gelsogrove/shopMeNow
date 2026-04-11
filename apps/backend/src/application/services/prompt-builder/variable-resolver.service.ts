@@ -351,7 +351,6 @@ export class VariableResolverService {
         sku: true,
         price: true,
         description: true,
-        category: { select: { name: true } },
       },
       take: 100, // Limit to avoid huge prompts
     })
@@ -370,7 +369,7 @@ export class VariableResolverService {
       
       // GENERICO: Funziona per panettoni, borse, qualsiasi prodotto
       // Format: - Nome (SKU) - €prezzo - Categoria (only if registered gets price)
-      return `- ${p.name} (${p.sku})${priceSection} - ${p.category?.name || "Uncategorized"}`
+      return `- ${p.name} (${p.sku})${priceSection}`
     }).join("\n")
   }
 

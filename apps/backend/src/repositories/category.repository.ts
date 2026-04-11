@@ -130,10 +130,10 @@ export class CategoryRepository implements ICategoryRepository {
     try {
       const products = await prisma.products.findMany({
         where: {
-          categoryId: id,
-          workspaceId
+          productCategories: { some: { categoryId: id } },
+          workspaceId,
         },
-        take: 1
+        take: 1,
       });
       
       return products.length > 0;

@@ -59,16 +59,16 @@ export const getOrdersTool = tool({
         orderCode: o.orderCode,
         status: o.status,
         paymentStatus: o.paymentStatus || undefined,
-        totalAmount: o.totalAmount,
-        shippingAmount: o.shippingAmount || undefined,
-        taxAmount: o.taxAmount || undefined,
-        discountAmount: o.discountAmount || undefined,
+        totalAmount: Number(o.totalAmount),
+        shippingAmount: o.shippingAmount ? Number(o.shippingAmount) : undefined,
+        taxAmount: o.taxAmount ? Number(o.taxAmount) : undefined,
+        discountAmount: o.discountAmount ? Number(o.discountAmount) : undefined,
         items: o.items.map((item) => ({
           productName: item.product?.name,
           serviceName: item.service?.name,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          totalPrice: item.totalPrice,
+          unitPrice: Number(item.unitPrice),
+          totalPrice: Number(item.totalPrice),
         })),
         createdAt: o.createdAt,
         trackingNumber: o.trackingNumber || undefined,
@@ -143,16 +143,16 @@ export const getOrderDetailsTool = tool({
           orderCode: order.orderCode,
           status: order.status,
           paymentStatus: order.paymentStatus || undefined,
-          totalAmount: order.totalAmount,
-          shippingAmount: order.shippingAmount || undefined,
-          taxAmount: order.taxAmount || undefined,
-          discountAmount: order.discountAmount || undefined,
+          totalAmount: Number(order.totalAmount),
+          shippingAmount: order.shippingAmount ? Number(order.shippingAmount) : undefined,
+          taxAmount: order.taxAmount ? Number(order.taxAmount) : undefined,
+          discountAmount: order.discountAmount ? Number(order.discountAmount) : undefined,
           items: order.items.map((item) => ({
             productName: item.product?.name,
             serviceName: item.service?.name,
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.totalPrice,
+            unitPrice: Number(item.unitPrice),
+            totalPrice: Number(item.totalPrice),
           })),
           createdAt: order.createdAt,
           trackingNumber: order.trackingNumber || undefined,
@@ -223,7 +223,7 @@ export const createOrderFromCartTool = tool({
       const orderItems: any[] = []
       
       for (const item of cart.items) {
-        const unitPrice = item.product?.price || item.service?.price || 0
+        const unitPrice = Number(item.product?.price || item.service?.price || 0)
         const totalPrice = unitPrice * item.quantity
         subtotal += totalPrice
         
@@ -295,11 +295,11 @@ export const createOrderFromCartTool = tool({
           },
         })
         
-        // Update stock for products
+        // Update stock for products (with workspace isolation)
         for (const item of cart.items) {
           if (item.productId && item.product) {
             await tx.products.update({
-              where: { id: item.productId },
+              where: { id: item.productId, workspaceId: ctx.workspaceId },
               data: { stock: item.product.stock - item.quantity },
             })
           }
@@ -320,14 +320,14 @@ export const createOrderFromCartTool = tool({
           orderCode: order.orderCode,
           status: order.status,
           paymentStatus: order.paymentStatus || undefined,
-          totalAmount: order.totalAmount,
-          discountAmount: order.discountAmount || undefined,
+          totalAmount: Number(order.totalAmount),
+          discountAmount: order.discountAmount ? Number(order.discountAmount) : undefined,
           items: order.items.map((item) => ({
             productName: item.product?.name,
             serviceName: item.service?.name,
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.totalPrice,
+            unitPrice: Number(item.unitPrice),
+            totalPrice: Number(item.totalPrice),
           })),
           createdAt: order.createdAt,
           notes: order.notes || undefined,

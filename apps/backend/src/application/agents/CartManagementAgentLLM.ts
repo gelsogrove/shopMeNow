@@ -903,12 +903,12 @@ export class CartManagementAgentLLM {
           const itemsSummary = orderDetails.items
             .map((item) => {
               const product = item.product
-              return `- ${product.name} x${item.quantity} (${formatCartPrice(item.unitPrice)})`
+              return `- ${product.name} x${item.quantity} (${formatCartPrice(Number(item.unitPrice))})`
             })
             .join("\n")
 
           const totalPrice = orderDetails.items.reduce(
-            (sum, item) => sum + item.unitPrice * item.quantity,
+            (sum, item) => sum + Number(item.unitPrice) * item.quantity,
             0
           )
 
@@ -922,8 +922,8 @@ export class CartManagementAgentLLM {
             items: orderDetails.items.map((item) => ({
               productName: item.product.name,
               quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              total: smartRoundPrice(item.unitPrice * item.quantity).toString(),
+              unitPrice: Number(item.unitPrice),
+              total: smartRoundPrice(Number(item.unitPrice) * item.quantity).toString(),
             })),
           }
 

@@ -896,21 +896,15 @@ router.post(
           isActive: true,
           imageUrl: true,
           formato: true,
-          category: {
+          productCategories: {
             select: {
-              id: true,
-              name: true,
+              category: { select: { id: true, name: true } },
             },
           },
           createdAt: true,
           updatedAt: true,
         },
         orderBy: [
-          {
-            category: {
-              name: "asc",
-            },
-          },
           {
             name: "asc",
           },
@@ -919,10 +913,11 @@ router.post(
 
       // Apply customer discount to all products
       const productsWithDiscounts = products.map((product) => {
-        const originalPrice = product.price
+        const originalPrice = Number(product.price)
         const discountAmount = originalPrice * (customerDiscount / 100)
         const finalPrice = originalPrice - discountAmount
         const appliedDiscount = customerDiscount > 0 ? customerDiscount : 0
+        const cat = product.productCategories?.[0]?.category
 
         return {
           id: product.id,
@@ -938,12 +933,7 @@ router.post(
           stock: product.stock,
           isActive: product.isActive,
           imageUrl: product.imageUrl || [],
-          category: product.category
-            ? {
-                id: product.category.id,
-                name: product.category.name,
-              }
-            : null,
+          category: cat ? { id: cat.id, name: cat.name } : null,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
         }

@@ -163,7 +163,7 @@ export const getServicesTool = tool({
         code: s.code,
         name: s.name,
         description: s.description,
-        price: s.price,
+        price: Number(s.price),
         duration: s.duration,
         imageUrl: s.imageUrl,
       }))

@@ -25,7 +25,6 @@ import { defaultFAQs } from "./data/defaultFAQs"
 import { faqs } from "./data/faqs"
 import { offers } from "./data/offers"
 import { platformConfigData } from "./data/platformConfig"
-import { pricingConfigData } from "./data/pricingConfig"
 import { products } from "./data/products"
 import { TRANSLATION_PROMPT } from "./data/agent-templates/translation"
 import { services } from "./data/services"
@@ -1600,42 +1599,7 @@ Can I help with anything else?"`,
 
   console.log(`✅ Created 2 additional languages (ESP, PRT)`)
 
-  // 6. Create Pricing Configuration (Single Source of Truth)
-  console.log("💰 Creating pricing configuration...")
-
-  for (const pricing of pricingConfigData) {
-    await prisma.pricingConfig.upsert({
-      where: { key: pricing.key },
-      update: {
-        type: pricing.type,
-        value: pricing.value,
-        description: pricing.description,
-        isActive: pricing.isActive,
-      },
-      create: {
-        type: pricing.type,
-        key: pricing.key,
-        value: pricing.value,
-        description: pricing.description,
-        isActive: pricing.isActive,
-      },
-    })
-  }
-
-  console.log(
-    `✅ Created/Updated ${pricingConfigData.length} pricing configurations`
-  )
-  console.log(
-    `   - Plans: ${pricingConfigData.filter((p) => p.type === "PLAN").length}`
-  )
-  console.log(
-    `   - Usage: ${pricingConfigData.filter((p) => p.type === "USAGE").length}`
-  )
-  console.log(
-    `   - Thresholds: ${pricingConfigData.filter((p) => p.type === "THRESHOLD").length}`
-  )
-
-  // 6b. Create Platform Configuration (NEW Single Source of Truth)
+  // 6. Create Platform Configuration (Single Source of Truth)
   console.log("🚀 Creating platform configuration (NEW)...")
 
   for (const config of platformConfigData) {
@@ -2941,8 +2905,7 @@ Confermi la tua presenza?`,
   })
 
   // Use pricing from database (with fallback for seed)
-  const messageCost =
-    pricingConfigData.find((p) => p.key === "MESSAGE")?.value ?? 0.15
+  const messageCost = 0.15
   let messageBillingRecords = 0
   let totalMessages = 0
 
@@ -3022,8 +2985,7 @@ Confermi la tua presenza?`,
     where: { workspaceId: workspace.id },
   })
 
-  const pushCampaignCost =
-    pricingConfigData.find((p) => p.key === "PUSH_CAMPAIGN")?.value ?? 1.0
+  const pushCampaignCost = 1.0
   let pushCampaignCount = 0
 
   if (customersForPush.length >= 3) {

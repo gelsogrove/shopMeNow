@@ -237,7 +237,6 @@ export class CatalogQueryService {
           productTypes: {
             select: { type: { select: { name: true } } },
           },
-          certifications: true,
           allergens: true,
         },
         orderBy: { name: "asc" },

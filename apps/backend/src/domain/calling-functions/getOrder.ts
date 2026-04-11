@@ -94,8 +94,8 @@ export async function getOrder(
       serviceId: item.serviceId || undefined,
       name: item.product?.name || item.service?.name || "Unknown",
       quantity: item.quantity,
-      price: item.unitPrice,
-      total: item.totalPrice,
+      price: Number(item.unitPrice),
+      total: Number(item.totalPrice),
     }))
 
     // Format response
@@ -103,7 +103,7 @@ export async function getOrder(
       id: order.id,
       orderCode: order.orderCode,
       status: order.status || "PENDING",
-      totalAmount: order.totalAmount,
+      totalAmount: Number(order.totalAmount),
       currency: order.customer?.currency || "EUR",
       createdAt: order.createdAt.toISOString(),
       deliveryDate: undefined, // Not in schema yet
@@ -120,7 +120,7 @@ export async function getOrder(
       creditNotes: order.creditNotes.length > 0
         ? order.creditNotes.map((cn) => ({
             creditNoteCode: cn.creditNoteCode,
-            amount: cn.amount,
+            amount: Number(cn.amount),
             reason: cn.reason,
             createdAt: cn.createdAt.toISOString(),
           }))

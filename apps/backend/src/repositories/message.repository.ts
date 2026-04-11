@@ -1320,16 +1320,14 @@ export class MessageRepository {
           },
           region: true, // ✅ Feature 123 - C2: Add region for single product details
           type: true, // ✅ Bonus: Temperature info for product search
-          category: {
+          productCategories: {
             select: {
-              name: true,
+              category: { select: { name: true } },
             },
           },
         },
         orderBy: {
-          category: {
-            name: "asc",
-          },
+          name: "asc",
         },
       })
 
@@ -1353,7 +1351,7 @@ export class MessageRepository {
       // Raggruppa i prodotti per categoria con prezzi scontati
       const productsByCategory = products.reduce(
         (acc, product) => {
-          const categoryName = product.category?.name || "Senza Categoria"
+          const categoryName = product.productCategories?.[0]?.category?.name || "Senza Categoria"
           const priceData = priceMap.get(product.id)
           if (!acc[categoryName]) {
             acc[categoryName] = []
@@ -2276,24 +2274,24 @@ export class MessageRepository {
       // Without this, WelcomeMessageHandler thinks customer already chatted
       // because it checks conversationMessage.count (different table!)
       
-      // First, get all conversationMessage IDs for this session
+      // First, get all conversationMessage IDs for this session (with workspace isolation)
       const conversationMessages = await this.prisma.conversationMessage.findMany({
-        where: { conversationId: chatSessionId },
+        where: { conversationId: chatSessionId, workspaceId },
         select: { id: true },
       })
-      
+
       if (conversationMessages.length > 0) {
         const messageIds = conversationMessages.map((m) => m.id)
-        
+
         // Nullify WhatsAppQueue FK references to avoid constraint violations
         await this.prisma.whatsAppQueue.updateMany({
           where: { conversationMessageId: { in: messageIds } },
           data: { conversationMessageId: null },
         })
-        
-        // Now safe to delete conversation messages
+
+        // Now safe to delete conversation messages (with workspace isolation)
         const deletedConversationMessages = await this.prisma.conversationMessage.deleteMany({
-          where: { conversationId: chatSessionId },
+          where: { conversationId: chatSessionId, workspaceId },
         })
         
         logger.info(
@@ -2313,11 +2311,11 @@ export class MessageRepository {
       // This ensures the bot responds again after all chats are deleted
       if (deletedSession.customerId) {
         const remainingSessions = await this.prisma.chatSession.count({
-          where: { customerId: deletedSession.customerId },
+          where: { customerId: deletedSession.customerId, workspaceId },
         })
         if (remainingSessions === 0) {
           await this.prisma.customers.update({
-            where: { id: deletedSession.customerId },
+            where: { id: deletedSession.customerId, workspaceId },
             data: { activeChatbot: true },
           })
           logger.info(`deleteChat: Reset activeChatbot=true for customer ${deletedSession.customerId} (no remaining sessions)`)
@@ -2998,14 +2996,9 @@ export class MessageRepository {
           name: "asc",
         },
         include: {
-          _count: {
-            select: {
-              products: {
-                where: {
-                  isActive: true,
-                },
-              },
-            },
+          productCategories: {
+            where: { product: { isActive: true } },
+            select: { productId: true },
           },
         },
       })
@@ -3018,7 +3011,7 @@ export class MessageRepository {
         .map((category, index) => {
           const name = category.name || "Categoria"
           const description = category.description || ""
-          const productCount = category._count.products
+          const productCount = category.productCategories?.length ?? 0
 
           // Prendi una descrizione breve (prima frase o primi 80 caratteri)
           const shortDesc = description

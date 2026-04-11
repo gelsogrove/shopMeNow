@@ -294,9 +294,9 @@ export class CustomerRepository implements ICustomerRepository {
       logger.info("Full updateData:", updateData)
       logger.info("==============================")
 
-      // Update the customer record
+      // Update the customer record (with workspace isolation)
       const updatedCustomer = await prisma.customers.update({
-        where: { id },
+        where: { id, workspaceId },
         data: updateData,
       })
 

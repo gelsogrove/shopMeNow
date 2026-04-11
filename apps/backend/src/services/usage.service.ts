@@ -143,7 +143,7 @@ export const usageService = {
 
       // Calculate total cost and messages
       const totalCost = usageRecords.reduce(
-        (sum, record) => sum + record.price,
+        (sum, record) => sum + Number(record.price),
         0
       )
       const totalMessages = usageRecords.length
@@ -157,7 +157,7 @@ export const usageService = {
         const dateKey = record.createdAt.toISOString().split("T")[0]
         const existing = dailyUsageMap.get(dateKey) || { cost: 0, messages: 0 }
         dailyUsageMap.set(dateKey, {
-          cost: existing.cost + record.price,
+          cost: existing.cost + Number(record.price),
           messages: existing.messages + 1,
         })
       })
@@ -189,7 +189,7 @@ export const usageService = {
         }
         clientUsageMap.set(record.clientId, {
           ...existing,
-          cost: existing.cost + record.price,
+          cost: existing.cost + Number(record.price),
           messages: existing.messages + 1,
         })
       })
@@ -209,7 +209,7 @@ export const usageService = {
         const existing = hourlyUsageMap.get(hour) || { messages: 0, cost: 0 }
         hourlyUsageMap.set(hour, {
           messages: existing.messages + 1,
-          cost: existing.cost + record.price,
+          cost: existing.cost + Number(record.price),
         })
       })
 
@@ -250,8 +250,8 @@ export const usageService = {
         }),
       ])
 
-      const currentMonth = currentMonthUsage._sum.price || 0
-      const previousMonth = previousMonthUsage._sum.price || 0
+      const currentMonth = Number(currentMonthUsage._sum.price) || 0
+      const previousMonth = Number(previousMonthUsage._sum.price) || 0
       const growth =
         previousMonth > 0
           ? ((currentMonth - previousMonth) / previousMonth) * 100
@@ -309,7 +309,7 @@ export const usageService = {
         _count: true,
       })
 
-      const totalCost = result._sum.price || 0
+      const totalCost = Number(result._sum.price) || 0
       const totalMessages = result._count || 0
       const averageDailyCost = totalCost / days
       const averageDailyMessages = totalMessages / days

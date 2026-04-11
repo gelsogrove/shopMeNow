@@ -554,17 +554,17 @@ export class TrashController {
       let deletedCount = 0
 
       if (entityType === "CUSTOMER") {
-        // Delete customer and all related data
+        // Delete customer and all related data (with workspace isolation)
         await this.prisma.$transaction(async (tx) => {
           await tx.message.deleteMany({
-            where: { chatSession: { customerId: id } },
+            where: { chatSession: { customerId: id, workspaceId: itemToDelete.workspaceId } },
           })
-          await tx.chatSession.deleteMany({ where: { customerId: id } })
+          await tx.chatSession.deleteMany({ where: { customerId: id, workspaceId: itemToDelete.workspaceId } })
           await tx.orderItems.deleteMany({
-            where: { order: { customerId: id } },
+            where: { order: { customerId: id, workspaceId: itemToDelete.workspaceId } },
           })
-          await tx.orders.deleteMany({ where: { customerId: id } })
-          const customer = await tx.customers.delete({ where: { id } })
+          await tx.orders.deleteMany({ where: { customerId: id, workspaceId: itemToDelete.workspaceId } })
+          const customer = await tx.customers.delete({ where: { id, workspaceId: itemToDelete.workspaceId } })
           deletedCount++
 
           // Audit log with admin details

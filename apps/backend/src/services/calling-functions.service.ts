@@ -1235,7 +1235,9 @@ export class CallingFunctionsService {
             isActive: true,
           },
           include: {
-            category: { select: { name: true } },
+            productCategories: {
+              select: { category: { select: { name: true } } },
+            },
             productCertifications: {
               select: {
                 certification: { select: { name: true } }
@@ -1384,7 +1386,7 @@ export class CallingFunctionsService {
             price: customerIsActive ? (pricing?.finalPrice || product.price) : null,
             description: product.description,
             stock: product.stock,
-            category: product.category?.name,
+            category: product.productCategories?.[0]?.category?.name,
             region: product.region,
             type: product.type,
             certifications: certifications,

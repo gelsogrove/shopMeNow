@@ -1193,7 +1193,9 @@ export class ChatEngineService {
     const productRecord = await this.prisma.products.findFirst({
       where,
       include: {
-        category: { select: { name: true } },
+        productCategories: {
+          include: { category: { select: { name: true } } },
+        },
         productCertifications: {
           include: { certification: true },
         },
@@ -1218,25 +1220,24 @@ export class ChatEngineService {
         certifications.add(relation.certification.name)
       }
     }
-    for (const inline of productRecord.certifications || []) {
-      if (inline) certifications.add(inline)
-    }
 
     const type =
       productRecord.productTypes?.[0]?.type?.name ||
       productRecord.type ||
       null
 
+    const categoryName = productRecord.productCategories?.[0]?.category?.name
+
     const productData: ProductContextData = {
       id: productRecord.id,
       name: productRecord.name,
       description: productRecord.description,
       format: productRecord.formato,
-      price: productRecord.price,
+      price: Number(productRecord.price),
       region: productRecord.region,
       certifications: Array.from(certifications),
       type,
-      tags: [productRecord.category?.name, productRecord.region].filter(Boolean) as string[],
+      tags: [categoryName, productRecord.region].filter(Boolean) as string[],
       storageInfo: null,
       pairingSuggestions: undefined,
       ingredients: [],

@@ -203,8 +203,8 @@ export const getProductDetailsTool = tool({
       
       const customerDiscount = ctx.customerDiscount || 0
       // 🔒 Feature 174: Handle null prices for non-registered users
-      const discountedPrice = (customerDiscount > 0 && product.price !== null) 
-        ? product.price * (1 - customerDiscount / 100) 
+      const discountedPrice = (customerDiscount > 0 && product.price !== null)
+        ? Number(product.price) * (1 - customerDiscount / 100)
         : undefined
       
       return {
@@ -214,7 +214,7 @@ export const getProductDetailsTool = tool({
           name: product.name,
           sku: product.sku || undefined,
           description: product.description || undefined,
-          price: product.price,
+          price: Number(product.price),
           discountedPrice,
           stock: product.stock,
           categoryName: product.productCategories[0]?.category?.name,
@@ -383,23 +383,20 @@ export const getProductsByCategoryTool = tool({
             some: { categoryId: category.id },
           },
         },
-        include: {
-          category: true,
-        },
         take: maxResults,
         orderBy: { name: "asc" },
       })
-      
+
       const customerDiscount = ctx.customerDiscount || 0
-      
+
       const results: ProductSearchResult[] = products.map((p) => ({
         id: p.id,
         name: p.name,
         sku: p.sku || undefined,
         description: p.description || undefined,
-        price: p.price,
-        discountedPrice: customerDiscount > 0 
-          ? p.price * (1 - customerDiscount / 100) 
+        price: Number(p.price),
+        discountedPrice: customerDiscount > 0
+          ? Number(p.price) * (1 - customerDiscount / 100)
           : undefined,
         stock: p.stock,
         categoryName: category.name,

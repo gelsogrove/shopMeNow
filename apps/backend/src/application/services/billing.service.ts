@@ -155,7 +155,7 @@ export class BillingService {
       })
 
       const totalCost = billings.reduce(
-        (sum, billing) => sum + billing.amount,
+        (sum, billing) => sum + Number(billing.amount),
         0
       )
 
@@ -166,7 +166,7 @@ export class BillingService {
             acc[type] = { count: 0, cost: 0 }
           }
           acc[type].count += 1
-          acc[type].cost += billing.amount
+          acc[type].cost += Number(billing.amount)
           return acc
         },
         {} as Record<string, { count: number; cost: number }>
@@ -313,14 +313,14 @@ export class BillingService {
         }
 
         const monthData = monthlyMap.get(key)!
-        monthData.total += billing.amount
+        monthData.total += Number(billing.amount)
 
         const type = billing.type
         if (!monthData.byType[type]) {
           monthData.byType[type] = { count: 0, cost: 0 }
         }
         monthData.byType[type].count += 1
-        monthData.byType[type].cost += billing.amount
+        monthData.byType[type].cost += Number(billing.amount)
       })
 
       // Get current month data
@@ -463,7 +463,7 @@ export class BillingService {
         id: b.id,
         date: b.createdAt,
         type: b.type,
-        amount: b.amount,
+        amount: Number(b.amount),
         description: b.description || "",
         customerName: b.customer?.name || null,
         customerEmail: b.customer?.email || null,

@@ -224,8 +224,8 @@ export class CartController {
       const totalAmount = cart.items.reduce((sum, item) => {
         const price =
           item.itemType === "PRODUCT"
-            ? item.product?.price || 0
-            : item.service?.price || 0
+            ? Number(item.product?.price || 0)
+            : Number(item.service?.price || 0)
         return sum + price * item.quantity
       }, 0)
 
@@ -981,7 +981,7 @@ export class CartController {
           ...itemData,
           quantity: updatedCartItem.quantity,
           total:
-            (updatedCartItem.product?.price || 0) * updatedCartItem.quantity,
+            Number(updatedCartItem.product?.price || 0) * updatedCartItem.quantity,
         },
         cart: {
           totalAmount: totalAmount,
@@ -1167,7 +1167,7 @@ export class CartController {
             )
             return sum
           }
-          return sum + (item.product.price || 0) * item.quantity
+          return sum + Number(item.product.price || 0) * item.quantity
         }
 
         // Handle SERVICE items
@@ -1178,7 +1178,7 @@ export class CartController {
             )
             return sum
           }
-          return sum + (item.service.price || 0) * item.quantity
+          return sum + Number(item.service.price || 0) * item.quantity
         }
 
         return sum
@@ -1224,8 +1224,8 @@ export class CartController {
                     itemType: "PRODUCT",
                     productId: item.productId,
                     quantity: item.quantity,
-                    unitPrice: item.product.price || 0,
-                    totalPrice: (item.product.price || 0) * item.quantity,
+                    unitPrice: Number(item.product.price || 0),
+                    totalPrice: Number(item.product.price || 0) * item.quantity,
                   }
                 }
 
@@ -1247,8 +1247,8 @@ export class CartController {
                     itemType: "SERVICE",
                     serviceId: item.serviceId,
                     quantity: item.quantity,
-                    unitPrice: item.service.price || 0,
-                    totalPrice: (item.service.price || 0) * item.quantity,
+                    unitPrice: Number(item.service.price || 0),
+                    totalPrice: Number(item.service.price || 0) * item.quantity,
                   }
                 }
 
@@ -1520,7 +1520,7 @@ export class CartController {
       }
 
       const productPricing = result.products[0]
-      const originalPrice = product.price
+      const originalPrice = Number(product.price)
       const unitPrice = productPricing.finalPrice || originalPrice
       const totalPrice = unitPrice * quantity
 

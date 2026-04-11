@@ -176,7 +176,7 @@ export async function sendInvoice(
     }
 
     // Calculate order total
-    const orderTotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0)
+    const orderTotal = order.items.reduce((sum, item) => sum + Number(item.totalPrice), 0)
 
     const workspaceName = order.workspace?.name || "eChatbot"
 
@@ -190,8 +190,8 @@ export async function sendInvoice(
       items: order.items.map((it) => ({
         name: it.product?.name || it.service?.name || "Item",
         quantity: it.quantity,
-        unitPrice: it.unitPrice,
-        totalPrice: it.totalPrice,
+        unitPrice: Number(it.unitPrice),
+        totalPrice: Number(it.totalPrice),
       })),
       orderTotal,
     })
@@ -206,7 +206,7 @@ export async function sendInvoice(
           workspaceName,
           orderCode: order.orderCode,
           creditNoteCode: cn.creditNoteCode,
-          amount: cn.amount,
+          amount: Number(cn.amount),
           reason: cn.reason,
           createdAt: cn.createdAt,
         })

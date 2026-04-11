@@ -178,16 +178,14 @@ export class MessageCatalogRepository {
           },
           region: true,
           type: true,
-          category: {
+          productCategories: {
             select: {
-              name: true,
+              category: { select: { name: true } },
             },
           },
         },
         orderBy: {
-          category: {
-            name: "asc",
-          },
+          name: "asc",
         },
       })
 
@@ -211,7 +209,7 @@ export class MessageCatalogRepository {
       // Raggruppa i prodotti per categoria con prezzi scontati
       const productsByCategory = products.reduce(
         (acc, product) => {
-          const categoryName = product.category?.name || "Senza Categoria"
+          const categoryName = product.productCategories?.[0]?.category?.name || "Senza Categoria"
           const priceData = priceMap.get(product.id)
           if (!acc[categoryName]) {
             acc[categoryName] = []
@@ -332,14 +330,9 @@ export class MessageCatalogRepository {
           name: "asc",
         },
         include: {
-          _count: {
-            select: {
-              products: {
-                where: {
-                  isActive: true,
-                },
-              },
-            },
+          productCategories: {
+            where: { product: { isActive: true } },
+            select: { productId: true },
           },
         },
       })
@@ -350,7 +343,7 @@ export class MessageCatalogRepository {
         .map((category, index) => {
           const name = category.name || "Categoria"
           const description = category.description || ""
-          const productCount = category._count.products
+          const productCount = category.productCategories?.length ?? 0
 
           const shortDesc = description
             .split(/[.,;]/)[0]

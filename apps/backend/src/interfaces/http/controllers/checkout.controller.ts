@@ -118,7 +118,7 @@ export class CheckoutController {
         cart?.items.map((item) => {
           // Handle SERVICE items - Services are NEVER discounted
           if (item.itemType === "SERVICE" && item.service) {
-            const originalPrice = item.service.price || 0
+            const originalPrice = Number(item.service.price || 0)
             const finalPrice = originalPrice // Services NEVER have discount
             const itemTotal = finalPrice * item.quantity
             totalAmount += itemTotal

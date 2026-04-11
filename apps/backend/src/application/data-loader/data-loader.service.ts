@@ -740,12 +740,12 @@ export class DataLoaderService {
         name: s.name,
         code: s.code,
         description: s.description || undefined,
-        price: s.price,
+        price: Number(s.price),
         currency: s.currency || "EUR",
         duration: s.duration || 60,
         imageUrl: this.normalizeImageArray(s.imageUrl),
         isAvailable: true,  // Services are always available if active
-        priceWithDiscount: s.price,  // Services don't have discounts
+        priceWithDiscount: Number(s.price),  // Services don't have discounts
       }))
 
       logger.info("📦 [DataLoader] Loaded services", { 
@@ -789,12 +789,12 @@ export class DataLoaderService {
         name: service.name,
         code: service.code,
         description: service.description || undefined,
-        price: service.price,
+        price: Number(service.price),
         currency: service.currency || "EUR",
         duration: service.duration || 60,
         imageUrl: this.normalizeImageArray(service.imageUrl),
         isAvailable: true,
-        priceWithDiscount: service.price,
+        priceWithDiscount: Number(service.price),
       }
 
       logger.info("📦 [DataLoader] Loaded service detail", {
@@ -840,12 +840,12 @@ export class DataLoaderService {
         name: service.name,
         code: service.code,
         description: service.description || undefined,
-        price: service.price,
+        price: Number(service.price),
         currency: service.currency || "EUR",
         duration: service.duration || 60,
         imageUrl: this.normalizeImageArray(service.imageUrl),
         isAvailable: true,
-        priceWithDiscount: service.price,
+        priceWithDiscount: Number(service.price),
       }
 
       logger.info("📦 [DataLoader] Loaded service by code", {
@@ -880,7 +880,6 @@ export class DataLoaderService {
           region: true,
           formato: true,
           type: true,
-          certifications: true,
           allergens: true,
           productCategories: {
             select: {
@@ -929,7 +928,6 @@ export class DataLoaderService {
           region: true,
           formato: true,
           type: true,
-          certifications: true,
           allergens: true,
           productCategories: {
             select: {
@@ -991,7 +989,6 @@ export class DataLoaderService {
           region: true,
           formato: true,
           type: true,
-          certifications: true,
           allergens: true,
           productCertifications: {
             select: {
@@ -1057,7 +1054,6 @@ export class DataLoaderService {
           region: true,
           formato: true,
           type: true,
-          certifications: true,
           allergens: true,
           productCategories: {
             select: {
@@ -1108,7 +1104,6 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
-          certifications: true,
           allergens: true,
           productCategories: {
             select: {
@@ -1311,7 +1306,6 @@ export class DataLoaderService {
           imageUrl: true,
           region: true,
           formato: true,
-          certifications: true,
           allergens: true,
           productCategories: {
             select: {
@@ -1400,7 +1394,7 @@ export class DataLoaderService {
         
         if (isService) {
           // Service item - no discount, no stock
-          const servicePrice = item.service!.price
+          const servicePrice = Number(item.service!.price)
           return {
             id: item.id,
             productId: item.serviceId || "",
@@ -1412,11 +1406,11 @@ export class DataLoaderService {
             isService: true,
           }
         }
-        
+
         // Product item - apply discount if applicable
         const unitPrice = customerDiscount > 0
-          ? item.product!.price * (1 - customerDiscount / 100)
-          : item.product!.price
+          ? Number(item.product!.price) * (1 - customerDiscount / 100)
+          : Number(item.product!.price)
         return {
           id: item.id,
           productId: item.productId || "",
@@ -1517,15 +1511,15 @@ export class DataLoaderService {
             id: item.id,
             name: item.service!.name,
             quantity: item.quantity,
-            price: item.service!.price,
+            price: Number(item.service!.price),
             isService: true,
           }
         }
-        
+
         // Product
         const price = customerDiscount > 0
-          ? item.product!.price * (1 - customerDiscount / 100)
-          : item.product!.price
+          ? Number(item.product!.price) * (1 - customerDiscount / 100)
+          : Number(item.product!.price)
         
         return {
           id: item.id,
@@ -1632,7 +1626,7 @@ export class DataLoaderService {
 
       const existingItem = await this.prisma.cartItems.findFirst({ where: { cartId: cart.id, productId: product.id } })
       if (existingItem) {
-        await this.prisma.cartItems.update({ where: { id: existingItem.id }, data: { quantity: existingItem.quantity + intent.quantity } })
+        await this.prisma.cartItems.update({ where: { id: existingItem.id, cart: { workspaceId } }, data: { quantity: existingItem.quantity + intent.quantity } })
         logger.info("🛒 [DataLoader] Updated existing cart item", {
           productName: product.name,
           newQuantity: existingItem.quantity + intent.quantity,
@@ -1710,9 +1704,9 @@ export class DataLoaderService {
     customerDiscount: number
   ): Promise<LoadedData> {
     try {
-      // Find the cart item to get its name for confirmation message
-      const cartItem = await this.prisma.cartItems.findUnique({
-        where: { id: cartItemId },
+      // Find the cart item to get its name for confirmation message (with workspace isolation)
+      const cartItem = await this.prisma.cartItems.findFirst({
+        where: { id: cartItemId, cart: { workspaceId } },
         include: {
           product: { select: { name: true } },
           service: { select: { name: true } },
@@ -1727,8 +1721,8 @@ export class DataLoaderService {
       const itemName = cartItem.service?.name || cartItem.product?.name || "Articolo"
       const isService = !!cartItem.serviceId
 
-      // Delete the cart item
-      await this.prisma.cartItems.delete({ where: { id: cartItemId } })
+      // Delete the cart item (with workspace isolation)
+      await this.prisma.cartItems.delete({ where: { id: cartItemId, cart: { workspaceId } } })
 
       logger.info("✅ [DataLoader] Cart item removed by ID", {
         cartItemId,
@@ -1818,7 +1812,7 @@ export class DataLoaderService {
         id: o.id,
         code: o.orderCode,
         status: o.status,
-        totalAmount: o.totalAmount,
+        totalAmount: Number(o.totalAmount),
         itemCount: o.items.reduce((sum, item) => sum + item.quantity, 0),
         createdAt: o.createdAt,
       }))
@@ -1885,14 +1879,14 @@ export class DataLoaderService {
           id: order.id,
           code: order.orderCode,
           status: order.status,
-          totalAmount: order.totalAmount,
+          totalAmount: Number(order.totalAmount),
           itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
           createdAt: order.createdAt,
           items: order.items.map((item) => ({
             productName: item.product?.name || "Unknown",
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.totalPrice,
+            unitPrice: Number(item.unitPrice),
+            totalPrice: Number(item.totalPrice),
           })),
           hasCreditNotes: order.creditNotes && order.creditNotes.length > 0,
           creditNotesCount: order.creditNotes?.length || 0,
@@ -2313,7 +2307,6 @@ export class DataLoaderService {
           region: true,
           formato: true,
           type: true,
-          certifications: true,
           allergens: true,
           productCategories: {
             select: {

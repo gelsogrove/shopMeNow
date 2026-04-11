@@ -758,7 +758,7 @@ export class CustomersController {
 
       // Update customer to ACTIVE status
       const updatedCustomer = await prisma.customers.update({
-        where: { id },
+        where: { id, workspaceId },
         data: {
           isActive: true,
           registrationStatus: "ACTIVE",

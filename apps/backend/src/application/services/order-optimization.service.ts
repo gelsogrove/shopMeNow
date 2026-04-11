@@ -460,7 +460,7 @@ export class OrderOptimizationService {
           products: productTransports.map(pt => ({
             id: pt.product.id,
             name: pt.product.name,
-            price: pt.product.price,
+            price: Number(pt.product.price),
             category: pt.product.productCategories[0]?.category?.name || "Altro",
           })),
         })
