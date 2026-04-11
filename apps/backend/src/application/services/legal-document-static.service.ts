@@ -18,7 +18,7 @@ const TYPE_TO_FILENAME: Record<LegalDocumentType, string> = {
  * Documents are served as-is from /apps/backend/public/legal/ directory
  */
 export class LegalDocumentStaticService {
-  private legalDocPath = join(process.cwd(), "public", "legal")
+  private legalDocPath = join(__dirname, "..", "..", "..", "public", "legal")
 
   async getLegalDocument(type: string, language: Language = "en") {
     if (!this.isValidType(type)) {
