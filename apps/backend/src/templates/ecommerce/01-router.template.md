@@ -53,26 +53,48 @@ Call this function when the user asks about order status, tracking, order histor
 
 {{#if hasHumanSupport}}
 ## 🆘 FUNCTION: customerSupportAgent
-Call this function when:
+Call this function IMMEDIATELY when:
 {{#if frustrationEscalationInstructions}}
   {{frustrationEscalationInstructions}}
 {{else}}
-- User explicitly asks for human help
+- User explicitly asks for a human operator ("voglio parlare con un operatore", "I want to speak to a person", "quiero hablar con alguien", "contact operator", "assistenza umana")
 - User is frustrated or angry
 - User has a complex issue that cannot be resolved by chatbot
 - User reports a problem (broken package, wrong item, etc.)
 {{/if}}
-**Note:** The system will automatically send the appropriate message to the customer.
+**CRITICAL**: When user asks for a human operator or support, call customerSupportAgent IMMEDIATELY — do NOT respond with text first.
+**Note:** The system will automatically handle contacting the operator (email/WhatsApp) and send the appropriate message to the customer.
 {{/if}}
 
 {{#if enableCalendarBooking}}
-## 📅 APPOINTMENT BOOKING FUNCTIONS
-The following functions are available for appointment booking:
-- **listAvailableSlots**: Call when the user wants to book an appointment or asks about availability.
-- **bookAppointment**: Call when the user has chosen a slot and confirms the booking.
-- **cancelAppointment**: Call when the user wants to cancel an existing appointment.
-- **rescheduleAppointment**: Call when the user wants to change the date/time of an appointment.
-- **getCustomerAppointments**: Call when the user asks about their upcoming appointments.
+## 📅 APPOINTMENT BOOKING — REGOLE OBBLIGATORIE
+
+**FLUSSO ESATTO — segui sempre questo ordine:**
+
+**STEP 1 — Cliente chiede un appuntamento:**
+- Qualunque variante: "prenota", "appuntamento", "disponibilità", "book", "voglio venire", "when can I come"
+- ❌ NON chiedere che servizio vuole
+- ❌ NON chiedere altri dettagli
+- ✅ Chiama SUBITO **listAvailableSlots** (senza parametri — trova automaticamente il servizio)
+- ✅ Mostra gli slot come lista NUMERATA:
+  ```
+  1. [data] alle [ora]
+  2. [data] alle [ora]  
+  3. [data] alle [ora]
+  4. Mostra il giorno successivo
+  ```
+
+**STEP 2 — Cliente sceglie uno slot (numero, ora, o data+ora):**
+- ❌ NON chiamare listAvailableSlots di nuovo
+- ✅ Chiedi conferma: "Confermo slot [data] alle [ora]?"
+
+**STEP 3 — Cliente conferma ("yes", "sì", "ok", "confermo", "prenota", "book it"):**
+- ❌ NON chiamare listAvailableSlots di nuovo MAI
+- ✅ Chiama SUBITO **bookAppointment** con serviceId e startTime dalla risposta listAvailableSlots nella cronologia
+
+**STEP 4 — Cliente vuole i suoi appuntamenti:** chiama **getCustomerAppointments**
+**STEP 5 — Cliente vuole annullare:** chiama **cancelAppointment**
+**STEP 6 — Cliente vuole spostare:** chiama **rescheduleAppointment**
 {{/if}}
 
 ## 👤 FUNCTION: profileManagementAgent (HIGH PRIORITY)

@@ -23,6 +23,7 @@ export interface ListAvailableSlotsRequest {
 export interface ListAvailableSlotsResult {
   success: boolean
   message: string
+  serviceId?: string // 🔑 CRITICAL: Must be passed to bookAppointment
   serviceName?: string
   duration?: number
   price?: number
@@ -119,6 +120,7 @@ export async function listAvailableSlots(
       return {
         success: true,
         message: "No available slots found in the next " + daysAhead + " days",
+        serviceId, // 🔑 Include even when no slots found
         serviceName: service.name,
         duration: service.duration,
         price: service.price ? Number(service.price) : undefined,
@@ -134,6 +136,7 @@ export async function listAvailableSlots(
     return {
       success: true,
       message: `Found ${slots.length} available slots for "${service.name}" (showing first 3)`,
+      serviceId, // 🔑 CRITICAL: LLM must use this serviceId when calling bookAppointment
       serviceName: service.name,
       duration: service.duration,
       price: service.price ? Number(service.price) : undefined,

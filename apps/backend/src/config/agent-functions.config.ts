@@ -88,7 +88,7 @@ export const ROUTER_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "customerSupportAgent",
       description:
-        "💬 Delega al Customer Support Agent. Usare quando cliente frustrato, problema serio, richiede assistenza umana.",
+        "💬 Delega al Customer Support Agent. Usare quando: cliente frustrato, problema serio, richiede assistenza umana. ANCHE: cliente vuole cambiare lingua ('voglio parlare in italiano', 'I want to speak in English', 'quiero hablar en español', 'quero falar em português').",
       parameters: {
         type: "object",
         properties: {
@@ -393,7 +393,7 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "listAvailableSlots",
       description:
-        "📅 Mostra slot disponibili per prenotazione appuntamento. QUANDO USARE: Cliente vuole prenotare un appuntamento, chiede disponibilità, vuole fissare un incontro. ESEMPI: 'voglio prenotare', 'quando posso venire?', 'hai disponibilità?', 'prenota appuntamento', 'guardami martedì'. Se il cliente chiede un giorno specifico usa targetDate. DOPO: mostra ESATTAMENTE 3 slot al cliente come lista NUMERATA (1, 2, 3) con data e ora. Aggiungi SEMPRE come opzione 4: '4. Guarda il giorno successivo'. Se il cliente sceglie l'opzione 4, chiama di nuovo listAvailableSlots con targetDate = giorno successivo. FORMATO OBBLIGATORIO:\n1. [data] alle [ora]\n2. [data] alle [ora]\n3. [data] alle [ora]\n4. Guarda il giorno successivo",
+        "📅 Recupera slot disponibili. CHIAMARE SUBITO quando cliente menziona appuntamento/prenotazione/disponibilità — senza chiedere nulla. NON chiamare di nuovo se già mostrati gli slot. Il risultato contiene 'serviceId': usarlo per bookAppointment. OUTPUT OBBLIGATORIO dopo questa chiamata — lista numerata ESATTA:\n1. [data] alle [ora]\n2. [data] alle [ora]\n3. [data] alle [ora]\n4. Mostra il giorno successivo",
       parameters: {
         type: "object",
         properties: {
@@ -419,17 +419,17 @@ export const APPOINTMENT_FUNCTIONS: FunctionDefinition[] = [
     function: {
       name: "bookAppointment",
       description:
-        "\u2705 Conferma prenotazione di un appuntamento. QUANDO USARE: Cliente ha scelto uno slot dalla lista e conferma la prenotazione. DEVE avere serviceId e startTime. ESEMPI: 's\u00ec, prenota alle 15:00', 'confermo gioved\u00ec alle 10'. DOPO: conferma con data, ora e tipo di servizio.",
+        "✅ Prenota un appuntamento. QUANDO USARE: Cliente ha scelto uno slot E ha confermato ('sì', 'yes', 'ok', 'confermo', 'prenota'). COME TROVARE I PARAMETRI: serviceId e startTime sono nella risposta precedente di listAvailableSlots nella cronologia della conversazione — usali ESATTAMENTE come restituiti. NON chiamare listAvailableSlots di nuovo. DOPO: conferma con data, ora e tipo di servizio.",
       parameters: {
         type: "object",
         properties: {
           serviceId: {
             type: "string",
-            description: "ID del servizio prenotabile",
+            description: "ID del servizio — PRENDERLO dalla risposta precedente di listAvailableSlots (campo 'serviceId')",
           },
           startTime: {
             type: "string",
-            description: "Data e ora di inizio in formato ISO 8601 (es: 2026-04-15T15:00:00.000Z)",
+            description: "Orario ISO 8601 dello slot scelto — PRENDERLO dalla risposta precedente di listAvailableSlots (campo 'slots[n].startTime')",
           },
           customerNotes: {
             type: "string",
@@ -652,9 +652,10 @@ export function getAgentFunctionsForWorkspace(
     )
   }
 
-  // 🔮 Future: Add filters for hasSalesAgents, hasHumanSupport, etc.
-  // if (workspace.hasSalesAgents) { ... }
-  // if (workspace.hasHumanSupport) { ... }
+  // Filter out contactOperator if hasHumanSupport is explicitly false
+  if (workspace.hasHumanSupport === false) {
+    functions = functions.filter(fn => fn.function?.name !== "contactOperator")
+  }
 
   return functions
 }

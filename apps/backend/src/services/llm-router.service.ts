@@ -1915,8 +1915,8 @@ export class LLMRouterService {
 
     // 🛡️ Sofia Fix: Ensure the LLM doesn't skip tools when a match exists
     const toolCoachingMsg = sellsProductsAndServices
-      ? "CRITICAL: For business operations (products, cart, orders, profile or support issues), YOU MUST call the appropriate specialist function. DO NOT attempt to answer these with text directly."
-      : "CRITICAL: If the user request matches a function (Profile Management, Support, etc.), YOU MUST call the function. DO NOT answer with text instructions or your identity description if a function is available for the request."
+      ? "CRITICAL: For business operations (products, cart, orders, profile, support, or appointment booking), YOU MUST call the appropriate specialist function. DO NOT answer with text. For appointments/booking: call listAvailableSlots IMMEDIATELY — do NOT ask what service."
+      : "CRITICAL: If the user request matches a function (Profile, Support, appointment booking, etc.), YOU MUST call the function immediately. For appointments: call listAvailableSlots IMMEDIATELY — do NOT ask what service or type."
 
     messages.splice(messages.length - 1, 0, {
       role: "system",
