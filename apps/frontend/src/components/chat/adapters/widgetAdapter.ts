@@ -336,3 +336,15 @@ export const updateWidgetProfile = async (input: {
   
   return result
 }
+
+/**
+ * Clear all widget session data for a workspace (logout).
+ * Removes customerId, sessionId, and messages from localStorage.
+ * After this, the widget will show the registration form again.
+ */
+export const clearWidgetSession = (storage: Storage, workspaceId: string) => {
+  const keys = buildWidgetStorageKeys(workspaceId)
+  storage.removeItem(keys.customerId)
+  storage.removeItem(keys.sessionId)
+  storage.removeItem(keys.messages)
+}

@@ -95,6 +95,7 @@ import {
   getWidgetStatus,
   getWidgetProfile,
   updateWidgetProfile,
+  clearWidgetSession,
   type WidgetStoredMessage,
 } from "@/components/chat/adapters/widgetAdapter"
 
@@ -928,6 +929,20 @@ export function ChatWidget({
     }
   }
 
+  /**
+   * Logout: clear localStorage session data and reset widget to registration form
+   */
+  const handleWidgetLogout = () => {
+    if (resolvedWorkspaceId) {
+      clearWidgetSession(localStorage, resolvedWorkspaceId)
+    }
+    setCustomerId(null)
+    setSessionId(null)
+    setMessages([])
+    setShowProfilePanel(false)
+    setShowRegistrationForm(true)
+  }
+
   const handleQuickReply = async (reply: string) => {
     // sendMessage already clears all bot suggestions before adding the user message
     await sendMessage(reply)
@@ -1418,6 +1433,7 @@ export function ChatWidget({
               primaryColor={resolvedPrimaryColor}
               onSave={handleSaveProfile}
               onBack={() => setShowProfilePanel(false)}
+              onLogout={handleWidgetLogout}
             />
           ) : (
             /* ── Normal Chat ── */

@@ -1,7 +1,7 @@
 import { useState, useEffect, type CSSProperties } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, Loader2, Save, User, Mail, Phone, Building, Globe, Bell } from "lucide-react"
+import { ArrowLeft, Loader2, Save, User, Mail, Phone, Building, Globe, Bell, LogOut } from "lucide-react"
 
 interface WidgetProfilePanelProps {
   profileData: Record<string, unknown> | null
@@ -11,6 +11,7 @@ interface WidgetProfilePanelProps {
   primaryColor: string
   onSave: (data: Record<string, unknown>) => void
   onBack: () => void
+  onLogout?: () => void
 }
 
 export function WidgetProfilePanel({
@@ -21,6 +22,7 @@ export function WidgetProfilePanel({
   primaryColor,
   onSave,
   onBack,
+  onLogout,
 }: WidgetProfilePanelProps) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -67,7 +69,7 @@ export function WidgetProfilePanel({
           </button>
 
           <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-            <User className="w-5 h-5" style={{ color: primaryColor }} />
+            <User className="w-5 h-5 text-slate-600" />
             My Profile
           </h3>
 
@@ -78,7 +80,7 @@ export function WidgetProfilePanel({
           {/* Name */}
           <div className="space-y-1">
             <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-              <User className="w-3.5 h-3.5" /> Name
+              <User className="w-3.5 h-3.5" /> Name & Surname
             </label>
             <input
               type="text"
@@ -187,6 +189,14 @@ export function WidgetProfilePanel({
             </>
           )}
         </button>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="w-full mt-2 py-2.5 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors border border-slate-200"
+          >
+            <LogOut className="w-4 h-4" /> Forget me / Log out
+          </button>
+        )}
       </div>
     </>
   )
