@@ -2020,8 +2020,9 @@ Confermi la tua presenza?`,
       parameters: {
         type: "object",
         properties: {
-          appointmentTypeId: { type: "string", description: "ID of appointment type (optional)" },
-          daysAhead: { type: "number", description: "How many days ahead to search (default 7, max 14)" }
+          serviceId: { type: "string", description: "ID of the service to book (optional - auto-selected if only one service exists)" },
+          daysAhead: { type: "number", description: "How many days ahead to search (default 7, max 14). Ignored when targetDate is specified." },
+          targetDate: { type: "string", description: "Specific date in YYYY-MM-DD format. Use when customer asks for availability on a specific day (e.g. next Thursday, this Friday). Example: 2026-04-17" }
         },
         required: []
       },
