@@ -339,15 +339,16 @@ export class WidgetChatController {
   private normalizeLanguage(raw?: string | null): string | null {
     if (!raw) return null
     const code = raw.toLowerCase().split("-")[0]
+    // Normalize to 2-letter ISO 639-1 codes (consistent with changeLanguage() and Prisma defaults)
     const map: Record<string, string> = {
-      it: "ITA",
-      en: "ENG",
-      es: "ESP",
-      pt: "POR",
-      fr: "FRA",
-      de: "DEU",
+      it: "it", ita: "it",
+      en: "en", eng: "en",
+      es: "es", esp: "es",
+      pt: "pt", por: "pt",
+      fr: "fr", fra: "fr",
+      de: "de", deu: "de",
     }
-    return map[code] || raw
+    return map[code] || raw.toLowerCase()
   }
 
   /**
@@ -375,7 +376,7 @@ export class WidgetChatController {
       const translationResult = await translationAgent.process({
         workspaceId,
         message: rawText,
-        targetLanguage: targetLanguage || "ENG",
+        targetLanguage: targetLanguage || "en",
         customerName: "Customer",
         customerId: undefined,
         channel: "widget",
@@ -716,7 +717,7 @@ export class WidgetChatController {
       // which also skips debugMode. We must check it explicitly here.
       // 🧪 PLAYGROUND BYPASS: isPlayground=true skips WIP (admin testing)
       if (workspace.debugMode === true && !isPlayground) {
-        const lang = this.normalizeLanguage(language) || workspace.defaultLanguage || "ENG"
+        const lang = this.normalizeLanguage(language) || workspace.defaultLanguage || "en"
         const wipResponse = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
           lang,
@@ -777,7 +778,7 @@ export class WidgetChatController {
 
       // 6. Normalize language
       const normalizedLanguage =
-        this.normalizeLanguage(language) || workspace.defaultLanguage || "ENG"
+        this.normalizeLanguage(language) || workspace.defaultLanguage || "en"
 
       // 7. Deduplication: find or create customer by phone within workspace
       let isNewCustomer = false
@@ -1052,6 +1053,8 @@ export class WidgetChatController {
         response: llmResult.response || "Welcome! How can I help you?",
         isNewCustomer,
         suggestions,
+        // 🌍 Return customer language — widget can sync its dropdown
+        language: normalizedLanguage,
         // 👤 Profile data — widget saves this in localStorage to show profile badge in header
         customerProfile: {
           name: customer.name,
@@ -1365,7 +1368,7 @@ export class WidgetChatController {
           channelStatus: workspace.channelStatus,
         })
 
-        const rawLanguage = requestedLanguage || workspace.defaultLanguage || "ENG"
+        const rawLanguage = requestedLanguage || workspace.defaultLanguage || "en"
         const wipResponse = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
           rawLanguage,
@@ -1387,7 +1390,7 @@ export class WidgetChatController {
           channelStatus: workspace.channelStatus,
         })
 
-        const rawLanguage = requestedLanguage || workspace.defaultLanguage || "ENG"
+        const rawLanguage = requestedLanguage || workspace.defaultLanguage || "en"
         const wipResponse = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
           rawLanguage,
@@ -1455,20 +1458,14 @@ export class WidgetChatController {
           language: customer.language,
         })
       } else {
-        // 🌍 Update customer language if widget explicitly requests different language
+        // 🌍 DO NOT overwrite customer.language with widget dropdown language.
+        // Customer language is only changed via: (1) registerAndStart(), (2) changeLanguage() chatbot function.
+        // Widget dropdown language affects THIS message only (via customerLanguage param to LLM).
+        // This prevents chatbot language changes from being overwritten by stale widget dropdown values.
         const updateData: any = {}
         
         if (phoneNumber && !customer.phone) {
           updateData.phone = phoneNumber
-        }
-        
-        if (requestedLanguage && requestedLanguage !== customer.language) {
-          updateData.language = requestedLanguage
-          logger.info("🌍 Widget language changed - updating customer", {
-            customerId: customer.id,
-            oldLanguage: customer.language,
-            newLanguage: requestedLanguage,
-          })
         }
         
         if (Object.keys(updateData).length > 0) {
@@ -1480,7 +1477,6 @@ export class WidgetChatController {
           logger.info("📝 Updated customer data", {
             customerId: customer.id,
             updates: Object.keys(updateData),
-            language: updateData.language || customer.language,
           })
         } else {
           logger.info("👤 Using existing customer (no changes)", {
@@ -1662,12 +1658,14 @@ export class WidgetChatController {
       })
 
       // 🌍 LANGUAGE PRIORITY for this message:
-      // 1) requestedLanguage (explicit/browser/phone) if present
-      // 2) customer.language stored in DB
+      // 1) customer.language stored in DB (set by registration or changeLanguage chatbot function) - HIGHEST
+      // 2) requestedLanguage (explicit widget dropdown/browser/phone) - fallback for new users
       // 3) workspace.defaultLanguage
+      // RULE: DB-stored language wins because it represents the customer's explicit preference
+      // (set via registration or chatbot changeLanguage). Widget dropdown only affects new users.
       const customerLanguage =
-        requestedLanguage ||
         customer.language ||
+        requestedLanguage ||
         workspace.defaultLanguage
       logger.info("🌍 Widget calling LLM Router with language", {
         requestedLanguage,
@@ -1702,16 +1700,19 @@ export class WidgetChatController {
       })
 
       // Check if operator handoff was triggered by this LLM call (contactOperator CF sets activeChatbot=false)
+      // Also reload customer language (may have changed via changeLanguage chatbot function)
       const freshCustomer = await prisma.customers.findUnique({
         where: { id: customer.id },
-        select: { activeChatbot: true },
+        select: { activeChatbot: true, language: true },
       })
       const operatorHandoffTriggered = freshCustomer?.activeChatbot === false
+      // Use fresh language for suggestions and response (changeLanguage may have updated it)
+      const freshLanguage = freshCustomer?.language || customerLanguage || "en"
 
       // RULE: Never generate suggestions when operator handoff was just triggered
       const suggestions =
         !operatorHandoffTriggered && workspace.widgetAutoSuggestionsEnabled === true
-          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", customerLanguage || "en", workspace.widgetQuickReplies as any, workspaceId)
+          ? await buildWidgetSuggestionsWithAI(llmResult.response || "", freshLanguage || "en", workspace.widgetQuickReplies as any, workspaceId)
           : []
 
       // � CRITICAL FIX: DO NOT save assistant message here
@@ -1770,6 +1771,8 @@ export class WidgetChatController {
         response: llmResult.response || "Sorry, I couldn't understand your request.",
         status: "ready",
         suggestions,
+        // 🌍 Return current customer language — widget can sync its dropdown if chatbot changed it
+        language: freshLanguage,
         // Tell widget immediately if operator handoff was triggered (no separate poll needed)
         ...(operatorHandoffTriggered && { activeChatbot: false }),
         // 👤 Profile data — widget keeps localStorage in sync after each message

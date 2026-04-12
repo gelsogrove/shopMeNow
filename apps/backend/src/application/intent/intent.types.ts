@@ -24,6 +24,7 @@ export type ListType =
   | "OFFER_CATEGORIES" // "1. Vedi prodotti Formaggi in sconto"
   | "ORDER_OPTIMIZATION_ACTIONS" // "1. 🧊 Mostra prodotti Congelati" (optimization menu)
   | "PRODUCT_DETAIL_ACTIONS" // "1. Esplora il catalogo" while viewing a product
+  | "APPOINTMENT_SLOTS" // "1. Lunedì 10:00 - 11:00" (available booking slots)
   | "unknown"       // Fallback for unrecognized list types
 
 // =============================================================================

@@ -87,6 +87,7 @@ export interface RouteMessageParams {
   customerDiscount?: number
   channel?: string // 🚫 WIDGET FIX: Channel type (widget, whatsapp, etc.)
   registrationPromptLevel?: number // 🆕 Progressive registration invitation (0=none, 1=gentle, 2=insistent, 3=warning)
+  skipTranslation?: boolean // 🆕 Skip translation + security in LLMRouter (caller handles it, e.g. ChatEngine wrapper)
 }
 
 export interface RouteMessageResponse {
@@ -1567,62 +1568,69 @@ export class LLMRouterService {
         },
       })
 
-      // STEP 5: Apply Translation Layer (always)
-      logger.info("Step 5: Applying Translation Layer")
-      const translationResult = await this.translationAgent.process({
-        workspaceId: params.workspaceId,
-        message: messageForTranslation,
-        targetLanguage: params.customerLanguage || "en",
-        customerName: params.customerName,
-        customerId: params.customerId,
-        channel: params.channel,
-      })
-
-      const finalResponse = translationResult.message
-      const translationTokens = translationResult.tokensUsed || 0
-
-      totalTokens += translationTokens
-
-      debugInfo.steps.push({
-        type: "safety",
-        agent: "Translation Layer",
-        model: translationResult.model || "openai/gpt-4o-mini",
-        temperature: 0.1,
-        timestamp: new Date().toISOString(),
-        systemPrompt: translationResult.systemPrompt || "Translate the following message",
-        input: {
-          previousResponse: responseWithLinks.substring(0, 200),
-          targetLanguage: params.customerLanguage || "en",
-        },
-        output: {
-          translatedText: translationResult.message,
-          decision: "translated",
-        },
-        tokenUsage: {
-          promptTokens: 0,
-          completionTokens: translationTokens,
-          totalTokens: translationTokens,
-        },
-      })
-
-      let finalCleanResponse = finalResponse
-
-      // Punctuation clean up and security (simplified for brevity but essential for finalCleanResponse definition)
-      finalCleanResponse = finalCleanResponse
-        .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, '')
-        .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, '')
-
-      if (this.shouldApplyWidgetSecurity(params.channel)) {
-        const securityInput = finalCleanResponse
-        const widgetSecurityResult = await this.securityAgent.process({
+      // STEP 5: Apply Translation Layer
+      // SKIP when called from ChatEngine (skipTranslation=true) — ChatEngine handles translation
+      // with fresh language from DB (supports mid-conversation language changes)
+      let finalCleanResponse: string
+      if (params.skipTranslation) {
+        logger.info("Step 5: ⏭️ Skipping Translation (ChatEngine handles it)")
+        finalCleanResponse = messageForTranslation
+          .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, '')
+          .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, '')
+      } else {
+        logger.info("Step 5: Applying Translation Layer")
+        const translationResult = await this.translationAgent.process({
           workspaceId: params.workspaceId,
-          message: securityInput,
+          message: messageForTranslation,
+          targetLanguage: params.customerLanguage || "en",
           customerName: params.customerName,
           customerId: params.customerId,
+          channel: params.channel,
         })
 
-        totalTokens += widgetSecurityResult.tokensUsed || 0
-        finalCleanResponse = widgetSecurityResult.message || securityInput
+        const finalResponse = translationResult.message
+        const translationTokens = translationResult.tokensUsed || 0
+
+        totalTokens += translationTokens
+
+        debugInfo.steps.push({
+          type: "safety",
+          agent: "Translation Layer",
+          model: translationResult.model || "openai/gpt-4o-mini",
+          temperature: 0.1,
+          timestamp: new Date().toISOString(),
+          systemPrompt: translationResult.systemPrompt || "Translate the following message",
+          input: {
+            previousResponse: responseWithLinks.substring(0, 200),
+            targetLanguage: params.customerLanguage || "en",
+          },
+          output: {
+            translatedText: translationResult.message,
+            decision: "translated",
+          },
+          tokenUsage: {
+            promptTokens: 0,
+            completionTokens: translationTokens,
+            totalTokens: translationTokens,
+          },
+        })
+
+        finalCleanResponse = finalResponse
+          .replace(/\s*\[SKU:[A-Z0-9-]+\]/gi, '')
+          .replace(/\s*\[SKUS?:[A-Z0-9-,]+\]/gi, '')
+
+        if (this.shouldApplyWidgetSecurity(params.channel)) {
+          const securityInput = finalCleanResponse
+          const widgetSecurityResult = await this.securityAgent.process({
+            workspaceId: params.workspaceId,
+            message: securityInput,
+            customerName: params.customerName,
+            customerId: params.customerId,
+          })
+
+          totalTokens += widgetSecurityResult.tokensUsed || 0
+          finalCleanResponse = widgetSecurityResult.message || securityInput
+        }
       }
 
       // 📢 REGISTRATION REMINDER: Every 6 messages, add registration call-to-action (WhatsApp only)
@@ -3004,6 +3012,37 @@ export class LLMRouterService {
           content: JSON.stringify(functionResult),
         })
 
+        // 📅 APPOINTMENT SLOTS: Save to optionsMapping so FAST-PATH can resolve "1", "2", "3"
+        if (functionName === "listAvailableSlots" && functionResult?.data?.success && functionResult?.data?.slots?.length > 0) {
+          const slotData = functionResult.data
+          const slotItems = slotData.slots.map((slot: any, index: number) => ({
+            number: index + 1,
+            name: `${slot.displayDate} - ${slot.displayTime}`,
+            id: slot.startTime, // Use startTime as unique ID for slot selection
+            metadata: {
+              startTime: slot.startTime,
+              endTime: slot.endTime,
+              serviceId: slotData.serviceId,
+              serviceName: slotData.serviceName,
+            },
+          }))
+
+          await this.optionsMappingService.saveMapping({
+            workspaceId: params.workspaceId,
+            conversationId: params.conversationId,
+            customerId: params.customerId,
+            responseText: "", // LLM will format the response text
+            items: slotItems,
+            listType: "APPOINTMENT_SLOTS",
+          })
+
+          logger.info("📅 [LLMRouter] Saved appointment slots to optionsMapping", {
+            slotCount: slotItems.length,
+            serviceId: slotData.serviceId,
+            conversationId: params.conversationId,
+          })
+        }
+
         // Determine agent used
         if (functionName.includes("search")) agentUsed = "PRODUCT_SEARCH"
         else if (functionName.includes("cart") || functionName.includes("Cart"))
@@ -3212,30 +3251,38 @@ export class LLMRouterService {
         logger.info("✅ Link replacement successful")
       }
 
-      // 🔒 STEP 2: Apply Translation Layer (always)
-      const translationResult = await this.translationAgent.process({
-        workspaceId: params.workspaceId,
-        message: responseWithLinks,
-        targetLanguage: params.customerLanguage || "en",
-        customerName: params.customerName,
-        customerId: params.customerId,
-        channel: params.channel,
-      })
+      // 🔒 STEP 2: Apply Translation Layer
+      // SKIP when ChatEngine handles translation (skipTranslation=true)
+      let finalResponse: string
+      let autoTokensUsed = specialistResponse.tokensUsed || 0
 
-      let finalResponse = translationResult.message
-      let autoTokensUsed = (specialistResponse.tokensUsed || 0) + (translationResult.tokensUsed || 0)
-
-      if (this.shouldApplyWidgetSecurity(params.channel)) {
-        const securityInput = finalResponse
-        const widgetSecurityResult = await this.securityAgent.process({
+      if (params.skipTranslation) {
+        finalResponse = responseWithLinks
+      } else {
+        const translationResult = await this.translationAgent.process({
           workspaceId: params.workspaceId,
-          message: securityInput,
+          message: responseWithLinks,
+          targetLanguage: params.customerLanguage || "en",
           customerName: params.customerName,
           customerId: params.customerId,
+          channel: params.channel,
         })
 
-        finalResponse = widgetSecurityResult.message || securityInput
-        autoTokensUsed += widgetSecurityResult.tokensUsed || 0
+        finalResponse = translationResult.message
+        autoTokensUsed += translationResult.tokensUsed || 0
+
+        if (this.shouldApplyWidgetSecurity(params.channel)) {
+          const securityInput = finalResponse
+          const widgetSecurityResult = await this.securityAgent.process({
+            workspaceId: params.workspaceId,
+            message: securityInput,
+            customerName: params.customerName,
+            customerId: params.customerId,
+          })
+
+          finalResponse = widgetSecurityResult.message || securityInput
+          autoTokensUsed += widgetSecurityResult.tokensUsed || 0
+        }
       }
 
       const executionTimeMs = Date.now() - startTime
@@ -3352,33 +3399,40 @@ export class LLMRouterService {
         customerDiscount,
       })
 
-      // Apply Translation (always)
-      const cartTranslationResult = await this.translationAgent.process({
-        workspaceId: options.params.workspaceId,
-        message: cartResponse.output,
-        targetLanguage: options.params.customerLanguage || "en",
-        customerName: options.params.customerName,
-        customerId: options.params.customerId,
-        channel: options.params.channel,
-      })
+      // Apply Translation + Security (skip when ChatEngine handles it)
+      let finalCartResponse: string
+      let cartTokensUsed = cartResponse.tokensUsed || 0
 
-      let finalCartResponse = cartTranslationResult.message
-      let cartTokensUsed = (cartResponse.tokensUsed || 0) + (cartTranslationResult.tokensUsed || 0)
-
-      // Security Layer
-      if (this.shouldApplyWidgetSecurity(options.params.channel)) {
-        const securityInput = finalCartResponse
-        const cartSecurityResult = await this.securityAgent.process({
+      if (options.params.skipTranslation) {
+        finalCartResponse = cartResponse.output
+      } else {
+        const cartTranslationResult = await this.translationAgent.process({
           workspaceId: options.params.workspaceId,
-          message: securityInput,
+          message: cartResponse.output,
+          targetLanguage: options.params.customerLanguage || "en",
           customerName: options.params.customerName,
           customerId: options.params.customerId,
+          channel: options.params.channel,
         })
 
-        finalCartResponse = cartSecurityResult.message || securityInput
-        cartTokensUsed += cartSecurityResult.tokensUsed || 0
-      } else {
-        logger.info("⏭️ Skipping Widget Security for cart handoff (WhatsApp - scheduler handles it)")
+        finalCartResponse = cartTranslationResult.message
+        cartTokensUsed += cartTranslationResult.tokensUsed || 0
+
+        // Security Layer
+        if (this.shouldApplyWidgetSecurity(options.params.channel)) {
+          const securityInput = finalCartResponse
+          const cartSecurityResult = await this.securityAgent.process({
+            workspaceId: options.params.workspaceId,
+            message: securityInput,
+            customerName: options.params.customerName,
+            customerId: options.params.customerId,
+          })
+
+          finalCartResponse = cartSecurityResult.message || securityInput
+          cartTokensUsed += cartSecurityResult.tokensUsed || 0
+        } else {
+          logger.info("⏭️ Skipping Widget Security for cart handoff (WhatsApp - scheduler handles it)")
+        }
       }
 
       const executionTimeMs = Date.now() - startTime

@@ -47,6 +47,7 @@ export type ListType =
   | "ORDER_OPTIMIZATION_ACTIONS"
   | "OFFER_CATEGORIES"
   | "PRODUCT_DETAIL_ACTIONS"
+  | "APPOINTMENT_SLOTS"
   | "binary"
   | "unknown"
 
@@ -62,12 +63,16 @@ export interface PendingAction {
     | "CANCEL_ORDER"
     | "ADD_ORDER_NOTE"
     | "SHOW_PRODUCTS"
+    | "BOOK_APPOINTMENT"
   productId?: string
   productName?: string
   quantity?: number
   orderId?: string
   itemType?: "PRODUCT" | "SERVICE" // 🆕 Distinguish products from services
   orderCode?: string
+  serviceId?: string // For BOOK_APPOINTMENT: the service being booked
+  slotStartTime?: string // For BOOK_APPOINTMENT: selected slot start time
+  slotEndTime?: string // For BOOK_APPOINTMENT: selected slot end time
 }
 
 /**

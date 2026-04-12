@@ -935,7 +935,8 @@ export class ChatEngineService {
         customerDiscount: input.customerDiscount || 0,
         conversationId,
         messageId: `${conversationId}-fallback-${Date.now()}`,
-        registrationPromptLevel: input.registrationPromptLevel, // 🆕 Progressive registration invitation
+        registrationPromptLevel: input.registrationPromptLevel,
+        skipTranslation: true, // ChatEngine wrapper handles translation + security
       })
 
       debugSteps.push({
@@ -2489,6 +2490,83 @@ export class ChatEngineService {
               listType: optionsMapping.listType,
             })
             
+            // 📅 APPOINTMENT_SLOTS: User selected a time slot → call bookAppointment
+            if (optionsMapping.listType === "APPOINTMENT_SLOTS") {
+              const slotMetadata = (selectedOption as any).metadata
+              if (slotMetadata?.startTime && slotMetadata?.serviceId) {
+                logger.info("📅 [ChatEngine] FAST-PATH: Booking appointment slot", {
+                  slotNumber: preprocessResult.extractedNumber,
+                  startTime: slotMetadata.startTime,
+                  serviceId: slotMetadata.serviceId,
+                })
+
+                try {
+                  const { bookAppointment } = await import("../../domain/calling-functions/bookAppointment")
+                  const bookResult = await bookAppointment({
+                    workspaceId: input.workspaceId,
+                    customerId: input.customerId,
+                    serviceId: slotMetadata.serviceId,
+                    startTime: slotMetadata.startTime,
+                    channel: input.channel,
+                  })
+
+                  const processingTimeMs = Date.now() - startTime
+                  let bookMessage = bookResult.message
+
+                  // Replace user variables
+                  bookMessage = await this.replaceUserVariables(
+                    bookMessage,
+                    input.customerId,
+                    input.workspaceId,
+                    input.customerName
+                  )
+
+                  // Save messages
+                  const savedMessages = await this.messagePersistence.saveMessages(
+                    input.workspaceId,
+                    input.customerId,
+                    conversationId,
+                    input.message,
+                    bookMessage
+                  )
+
+                  // Clear optionsMapping after booking
+                  await this.optionsMappingService.saveMapping({
+                    workspaceId: input.workspaceId,
+                    conversationId,
+                    customerId: input.customerId,
+                    responseText: bookMessage,
+                    forceClear: true,
+                  })
+
+                  return {
+                    message: bookMessage,
+                    agentType: AgentType.ROUTER,
+                    wasHandled: true,
+                    intent: "BOOK_APPOINTMENT",
+                    confidence: "HIGH",
+                    source: "PATTERN",
+                    processingTimeMs,
+                    debugInfo: {
+                      steps: debugSteps,
+                      totalTokens: 0,
+                      executionTimeMs: processingTimeMs,
+                    },
+                    response: bookMessage,
+                    agentUsed: AgentType.ROUTER,
+                    tokensUsed: 0,
+                    executionTimeMs: processingTimeMs,
+                    wasFAQ: false,
+                    isBlocked: false,
+                    _assistantMessageId: savedMessages?.assistantMessageId,
+                  }
+                } catch (bookError) {
+                  logger.error("❌ [ChatEngine] FAST-PATH bookAppointment failed", { error: bookError })
+                  // Fall through to generic handling
+                }
+              }
+            }
+
             // Create SELECT_OPTION intent with SKUs and optionId
             const selectIntent: import("../intent/intent.types").SelectOptionIntent = {
               type: "SELECT_OPTION",
@@ -3163,7 +3241,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
                 customerDiscount: input.customerDiscount || 0,
                 conversationId,
                 messageId: `${conversationId}-context-${Date.now()}`,
-                registrationPromptLevel: input.registrationPromptLevel, // 🆕 Progressive registration invitation
+                registrationPromptLevel: input.registrationPromptLevel,
+                skipTranslation: true, // ChatEngine wrapper handles translation + security
               })
 
               // 🎯 Extract widget action if present
@@ -5690,6 +5769,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         customerDiscount: customer?.discount || 0,
         channel: input.channel,
         registrationPromptLevel: input.registrationPromptLevel,
+        skipTranslation: true, // ChatEngine wrapper handles translation + security
       })
 
       agentResponse = {

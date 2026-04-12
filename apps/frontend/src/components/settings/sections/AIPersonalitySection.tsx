@@ -6,9 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Button } from "@/components/ui/button"
-import { Bot, Briefcase, Smile, Award, Coffee, ShoppingCart } from "lucide-react"
+import { Bot, Briefcase, Smile, Award, Coffee } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
 
@@ -115,31 +113,6 @@ export function AIPersonalitySection({
                   />
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Enable E-commerce */}
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("ecommerceFeatures")}>
-            <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 p-4">
-              <div className="flex items-center gap-3">
-                <ShoppingCart className="h-5 w-5 text-green-600" />
-                <div>
-                  <Label htmlFor="ecommerceToggle" className="text-sm font-medium text-gray-900">
-                    Enable E-commerce
-                  </Label>
-                  <p className="text-xs text-green-700">
-                    {formData.sellsProductsAndServices
-                      ? "AI can help with products, orders, and payments"
-                      : "AI focuses on information and support only"}
-                  </p>
-                </div>
-              </div>
-              <Switch
-                id="ecommerceToggle"
-                checked={formData.sellsProductsAndServices}
-                onCheckedChange={(checked) => onFieldChange("sellsProductsAndServices", checked)}
-                disabled={!canEdit}
-              />
             </div>
           </div>
 

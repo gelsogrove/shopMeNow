@@ -1514,6 +1514,7 @@ export class MessageRepository {
             unreadCount: 0, // Will be updated later
             workspaceId: session.workspaceId,
             activeChatbot: session.customer?.activeChatbot ?? true,
+            channel: session.channel || "whatsapp", // 🌐 Widget/WhatsApp channel indicator for admin UI
           }
         })
       )
